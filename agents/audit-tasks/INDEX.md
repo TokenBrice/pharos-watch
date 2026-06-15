@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**148/733 done (20%)**  `████░░░░░░░░░░░░░░░░`
+**153/733 done (21%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 553 | 11 | 0 | 148 | 21 |
+| Count | 547 | 12 | 0 | 153 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 56 | 1 | 0 | 198 |
-| quality | 315 | 79 | 9 | 0 | 219 |
+| redundancy | 266 | 57 | 0 | 0 | 198 |
+| quality | 315 | 83 | 11 | 0 | 213 |
 | sustainability | 152 | 13 | 1 | 0 | 136 |
 
 ## redundancy (266)
@@ -229,7 +229,7 @@
 | ⬜ | [R-195](redundancy/R-195.md) | S | clone | BCB regulatory annotation label and timestamp duplicated verbatim across two BRL stablecoi |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ⬜ | [R-196](redundancy/R-196.md) | S | wrapper | ExplainerPageShell is a pure pass-through that adds no logic |  | `src/app/learn/mechanisms/explainer-page-shell.ts` |
 | ⬜ | [R-197](redundancy/R-197.md) | S | clone | Duplicate `overallScore`/`safetyScore` both set to the same value in selector-data-adapter |  | `src/app/screener/picker/selector-data-adapter.ts` |
-| 🔄 | [R-198](redundancy/R-198.md) | S | dead-code | homepage-skeletons.tsx is a one-line file with a single external consumer | codex | `src/components/homepage-skeletons.tsx:L1-L5` |
+| ✅ | [R-198](redundancy/R-198.md) | S | dead-code | homepage-skeletons.tsx is a one-line file with a single external consumer | codex | `src/components/homepage-skeletons.tsx:L1-L5` |
 | ⬜ | [R-199](redundancy/R-199.md) | S | wrapper | depeg-resolver-row-card.tsx is a thin glue file that only re-exports DepegResolverRowCard |  | `src/components/depeg-resolver-row-card.tsx:1-47` |
 | ⬜ | [R-200](redundancy/R-200.md) | S | clone | Two independent YYYY-MM month-name formatters in the same feature area |  | `src/components/cemetery-tombstones.tsx:L204-L215` |
 | ⬜ | [R-201](redundancy/R-201.md) | S | clone | FlowChart computes the data range twice — once from raw hourly buckets, once from shaped c |  | `src/components/flow-chart.tsx:L133-L140, L175-L1` |
@@ -324,7 +324,7 @@
 | ✅ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts | codex | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
-| 🔄 | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi | opus-02 | `shared/lib/selector/answers-to-screener.ts:L84-L` |
+| ✅ | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi | opus-02 | `shared/lib/selector/answers-to-screener.ts:L84-L` |
 | ✅ | [Q-022](quality/Q-022.md) | S | error-handling | Silent broad catch on stress_signals_latest hides D1 transient errors from observability | opus-03 | `worker/src/cron/dews/source-state/hydration.ts:L` |
 | ✅ | [Q-023](quality/Q-023.md) | S | testing | depeg-incident-utils.ts has no tests despite being the sole parser for pending-depeg UI da | codex | `src/lib/depeg-incident-utils.ts:L57-L80` |
 | ✅ | [Q-024](quality/Q-024.md) | S | type-safety | buildResultSummaryCoordinationProps erases all prop types via Record<string, unknown> | codex | `src/app/screener/picker/handoff.ts:L128` |
@@ -343,31 +343,31 @@
 | ✅ | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard | opus-06 | `worker/src/handlers/scheduled/five-minute-telegr` |
 | ✅ | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri | opus-07 | `worker/src/api/telegram-store/forget.ts:L9-L31` |
 | ✅ | [Q-058](quality/Q-058.md) | S | error-handling | inferErrorClass misclassifies errors whose message contains the substring 'http' | opus-08 | `worker/src/cron/blacklist/amount-recovery.ts:L87` |
-| 🔄 | [Q-059](quality/Q-059.md) | S | error-handling | recordDirectApiOutcome records the circuit outcome twice on telemetry read failure | opus-09 | `worker/src/cron/dex-liquidity/orchestrator-phase` |
+| ✅ | [Q-059](quality/Q-059.md) | S | error-handling | recordDirectApiOutcome records the circuit outcome twice on telemetry read failure | opus-09 | `worker/src/cron/dex-liquidity/orchestrator-phase` |
 | ✅ | [Q-061](quality/Q-061.md) | S | error-handling | Single try/catch across all three CEX venue fetches silently skips venues after the first  | opus-10 | `worker/src/lib/cex-orderbooks.ts:L218-L228` |
 | ⬜ | [Q-062](quality/Q-062.md) | M | testing | api-pagination cursor-helper internals have no unit tests; multi-column disjunction untest |  | `worker/src/lib/api-pagination.ts:L1-L320 (49.6% ` |
 | ⬜ | [Q-063](quality/Q-063.md) | M | testing | reserve-presentation.ts (265 lines) has no tests; incorrect notice tone for stale/failed r |  | `src/components/stablecoin-detail/reserve-present` |
 | ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
 | ⬜ | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds |  | `src/components/table/content-table.tsx:L150-L153` |
-| 🔄 | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics | opus-03 | `src/components/toast-container.tsx:L39, L69-L70` |
+| ✅ | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics | opus-03 | `src/components/toast-container.tsx:L39, L69-L70` |
 | 🔄 | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety | opus-04 | `src/components/key-info-card.tsx:L43, L253, L273` |
 | 🔄 | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc | opus-05 | `src/components/yield-scatter-plot.tsx:L139-L171` |
 | 🚫 | [Q-071](quality/Q-071.md) | M | error-handling | build-og-learn-images.mjs generates SVGs but never converts them to PNGs — the check:og-le |  | `scripts/maintenance/build-og-learn-images.mjs:L1` |
 | ⬜ | [Q-072](quality/Q-072.md) | M | clone | Hardcoded 4% APY benchmark in yield-source diverges from per-coin benchmarkRate used by th |  | `shared/lib/selector/yield-source.ts:L75; shared/` |
 | 🔄 | [Q-073](quality/Q-073.md) | S | complexity | coverage-matrix-model.ts: three separate O(n log n) sorts over featureSummaries to extract | opus-06 | `src/lib/coverage-matrix-model.ts:185-202` |
 | ⬜ | [Q-074](quality/Q-074.md) | S | error-handling | backfillTronFromLedger returns {updated: 0} mid-loop when budget is reached, discarding al |  | `worker/src/cron/blacklist/amount-recovery.ts:L71` |
-| ⬜ | [Q-075](quality/Q-075.md) | S | type-safety | Unsafe Number(bigint) fallback for token balances loses precision on large reserves |  | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L13` |
+| 🔄 | [Q-075](quality/Q-075.md) | S | type-safety | Unsafe Number(bigint) fallback for token balances loses precision on large reserves | opus-07 | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L13` |
 | ⬜ | [Q-076](quality/Q-076.md) | M | complexity | supply7dOutcome evaluates wrong coin when symbol ranking changes day-over-day |  | `worker/src/cron/daily-digest/digest-next-trigger` |
 | ⬜ | [Q-079](quality/Q-079.md) | M | type-safety | isFallbackCronResult discriminates on 'metadata' in result — fragile structural guard |  | `worker/src/cron/sync-stablecoins/fallback.ts:22-` |
 | 🔄 | [Q-080](quality/Q-080.md) | S | type-safety | Eventless fast-path result built via Object.assign with an unsafe cast | opus-08 | `worker/src/cron/dispatch-telegram-alerts.ts:L374` |
-| ⬜ | [Q-081](quality/Q-081.md) | S | type-safety | Four independent nowSec timestamps computed within a single fan-out Promise.all |  | `worker/src/cron/dispatch-telegram-subscribers.ts` |
+| 🔄 | [Q-081](quality/Q-081.md) | S | type-safety | Four independent nowSec timestamps computed within a single fan-out Promise.all | opus-09 | `worker/src/cron/dispatch-telegram-subscribers.ts` |
 | ⬜ | [Q-083](quality/Q-083.md) | M | testing | depeg-resolver resolution.ts — K2/R1/R2 kill and anchor factor codes never directly assert |  | `shared/lib/depeg-resolver/resolution.ts:L67-L130` |
 | ⬜ | [Q-086](quality/Q-086.md) | M | type-safety | Redemption backstop toEntry throws on schema parse failure, causing full snapshot load to  |  | `worker/src/lib/redemption-backstops-store.ts:L27` |
-| 🔄 | [Q-088](quality/Q-088.md) | S | error-handling | `CaseStudyChart` passes an empty array to `PegDeviationChart` during loading, rendering an | opus-10 | `src/app/learn/case-studies/case-study-chart.tsx:` |
+| ✅ | [Q-088](quality/Q-088.md) | S | error-handling | `CaseStudyChart` passes an empty array to `PegDeviationChart` during loading, rendering an | opus-10 | `src/app/learn/case-studies/case-study-chart.tsx:` |
 | ⬜ | [Q-090](quality/Q-090.md) | S | error-handling | Response bodies not consumed on early-exit paths in checkSitemapUrls (check-seo-live-smoke |  | `scripts/ci/check-seo-live-smoke.mjs:L125-L148` |
 | ⬜ | [Q-093](quality/Q-093.md) | S | error-handling | yield-history-chart-model onSourceChange is a noop when externalSourceKey is set, silently |  | `src/components/yield-history-chart-model.ts:L373` |
 | ✅ | [Q-094](quality/Q-094.md) | S | error-handling | yield-venue-risk-calibration.ts reads .env.local by splitting on '=' which breaks values c | codex | `scripts/maintenance/yield-venue-risk-calibration` |
-| ⬜ | [Q-095](quality/Q-095.md) | S | error-handling | filterAgainstExisting in build-annotation-candidates uses fragile substring matching that  |  | `scripts/maintenance/build-annotation-candidates.` |
+| 🔄 | [Q-095](quality/Q-095.md) | S | error-handling | filterAgainstExisting in build-annotation-candidates uses fragile substring matching that  | opus-03 | `scripts/maintenance/build-annotation-candidates.` |
 | 🚫 | [Q-096](quality/Q-096.md) | S | type-safety | isActiveStablecoinMeta silently treats undefined status as active | codex | `shared/lib/stablecoins/status.ts:L3-L5` |
 | ⬜ | [Q-097](quality/Q-097.md) | M | complexity | runSimulation O(n²) post-simulation collision pass runs synchronously on the main thread w |  | `src/lib/contagion-layout.ts:493-543` |
 | ⬜ | [Q-098](quality/Q-098.md) | S | error-handling | backfill-cg-prices has no per-coin error isolation; one bad response aborts the whole batc |  | `worker/src/api/backfill-cg-prices.ts:53-176` |
@@ -387,7 +387,7 @@
 | ⬜ | [Q-126](quality/Q-126.md) | M | error-handling | linkSealedNearbyIncidentTail performs 4+ non-atomic sequential D1 writes with no compensat |  | `worker/src/lib/depeg-resolver-incident-store.ts:` |
 | ⬜ | [Q-127](quality/Q-127.md) | M | error-handling | safeErrorMessage is nearly unused — raw toErrorMessage leaks into logs throughout the work |  | `worker/src/lib/safe-error-message.ts:L1-L30` |
 | ⬜ | [Q-128](quality/Q-128.md) | M | type-safety | computePriceSignal returns available:true with value 100 when price is null — breaks evide |  | `worker/src/lib/dews/signal-families.ts:L226-L228` |
-| ⬜ | [Q-131](quality/Q-131.md) | S | error-handling | apiFetchWithMeta silently retries schema validation on the unstripped JSON body |  | `src/lib/api.ts:334-341` |
+| 🔄 | [Q-131](quality/Q-131.md) | S | error-handling | apiFetchWithMeta silently retries schema validation on the unstripped JSON body | opus-10 | `src/lib/api.ts:334-341` |
 | ⬜ | [Q-133](quality/Q-133.md) | M | testing | Production routes the *Trusted backfill/remediate handlers; the auth-wrapped public varian |  | `worker/src/api/backfill-cg-prices.ts:196-211, wo` |
 | ⬜ | [Q-135](quality/Q-135.md) | M | error-handling | Broad silent catch in telegram-usage-analytics swallows all errors from non-telemetry path |  | `worker/src/lib/telegram-usage-analytics.ts:L264-` |
 | ⬜ | [Q-136](quality/Q-136.md) | M | error-handling | healNullPrices silently skips historical events (>48h old) with no alerting or escalation  |  | `worker/src/lib/mint-burn-pipeline/price-heal.ts:` |
@@ -397,7 +397,7 @@
 | ⬜ | [Q-142](quality/Q-142.md) | M | type-safety | stablecoin-detail-mint-authority-client.ts: multiple unsafe casts of string values to narr |  | `src/lib/stablecoin-detail-mint-authority-client.` |
 | 🚫 | [Q-143](quality/Q-143.md) | S | naming | use-stress-test-model.ts lacks "use client" but exports React-hook-adjacent code with modu |  | `src/hooks/use-stress-test-model.ts:L1, L35-L39` |
 | ⬜ | [Q-144](quality/Q-144.md) | M | error-handling | Admin reject mutation is non-atomic: key can be deactivated while request stays pending/is |  | `worker/src/api/api-key-requests/admin-handlers.t` |
-| ⬜ | [Q-145](quality/Q-145.md) | S | error-handling | SSE data: line concatenation omits the newline separator required by the spec |  | `worker/src/cron/digest/anthropic-stream.ts:L111-` |
+| 🔄 | [Q-145](quality/Q-145.md) | S | error-handling | SSE data: line concatenation omits the newline separator required by the spec | codex | `worker/src/cron/digest/anthropic-stream.ts:L111-` |
 | ⬜ | [Q-146](quality/Q-146.md) | M | testing | Identity disambiguation resolver (a financial-signal correctness path) has no unit tests |  | `worker/src/cron/yield-sync/identity.ts:81-148` |
 | ⬜ | [Q-147](quality/Q-147.md) | S | complexity | derivePoolVolume24hUsd averages USD estimates instead of summing, producing incorrect mult |  | `worker/src/lib/dex-api-token-pricing.ts:L99-L144` |
 | ⬜ | [Q-148](quality/Q-148.md) | S | clone | Local median() diverges from canonical stats.median for even-length inputs, biasing aggreg |  | `worker/src/lib/address-price-providers/shared.ts` |
@@ -453,7 +453,7 @@
 | ✅ | [Q-046](quality/Q-046.md) | S | error-handling | External links rendered via ReactMarkdown in the docs page lack rel="noopener noreferrer" | codex | `src/app/docs/[slug]/page.tsx:L82-L97` |
 | ⬜ | [Q-048](quality/Q-048.md) | S | complexity | Module-scope `readFileSync` at import time in depeg page-data.ts |  | `src/app/depeg/[event]/page-data.ts:L20-L25` |
 | ⬜ | [Q-049](quality/Q-049.md) | M | complexity | getActionGroup groups admin actions by path string matching — fragile coupling to URL stru |  | `src/components/status/admin-actions-panel.tsx:L1` |
-| ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
+| 🔄 | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  | codex | `src/components/desktop-sidebar.tsx:10-22` |
 | ✅ | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps | codex | `src/components/feedback-modal.tsx:L78-L120` |
 | ✅ | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
 | ✅ | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif | codex | `scripts/maintenance/audit-redemption-v4-score-di` |
