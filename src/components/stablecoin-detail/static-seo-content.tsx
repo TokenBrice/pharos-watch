@@ -4,6 +4,7 @@ import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, POR_BADGE_STYLES } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -17,6 +18,8 @@ import {
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
 import { stripTermMarkup } from "@/lib/term-markup";
+import { buildStablecoinUrl } from "@/lib/urls";
+import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
 
 interface StablecoinDetailSeoContentProps {
   coin: StablecoinMeta;
@@ -100,6 +103,58 @@ function ContractSummary({ coin }: { coin: StablecoinMeta }) {
       {contracts.length} {deploymentLabel} tracked across {renderInlineList(sampleChains)}
       {remaining}.
     </span>
+  );
+}
+
+function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
+  if (!coin.variantOf || !coin.variantKind) return null;
+
+  const parent = TRACKED_META_BY_ID.get(coin.variantOf);
+  if (!parent) return null;
+
+  const display = getVariantDisplay(coin.variantKind);
+  const variantLabel = getVariantAccessibleLabel(coin.variantKind).toLowerCase();
+  const siblings = TRACKED_STABLECOINS.filter(
+    (candidate) =>
+      candidate.variantOf === parent.id &&
+      candidate.id !== coin.id &&
+      candidate.status !== "pre-launch" &&
+      candidate.status !== "frozen",
+  ).slice(0, 4);
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
+      <p className="pharos-kicker">Variant Relationship</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        {coin.name} ({coin.symbol}) is modeled as a {variantLabel} of{" "}
+        <Link
+          href={buildStablecoinUrl(parent.id)}
+          className={INLINE_LINK_CLASS}
+          aria-label={`View ${parent.name} (${parent.symbol}) parent asset`}
+        >
+          {parent.name} ({parent.symbol})
+        </Link>
+        . Pharos treats parent stress, redemption, mint authority, and dependency context as relevant to this variant
+        before interpreting its own live metrics.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span
+          className={`inline-flex min-h-8 items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${display.badgeClass}`}
+        >
+          {display.fullLabel}
+        </span>
+        {siblings.map((sibling) => (
+          <Link
+            key={sibling.id}
+            href={buildStablecoinUrl(sibling.id)}
+            className={LINK_PILL_CLASS}
+            aria-label={`View related ${sibling.name} (${sibling.symbol}) variant`}
+          >
+            {sibling.symbol}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -300,6 +355,8 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
                 </Link>
               ))}
             </div>
+
+            <VariantRelationshipSummary coin={coin} />
 
             {summary ? (
               <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-2.5">

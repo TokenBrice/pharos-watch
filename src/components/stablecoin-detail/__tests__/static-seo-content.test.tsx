@@ -139,6 +139,32 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByText(/Frozen archives keep historical context/)).toBeTruthy();
   });
 
+  it("renders crawlable parent and sibling links for tracked variants", () => {
+    const variantCoin: StablecoinMeta = {
+      ...coin,
+      id: "test-savings-dollar",
+      name: "Test Savings Dollar",
+      symbol: "sTSTD",
+      variantOf: "usds-sky",
+      variantKind: "savings-passthrough",
+    };
+
+    const { container } = render(<StablecoinDetailSeoContent coin={variantCoin} />);
+
+    expect(screen.getByText("Variant Relationship")).toBeTruthy();
+    expect(container.textContent).toContain("modeled as a savings variant of");
+    expect(container.textContent).toContain(
+      "Pharos treats parent stress, redemption, mint authority, and dependency context as relevant",
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "View Sky Dollar (USDS) parent asset",
+      }).getAttribute("href"),
+    ).toBe("/stablecoin/usds-sky/");
+    expect(screen.getAllByText("Savings variant").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: /View related .* variant/ })).toHaveLength(2);
+  });
+
   it("derives the 3-question FAQ from static profile fields and renders FAQPage JSON-LD", () => {
     const items = buildStablecoinFaqItems(coin);
 

@@ -103,7 +103,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 15. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
 16. `FeedbackModal`
 
-`StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. The server shell passes `ExploreNextSection` into `StablecoinDetailClient` as `exploreNextContent`, and the client renders it inside the Explore zone.
+`StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. For tracked variants, that fallback includes a crawlable variant-relationship block linking to the parent asset and up to four sibling variants so wrapper, savings, strategy-vault, and risk-absorption pages expose their parent risk context even before hydration. The server shell passes `ExploreNextSection` into `StablecoinDetailClient` as `exploreNextContent`, and the client renders it inside the Explore zone.
 
 ### Rail vs section rules
 
