@@ -7,7 +7,7 @@ import type {
   EndpointPublicApiAccess,
   EndpointSiteDataAccess,
 } from "./definitions";
-import { findDynamicEndpointDescriptor, getDynamicEndpointDescriptorByKey } from "./dynamic";
+import { findDynamicEndpointDescriptor } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
@@ -187,9 +187,7 @@ function getResolvedDynamicEndpointDescriptor(path: string) {
     return dynamicDescriptor;
   }
   const dynamicAdminEndpoint = matchDynamicAdminEndpoint(path);
-  return dynamicAdminEndpoint
-    ? getDynamicEndpointDescriptorByKey(dynamicAdminEndpoint.key)
-    : null;
+  return dynamicAdminEndpoint ? dynamicDescriptor : null;
 }
 
 export function validateAllowedEndpointMethods(
