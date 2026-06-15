@@ -7,13 +7,17 @@ export function resolveSourceRoot(root, cwd = process.cwd()) {
   return isAbsolute(root) ? root : join(cwd, root);
 }
 
-export function collectSourceFiles(rootDir, { extensions, excludedDirs = DEFAULT_SOURCE_FILE_EXCLUDED_DIRS } = {}) {
+export function collectSourceFiles(
+  rootDir,
+  { extensions, excludedDirs = DEFAULT_SOURCE_FILE_EXCLUDED_DIRS, skipDotEntries = false } = {},
+) {
   const extensionSet = extensions instanceof Set ? extensions : new Set(extensions ?? []);
   const excludedDirSet = excludedDirs instanceof Set ? excludedDirs : new Set(excludedDirs ?? []);
   const files = [];
 
   function visit(dir) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (skipDotEntries && entry.name.startsWith(".")) continue;
       const entryPath = join(dir, entry.name);
       if (entry.isDirectory()) {
         if (excludedDirSet.has(entry.name)) continue;
@@ -31,9 +35,9 @@ export function collectSourceFiles(rootDir, { extensions, excludedDirs = DEFAULT
   return files;
 }
 
-export function collectSourceFilesUnderRoot(root, cwd, { extensions, excludedDirs } = {}) {
+export function collectSourceFilesUnderRoot(root, cwd, { extensions, excludedDirs, skipDotEntries } = {}) {
   const absolute = resolveSourceRoot(root, cwd);
   if (!existsSync(absolute)) return [];
   if (statSync(absolute).isFile()) return [absolute];
-  return collectSourceFiles(absolute, { extensions, excludedDirs });
+  return collectSourceFiles(absolute, { extensions, excludedDirs, skipDotEntries });
 }

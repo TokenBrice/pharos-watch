@@ -49,4 +49,21 @@ describe("collectSourceFiles", () => {
     expect(resolveSourceRoot("src/app", root)).toBe(join(root, "src/app"));
     expect(resolveSourceRoot(root, "/tmp/elsewhere")).toBe(root);
   });
+
+  it("can skip dot files and dot directories without changing the default scan contract", () => {
+    const root = makeTempRepo();
+    mkdirSync(join(root, "src/.cache"), { recursive: true });
+    writeFileSync(join(root, "src/page.ts"), "export const page = true;\n");
+    writeFileSync(join(root, "src/.hidden.ts"), "export const hidden = true;\n");
+    writeFileSync(join(root, "src/.cache/generated.ts"), "export const generated = true;\n");
+
+    const files = collectSourceFiles(join(root, "src"), {
+      extensions: new Set([".ts"]),
+      skipDotEntries: true,
+    })
+      .map((file) => relative(root, file))
+      .sort();
+
+    expect(files).toEqual(["src/page.ts"]);
+  });
 });

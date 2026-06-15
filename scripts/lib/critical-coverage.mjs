@@ -1,5 +1,7 @@
-import { readdirSync } from "node:fs";
-import { extname, join, relative, resolve } from "node:path";
+import { relative } from "node:path";
+
+import { isValidDateOnly } from "./date-helpers.mjs";
+import { collectSourceFilesUnderRoot } from "./source-files.mjs";
 
 export const CRITICAL_FILES = [
   "src/lib/api.ts",
@@ -116,6 +118,7 @@ export const CRITICAL_FILES = [
 
 const HIGH_STAKES_COVERAGE_SCAN_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const HIGH_STAKES_COVERAGE_SCAN_EXTENSIONS = new Set([".ts"]);
+const HIGH_STAKES_COVERAGE_SCAN_EXCLUDED_DIRS = new Set();
 const HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES = [
   "worker/src/cron/sync-stablecoins/",
   "worker/src/cron/depeg-detection/",
@@ -149,7 +152,6 @@ const CRITICAL_COVERAGE_WAIVER_DISPOSITIONS = new Set([
   "barrel-or-contract",
   "deferred-ratchet",
 ]);
-const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/cron/depeg-resolver/constants.ts",
@@ -327,28 +329,16 @@ export function validateCriticalCoverageWaiverMetadata(
 }
 
 function collectCriticalCoverageSourceFiles(cwd) {
-  const relPaths = [];
-
-  function walk(absDirPath) {
-    for (const entry of readdirSync(absDirPath, { withFileTypes: true })) {
-      if (entry.name.startsWith(".")) continue;
-      const absPath = join(absDirPath, entry.name);
-      if (entry.isDirectory()) {
-        walk(absPath);
-        continue;
-      }
-      if (!HIGH_STAKES_COVERAGE_SCAN_EXTENSIONS.has(extname(entry.name))) continue;
-      const relPath = normalizePath(relative(cwd, absPath));
-      if (shouldSkipCriticalCoverageScanFile(relPath)) continue;
-      relPaths.push(relPath);
-    }
-  }
-
-  for (const root of HIGH_STAKES_COVERAGE_SCAN_ROOTS) {
-    walk(resolve(cwd, root));
-  }
-
-  return relPaths.sort();
+  return HIGH_STAKES_COVERAGE_SCAN_ROOTS.flatMap((root) =>
+    collectSourceFilesUnderRoot(root, cwd, {
+      extensions: HIGH_STAKES_COVERAGE_SCAN_EXTENSIONS,
+      excludedDirs: HIGH_STAKES_COVERAGE_SCAN_EXCLUDED_DIRS,
+      skipDotEntries: true,
+    }),
+  )
+    .map((absPath) => normalizePath(relative(cwd, absPath)))
+    .filter((relPath) => !shouldSkipCriticalCoverageScanFile(relPath))
+    .sort();
 }
 
 function shouldSkipCriticalCoverageScanFile(relPath) {
@@ -413,10 +403,4 @@ function waiverReasonForFile(file) {
     return "Live-reserve support/config helper is covered by the enrolled sync-live-reserves suite; promote it if it starts owning persistence or scoring logic.";
   }
   return "Reviewed high-stakes support module; current critical behavior is covered by an enrolled entrypoint test suite.";
-}
-
-function isValidDateOnly(value) {
-  if (typeof value !== "string" || !DATE_ONLY_RE.test(value)) return false;
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }

@@ -1,6 +1,9 @@
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { extname, join, relative, resolve } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { relative, resolve } from "node:path";
 import ts from "typescript";
+
+import { isValidDateOnly } from "./date-helpers.mjs";
+import { collectSourceFilesUnderRoot } from "./source-files.mjs";
 
 export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
@@ -55,13 +58,13 @@ export const WAIVER_PATH = resolve(process.cwd(), "scripts/lib/hotspot-ratchet-w
 
 const HOTSPOT_SCAN_ROOTS = ["src", "shared", "worker/src", "functions"];
 const HOTSPOT_SCAN_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
+const HOTSPOT_SCAN_EXCLUDED_DIRS = new Set();
 const HOTSPOT_METRIC_KEYS = ["fileLines", "maxFunctionLines", "branchCount"];
 const HOTSPOT_DISPOSITIONS = new Set(["stabilized", "queued-p4", "deferred"]);
 const HOTSPOT_WAIVER_DISPOSITIONS = new Set(["queued-p4", "deferred"]);
 const HOTSPOT_CANDIDATE_TOP_N = 12;
 const HOTSPOT_FILELINE_MIN_FUNCTION_LINES = 40;
 const HOTSPOT_FILELINE_MIN_BRANCH_COUNT = 8;
-const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function normalizeRelPath(relPath) {
   return relPath.replaceAll("\\", "/");
@@ -78,30 +81,16 @@ function shouldSkipHotspotScanFile(relPath) {
 }
 
 function collectHotspotSourceFiles() {
-  const relPaths = [];
-
-  function walk(absDirPath) {
-    for (const entry of readdirSync(absDirPath, { withFileTypes: true })) {
-      if (entry.name.startsWith(".")) continue;
-      const absPath = join(absDirPath, entry.name);
-      if (entry.isDirectory()) {
-        walk(absPath);
-        continue;
-      }
-
-      if (!HOTSPOT_SCAN_EXTENSIONS.has(extname(entry.name))) continue;
-      const relPath = normalizeRelPath(relative(process.cwd(), absPath));
-      if (shouldSkipHotspotScanFile(relPath)) continue;
-      relPaths.push(relPath);
-    }
-  }
-
-  for (const root of HOTSPOT_SCAN_ROOTS) {
-    walk(resolve(process.cwd(), root));
-  }
-
-  relPaths.sort();
-  return relPaths;
+  return HOTSPOT_SCAN_ROOTS.flatMap((root) =>
+    collectSourceFilesUnderRoot(root, process.cwd(), {
+      extensions: HOTSPOT_SCAN_EXTENSIONS,
+      excludedDirs: HOTSPOT_SCAN_EXCLUDED_DIRS,
+      skipDotEntries: true,
+    }),
+  )
+    .map((absPath) => normalizeRelPath(relative(process.cwd(), absPath)))
+    .filter((relPath) => !shouldSkipHotspotScanFile(relPath))
+    .sort();
 }
 
 export function collectHotspotMetrics(relPath) {
@@ -360,14 +349,6 @@ export function collectHotspotWaiverReviewQueue(
     due: due.sort(sortByReviewDate),
     upcoming: upcoming.sort(sortByReviewDate),
   };
-}
-
-function isValidDateOnly(value) {
-  if (typeof value !== "string" || !DATE_ONLY_RE.test(value)) {
-    return false;
-  }
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
 
 function toUtcDateOnly(date) {
