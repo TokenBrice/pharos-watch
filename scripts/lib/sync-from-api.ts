@@ -124,3 +124,47 @@ export async function syncJson<T>(
   writeFileSync(outputFile, JSON.stringify(entries, null, 2) + "\n");
   return { entries, outputFile };
 }
+
+/**
+ * Unified env-var priority order for the static-export generator scripts that
+ * fetch from a Pharos API base (generate-homepage-bootstrap, generate-public-
+ * datasets). Both consult the same ordered list so a configured DIGEST_API_URL
+ * (or any shared fallback) is honoured regardless of which generator runs.
+ */
+export const GENERATOR_API_URL_ENV_NAMES = [
+  "HOMEPAGE_BOOTSTRAP_API_URL",
+  "DIGEST_API_URL",
+  "PUBLIC_DATASETS_API_URL",
+  "SMOKE_API_BASE",
+  "API_BASE_URL",
+] as const;
+
+export const GENERATOR_API_KEY_ENV_NAMES = [
+  "HOMEPAGE_BOOTSTRAP_API_KEY",
+  "DIGEST_API_KEY",
+  "PUBLIC_DATASETS_API_KEY",
+  "SMOKE_API_KEY",
+  "PHAROS_API_KEY",
+] as const;
+
+/**
+ * Resolve an API base from the first non-empty value among `envNames`, with the
+ * trailing slash trimmed. Returns null when none are configured (callers decide
+ * whether that is fatal). Unlike `resolveApiUrl`, this does not throw.
+ */
+export function resolveApiBaseFromEnv(envNames: readonly string[]): string | null {
+  const raw = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
+  return raw ? raw.replace(/\/+$/, "") : null;
+}
+
+/**
+ * Build request headers (`Accept` + optional `X-API-Key`) from the first
+ * non-empty API key among `envNames`.
+ */
+export function apiFetchHeaders(envNames: readonly string[]): Record<string, string> {
+  const apiKey = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
+  return {
+    Accept: "application/json",
+    ...(apiKey ? { "X-API-Key": apiKey } : {}),
+  };
+}

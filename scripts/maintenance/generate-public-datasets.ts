@@ -41,6 +41,12 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/safety-
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
 import { parseCheckMode } from "../lib/cli.mjs";
+import {
+  apiFetchHeaders,
+  GENERATOR_API_KEY_ENV_NAMES,
+  GENERATOR_API_URL_ENV_NAMES,
+  resolveApiBaseFromEnv,
+} from "../lib/sync-from-api";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
@@ -120,11 +126,7 @@ function isoDateUtc(now: Date): string {
 }
 
 function resolveApiBase(): string | null {
-  const explicit =
-    process.env.PUBLIC_DATASETS_API_URL?.trim() ||
-    process.env.SMOKE_API_BASE?.trim() ||
-    process.env.API_BASE_URL?.trim();
-  return explicit ? explicit.replace(/\/+$/, "") : null;
+  return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
 }
 
 function resolveSnapshotDate(): string {
@@ -132,8 +134,7 @@ function resolveSnapshotDate(): string {
 }
 
 function fetchHeaders(): Record<string, string> {
-  const apiKey = process.env.PUBLIC_DATASETS_API_KEY?.trim();
-  return apiKey ? { "X-API-Key": apiKey } : {};
+  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
 }
 
 async function safeFetchJson<T>(url: string): Promise<T | null> {

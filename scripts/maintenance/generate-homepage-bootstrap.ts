@@ -9,6 +9,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyFreshnessRatio } from "../../shared/lib/status-thresholds";
+import {
+  apiFetchHeaders,
+  GENERATOR_API_KEY_ENV_NAMES,
+  GENERATOR_API_URL_ENV_NAMES,
+  resolveApiBaseFromEnv,
+} from "../lib/sync-from-api";
 import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
 import { FRONTEND_API_QUERY_REGISTRY, type FrontendApiQueryDescriptor } from "../../src/lib/api-query-registry";
 import {
@@ -52,26 +58,11 @@ function emptyPayload(): HomepageBootstrapPayload {
 }
 
 function resolveApiBase(): string | null {
-  const raw =
-    process.env.HOMEPAGE_BOOTSTRAP_API_URL?.trim() ||
-    process.env.DIGEST_API_URL?.trim() ||
-    process.env.PUBLIC_DATASETS_API_URL?.trim() ||
-    process.env.SMOKE_API_BASE?.trim() ||
-    process.env.API_BASE_URL?.trim();
-  return raw ? raw.replace(/\/+$/, "") : null;
+  return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
 }
 
 function fetchHeaders(): Record<string, string> {
-  const apiKey =
-    process.env.HOMEPAGE_BOOTSTRAP_API_KEY?.trim() ||
-    process.env.DIGEST_API_KEY?.trim() ||
-    process.env.PUBLIC_DATASETS_API_KEY?.trim() ||
-    process.env.SMOKE_API_KEY?.trim() ||
-    process.env.PHAROS_API_KEY?.trim();
-  return {
-    Accept: "application/json",
-    ...(apiKey ? { "X-API-Key": apiKey } : {}),
-  };
+  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
 }
 
 function parseExistingPayload(): HomepageBootstrapPayload | null {
