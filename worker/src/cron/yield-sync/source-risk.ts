@@ -1027,10 +1027,40 @@ export function resolveReviewedYieldRiskConfig(
  * neutral. See `agents/yearn-risk-pys-plan.md` §3.3.
  */
 const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
+  // Penalty-worthy: a LOW venue tier (yearn-finance) hides a real single-ecosystem
+  // (Sky) coupling — the canonical case the signal exists for.
   "yvusdc-yearn": {
     ecosystem: "Sky",
     severity: "medium",
     note: "Funded debt sits almost entirely in Sky-governed venues (sUSDS savings plus Spark Lend); a Sky incident would affect both legs simultaneously. Matches Yearn's own risk report flagging ~100% Sky-governance coupling.",
+    reviewedAt: "2026-06-15",
+  },
+  // Informational (severity low = no added penalty): single-curator MetaMorpho
+  // vaults whose apparent market-level diversification is bounded by one curator +
+  // the Morpho protocol. Morpho protocol risk is already priced by the medium
+  // venue tier, so this surfaces the curator coupling without double-counting.
+  "gtusdc-gauntlet": {
+    ecosystem: "Morpho (Gauntlet)",
+    severity: "low",
+    note: "All exposure is Morpho Blue lending markets allocated by a single curator (Gauntlet); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
+    reviewedAt: "2026-06-15",
+  },
+  "gtusdcp-gauntlet": {
+    ecosystem: "Morpho (Gauntlet)",
+    severity: "low",
+    note: "All exposure is Morpho Blue lending markets allocated by a single curator (Gauntlet); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
+    reviewedAt: "2026-06-15",
+  },
+  "steakusdc-steakhouse": {
+    ecosystem: "Morpho (Steakhouse)",
+    severity: "low",
+    note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
+    reviewedAt: "2026-06-15",
+  },
+  "steakusdt-steakhouse": {
+    ecosystem: "Morpho (Steakhouse)",
+    severity: "low",
+    note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
     reviewedAt: "2026-06-15",
   },
 };

@@ -261,6 +261,15 @@ describe("yield source-risk registry", () => {
     expect(yvusdc?.note.length ?? 0).toBeGreaterThan(0);
     expect(resolveDependencyConcentration("usdc-circle")).toBeNull();
     expect(resolveDependencyConcentration(null)).toBeNull();
+
+    // Single-curator MetaMorpho vaults: surfaced at low severity (chip, no penalty)
+    // because the medium morpho-blue venue tier already prices Morpho protocol risk.
+    const gt = resolveDependencyConcentration("gtusdc-gauntlet");
+    expect(gt?.ecosystem).toBe("Morpho (Gauntlet)");
+    expect(gt?.severity).toBe("low");
+    expect(resolveDependencyConcentration("steakusdc-steakhouse")?.ecosystem).toBe("Morpho (Steakhouse)");
+    // low severity adds no penalty (avoids double-counting the venue tier)
+    expect(derivePysSourceRiskPenalty({ dependencyConcentrationSeverity: "low" })).toBe(1);
   });
 
   it("normalizes sourceRiskScore from the resolved sourceRiskPenalty", () => {
