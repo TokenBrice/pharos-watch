@@ -78,6 +78,7 @@ function classifyResource(url, resourceType) {
 function emptyCounters() {
   return {
     requests: 0,
+    accountingErrors: 0,
     scriptRequests: 0,
     styleRequests: 0,
     fontRequests: 0,
@@ -182,8 +183,16 @@ async function auditRoute(browser, baseUrl, route, waitMs) {
   page.on("response", (response) => {
     try {
       addResponse(counters, response);
-    } catch {
+    } catch (error) {
       // Best-effort audit; individual response accounting should not abort the route.
+      counters.accountingErrors += 1;
+      if (process.env.DEBUG) {
+        console.warn(
+          `[seo-render-budget] response accounting failed for ${response.url()}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
     }
   });
 
@@ -235,6 +244,7 @@ function formatTable(rows) {
     "htmlKB",
     "mainChars",
     "req",
+    "acctErr",
     "jsReq",
     "cssReq",
     "fontReq",
@@ -251,6 +261,7 @@ function formatTable(rows) {
         Math.round(row.htmlBytes / 1024),
         row.mainTextChars,
         row.requests,
+        row.accountingErrors,
         row.scriptRequests,
         row.styleRequests,
         row.fontRequests,
