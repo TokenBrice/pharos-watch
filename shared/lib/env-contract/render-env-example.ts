@@ -93,6 +93,10 @@ function bindingOrder(binding: (typeof ENV_BINDINGS)[number]): number {
   return Number.MAX_SAFE_INTEGER;
 }
 
+function compareBindingKeys(left: (typeof ENV_BINDINGS)[number], right: (typeof ENV_BINDINGS)[number]): number {
+  return left.key.localeCompare(right.key);
+}
+
 export function renderEnvExample(): string {
   const lines: string[] = [];
 
@@ -105,11 +109,12 @@ export function renderEnvExample(): string {
 
     const bindings = ENV_BINDINGS
       .filter((binding) => binding.example?.section === section.key)
-      .slice()
-      .sort((left, right) => left.key.localeCompare(right.key));
+      .slice();
 
     if (section.key === "workerOptional" || section.key === "workerReserved") {
-      const ordered = bindings.slice().sort((left, right) => compareRuntimeOrder(left, right, "worker"));
+      const ordered = bindings
+        .slice()
+        .sort((left, right) => compareRuntimeOrder(left, right, "worker") || compareBindingKeys(left, right));
       for (const binding of ordered) {
         lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
       }
@@ -117,14 +122,18 @@ export function renderEnvExample(): string {
     }
 
     if (section.key === "pagesOptional") {
-      const ordered = bindings.slice().sort((left, right) => compareRuntimeOrder(left, right, "pagesSiteData"));
+      const ordered = bindings
+        .slice()
+        .sort((left, right) => compareRuntimeOrder(left, right, "pagesSiteData") || compareBindingKeys(left, right));
       for (const binding of ordered) {
         lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
       }
       continue;
     }
 
-    const ordered = bindings.slice().sort((left, right) => bindingOrder(left) - bindingOrder(right));
+    const ordered = bindings
+      .slice()
+      .sort((left, right) => bindingOrder(left) - bindingOrder(right) || compareBindingKeys(left, right));
 
     for (const binding of ordered) {
       lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
