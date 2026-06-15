@@ -1,21 +1,6 @@
 import { cn } from "@/lib/utils";
 import { digestDisplay } from "@/lib/fonts/digest";
-import type { ChangelogEntry, SummaryTag } from "@/data/changelogs/types";
-
-/* ── Summary-item category ──────────────────────────────────────── */
-
-const TAG_RULES: [SummaryTag, RegExp][] = [
-  ["security", /security|harden|audit|auth/i],
-  ["coverage", /coverage|stablecoin|addition|reserve/i],
-  ["infra", /pipeline|reliab|status|cron|sync/i],
-  ["design", /design|polish|changelog|ux|ui/i],
-];
-
-/** Fallback when no explicit tag is set on the entry. */
-function inferTag(label: string): SummaryTag {
-  for (const [tag, re] of TAG_RULES) if (re.test(label)) return tag;
-  return "feature";
-}
+import type { ChangelogEntry } from "@/data/changelogs/types";
 
 export function formatDateRange(
   from: string,
@@ -155,7 +140,7 @@ export function ChangelogEntryCard({
 
       <ul className="mt-5 space-y-4 mb-6">
         {summary.map((item) => {
-          const tag = item.tag ?? inferTag(item.label);
+          const tag = item.tag;
           return (
             <li key={item.label} className="space-y-0.5">
               <div className="flex items-baseline gap-2">

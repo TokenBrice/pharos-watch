@@ -8,7 +8,7 @@ export type SummaryTag = "feature" | "security" | "coverage" | "infra" | "design
 export interface SummaryItem {
   label: string;
   description: string;
-  tag?: SummaryTag;
+  tag: SummaryTag;
   href?: string;
 }
 
