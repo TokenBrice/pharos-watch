@@ -8,13 +8,13 @@
  *
  * Values applied per entry (only when missing):
  *   authoredBy = "ai"
- *   model      = "claude-opus-4-7"
+ *   model      = --model, AI_SUMMARY_MODEL, MODEL_OVERRIDE, or the legacy default
  *   reviewedBy = AI_SUMMARY_REVIEWED_BY
  *   reviewedAt = AI_SUMMARY_REVIEWED_AT
  *   factsAsOf  = entry.updatedAt
  *
  * Run via:
- *   AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance
+ *   AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance -- --model claude-opus-4-7
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -23,16 +23,32 @@ import { resolve } from "node:path";
 const ROOT = process.cwd();
 const SUMMARIES_PATH = resolve(ROOT, "data/ai-summaries.json");
 
+function getArgValue(name) {
+  const inlinePrefix = `${name}=`;
+  for (let index = 2; index < process.argv.length; index += 1) {
+    const arg = process.argv[index];
+    if (arg === name) return process.argv[index + 1]?.trim() || "";
+    if (arg.startsWith(inlinePrefix)) return arg.slice(inlinePrefix.length).trim();
+  }
+  return "";
+}
+
 const reviewedBy = process.env.AI_SUMMARY_REVIEWED_BY?.trim();
 const reviewedAt = process.env.AI_SUMMARY_REVIEWED_AT?.trim();
+const model = (
+  getArgValue("--model") ||
+  process.env.AI_SUMMARY_MODEL?.trim() ||
+  process.env.MODEL_OVERRIDE?.trim() ||
+  "claude-opus-4-7"
+);
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-if (!reviewedBy || !reviewedAt || !ISO_DATE_RE.test(reviewedAt)) {
+if (!reviewedBy || !reviewedAt || !ISO_DATE_RE.test(reviewedAt) || !model) {
   process.stderr.write(
     [
-      "backfill: AI_SUMMARY_REVIEWED_BY and ISO-date AI_SUMMARY_REVIEWED_AT are required.",
+      "backfill: AI_SUMMARY_REVIEWED_BY, ISO-date AI_SUMMARY_REVIEWED_AT, and a non-empty model are required.",
       "This script records human-review provenance; do not infer reviewedAt from updatedAt.",
-      'Example: AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance',
+      'Example: AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance -- --model claude-opus-4-7',
     ].join("\n") + "\n",
   );
   process.exit(1);
@@ -40,7 +56,7 @@ if (!reviewedBy || !reviewedAt || !ISO_DATE_RE.test(reviewedAt)) {
 
 const DEFAULTS = {
   authoredBy: "ai",
-  model: "claude-opus-4-7",
+  model,
   reviewedBy,
   reviewedAt,
 };
