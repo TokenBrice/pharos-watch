@@ -28,16 +28,6 @@ import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
 import type { CauseOfDeath } from "@shared/types";
 
-/* ── Custom tooltip shell ── */
-
-function ChartTooltip({ active, children }: { active?: boolean; children: ReactNode }) {
-  return (
-    <PharosChartTooltip active={active}>
-      {children}
-    </PharosChartTooltip>
-  );
-}
-
 function CemeteryChartCard({ title, ariaLabel, children }: { title: string; ariaLabel?: string; children: ReactNode }) {
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
@@ -109,12 +99,12 @@ function CauseOfDeathDonutChart({
                   if (!payload?.[0]) return null;
                   const datum = payload[0].payload as CauseOfDeathDonutDatum;
                   return (
-                    <ChartTooltip active={active}>
+                    <PharosChartTooltip active={active}>
                       <p className="font-semibold" style={{ color: CAUSE_HEX[datum.cause] }}>
                         {datum.name}
                       </p>
                       <div className="font-mono tabular-nums">{formatValue(datum, total)}</div>
-                    </ChartTooltip>
+                    </PharosChartTooltip>
                   );
                 }}
               />
@@ -262,7 +252,7 @@ function DeathsByYearChart({ entries }: { entries: CemeteryEntries }) {
                 content={({ active, payload, label }) => {
                   if (!payload?.length) return null;
                   return (
-                    <ChartTooltip active={active}>
+                    <PharosChartTooltip active={active}>
                       <p className="font-semibold mb-1">{label}</p>
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-1.5">
@@ -278,7 +268,7 @@ function DeathsByYearChart({ entries }: { entries: CemeteryEntries }) {
                         </div>
                         <span className="font-mono tabular-nums">{formatCurrency(Number(payload[1]?.value ?? 0), 1)}</span>
                       </div>
-                    </ChartTooltip>
+                    </PharosChartTooltip>
                   );
                 }}
               />
@@ -337,11 +327,11 @@ function TopFailuresChart({ entries }: { entries: CemeteryEntries }) {
               if (!payload?.[0]) return null;
               const d = payload[0].payload as (typeof data)[0];
               return (
-                <ChartTooltip active={active}>
+                <PharosChartTooltip active={active}>
                   <p className="font-semibold">{d.name}</p>
                   <p className="font-mono tabular-nums">{formatCurrency(d.mcap, 1)}</p>
                   <p style={{ color: CAUSE_HEX[d.cause] }}>{CAUSE_META[d.cause].label}</p>
-                </ChartTooltip>
+                </PharosChartTooltip>
               );
             }}
           />
@@ -480,14 +470,14 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
                   if (!payload?.[0]) return null;
                   const d = payload[0].payload as CumulativePoint;
                   return (
-                    <ChartTooltip active={active}>
+                    <PharosChartTooltip active={active}>
                       <p className="font-semibold">{d.symbol}</p>
                       <p className="text-muted-foreground text-xs">{d.date}</p>
                       <p className="font-mono tabular-nums">+{formatCurrency(d.added, 1)}</p>
                       <p className="font-mono tabular-nums text-red-700 dark:text-red-400">
                         Total: {formatCurrency(d.cumulative, 1)}
                       </p>
-                    </ChartTooltip>
+                    </PharosChartTooltip>
                   );
                 }}
               />
