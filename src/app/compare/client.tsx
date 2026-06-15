@@ -190,12 +190,16 @@ export function CompareClient() {
     },
   );
 
+  // nowSeconds only feeds the "Updated N min ago" flow-staleness label, so the
+  // per-minute ticker is only worth running once flow data is present.
+  const flowUpdatedAt = flowData?.updatedAt ?? null;
   useEffect(() => {
+    if (flowUpdatedAt == null) return;
     const updateNow = () => setNowSeconds(Math.floor(Date.now() / 1000));
     updateNow();
     const interval = window.setInterval(updateNow, 60_000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [flowUpdatedAt]);
 
   const cohortBaseline = useMemo(() => {
     const allCards = reportCardsData?.cards ?? [];
