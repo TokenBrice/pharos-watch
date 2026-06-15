@@ -136,6 +136,9 @@ export function computeStressedGrades(
 
   function visitAffected(id: string): void {
     if (visited.has(id) || !affectedIds.has(id)) return;
+    // Cycle guard: break recursion when re-entering a node already on the DFS
+    // stack. The node is not dropped — the outer `for (const id of affectedIds)`
+    // loop still visits it, so every cycle member lands in recomputeOrder.
     if (visiting.has(id)) return;
     visiting.add(id);
     const card = cardById.get(id);

@@ -173,6 +173,104 @@ describe("computeStressedGrades", () => {
     expect(stressedTransitive.overallScore).toBeLessThan(transitive.overallScore ?? 0);
   });
 
+  it("recomputes every member of a dependency cycle when one is stressed", () => {
+    // a <-> b form a cycle; c depends on b. Stressing the upstream usdc must
+    // re-score a, b, and c (no cycle member is silently dropped).
+    const upstream = makeCard({
+      id: "usdc",
+      name: "USD Coin",
+      symbol: "USDC",
+      overallScore: 92,
+      overallGrade: "A+",
+    });
+    const cyclicDeps = (deps: { id: string; weight: number; type: "collateral" | "mechanism" }[]) => ({
+      pegScore: 90,
+      activeDepeg: false,
+      activeDepegBps: null,
+      depegEventCount: 0,
+      lastEventAt: null,
+      liquidityScore: 80,
+      effectiveExitScore: 80,
+      redemptionBackstopScore: null,
+      redemptionRouteFamily: null,
+      redemptionModelConfidence: null,
+      redemptionUsedForLiquidity: false,
+      redemptionImmediateCapacityUsd: null,
+      redemptionImmediateCapacityRatio: null,
+      concentrationHhi: 0.2,
+      bluechipGrade: null,
+      canBeBlacklisted: "possible" as const,
+      chainTier: "ethereum" as const,
+      deploymentModel: "single-chain" as const,
+      collateralQuality: "native" as const,
+      custodyModel: "onchain" as const,
+      governanceTier: "centralized-dependent" as const,
+      governanceQuality: "multisig" as const,
+      dependencies: deps,
+      navToken: false,
+      collateralFromLive: false,
+      dependencyFromLive: false,
+    });
+    const a = makeCard({
+      id: "a",
+      name: "A",
+      symbol: "A",
+      overallScore: 80,
+      overallGrade: "B+",
+      dimensions: {
+        pegStability: makeDimension(90),
+        liquidity: makeDimension(80),
+        resilience: makeDimension(75),
+        decentralization: makeDimension(70),
+        dependencyRisk: makeDimension(90),
+      },
+      rawInputs: cyclicDeps([
+        { id: "usdc", weight: 0.4, type: "collateral" },
+        { id: "b", weight: 0.3, type: "mechanism" },
+      ]),
+    });
+    const b = makeCard({
+      id: "b",
+      name: "B",
+      symbol: "B",
+      overallScore: 80,
+      overallGrade: "B+",
+      dimensions: {
+        pegStability: makeDimension(90),
+        liquidity: makeDimension(80),
+        resilience: makeDimension(75),
+        decentralization: makeDimension(70),
+        dependencyRisk: makeDimension(90),
+      },
+      rawInputs: cyclicDeps([{ id: "a", weight: 0.5, type: "mechanism" }]),
+    });
+    const c = makeCard({
+      id: "c",
+      name: "C",
+      symbol: "C",
+      overallScore: 80,
+      overallGrade: "B+",
+      dimensions: {
+        pegStability: makeDimension(90),
+        liquidity: makeDimension(80),
+        resilience: makeDimension(75),
+        decentralization: makeDimension(70),
+        dependencyRisk: makeDimension(90),
+      },
+      rawInputs: cyclicDeps([{ id: "b", weight: 0.5, type: "mechanism" }]),
+    });
+
+    const result = computeStressedGrades([upstream, a, b, c], new Map([["usdc", 30]]));
+    const byId = new Map(result.map((card) => [card.id, card]));
+
+    // a depends directly on stressed usdc → must drop.
+    expect(byId.get("a")!.dimensions.dependencyRisk.score).toBeLessThan(90);
+    // b depends on a (cycle member) → must still be recomputed, not dropped.
+    expect(byId.get("b")!.dimensions.dependencyRisk.score).toBeLessThan(90);
+    // c depends transitively through the cycle → must also be recomputed.
+    expect(byId.get("c")!.dimensions.dependencyRisk.score).toBeLessThan(90);
+  });
+
   it("caps tracked variants at the parent overall score in live and stressed paths", () => {
     const parent = makeCard({
       id: "parent",
