@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -12,7 +13,6 @@ import {
   BLUECHIP_REFUSALS,
   BLUECHIP_WHAT_IT_MEANS,
 } from "./content";
-import { createAboutEditorialSection } from "../editorial-helpers";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Bluechip Stablecoins: Safety Criteria & List",
@@ -22,10 +22,34 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
 
-const BluechipSection = createAboutEditorialSection(
-  "bluechip",
-  `${digestDisplay.className} text-[1.55rem] font-semibold leading-tight tracking-[-0.01em] text-foreground sm:text-[1.7rem]`,
-);
+function BluechipSection({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: ReactNode;
+}) {
+  const slug = eyebrow.replace(/\s+/g, "-").toLowerCase();
+  const headingId = `bluechip-${slug}`;
+
+  return (
+    <section aria-labelledby={headingId} className="space-y-5">
+      <header className="space-y-2">
+        <p className="pharos-kicker">{eyebrow}</p>
+        <h2
+          id={headingId}
+          className={`${digestDisplay.className} text-[1.55rem] font-semibold leading-tight tracking-[-0.01em] text-foreground sm:text-[1.7rem]`}
+        >
+          {title}
+        </h2>
+        <div className="h-px bg-border/60" aria-hidden="true" />
+      </header>
+      {children}
+    </section>
+  );
+}
 
 export default function AboutBluechipPage() {
   return (
