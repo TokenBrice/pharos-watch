@@ -10,11 +10,11 @@ import {
   sourceRef,
 } from "./shared";
 import { REVIEWED_FIRST_WAVE_AT, REVIEWED_REMEDIATION_AT, REVIEWED_STABLECOIN_AUDIT_AT } from "./review-dates";
+import { REVIEWED_YIELD_EXPANSION_AT } from "./stablecoin-redeem/shared";
 
 const REVIEWED_QUEUE_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_WRAPPER_QUEUE_AT = "2026-04-21";
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
-const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
 const REVIEWED_CONFIG_ONLY_GAPS_AT = "2026-05-17";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
 
