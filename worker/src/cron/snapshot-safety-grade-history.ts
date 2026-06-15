@@ -4,6 +4,7 @@ import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
 import { writeReportCardCache } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { throwIfAborted } from "../lib/abort";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import type { ReportCardsSnapshot } from "../lib/report-cards-snapshot";
@@ -57,9 +58,7 @@ export async function snapshotSafetyGradeHistory(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<CronResult> {
-  if (signal?.aborted) {
-    throw signal.reason ?? new Error("snapshot-safety-grade-history aborted");
-  }
+  throwIfAborted(signal);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const snapshotDay = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
@@ -108,9 +107,7 @@ export async function snapshotSafetyGradeHistory(
   const stmts: D1PreparedStatement[] = [];
 
   for (const card of liveCards) {
-    if (signal?.aborted) {
-      throw signal.reason ?? new Error("snapshot-safety-grade-history aborted");
-    }
+    throwIfAborted(signal);
 
     const latest = latestByCoin.get(card.id);
 
