@@ -14,7 +14,13 @@ import {
   usesHistoricalStressBreadth,
 } from "../lib/psi-replay";
 import { runAdminJob } from "../lib/admin-job";
+import { acquireCronLease, createLeaseOwner, releaseCronLease } from "../lib/cron-lease";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
+
+// Advisory lease key fencing concurrent admin invocations of this rebuild. It
+// is intentionally distinct from the "stability-index" cron job key.
+const BACKFILL_PSI_LEASE_JOB = "backfill-stability-index";
+const BACKFILL_PSI_LEASE_TTL_SEC = 10 * 60;
 
 interface ExistingStabilityIndexRow {
   computed_at: number;
@@ -142,6 +148,19 @@ export async function handleBackfillStabilityIndex(
         .all<ExistingStabilityIndexRow>();
       const existingByDay = new Map((existingRows.results ?? []).map((row) => [row.computed_at, row]));
 
+      // Fence concurrent non-dry-run rebuilds: two overlapping admin calls would
+      // otherwise DROP each other's rebuild table or interleave the canonical
+      // DELETE+INSERT swap, risking a partial or empty stability_index.
+      const leaseOwner = createLeaseOwner(BACKFILL_PSI_LEASE_JOB);
+      let leaseAcquired = false;
+      if (!dryRun) {
+        leaseAcquired = await acquireCronLease(db, BACKFILL_PSI_LEASE_JOB, leaseOwner, BACKFILL_PSI_LEASE_TTL_SEC);
+        if (!leaseAcquired) {
+          return errorResponse(409, "A stability-index backfill is already running. Try again later.");
+        }
+      }
+
+      try {
       if (!dryRun) {
         await db.batch([db.prepare("DROP TABLE IF EXISTS stability_index_rebuild"), db.prepare(rebuildTableSql)]);
       }
@@ -287,6 +306,11 @@ export async function handleBackfillStabilityIndex(
         startDay,
         endDay,
       });
+      } finally {
+        if (leaseAcquired) {
+          await releaseCronLease(db, BACKFILL_PSI_LEASE_JOB, leaseOwner).catch(() => {});
+        }
+      }
     },
   );
 }

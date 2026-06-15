@@ -472,6 +472,48 @@ describe("handleBackfillStabilityIndex", () => {
     ]);
   });
 
+  it("returns 409 when the advisory backfill lease is already held", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const start = nowSec - 86400;
+    const db = makeDb({
+      earliest: start,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: start,
+          ended_at: null,
+        },
+      ],
+    });
+
+    // Make only the cron_leases acquire INSERT report no change (lock held).
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      const stmt = origPrepare(sql);
+      if (sql.includes("INSERT INTO cron_leases")) {
+        const bind = stmt.bind.bind(stmt);
+        return {
+          ...stmt,
+          bind: (...args: unknown[]) => {
+            const bound = bind(...args);
+            return { ...bound, run: async () => ({ success: true, meta: { changes: 0 } }) };
+          },
+        } as typeof stmt;
+      }
+      return stmt;
+    }) as typeof db.prepare;
+
+    const res = await handleBackfillStabilityIndex(
+      db,
+      true,
+      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
+    );
+
+    expect(res.status).toBe(409);
+  });
+
   it("rejects invalid day parameters", async () => {
     const res = await handleBackfillStabilityIndex(
       makeDb({ earliest: 1 }),
