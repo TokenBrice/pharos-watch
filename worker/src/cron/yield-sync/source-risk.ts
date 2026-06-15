@@ -16,6 +16,7 @@ export {
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
 } from "@shared/lib/yield-source-risk-registry";
 import type { EvaluatedYieldSource } from "./evaluation-types";
+import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
 function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -38,36 +39,17 @@ export function inferVenueProtocol(source: {
   yieldType?: EvaluatedYieldSource["yieldType"] | null;
   dataSource: EvaluatedYieldSource["dataSource"];
 }): string | null {
-  if (source.sourceKey.startsWith("protocol-api:morpho-vault:")) return "morpho-blue";
-  if (source.sourceKey.startsWith("protocol-api:pendle:")) return "pendle";
-  if (source.sourceKey.startsWith("protocol-api:yearn:")) return "yearn";
-  if (source.sourceKey.startsWith("protocol-api:kong:")) return "kong";
-  if (source.sourceKey.startsWith("protocol-api:k3:")) return "k3";
-  if (source.sourceKey.startsWith("protocol-api:beefy:")) return "beefy";
-  if (source.sourceKey.startsWith("protocol-api:compound-v3-supply:")) return "compound-v3";
-  if (source.sourceKey.startsWith("aave-v3-onchain:")) return "aave-v3";
-  if (source.sourceKey.startsWith("royco-dawn:")) return "royco-dawn";
+  const route = resolveYieldSourceKeyRoute(source.sourceKey);
+  if (route) return route.venueProtocol;
   return source.dataSource === "rate-derived" || source.dataSource === "price-derived"
     ? source.dataSource
     : null;
 }
 
 function inferVenueChain(sourceKey: string): string | null {
-  const parts = sourceKey.split(":");
-  if (sourceKey.startsWith("protocol-api:morpho-vault:")) return parts[2] ?? null;
-  if (sourceKey.startsWith("protocol-api:pendle:")) return parts[2] ?? null;
-  if (
-    sourceKey.startsWith("protocol-api:yearn:") ||
-    sourceKey.startsWith("protocol-api:kong:") ||
-    sourceKey.startsWith("protocol-api:k3:") ||
-    sourceKey.startsWith("protocol-api:beefy:") ||
-    sourceKey.startsWith("protocol-api:compound-v3-supply:")
-  ) {
-    return parts[2] ?? null;
-  }
-  if (sourceKey.startsWith("aave-v3-onchain:")) return parts[1] ?? null;
-  if (sourceKey.startsWith("royco-dawn:")) return parts[1] ?? null;
-  return null;
+  const route = resolveYieldSourceKeyRoute(sourceKey);
+  if (!route) return null;
+  return sourceKey.split(":")[route.chainSegmentIndex] ?? null;
 }
 
 function optionalSourceRiskFields(existing: YieldSourceRisk): Partial<YieldSourceRisk> {

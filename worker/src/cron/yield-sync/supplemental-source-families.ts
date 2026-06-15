@@ -16,6 +16,7 @@ import {
 } from "./sources";
 import { runOptionalSourceFamily } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
+import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
 
@@ -91,21 +92,7 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
 export function getSupplementalCandidateFamily(
   sourceKey: string | null | undefined,
 ): SupplementalSourceFamilyKey | null {
-  if (!sourceKey) return null;
-  if (sourceKey.startsWith("protocol-api:morpho-vault:")) return "morpho";
-  if (sourceKey.startsWith("protocol-api:pendle:")) return "pendle";
-  if (
-    sourceKey.startsWith("protocol-api:yearn:") ||
-    sourceKey.startsWith("protocol-api:kong:") ||
-    sourceKey.startsWith("protocol-api:k3:")
-  ) {
-    return "yearnKong";
-  }
-  if (sourceKey.startsWith("protocol-api:beefy:")) return "beefy";
-  if (sourceKey.startsWith("protocol-api:compound-v3-supply:")) return "compoundV3";
-  if (sourceKey.startsWith("aave-v3-onchain:")) return "aaveV3";
-  if (sourceKey.startsWith("royco-dawn:")) return "roycoDawn";
-  return null;
+  return resolveYieldSourceKeyRoute(sourceKey)?.family ?? null;
 }
 
 function buildSourceFamilyCountRecord(): SourceFamilyCountRecord {
