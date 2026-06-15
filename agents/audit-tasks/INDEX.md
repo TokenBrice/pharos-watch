@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**143/733 done (20%)**  `████░░░░░░░░░░░░░░░░`
+**146/733 done (20%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 557 | 12 | 0 | 143 | 21 |
+| Count | 555 | 11 | 0 | 146 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 55 | 2 | 0 | 198 |
-| quality | 315 | 75 | 9 | 0 | 223 |
+| redundancy | 266 | 56 | 1 | 0 | 198 |
+| quality | 315 | 77 | 9 | 0 | 221 |
 | sustainability | 152 | 13 | 1 | 0 | 136 |
 
 ## redundancy (266)
@@ -34,7 +34,7 @@
 | ✅ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
 | ✅ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules | codex | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
-| 🔄 | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp | codex | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
+| ✅ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp | codex | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
 | ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
 | ✅ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call | codex | `src/components/depeg-feed.tsx:L170-L177` |
 | ✅ | [R-011](redundancy/R-011.md) | S | clone | Duplicated `isValidDateOnly` / `DATE_ONLY_RE` across two tooling modules | codex | `scripts/lib/hotspot-ratchet.mjs:L64-L70+L365-L37` |
@@ -325,7 +325,7 @@
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
 | 🔄 | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi | opus-02 | `shared/lib/selector/answers-to-screener.ts:L84-L` |
-| 🔄 | [Q-022](quality/Q-022.md) | S | error-handling | Silent broad catch on stress_signals_latest hides D1 transient errors from observability | opus-03 | `worker/src/cron/dews/source-state/hydration.ts:L` |
+| ✅ | [Q-022](quality/Q-022.md) | S | error-handling | Silent broad catch on stress_signals_latest hides D1 transient errors from observability | opus-03 | `worker/src/cron/dews/source-state/hydration.ts:L` |
 | ✅ | [Q-023](quality/Q-023.md) | S | testing | depeg-incident-utils.ts has no tests despite being the sole parser for pending-depeg UI da | codex | `src/lib/depeg-incident-utils.ts:L57-L80` |
 | ✅ | [Q-024](quality/Q-024.md) | S | type-safety | buildResultSummaryCoordinationProps erases all prop types via Record<string, unknown> | codex | `src/app/screener/picker/handoff.ts:L128` |
 | ✅ | [Q-026](quality/Q-026.md) | S | error-handling | project-tape.ts silently returns ok status when tape projectors throw | codex | `worker/src/cron/project-tape.ts:106-125` |
@@ -340,7 +340,7 @@
 | ✅ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
 | 🔄 | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response | codex | `src/app/screener/picker/use-selector.ts:L54` |
 | ✅ | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox | opus-05 | `src/components/coin-selector.tsx:L205-L207` |
-| 🔄 | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard | opus-06 | `worker/src/handlers/scheduled/five-minute-telegr` |
+| ✅ | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard | opus-06 | `worker/src/handlers/scheduled/five-minute-telegr` |
 | 🔄 | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri | opus-07 | `worker/src/api/telegram-store/forget.ts:L9-L31` |
 | ✅ | [Q-058](quality/Q-058.md) | S | error-handling | inferErrorClass misclassifies errors whose message contains the substring 'http' | opus-08 | `worker/src/cron/blacklist/amount-recovery.ts:L87` |
 | 🔄 | [Q-059](quality/Q-059.md) | S | error-handling | recordDirectApiOutcome records the circuit outcome twice on telemetry read failure | opus-09 | `worker/src/cron/dex-liquidity/orchestrator-phase` |
@@ -349,9 +349,9 @@
 | ⬜ | [Q-063](quality/Q-063.md) | M | testing | reserve-presentation.ts (265 lines) has no tests; incorrect notice tone for stale/failed r |  | `src/components/stablecoin-detail/reserve-present` |
 | ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
 | ⬜ | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds |  | `src/components/table/content-table.tsx:L150-L153` |
-| ⬜ | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics |  | `src/components/toast-container.tsx:L39, L69-L70` |
+| 🔄 | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics | opus-03 | `src/components/toast-container.tsx:L39, L69-L70` |
 | 🔄 | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety | opus-04 | `src/components/key-info-card.tsx:L43, L253, L273` |
-| ⬜ | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc |  | `src/components/yield-scatter-plot.tsx:L139-L171` |
+| 🔄 | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc | opus-05 | `src/components/yield-scatter-plot.tsx:L139-L171` |
 | 🚫 | [Q-071](quality/Q-071.md) | M | error-handling | build-og-learn-images.mjs generates SVGs but never converts them to PNGs — the check:og-le |  | `scripts/maintenance/build-og-learn-images.mjs:L1` |
 | ⬜ | [Q-072](quality/Q-072.md) | M | clone | Hardcoded 4% APY benchmark in yield-source diverges from per-coin benchmarkRate used by th |  | `shared/lib/selector/yield-source.ts:L75; shared/` |
 | ⬜ | [Q-073](quality/Q-073.md) | S | complexity | coverage-matrix-model.ts: three separate O(n log n) sorts over featureSummaries to extract |  | `src/lib/coverage-matrix-model.ts:185-202` |
