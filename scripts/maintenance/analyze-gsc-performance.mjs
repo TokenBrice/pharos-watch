@@ -153,7 +153,7 @@ function parseTargetCtr(value) {
 
 function parsePositiveInteger(value, optionName) {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new Error(`Invalid ${optionName}: ${value}`);
   }
   return parsed;

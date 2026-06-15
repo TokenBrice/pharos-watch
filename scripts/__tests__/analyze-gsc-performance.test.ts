@@ -141,4 +141,14 @@ describe("analyze-gsc-performance", () => {
     expect(stdout).toContain("Target CTR: 5.00%");
     expect(stdout).toContain("targetClickGap=4");
   });
+
+  it("rejects zero for positive integer CLI options", async () => {
+    for (const option of ["--top=0", "--min-impressions=0"]) {
+      await expect(runCli(
+        [option, "/tmp/missing-gsc-export"],
+        { write: () => undefined },
+        { write: () => undefined },
+      )).rejects.toThrow(`Invalid ${option.split("=")[0]}: 0`);
+    }
+  });
 });
