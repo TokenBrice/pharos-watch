@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useSyncExternalStore } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import {
   DataTableEmptyRow,
@@ -14,6 +14,7 @@ import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useSortColumnEvent } from "@/hooks/use-sort-column-event";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
@@ -110,20 +111,6 @@ const MOBILE_SORT_OPTIONS: Array<{ key: ScreenerSortKey; label: string }> = [
   { key: "mintAuthorityScore", label: "Mint Score" },
 ];
 
-function subscribeHydratedLayout(onStoreChange: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  const timeout = window.setTimeout(onStoreChange, 0);
-  return () => window.clearTimeout(timeout);
-}
-
-function getHydratedLayoutSnapshot(): boolean {
-  return typeof window !== "undefined";
-}
-
-function getServerLayoutSnapshot(): boolean {
-  return false;
-}
-
 interface ScreenerTableProps {
   rows: readonly ScreenerRow[];
   logos?: Record<string, string>;
@@ -146,11 +133,7 @@ export function ScreenerTable({
   const compareLinkRef = useRef<HTMLAnchorElement>(null);
   const isMobileLayout = useIsMobile(768);
   const isBelowXl = useIsMobile(1280);
-  const layoutResolved = useSyncExternalStore(
-    subscribeHydratedLayout,
-    getHydratedLayoutSnapshot,
-    getServerLayoutSnapshot,
-  );
+  const layoutResolved = useHydrated();
   const showDesktopSparklines = layoutResolved && !isBelowXl;
 
   // P6 — j/k row cursor over the desktop table rows. o/Enter opens the dossier,

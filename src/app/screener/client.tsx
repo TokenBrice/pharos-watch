@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SelectorCallout } from "@/components/selector/selector-callout";
 import { TableExportMenu } from "@/components/table-export-menu";
@@ -11,6 +11,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary, useReportCards, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useSort } from "@/hooks/use-sort";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { decodeState, encodeState } from "@/lib/url-state";
 import {
@@ -80,18 +81,6 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   },
 ];
 
-function subscribeHydrationStore() {
-  return () => {};
-}
-
-function getHydratedSnapshot() {
-  return true;
-}
-
-function getServerHydrationSnapshot() {
-  return false;
-}
-
 function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<number | null> | undefined {
   if (!asset) return undefined;
   const current = getCirculatingRaw(asset);
@@ -108,11 +97,7 @@ function buildPegDeviationSeries(pegCoin: PegSummaryCoin | undefined): ReadonlyA
 }
 
 export function ScreenerClient() {
-  const hasHydrated = useSyncExternalStore(
-    subscribeHydrationStore,
-    getHydratedSnapshot,
-    getServerHydrationSnapshot,
-  );
+  const hasHydrated = useHydrated();
   const { data: logos } = useLogos();
   const {
     data: stablecoinsData,
