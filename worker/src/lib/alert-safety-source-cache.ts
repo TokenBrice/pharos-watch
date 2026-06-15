@@ -454,6 +454,32 @@ export function getAlertSafetySourceGeneration(methodologyVersion = SAFETY_SCORE
   return `safety-${methodologyVersion}-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`;
 }
 
+/**
+ * Reproduces the unrounded weighted base mean from `computeOverallGrade`
+ * (shared/lib/report-card-overall.ts) so the explain snapshot applies the peg
+ * multiplier and downstream stages to the same pre-round1 value the scoring
+ * engine used — not to the rounded `card.baseScore`. Returns null when fewer
+ * than two non-peg dimensions are rated (mirrors the NR guard there).
+ */
+function rawBaseWeightedMean(
+  dimensions: Record<DimensionKey, AlertSafetyDimensionSnapshot>,
+): number | null {
+  let ratedWeight = 0;
+  let weightedSum = 0;
+  let baseRatedCount = 0;
+  for (const key of DIMENSION_KEYS) {
+    if (key === "pegStability") continue;
+    const score = dimensions[key].score;
+    if (score !== null) {
+      ratedWeight += DIMENSION_WEIGHTS[key];
+      weightedSum += score * DIMENSION_WEIGHTS[key];
+      baseRatedCount++;
+    }
+  }
+  if (baseRatedCount < 2 || ratedWeight === 0) return null;
+  return weightedSum / ratedWeight;
+}
+
 function buildAlertSafetyExplainSnapshot(card: ReportCard): AlertSafetyExplainSnapshot | undefined {
   const dimensions = {} as Record<DimensionKey, AlertSafetyDimensionSnapshot>;
   for (const key of DIMENSION_KEYS) {
@@ -479,13 +505,20 @@ function buildAlertSafetyExplainSnapshot(card: ReportCard): AlertSafetyExplainSn
 
   let postPegScore: number | null = null;
 
-  if (baseScore != null) {
+  // Apply the peg multiplier to the unrounded weighted mean, exactly as
+  // computeOverallGrade does. Reconstructing it from the dimension scores
+  // avoids re-deriving from the rounded card.baseScore (which diverges
+  // slightly from the value the scoring engine actually used). Fall back to
+  // baseScore only when the mean cannot be reconstructed.
+  const pegMultiplierBase = rawBaseWeightedMean(dimensions) ?? baseScore;
+
+  if (pegMultiplierBase != null) {
     if (pegScore != null) {
       postPegScore = pegScore === 0
         ? 0
-        : baseScore * Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
+        : pegMultiplierBase * Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
     } else if (rawInputs.navToken) {
-      postPegScore = baseScore;
+      postPegScore = pegMultiplierBase;
     }
   }
 

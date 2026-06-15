@@ -216,6 +216,32 @@ describe("alert safety source cache", () => {
     expect(assessed.envelope).toBeNull();
   });
 
+  it("derives the post-peg stage from the unrounded weighted mean, not rounded baseScore", () => {
+    // Dimension scores chosen so the weighted mean (60.2778) rounds to a
+    // baseScore (60.3) that, after the peg multiplier, would round to a
+    // different post-peg stage (55.2) than the engine's actual value (55.1).
+    const envelope = buildAlertSafetySourceEnvelope([
+      reportCard({
+        id: "divergent",
+        overallGrade: "D",
+        overallScore: 55,
+        baseScore: 60.3,
+        dimensions: {
+          pegStability: dimension("C", 80, "Peg detail"),
+          liquidity: dimension("D", 60, "Liquidity detail"),
+          resilience: dimension("D", 60, "Resilience detail"),
+          decentralization: dimension("D", 60, "Decentralization detail"),
+          dependencyRisk: dimension("D", 61, "Dependency detail"),
+        },
+        rawInputs: { ...reportCard().rawInputs, pegScore: 80, liquidityScore: 60 },
+      }),
+    ], "7.09", 1_700_000_000);
+
+    const stages = envelope.snapshot["divergent"].explain?.stages;
+    expect(stages?.baseScore).toBe(60.3);
+    expect(stages?.postPegScore).toBe(55.1);
+  });
+
   it("keeps explain data through the source-cache to alert-snapshot envelope path", () => {
     const source = buildAlertSafetySourceEnvelope([reportCard()], "7.09", 1_700_000_000);
     const alertSnapshot = buildAlertSafetySnapshotEnvelope(source.snapshot, source.generation);
