@@ -1,17 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ReportCardMini } from "@/components/report-card-mini";
+import { LazySection } from "@/components/lazy-section";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StressTestPanel } from "@/components/stress-test-panel";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
-import { useNearViewport } from "@/hooks/use-near-viewport";
 import { useStressTest } from "@/hooks/use-stress-test";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
-import { cn } from "@/lib/utils";
 import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import type { ReportCard } from "@shared/types";
 import {
@@ -35,26 +34,18 @@ import {
   SafetySimulationBanner,
 } from "./presentational";
 
-function LazyCard({ children, className }: { children: ReactNode; className?: string }) {
-  const { ref, near } = useNearViewport<HTMLDivElement>("100px");
-
-  return (
-    <div ref={ref} className={cn(className, near && "pharos-card-enter")}>
-      {near ? children : (
-        <div
-          className="h-[340px] rounded-xl border bg-muted/20 animate-pulse flex flex-col items-center justify-center gap-2"
-          role="status"
-          aria-busy="true"
-          aria-label="Loading score card"
-        >
-          <div className="h-8 w-8 rounded-full bg-muted/40" />
-          <div className="h-4 w-20 bg-muted/40 rounded" />
-          <div className="h-6 w-12 bg-muted/40 rounded" />
-        </div>
-      )}
-    </div>
-  );
-}
+const lazyCardSkeleton = (
+  <div
+    className="h-[340px] rounded-xl border bg-muted/20 animate-pulse flex flex-col items-center justify-center gap-2"
+    role="status"
+    aria-busy="true"
+    aria-label="Loading score card"
+  >
+    <div className="h-8 w-8 rounded-full bg-muted/40" />
+    <div className="h-4 w-20 bg-muted/40 rounded" />
+    <div className="h-6 w-12 bg-muted/40 rounded" />
+  </div>
+);
 
 export function ReportCardsClient() {
   const {
@@ -148,19 +139,21 @@ export function ReportCardsClient() {
   const showGroupedCards = gradeFilter === "all" && !isSimulating && sortDirection === "desc";
 
   const renderMiniCard = useCallback((card: ReportCard, index: number) => (
-    <LazyCard key={card.id}>
-      <ReportCardMini
-        card={card}
-        logo={logos?.[card.id]}
-        isSimulated={affectedIds.has(card.id)}
-        isSimulating={isSimulating}
-        originalGrade={originalCardMap.get(card.id)?.overallGrade}
-        originalScore={originalCardMap.get(card.id)?.overallScore}
-        coreSettlement={coreSettlementProfiles.has(card.id)}
-        animIndex={index % 5}
-        gradeVersionVariant="tooltip-only"
-      />
-    </LazyCard>
+    <LazySection key={card.id} rootMargin="100px" placeholder={lazyCardSkeleton}>
+      <div className="pharos-card-enter">
+        <ReportCardMini
+          card={card}
+          logo={logos?.[card.id]}
+          isSimulated={affectedIds.has(card.id)}
+          isSimulating={isSimulating}
+          originalGrade={originalCardMap.get(card.id)?.overallGrade}
+          originalScore={originalCardMap.get(card.id)?.overallScore}
+          coreSettlement={coreSettlementProfiles.has(card.id)}
+          animIndex={index % 5}
+          gradeVersionVariant="tooltip-only"
+        />
+      </div>
+    </LazySection>
   ), [affectedIds, coreSettlementProfiles, isSimulating, logos, originalCardMap]);
 
   if (isLoadingCards) {
