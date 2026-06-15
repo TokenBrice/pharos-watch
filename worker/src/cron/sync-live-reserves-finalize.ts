@@ -17,7 +17,7 @@ import {
   type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
 import {
-  persistLiveReserveCursorState,
+  clearCursorStateIfComplete,
   type LiveReserveCursorTailState,
   type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
@@ -78,7 +78,7 @@ async function persistCursorStateForRun(args: FinalizeReserveSyncRunArgs): Promi
   cursorPersistError: string | null;
 }> {
   try {
-    await persistLiveReserveCursorState(
+    await clearCursorStateIfComplete(
       args.db,
       args.deferredCoins,
       args.nextCursorStablecoinId,

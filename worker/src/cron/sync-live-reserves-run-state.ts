@@ -265,7 +265,11 @@ export async function recordDeferredTail(
   };
 }
 
-export async function persistLiveReserveCursorState(
+/**
+ * Deferred-tail runs persist their cursor before finalization; completed runs
+ * clear any previous cursor row so the next run starts from the beginning.
+ */
+export async function clearCursorStateIfComplete(
   db: D1Database,
   deferredCoins: number,
   nextCursorStablecoinId: string | null,
