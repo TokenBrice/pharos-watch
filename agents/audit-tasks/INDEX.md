@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**142/733 done (19%)**  `████░░░░░░░░░░░░░░░░`
+**143/733 done (20%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 561 | 9 | 0 | 142 | 21 |
+| Count | 557 | 12 | 0 | 143 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 55 | 1 | 0 | 199 |
-| quality | 315 | 74 | 7 | 0 | 226 |
+| redundancy | 266 | 55 | 2 | 0 | 198 |
+| quality | 315 | 75 | 9 | 0 | 223 |
 | sustainability | 152 | 13 | 1 | 0 | 136 |
 
 ## redundancy (266)
@@ -229,7 +229,7 @@
 | ⬜ | [R-195](redundancy/R-195.md) | S | clone | BCB regulatory annotation label and timestamp duplicated verbatim across two BRL stablecoi |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ⬜ | [R-196](redundancy/R-196.md) | S | wrapper | ExplainerPageShell is a pure pass-through that adds no logic |  | `src/app/learn/mechanisms/explainer-page-shell.ts` |
 | ⬜ | [R-197](redundancy/R-197.md) | S | clone | Duplicate `overallScore`/`safetyScore` both set to the same value in selector-data-adapter |  | `src/app/screener/picker/selector-data-adapter.ts` |
-| ⬜ | [R-198](redundancy/R-198.md) | S | dead-code | homepage-skeletons.tsx is a one-line file with a single external consumer |  | `src/components/homepage-skeletons.tsx:L1-L5` |
+| 🔄 | [R-198](redundancy/R-198.md) | S | dead-code | homepage-skeletons.tsx is a one-line file with a single external consumer | codex | `src/components/homepage-skeletons.tsx:L1-L5` |
 | ⬜ | [R-199](redundancy/R-199.md) | S | wrapper | depeg-resolver-row-card.tsx is a thin glue file that only re-exports DepegResolverRowCard |  | `src/components/depeg-resolver-row-card.tsx:1-47` |
 | ⬜ | [R-200](redundancy/R-200.md) | S | clone | Two independent YYYY-MM month-name formatters in the same feature area |  | `src/components/cemetery-tombstones.tsx:L204-L215` |
 | ⬜ | [R-201](redundancy/R-201.md) | S | clone | FlowChart computes the data range twice — once from raw hourly buckets, once from shaped c |  | `src/components/flow-chart.tsx:L133-L140, L175-L1` |
@@ -350,7 +350,7 @@
 | ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
 | ⬜ | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds |  | `src/components/table/content-table.tsx:L150-L153` |
 | ⬜ | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics |  | `src/components/toast-container.tsx:L39, L69-L70` |
-| ⬜ | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety |  | `src/components/key-info-card.tsx:L43, L253, L273` |
+| 🔄 | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety | opus-04 | `src/components/key-info-card.tsx:L43, L253, L273` |
 | ⬜ | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc |  | `src/components/yield-scatter-plot.tsx:L139-L171` |
 | 🚫 | [Q-071](quality/Q-071.md) | M | error-handling | build-og-learn-images.mjs generates SVGs but never converts them to PNGs — the check:og-le |  | `scripts/maintenance/build-og-learn-images.mjs:L1` |
 | ⬜ | [Q-072](quality/Q-072.md) | M | clone | Hardcoded 4% APY benchmark in yield-source diverges from per-coin benchmarkRate used by th |  | `shared/lib/selector/yield-source.ts:L75; shared/` |
@@ -359,11 +359,11 @@
 | ⬜ | [Q-075](quality/Q-075.md) | S | type-safety | Unsafe Number(bigint) fallback for token balances loses precision on large reserves |  | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L13` |
 | ⬜ | [Q-076](quality/Q-076.md) | M | complexity | supply7dOutcome evaluates wrong coin when symbol ranking changes day-over-day |  | `worker/src/cron/daily-digest/digest-next-trigger` |
 | ⬜ | [Q-079](quality/Q-079.md) | M | type-safety | isFallbackCronResult discriminates on 'metadata' in result — fragile structural guard |  | `worker/src/cron/sync-stablecoins/fallback.ts:22-` |
-| ⬜ | [Q-080](quality/Q-080.md) | S | type-safety | Eventless fast-path result built via Object.assign with an unsafe cast |  | `worker/src/cron/dispatch-telegram-alerts.ts:L374` |
+| 🔄 | [Q-080](quality/Q-080.md) | S | type-safety | Eventless fast-path result built via Object.assign with an unsafe cast | opus-08 | `worker/src/cron/dispatch-telegram-alerts.ts:L374` |
 | ⬜ | [Q-081](quality/Q-081.md) | S | type-safety | Four independent nowSec timestamps computed within a single fan-out Promise.all |  | `worker/src/cron/dispatch-telegram-subscribers.ts` |
 | ⬜ | [Q-083](quality/Q-083.md) | M | testing | depeg-resolver resolution.ts — K2/R1/R2 kill and anchor factor codes never directly assert |  | `shared/lib/depeg-resolver/resolution.ts:L67-L130` |
 | ⬜ | [Q-086](quality/Q-086.md) | M | type-safety | Redemption backstop toEntry throws on schema parse failure, causing full snapshot load to  |  | `worker/src/lib/redemption-backstops-store.ts:L27` |
-| ⬜ | [Q-088](quality/Q-088.md) | S | error-handling | `CaseStudyChart` passes an empty array to `PegDeviationChart` during loading, rendering an |  | `src/app/learn/case-studies/case-study-chart.tsx:` |
+| 🔄 | [Q-088](quality/Q-088.md) | S | error-handling | `CaseStudyChart` passes an empty array to `PegDeviationChart` during loading, rendering an | opus-10 | `src/app/learn/case-studies/case-study-chart.tsx:` |
 | ⬜ | [Q-090](quality/Q-090.md) | S | error-handling | Response bodies not consumed on early-exit paths in checkSitemapUrls (check-seo-live-smoke |  | `scripts/ci/check-seo-live-smoke.mjs:L125-L148` |
 | ⬜ | [Q-093](quality/Q-093.md) | S | error-handling | yield-history-chart-model onSourceChange is a noop when externalSourceKey is set, silently |  | `src/components/yield-history-chart-model.ts:L373` |
 | ✅ | [Q-094](quality/Q-094.md) | S | error-handling | yield-venue-risk-calibration.ts reads .env.local by splitting on '=' which breaks values c | codex | `scripts/maintenance/yield-venue-risk-calibration` |
@@ -580,7 +580,7 @@
 | ⬜ | [Q-263](quality/Q-263.md) | S | error-handling | Feedback modal honeypot input has readOnly + value='' but still reads via body JSON |  | `src/components/feedback-modal.tsx:L251-L259, L97` |
 | ⬜ | [Q-264](quality/Q-264.md) | S | error-handling | freeze-stablecoin.ts fetches the entire /api/stablecoins payload to find one coin |  | `scripts/maintenance/freeze-stablecoin.ts:L78-L86` |
 | ⬜ | [Q-265](quality/Q-265.md) | S | error-handling | Dependency-risk ceiling detail can mislabel a mechanism-bound ceiling as 'wrapper' |  | `shared/lib/report-card-dependency.ts:109-147` |
-| 🔄 | [Q-266](quality/Q-266.md) | S | naming | getDewsFreshness: computedAt=0 (Unix epoch) silently treated as missing data | codex | `src/lib/dews-signal-utils.ts:L84-L85` |
+| ✅ | [Q-266](quality/Q-266.md) | S | naming | getDewsFreshness: computedAt=0 (Unix epoch) silently treated as missing data | codex | `src/lib/dews-signal-utils.ts:L84-L85` |
 | ⬜ | [Q-267](quality/Q-267.md) | S | complexity | CohortBucket.size duplicates scoresDescending.length and is maintained in parallel |  | `src/lib/yield-view-model.ts:785-815, 825-837` |
 | ✅ | [Q-268](quality/Q-268.md) | S | type-safety | handleApiKeyAuditLog declares request optional but dereferences it unconditionally | codex | `worker/src/api/api-key-audit-log.ts:30-42` |
 | ⬜ | [Q-269](quality/Q-269.md) | S | testing | bounded-queue.ts has no test for worker exception propagation leaving sparse results array |  | `worker/src/cron/shared/bounded-queue.ts:L37-64 +` |
