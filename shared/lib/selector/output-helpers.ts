@@ -38,23 +38,10 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
       return row.currentDeviationBps != null
         ? `${Math.round(row.currentDeviationBps)} bps deviation`
         : "active depeg flag";
-    case "depeg-event-count":
-      return `${row.depegEventCount} depeg events`;
     case "peg-score-floor":
       return row.pegScore != null
         ? `PegScore ${Math.round(row.pegScore)}`
         : "missing PegScore";
-    case "peg-stability-floor":
-      if (row.pegStabilityScore != null && row.pegScore != null) {
-        return `peg history ${Math.round(row.pegStabilityScore)}, PegScore ${Math.round(row.pegScore)}`;
-      }
-      if (row.pegStabilityScore != null) {
-        return `peg history ${Math.round(row.pegStabilityScore)}`;
-      }
-      if (row.pegScore != null) {
-        return `PegScore ${Math.round(row.pegScore)}`;
-      }
-      return "missing peg-quality data";
     case "dews-ceiling":
       return row.dewsScore != null ? `DEWS ${Math.round(row.dewsScore)}` : "missing DEWS";
     case "safety-resilience-floor":

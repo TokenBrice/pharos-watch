@@ -278,9 +278,7 @@ export function renderWatchText(
 
 const LOWER_REASON_LABELS: Readonly<Record<string, string>> = {
   "active-depeg": "the current peg-deviation gate",
-  "depeg-event-count": "depeg history with incomplete peg-quality coverage",
   "peg-score-floor": "the PegScore floor",
-  "peg-stability-floor": "the peg-stability floor",
   "safety-resilience-floor": "the resilience floor",
   "safety-dependency-risk-floor": "the dependency-risk floor",
   "dews-ceiling": "the stress-signal ceiling",
