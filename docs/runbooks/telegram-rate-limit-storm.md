@@ -9,7 +9,7 @@ Detection signals:
 - `/api/status` -> `telegramBot.pendingDeliveries` trends upward across consecutive runs.
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `oldestPendingAgeSec`, `estimatedDrainTimeSec`, `pendingNearTtlCount`, or `pendingCapacityAfter.nearTtl` above normal.
 - `telegramBot.retryErrorClassCounts.rate_limit` dominates.
-- Watchdog alert: `pendingDeliveries > 500` sustained for >20 min, oldest pending age over 15 min, estimated drain time over 30 min, or any near-TTL pending row triggers an operator alert on the standard `sendAlert()` rail.
+- Watchdog alert: `pendingDeliveries > 500` sustained for 20 min or more, oldest pending age 15 min or more, estimated drain time 30 min or more, or any near-TTL pending row triggers an operator alert on the standard `sendAlert()` rail.
 - `oldestPendingDeliveryAgeSec` approaching `PENDING_TTL_SEC` (3600).
 - `npm run check:telegram-load` shows the matching 429-storm scenario exceeding the one-hour maximum at the current watcher scale.
 
