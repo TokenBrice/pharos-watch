@@ -6,6 +6,7 @@ import {
   type SelectorOutput,
 } from "@shared/lib/selector";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
+import type { SelectorResultSummaryProps } from "@/components/selector/selector-result-summary";
 import {
   shouldSkipExitStep,
   type SelectorStep,
@@ -24,6 +25,11 @@ export interface ScreenerHandoffView {
   url: string;
   filterChips: Array<{ label: string; value: string }>;
 }
+
+type ResultSummaryCoordinationProps = Pick<
+  SelectorResultSummaryProps,
+  "answerChips" | "priorityLabels" | "filterChips" | "usedRelaxedFallback" | "relaxedReasons"
+>;
 
 export function buildScreenerHandoff(output: SelectorOutput | null): ScreenerHandoffView {
   if (!output) return { url: "/screener/", filterChips: [] };
@@ -125,7 +131,7 @@ export function buildResultSummaryCoordinationProps({
   output: SelectorOutput;
   state: SelectorWizardState;
   screenerHandoff: ScreenerHandoffView;
-}): Record<string, unknown> {
+}): ResultSummaryCoordinationProps {
   const relaxed = output as SelectorOutput & {
     usedRelaxedFallback?: boolean;
     relaxedReasons?: readonly string[];
@@ -133,7 +139,6 @@ export function buildResultSummaryCoordinationProps({
   return {
     answerChips: answerChipsFor(output.input, state),
     priorityLabels: priorityLabelsFor(output.input),
-    screenerFilterChips: screenerHandoff.filterChips,
     filterChips: screenerHandoff.filterChips,
     usedRelaxedFallback: relaxed.usedRelaxedFallback ?? false,
     relaxedReasons: relaxed.relaxedReasons ?? [],

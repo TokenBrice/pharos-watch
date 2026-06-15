@@ -41,7 +41,7 @@ export interface SelectorSummarySessionRecovery {
   onDismiss?: () => void;
 }
 
-interface SelectorResultSummaryProps {
+export interface SelectorResultSummaryProps {
   profile: SelectorProfile;
   input: SelectorInput;
   universe: { active: number; surviving: number };
