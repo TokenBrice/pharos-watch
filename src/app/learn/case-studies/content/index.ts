@@ -10,6 +10,19 @@ import { content as feiProtocol } from "./fei-protocol";
 import { content as usrResolv2026 } from "./usr-resolv-2026";
 import { content as pmusdPreciousMetals } from "./pmusd-precious-metals";
 import { content as apxusdDatCollateral } from "./apxusd-dat-collateral";
+import { content as lusdFlightToSafety2023 } from "./lusd-flight-to-safety-2023";
+import { content as streamElixirContagion2025 } from "./stream-elixir-contagion-2025";
+import { content as busdPaxos2023 } from "./busd-paxos-2023";
+import { content as multichainUsdc2023 } from "./multichain-usdc-2023";
+import { content as eurtMicaExit2024 } from "./eurt-mica-exit-2024";
+import { content as maiQidaoBridge2023 } from "./mai-qidao-bridge-2023";
+import { content as susdSip4202025 } from "./susd-sip420-2025";
+import { content as fdusdSunFdt2025 } from "./fdusd-sun-fdt-2025";
+import { content as usdfFalcon2025 } from "./usdf-falcon-2025";
+import { content as usdnNeutrino2022 } from "./usdn-neutrino-2022";
+import { content as usdxKava2022 } from "./usdx-kava-2022";
+import { content as ftxContagion2022 } from "./ftx-contagion-2022";
+import { content as usddTronReserve2024 } from "./usdd-tron-reserve-2024";
 
 /**
  * Canonical display + sitemap order. Tier 1 (one per archetype, marquee) first,
@@ -17,14 +30,27 @@ import { content as apxusdDatCollateral } from "./apxusd-dat-collateral";
  */
 export const CASE_STUDY_LIST: readonly CaseStudy[] = [
   usdcSvb2023,
+  lusdFlightToSafety2023,
   terraUst2022,
   daiBlackThursday,
   usdeOracle2025,
   usd0ppUsual2025,
   crvusdExploitTrilogy,
+  susdSip4202025,
   ironTitan2021,
+  usdnNeutrino2022,
   feiProtocol,
   usrResolv2026,
+  streamElixirContagion2025,
+  usdfFalcon2025,
+  fdusdSunFdt2025,
+  busdPaxos2023,
+  multichainUsdc2023,
+  ftxContagion2022,
+  eurtMicaExit2024,
+  usddTronReserve2024,
+  usdxKava2022,
+  maiQidaoBridge2023,
   pmusdPreciousMetals,
   apxusdDatCollateral,
 ];

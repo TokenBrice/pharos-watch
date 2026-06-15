@@ -8,7 +8,10 @@ import {
   CASE_STUDIES,
   caseStudySlugForEvent,
 } from "../content";
-import { CASE_STUDY_CLIENT_BY_COIN_ID } from "../content/client-index";
+import {
+  CASE_STUDY_CLIENT_BY_CEMETERY_ID,
+  CASE_STUDY_CLIENT_BY_COIN_ID,
+} from "../content/client-index";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const CEMETERY_PATH = join(process.cwd(), "public/datasets/stablecoin-cemetery.json");
@@ -29,8 +32,8 @@ const VALID_ARCHETYPES = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
 const VALID_OUTCOMES = new Set(["survived", "wounded", "died"]);
 
 describe("case-study content", () => {
-  it("ships eleven studies with unique slugs", () => {
-    expect(CASE_STUDY_LIST).toHaveLength(11);
+  it("ships twenty-four studies with unique slugs", () => {
+    expect(CASE_STUDY_LIST).toHaveLength(24);
     expect(new Set(CASE_STUDY_ORDER).size).toBe(CASE_STUDY_LIST.length);
   });
 
@@ -51,6 +54,19 @@ describe("case-study content", () => {
     );
 
     expect(CASE_STUDY_CLIENT_BY_COIN_ID).toEqual(expected);
+  });
+
+  it("keeps the client-safe cemetery lookup in sync without importing article bodies", () => {
+    const expected = Object.fromEntries(
+      CASE_STUDY_LIST
+        .filter((study) => study.cemeteryId)
+        .map((study) => [
+          study.cemeteryId!,
+          { slug: study.slug, title: study.title, outcome: study.outcome },
+        ]),
+    );
+
+    expect(CASE_STUDY_CLIENT_BY_CEMETERY_ID).toEqual(expected);
   });
 
   describe.each(CASE_STUDY_LIST)("$slug", (study) => {

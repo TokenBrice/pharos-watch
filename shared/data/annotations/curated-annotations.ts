@@ -1414,6 +1414,15 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       severity: "med",
       href: "https://www.liquity.org/blog/announcing-liquity",
     },
+    {
+      // 2023-03-11 — flight-to-safety premium during the SVB weekend; LUSD's
+      // ETH-only, fiat-free design inverted the contagion that broke USDC/Dai/FRAX.
+      ts: Date.UTC(2023, 2, 11),
+      kind: "depeg",
+      label: "Flight to safety: LUSD trades to a premium as SVB breaks USDC/Dai/FRAX",
+      severity: "med",
+      href: "https://www.liquity.org/blog/liquity-q1-report",
+    },
   ],
   "mai-qidao": [
     {
