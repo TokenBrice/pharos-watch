@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   runSelector,
+  validateSelectorSnapshot,
   type SelectorInput,
   type SelectorOutput,
 } from "@shared/lib/selector";
@@ -55,7 +56,11 @@ async function defaultFetchSnapshot(sid: string): Promise<SnapshotFetchResult> {
       return { kind: "error", reason: "snapshot-store-unavailable" };
     }
     if (!response.ok) throw new Error(`Snapshot fetch failed: ${response.status}`);
-    return { kind: "found", output: (await response.json()) as SelectorOutput };
+    const snapshot = validateSelectorSnapshot(await response.json());
+    if (!snapshot.ok) {
+      return { kind: "error", reason: "snapshot-corrupt" };
+    }
+    return { kind: "found", output: snapshot.snapshot };
   } catch (error) {
     return {
       kind: "error",

@@ -123,6 +123,17 @@ vi.mock("@shared/lib/selector", async () => {
     })),
     selectorAnswersToScreenerFilters: vi.fn(() => ({ filters: {}, divergenceWarnings: [] })),
     computeSnapshotId: vi.fn(async () => "stub-sid"),
+    validateSelectorSnapshot: vi.fn((value: unknown) => {
+      if (
+        value != null
+        && typeof value === "object"
+        && Array.isArray((value as { recommended?: unknown }).recommended)
+        && (value as { input?: unknown }).input != null
+      ) {
+        return { ok: true, snapshot: value };
+      }
+      return { ok: false, error: "shape" };
+    }),
     getTemplate: vi.fn(() => ({ oneLineExplanation: "Dimension watch line for test." })),
     canonicalizeForDatasetHash: vi.fn((v: unknown) => JSON.stringify(v)),
     SELECTOR_VERSION: "selector-v1.2",
@@ -680,6 +691,22 @@ describe("SelectorClient — snapshot recall", () => {
     expect(
       await screen.findByText(/Original snapshot no longer cached/i),
     ).toBeTruthy();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects structurally corrupt snapshot payloads returned with 200", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ input: { profile: "treasury" }, rows: "not-an-array" }),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    setUrlSearch("sid=00112233445566778899aabbccddeeff");
+    render(<SelectorClient />);
+
+    expect(await screen.findByText(/snapshot data is corrupt/i)).toBeTruthy();
 
     vi.unstubAllGlobals();
   });
