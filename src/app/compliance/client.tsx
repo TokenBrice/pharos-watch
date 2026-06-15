@@ -79,10 +79,16 @@ export function ComplianceClient() {
 
   const rawRegime = getParam("regime", "");
   const rawStatus = getParam("status", "all");
+  // Legacy alias `tokenType` is read as a fallback for the canonical `type`
+  // param to keep old `/compliance` deep links working. Deprecated since the
+  // regime split; remove once analytics show no `tokenType=` traffic for a
+  // full release window (canonical writers below only ever emit `type`).
   const rawTokenType = getParam("type", getParam("tokenType", "all"));
   const regimeFilter = inferRegimeFromLegacyParams({ rawRegime, rawStatus, rawTokenType });
   const statusFilter = normalizeComplianceStatusFilter(rawStatus, regimeFilter);
   const tokenTypeFilter = regimeFilter === "genius" ? "all" : normalizeMicaTokenTypeFilter(rawTokenType);
+  // Legacy alias `pegCurrency` -> canonical `peg`; same deprecation/removal plan
+  // as `tokenType` above.
   const pegFilter = normalizePegFilter(getParam("peg", getParam("pegCurrency", "all")));
 
   const setRegimeFilter = useCallback(
