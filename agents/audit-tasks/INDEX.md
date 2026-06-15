@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**114/733 done (16%)**  `███░░░░░░░░░░░░░░░░░`
+**117/733 done (16%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 596 | 4 | 0 | 114 | 19 |
+| Count | 593 | 4 | 0 | 117 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 49 | 1 | 0 | 206 |
-| quality | 315 | 56 | 2 | 0 | 250 |
-| sustainability | 152 | 9 | 1 | 0 | 140 |
+| redundancy | 266 | 50 | 1 | 0 | 205 |
+| quality | 315 | 57 | 2 | 0 | 249 |
+| sustainability | 152 | 10 | 1 | 0 | 139 |
 
 ## redundancy (266)
 
@@ -28,7 +28,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| 🔄 | [R-002](redundancy/R-002.md) | S | clone | REVIEWED_YIELD_EXPANSION_AT defined independently in two files with identical value | codex | `shared/lib/redemption-backstop-configs/queue-red` |
+| ✅ | [R-002](redundancy/R-002.md) | S | clone | REVIEWED_YIELD_EXPANSION_AT defined independently in two files with identical value | codex | `shared/lib/redemption-backstop-configs/queue-red` |
 | ✅ | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files | codex | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
 | ⬜ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store |  | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
@@ -218,7 +218,7 @@
 | ⬜ | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s |  | `src/generated/depeg-event-related-data.json.d.ts` |
 | ⬜ | [R-185](redundancy/R-185.md) | S | clone | Local CAUSE_OF_DEATH_LABELS in event-card.tsx duplicates shared CAUSE_META |  | `src/components/tape/event-card.tsx:L345-L354` |
 | ⬜ | [R-186](redundancy/R-186.md) | S | clone | renderDelta and renderMetric are near-identical local render helpers in telegram-bot-stats |  | `src/components/status/telegram-bot-stats.tsx:L24` |
-| ⬜ | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches |  | `shared/lib/classification/domain.ts:L63-L71` |
+| 🔄 | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches | codex | `shared/lib/classification/domain.ts:L63-L71` |
 | ⬜ | [R-188](redundancy/R-188.md) | S | wrapper | expandIds and defineBatch are two utilities for the same semantic operation with different |  | `shared/lib/redemption-backstop-configs/shared.ts` |
 | ✅ | [R-189](redundancy/R-189.md) | S | dead-code | z.lazy forward reference in YieldHistoryPointSchema is unnecessary — YieldSourceRiskSchema | codex | `shared/types/yield.ts:L117` |
 | ⬜ | [R-190](redundancy/R-190.md) | S | wrapper | No-op identity wrapper functions pollingDescriptor and staticDescriptor |  | `src/lib/api-query-registry.ts:L126-L132, src/lib` |
@@ -440,7 +440,7 @@
 | ✅ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block | codex | `worker/src/handlers/scheduled/hourly-live-reserv` |
 | ✅ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function | codex | `worker/src/cron/sync-live-reserves-run-state.ts:` |
 | ✅ | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key | codex | `src/components/status/admin-action-button.tsx:L3` |
-| ⬜ | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic |  | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
+| 🔄 | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic | codex | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
 | ⬜ | [Q-029](quality/Q-029.md) | M | complexity | IIFE inside JSX render obscures dominance-breakdown logic in chains/client.tsx |  | `src/app/chains/client.tsx:L292-L385` |
 | ⬜ | [Q-030](quality/Q-030.md) | S | type-safety | psiBand is cast to ConditionBand without membership guard in digest-archive-client |  | `src/components/digest-archive-client.tsx:296, 31` |
 | ✅ | [Q-032](quality/Q-032.md) | S | error-handling | chart-export.ts silently swallows errors; caller has no way to surface failure to the user | codex | `src/lib/chart-export.ts:15-17` |
@@ -617,7 +617,7 @@
 | ⬜ | [Q-300](quality/Q-300.md) | S | complexity | computeWeightedMedianPrice uses a lower-fence boundary (>= halfWeight) that selects the fi |  | `worker/src/lib/dex-price-estimators.ts:L38-L45` |
 | ⬜ | [Q-301](quality/Q-301.md) | S | security | Transitive advisories in build/dev chain (ws high, postcss moderate) tracked but the prod- |  | `package.json:scripts.audit:deps (`npm audit --au` |
 | ⬜ | [Q-302](quality/Q-302.md) | M | error-handling | Inline AbortSignal.any timeout composition in worker fetch-retry bypasses the shared creat |  | `worker/src/lib/fetch-retry.ts:42-49 vs shared/li` |
-| 🔄 | [Q-303](quality/Q-303.md) | S | type-safety | Unsafe key cast into CRON_STATUS_COLORS duplicated in two render paths | codex | `src/app/admin/sections/cron-lane-table.tsx:106, ` |
+| ✅ | [Q-303](quality/Q-303.md) | S | type-safety | Unsafe key cast into CRON_STATUS_COLORS duplicated in two render paths | codex | `src/app/admin/sections/cron-lane-table.tsx:106, ` |
 | ⬜ | [Q-304](quality/Q-304.md) | S | naming | OG card 24h change derived from adjacent daily supply_history snapshots, not a true 24h wi |  | `worker/src/api/og.tsx:236-243,288-291` |
 | ✅ | [Q-305](quality/Q-305.md) | S | type-safety | events.ts accepts negative since/until and unbounded epoch values without validating they  | codex | `worker/src/api/events.ts:44-49,111-114` |
 | ⬜ | [Q-306](quality/Q-306.md) | M | type-safety | digest-snapshot casts DB-stored JSON straight to DigestInputData without shape validation |  | `worker/src/api/digest-snapshot.ts:89-107` |
@@ -708,7 +708,7 @@
 | ⬜ | [S-017](sustainability/S-017.md) | M | coupling | repair-non-usd-fiat-depeg-history.ts uses module-scope mutable D1 and operation-mode const |  | `worker/scripts/repair-non-usd-fiat-depeg-history` |
 | ⬜ | [S-019](sustainability/S-019.md) | S | coupling | currentVersion string in lib files is manually synced with the top entry version in data f |  | `shared/lib/methodology-versions/yield-methodolog` |
 | ⬜ | [S-020](sustainability/S-020.md) | S | complexity | getChainTrackedDeploymentCount calls getTrackedDeploymentsForChain which re-scans all 406  |  | `src/app/chains/static-chain-content.ts:L75-L113` |
-| 🔄 | [S-021](sustainability/S-021.md) | S | config | check-cron-schedule-sync.ts reads wrangler.toml with a relative path and no explicit root  | codex | `scripts/ci/check-cron-schedule-sync.ts:L15` |
+| ✅ | [S-021](sustainability/S-021.md) | S | config | check-cron-schedule-sync.ts reads wrangler.toml with a relative path and no explicit root  | codex | `scripts/ci/check-cron-schedule-sync.ts:L15` |
 | ⬜ | [S-023](sustainability/S-023.md) | M | coupling | exit-route-map.tsx hard-codes SVG coordinate literals with no connection to EXIT_ROUTE_SCE |  | `src/components/exit-route-map.tsx:L203-L348` |
 | ⬜ | [S-045](sustainability/S-045.md) | S | config | NO_FREEZE_IMPL hardcoded implementation address bypasses probe for the known-safe impl |  | `worker/src/cron/sync-usds-status.ts:17-18,99` |
 | ⬜ | [S-046](sustainability/S-046.md) | S | scalability | Module-scope mutable Map in fx-rate-state.ts grows unboundedly across isolate lifetime |  | `worker/src/lib/fx-rate-state.ts:L183-L218` |
@@ -728,7 +728,7 @@
 | ⬜ | [S-078](sustainability/S-078.md) | S | coupling | toTimestampMs from yield-history-chart-model is imported by a page-level module, coupling  |  | `src/components/yield-history-chart-model.ts:L203` |
 | ⬜ | [S-079](sustainability/S-079.md) | S | config | PEG_FILTER_OPTIONS is a hardcoded three-entry subset with no documentation of the selectio |  | `shared/lib/classification/pegs.ts:L416-L421` |
 | ⬜ | [S-080](sustainability/S-080.md) | S | config | Worker runtime binding order numbers in env-contract registry are non-unique across status |  | `shared/lib/env-contract/registry.ts:L200-272` |
-| ⬜ | [S-081](sustainability/S-081.md) | S | config | render-env-example.ts applies an initial alphabetical sort that is unconditionally discard |  | `shared/lib/env-contract/render-env-example.ts:L1` |
+| 🔄 | [S-081](sustainability/S-081.md) | S | config | render-env-example.ts applies an initial alphabetical sort that is unconditionally discard | codex | `shared/lib/env-contract/render-env-example.ts:L1` |
 | ⬜ | [S-082](sustainability/S-082.md) | S | error-handling | eEARN admin-configurable fee hardcoded as 0 with no enforcement of noted future telemetry |  | `shared/lib/redemption-backstop-configs/stablecoi` |
 | ⬜ | [S-083](sustainability/S-083.md) | L | complexity | weekly-recap.ts is a 1302-line monolith mixing data collection, aggregation, and LLM orche |  | `worker/src/cron/weekly-recap.ts:L1-L1302` |
 | ⬜ | [S-084](sustainability/S-084.md) | S | naming | Commit hash lengths are inconsistent across entries — 7-char vs 8-char |  | `src/data/changelogs/2026-03-08.ts:L18, src/data/` |
