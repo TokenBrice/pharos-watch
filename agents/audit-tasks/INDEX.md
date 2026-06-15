@@ -3,16 +3,16 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**129/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
+**130/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 580 | 3 | 0 | 129 | 21 |
+| Count | 580 | 2 | 0 | 130 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 52 | 1 | 0 | 202 |
+| redundancy | 266 | 53 | 0 | 0 | 202 |
 | quality | 315 | 65 | 2 | 0 | 240 |
 | sustainability | 152 | 12 | 0 | 0 | 138 |
 
@@ -32,7 +32,7 @@
 | ✅ | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files | codex | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
 | ✅ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
-| 🔄 | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules | codex | `worker/src/api/telegram-webhook-settings-mutatio` |
+| ✅ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules | codex | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
 | ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
