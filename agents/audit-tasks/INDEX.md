@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**106/733 done (14%)**  `███░░░░░░░░░░░░░░░░░`
+**109/733 done (15%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 603 | 5 | 0 | 106 | 19 |
+| Count | 601 | 4 | 0 | 109 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 46 | 2 | 0 | 208 |
-| quality | 315 | 51 | 3 | 0 | 254 |
+| redundancy | 266 | 48 | 0 | 0 | 208 |
+| quality | 315 | 52 | 4 | 0 | 252 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -116,7 +116,7 @@
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
 | ⬜ | [R-071](redundancy/R-071.md) | M | clone | ISO date formatter (epoch->YYYY-MM-DD) re-implemented inline ~30x in worker despite export |  | `shared/lib/format.ts:158-160 (canonical formatIs` |
-| 🔄 | [R-075](redundancy/R-075.md) | S | clone | parseDigestParagraph duplicates bold-header stripping already done in consumers of lib/dig | codex | `src/components/daily-digest.tsx:L67-L72` |
+| ✅ | [R-075](redundancy/R-075.md) | S | clone | parseDigestParagraph duplicates bold-header stripping already done in consumers of lib/dig | codex | `src/components/daily-digest.tsx:L67-L72` |
 | ⬜ | [R-076](redundancy/R-076.md) | S | clone | StablecoinChartResponseSchema and UsdsStatusResponseSchema are domain-mislocated in digest |  | `shared/types/digest.ts:L393-L427` |
 | ⬜ | [R-077](redundancy/R-077.md) | S | clone | formatNetFlowUsd in mint-burn-card duplicates shared compact-USD formatting with a minor p |  | `src/components/home-alt-mini-cards/mint-burn-car` |
 | ⬜ | [R-078](redundancy/R-078.md) | S | wrapper | useCoverageMatrixQueryResource is a trivial useMemo wrapper used only once |  | `src/hooks/use-coverage-matrix-model.ts:L28-L40` |
@@ -195,7 +195,7 @@
 | ✅ | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null | codex | `src/lib/sidebar-signals.ts:L55-L57` |
 | ⬜ | [R-162](redundancy/R-162.md) | S | clone | MONTH_INDEX and MONTH_LABEL arrays duplicated between attestation-pdf-index and usdh-nativ |  | `worker/src/cron/reserve-adapters/attestation-pdf` |
 | ⬜ | [R-163](redundancy/R-163.md) | S | dead-code | Report-card cache envelope path (generation-mismatch / invalid-envelope) is unreachable at |  | `worker/src/lib/report-card-cache.ts:L102-L130, L` |
-| 🔄 | [R-164](redundancy/R-164.md) | S | wrapper | toRedemptionBackstopVersionLabel re-export aliases a base utility only for one methodology | codex | `shared/lib/methodology-versions/redemption-backs` |
+| ✅ | [R-164](redundancy/R-164.md) | S | wrapper | toRedemptionBackstopVersionLabel re-export aliases a base utility only for one methodology | codex | `shared/lib/methodology-versions/redemption-backs` |
 | ⬜ | [R-165](redundancy/R-165.md) | M | clone | Desktop/mobile diagram JSX trees duplicated verbatim in two methodology sections |  | `src/app/methodology/sections/core-sections-prici` |
 | ⬜ | [R-166](redundancy/R-166.md) | S | wrapper | createAboutEditorialSection is a single-consumer factory wrapper |  | `src/app/about/editorial-helpers.tsx:L9-L31, src/` |
 | ⬜ | [R-167](redundancy/R-167.md) | S | clone | Venue resolution logic duplicated across `venueFromInput` and `compareVenueParam` |  | `src/app/screener/picker/handoff.ts:L77-L111` |
@@ -335,7 +335,7 @@
 | ✅ | [Q-039](quality/Q-039.md) | S | error-handling | admin-action-audit.ts truncates serialized JSON at a byte boundary, producing invalid JSON | codex | `worker/src/lib/admin-action-audit.ts:L22-L23` |
 | ✅ | [Q-040](quality/Q-040.md) | S | error-handling | mapWithConcurrency early-abort skips when task rejects with a falsy value | codex | `worker/src/lib/concurrency.ts:37-43` |
 | ⬜ | [Q-041](quality/Q-041.md) | M | clone | Alert-safety explain snapshot re-derives stage scores from rounded baseScore, diverging fr |  | `worker/src/lib/alert-safety-source-cache.ts:L470` |
-| ⬜ | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh |  | `worker/src/lib/__tests__/safety-score-golden.tes` |
+| 🔄 | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh | codex | `worker/src/lib/__tests__/safety-score-golden.tes` |
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ⬜ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple |  | `eslint.config.mjs:147-155` |
 | ⬜ | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response |  | `src/app/screener/picker/use-selector.ts:L54` |
@@ -456,11 +456,11 @@
 | ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
 | ⬜ | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps |  | `src/components/feedback-modal.tsx:L78-L120` |
 | ✅ | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
-| 🔄 | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif | codex | `scripts/maintenance/audit-redemption-v4-score-di` |
+| ✅ | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif | codex | `scripts/maintenance/audit-redemption-v4-score-di` |
 | 🔄 | [Q-055](quality/Q-055.md) | S | complexity | getCoinsByLifecycleStatus rebuilds a full Map on every call; called in a hot build-time lo | codex | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [Q-060](quality/Q-060.md) | S | complexity | price-consensus medianPrice uses floor-index, systematically biasing high for even-sized c |  | `worker/src/lib/price-consensus.ts:L248-L251` |
 | ⬜ | [Q-069](quality/Q-069.md) | M | complexity | `validateRedemptionBackstopRegistry` is a 1117-line god function with nested function decl |  | `scripts/lib/redemption-backstop-validation.ts:L1` |
-| ⬜ | [Q-070](quality/Q-070.md) | S | error-handling | audit-seo-render-budget.mjs silently swallows all per-response accounting errors in the Pl |  | `scripts/maintenance/audit-seo-render-budget.mjs:` |
+| 🔄 | [Q-070](quality/Q-070.md) | S | error-handling | audit-seo-render-budget.mjs silently swallows all per-response accounting errors in the Pl | codex | `scripts/maintenance/audit-seo-render-budget.mjs:` |
 | ✅ | [Q-077](quality/Q-077.md) | S | naming | validationFailures in mint-burn metadata aliases apiErrors, producing a misleading cron_ru | codex | `worker/src/cron/mint-burn/run-completion.ts:L154` |
 | ⬜ | [Q-084](quality/Q-084.md) | M | complexity | DailyDigest contains an IIFE returning JSX, splitting layout into two unrelated branches i |  | `src/components/daily-digest.tsx:L249-L333` |
 | ⬜ | [Q-085](quality/Q-085.md) | M | complexity | readRedemptionBackstopLiveMetadata is a 220-line monolithic function with 30+ intermediate |  | `worker/src/lib/redemption-backstop-live-metadata` |
