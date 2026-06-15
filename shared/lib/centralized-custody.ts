@@ -27,16 +27,21 @@ function sliceMatchesCentralizedCrypto(name: string): boolean {
  * 2. Stablecoins classified as "centralized" or "centralized-dependent"
  * 3. Transitive: upstream "decentralized" coins' own centralized fraction
  */
+type CentralizedCustodyCoin = Pick<StablecoinMeta, "id" | "reserves" | "flags">;
+
 export function computeCentralizedCustodyFraction(
   coinId: string,
-  allCoins: ReadonlyArray<Pick<StablecoinMeta, "id" | "reserves" | "flags">>,
+  allCoins: ReadonlyArray<CentralizedCustodyCoin>,
   visited: ReadonlySet<string> = new Set(),
+  metaById: ReadonlyMap<string, CentralizedCustodyCoin> = new Map(
+    allCoins.map((c) => [c.id, c]),
+  ),
 ): number {
   if (visited.has(coinId)) return 0; // cycle guard
   const nextVisited = new Set(visited);
   nextVisited.add(coinId);
 
-  const meta = allCoins.find((c) => c.id === coinId);
+  const meta = metaById.get(coinId);
   if (!meta) return 0;
 
   // Coin without reserves: use governance as proxy
@@ -58,7 +63,7 @@ export function computeCentralizedCustodyFraction(
 
     // Linked upstream stablecoin
     if (slice.coinId) {
-      const upstream = allCoins.find((c) => c.id === slice.coinId);
+      const upstream = metaById.get(slice.coinId);
       if (!upstream) continue;
       const upGov = upstream.flags.governance;
 
@@ -68,7 +73,7 @@ export function computeCentralizedCustodyFraction(
       } else {
         // Decentralized upstream -> recursively compute its centralized fraction
         const upstreamFraction = computeCentralizedCustodyFraction(
-          slice.coinId, allCoins, nextVisited,
+          slice.coinId, allCoins, nextVisited, metaById,
         );
         centralizedPct += slice.pct * upstreamFraction;
       }
