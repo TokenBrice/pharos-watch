@@ -7,7 +7,7 @@ export function getStatusPageActions(): StatusPageAction[] {
     return [
       {
         label: endpoint.statusPageAction.label,
-        path: endpoint.statusPageAction.path ?? endpoint.probePath ?? endpoint.path,
+        path: endpoint.statusPageAction.path ?? endpoint.path,
         confirm: endpoint.statusPageAction.confirm,
         destructive: endpoint.statusPageAction.destructive ?? false,
         method: endpoint.statusPageAction.method,
