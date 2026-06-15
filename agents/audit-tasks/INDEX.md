@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**74/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
+**75/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 637 | 3 | 0 | 74 | 19 |
+| Count | 636 | 3 | 0 | 75 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 35 | 0 | 0 | 221 |
-| quality | 315 | 30 | 3 | 0 | 275 |
+| redundancy | 266 | 35 | 1 | 0 | 220 |
+| quality | 315 | 31 | 2 | 0 | 275 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -177,7 +177,7 @@
 | ⬜ | [R-143](redundancy/R-143.md) | S | clone | stablecoinRouteSearchText called twice per coin in buildL2BeatBridgeRouteReviewAudit |  | `shared/lib/chains/l2beat-audit.ts:L551, L589` |
 | ✅ | [R-144](redundancy/R-144.md) | S | clone | escapeSqlString defined independently in two maintenance scripts instead of using the shar | codex | `worker/scripts/repair-non-usd-fiat-depeg-history` |
 | ⬜ | [R-145](redundancy/R-145.md) | S | clone | InlineKeyboardButton interface duplicated in setup and messages modules |  | `worker/src/api/telegram-webhook-setup.ts:L77-L82` |
-| ⬜ | [R-146](redundancy/R-146.md) | S | dead-code | requireGroupAdminForCallback carries a _db parameter that is never used |  | `worker/src/api/telegram-webhook-auth.ts:L80-L93` |
+| 🔄 | [R-146](redundancy/R-146.md) | S | dead-code | requireGroupAdminForCallback carries a _db parameter that is never used | codex | `worker/src/api/telegram-webhook-auth.ts:L80-L93` |
 | ⬜ | [R-147](redundancy/R-147.md) | S | clone | DRPC_NETWORK map duplicated in balance-providers.ts and chainlink-feeds.ts |  | `worker/src/cron/blacklist/balance-providers.ts:L` |
 | ⬜ | [R-148](redundancy/R-148.md) | S | wrapper | loadLastRunSec / recordLastRunSec re-implement the shared cache abstraction |  | `worker/src/cron/telegram-inactive-cleanup.ts:L51` |
 | ⬜ | [R-149](redundancy/R-149.md) | S | clone | cex-tickers.ts duplicates parsePositiveNumber from number-utils.ts |  | `worker/src/lib/cex-tickers.ts:L65-L68` |
@@ -545,7 +545,7 @@
 | ⬜ | [Q-228](quality/Q-228.md) | S | error-handling | useCompareShareActions silently swallows all canvas/render errors in handleTwitterShare |  | `src/hooks/use-compare-share-actions.ts:L123-L150` |
 | ⬜ | [Q-229](quality/Q-229.md) | S | docs | fieldNotes word-count constraint is JSDoc-only and unverifiable at authoring time |  | `src/data/changelogs/types.ts:L21-26` |
 | ⬜ | [Q-230](quality/Q-230.md) | S | complexity | pickRelatedStudies performs two O(n) linear scans per call inside an O(n) loop |  | `src/app/learn/case-studies/case-study-body.tsx:L` |
-| 🔄 | [Q-231](quality/Q-231.md) | S | error-handling | RefreshCountdown timer only counts up but never drives an actual refresh — stale seconds s | codex | `src/components/status/refresh-countdown.tsx:L1-L` |
+| ✅ | [Q-231](quality/Q-231.md) | S | error-handling | RefreshCountdown timer only counts up but never drives an actual refresh — stale seconds s | codex | `src/components/status/refresh-countdown.tsx:L1-L` |
 | ⬜ | [Q-232](quality/Q-232.md) | M | naming | Hardcoded AI model name in DigestNameplate creates a brittle sustainability dependency |  | `src/components/digest-nameplate.tsx:L39` |
 | ⬜ | [Q-233](quality/Q-233.md) | S | type-safety | ApiKeySelfServeIssueResponse hardcodes rateLimitPerMinute: 30 as a literal type — unnecess |  | `shared/types/api-key-requests.ts:L51` |
 | ⬜ | [Q-234](quality/Q-234.md) | S | type-safety | backfill-mint-burn block-range bounds validation is dead for any supplied param |  | `worker/src/api/backfill-mint-burn.ts:112-131,189` |
