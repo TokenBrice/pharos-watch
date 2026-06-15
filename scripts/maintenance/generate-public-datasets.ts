@@ -41,6 +41,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/safety-
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
 import { parseCheckMode } from "../lib/cli.mjs";
+import { type CsvColumn, escapeCsvField } from "../lib/csv-helpers";
 import {
   apiFetchHeaders,
   GENERATOR_API_KEY_ENV_NAMES,
@@ -237,18 +238,9 @@ async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string):
   };
 }
 
-// --- CSV helpers (mirror src/lib/exports/csv.ts escaping rules) -------------
-
-function escapeCsvField(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return "";
-  const str = String(value);
-  return str.includes(",") || str.includes('"') || str.includes("\n") ? `"${str.replace(/"/g, '""')}"` : str;
-}
-
-interface CsvColumn<T> {
-  header: string;
-  accessor: (row: T) => string | number | null;
-}
+// --- CSV helpers ------------------------------------------------------------
+// `escapeCsvField` + `CsvColumn` live in scripts/lib/csv-helpers.ts (imported
+// above); the preamble-aware builders below are script-specific.
 
 interface Preamble {
   endpoint: string;
