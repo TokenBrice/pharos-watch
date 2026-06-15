@@ -10161,14 +10161,14 @@
       }
     ],
     "liveReservesConfig": {
-      "version": 1,
+      "version": 2,
       "semantics": "collateral-mix",
       "breakerScope": "cdp-enosys",
       "display": {
         "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans",
-        "label": "Enosys docs"
+        "label": "Enosys Loans"
       },
-      "adapter": "curated-validated",
+      "adapter": "liquity-v2-branches",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -10177,7 +10177,57 @@
         }
       },
       "params": {
-        "rpcUrl": "https://flare-api.flare.network/ext/C/rpc"
+        "rpcUrl": "https://flare-api.flare.network/ext/C/rpc",
+        "branches": [
+          {
+            "name": "FXRP",
+            "holder": "0x65C378Bf4A68491436C84d8Da020b14FEfE03D17",
+            "token": {
+              "chain": "flare",
+              "address": "0xAd552A648C74D49E10027AB8a618A3ad4901c5bE",
+              "decimals": 6
+            },
+            "risk": "high"
+          },
+          {
+            "name": "WFLR",
+            "holder": "0xE4Fc0543990128612d8112c90cdECc252165D255",
+            "token": {
+              "chain": "flare",
+              "address": "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "stXRP",
+            "holder": "0x6988515B4e69Ab8AfA56E6079A1787F5A0a71Be7",
+            "token": {
+              "chain": "flare",
+              "address": "0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
+              "decimals": 6
+            },
+            "risk": "high"
+          },
+          {
+            "name": "sFLR",
+            "holder": "0x8fc9996d9B7c88F84e21fCCf46397cE534A2B17b",
+            "token": {
+              "chain": "flare",
+              "address": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+              "decimals": 18
+            },
+            "risk": "high"
+          }
+        ],
+        "sourceUrls": [
+          "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans",
+          "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare"
+        ],
+        "redemptionRateProbe": {
+          "contract": "0x9474206bc035D03d142264fd9913d1D51246d3AC",
+          "selector": "0xc52861f2"
+        }
       }
     }
   },
@@ -37282,28 +37332,39 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "meusd-mezo",
       "display": {
-        "url": "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
-        "label": "Explorer"
+        "url": "https://mezo.org/docs/users/musd/",
+        "label": "Mezo MUSD"
       },
-      "adapter": "single-asset",
+      "adapter": "liquity-native-active-pool",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://api.explorer.mezo.org/api/v2/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          "kind": "onchain-evm",
+          "chain": "mezo",
+          "rpcMode": "public-rpc"
         }
       },
       "params": {
-        "label": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
-        "risk": "medium",
-        "probe": {
-          "kind": "json-path",
-          "path": [
-            "total_supply"
-          ]
-        }
+        "activePoolAddress": "0x3012C2fE1240e3754E5C200A0946bb0E07474876",
+        "collateralLabel": "BTC collateral in Mezo ActivePool",
+        "collateralRisk": "medium",
+        "collateralDecimals": 18,
+        "debtSelector": "0x14a6bf0f",
+        "collateralBalanceSelector": "0x1529a639",
+        "priceFeedAddress": "0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88",
+        "priceSelector": "0x0fdb11cf",
+        "troveManagerAddress": "0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193",
+        "tcrSelector": "0xb82f263d",
+        "mcrSelector": "0x794e5724",
+        "borrowerOperationsAddress": "0x44b1bac67dDA612a41a58AAf779143B181dEe031",
+        "redemptionRateSelector": "0x540385a3",
+        "sourceUrls": [
+          "https://mezo.org/docs/users/musd/",
+          "https://mezo.org/docs/developers/musd/musd-redemptions"
+        ],
+        "rpcUrl": "https://mainnet.mezo.public.validationcloud.io"
       }
     },
     "launchDate": "2025-05-12"
@@ -71620,18 +71681,38 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "protocol-reserve",
-      "breakerScope": "m0",
+      "semantics": "single-asset",
+      "breakerScope": "usdsc-startale",
       "display": {
-        "url": "https://dashboard.m0.org/",
-        "label": "M0 Dashboard"
+        "url": "https://startale.com/usdsc",
+        "label": "Startale USDSC"
       },
-      "adapter": "m0",
+      "adapter": "m0-wrapper-underlying",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://protocol-api.m0.org/graphql"
+          "kind": "onchain-evm",
+          "chain": "soneium",
+          "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "mode": "m-extension",
+        "wrapperAddress": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+        "expectedSwapFacilityAddress": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "swapperAddress": "0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd",
+        "slice": {
+          "name": "M token held by Startale USDSC",
+          "risk": "very-low",
+          "coinId": "m-m0",
+          "depType": "wrapper"
+        },
+        "sourceUrls": [
+          "https://startale.com/usdsc",
+          "https://docs.m0.org/get-started/resources/addresses/"
+        ],
+        "rpcUrl": "https://rpc.soneium.org",
+        "fallbackRpcUrl": "https://soneium.drpc.org"
       }
     },
     "launchDate": "2025-12-03"
@@ -80832,18 +80913,35 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "protocol-reserve",
-      "breakerScope": "m0",
+      "semantics": "single-asset",
+      "breakerScope": "wm-m0",
       "display": {
-        "url": "https://dashboard.m0.org/",
-        "label": "M0 Dashboard"
+        "url": "https://docs.m0.org/",
+        "label": "Wrapped M contract"
       },
-      "adapter": "m0",
+      "adapter": "m0-wrapper-underlying",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://protocol-api.m0.org/graphql"
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "mode": "wrapped-m-token",
+        "wrapperAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+        "slice": {
+          "name": "M token held by Wrapped M",
+          "risk": "very-low",
+          "coinId": "m-m0",
+          "depType": "wrapper"
+        },
+        "sourceUrls": [
+          "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol",
+          "https://docs.m0.org/get-started/resources/addresses/"
+        ],
+        "rpcUrl": "https://ethereum.publicnode.com"
       }
     },
     "launchDate": "2024-08-14"

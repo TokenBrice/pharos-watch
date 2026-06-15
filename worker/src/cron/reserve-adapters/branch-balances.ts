@@ -43,6 +43,7 @@ export interface BranchBalanceParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   branches: BranchConfig[];
+  sourceUrls?: string[];
   redemptionRateProbe?: OnchainRateProbe;
   debtSelector?: string;
   debtContract?: string;

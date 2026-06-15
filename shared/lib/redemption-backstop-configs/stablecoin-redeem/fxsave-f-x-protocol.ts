@@ -1,12 +1,12 @@
-import { fixedFee, sourceRef } from "../shared";
+import { documentedVariableFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_FXSAVE_LIVE_REDEMPTION_AT } from "./shared";
 
 export const FXSAVE_F_X_PROTOCOL_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: fixedFee(
-    100,
-    "f(x) atomic fxSAVE exits route through fxSP instantRedeem, where the current on-chain instantRedeemFeeRatio is 1%; the admin-governed parameter is capped at 5%",
+  costModel: documentedVariableFee(
+    "f(x) fxSP instantRedeem fee = on-chain instantRedeemFeeRatio, currently 1%, governance cap 5%",
+    "formula",
   ),
   reviewedAt: REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
   docs: [

@@ -241,19 +241,36 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "m0",
+    "adapter": "m0-wrapper-underlying",
     "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
+    "semantics": "single-asset",
+    "breakerScope": "wm-m0",
     "display": {
-      "url": "https://dashboard.m0.org/",
-      "label": "M0 Dashboard"
+      "url": "https://docs.m0.org/",
+      "label": "Wrapped M contract"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "mode": "wrapped-m-token",
+      "wrapperAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+      "slice": {
+        "name": "M token held by Wrapped M",
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol",
+        "https://docs.m0.org/get-started/resources/addresses/"
+      ],
+      "rpcUrl": "https://ethereum.publicnode.com"
     }
   },
   "launchDate": "2024-08-14"

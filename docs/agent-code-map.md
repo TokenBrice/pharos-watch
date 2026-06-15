@@ -107,7 +107,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/screener/picker/client.tsx` - SelectorClient, decodeSelectorState, highestValidStep, useSelector
 - `src/app/screener/picker/page.tsx` - route /screener/picker; metadata
 - `src/app/sitemap-tree/page.tsx` - route /sitemap-tree; default:SitemapTreePage, metadata
-- `src/app/sitemap.ts` - default:sitemap, dynamic
+- `src/app/sitemap.ts` - DIGEST_DAILY_SITEMAP_LIMIT, METHODOLOGY_CHANGELOG_SITEMAP_PATHS, default:sitemap, dynamic, selectSitemapDigestEntries
 - `src/app/stability-index/client.tsx` - StabilityIndexClient
 - `src/app/stability-index/error.tsx`
 - `src/app/stability-index/page.tsx` - route /stability-index; metadata
@@ -616,7 +616,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- ... 314 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 316 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 

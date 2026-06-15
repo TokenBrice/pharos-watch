@@ -219,19 +219,39 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "m0",
+    "adapter": "m0-wrapper-underlying",
     "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
+    "semantics": "single-asset",
+    "breakerScope": "usdsc-startale",
     "display": {
-      "url": "https://dashboard.m0.org/",
-      "label": "M0 Dashboard"
+      "url": "https://startale.com/usdsc",
+      "label": "Startale USDSC"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
+        "kind": "onchain-evm",
+        "chain": "soneium",
+        "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "mode": "m-extension",
+      "wrapperAddress": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+      "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+      "expectedSwapFacilityAddress": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+      "swapperAddress": "0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd",
+      "slice": {
+        "name": "M token held by Startale USDSC",
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://startale.com/usdsc",
+        "https://docs.m0.org/get-started/resources/addresses/"
+      ],
+      "rpcUrl": "https://rpc.soneium.org",
+      "fallbackRpcUrl": "https://soneium.drpc.org"
     }
   },
   "launchDate": "2025-12-03"

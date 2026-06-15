@@ -142,13 +142,13 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
+    "adapter": "liquity-v2-branches",
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "cdp-enosys",
     "display": {
       "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans",
-      "label": "Enosys docs"
+      "label": "Enosys Loans"
     },
     "inputs": {
       "primary": {
@@ -158,7 +158,57 @@
       }
     },
     "params": {
-      "rpcUrl": "https://flare-api.flare.network/ext/C/rpc"
+      "rpcUrl": "https://flare-api.flare.network/ext/C/rpc",
+      "sourceUrls": [
+        "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans",
+        "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare"
+      ],
+      "redemptionRateProbe": {
+        "contract": "0x9474206bc035D03d142264fd9913d1D51246d3AC",
+        "selector": "0xc52861f2"
+      },
+      "branches": [
+        {
+          "name": "FXRP",
+          "holder": "0x65C378Bf4A68491436C84d8Da020b14FEfE03D17",
+          "token": {
+            "chain": "flare",
+            "address": "0xAd552A648C74D49E10027AB8a618A3ad4901c5bE",
+            "decimals": 6
+          },
+          "risk": "high"
+        },
+        {
+          "name": "WFLR",
+          "holder": "0xE4Fc0543990128612d8112c90cdECc252165D255",
+          "token": {
+            "chain": "flare",
+            "address": "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "stXRP",
+          "holder": "0x6988515B4e69Ab8AfA56E6079A1787F5A0a71Be7",
+          "token": {
+            "chain": "flare",
+            "address": "0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
+            "decimals": 6
+          },
+          "risk": "high"
+        },
+        {
+          "name": "sFLR",
+          "holder": "0x8fc9996d9B7c88F84e21fCCf46397cE534A2B17b",
+          "token": {
+            "chain": "flare",
+            "address": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+            "decimals": 18
+          },
+          "risk": "high"
+        }
+      ]
     }
   }
 }

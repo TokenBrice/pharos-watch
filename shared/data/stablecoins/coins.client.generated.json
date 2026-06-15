@@ -2923,7 +2923,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "liquity-v2-branches"
   },
   {
     "id": "cdxusd-cod3x",
@@ -11265,7 +11265,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "single-asset"
+    "liveReserveAdapter": "liquity-native-active-pool"
   },
   {
     "id": "mf-one-midas",
@@ -21713,7 +21713,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "m0"
+    "liveReserveAdapter": "m0-wrapper-underlying"
   },
   {
     "id": "usdsui-sui",
@@ -24393,7 +24393,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "m0"
+    "liveReserveAdapter": "m0-wrapper-underlying"
   },
   {
     "id": "wmxn-ripio",

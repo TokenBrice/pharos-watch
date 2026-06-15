@@ -1,8 +1,9 @@
-import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig } from "./shared";
 
 export const WM_M0_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
-  ...documentedBoundSupplyFull("2026-04-16"),
+  capacityModel: { kind: "reserve-sync-metadata" },
+  reviewedAt: "2026-04-16",
   totalScoreCap: 70,
   costModel: fixedFee(0, "wM docs describe wrap and unwrap as fee-free permissionless calls against the underlying M token"),
   docs: [
@@ -11,6 +12,7 @@ export const WM_M0_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ],
   notes: [
     "Permissionless ERC-20 wrapper: wrap() deposits M and mints wM; unwrap() redeems 1:1 back to M with no fee or queue",
+    "Fresh live reserve metadata reads the current M token balance held by the wM contract as the directly unwrapable capacity bound.",
     "Config-level cap reflects that the wM->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail (institution-only M0 mint/burn) still gates actual par exit",
   ],
 });

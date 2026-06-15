@@ -844,7 +844,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacitySemantics).toBe("immediate-bounded");
     expect(entry.immediateCapacityUsd).toBe(2_000_000);
     expect(entry.immediateCapacityRatio).toBe(0.2);
-    expect(entry.modelConfidence).toBe("medium");
+    expect(entry.modelConfidence).toBe("high");
     expect(entry.effectiveExitScore).toBeGreaterThan(20);
   });
 

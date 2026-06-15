@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.13",
+    title: "Live reserve telemetry for medium-confidence follow-ups",
+    date: "2026-06-15",
+    effectiveAt: 1781510400,
+    summary:
+      "Verified Redemption Backstop follow-ups now use same-run reserve-sync capacity for eligible Liquity-style, M0-wrapper, and Re Protocol routes, while entries whose live evidence is paused, zero, queue-only, or reserve-incomplete remain deliberately unpromoted.",
+    impact: [
+      "`cdp-enosys` now binds the Flare Liquity V2 branch telemetry path, measuring FXRP, WFLR, stXRP, and sFLR branch collateral plus branch debt and current redemption-fee evidence from the 4-hourly live reserve snapshot",
+      "`meusd-mezo` now uses a dedicated Mezo native ActivePool adapter that reads live collateral balance, protocol debt, TCR/MCR route health, and current redemption-rate telemetry directly from Mezo contracts",
+      "`wm-m0` and `usdsc-startale` now use an M0 wrapper-underlying adapter for current M balance capacity; USDSC additionally verifies the Soneium SwapFacility route and approved swapper before emitting whitelisted-primary direct capacity",
+      "`reusd-re-protocol` now parses Re Protocol's official metrics payload for instant redemption vault capacity instead of relying only on reviewed fallback ratios, while retaining the queued-route fallback because excess redemptions can still spill to the queue",
+      "Aster asUSDF, Hyperbeat hbUSDT, Inverse DOLA, and Piku USP remain unpromoted because the verified live route is unavailable, paused/zero-capacity, or queue-only; DUSD Alto and Lista lisUSD have verified PSM candidates but need a clean reserve-composition plus live-capacity side-channel before promotion",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.12",
     title: "Verified fee evidence and direct Sky LitePSM capacity",
     date: "2026-06-15",

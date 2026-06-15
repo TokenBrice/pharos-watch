@@ -1,5 +1,6 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import cdpEnosys from "@shared/data/stablecoins/coins/cdp-enosys.json";
 import nectBeraborrow from "@shared/data/stablecoins/coins/nect-beraborrow.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -306,6 +307,39 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
       contract: pumpBtcBranch.holder,
       data: BERABORROW_SHUTDOWN_SELECTOR,
     }));
+  });
+});
+
+describe("fetchLiquityV2BranchReserves Enosys branches", () => {
+  const config = cdpEnosys.liveReservesConfig as LiveReservesConfig;
+  const branches = (config.params as { branches: typeof branch[] }).branches;
+
+  it("keeps the reviewed Flare branch set and redemption-rate probe", () => {
+    expect(config.adapter).toBe("liquity-v2-branches");
+    expect(config.version).toBe(2);
+    expect(config.inputs.primary).toMatchObject({
+      kind: "onchain-evm",
+      chain: "flare",
+      rpcMode: "public-rpc",
+    });
+    expect(config.params).toMatchObject({
+      rpcUrl: "https://flare-api.flare.network/ext/C/rpc",
+      redemptionRateProbe: {
+        contract: "0x9474206bc035D03d142264fd9913d1D51246d3AC",
+        selector: "0xc52861f2",
+      },
+      sourceUrls: [
+        "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans",
+        "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
+      ],
+    });
+    expect(branches.map((entry) => entry.name)).toEqual(["FXRP", "WFLR", "stXRP", "sFLR"]);
+    expect(branches.map((entry) => entry.holder)).toEqual([
+      "0x65C378Bf4A68491436C84d8Da020b14FEfE03D17",
+      "0xE4Fc0543990128612d8112c90cdECc252165D255",
+      "0x6988515B4e69Ab8AfA56E6079A1787F5A0a71Be7",
+      "0x8fc9996d9B7c88F84e21fCCf46397cE534A2B17b",
+    ]);
   });
 });
 

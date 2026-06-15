@@ -1,4 +1,4 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
@@ -6,7 +6,10 @@ export const MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemCo
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   totalScoreCap: 65,
-  costModel: undisclosedReviewedFee(),
+  costModel: fixedFee(
+    0,
+    "Main Street msY ERC-4626 (0x890a5122aa1da30fec4286de7904ff808f0bd74a): on-chain previewRedeem == convertToAssets with no fee delta; T&C charge fees only on msUSD mint, not the msY unwrap step",
+  ),
   docs: [
     sourceRef("Main Street staking model", "https://mainstreet-finance.gitbook.io/mainstreet.finance/staking-model", ["route", "capacity", "fees", "access", "settlement"]),
     sourceRef("Main Street msY vault", "https://mainstreet-finance.gitbook.io/mainstreet.finance/msusd-and-strategy-vaults/strategy-vaults/msy-the-options-box-spread", ["route", "capacity"]),

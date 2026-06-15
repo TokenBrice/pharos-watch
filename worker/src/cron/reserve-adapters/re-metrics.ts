@@ -43,9 +43,17 @@ interface ReMetricsTvlPoint {
   offchain_capital?: number;
 }
 
+interface ReMetricsRedemptionRow {
+  chainName?: string;
+  vaultAddress?: string;
+  custodialWalletAddress?: string;
+  totalReserveValueWei?: string;
+}
+
 const ESCAPED_INITIAL_BREAKDOWNS_KEY = "\\\"initialChainBreakdowns\\\":";
 const ESCAPED_SERIES_KEY = "\\\"series\\\":";
 const ESCAPED_INITIAL_TVL_DATA_KEY = "\\\"initialTvlData\\\":";
+const ESCAPED_REDEMPTION_ROWS_KEY = "\\\"redemptionRows\\\":";
 
 const SYMBOL_CONFIG: Record<string, {
   name: string;
@@ -160,6 +168,25 @@ function parseInitialTvlData(html: string): ReMetricsTvlPoint[] {
   return parsed as ReMetricsTvlPoint[];
 }
 
+function parseRedemptionRows(html: string): ReMetricsRedemptionRow[] | null {
+  if (!html.includes(ESCAPED_REDEMPTION_ROWS_KEY)) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      extractEscapedJsonValueAfterKey(html, ESCAPED_REDEMPTION_ROWS_KEY, "re-metrics"),
+    ) as unknown;
+  } catch (error) {
+    throw htmlParseError(
+      "re-metrics",
+      `redemptionRows JSON is malformed: ${toErrorMessage(error)}`,
+    );
+  }
+  if (!Array.isArray(parsed)) {
+    throw htmlParseError("re-metrics", "redemptionRows was not an array");
+  }
+  return parsed as ReMetricsRedemptionRow[];
+}
+
 function normalizeTokenSymbol(symbol: string): string {
   return symbol.trim().toLowerCase();
 }
@@ -201,9 +228,37 @@ function extractOffchainCapitalContext(html: string): {
   );
 }
 
+function extractInstantRedemptionCapacity(html: string): {
+  capacityUsd: number;
+  rows: Array<{
+    chainName?: string;
+    vaultAddress?: string;
+    custodialWalletAddress?: string;
+    capacityUsd: number;
+  }>;
+} | null {
+  const rows = parseRedemptionRows(html);
+  if (!rows) return null;
+  const parsedRows = rows
+    .map((row) => {
+      const capacityUsd = parseValueUsdFromWei(row.totalReserveValueWei);
+      if (capacityUsd == null || capacityUsd <= 0) return null;
+      return {
+        ...(row.chainName ? { chainName: row.chainName } : {}),
+        ...(row.vaultAddress ? { vaultAddress: row.vaultAddress } : {}),
+        ...(row.custodialWalletAddress ? { custodialWalletAddress: row.custodialWalletAddress } : {}),
+        capacityUsd,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row != null);
+  const capacityUsd = parsedRows.reduce((sum, row) => sum + row.capacityUsd, 0);
+  return capacityUsd > 0 ? { capacityUsd, rows: parsedRows } : null;
+}
+
 export function adaptReMetrics(html: string): AdapterResult {
   const breakdowns = parseInitialChainBreakdowns(html);
   const { offchainCapitalUsd, offchainTimestamp } = extractOffchainCapitalContext(html);
+  const instantRedemptionCapacity = extractInstantRedemptionCapacity(html);
 
   const tokenValues = new Map<string, number>();
   const snapshotTimestamps: number[] = [];
@@ -275,6 +330,27 @@ export function adaptReMetrics(html: string): AdapterResult {
         "Re Metrics embedded payload did not expose a trustworthy source timestamp",
       ),
       stableAssetUsd: stableRedeemableUsd,
+      ...(instantRedemptionCapacity
+        ? {
+            immediateRedeemableUsd: instantRedemptionCapacity.capacityUsd,
+            redemptionRowsCount: instantRedemptionCapacity.rows.length,
+            redemption: {
+              capacityUsd: instantRedemptionCapacity.capacityUsd,
+              capacityKind: "live-direct-bounded" as const,
+              freshnessKind: "same-run-api" as const,
+              routeStatus: "unknown" as const,
+              routeStatusSource: "protocol-api" as const,
+              holderEligibility: "any-holder" as const,
+              sourceUrls: [
+                "https://app.re.xyz/metrics",
+                "https://docs.re.xyz/protocol/smart-contract-addresses.md",
+              ],
+            },
+            details: {
+              redemptionRows: instantRedemptionCapacity.rows,
+            },
+          }
+        : {}),
     },
   };
 }

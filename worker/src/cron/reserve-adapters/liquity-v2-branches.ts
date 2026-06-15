@@ -301,6 +301,10 @@ function chooseSnapshotRedemptionFeeBps(
 export function buildLiquityV2RedemptionMetadata(
   snapshot: LiquityV2BranchSnapshot,
   debtDecimals = DEFAULT_DEBT_DECIMALS,
+  sourceUrls: string[] = [
+    "https://docs.liquity.org/v2-faq/redemptions-and-delegation",
+    "https://docs.liquity.org/v2-faq/technical-resources",
+  ],
 ): NonNullable<AdapterResult["metadata"]> {
   const capacityUsd = sumBranchDebtUsd(snapshot.debts, debtDecimals);
   if (capacityUsd <= 0) {
@@ -337,10 +341,7 @@ export function buildLiquityV2RedemptionMetadata(
       ...(routeStatusReason ? { routeStatusReason } : {}),
       holderEligibility: "any-holder",
       settlementDelaySec: 0,
-      sourceUrls: [
-        "https://docs.liquity.org/v2-faq/redemptions-and-delegation",
-        "https://docs.liquity.org/v2-faq/technical-resources",
-      ],
+      sourceUrls,
       feeBps: snapshot.redemptionFeeBps,
     }),
     details: {
@@ -511,7 +512,7 @@ export async function fetchLiquityV2BranchReserves(
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
-    metadata: buildLiquityV2RedemptionMetadata(snapshot, debtDecimals),
+    metadata: buildLiquityV2RedemptionMetadata(snapshot, debtDecimals, params.sourceUrls),
   });
   const warnings = [...buildLiquityV2Warnings(snapshot), ...priceMapWarnings];
   return warnings.length > 0

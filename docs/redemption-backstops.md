@@ -6,11 +6,13 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.12`
+- **Current methodology version:** `v4.13`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.12` update: a verified medium-confidence upgrade tranche replaces eligible undisclosed-fee placeholders with fixed or formula fee evidence, while Sky `DAI`/`USDS` now read the LitePSM `USDC` pocket directly on-chain for same-run live-direct capacity. Routes with admin-configurable, silent, or missing fee/capacity evidence remain deliberately unpromoted.
+Latest `v4.13` update: eligible medium-confidence follow-ups now use same-run reserve-sync capacity for `cdp-enosys`, `meusd-mezo`, `wm-m0`, `usdsc-startale`, and `reusd-re-protocol`. Verified entries with paused/zero live capacity, queue-only exits, or reserve-incomplete PSM-only telemetry remain deliberately unpromoted.
+
+Previous `v4.12` update: a verified medium-confidence upgrade tranche replaces eligible undisclosed-fee placeholders with fixed or formula fee evidence, while Sky `DAI`/`USDS` now read the LitePSM `USDC` pocket directly on-chain for same-run live-direct capacity. Routes with admin-configurable, silent, or missing fee/capacity evidence remain deliberately unpromoted.
 
 Previous `v4.11` update: reviewed issuer rails with public at-par redemption terms AND attested ~100% highly-liquid reserves (PYUSD, USDP, USDG, GUSD) move from eventual-only `supply-full` to a `documented-bound` 25% same-day hot-buffer ratio (attested liquid share with a uniform 75% haircut, anchored above the worst observed primary-redemption wave). USDT, RLUSD, FDUSD, and USD1 deliberately stay eventual-only because their public terms do not commit to a settlement window. Issuer-specific stricter bounds (USDC's 7% cash floor) take precedence over the generic rule.
 
@@ -145,9 +147,12 @@ Live reserve adapters can now emit a nested `metadata.redemption` object for new
 Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as their immediate redeemable bound when that telemetry is fresh, with the prior 33% reviewed heuristic retained only as fallback.
 `cUSD` now uses the live `cap-vault` onchain adapter for bounded current redemption capacity, scoring against unpaused available vault balances rather than full eventual basket redeemability.
 `LUSD` now uses the live `liquity-v1` onchain adapter for bounded current direct capacity, scoring against `TroveManager.getEntireSystemDebt()` when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model.
-`BOLD`, `feUSD`, `USDQ`, and `NECT` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown/sunsetting as degraded route status.
+`BOLD`, `feUSD`, `USDQ`, `NECT`, and `CDP` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown/sunsetting as degraded route status.
+`meUSD` now uses the live `liquity-native-active-pool` onchain adapter for Mezo's native ActivePool shape, scoring against latest contract debt only when the same-run collateral, TCR/MCR, and fee telemetry is fresh and clean.
 `reUSD` now uses the live `resupply-pairs` onchain adapter for bounded current direct capacity, scoring against aggregate `RedemptionHandler.getMaxRedeemableDebt(pair)` only when the same-run handler guard state shows permissionless redemptions are open. If the guard is closed above the threshold, the route is marked cohort-limited and does not uplift Safety Score liquidity.
+Re Protocol `reUSD` now uses `re-metrics` instant redemption vault capacity from the official metrics payload as same-run API telemetry, retaining a reviewed fallback because redemptions above the instant vault capacity can spill to the queue.
 `fxUSD` now uses f(x)'s protocol pool API debt balances as live proxy capacity, while `USDaf` uses Asymmetry's timestamped protocol supply data as direct live capacity. `JupUSD` uses Jupiter's public transparency API for current USDC/USDtb holdings and oracle route-status context, with the previous 10% reviewed buffer retained only as fallback.
+M0 wrappers `wM` and `USDSC` now use `m0-wrapper-underlying` capacity telemetry from the underlying M token balance; USDSC also requires the reviewed Soneium SwapFacility and approved swapper route before emitting whitelisted-primary direct capacity.
 ERC-4626 single-asset wrappers such as fxSAVE, Spark savings wrappers, sUSDS, sDAI, scrvUSD, sfrxUSD, and stcUSD now use the live adapter's idle underlying ERC-20 balance as current direct redemption capacity when fresh reserve telemetry is available, rather than treating the full wrapper supply as immediately executable.
 `GHO` now uses tracked swappable GSM backing as a live lower bound even when reserve sync is degraded solely by aggregated residual issuance outside the configured GSM set, because that warning reflects reserve completeness rather than invalid tracked telemetry.
 `wsrUSD` continues to prefer live Reservoir USDC balance telemetry when available, but now falls back to Reservoir's documented 25 bps minimum USDC PSM balance instead of remaining unrated when the live feed lacks a trustworthy source timestamp.

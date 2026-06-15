@@ -11,7 +11,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 280 active live-enabled stablecoins across 57 registered adapters; 280 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 54 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 280 active live-enabled stablecoins across 59 registered adapters; 280 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 56 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -89,7 +89,7 @@ The shared live-reserve config schema enforces adapter-specific primary and fall
 
 `onchain-solana` now tries three public RPCs in order before failing the adapter: `https://api.mainnet-beta.solana.com`, `https://api.mainnet.solana.com`, and `https://solana-rpc.publicnode.com`. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
 
-Branch-balance adapters (`evm-branch-balances`, `liquity-v2-branches`, and `lista`) can set a per-branch `priceToken` when the measured collateral balance is a protocol receipt token whose live price should be sourced from a separate underlying token address. The balance still comes from the configured branch token; only the DefiLlama price lookup address changes.
+Branch-balance adapters (`evm-branch-balances`, `liquity-v2-branches`, and `lista`) can set a per-branch `priceToken` when the measured collateral balance is a protocol receipt token whose live price should be sourced from a separate underlying token address. The balance still comes from the configured branch token; only the DefiLlama price lookup address changes. Branch-balance configs can also attach reviewed `sourceUrls` so redemption telemetry emitted from same-run on-chain reads carries source provenance into the Redemption Backstop API.
 
 Adapters can also pass browser-style request headers through the shared JSON retry helper when an upstream is sensitive to request origin hints. Ethena, OpenEden, and Reservoir use this because production failures showed Cloudflare Worker requests intermittently receiving HTML / network failures while the same endpoints still served healthy JSON to browser-like clients. OpenEden and Reservoir additionally retry with the neutral Pharos fetch identity when the browser-style request fails.
 
@@ -126,9 +126,9 @@ Common metadata fields:
 
 Redemption telemetry is validated before persistence. Negative capacity or constraint values, capacity ratios outside `0..1`, negative fees, malformed redemption source URLs, invalid redemption freshness/capacity/holder-eligibility enum values, invalid `routeStatusReviewedAt` dates, capacity emitted by adapters that do not declare redemption-capacity support, fee telemetry emitted by adapters that do not declare fee support, and direct/proxy/queue capacity evidence emitted by an incompatible adapter capability fail the adapter output validation. Queue capacity that omits queue depth, settlement delay, or daily-limit semantics is stored only with a degraded warning. Existing flat fields are still parsed for backward compatibility, but new adapter work should emit the nested `metadata.redemption` object.
 
-Same-run adapters populate `routeStatusSource` only when the already-fetched source payload explicitly supports current route status: GHO GSM freeze/seize checks, Cap vault pause checks, Liquity V2 branch shutdown checks, and JupUSD oracle ripcord checks currently use this path.
+Same-run adapters populate `routeStatusSource` only when the already-fetched source payload explicitly supports current route status: GHO GSM freeze/seize checks, Cap vault pause checks, Liquity V2 branch shutdown checks, Mezo TCR/MCR checks, M0 SwapFacility checks, and JupUSD oracle ripcord checks currently use this path.
 
-`freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current reads such as `evm-branch-balances`, `liquity-v1`, `liquity-v2-branches`, `btcfi`, and `collateral-positions-api`, where reserve composition comes from latest-state contract/API state rather than a separately timestamped disclosure. Timestamp-less APIs that expose balance-sheet snapshots without a reviewed latest-state contract remain `freshnessMode = "unverified"` and are detail-visible but not score-grade collateral. `reservoir` graduated out of this bucket after a latest-state review: its raw reserves payload provably re-derives every balance-sheet row from issuer-disclosed on-chain contracts on each fetch (the sibling `/api/reserves` endpoint publishes the token and holder contracts per row), so it now uses `not-applicable` freshness like other reviewed latest-state reads.
+`freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current reads such as `evm-branch-balances`, `liquity-v1`, `liquity-v2-branches`, `liquity-native-active-pool`, `m0-wrapper-underlying`, `btcfi`, and `collateral-positions-api`, where reserve composition comes from latest-state contract/API state rather than a separately timestamped disclosure. Timestamp-less APIs that expose balance-sheet snapshots without a reviewed latest-state contract remain `freshnessMode = "unverified"` and are detail-visible but not score-grade collateral. `reservoir` graduated out of this bucket after a latest-state review: its raw reserves payload provably re-derives every balance-sheet row from issuer-disclosed on-chain contracts on each fetch (the sibling `/api/reserves` endpoint publishes the token and holder contracts per row), so it now uses `not-applicable` freshness like other reviewed latest-state reads.
 
 Mento reserve sync combines the composition payload from Mento's analytics API with the dashboard's embedded reserve payload timestamp. When that dashboard timestamp parses successfully, the `mento` adapter emits verified freshness for USDm and Mento CDP assets; if the dashboard timestamp disappears, it falls back to explicit unverified freshness rather than guessing.
 
@@ -414,9 +414,9 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `circle-transparency`      | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `collateral-positions-api` | `http-json`                                      | `collateral-mix`                                      | 2                |
 | `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 63               |
+| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 62               |
 | `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 34               |
+| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 36               |
 | `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `evm-branch-balances`      | `onchain-evm`                                    | `collateral-mix`                                      | 9                |
 | `falcon`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
@@ -428,9 +428,11 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `infinifi`                 | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `jupusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `liquity-v1`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `liquity-v2-branches`      | `onchain-evm`                                    | `collateral-mix`                                      | 6                |
+| `liquity-native-active-pool` | `onchain-evm`                                   | `collateral-mix`                                      | 1                |
+| `liquity-v2-branches`      | `onchain-evm`                                    | `collateral-mix`                                      | 7                |
 | `lista`                    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `m0`                       | `http-json`                                      | `protocol-reserve`                                    | 10               |
+| `m0`                       | `http-json`                                      | `protocol-reserve`                                    | 8                |
+| `m0-wrapper-underlying`    | `onchain-evm`                                    | `single-asset`                                        | 2                |
 | `mento`                    | `http-json`                                      | `collateral-mix`                                      | 13               |
 | `nest-vault-positions`     | `http-json`                                      | `collateral-mix`                                      | 5                |
 | `openeden-usdo`            | `http-json`                                      | `collateral-mix`                                      | 1                |
@@ -444,7 +446,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `river-protocol-info`      | `http-json`                                      | `protocol-reserve`                                    | 1                |
 | `sgforge-coinvertible`     | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `sgho-wrapper`             | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `single-asset`             | `http-json` / `onchain-evm`                      | `single-asset`                                        | 47               |
+| `single-asset`             | `http-json` / `onchain-evm`                      | `single-asset`                                        | 46               |
 | `sky-makercore`            | `http-json`                                      | `collateral-mix`                                      | 2                |
 | `solstice-attestation`     | `http-json`                                      | `protocol-reserve`                                    | 1                |
 | `superstate-liquidity`     | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                                        | 1                |
@@ -518,7 +520,16 @@ Liquity v1 note:
 the `liquity-v1` adapter covers `lusd-liquity` by reading `getEntireSystemColl()` and `getEntireSystemDebt()` from the official Ethereum `TroveManager`, preserving LUSD as a one-slice 100% ETH reserve view while classifying the feed as independent latest-state on-chain evidence rather than a generic ERC-20 liveness probe. The adapter also publishes nested redemption telemetry from the same run: `capacityUsd` is derived from `getEntireSystemDebt()`, `capacityKind = "live-direct-bounded"`, `freshnessKind = "same-run-onchain"`, and the existing redemption-fee probe populates the nested fee field when available.
 
 Liquity v2 branch note:
-the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, DefiLlama prices, ActivePool debt, optional branch shutdown status, and optional live redemption-fee telemetry. `bold-liquity`, `feusd-felix`, `usdq-quill`, and `nect-beraborrow` use this path so their reserve slices remain branch-collateral based while nested redemption telemetry uses aggregate branch debt as `capacityUsd` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`. The Beraborrow binding also supports ERC-4626-style Collateral Vault share branches, branch `fetchPrice()` fallback, and per-branch `getRedemptionRateWithDecay()` fee telemetry.
+the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, DefiLlama prices, ActivePool debt, optional branch shutdown status, and optional live redemption-fee telemetry. `bold-liquity`, `feusd-felix`, `usdq-quill`, `nect-beraborrow`, and `cdp-enosys` use this path so their reserve slices remain branch-collateral based while nested redemption telemetry uses aggregate branch debt as `capacityUsd` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`. The Beraborrow binding also supports ERC-4626-style Collateral Vault share branches, branch `fetchPrice()` fallback, and per-branch `getRedemptionRateWithDecay()` fee telemetry.
+
+Liquity native ActivePool note:
+the `liquity-native-active-pool` adapter covers Liquity-style forks whose native collateral balance is exposed directly on ActivePool instead of through per-branch ERC-20 balances. `meusd-mezo` uses this path on Mezo: the adapter reads ActivePool debt and collateral, values native collateral through the protocol price feed, checks TCR against MCR for current route health, and emits same-run redemption-fee telemetry from BorrowerOperations when available.
+
+M0 wrapper note:
+the `m0-wrapper-underlying` adapter covers token-specific M0 wrappers whose immediate redemption capacity is the current M token balance held by a wrapper or reviewed facility. `wm-m0` reads the Ethereum wM wrapper's M balance directly. `usdsc-startale` reads the Soneium SwapFacility's M balance only after verifying the stable token, underlying M token, approved swapper, and unpaused route state, then emits whitelisted-primary direct capacity.
+
+Re Protocol metrics note:
+the `re-metrics` adapter parses Re Protocol's official metrics page and now extracts instant redemption vault capacity from the embedded `redemptionRows` payload. The reserve slices remain metrics-derived, while nested redemption telemetry carries the current direct vault capacity from the same API payload for `reusd-re-protocol`.
 
 `fx` now publishes f(x) protocol pool debt balances as conservative live proxy redemption capacity for `fxusd-f-x-protocol`; the configured score-grade path reads the reviewed Ethereum WBTC and wstETH pool collateral/debt totals directly on-chain. `fxsave-f-x-protocol` uses the generic `erc4626-single-asset` path to publish the vault's idle fxSP balance as live-direct capacity for its fxSP/router exit route. `asymmetry` now publishes USDaf protocol supply from the timestamped stats API as live direct redemption capacity alongside branch collateral slices. `jupusd` consumes Jupiter's public transparency API and latest snapshot timestamp, grouping USDC/USDtb holdings into reserve slices while emitting whitelisted-primary live redemption capacity and route status from the public oracle endpoint.
 

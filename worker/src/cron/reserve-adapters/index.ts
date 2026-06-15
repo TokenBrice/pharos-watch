@@ -28,8 +28,10 @@ import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchJupUsdReserves } from "./jupusd";
 import { fetchListaReserves } from "./lista";
 import { fetchLiquityV1Reserves } from "./liquity-v1";
+import { fetchLiquityNativeActivePoolReserves } from "./liquity-native-active-pool";
 import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
 import { fetchM0Reserves } from "./m0";
+import { fetchM0WrapperUnderlyingReserves } from "./m0-wrapper-underlying";
 import { fetchMentoReserves } from "./mento";
 import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
@@ -91,8 +93,10 @@ const ADAPTER_FNS = {
   jupusd: fetchJupUsdReserves,
   lista: fetchListaReserves,
   "liquity-v1": fetchLiquityV1Reserves,
+  "liquity-native-active-pool": fetchLiquityNativeActivePoolReserves,
   "liquity-v2-branches": fetchLiquityV2BranchReserves,
   m0: fetchM0Reserves,
+  "m0-wrapper-underlying": fetchM0WrapperUnderlyingReserves,
   mento: fetchMentoReserves,
   "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,

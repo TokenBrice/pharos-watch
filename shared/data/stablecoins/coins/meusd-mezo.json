@@ -269,27 +269,40 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "liquity-native-active-pool",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "collateral-mix",
     "breakerScope": "meusd-mezo",
     "display": {
-      "url": "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
-      "label": "Explorer"
+      "url": "https://mezo.org/docs/users/musd/",
+      "label": "Mezo MUSD"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://api.explorer.mezo.org/api/v2/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        "kind": "onchain-evm",
+        "chain": "mezo",
+        "rpcMode": "public-rpc"
       }
     },
     "params": {
-      "label": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
-      "risk": "medium",
-      "probe": {
-        "kind": "json-path",
-        "path": ["total_supply"]
-      }
+      "rpcUrl": "https://mainnet.mezo.public.validationcloud.io",
+      "activePoolAddress": "0x3012C2fE1240e3754E5C200A0946bb0E07474876",
+      "collateralLabel": "BTC collateral in Mezo ActivePool",
+      "collateralRisk": "medium",
+      "collateralDecimals": 18,
+      "debtSelector": "0x14a6bf0f",
+      "collateralBalanceSelector": "0x1529a639",
+      "priceFeedAddress": "0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88",
+      "priceSelector": "0x0fdb11cf",
+      "troveManagerAddress": "0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193",
+      "tcrSelector": "0xb82f263d",
+      "mcrSelector": "0x794e5724",
+      "borrowerOperationsAddress": "0x44b1bac67dDA612a41a58AAf779143B181dEe031",
+      "redemptionRateSelector": "0x540385a3",
+      "sourceUrls": [
+        "https://mezo.org/docs/users/musd/",
+        "https://mezo.org/docs/developers/musd/musd-redemptions"
+      ]
     }
   },
   "launchDate": "2025-05-12"

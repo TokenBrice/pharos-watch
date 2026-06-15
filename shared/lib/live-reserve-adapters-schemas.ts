@@ -323,6 +323,50 @@ const erc4626SingleAssetParamsSchema = z
   })
   .strict();
 
+const evmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
+
+const m0WrapperUnderlyingParamsSchema = z
+  .object({
+    mode: z.enum(["wrapped-m-token", "m-extension"]),
+    wrapperAddress: z.string().optional(),
+    mTokenSelector: evmSelectorSchema.optional(),
+    expectedMTokenAddress: z.string().optional(),
+    swapFacilitySelector: evmSelectorSchema.optional(),
+    expectedSwapFacilityAddress: z.string().optional(),
+    swapperAddress: z.string().optional(),
+    pausedSelector: evmSelectorSchema.optional(),
+    canSwapViaPathSelector: evmSelectorSchema.optional(),
+    slice: reserveSliceDescriptorSchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+const liquityNativeActivePoolParamsSchema = z
+  .object({
+    activePoolAddress: z.string(),
+    collateralLabel: z.string(),
+    collateralRisk: LiveReserveRiskSchema,
+    collateralDecimals: z.number().int().nonnegative(),
+    debtSelector: evmSelectorSchema,
+    debtDecimals: z.number().int().nonnegative().optional(),
+    collateralBalanceSelector: evmSelectorSchema,
+    priceFeedAddress: z.string(),
+    priceSelector: evmSelectorSchema,
+    priceDecimals: z.number().int().nonnegative().optional(),
+    troveManagerAddress: z.string(),
+    tcrSelector: evmSelectorSchema,
+    mcrSelector: evmSelectorSchema,
+    borrowerOperationsAddress: z.string().optional(),
+    redemptionRateSelector: evmSelectorSchema.optional(),
+    redemptionRateDecimals: z.number().int().nonnegative().optional(),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
 const centrifugeVaultSliceSchema = z
   .object({
     name: z.string(),
@@ -402,6 +446,7 @@ const evmBranchBalancesParamsSchema = z
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
     branches: z.array(evmBranchBalanceBranchSchema).min(1),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
     redemptionRateProbe: redemptionRateProbeSchema.optional(),
     /**
      * When provided, the adapter calls `debtSelector` on `debtContract` (or the
@@ -419,10 +464,7 @@ const evmBranchBalancesParamsSchema = z
 
 const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema
   .extend({
-    shutdownSelector: z
-      .string()
-      .regex(/^0x[0-9a-fA-F]{8}$/)
-      .optional(),
+    shutdownSelector: evmSelectorSchema.optional(),
   })
   .strict();
 
@@ -565,8 +607,13 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   jupusd: { primaryInputKinds: ["http-json"], params: jupusdParamsSchema },
   lista: { primaryInputKinds: ["onchain-evm"], params: evmBranchBalancesParamsSchema },
   "liquity-v1": { primaryInputKinds: ["onchain-evm"], params: liquityV1ParamsSchema },
+  "liquity-native-active-pool": {
+    primaryInputKinds: ["onchain-evm"],
+    params: liquityNativeActivePoolParamsSchema,
+  },
   "liquity-v2-branches": { primaryInputKinds: ["onchain-evm"], params: liquityV2BranchesParamsSchema },
   m0: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "m0-wrapper-underlying": { primaryInputKinds: ["onchain-evm"], params: m0WrapperUnderlyingParamsSchema },
   mento: { primaryInputKinds: ["http-json"], params: mentoParamsSchema },
   "nest-vault-positions": { primaryInputKinds: ["http-json"], params: nestVaultPositionsParamsSchema },
   "openeden-usdo": { primaryInputKinds: ["http-json"], params: noParamsSchema },

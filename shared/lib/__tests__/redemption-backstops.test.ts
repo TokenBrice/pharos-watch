@@ -187,7 +187,7 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("reusd-re-protocol")).toMatchObject({
       routeFamily: "queue-redeem",
-      capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, confidence: "documented-bound" },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });
@@ -243,7 +243,7 @@ describe("getRedemptionBackstopConfig", () => {
       executionModel: "rules-based-nav",
       outputAssetType: "stable-single",
       capacityModel: { kind: "reserve-sync-metadata" },
-      costModel: { kind: "fee-bps", feeBps: 100 },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula" },
       reviewedAt: "2026-05-27",
     });
     expect(getRedemptionBackstopConfig("fxsave-f-x-protocol")?.notes?.[0]).toContain("idle fxSP balance");
@@ -682,7 +682,7 @@ describe("getRedemptionBackstopConfig", () => {
         executionModel: "rules-based-nav",
         outputAssetType: "stable-single",
         capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "dynamic-or-unclear" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
         reviewedAt: "2026-03-23",
       });
       expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);

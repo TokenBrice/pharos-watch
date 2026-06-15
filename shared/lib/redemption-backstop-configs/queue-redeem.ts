@@ -176,8 +176,9 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedQueueRedemptionSupplyFull,
     capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
-    costModel: undisclosedReviewedFee(
-      "Maple docs describe FIFO queued withdrawal requests for syrupUSDT and do not publish a separate protocol redemption fee",
+    costModel: fixedFee(
+      0,
+      "Maple docs state syrupUSDC and syrupUSDT are redeemed at the smart-contract exchange rate with no slippage and no separate protocol redemption fee (mirrors syrupUSDC)",
     ),
     docs: [
       sourceRef(
@@ -204,7 +205,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "reusd-re-protocol": {
     ...queueRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "documented-bound" },
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, confidence: "documented-bound" },
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     costModel: documentedVariableFee(
       "Re Protocol docs state redemption and transaction fees currently start at 6 bps (0.06%).",
@@ -221,7 +222,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: [
       "Tracked metadata describes atomic redemption when instant liquidity is available and queue settlement otherwise",
-      "The reviewed 20% bound matches the tracked USDC instant-redemption buffer rather than assuming the full reUSD reserve stack is immediately withdrawable",
+      "Fresh Re Metrics reserve telemetry reads the current instant redemption vault balances as the direct bounded capacity; if that payload is unavailable, the reviewed 20% fallback matches the prior tracked instant-redemption buffer rather than assuming the full reUSD reserve stack is immediately withdrawable",
     ],
   },
   "susdai-usd-ai": {
@@ -686,8 +687,9 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     capacityModel: { kind: "reserve-sync-metadata" },
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: documentedVariableFee(
-      "Avant docs describe savAsset unstaking with a one-day cooldown before receiving the underlying avAsset",
+    costModel: fixedFee(
+      0,
+      "StakedAvUSDV2 ERC-4626 (0x06d47f3fb376649c3a9dafe069b3d6e35572219e) charges no exit fee: on-chain previewRedeem == convertToAssets, source shows a vesting-only adjustment; the Avant redemption 'fee' applies to the downstream avUSD leg",
     ),
     docs: [
       sourceRef(

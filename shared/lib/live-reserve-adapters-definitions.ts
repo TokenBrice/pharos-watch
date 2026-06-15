@@ -403,6 +403,14 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
+  "liquity-native-active-pool": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   "liquity-v2-branches": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -421,6 +429,14 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
+  },
+  "m0-wrapper-underlying": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   mento: {
     sourceModel: "dynamic-mix",
@@ -479,7 +495,7 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,

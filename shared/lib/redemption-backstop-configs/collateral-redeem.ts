@@ -156,7 +156,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "meusd-mezo": {
       ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
       docs: [
         sourceRef("Mezo MUSD overview", "https://mezo.org/docs/users/musd/", ["route", "capacity", "fees"]),
@@ -166,6 +167,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "fees",
           "access",
         ]),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Mezo ActivePool debt as the current direct redemption-capacity bound, paired with BTC collateral value, TCR/MCR route status, and the on-chain redemption-rate read.",
       ],
     },
     "nect-beraborrow": {
@@ -233,7 +237,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "cdp-enosys": {
       ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_FOLLOWUP_REMEDIATION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
@@ -245,7 +250,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ],
       notes: [
         "Modeled as a Liquity V2-style collateral redemption route on Flare; lowest-rate troves are redeemed first when CDP trades below peg.",
-        "Capacity should stay documented-bound until a Flare adapter can read current branch debt and collateral directly.",
+        "Fresh live reserve metadata reads Enosys ActivePool branch debt and collateral balances on Flare as the current direct redemption-capacity bound.",
       ],
     },
     "ausdt-tether-alloy": {
