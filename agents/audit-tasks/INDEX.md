@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**97/733 done (13%)**  `███░░░░░░░░░░░░░░░░░`
+**99/733 done (14%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 613 | 4 | 0 | 97 | 19 |
+| Count | 612 | 3 | 0 | 99 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 43 | 1 | 0 | 212 |
-| quality | 315 | 45 | 3 | 0 | 260 |
+| redundancy | 266 | 43 | 2 | 0 | 211 |
+| quality | 315 | 47 | 1 | 0 | 260 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -36,7 +36,7 @@
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
 | ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
-| ⬜ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call |  | `src/components/depeg-feed.tsx:L170-L177` |
+| 🔄 | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call | codex | `src/components/depeg-feed.tsx:L170-L177` |
 | ✅ | [R-011](redundancy/R-011.md) | S | clone | Duplicated `isValidDateOnly` / `DATE_ONLY_RE` across two tooling modules | codex | `scripts/lib/hotspot-ratchet.mjs:L64-L70+L365-L37` |
 | ✅ | [R-012](redundancy/R-012.md) | S | clone | stringValue() defined six times across scripts with identical body | codex | `scripts/maintenance/audit-dex-pricing-source-gap` |
 | ⬜ | [R-013](redundancy/R-013.md) | S | clone | Three independent formatAge implementations across the telegram layer |  | `worker/src/api/telegram-webhook-insights.ts:L21-` |
@@ -310,7 +310,7 @@
 | ✅ | [Q-003](quality/Q-003.md) | S | dead-code | Slipstream pools hardcode volume24hUsd=0, triggering silent large-pool filter exclusion | codex | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ✅ | [Q-004](quality/Q-004.md) | S | type-safety | usdgo-osl rate-derived config uses benchmarkCurrency instead of benchmarkOverrideKey, spli | codex | `worker/src/cron/yield-config-rate-sources.ts:221` |
 | ✅ | [Q-078](quality/Q-078.md) | S | type-safety | reserve-protocol-dtf compares fetchOnchainUint256 bigint result to 0n to detect non-SOUND  | codex | `worker/src/cron/reserve-adapters/reserve-protoco` |
-| 🔄 | [Q-082](quality/Q-082.md) | S | security | LIKE wildcard injection in tape-event full-text search (q parameter) | codex | `worker/src/lib/tape-event-store.ts:142-145, work` |
+| ✅ | [Q-082](quality/Q-082.md) | S | security | LIKE wildcard injection in tape-event full-text search (q parameter) | codex | `worker/src/lib/tape-event-store.ts:142-145, work` |
 
 ### Medium (110)
 
@@ -461,7 +461,7 @@
 | ⬜ | [Q-060](quality/Q-060.md) | S | complexity | price-consensus medianPrice uses floor-index, systematically biasing high for even-sized c |  | `worker/src/lib/price-consensus.ts:L248-L251` |
 | ⬜ | [Q-069](quality/Q-069.md) | M | complexity | `validateRedemptionBackstopRegistry` is a 1117-line god function with nested function decl |  | `scripts/lib/redemption-backstop-validation.ts:L1` |
 | ⬜ | [Q-070](quality/Q-070.md) | S | error-handling | audit-seo-render-budget.mjs silently swallows all per-response accounting errors in the Pl |  | `scripts/maintenance/audit-seo-render-budget.mjs:` |
-| 🔄 | [Q-077](quality/Q-077.md) | S | naming | validationFailures in mint-burn metadata aliases apiErrors, producing a misleading cron_ru | codex | `worker/src/cron/mint-burn/run-completion.ts:L154` |
+| ✅ | [Q-077](quality/Q-077.md) | S | naming | validationFailures in mint-burn metadata aliases apiErrors, producing a misleading cron_ru | codex | `worker/src/cron/mint-burn/run-completion.ts:L154` |
 | ⬜ | [Q-084](quality/Q-084.md) | M | complexity | DailyDigest contains an IIFE returning JSX, splitting layout into two unrelated branches i |  | `src/components/daily-digest.tsx:L249-L333` |
 | ⬜ | [Q-085](quality/Q-085.md) | M | complexity | readRedemptionBackstopLiveMetadata is a 220-line monolithic function with 30+ intermediate |  | `worker/src/lib/redemption-backstop-live-metadata` |
 | ⬜ | [Q-087](quality/Q-087.md) | M | type-safety | Hundreds of entries have reconstructed: false with commits: [] — semantically contradictor |  | `shared/data/methodology-changelogs/depeg-dews/v6` |
