@@ -591,6 +591,16 @@ describe("api endpoint registry", () => {
     ]);
   });
 
+  it("does not infer status-page action paths from probe paths", () => {
+    const actionPaths = new Set(getStatusPageActions().map((action) => action.path));
+
+    for (const endpoint of ENDPOINT_DEFINITIONS) {
+      if (!endpoint.statusPageAction || !endpoint.probePath || endpoint.statusPageAction.path) continue;
+      expect(actionPaths.has(endpoint.probePath), endpoint.key).toBe(false);
+      expect(actionPaths.has(endpoint.path), endpoint.key).toBe(true);
+    }
+  });
+
   it("keeps strict contract path list unique", () => {
     expect(new Set(STRICT_CONTRACT_PATHS_LIST).size).toBe(STRICT_CONTRACT_PATHS_LIST.length);
   });
