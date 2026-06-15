@@ -311,7 +311,10 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "reusd-resupply": {
       ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: {
+        kind: "reserve-sync-metadata",
+      },
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
       docs: [
@@ -321,6 +324,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "fees",
         ]),
         sourceRef("Resupply app", "https://resupply.fi/redeem", ["route", "capacity", "settlement"]),
+      ],
+      notes: [
+        "Fresh Resupply pair telemetry reads RedemptionHandler.getMaxRedeemableDebt() and the permissionless guard state as the current executable capacity bound; when the guard is closed, the route stays visible but does not uplift Safety Score liquidity",
       ],
     },
     "cusd-celo": {

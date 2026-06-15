@@ -6,6 +6,7 @@ import { throwIfAborted } from "../../lib/abort";
 import type { AdapterContext, AdapterResult } from "./types";
 import { encodeUint256 } from "../../lib/evm-selectors";
 import {
+  buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchOnchainRawCall,
   notApplicableFreshnessMetadata,
@@ -25,6 +26,7 @@ interface ResupplyUnderlyingDescriptor {
 interface ResupplyPairsParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  redemptionHandlerAddress?: string;
   pairs?: ResupplyPairConfig[];
   underlyings?: ResupplyUnderlyingDescriptor[];
 }
@@ -43,13 +45,29 @@ interface ResupplyPairSnapshot {
   totalBorrowShares: bigint;
   totalCollateralShares: bigint;
   totalCollateralAssets: bigint;
+  maxRedeemableDebt?: bigint;
 }
 
 const UNDERLYING_SELECTOR = "0x6f307dc3";
 const COLLATERAL_SELECTOR = "0xd8dfeb45";
 const GET_PAIR_ACCOUNTING_SELECTOR = "0xcdd72d52";
 const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+const GET_MAX_REDEEMABLE_DEBT_SELECTOR = "0x43bad45b";
+const GUARD_ENABLED_SELECTOR = "0x901654fc";
+const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
+const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
 const UNDERLYING_DECIMALS = 18;
+
+interface RedemptionGuardSnapshot {
+  guardEnabled: boolean;
+  permissionlessPriceThreshold: bigint;
+  reUsdOraclePrice: bigint;
+}
+
+interface RedemptionTelemetryInput {
+  redemptionHandlerAddress: `0x${string}`;
+  guard: RedemptionGuardSnapshot;
+}
 
 function normalizeAddress(value: string | undefined): string | null {
   const trimmed = value?.trim().toLowerCase();
@@ -83,7 +101,10 @@ function buildUnderlyingMap(
   return byAddress;
 }
 
-function decodePairAccounting(raw: string | null, pairAddress: string): {
+function decodePairAccounting(
+  raw: string | null,
+  pairAddress: string,
+): {
   totalBorrowAmount: bigint;
   totalBorrowShares: bigint;
   totalCollateral: bigint;
@@ -110,16 +131,81 @@ function encodeConvertToAssetsCall(shares: bigint): `0x${string}` {
   return `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(shares)}` as `0x${string}`;
 }
 
+function encodeAddressArgument(address: string): string {
+  return address.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+}
+
+function encodeGetMaxRedeemableDebtCall(pairAddress: `0x${string}`): `0x${string}` {
+  return `${GET_MAX_REDEEMABLE_DEBT_SELECTOR}${encodeAddressArgument(pairAddress)}` as `0x${string}`;
+}
+
+function decodeBooleanResult(raw: string | null, context: string): boolean {
+  const decoded = decodeUint256Word(raw);
+  if (decoded == null || (decoded !== 0n && decoded !== 1n)) {
+    throw new Error(`resupply-pairs ${context} call failed`);
+  }
+  return decoded === 1n;
+}
+
+function buildRedemptionTelemetry(
+  snapshots: readonly ResupplyPairSnapshot[],
+  input: RedemptionTelemetryInput | undefined,
+): Pick<NonNullable<AdapterResult["metadata"]>, "redemption" | "immediateRedeemableUsd"> {
+  if (!input) return {};
+  let capacityUsd = 0;
+  for (const snapshot of snapshots) {
+    if (snapshot.maxRedeemableDebt == null) {
+      throw new Error(`resupply-pairs missing redemption capacity for ${snapshot.pairAddress}`);
+    }
+    capacityUsd += decimalNumberFromBigInt(snapshot.maxRedeemableDebt, UNDERLYING_DECIMALS);
+  }
+
+  const permissionlessOpen =
+    !input.guard.guardEnabled || input.guard.reUsdOraclePrice < input.guard.permissionlessPriceThreshold;
+  const routeStatusReason = permissionlessOpen
+    ? "Resupply redemption guard permits same-transaction holder redemptions"
+    : "Resupply redemption guard currently limits redemptions to the protocol redemption operator until the reUSD oracle price is below the permissionless threshold";
+
+  return {
+    immediateRedeemableUsd: capacityUsd,
+    ...buildRedemptionSnapshotMetadata({
+      capacityUsd,
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
+      routeStatus: permissionlessOpen ? "open" : "cohort-limited",
+      routeStatusSource: "onchain",
+      routeStatusReason,
+      holderEligibility: permissionlessOpen ? "any-holder" : "whitelisted-primary",
+      settlementDelaySec: 0,
+      sourceUrls: [
+        "https://docs.resupply.fi/resupply-protocol/stability-mechanics",
+        "https://github.com/resupplyfi/resupply/blob/main/src/protocol/RedemptionHandler.sol",
+      ],
+      redemptionHandlerAddress: input.redemptionHandlerAddress,
+      guardEnabled: input.guard.guardEnabled,
+      reUsdOraclePrice: decimalNumberFromBigInt(input.guard.reUsdOraclePrice, UNDERLYING_DECIMALS),
+      permissionlessPriceThreshold: decimalNumberFromBigInt(
+        input.guard.permissionlessPriceThreshold,
+        UNDERLYING_DECIMALS,
+      ),
+    }),
+  };
+}
+
 export function adaptResupplyPairSnapshots(
   snapshots: readonly ResupplyPairSnapshot[],
   underlyings: readonly ResupplyUnderlyingDescriptor[] | undefined,
+  redemptionTelemetry?: RedemptionTelemetryInput,
 ): AdapterResult {
   const underlyingByAddress = buildUnderlyingMap(underlyings);
-  const valueByUnderlying = new Map<string, {
-    value: number;
-    descriptor: ResupplyUnderlyingDescriptor;
-    pairCount: number;
-  }>();
+  const valueByUnderlying = new Map<
+    string,
+    {
+      value: number;
+      descriptor: ResupplyUnderlyingDescriptor;
+      pairCount: number;
+    }
+  >();
   const components: Array<Record<string, unknown>> = [];
   let totalBorrowUsd = 0;
   let totalCollateralAssetsUsd = 0;
@@ -128,7 +214,9 @@ export function adaptResupplyPairSnapshots(
     totalBorrowUsd += decimalNumberFromBigInt(snapshot.totalBorrowAmount, UNDERLYING_DECIMALS);
     if (snapshot.totalCollateralAssets === 0n) {
       if (snapshot.totalBorrowAmount > 0n) {
-        throw new Error(`resupply-pairs ${snapshot.pairAddress} has positive borrow and zero converted collateral assets`);
+        throw new Error(
+          `resupply-pairs ${snapshot.pairAddress} has positive borrow and zero converted collateral assets`,
+        );
       }
       continue;
     }
@@ -156,6 +244,7 @@ export function adaptResupplyPairSnapshots(
       totalBorrowShares: snapshot.totalBorrowShares.toString(),
       totalCollateralShares: snapshot.totalCollateralShares.toString(),
       totalCollateralAssets: snapshot.totalCollateralAssets.toString(),
+      ...(snapshot.maxRedeemableDebt != null ? { maxRedeemableDebt: snapshot.maxRedeemableDebt.toString() } : {}),
     });
   }
 
@@ -178,6 +267,7 @@ export function adaptResupplyPairSnapshots(
       totalCollateralAssetsUsd,
       pairCount: snapshots.length,
       activePairCount: components.length,
+      ...buildRedemptionTelemetry(snapshots, redemptionTelemetry),
       ...notApplicableFreshnessMetadata({
         proofKind: "resupply-pair-accounting",
         components,
@@ -207,13 +297,43 @@ export async function fetchResupplyPairsReserves(
     timeoutMs: 12_000,
   };
 
+  let redemptionHandlerAddress: `0x${string}` | undefined;
+  let guard: RedemptionGuardSnapshot | undefined;
+  if (params.redemptionHandlerAddress) {
+    redemptionHandlerAddress = parseConfiguredAddress(params.redemptionHandlerAddress, "redemption handler");
+    const [rawGuardEnabled, rawThreshold, rawOraclePrice] = await Promise.all([
+      fetchOnchainRawCall({ ...callBase, contract: redemptionHandlerAddress, data: GUARD_ENABLED_SELECTOR }),
+      fetchOnchainRawCall({
+        ...callBase,
+        contract: redemptionHandlerAddress,
+        data: PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR,
+      }),
+      fetchOnchainRawCall({ ...callBase, contract: redemptionHandlerAddress, data: REUSD_ORACLE_PRICE_SELECTOR }),
+    ]);
+    guard = {
+      guardEnabled: decodeBooleanResult(rawGuardEnabled, `guardEnabled() for ${redemptionHandlerAddress}`),
+      permissionlessPriceThreshold: decodeUint256Result(
+        rawThreshold,
+        `permissionlessPriceThreshold() for ${redemptionHandlerAddress}`,
+      ),
+      reUsdOraclePrice: decodeUint256Result(rawOraclePrice, `reUsdOraclePrice() for ${redemptionHandlerAddress}`),
+    };
+  }
+
   const snapshots: ResupplyPairSnapshot[] = [];
   for (const pair of params.pairs) {
     throwIfAborted(signal);
     const pairAddress = parseConfiguredAddress(pair.address, `configured pair ${pair.key}`);
-    const [rawUnderlying, rawAccounting] = await Promise.all([
+    const [rawUnderlying, rawAccounting, rawMaxRedeemableDebt] = await Promise.all([
       fetchOnchainRawCall({ ...callBase, contract: pairAddress, data: UNDERLYING_SELECTOR }),
       fetchOnchainRawCall({ ...callBase, contract: pairAddress, data: GET_PAIR_ACCOUNTING_SELECTOR }),
+      redemptionHandlerAddress
+        ? fetchOnchainRawCall({
+            ...callBase,
+            contract: redemptionHandlerAddress,
+            data: encodeGetMaxRedeemableDebtCall(pairAddress),
+          })
+        : Promise.resolve(null),
     ]);
     const underlyingAddress = parseAddressResult(rawUnderlying, `underlying() for ${pairAddress}`);
     const accounting = decodePairAccounting(rawAccounting, pairAddress);
@@ -224,7 +344,10 @@ export async function fetchResupplyPairsReserves(
       contract: collateralAddress,
       data: encodeConvertToAssetsCall(accounting.totalCollateral),
     });
-    const totalCollateralAssets = decodeUint256Result(rawCollateralAssets, `convertToAssets() for ${collateralAddress}`);
+    const totalCollateralAssets = decodeUint256Result(
+      rawCollateralAssets,
+      `convertToAssets() for ${collateralAddress}`,
+    );
     snapshots.push({
       pairKey: pair.key,
       pairAddress,
@@ -234,8 +357,17 @@ export async function fetchResupplyPairsReserves(
       totalBorrowShares: accounting.totalBorrowShares,
       totalCollateralShares: accounting.totalCollateral,
       totalCollateralAssets,
+      ...(redemptionHandlerAddress
+        ? {
+            maxRedeemableDebt: decodeUint256Result(rawMaxRedeemableDebt, `getMaxRedeemableDebt() for ${pairAddress}`),
+          }
+        : {}),
     });
   }
 
-  return adaptResupplyPairSnapshots(snapshots, params.underlyings);
+  return adaptResupplyPairSnapshots(
+    snapshots,
+    params.underlyings,
+    redemptionHandlerAddress && guard ? { redemptionHandlerAddress, guard } : undefined,
+  );
 }

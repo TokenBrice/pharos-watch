@@ -26,14 +26,17 @@ const UNDERLYING_SELECTOR = "0x6f307dc3";
 const COLLATERAL_SELECTOR = "0xd8dfeb45";
 const GET_PAIR_ACCOUNTING_SELECTOR = "0xcdd72d52";
 const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+const GET_MAX_REDEEMABLE_DEBT_SELECTOR = "0x43bad45b";
+const GUARD_ENABLED_SELECTOR = "0x901654fc";
+const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
+const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
+const REDEMPTION_HANDLER = "0x5eeB063d0abefBBc78F576E28d762a16b637A025";
 const ONE = 1_000_000_000_000_000_000n;
 
 const coin = {
   id: "reusd-resupply",
   symbol: "REUSD",
-  contracts: [
-    { chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 },
-  ],
+  contracts: [{ chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 }],
 };
 
 function encodeAddressResult(address: string): `0x${string}` {
@@ -49,6 +52,10 @@ function encodePairAccounting(totalBorrowAmount: bigint, totalCollateralShares: 
 
 function encodeUint256Result(value: bigint): `0x${string}` {
   return `0x${value.toString(16).padStart(64, "0")}`;
+}
+
+function encodeBoolResult(value: boolean): `0x${string}` {
+  return encodeUint256Result(value ? 1n : 0n);
 }
 
 function normalizeAddress(address: string): string {
@@ -89,6 +96,7 @@ describe("resupply-pairs adapter", () => {
           totalBorrowShares: 60n * ONE,
           totalCollateralShares: 100n * ONE,
           totalCollateralAssets: 80n * ONE,
+          maxRedeemableDebt: 50n * ONE,
         },
         {
           pairKey: "PAIR_FRAXLEND_SFRXETH_FRXUSD",
@@ -99,6 +107,7 @@ describe("resupply-pairs adapter", () => {
           totalBorrowShares: 40n * ONE,
           totalCollateralShares: 80n * ONE,
           totalCollateralAssets: 120n * ONE,
+          maxRedeemableDebt: 30n * ONE,
         },
         {
           pairKey: "PAIR_FRAXLEND_SUSDE_FRXUSD",
@@ -109,9 +118,18 @@ describe("resupply-pairs adapter", () => {
           totalBorrowShares: 0n,
           totalCollateralShares: 0n,
           totalCollateralAssets: 0n,
+          maxRedeemableDebt: 0n,
         },
       ],
       underlyings,
+      {
+        redemptionHandlerAddress: REDEMPTION_HANDLER.toLowerCase() as `0x${string}`,
+        guard: {
+          guardEnabled: true,
+          permissionlessPriceThreshold: 985_000_000_000_000_000n,
+          reUsdOraclePrice: 970_000_000_000_000_000n,
+        },
+      },
     );
 
     expect(result.slices).toEqual([
@@ -122,6 +140,19 @@ describe("resupply-pairs adapter", () => {
       freshnessMode: "not-applicable",
       totalBorrowUsd: 100,
       totalCollateralAssetsUsd: 200,
+      immediateRedeemableUsd: 80,
+      redemption: {
+        capacityUsd: 80,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        guardEnabled: true,
+        reUsdOraclePrice: 0.97,
+        permissionlessPriceThreshold: 0.985,
+      },
       pairCount: 3,
       activePairCount: 2,
       details: {
@@ -143,6 +174,7 @@ describe("resupply-pairs adapter", () => {
             totalBorrowShares: ONE,
             totalCollateralShares: 2n * ONE,
             totalCollateralAssets: 2n * ONE,
+            maxRedeemableDebt: ONE,
           },
         ],
         underlyings,
@@ -163,6 +195,7 @@ describe("resupply-pairs adapter", () => {
       params: {
         rpcUrl: "https://ethereum-rpc.publicnode.com",
         fallbackRpcUrl: "https://eth.llamarpc.com",
+        redemptionHandlerAddress: REDEMPTION_HANDLER,
         pairs: [
           { key: "PAIR_CURVELEND_SFRXUSD_CRVUSD", address: CURVE_PAIR },
           { key: "PAIR_FRAXLEND_SFRXETH_FRXUSD", address: FRAX_PAIR },
@@ -201,6 +234,32 @@ describe("resupply-pairs adapter", () => {
       if (normalizedContract === normalizeAddress(EMPTY_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
         return encodePairAccounting(0n, 0n);
       }
+      if (normalizedContract === normalizeAddress(REDEMPTION_HANDLER) && data === GUARD_ENABLED_SELECTOR) {
+        return encodeBoolResult(true);
+      }
+      if (
+        normalizedContract === normalizeAddress(REDEMPTION_HANDLER) &&
+        data === PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR
+      ) {
+        return encodeUint256Result(985_000_000_000_000_000n);
+      }
+      if (normalizedContract === normalizeAddress(REDEMPTION_HANDLER) && data === REUSD_ORACLE_PRICE_SELECTOR) {
+        return encodeUint256Result(990_000_000_000_000_000n);
+      }
+      if (
+        normalizedContract === normalizeAddress(REDEMPTION_HANDLER) &&
+        data.startsWith(GET_MAX_REDEEMABLE_DEBT_SELECTOR)
+      ) {
+        if (data.toLowerCase().endsWith(CURVE_PAIR.toLowerCase().replace(/^0x/, "").padStart(64, "0"))) {
+          return encodeUint256Result(50n * ONE);
+        }
+        if (data.toLowerCase().endsWith(FRAX_PAIR.toLowerCase().replace(/^0x/, "").padStart(64, "0"))) {
+          return encodeUint256Result(25n * ONE);
+        }
+        if (data.toLowerCase().endsWith(EMPTY_PAIR.toLowerCase().replace(/^0x/, "").padStart(64, "0"))) {
+          return encodeUint256Result(0n);
+        }
+      }
       if (normalizedContract === normalizeAddress(CURVE_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
         return encodeUint256Result(60n * ONE);
       }
@@ -223,9 +282,22 @@ describe("resupply-pairs adapter", () => {
     expect(result.metadata).toMatchObject({
       totalBorrowUsd: 100,
       totalCollateralAssetsUsd: 100,
+      immediateRedeemableUsd: 75,
+      redemption: {
+        capacityUsd: 75,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "cohort-limited",
+        routeStatusSource: "onchain",
+        holderEligibility: "whitelisted-primary",
+        settlementDelaySec: 0,
+        guardEnabled: true,
+        reUsdOraclePrice: 0.99,
+        permissionlessPriceThreshold: 0.985,
+      },
       pairCount: 3,
       activePairCount: 2,
     });
-    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(12);
+    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(18);
   });
 });

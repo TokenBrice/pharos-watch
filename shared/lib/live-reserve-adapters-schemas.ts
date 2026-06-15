@@ -283,6 +283,7 @@ const resupplyPairsParamsSchema = z
   .object({
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    redemptionHandlerAddress: z.string().optional(),
     pairs: z.array(resupplyPairSchema).min(1),
     underlyings: z.array(resupplyUnderlyingSchema).min(1),
   })

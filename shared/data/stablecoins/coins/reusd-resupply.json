@@ -170,6 +170,7 @@
     "params": {
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
       "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "redemptionHandlerAddress": "0x5eeB063d0abefBBc78F576E28d762a16b637A025",
       "pairs": [
         {
           "key": "PAIR_CURVELEND_SFRXUSD_CRVUSD",

@@ -468,7 +468,13 @@ each pair's current on-chain accounting and collateral vault conversion to
 aggregate positive collateral assets by reviewed underlying stablecoin
 (`crvUSD` / `frxUSD`). It fails closed on unmapped positive-collateral pairs
 and uses `freshnessMode: not-applicable` because the source is latest Ethereum
-state.
+state. When a reviewed `redemptionHandlerAddress` is configured, the adapter
+also reads `getMaxRedeemableDebt(pair)`, `guardEnabled()`,
+`permissionlessPriceThreshold()`, and `reUsdOraclePrice()` from the Resupply
+redemption handler in the same run. That nested redemption telemetry is
+score-grade only while the permissionless guard is open; if the guard is closed
+above the threshold, the route is surfaced as cohort-limited and remains
+excluded from Safety Score liquidity.
 
 Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts` and covered by the registry tests. Every registered key has one of these statuses:
 

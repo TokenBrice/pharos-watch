@@ -490,7 +490,7 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
