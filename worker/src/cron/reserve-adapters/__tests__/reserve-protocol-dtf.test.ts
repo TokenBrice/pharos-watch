@@ -18,9 +18,7 @@ import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 const coin = {
   id: "usd3-reserve-protocol",
   symbol: "USD3",
-  contracts: [
-    { chain: "ethereum", address: "0x0d86883faf4ffd7aeb116390af37746f45b6f378", decimals: 18 },
-  ],
+  contracts: [{ chain: "ethereum", address: "0x0d86883faf4ffd7aeb116390af37746f45b6f378", decimals: 18 }],
 };
 
 const MAIN_SELECTOR = "0xdffeadd0";
@@ -57,6 +55,85 @@ function normalizeAddress(address: string): string {
   return address.toLowerCase();
 }
 
+function createOnchainConfig(): LiveReservesConfig {
+  return {
+    adapter: "reserve-protocol-dtf",
+    version: 1,
+    semantics: "collateral-mix",
+    breakerScope: "usd3-reserve-protocol",
+    display: {
+      url: "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+      label: "Reserve Protocol",
+    },
+    inputs: {
+      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+    },
+    params: {
+      rpcUrl: "https://ethereum-rpc.publicnode.com",
+      fallbackRpcUrl: "https://eth.llamarpc.com",
+      assets: [
+        {
+          address: SUSDS,
+          name: "Savings USDS",
+          risk: "low",
+          coinId: "susds-sky",
+          depType: "collateral",
+        },
+        {
+          address: WCUSDCV3,
+          name: "Wrapped Compound USDCv3",
+          risk: "medium",
+          coinId: "usdc-circle",
+          depType: "collateral",
+        },
+      ],
+    },
+  };
+}
+
+function mockReserveProtocolOnchain(statusByAsset = new Map<string, bigint>()): void {
+  vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
+    const normalizedContract = normalizeAddress(contract);
+    if (normalizedContract === RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(MAIN);
+    if (normalizedContract === MAIN && data === ASSET_REGISTRY_SELECTOR) return encodeAddressResult(ASSET_REGISTRY);
+    if (normalizedContract === MAIN && data === BASKET_HANDLER_SELECTOR) return encodeAddressResult(BASKET_HANDLER);
+    if (normalizedContract === BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR) return encodeBoolResult(true);
+    if (normalizedContract === BASKET_HANDLER && data.startsWith(QUOTE_SELECTOR)) {
+      return encodeAbiParameters(
+        [{ type: "address[]" }, { type: "uint256[]" }],
+        [
+          [SUSDS, WCUSDCV3],
+          [50n * ONE, 50_000_000n],
+        ],
+      );
+    }
+    if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(SUSDS)}`) {
+      return encodeAddressResult(SUSDS_ASSET);
+    }
+    if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(WCUSDCV3)}`) {
+      return encodeAddressResult(WCUSDCV3_ASSET);
+    }
+    if ((normalizedContract === SUSDS_ASSET || normalizedContract === WCUSDCV3_ASSET) && data === PRICE_SELECTOR) {
+      return encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]);
+    }
+    return null;
+  });
+
+  vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+    const normalizedContract = normalizeAddress(contract);
+    if (normalizedContract === RTOKEN && data === BASKETS_NEEDED_SELECTOR) return 100n * ONE;
+    if (normalizedContract === SUSDS && data === DECIMALS_SELECTOR) return 18n;
+    if (normalizedContract === WCUSDCV3 && data === DECIMALS_SELECTOR) return 6n;
+    if (
+      (normalizedContract === SUSDS_ASSET || normalizedContract === WCUSDCV3_ASSET) &&
+      data === COLLATERAL_STATUS_SELECTOR
+    ) {
+      return statusByAsset.get(normalizedContract) ?? 0n;
+    }
+    return null;
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -74,8 +151,18 @@ describe("reserve-protocol-dtf adapter", () => {
           chainId: 1,
           status: "active",
           basket: [
-            { address: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD", symbol: "sUSDS", name: "Savings USDS", weight: "50" },
-            { address: "0x27F2f159Fe990Ba83D57f39Fd69661764BEbf37a", symbol: "wcUSDCv3", name: "Wrapped cUSDCv3", weight: "50" },
+            {
+              address: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+              symbol: "sUSDS",
+              name: "Savings USDS",
+              weight: "50",
+            },
+            {
+              address: "0x27F2f159Fe990Ba83D57f39Fd69661764BEbf37a",
+              symbol: "wcUSDCv3",
+              name: "Wrapped cUSDCv3",
+              weight: "50",
+            },
           ],
         },
       ],
@@ -114,9 +201,7 @@ describe("reserve-protocol-dtf adapter", () => {
         {
           address: "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
           symbol: "USD3",
-          basket: [
-            { address: "0x0000000000000000000000000000000000000001", symbol: "UNKNOWN", weight: 100 },
-          ],
+          basket: [{ address: "0x0000000000000000000000000000000000000001", symbol: "UNKNOWN", weight: 100 }],
         },
       ],
       coin as never,
@@ -141,7 +226,10 @@ describe("reserve-protocol-dtf adapter", () => {
       version: 1,
       semantics: "collateral-mix",
       breakerScope: "usd3-reserve-protocol",
-      display: { url: "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378", label: "Reserve Protocol" },
+      display: {
+        url: "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+        label: "Reserve Protocol",
+      },
       inputs: {
         primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
       },
@@ -172,11 +260,15 @@ describe("reserve-protocol-dtf adapter", () => {
       if (normalizedContract === RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(MAIN);
       if (normalizedContract === MAIN && data === ASSET_REGISTRY_SELECTOR) return encodeAddressResult(ASSET_REGISTRY);
       if (normalizedContract === MAIN && data === BASKET_HANDLER_SELECTOR) return encodeAddressResult(BASKET_HANDLER);
-      if (normalizedContract === BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR) return encodeBoolResult(true);
+      if (normalizedContract === BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR)
+        return encodeBoolResult(true);
       if (normalizedContract === BASKET_HANDLER && data.startsWith(QUOTE_SELECTOR)) {
         return encodeAbiParameters(
           [{ type: "address[]" }, { type: "uint256[]" }],
-          [[SUSDS, WCUSDCV3], [50n * ONE, 50_000_000n]],
+          [
+            [SUSDS, WCUSDCV3],
+            [50n * ONE, 50_000_000n],
+          ],
         );
       }
       if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(SUSDS)}`) {
@@ -196,7 +288,11 @@ describe("reserve-protocol-dtf adapter", () => {
       if (normalizedContract === RTOKEN && data === BASKETS_NEEDED_SELECTOR) return 100n * ONE;
       if (normalizedContract === SUSDS && data === DECIMALS_SELECTOR) return 18n;
       if (normalizedContract === WCUSDCV3 && data === DECIMALS_SELECTOR) return 6n;
-      if ((normalizedContract === SUSDS_ASSET || normalizedContract === WCUSDCV3_ASSET) && data === COLLATERAL_STATUS_SELECTOR) return 0n;
+      if (
+        (normalizedContract === SUSDS_ASSET || normalizedContract === WCUSDCV3_ASSET) &&
+        data === COLLATERAL_STATUS_SELECTOR
+      )
+        return 0n;
       return null;
     });
 
@@ -230,5 +326,31 @@ describe("reserve-protocol-dtf adapter", () => {
       basketHandler: BASKET_HANDLER,
       quoteAmount: (100n * ONE).toString(),
     });
+  });
+
+  it("keeps IFFY collateral published with a degraded status warning", async () => {
+    mockReserveProtocolOnchain(new Map([[SUSDS_ASSET, 1n]]));
+
+    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+
+    expect(result.slices).toEqual([
+      { name: "Savings USDS", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+    ]);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "reserve-protocol-dtf-collateral-status",
+        effect: "degraded",
+        message: expect.stringContaining("IFFY (1)"),
+      }),
+    );
+  });
+
+  it("rejects DISABLED collateral status instead of publishing a stale basket", async () => {
+    mockReserveProtocolOnchain(new Map([[SUSDS_ASSET, 2n]]));
+
+    await expect(fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal)).rejects.toThrow(
+      /collateral status is DISABLED \(2\)/,
+    );
   });
 });

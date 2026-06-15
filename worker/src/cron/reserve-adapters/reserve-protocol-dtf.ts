@@ -72,13 +72,18 @@ const FULLY_COLLATERALIZED_SELECTOR = "0xe45a5b2d";
 const FLOOR_ROUNDING = 0n;
 const APPLY_ISSUANCE_PREMIUM = 0n;
 const PRICE_DECIMALS = 18;
+const COLLATERAL_STATUS_SOUND = 0n;
+const COLLATERAL_STATUS_IFFY = 1n;
+const COLLATERAL_STATUS_DISABLED = 2n;
 
 function normalizeAddress(value: string | undefined): string | null {
   const trimmed = value?.trim().toLowerCase();
   return trimmed && /^0x[0-9a-f]{40}$/.test(trimmed) ? trimmed : null;
 }
 
-function buildDescriptorMap(assets: readonly ReserveProtocolDtfAssetDescriptor[] | undefined): Map<string, ReserveProtocolDtfAssetDescriptor> {
+function buildDescriptorMap(
+  assets: readonly ReserveProtocolDtfAssetDescriptor[] | undefined,
+): Map<string, ReserveProtocolDtfAssetDescriptor> {
   const descriptors = new Map<string, ReserveProtocolDtfAssetDescriptor>();
   for (const asset of assets ?? []) {
     const address = normalizeAddress(asset.address);
@@ -87,10 +92,7 @@ function buildDescriptorMap(assets: readonly ReserveProtocolDtfAssetDescriptor[]
   return descriptors;
 }
 
-function findDtfRow(
-  rows: readonly ReserveProtocolDtfRow[],
-  coin: StablecoinMeta,
-): ReserveProtocolDtfRow | null {
+function findDtfRow(rows: readonly ReserveProtocolDtfRow[], coin: StablecoinMeta): ReserveProtocolDtfRow | null {
   const contractAddresses = new Set(
     (coin.contracts ?? [])
       .map((contract) => normalizeAddress(contract.address))
@@ -227,17 +229,18 @@ export function adaptReserveProtocolDtfRows(
 
   const unknownExposurePct = computeUnknownExposurePct(unknownWeight, totalWeight);
   if (unknownExposurePct > 0) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "reserve-protocol-dtf-unknown-component",
-      message: "Unmapped Reserve Protocol DTF basket components",
-      unknownExposurePct,
-    }));
+    warnings.push(
+      buildUnknownExposureWarning({
+        code: "reserve-protocol-dtf-unknown-component",
+        message: "Unmapped Reserve Protocol DTF basket components",
+        unknownExposurePct,
+      }),
+    );
   }
   if (dtf.status && dtf.status !== "active") {
-    warnings.push(reserveInfoWarning(
-      "reserve-protocol-dtf-status",
-      `Reserve Protocol reports DTF status "${dtf.status}"`,
-    ));
+    warnings.push(
+      reserveInfoWarning("reserve-protocol-dtf-status", `Reserve Protocol reports DTF status "${dtf.status}"`),
+    );
   }
 
   const freshness = unverifiedFreshnessMetadata(
@@ -385,11 +388,24 @@ async function fetchReserveProtocolDtfOnchainReserves(
       collateralStatus: rawStatus?.toString(),
     });
 
-    if (rawStatus != null && rawStatus !== 0n) {
-      warnings.push(reserveDegradedWarning(
-        "reserve-protocol-dtf-collateral-status",
-        `Reserve Protocol collateral status is ${rawStatus} for ${entry.address}`,
-      ));
+    if (rawStatus === COLLATERAL_STATUS_IFFY) {
+      warnings.push(
+        reserveDegradedWarning(
+          "reserve-protocol-dtf-collateral-status",
+          `Reserve Protocol collateral status is IFFY (${COLLATERAL_STATUS_IFFY}) for ${entry.address}`,
+        ),
+      );
+    } else if (rawStatus === COLLATERAL_STATUS_DISABLED) {
+      throw new Error(
+        `reserve-protocol-dtf collateral status is DISABLED (${COLLATERAL_STATUS_DISABLED}) for ${entry.address}`,
+      );
+    } else if (rawStatus != null && rawStatus !== COLLATERAL_STATUS_SOUND) {
+      warnings.push(
+        reserveDegradedWarning(
+          "reserve-protocol-dtf-collateral-status",
+          `Reserve Protocol collateral status is unknown (${rawStatus}) for ${entry.address}`,
+        ),
+      );
     }
     if (!descriptor) {
       unknownValue += value;
@@ -412,21 +428,25 @@ async function fetchReserveProtocolDtfOnchainReserves(
 
   const unknownExposurePct = computeUnknownExposurePct(unknownValue, totalValue);
   if (unknownExposurePct > 0) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "reserve-protocol-dtf-unknown-component",
-      message: "Unmapped Reserve Protocol DTF basket components",
-      unknownExposurePct,
-    }));
+    warnings.push(
+      buildUnknownExposureWarning({
+        code: "reserve-protocol-dtf-unknown-component",
+        message: "Unmapped Reserve Protocol DTF basket components",
+        unknownExposurePct,
+      }),
+    );
   }
   const fullyCollateralized = decodeBoolResult(rawFullyCollateralized);
   if (fullyCollateralized == null) {
     throw new Error("reserve-protocol-dtf fullyCollateralized() call failed");
   }
   if (fullyCollateralized === false) {
-    warnings.push(reserveDegradedWarning(
-      "reserve-protocol-dtf-undercollateralized",
-      "Reserve Protocol reports the RToken is not fully collateralized",
-    ));
+    warnings.push(
+      reserveDegradedWarning(
+        "reserve-protocol-dtf-undercollateralized",
+        "Reserve Protocol reports the RToken is not fully collateralized",
+      ),
+    );
   }
 
   return {
