@@ -29,13 +29,13 @@ export async function loadSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
   type: DispatchAlertType,
+  nowSec: number,
 ): Promise<Map<string, SubscriberRow[]>> {
   if (stablecoinIds.length === 0) return new Map();
   const alertColumn = ALERT_COLUMN_BY_TYPE[type];
   if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid alert subscription column for ${type}`);
   }
-  const nowSec = Math.floor(Date.now() / 1000);
   const map = new Map<string, SubscriberRow[]>();
   const seen = new Set<string>();
   for (const idChunk of chunkArray(Array.from(new Set(stablecoinIds)))) {
@@ -90,12 +90,12 @@ export async function loadSubscriberRowsBatch(
 export async function loadGlobalSubscriberRows(
   db: D1Database,
   type: DispatchAlertType,
+  nowSec: number,
 ): Promise<SubscriberRow[]> {
   const alertColumn = GLOBAL_ALERT_COLUMN_BY_TYPE[type];
   if (!VALID_GLOBAL_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid global alert subscription column for ${type}`);
   }
-  const nowSec = Math.floor(Date.now() / 1000);
   const result = await db
     .prepare(
       // SAFETY: alertColumn comes from GLOBAL_ALERT_COLUMN_BY_TYPE and is
@@ -138,11 +138,11 @@ export async function loadGlobalSubscriberRows(
 export async function loadPerCoinSnoozeMap(
   db: D1Database,
   stablecoinIds: readonly string[],
+  nowSec: number,
 ): Promise<Map<string, Set<string>>> {
   const map = new Map<string, Set<string>>();
   const unique = Array.from(new Set(stablecoinIds));
   if (unique.length === 0) return map;
-  const nowSec = Math.floor(Date.now() / 1000);
   for (const idChunk of chunkArray(unique)) {
     const inClause = buildInClause(idChunk);
     const result = await db
@@ -185,6 +185,7 @@ export async function loadPresetSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
   type: Exclude<DispatchAlertType, "launch">,
+  nowSec: number,
 ): Promise<PresetSubscriberLoadResult> {
   if (stablecoinIds.length === 0) return { kind: "ok", rows: new Map() };
   const alertColumn = ALERT_COLUMN_BY_TYPE[type];
@@ -221,7 +222,7 @@ export async function loadPresetSubscriberRowsBatch(
           WHERE p.${alertColumn} = 1
             AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
       )
-      .bind(Math.floor(Date.now() / 1000))
+      .bind(nowSec)
       .all<{
         chat_id: string;
         preset_id: TelegramPresetId;

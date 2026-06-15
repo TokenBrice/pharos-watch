@@ -421,6 +421,7 @@ async function executeFullFanoutPath({
       loadGlobalSubscriberRows,
       loadPerCoinSnoozeMap,
     },
+    nowSec,
   );
   const fanoutQueryMs = Math.max(0, Date.now() - fanoutQueryStartedAtMs);
   const fanoutBuildStartedAtMs = Date.now();

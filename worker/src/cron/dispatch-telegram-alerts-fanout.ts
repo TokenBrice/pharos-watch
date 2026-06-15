@@ -35,16 +35,19 @@ interface FanoutSubscriptionLoaders {
     db: D1Database,
     stablecoinIds: string[],
     type: AlertType,
+    nowSec: number,
   ) => Promise<Map<string, SubscriberRow[]>>;
   loadPresetSubscriberRowsBatch: (
     db: D1Database,
     stablecoinIds: string[],
     type: Exclude<AlertType, "launch">,
+    nowSec: number,
   ) => Promise<PresetSubscriberLoadResult>;
-  loadGlobalSubscriberRows: (db: D1Database, type: AlertType) => Promise<SubscriberRow[]>;
+  loadGlobalSubscriberRows: (db: D1Database, type: AlertType, nowSec: number) => Promise<SubscriberRow[]>;
   loadPerCoinSnoozeMap: (
     db: D1Database,
     stablecoinIds: readonly string[],
+    nowSec: number,
   ) => Promise<Map<string, Set<string>>>;
 }
 
@@ -78,6 +81,7 @@ export async function loadFanoutSubscriptionInputs(
   db: D1Database,
   ids: AlertStablecoinIds,
   loaders: FanoutSubscriptionLoaders,
+  nowSec: number,
 ): Promise<FanoutSubscriptionInputs> {
   const {
     dewsIds,
@@ -99,18 +103,18 @@ export async function loadFanoutSubscriptionInputs(
     globalLaunchSubs,
     perCoinSnoozeMap,
   ] = await Promise.all([
-    loaders.loadSubscriberRowsBatch(db, dewsIds, "dews"),
-    loaders.loadSubscriberRowsBatch(db, depegIds, "depeg"),
-    loaders.loadSubscriberRowsBatch(db, safetyIds, "safety"),
-    loaders.loadSubscriberRowsBatch(db, launchIds, "launch"),
-    loaders.loadPresetSubscriberRowsBatch(db, dewsIds, "dews"),
-    loaders.loadPresetSubscriberRowsBatch(db, depegIds, "depeg"),
-    loaders.loadPresetSubscriberRowsBatch(db, safetyIds, "safety"),
-    loaders.loadGlobalSubscriberRows(db, "dews"),
-    loaders.loadGlobalSubscriberRows(db, "depeg"),
-    loaders.loadGlobalSubscriberRows(db, "safety"),
-    loaders.loadGlobalSubscriberRows(db, "launch"),
-    loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]),
+    loaders.loadSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
+    loaders.loadSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
+    loaders.loadSubscriberRowsBatch(db, safetyIds, "safety", nowSec),
+    loaders.loadSubscriberRowsBatch(db, launchIds, "launch", nowSec),
+    loaders.loadPresetSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
+    loaders.loadPresetSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
+    loaders.loadPresetSubscriberRowsBatch(db, safetyIds, "safety", nowSec),
+    loaders.loadGlobalSubscriberRows(db, "dews", nowSec),
+    loaders.loadGlobalSubscriberRows(db, "depeg", nowSec),
+    loaders.loadGlobalSubscriberRows(db, "safety", nowSec),
+    loaders.loadGlobalSubscriberRows(db, "launch", nowSec),
+    loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds], nowSec),
   ]);
 
   return {
