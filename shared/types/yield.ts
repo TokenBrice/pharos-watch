@@ -98,28 +98,6 @@ export const YIELD_DECISION_REJECTION_REASON_CODES = [
 ] as const;
 export type YieldDecisionRejectionReasonCode = (typeof YIELD_DECISION_REJECTION_REASON_CODES)[number];
 
-const YieldHistoryPointSchema = z.object({
-  date: z.union([z.number(), z.string()]),
-  apy: z.number(),
-  apyBase: z.number().nullable(),
-  apyReward: z.number().nullable(),
-  exchangeRate: z.number().nullable(),
-  sourceTvlUsd: z.number().nullable(),
-  warningSignals: z.array(z.string()),
-  sourceKey: z.string().nullable().optional(),
-  yieldSource: z.string().nullable().optional(),
-  yieldSourceUrl: z.string().url().nullable().optional(),
-  yieldType: YieldTypeSchema.nullable().optional(),
-  dataSource: z.string().nullable().optional(),
-  isBest: z.boolean().optional(),
-  sourceSwitch: z.boolean().optional(),
-  publicationGenerationId: z.string().nullable().optional(),
-  sourceRisk: z.lazy(() => YieldSourceRiskSchema).nullable().optional(),
-  pysAtPublish: z.number().nullable().optional(),
-  safetyAtPublish: z.number().nullable().optional(),
-  varianceAtPublish: z.number().nullable().optional(),
-});
-
 const YieldPublicationMetadataSchema = z.object({
   generationId: z.string().nullable().optional(),
   updatedAt: z.number().nullable().optional(),
@@ -178,6 +156,28 @@ const YieldSourceRiskSchema = z.object({
   kycRequired: z.boolean().nullable().optional(),
   accessRestricted: z.boolean().nullable().optional(),
   investabilityFlags: z.array(z.string()).optional(),
+});
+
+const YieldHistoryPointSchema = z.object({
+  date: z.union([z.number(), z.string()]),
+  apy: z.number(),
+  apyBase: z.number().nullable(),
+  apyReward: z.number().nullable(),
+  exchangeRate: z.number().nullable(),
+  sourceTvlUsd: z.number().nullable(),
+  warningSignals: z.array(z.string()),
+  sourceKey: z.string().nullable().optional(),
+  yieldSource: z.string().nullable().optional(),
+  yieldSourceUrl: z.string().url().nullable().optional(),
+  yieldType: YieldTypeSchema.nullable().optional(),
+  dataSource: z.string().nullable().optional(),
+  isBest: z.boolean().optional(),
+  sourceSwitch: z.boolean().optional(),
+  publicationGenerationId: z.string().nullable().optional(),
+  sourceRisk: YieldSourceRiskSchema.nullable().optional(),
+  pysAtPublish: z.number().nullable().optional(),
+  safetyAtPublish: z.number().nullable().optional(),
+  varianceAtPublish: z.number().nullable().optional(),
 });
 
 const YieldPublicDecisionAlternativeSchema = z.object({
