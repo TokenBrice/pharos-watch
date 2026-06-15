@@ -39,16 +39,21 @@ const LIQUIDITY_COMPONENT_DETAILS: Record<LiquidityScoreComponentKey, { label: s
 
 function LiquidityComponentCard({
   component,
-  compact = false,
 }: {
   component: (typeof LIQUIDITY_SCORE_WEIGHTS)[number];
-  compact?: boolean;
 }) {
   const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
   return (
-    <div className={`rounded-lg border p-3 text-center ${compact && component.key === "pairDiversity" ? "col-span-2" : ""}`.trim()}>
-      <p className={`text-foreground font-medium ${compact ? "text-xs" : ""}`.trim()}>
-        {compact ? detail.shortLabel : detail.label}
+    <div
+      className={
+        component.key === "pairDiversity"
+          ? "col-span-2 md:col-span-1 rounded-lg border p-3 text-center"
+          : "rounded-lg border p-3 text-center"
+      }
+    >
+      <p className="text-foreground font-medium text-xs md:text-base">
+        <span className="md:hidden">{detail.shortLabel}</span>
+        <span className="hidden md:inline">{detail.label}</span>
       </p>
       <p className="text-xs text-muted-foreground mt-0.5">{component.displayWeight}</p>
     </div>
@@ -58,27 +63,14 @@ function LiquidityComponentCard({
 export function LiquidityTechnicalDetails() {
   return (
     <MethodologyDetails summary="Technical details: component weights, TVL scaling, and quality adjustments">
-      <div className="hidden md:flex flex-col items-center gap-3">
-        <div className="grid grid-cols-5 gap-3 w-full">
+      <div className="flex flex-col items-center gap-3">
+        <div className="grid grid-cols-2 gap-2 w-full md:grid-cols-5 md:gap-3">
           {LIQUIDITY_SCORE_WEIGHTS.map((component) => (
             <LiquidityComponentCard key={component.key} component={component} />
           ))}
         </div>
         <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="rounded-lg border p-3 text-center w-64">
-          <p className="text-foreground font-medium">Liquidity Score</p>
-          <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center gap-3 md:hidden">
-        <div className="grid grid-cols-2 gap-2 w-full">
-          {LIQUIDITY_SCORE_WEIGHTS.map((component) => (
-            <LiquidityComponentCard key={component.key} component={component} compact />
-          ))}
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center">
+        <div className="w-full rounded-lg border p-3 text-center md:w-64">
           <p className="text-foreground font-medium">Liquidity Score</p>
           <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
         </div>
