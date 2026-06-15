@@ -7,6 +7,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
+import { formatChartDate } from "@shared/lib/format";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
   AnnotationDensityStrip,
@@ -34,14 +35,8 @@ function formatTooltip(value: number): [string, string] {
  * Calibrated to match the wider Pharos depeg threshold (100 bps for USD pegs)
  * and to give a calm gradient of severity inside that envelope.
  */
-const PEG_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
 const PEG_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; price: number }>[] = [
-  { id: "date", label: "Date", format: (row) => PEG_TABLE_DATE_FMT.format(new Date(row.ts)) },
+  { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
   { id: "price", label: "Price (USD)", format: (row) => `$${row.price.toFixed(6)}` },
   {
     id: "deviation",

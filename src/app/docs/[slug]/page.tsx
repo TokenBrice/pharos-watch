@@ -84,13 +84,13 @@ const mdxComponents = {
     if (!resolved) return <span>{children}</span>;
     if (resolved.startsWith("/")) {
       return (
-        <Link href={resolved} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+        <Link href={resolved} className="pharos-prose-link">
           {children}
         </Link>
       );
     }
     return (
-      <a href={resolved} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+      <a href={resolved} className="pharos-prose-link">
         {children}
       </a>
     );

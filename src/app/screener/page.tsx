@@ -55,21 +55,21 @@ const SCREENER_SUPPORT_SECTION = (
             Cross-reference results against the{" "}
             <Link
               href="/safety-scores/"
-              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+              className="pharos-prose-link"
             >
               Safety Scores
             </Link>
             ,{" "}
             <Link
               href="/depeg/"
-              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+              className="pharos-prose-link"
             >
               Depeg Tracker
             </Link>
             , and{" "}
             <Link
               href="/liquidity/"
-              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+              className="pharos-prose-link"
             >
               DEX Liquidity
             </Link>{" "}

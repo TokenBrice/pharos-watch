@@ -46,14 +46,14 @@ const DEPENDENCY_MAP_STATIC_SECTION = (
         Start with the graph, then open{" "}
         <Link
           href="/safety-scores/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           Safety Scores
         </Link>{" "}
         for the grade impact and{" "}
         <Link
           href="/coverage/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           Coverage Matrix
         </Link>{" "}

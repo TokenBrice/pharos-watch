@@ -9,6 +9,7 @@ import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
+import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import type { FaqItem } from "@/lib/faq";
 import { normalizeWhitespace } from "@/lib/page-metadata";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -69,15 +70,17 @@ function renderInlineList(items: readonly ReactNode[]): ReactNode {
 }
 
 function ContractSummary({ coin }: { coin: StablecoinMeta }) {
-  const contracts = coin.contracts ?? [];
+  const { count, sample, chainNames, remaining: remainingCount, deploymentLabel } = buildContractDeploymentParts(
+    coin.contracts,
+  );
 
-  if (contracts.length === 0) {
+  if (count === 0) {
     return <span>No contract deployments are listed in the static profile.</span>;
   }
 
-  const sampleChains = contracts.slice(0, 4).map((contract) => {
+  const sampleChains = sample.map((contract, index) => {
     const meta = CHAIN_META[contract.chain];
-    const label = meta?.name ?? contract.chain;
+    const label = chainNames[index];
 
     if (!meta) {
       return <span key={`${contract.chain}-${contract.address}`}>{label}</span>;
@@ -94,13 +97,11 @@ function ContractSummary({ coin }: { coin: StablecoinMeta }) {
       </Link>
     );
   });
-  const remainingCount = Math.max(contracts.length - sampleChains.length, 0);
   const remaining = remainingCount > 0 ? `, plus ${remainingCount} more` : "";
-  const deploymentLabel = contracts.length === 1 ? "deployment" : "deployments";
 
   return (
     <span>
-      {contracts.length} {deploymentLabel} tracked across {renderInlineList(sampleChains)}
+      {count} {deploymentLabel} tracked across {renderInlineList(sampleChains)}
       {remaining}.
     </span>
   );

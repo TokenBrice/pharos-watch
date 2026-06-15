@@ -6,6 +6,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { buildBreakdownEntries, BreakdownBar, BreakdownLegend } from "@/components/liquidity-breakdown";
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { ChartAreaGradient } from "@/components/chart-primitives/axes";
 import { formatCurrency, formatChartDate, getNetColor } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import {
@@ -355,10 +356,7 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
         {isChartReady ? (
           <AreaChart width={width} height={height} data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
-              </linearGradient>
+              <ChartAreaGradient id={gradientId} color={CHART_BLUE} />
             </defs>
             <XAxis
               dataKey="date"

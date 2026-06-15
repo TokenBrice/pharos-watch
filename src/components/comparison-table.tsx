@@ -118,8 +118,7 @@ interface ComparisonMetric {
   mobileLabel: ReactNode;
   desktopLabel: ReactNode;
   renderValue: (coin: ComparisonCoin, index: number) => ReactNode;
-  mobileValueClassName: (coin: ComparisonCoin, index: number) => string;
-  desktopValueClassName: (coin: ComparisonCoin, index: number) => string;
+  valueClassName: (coin: ComparisonCoin, index: number, isDesktop: boolean) => string;
 }
 
 export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {
@@ -192,8 +191,8 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
         mobileLabel: "Price",
         desktopLabel: "Price",
         renderValue: (_coin, i) => rowData.prices[i],
-        mobileValueClassName: (_coin, i) => `text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`,
-        desktopValueClassName: (_coin, i) => `text-center font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`,
+        valueClassName: (_coin, i, isDesktop) =>
+          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`,
       },
       {
         key: "peg-score",
@@ -203,16 +202,16 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
           rowData.pegScores[i] != null
             ? formatScore(rowData.pegScores[i])
             : <NullCell frozen={coin.meta.status === "frozen"} />,
-        mobileValueClassName: (_coin, i) => `text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`,
-        desktopValueClassName: (_coin, i) => `text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`,
+        valueClassName: (_coin, i, isDesktop) =>
+          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`,
       },
       {
         key: "market-cap",
         mobileLabel: "Market Cap",
         desktopLabel: "Market Cap",
         renderValue: (_coin, i) => formatCurrency(rowData.marketCaps[i]),
-        mobileValueClassName: () => "text-right font-mono tabular-nums",
-        desktopValueClassName: () => "text-center font-mono tabular-nums",
+        valueClassName: (_coin, _i, isDesktop) =>
+          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums`,
       },
       {
         key: "weekly-change",
@@ -223,8 +222,8 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
           const sign = change != null && change >= 0 ? "+" : "";
           return change != null ? `${sign}${change.toFixed(2)}%` : <NullCell frozen={coin.meta.status === "frozen"} />;
         },
-        mobileValueClassName: () => "text-right font-mono tabular-nums",
-        desktopValueClassName: () => "text-center font-mono tabular-nums",
+        valueClassName: (_coin, _i, isDesktop) =>
+          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums`,
       },
       {
         key: "liquidity-score",
@@ -234,40 +233,37 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
           rowData.liquidityScores[i] != null
             ? formatScore(rowData.liquidityScores[i])
             : <NullCell frozen={coin.meta.status === "frozen"} />,
-        mobileValueClassName: (_coin, i) => `text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`,
-        desktopValueClassName: (_coin, i) => `text-center font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`,
+        valueClassName: (_coin, i, isDesktop) =>
+          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`,
       },
       {
         key: "governance",
         mobileLabel: "Governance",
         desktopLabel: "Governance",
         renderValue: (_coin, i) => rowData.governanceLabels[i],
-        mobileValueClassName: () => "text-right",
-        desktopValueClassName: () => "text-center",
+        valueClassName: (_coin, _i, isDesktop) => (isDesktop ? "text-center" : "text-right"),
       },
       {
         key: "backing",
         mobileLabel: "Backing",
         desktopLabel: "Backing",
         renderValue: (_coin, i) => rowData.backingLabels[i],
-        mobileValueClassName: () => "text-right",
-        desktopValueClassName: () => "text-center",
+        valueClassName: (_coin, _i, isDesktop) => (isDesktop ? "text-center" : "text-right"),
       },
       {
         key: "peg-currency",
         mobileLabel: "Peg",
         desktopLabel: "Peg Currency",
         renderValue: (_coin, i) => rowData.pegCurrencies[i],
-        mobileValueClassName: () => "text-right",
-        desktopValueClassName: () => "text-center",
+        valueClassName: (_coin, _i, isDesktop) => (isDesktop ? "text-center" : "text-right"),
       },
       {
         key: "safety-rating",
         mobileLabel: <MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel>,
         desktopLabel: <MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel>,
         renderValue: (coin, i) => rowData.safetyGrades[i] ?? <NullCell frozen={coin.meta.status === "frozen"} />,
-        mobileValueClassName: (_coin, i) => `text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`,
-        desktopValueClassName: (_coin, i) => `text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`,
+        valueClassName: (_coin, i, isDesktop) =>
+          `${isDesktop ? "text-center" : "text-right"} ${i === rowData.bestGrade ? BEST_CLASS : ""}`,
       },
       {
         key: "net-flow-30d",
@@ -277,15 +273,9 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
           rowData.netFlow30dValues[i] != null
             ? formatSignedCurrency(rowData.netFlow30dValues[i]!)
             : <NullCell frozen={coin.meta.status === "frozen"} />,
-        mobileValueClassName: (_coin, i) => {
+        valueClassName: (_coin, i, isDesktop) => {
           const value = rowData.netFlow30dValues[i];
-          return `text-right font-mono tabular-nums ${
-            i === rowData.bestNetFlow30d ? BEST_CLASS : value != null ? getNetColor(value) : ""
-          }`;
-        },
-        desktopValueClassName: (_coin, i) => {
-          const value = rowData.netFlow30dValues[i];
-          return `text-center font-mono tabular-nums ${
+          return `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${
             i === rowData.bestNetFlow30d ? BEST_CLASS : value != null ? getNetColor(value) : ""
           }`;
         },
@@ -332,7 +322,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               {comparisonMetrics.map((metric) => (
                 <Fragment key={metric.key}>
                   <dt className="text-muted-foreground">{metric.mobileLabel}</dt>
-                  <dd className={metric.mobileValueClassName(coin, i)}>{metric.renderValue(coin, i)}</dd>
+                  <dd className={metric.valueClassName(coin, i, false)}>{metric.renderValue(coin, i)}</dd>
                 </Fragment>
               ))}
             </dl>
@@ -382,7 +372,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                   {metric.desktopLabel}
                 </TableHead>
                 {coins.map((coin, i) => (
-                  <TableCell key={coin.id} className={metric.desktopValueClassName(coin, i)}>
+                  <TableCell key={coin.id} className={metric.valueClassName(coin, i, true)}>
                     {metric.renderValue(coin, i)}
                   </TableCell>
                 ))}

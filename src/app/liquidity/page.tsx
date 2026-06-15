@@ -51,21 +51,21 @@ const LIQUIDITY_STATIC_SECTION = (
           Pair this page with{" "}
           <Link
             href="/depeg/"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            className="pharos-prose-link"
           >
             Depeg Tracker
           </Link>
           ,{" "}
           <Link
             href="/safety-scores/"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            className="pharos-prose-link"
           >
             Safety Scores
           </Link>
           , and{" "}
           <Link
             href="/coverage/"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            className="pharos-prose-link"
           >
             Coverage Matrix
           </Link>{" "}

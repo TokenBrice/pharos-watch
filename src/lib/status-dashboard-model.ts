@@ -223,20 +223,16 @@ function dedupeCauses(causes: StatusCause[]): StatusCause[] {
     });
 }
 
-function getBlockerCauses(causes: StatusResponse["causes"]): StatusCause[] {
+function getCauses(causes: StatusResponse["causes"], kind: "blocker" | "watch"): StatusCause[] {
   return dedupeCauses(
-    [...causes.overall, ...causes.availability, ...causes.dataQuality].filter((cause) => cause.severity !== "info"),
-  );
-}
-
-function getWatchCauses(causes: StatusResponse["causes"]): StatusCause[] {
-  return dedupeCauses(
-    [...causes.overall, ...causes.availability, ...causes.dataQuality].filter((cause) => cause.severity === "info"),
+    [...causes.overall, ...causes.availability, ...causes.dataQuality].filter((cause) =>
+      kind === "blocker" ? cause.severity !== "info" : cause.severity === "info",
+    ),
   );
 }
 
 export function getTopCauses(causes: StatusResponse["causes"], limit: number): StatusCause[] {
-  return getBlockerCauses(causes).slice(0, limit);
+  return getCauses(causes, "blocker").slice(0, limit);
 }
 
 interface BuildStatusDashboardOptions {
@@ -297,8 +293,8 @@ export function buildStatusDashboardData({
   const allTransitions = historyTransitions ?? data.timeline;
   const latestTransition = allTransitions[0] ?? null;
   const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
-  const blockerCauses = getBlockerCauses(data.causes);
-  const watchCauses = getWatchCauses(data.causes);
+  const blockerCauses = getCauses(data.causes, "blocker");
+  const watchCauses = getCauses(data.causes, "watch");
   const overallCauseCount = blockerCauses.length;
   const watchCauseCount = watchCauses.length;
   const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);

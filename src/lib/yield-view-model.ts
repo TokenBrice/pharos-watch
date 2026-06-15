@@ -286,6 +286,14 @@ interface YieldRiskBudgetSpec {
   overrides: Partial<YieldViewModelFilters>;
 }
 
+// Single source of truth for the per-budget safety floors. Consumed by the
+// SPECS below and by the scatter-plot legend so the thresholds cannot drift.
+export const YIELD_RISK_BUDGET_MIN_SAFETY = {
+  conservative: 80,
+  balanced: 70,
+  opportunistic: 50,
+} as const;
+
 // Risk budget collapses safety/depth/source-confidence/warnings into a single
 // conservative→all dimension. Stops are stackable on top of other
 // filters via merge semantics in `handleApplyRiskBudget`.
@@ -295,7 +303,7 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
     label: "Conservative",
     description: "A- safety, hide thin venues, hide warnings",
     overrides: {
-      minSafety: 80,
+      minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.conservative,
       depth: "hide-thin",
       warnings: "hide",
     },
@@ -305,7 +313,7 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
     label: "Balanced",
     description: "B- safety, hide thin venues, hide warnings",
     overrides: {
-      minSafety: 70,
+      minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.balanced,
       depth: "hide-thin",
       warnings: "hide",
     },
@@ -315,7 +323,7 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
     label: "Opportunistic",
     description: "C+ safety, hide warnings",
     overrides: {
-      minSafety: 50,
+      minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic,
       warnings: "hide",
     },
   },

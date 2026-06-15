@@ -51,6 +51,14 @@ import {
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 const OVERSCAN = 32;
 const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
+const STABLECOIN_FRAME_SHARED = {
+  tableId: "stablecoin-overview",
+  testId: "stablecoin-overview-table",
+  viewportClassName:
+    "max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0",
+  mobileScrollHint: "Swipe sideways for more columns. Risk cues stay visible in each row.",
+  tableClassName: "min-w-[420px] table-fixed",
+} as const;
 // M1: keys feeding the home table's columns (market data, peg, grade, liquidity).
 // A background refetch surfaces the RefreshingBar while prior rows stay visible.
 const STABLECOIN_TABLE_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
@@ -438,13 +446,9 @@ export function StablecoinTable({
   if (isLoading) {
     return (
       <VirtualTableFrame
-        tableId="stablecoin-overview"
-        testId="stablecoin-overview-table"
+        {...STABLECOIN_FRAME_SHARED}
         density={density}
         striped="indexed"
-        viewportClassName="max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0"
-        mobileScrollHint="Swipe sideways for more columns. Risk cues stay visible in each row."
-        tableClassName="min-w-[420px] table-fixed"
         tableProps={{
           style: { minWidth: tableMinWidthPx },
         }}
@@ -473,15 +477,11 @@ export function StablecoinTable({
 
   return (
     <VirtualTableFrame
+      {...STABLECOIN_FRAME_SHARED}
       surfaceRef={tableRef}
-      tableId="stablecoin-overview"
-      testId="stablecoin-overview-table"
       className="animate-in fade-in duration-300"
       density={density}
       viewportRef={scrollRef}
-      viewportClassName="max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0"
-      mobileScrollHint="Swipe sideways for more columns. Risk cues stay visible in each row."
-      tableClassName="min-w-[420px] table-fixed"
       tableProps={{
         style: { minWidth: tableMinWidthPx },
       }}

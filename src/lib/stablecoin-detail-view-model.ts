@@ -522,6 +522,16 @@ export interface BuildHeroCardViewModelParams {
   redemptionBackstop: RedemptionBackstopEntry | null;
 }
 
+const MOBILE_ONLY_TERTIARY_KEYS: ReadonlySet<HeroTertiaryMetricViewModel["key"]> = new Set([
+  "dews",
+  "liquidity",
+  "peg-score",
+]);
+
+function posOrNull(value: number | null): number | null {
+  return typeof value === "number" && value > 0 ? value : null;
+}
+
 function getTrendClass(hasPreviousValue: boolean, currentValue: number, previousValue: number): string {
   if (!hasPreviousValue) return HERO_MUTED_CLASS;
   if (isQuietDeviationsEnabled()) {
@@ -578,12 +588,12 @@ export function buildStablecoinDetailHeroViewModel({
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage?.benchmarkSymbol ?? null;
 
-  const hasPrevDay = typeof prevDay === "number" && prevDay > 0;
-  const hasPrevWeek = typeof prevWeek === "number" && prevWeek > 0;
-  const hasPrevMonth = typeof prevMonth === "number" && prevMonth > 0;
-  const safePrevDay = hasPrevDay ? prevDay : null;
-  const safePrevWeek = hasPrevWeek ? prevWeek : null;
-  const safePrevMonth = hasPrevMonth ? prevMonth : null;
+  const safePrevDay = posOrNull(prevDay);
+  const safePrevWeek = posOrNull(prevWeek);
+  const safePrevMonth = posOrNull(prevMonth);
+  const hasPrevDay = safePrevDay !== null;
+  const hasPrevWeek = safePrevWeek !== null;
+  const hasPrevMonth = safePrevMonth !== null;
   const prevDayValue = safePrevDay ?? 0;
   const prevWeekValue = safePrevWeek ?? 0;
   const prevMonthValue = safePrevMonth ?? 0;
@@ -733,9 +743,7 @@ export function buildStablecoinDetailHeroViewModel({
       activeDepeg: pegScoreResult?.activeDepeg === true,
     },
     tertiaryMetrics,
-    desktopTertiaryMetrics: tertiaryMetrics.filter(
-      (metric) => !["dews", "liquidity", "peg-score"].includes(metric.key),
-    ),
+    desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => !MOBILE_ONLY_TERTIARY_KEYS.has(metric.key)),
     signalRailItems,
     passportItems,
     caseStudyCallout,

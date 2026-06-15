@@ -12,7 +12,7 @@ import { formatCurrency, formatChartDate, formatPercent } from "@shared/lib/form
 import { useNonUsdShare } from "@/hooks/api-hooks";
 import { CHART_GREEN, CHART_AMBER, CHART_HEIGHT } from "@/lib/chart-colors";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { computeChartYDomain } from "@/lib/chart-utils";
 
 const COMMODITY_COLOR = CHART_AMBER;
@@ -192,14 +192,8 @@ export function NonUsdShareChart({
                   margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
                 >
                   <defs>
-                    <linearGradient id="commodityShareGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COMMODITY_COLOR} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={COMMODITY_COLOR} stopOpacity={0.05} />
-                    </linearGradient>
-                    <linearGradient id="fiatNonUsdShareGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={FIAT_COLOR} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={FIAT_COLOR} stopOpacity={0.05} />
-                    </linearGradient>
+                    <ChartAreaGradient id="commodityShareGrad" color={COMMODITY_COLOR} />
+                    <ChartAreaGradient id="fiatNonUsdShareGrad" color={FIAT_COLOR} />
                   </defs>
                   <TimeGrid />
                   <TimeXAxis dataKey="ts" minTickGap={72} />

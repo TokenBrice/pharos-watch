@@ -8,6 +8,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
+  GOVERNANCE_PROSE_LABELS,
   PEG_LABELS,
   PEG_LABELS_SHORT,
 } from "@shared/lib/classification";
@@ -72,12 +73,6 @@ function InfrastructureBadge({ value }: { value: Infrastructure }) {
   );
 }
 
-const GOVERNANCE_SENTENCE_LABELS: Record<StablecoinMeta["flags"]["governance"], string> = {
-  centralized: "centralized",
-  "centralized-dependent": "CeFi-dependent",
-  decentralized: "decentralized",
-};
-
 const BACKING_SENTENCE_LABELS: Record<StablecoinMeta["flags"]["backing"], string> = {
   "rwa-backed": "RWA-backed",
   "crypto-backed": "Crypto-backed",
@@ -131,7 +126,7 @@ function HeroClassificationLine({
   if (!isDecentralized) {
     sentenceSegments.push({
       key: "governance",
-      label: GOVERNANCE_SENTENCE_LABELS[coin.flags.governance],
+      label: GOVERNANCE_PROSE_LABELS[coin.flags.governance],
       href: governanceHref,
       aria: `Browse ${governanceFullLabel} stablecoins`,
     });

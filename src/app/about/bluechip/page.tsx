@@ -45,7 +45,7 @@ export default function AboutBluechipPage() {
           Methodology {SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} ·{" "}
           <Link
             href="/methodology/#safety-scores-methodology"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            className="pharos-prose-link"
           >
             Read the rules
           </Link>
@@ -136,7 +136,7 @@ export default function AboutBluechipPage() {
               <dd className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
                 <Link
                   href="/methodology/#safety-scores-methodology"
-                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                  className="pharos-prose-link"
                 >
                   Safety Scores methodology →
                 </Link>
@@ -149,7 +149,7 @@ export default function AboutBluechipPage() {
               <dd className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
                 <Link
                   href="/methodology/scoring-changelog/"
-                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                  className="pharos-prose-link"
                 >
                   Scoring changelog →
                 </Link>
@@ -162,7 +162,7 @@ export default function AboutBluechipPage() {
               <dd className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
                 <Link
                   href="/learn/glossary/#bluechip"
-                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                  className="pharos-prose-link"
                 >
                   Glossary entry →
                 </Link>

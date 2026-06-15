@@ -15,6 +15,7 @@ import { getInfrastructureLabel, getInfrastructureSummary } from "@shared/lib/in
 import { formatAddress } from "@shared/lib/format";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { trackEvent } from "@/lib/analytics";
+import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import {
   BACKING_BADGE_STYLES,
@@ -38,6 +39,8 @@ import {
 } from "@/lib/stablecoin-taxonomy-urls";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
+
+const BADGE_PILL_BASE = "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold";
 
 function ClassificationBadgeLink({
   href,
@@ -247,7 +250,7 @@ export function KeyInfoCard({
                 </ClassificationBadgeLink>
               ) : (
                 <span
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
+                  className={`${BADGE_PILL_BASE} ${peg.cls}`}
                 >
                   {peg.label}
                 </span>
@@ -267,12 +270,12 @@ export function KeyInfoCard({
               </Link>
             ))}
             {meta.flags.yieldBearing && (
-              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+              <span className={`${BADGE_PILL_BASE} bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20`}>
                 Yield-Bearing
               </span>
             )}
             {meta.flags.rwa && (
-              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">
+              <span className={`${BADGE_PILL_BASE} bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20`}>
                 RWA
               </span>
             )}
@@ -282,13 +285,13 @@ export function KeyInfoCard({
                   <AttestorTierBadge proofOfReserves={meta.proofOfReserves} />
                 ) : (
                   <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
+                    className={`${BADGE_PILL_BASE} ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
                   >
                     {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
                   </span>
                 )
               ) : (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+                <span className={`${BADGE_PILL_BASE} bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20`}>
                   No PoR
                 </span>
               ))}
@@ -427,12 +430,12 @@ export function KeyInfoCard({
                 <div className="flex flex-wrap items-center gap-2">
                   {meta.jurisdiction && <span className="text-sm font-medium">{meta.jurisdiction.country}</span>}
                   {meta.jurisdiction?.regulator && (
-                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
+                    <span className={`${BADGE_PILL_BASE} bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20`}>
                       {meta.jurisdiction.regulator}
                     </span>
                   )}
                   {meta.jurisdiction?.license && (
-                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20">
+                    <span className={`${BADGE_PILL_BASE} bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20`}>
                       {meta.jurisdiction.license}
                     </span>
                   )}
@@ -541,6 +544,33 @@ export function KeyInfoCard({
   );
 }
 
+/* Copy→Check crossfade with the success ring, shared by the mobile and desktop
+ * contract rows. Size strings are static literals per branch (Tailwind purge). */
+function ContractCopyIcons({ copied, size }: { copied: boolean; size: "sm" | "md" }) {
+  if (size === "md") {
+    return (
+      <>
+        <Copy className={`pharos-copy-icon absolute h-4 w-4 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
+        <Check
+          className={`pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
+          aria-hidden="true"
+        />
+        {copied ? <span className="pharos-copy-ring" aria-hidden="true" /> : null}
+      </>
+    );
+  }
+  return (
+    <>
+      <Copy className={`pharos-copy-icon absolute h-3.5 w-3.5 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
+      <Check
+        className={`pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
+        aria-hidden="true"
+      />
+      {copied ? <span className="pharos-copy-ring" aria-hidden="true" /> : null}
+    </>
+  );
+}
+
 function ContractDetailRow({
   contract,
   copied,
@@ -577,12 +607,7 @@ function ContractDetailRow({
           aria-label={`Copy ${chainName} contract address`}
         >
           <span className="relative inline-flex h-4 w-4 items-center justify-center">
-            <Copy className={`pharos-copy-icon absolute h-4 w-4 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
-            <Check
-              className={`pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
-              aria-hidden="true"
-            />
-            {copied ? <span key={contract.chain} className="pharos-copy-ring" aria-hidden="true" /> : null}
+            <ContractCopyIcons copied={copied} size="md" />
           </span>
         </button>
       </div>
@@ -646,12 +671,7 @@ function ContractLabeledRow({
         title="Copy address"
         aria-label={`Copy ${chainName} contract address`}
       >
-        <Copy className={`pharos-copy-icon absolute h-3.5 w-3.5 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
-        <Check
-          className={`pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
-          aria-hidden="true"
-        />
-        {copied ? <span key={contract.chain} className="pharos-copy-ring" aria-hidden="true" /> : null}
+        <ContractCopyIcons copied={copied} size="sm" />
       </button>
       {explorerUrl ? (
         <a
@@ -682,10 +702,8 @@ function deriveContractInfo(contract: ContractDeployment) {
 }
 
 function buildContractDeploymentSummary(contracts: StablecoinMeta["contracts"]): string | null {
-  const list = contracts ?? [];
-  if (list.length === 0) return null;
-  const chainNames = list.slice(0, 4).map((c) => CHAIN_META[c.chain]?.name ?? c.chain);
-  const remaining = Math.max(list.length - chainNames.length, 0);
+  const { count, chainNames, remaining, deploymentLabel } = buildContractDeploymentParts(contracts);
+  if (count === 0) return null;
   const remainingSuffix = remaining > 0 ? `, plus ${remaining} more` : "";
   const formattedChains =
     chainNames.length <= 1
@@ -693,8 +711,7 @@ function buildContractDeploymentSummary(contracts: StablecoinMeta["contracts"]):
       : chainNames.length === 2
         ? `${chainNames[0]} and ${chainNames[1]}`
         : `${chainNames.slice(0, -1).join(", ")}, and ${chainNames[chainNames.length - 1]}`;
-  const deploymentLabel = list.length === 1 ? "deployment" : "deployments";
-  return `${list.length} ${deploymentLabel} tracked across ${formattedChains}${remainingSuffix}.`;
+  return `${count} ${deploymentLabel} tracked across ${formattedChains}${remainingSuffix}.`;
 }
 
 function ContractChainButton({

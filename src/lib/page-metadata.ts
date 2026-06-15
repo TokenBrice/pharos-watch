@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import {
+  BACKING_PROSE_LABELS,
+  GOVERNANCE_PROSE_LABELS,
   PEG_LABELS_SHORT,
   getMechanismArchetypeLabel,
   getMechanismArchetypeOneLiner,
@@ -10,7 +12,7 @@ import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import type { BackingType, MechanismArchetype, StablecoinMeta } from "@shared/types";
+import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -38,18 +40,6 @@ const METHODOLOGY_MARKDOWN_PATHS = new Set([
   "/methodology/stability-index-changelog/",
   "/methodology/yield-changelog/",
 ]);
-
-const GOVERNANCE_METADATA_PHRASES = {
-  centralized: "centralized",
-  "centralized-dependent": "CeFi-dependent",
-  decentralized: "decentralized",
-} as const;
-
-const BACKING_METADATA_PHRASES: Record<BackingType, string> = {
-  "rwa-backed": "backed by real-world assets",
-  "crypto-backed": "collateralized by crypto assets",
-  algorithmic: "algorithmic stablecoin",
-};
 
 export function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -201,9 +191,9 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
 }
 
 export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
-  const governancePhrase = GOVERNANCE_METADATA_PHRASES[coin.flags.governance];
+  const governancePhrase = GOVERNANCE_PROSE_LABELS[coin.flags.governance];
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
-  const backingPhrase = BACKING_METADATA_PHRASES[coin.flags.backing];
+  const backingPhrase = BACKING_PROSE_LABELS[coin.flags.backing];
 
   if (coin.status === "pre-launch") {
     const structure =

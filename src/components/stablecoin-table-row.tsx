@@ -12,7 +12,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
+import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, getNetColor } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -136,6 +136,41 @@ function StablecoinVirtualRowBase({
     riskLevel === "warning" ? "pharos-row-risk-warning" : "";
   const isCompactDensity = density === "list" || density === "compact";
 
+  const pegRef = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
+  const priceCell = formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef);
+
+  const pegDeviationCell = (() => {
+    const price = coin.price;
+    const absBps =
+      price != null && typeof price === "number" && pegRef > 0
+        ? Math.abs(price / pegRef - 1) * 10_000
+        : null;
+    const colorClass = absBps === null ? "text-muted-foreground" : deviationColorClass(absBps);
+    return (
+      <span className={`inline-flex items-center gap-0.5 ${colorClass}`}>
+        {absBps !== null && <DeviationIcon absBps={absBps} />}
+        {formatPegDeviation(price, pegRef)}
+      </span>
+    );
+  })();
+
+  const stabilityCell = (() => {
+    if (meta?.flags.navToken) {
+      return <span className="text-muted-foreground">—</span>;
+    }
+    if (pegScore === null) {
+      return <span className="text-muted-foreground">—</span>;
+    }
+    return <span className={pegScoreColor(pegScore)}>{pegScore}</span>;
+  })();
+
+  const liquidityCell = (() => {
+    if (liquidityScore === null || liquidityScore === 0) {
+      return <span className="text-muted-foreground">—</span>;
+    }
+    return <span className={getScoreColor(liquidityScore)}>{liquidityScore}</span>;
+  })();
+
   return (
     <TableRow
       {...rowProps}
@@ -253,10 +288,7 @@ function StablecoinVirtualRowBase({
       {isVisible("price") && (
         <TableCell key="price" className="text-right font-mono tabular-nums">
           <span className={confidenceClass(coin.priceConfidence)}>
-            {(() => {
-              const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
-              return formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", ref);
-            })()}
+            {priceCell}
           </span>
         </TableCell>
       )}
@@ -274,21 +306,7 @@ function StablecoinVirtualRowBase({
               {meta.flags.pegCurrency === "VAR" ? "CPI" : "NAV"}
             </span>
           ) : (
-            (() => {
-              const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
-              const price = coin.price;
-              const absBps =
-                price != null && typeof price === "number" && ref > 0
-                  ? Math.abs(price / ref - 1) * 10_000
-                  : null;
-              const colorClass = absBps === null ? "text-muted-foreground" : deviationColorClass(absBps);
-              return (
-                <span className={`inline-flex items-center gap-0.5 ${colorClass}`}>
-                  {absBps !== null && <DeviationIcon absBps={absBps} />}
-                  {formatPegDeviation(price, ref)}
-                </span>
-              );
-            })()
+            pegDeviationCell
           )}
         </TableCell>
       )}
@@ -297,7 +315,7 @@ function StablecoinVirtualRowBase({
       )}
       {isVisible("change24h") && (
         <TableCell key="change24h" className="text-right font-mono tabular-nums text-sm">
-          <span className={change24h >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
+          <span className={getNetColor(change24h, { positiveClass: "text-green-700 dark:text-green-400", negativeClass: "text-red-700 dark:text-red-400", positiveInclusiveZero: true })}>
             {prevDay > 0 ? (
               <>
                 {change24h >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevDay)}
@@ -310,7 +328,7 @@ function StablecoinVirtualRowBase({
       )}
       {isVisible("change7d") && (
         <TableCell key="change7d" className="text-right font-mono tabular-nums text-sm">
-          <span className={change7d >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
+          <span className={getNetColor(change7d, { positiveClass: "text-green-700 dark:text-green-400", negativeClass: "text-red-700 dark:text-red-400", positiveInclusiveZero: true })}>
             {prevWeek > 0 ? (
               <>
                 {/* 2xl gate: below ~1536px the fixed-layout columns are too
@@ -347,25 +365,12 @@ function StablecoinVirtualRowBase({
       )}
       {isVisible("stability") && (
         <TableCell key="stability" className="text-right font-mono tabular-nums text-sm">
-          {(() => {
-            if (meta?.flags.navToken) {
-              return <span className="text-muted-foreground">—</span>;
-            }
-            if (pegScore === null) {
-              return <span className="text-muted-foreground">—</span>;
-            }
-            return <span className={pegScoreColor(pegScore)}>{pegScore}</span>;
-          })()}
+          {stabilityCell}
         </TableCell>
       )}
       {isVisible("liquidity") && (
         <TableCell key="liquidity" className="text-right font-mono tabular-nums text-sm">
-          {(() => {
-            if (liquidityScore === null || liquidityScore === 0) {
-              return <span className="text-muted-foreground">—</span>;
-            }
-            return <span className={getScoreColor(liquidityScore)}>{liquidityScore}</span>;
-          })()}
+          {liquidityCell}
         </TableCell>
       )}
       {isVisible("blacklistable") && (

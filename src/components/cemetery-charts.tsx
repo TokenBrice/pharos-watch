@@ -17,7 +17,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
-import { ChartLegendChip } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, ChartLegendChip } from "@/components/chart-primitives/axes";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
@@ -465,10 +465,7 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={chartData} margin={{ top: 24, right: 12, bottom: 20, left: 5 }}>
               <defs>
-                <linearGradient id={destroyedGradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_RED} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={CHART_RED} stopOpacity={0.05} />
-                </linearGradient>
+                <ChartAreaGradient id={destroyedGradientId} color={CHART_RED} />
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
               <XAxis

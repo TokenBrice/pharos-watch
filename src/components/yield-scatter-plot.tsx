@@ -10,6 +10,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { YieldRanking, YieldType } from "@shared/types";
 
@@ -115,14 +116,15 @@ function getYieldScatterQuadrantBounds(
   };
 }
 
-// Mirrors YIELD_RISK_BUDGET_SPECS thresholds so the risk-tolerance slider
+// Mirrors YIELD_RISK_BUDGET_MIN_SAFETY thresholds so the risk-tolerance slider
 // acts as the legend for the scatter: each dot's ring tier matches the band
-// that would just barely include it.
+// that would just barely include it. The <opportunistic tier (CHART_ORANGE)
+// has no risk-budget counterpart and is intentionally scatter-only.
 function safetyTierColor(safetyScore: number | null): string {
   if (safetyScore === null) return "var(--color-border)";
-  if (safetyScore >= 80) return CHART_GREEN;
-  if (safetyScore >= 70) return CHART_TEAL;
-  if (safetyScore >= 50) return CHART_AMBER;
+  if (safetyScore >= YIELD_RISK_BUDGET_MIN_SAFETY.conservative) return CHART_GREEN;
+  if (safetyScore >= YIELD_RISK_BUDGET_MIN_SAFETY.balanced) return CHART_TEAL;
+  if (safetyScore >= YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic) return CHART_AMBER;
   return CHART_ORANGE;
 }
 

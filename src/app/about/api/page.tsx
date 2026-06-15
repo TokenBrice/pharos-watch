@@ -101,7 +101,7 @@ const inlineMarkdownComponents = {
     if (!href) return <span>{children}</span>;
     if (href.startsWith("/")) {
       return (
-        <Link href={href} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+        <Link href={href} className="pharos-prose-link">
           {children}
         </Link>
       );
@@ -114,7 +114,7 @@ const inlineMarkdownComponents = {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        className="pharos-prose-link"
       >
         {children}
       </a>
@@ -303,7 +303,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public API routes</h2>
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             This page keeps the route list scannable. The canonical field tables, examples, and edge-case contracts live in the{" "}
-            <Link href="/docs/api-reference/#public-endpoints" className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+            <Link href="/docs/api-reference/#public-endpoints" className="pharos-prose-link">
               full API reference
             </Link>
             .
@@ -409,11 +409,11 @@ export default async function AboutApiPage() {
               </p>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
                 For implementation context beyond the HTTP contract, read the{" "}
-                <Link href="/docs/api-reference/" className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+                <Link href="/docs/api-reference/" className="pharos-prose-link">
                   public API reference doc
                 </Link>{" "}
                 and the broader{" "}
-                <Link href="/docs/" className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+                <Link href="/docs/" className="pharos-prose-link">
                   documentation archive
                 </Link>
                 .
@@ -422,21 +422,21 @@ export default async function AboutApiPage() {
                 Prefer machine-readable tooling? Download the{" "}
                 <a
                   href={PUBLIC_API_ARTIFACTS.openApi}
-                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                  className="pharos-prose-link"
                 >
                   OpenAPI spec
                 </a>
                 , or import the{" "}
                 <a
                   href={PUBLIC_API_ARTIFACTS.postmanCollection}
-                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                  className="pharos-prose-link"
                 >
                   Pharos API collection
                 </a>{" "}
                 with the{" "}
                 <a
                   href={PUBLIC_API_ARTIFACTS.postmanEnvironment}
-                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                  className="pharos-prose-link"
                 >
                   production environment template
                 </a>
@@ -492,7 +492,7 @@ export default async function AboutApiPage() {
             If you want a public API key, use the{" "}
             <Link
               href="/api/"
-              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+              className="pharos-prose-link"
             >
               self-serve API access form
             </Link>

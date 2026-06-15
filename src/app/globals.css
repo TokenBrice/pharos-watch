@@ -979,6 +979,20 @@
 }
 
 @layer utilities {
+  /* Inline prose link: focus ring + underline affordance shared across
+     feature pages. Mirrors the verbatim
+     `pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground`
+     string it replaces. */
+  .pharos-prose-link {
+    @apply rounded-sm underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    transition:
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+      background-color var(--motion-duration-fast) var(--motion-ease-standard),
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      color var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
   /* Command palette spring-in entrance (M12). 180ms with 4% overshoot.
      Lives in the utilities layer so it overrides the tw-animate-css
      `data-[state=open]:animate-in zoom-in-95` shorthand on DialogContent.

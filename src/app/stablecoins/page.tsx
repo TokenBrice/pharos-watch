@@ -56,7 +56,7 @@ export default function StablecoinsHubPage() {
           {`Four ways to browse the ${TOTAL} active stablecoins Pharos tracks: peg currency, backing type, governance model, and shared infrastructure. For the design-family view (how each coin keeps its peg), see the `}
           <Link
             href="/learn/mechanisms/"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            className="pharos-prose-link"
           >
             mechanism explainer
           </Link>

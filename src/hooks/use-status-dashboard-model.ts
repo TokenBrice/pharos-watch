@@ -7,6 +7,7 @@ import { useRequestSourceStats } from "@/hooks/use-request-source-stats";
 import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
 import { useStatus } from "@/hooks/use-status";
 import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
+import { refetchQueryGroup } from "@/lib/query-refetch-group";
 
 export function useStatusDashboardModel() {
   const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus();
@@ -41,11 +42,9 @@ export function useStatusDashboardModel() {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    refetchStatus();
-    refetchHealth();
-    refetchProbes();
-    refetchHistory();
-    refetchRequestSourceStats();
+    void refetchQueryGroup([refetchStatus, refetchHealth, refetchProbes, refetchHistory, refetchRequestSourceStats], {
+      warnLabel: "[refetch] Some status dashboard queries failed to refresh",
+    });
   }, [refetchHealth, refetchHistory, refetchProbes, refetchRequestSourceStats, refetchStatus]);
 
   const criticalUpdatedAts = [statusUpdatedAt ?? 0, healthUpdatedAt ?? 0, probesUpdatedAt ?? 0]

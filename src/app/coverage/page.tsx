@@ -34,28 +34,28 @@ const COVERAGE_STATIC_SECTION = (
         Use the matrix before comparing{" "}
         <Link
           href="/depeg/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           depegs
         </Link>
         ,{" "}
         <Link
           href="/liquidity/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           liquidity
         </Link>
         ,{" "}
         <Link
           href="/yield/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           yield
         </Link>
         , or{" "}
         <Link
           href="/flows/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           mint/burn flows
         </Link>{" "}

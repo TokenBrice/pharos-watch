@@ -59,6 +59,38 @@ const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
   { id: "largest", label: "Largest Event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
 ] as const;
 
+function FlowNetCell({
+  value,
+  hasWindow,
+  cellClassName,
+  windowLabel,
+}: {
+  value: number;
+  hasWindow: boolean | undefined;
+  cellClassName: string;
+  windowLabel: string;
+}) {
+  const isPartial = hasWindow === false;
+  return (
+    <TableCell className={cellClassName}>
+      <div
+        className="flex items-center justify-end gap-1"
+        title={
+          isPartial
+            ? `${windowLabel} window is incomplete; value reflects the covered portion only.`
+            : undefined
+        }
+      >
+        <span className={cn(getNetColor(value), isPartial && "opacity-60")}>
+          {getNetPrefix(value)}
+          {formatCurrency(value)}
+        </span>
+        {isPartial && <span className="text-xs text-muted-foreground">partial</span>}
+      </div>
+    </TableCell>
+  );
+}
+
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const router = useRouter();
   const {
@@ -188,52 +220,18 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     {formatCurrency(coin.netFlow7dUsd)}
                   </span>
                 </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums lg:table-cell">
-                  <div
-                    className="flex items-center justify-end gap-1"
-                    title={
-                      coin.coverage?.has30dWindow === false
-                        ? "30-day window is incomplete; value reflects the covered portion only."
-                        : undefined
-                    }
-                  >
-                    <span
-                      className={cn(
-                        getNetColor(coin.netFlow30dUsd),
-                        coin.coverage?.has30dWindow === false && "opacity-60",
-                      )}
-                    >
-                      {getNetPrefix(coin.netFlow30dUsd)}
-                      {formatCurrency(coin.netFlow30dUsd)}
-                    </span>
-                    {coin.coverage?.has30dWindow === false && (
-                      <span className="text-xs text-muted-foreground">partial</span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
-                  <div
-                    className="flex items-center justify-end gap-1"
-                    title={
-                      coin.coverage?.has90dWindow === false
-                        ? "90-day window is incomplete; value reflects the covered portion only."
-                        : undefined
-                    }
-                  >
-                    <span
-                      className={cn(
-                        getNetColor(coin.netFlow90dUsd),
-                        coin.coverage?.has90dWindow === false && "opacity-60",
-                      )}
-                    >
-                      {getNetPrefix(coin.netFlow90dUsd)}
-                      {formatCurrency(coin.netFlow90dUsd)}
-                    </span>
-                    {coin.coverage?.has90dWindow === false && (
-                      <span className="text-xs text-muted-foreground">partial</span>
-                    )}
-                  </div>
-                </TableCell>
+                <FlowNetCell
+                  value={coin.netFlow30dUsd}
+                  hasWindow={coin.coverage?.has30dWindow}
+                  cellClassName="hidden text-right font-mono tabular-nums lg:table-cell"
+                  windowLabel="30-day"
+                />
+                <FlowNetCell
+                  value={coin.netFlow90dUsd}
+                  hasWindow={coin.coverage?.has90dWindow}
+                  cellClassName="hidden text-right font-mono tabular-nums xl:table-cell"
+                  windowLabel="90-day"
+                />
                 <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
                   {coin.largestEvent24h ? (
                     <span

@@ -10,7 +10,7 @@ import { THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
@@ -29,6 +29,13 @@ const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel
   flow: { name: getDewsSignalLabel("flow"), metricKey: "burnSurge", metricLabel: "burn surge" },
   yield: { name: getDewsSignalLabel("yield"), metricKey: "warnings", metricLabel: "warnings" },
 };
+
+/** Snap a max value up to the next chart Y-axis ceiling (50 / 75 / 100) */
+function snapDewsYMax(max: number): number {
+  if (max <= 25) return 50;
+  if (max <= 50) return 75;
+  return 100;
+}
 
 /** Map a signal score to its severity color (per-signal, not composite band) */
 function signalBarHex(value: number): string {
@@ -137,9 +144,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const chartYMax = useMemo(() => {
     if (!chartData.length) return 100;
     const max = Math.max(...chartData.map((d) => d.score as number));
-    if (max <= 25) return 50;
-    if (max <= 50) return 75;
-    return 100;
+    return snapDewsYMax(max);
   }, [chartData]);
 
   // Dynamic Y-axis for breakdown view (max of any individual signal)
@@ -152,9 +157,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         if (sig?.available && sig.value > max) max = sig.value;
       }
     }
-    if (max <= 25) return 50;
-    if (max <= 50) return 75;
-    return 100;
+    return snapDewsYMax(max);
   }, [history]);
 
   if (isLoading) {
@@ -323,10 +326,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
                 >
                   <defs>
-                    <linearGradient id={dewsGradientId} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={bandHex} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={bandHex} stopOpacity={0.05} />
-                    </linearGradient>
+                    <ChartAreaGradient id={dewsGradientId} color={bandHex} />
                   </defs>
                   <TimeGrid />
                   <TimeXAxis

@@ -7,28 +7,22 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { usePreference } from "@/hooks/use-preferences";
-import { formatCurrency } from "@shared/lib/format";
+import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
 import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
 
-const MCAP_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
 const MCAP_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; mcap: number }>[] = [
-  { id: "date", label: "Date", format: (row) => MCAP_TABLE_DATE_FMT.format(new Date(row.ts)) },
+  { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
   { id: "mcap", label: "Market cap (USD)", format: (row) => formatCurrency(row.mcap) },
 ];
 
@@ -216,10 +210,7 @@ export function McapChart({
               onMouseLeave={handleMouseLeave}
             >
               <defs>
-                <linearGradient id={mcapGradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
-                </linearGradient>
+                <ChartAreaGradient id={mcapGradientId} color={CHART_BLUE} />
               </defs>
               <TimeGrid />
               <TimeXAxis

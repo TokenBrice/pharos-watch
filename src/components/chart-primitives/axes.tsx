@@ -137,3 +137,12 @@ export function TimeGrid({
 }: TimeGridProps) {
   return <CartesianGrid strokeDasharray={strokeDasharray} stroke={stroke} vertical={vertical} {...props} />;
 }
+
+export function ChartAreaGradient({ id, color }: { id: string; color: string }) {
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+      <stop offset="95%" stopColor={color} stopOpacity={0.05} />
+    </linearGradient>
+  );
+}

@@ -77,7 +77,7 @@ const COMPLIANCE_STATIC_SECTION = (
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+              className="pharos-prose-link"
             >
               {source.label}
             </a>
@@ -87,14 +87,14 @@ const COMPLIANCE_STATIC_SECTION = (
         Pair this with{" "}
         <Link
           href="/screener/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           Screener
         </Link>{" "}
         and{" "}
         <Link
           href="/safety-scores/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-prose-link"
         >
           Safety Scores
         </Link>{" "}

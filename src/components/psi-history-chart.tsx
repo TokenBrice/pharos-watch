@@ -13,7 +13,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
 import { trackEvent } from "@/lib/analytics";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import {
   ChartDataTable,
   capDataForTable,
@@ -21,20 +21,15 @@ import {
 } from "@/components/chart-primitives/data-table";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatRangeTickDate } from "@/lib/chart-time-range";
+import { formatChartDate } from "@shared/lib/format";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
 const PSI_EVENT_LABEL_CLASS =
   "[fill:var(--text-secondary)] [paint-order:stroke] [stroke:var(--surface-overlay)] [stroke-width:4px] font-medium";
 
-const PSI_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
 const PSI_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; score: number }>[] = [
-  { id: "date", label: "Date", format: (row) => PSI_TABLE_DATE_FMT.format(new Date(row.ts)) },
+  { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
   { id: "score", label: "Score (0–100)", format: (row) => row.score.toFixed(1) },
 ];
 
@@ -143,10 +138,7 @@ export function ScoreChart({
                   margin={chartMargin}
                 >
                   <defs>
-                    <linearGradient id={psiScoreGradientId} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
-                    </linearGradient>
+                    <ChartAreaGradient id={psiScoreGradientId} color={CHART_BLUE} />
                   </defs>
                   {BAND_ZONES.map((zone) => (
                     <ReferenceArea
