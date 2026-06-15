@@ -18,10 +18,9 @@ export function YieldIntelligenceMethodologySection() {
           <MethodologySectionShell
             id={YIELD_SECTION_CONTENT.id}
             title={YIELD_SECTION_CONTENT.title}
-            versionLabel={YIELD_METHODOLOGY_VERSION_LABEL}
+            versionBadge={{ label: YIELD_METHODOLOGY_VERSION_LABEL, className: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400" }}
             changelogPath={YIELD_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or eligibility rules for discovered yield sources change."
-            badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
             changelogClassName="hover:text-violet-700 dark:text-violet-400"
           >
               <p>

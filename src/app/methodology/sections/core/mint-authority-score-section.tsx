@@ -69,9 +69,8 @@ export function MintAuthorityScoreMethodologySection() {
     <MethodologySectionShell
       id={MINT_AUTHORITY_SCORE_SECTION_CONTENT.id}
       title={MINT_AUTHORITY_SCORE_SECTION_CONTENT.title}
-      versionLabel={MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}
+      versionBadge={{ label: MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL, className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" }}
       versionNote="Version increments when weights, route/controller scores, caps, bands, inheritance, or NR semantics change."
-      badgeClassName="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
     >
       <p>
         Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or

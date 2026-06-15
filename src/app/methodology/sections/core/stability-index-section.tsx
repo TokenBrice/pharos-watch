@@ -80,10 +80,9 @@ export function StabilityIndexMethodologySection() {
           <MethodologySectionShell
             id={STABILITY_INDEX_SECTION_CONTENT.id}
             title={STABILITY_INDEX_SECTION_CONTENT.title}
-            versionLabel={PSI_METHODOLOGY_VERSION_LABEL}
+            versionBadge={{ label: PSI_METHODOLOGY_VERSION_LABEL, className: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400" }}
             changelogPath={PSI_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change."
-            badgeClassName="border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400"
             changelogClassName="hover:text-cyan-700 dark:text-cyan-400"
           >
               <p>

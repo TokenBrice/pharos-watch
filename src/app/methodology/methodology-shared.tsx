@@ -48,19 +48,17 @@ export const READER_GUIDE_COPY =
 export function MethodologySectionShell({
   id,
   title,
-  versionLabel,
+  versionBadge,
   changelogPath,
   versionNote,
-  badgeClassName,
   changelogClassName,
   children,
 }: {
   id: string;
   title: string;
-  versionLabel?: string;
+  versionBadge?: { label: string; className: string };
   changelogPath?: string;
   versionNote?: string;
-  badgeClassName?: string;
   changelogClassName?: string;
   children: ReactNode;
 }) {
@@ -72,9 +70,9 @@ export function MethodologySectionShell({
       <CardHeader className={versionNote ? "space-y-2" : undefined}>
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle as="h2">{title}</CardTitle>
-          {versionLabel && badgeClassName && (
-            <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-mono tabular-nums font-semibold", badgeClassName)}>
-              {versionLabel}
+          {versionBadge && (
+            <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-mono tabular-nums font-semibold", versionBadge.className)}>
+              {versionBadge.label}
             </span>
           )}
           {changelogPath && (

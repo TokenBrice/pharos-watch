@@ -32,10 +32,9 @@ export function MintBurnFlowMethodologySection() {
           <MethodologySectionShell
             id={MINT_BURN_FLOW_SECTION_CONTENT.id}
             title={MINT_BURN_FLOW_SECTION_CONTENT.title}
-            versionLabel={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
+            versionBadge={{ label: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL, className: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400" }}
             changelogPath={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change."
-            badgeClassName="border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
             changelogClassName="hover:text-orange-700 dark:text-orange-400"
           >
               <p>

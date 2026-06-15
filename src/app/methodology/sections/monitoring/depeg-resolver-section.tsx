@@ -14,10 +14,9 @@ export function DepegResolverMethodologySection() {
     <MethodologySectionShell
       id={DEPEG_RESOLVER_SECTION_CONTENT.id}
       title={DEPEG_RESOLVER_SECTION_CONTENT.title}
-      versionLabel={DDR_METHODOLOGY_VERSION_LABEL}
+      versionBadge={{ label: DDR_METHODOLOGY_VERSION_LABEL, className: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400" }}
       changelogPath={DDR_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when the resolution rubric, duration stratification, forecast-readiness trigger, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes."
-      badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
       changelogClassName="hover:text-violet-700 dark:text-violet-400"
     >
       <p>

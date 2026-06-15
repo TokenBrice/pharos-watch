@@ -24,10 +24,9 @@ export function PricingPipelineMethodologySection() {
     <MethodologySectionShell
       id={PRICING_PIPELINE_SECTION_CONTENT.id}
       title={PRICING_PIPELINE_SECTION_CONTENT.title}
-      versionLabel={PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL}
+      versionBadge={{ label: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL, className: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400" }}
       changelogPath={PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when price sources, consensus algorithm, enrichment passes, or validation rules change."
-      badgeClassName="border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400"
       changelogClassName="hover:text-blue-700 dark:text-blue-400"
     >
         <p>

@@ -12,10 +12,9 @@ export function SafetyScoresMethodologySection() {
     <MethodologySectionShell
       id={SAFETY_SCORES_SECTION_CONTENT.id}
       title={SAFETY_SCORES_SECTION_CONTENT.title}
-      versionLabel={SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}
+      versionBadge={{ label: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL, className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400" }}
       changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when weights, thresholds, or dimension definitions change."
-      badgeClassName="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
       changelogClassName="hover:text-amber-700 dark:text-amber-400"
     >
       <SafetyScoresOverview />
