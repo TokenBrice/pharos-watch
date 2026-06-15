@@ -22,9 +22,8 @@ import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 type CreateKeyPatch = Partial<CreateKeyState>;
 type EditableKeyPatch = Partial<EditableKeyState>;
 
-function fieldClassName() {
-  return "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
-}
+const FIELD_CLASS_NAME =
+  "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 
 function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>({
   state,
@@ -43,20 +42,20 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
     <div className={gridClassName}>
       <label className="space-y-1">
         <span className="text-xs font-medium text-muted-foreground">Name</span>
-        <input className={fieldClassName()} value={state.name} onChange={(event) => onChange({ name: event.target.value } as Partial<TState>)} />
+        <input className={FIELD_CLASS_NAME} value={state.name} onChange={(event) => onChange({ name: event.target.value } as Partial<TState>)} />
       </label>
       <label className="space-y-1">
         <span className="text-xs font-medium text-muted-foreground">Owner Email</span>
-        <input className={fieldClassName()} value={state.ownerEmail} onChange={(event) => onChange({ ownerEmail: event.target.value } as Partial<TState>)} />
+        <input className={FIELD_CLASS_NAME} value={state.ownerEmail} onChange={(event) => onChange({ ownerEmail: event.target.value } as Partial<TState>)} />
       </label>
       <label className="space-y-1">
         <span className="text-xs font-medium text-muted-foreground">Tier</span>
-        <input className={fieldClassName()} value={state.tier} onChange={(event) => onChange({ tier: event.target.value } as Partial<TState>)} />
+        <input className={FIELD_CLASS_NAME} value={state.tier} onChange={(event) => onChange({ tier: event.target.value } as Partial<TState>)} />
       </label>
       <label className="space-y-1">
         <span className="text-xs font-medium text-muted-foreground">Traffic Class</span>
         <select
-          className={fieldClassName()}
+          className={FIELD_CLASS_NAME}
           value={state.trafficClass}
           onChange={(event) => onChange({ trafficClass: event.target.value as ApiKeyTrafficClass } as Partial<TState>)}
         >
@@ -71,7 +70,7 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
           min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
           max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
           step={1}
-          className={fieldClassName()}
+          className={FIELD_CLASS_NAME}
           value={state.rateLimitPerMinute}
           onChange={(event) => onChange({ rateLimitPerMinute: event.target.value } as Partial<TState>)}
         />
@@ -79,7 +78,7 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
       <label className="space-y-1">
         <span className="text-xs font-medium text-muted-foreground">{expiryLabel}</span>
         <select
-          className={fieldClassName()}
+          className={FIELD_CLASS_NAME}
           value={state.expiryMode}
           onChange={(event) => onChange({ expiryMode: event.target.value as TState["expiryMode"] } as Partial<TState>)}
         >
@@ -96,7 +95,7 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
           <input
             type="datetime-local"
             step={60}
-            className={fieldClassName()}
+            className={FIELD_CLASS_NAME}
             value={state.expiresAtInput}
             onChange={(event) => onChange({ expiresAtInput: event.target.value } as Partial<TState>)}
           />
