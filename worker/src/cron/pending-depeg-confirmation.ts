@@ -28,7 +28,7 @@ import type {
   PendingDepegRow,
   PendingDepegState,
 } from "../lib/depeg-pending";
-import { normalizeSupportedPegCurrency } from "../lib/native-peg-quotes";
+import { normalizeSupportedPegCurrency, type NativePegQuote } from "../lib/native-peg-quotes";
 
 const CONFIRMATION_TIMESTAMP_FUTURE_SKEW_SEC = 5 * 60;
 const DEPEG_PENDING_EXTENDED_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 3;
@@ -41,11 +41,6 @@ type PendingOutcome = "promoted" | "rejected" | "expired" | "recovered" | "super
 export type DexPriceRowsByCoin = Awaited<ReturnType<typeof loadDexPriceRows>>;
 export type DexPriceSourcesByCoin = Awaited<ReturnType<typeof loadDexPriceSources>>;
 export type DexPoolChallengersByCoin = Awaited<ReturnType<typeof loadDexPoolChallengers>>;
-
-export interface NativePegQuote {
-  price: number;
-  pegCurrency: string;
-}
 
 export interface PeakCandidate {
   bps: number | null | undefined;
