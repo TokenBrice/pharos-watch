@@ -305,7 +305,6 @@ function formatTelemetryError(error: unknown): string {
 }
 
 async function loadOptionalTelegramTelemetry<T>(
-  field: string,
   loader: Promise<T | null>,
 ): Promise<OptionalTelegramTelemetry<T>> {
   try {
@@ -558,13 +557,13 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramBotAggregate(db),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DELIVERIES_SQL),
-    loadOptionalTelegramTelemetry("pendingDeliveryBacklog", loadTelegramPendingDeliveryTelemetry(db, now)),
-    loadOptionalTelegramTelemetry("retryErrorClassCounts", loadTelegramRetryErrorClasses(db)),
+    loadOptionalTelegramTelemetry(loadTelegramPendingDeliveryTelemetry(db, now)),
+    loadOptionalTelegramTelemetry(loadTelegramRetryErrorClasses(db)),
     loadTelegramTopStablecoins(db),
-    loadOptionalTelegramTelemetry("presetQueryFailures", loadPresetQueryFailureCount(db)),
-    loadOptionalTelegramTelemetry("inactiveSubscribersCleanedThisWeek", loadInactiveSubscribersCleanedThisWeek(db, now)),
-    loadOptionalTelegramTelemetry("miniAppDailyAggregate", loadTelegramMiniAppDailyAggregate(db, today)),
-    loadOptionalTelegramTelemetry("lifecycleSnapshot", refreshTelegramLifecycleSnapshotIfStale(db, now)),
+    loadOptionalTelegramTelemetry(loadPresetQueryFailureCount(db)),
+    loadOptionalTelegramTelemetry(loadInactiveSubscribersCleanedThisWeek(db, now)),
+    loadOptionalTelegramTelemetry(loadTelegramMiniAppDailyAggregate(db, today)),
+    loadOptionalTelegramTelemetry(refreshTelegramLifecycleSnapshotIfStale(db, now)),
   ]);
   const optionalResults = {
     pendingDeliveryBacklog: pendingDeliveryTelemetryResult,
