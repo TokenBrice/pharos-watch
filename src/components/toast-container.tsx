@@ -33,10 +33,11 @@ function ToastItem({
   index: number;
 }) {
   const Icon = toastIcons[toast.type];
+  const role = toast.type === "error" || toast.type === "warning" ? "alert" : "status";
 
   return (
     <div
-      role="alert"
+      role={role}
       className={cn(
         "pointer-events-auto flex w-full items-center gap-3 rounded-lg border px-4 py-3 shadow-lg",
         "animate-in slide-in-from-bottom-2 fade-in duration-200",
@@ -66,8 +67,6 @@ export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
   return (
     <div
       className="fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2 p-4 sm:bottom-6 sm:right-6"
-      aria-live="polite"
-      aria-atomic="true"
     >
       {toasts.map((toast, index) => (
         <ToastItem
