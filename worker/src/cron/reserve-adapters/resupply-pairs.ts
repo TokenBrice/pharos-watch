@@ -3,6 +3,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import type { AdapterContext, AdapterResult } from "./types";
 import { encodeUint256 } from "../../lib/evm-selectors";
 import {
@@ -57,6 +58,7 @@ const GUARD_ENABLED_SELECTOR = "0x901654fc";
 const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
 const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
 const UNDERLYING_DECIMALS = 18;
+const PAIR_FETCH_CONCURRENCY = 2;
 
 interface RedemptionGuardSnapshot {
   guardEnabled: boolean;
@@ -320,8 +322,7 @@ export async function fetchResupplyPairsReserves(
     };
   }
 
-  const snapshots: ResupplyPairSnapshot[] = [];
-  for (const pair of params.pairs) {
+  const snapshots = await mapWithConcurrency(params.pairs, PAIR_FETCH_CONCURRENCY, async (pair) => {
     throwIfAborted(signal);
     const pairAddress = parseConfiguredAddress(pair.address, `configured pair ${pair.key}`);
     const [rawUnderlying, rawAccounting, rawMaxRedeemableDebt] = await Promise.all([
@@ -348,7 +349,7 @@ export async function fetchResupplyPairsReserves(
       rawCollateralAssets,
       `convertToAssets() for ${collateralAddress}`,
     );
-    snapshots.push({
+    return {
       pairKey: pair.key,
       pairAddress,
       underlyingAddress,
@@ -362,8 +363,8 @@ export async function fetchResupplyPairsReserves(
             maxRedeemableDebt: decodeUint256Result(rawMaxRedeemableDebt, `getMaxRedeemableDebt() for ${pairAddress}`),
           }
         : {}),
-    });
-  }
+    };
+  });
 
   return adaptResupplyPairSnapshots(
     snapshots,
