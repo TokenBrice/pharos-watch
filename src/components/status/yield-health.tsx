@@ -64,7 +64,12 @@ function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): 
     return "queue unavailable";
   }
   const stale = coverageAudit.staleAutoLendingOverrideCount ?? 0;
-  const staleText = stale > 0 ? ` · ${stale} stale overrides` : "";
+  const staleVenue = coverageAudit.staleVenueRiskScoreCount ?? 0;
+  const staleParts = [
+    ...(stale > 0 ? [`${stale} stale overrides`] : []),
+    ...(staleVenue > 0 ? [`${staleVenue} venue reviews`] : []),
+  ];
+  const staleText = staleParts.length > 0 ? ` · ${staleParts.join(" · ")}` : "";
   return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates${staleText}`;
 }
 

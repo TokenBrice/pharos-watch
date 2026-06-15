@@ -8,6 +8,7 @@ import {
   CASE_STUDIES,
   caseStudySlugForEvent,
 } from "../content";
+import { CASE_STUDY_CLIENT_BY_COIN_ID } from "../content/client-index";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const CEMETERY_PATH = join(process.cwd(), "public/datasets/stablecoin-cemetery.json");
@@ -37,6 +38,19 @@ describe("case-study content", () => {
     for (const study of CASE_STUDY_LIST) {
       expect(CASE_STUDIES[study.slug]).toBe(study);
     }
+  });
+
+  it("keeps the client-safe coin lookup in sync without importing article bodies", () => {
+    const expected = Object.fromEntries(
+      CASE_STUDY_LIST
+        .filter((study) => study.primaryCoinId)
+        .map((study) => [
+          study.primaryCoinId!,
+          { slug: study.slug, title: study.title, outcome: study.outcome },
+        ]),
+    );
+
+    expect(CASE_STUDY_CLIENT_BY_COIN_ID).toEqual(expected);
   });
 
   describe.each(CASE_STUDY_LIST)("$slug", (study) => {

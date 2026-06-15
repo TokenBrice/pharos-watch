@@ -90,7 +90,7 @@ import {
 export type { HeroDewsDisplay, HeroDisplayValue } from "@/lib/stablecoin-detail-hero-metrics";
 import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 export type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
-import { CASE_STUDY_BY_COIN_ID } from "@/app/learn/case-studies/content";
+import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/app/learn/case-studies/content/client-index";
 import {
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
@@ -644,7 +644,7 @@ export function buildStablecoinDetailHeroViewModel({
 
   const passportItems = buildHeroPassportItems(passport);
 
-  const subjectCaseStudy = CASE_STUDY_BY_COIN_ID[coin.id];
+  const subjectCaseStudy = CASE_STUDY_CLIENT_BY_COIN_ID[coin.id];
   const caseStudyCallout: HeroCaseStudyCalloutViewModel | null = subjectCaseStudy
     ? {
         href: `/learn/case-studies/${subjectCaseStudy.slug}/`,
