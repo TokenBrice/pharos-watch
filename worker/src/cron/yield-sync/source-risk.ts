@@ -5,10 +5,7 @@ import {
   computeVenueRiskWeighted,
   deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
-import {
-  resolveReviewedYieldRiskConfig,
-  venueRiskWeightedOf,
-} from "@shared/lib/yield-source-risk-registry";
+import { resolveReviewedYieldRiskConfig } from "@shared/lib/yield-source-risk-registry";
 export {
   findStaleVenueRiskScores,
   resolveDependencyConcentration,
@@ -18,7 +15,6 @@ export {
   YIELD_RISK_CONFIG,
   YIELD_RISK_CONFIG_PROTOCOLS,
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
-  VENUE_RISK_SCORE_MAX_AGE_DAYS,
 } from "@shared/lib/yield-source-risk-registry";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 function finiteNumber(value: unknown): number | null {

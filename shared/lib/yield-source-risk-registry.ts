@@ -1062,7 +1062,7 @@ export function resolveDependencyConcentration(
 }
 
 /** Venue-risk scores older than this are flagged for re-review (yield v8.292). */
-export const VENUE_RISK_SCORE_MAX_AGE_DAYS = 90;
+const VENUE_RISK_SCORE_MAX_AGE_DAYS = 90;
 
 export interface StaleVenueRiskScore {
   protocol: YieldRiskConfigProtocol;
@@ -1092,4 +1092,3 @@ export function findStaleVenueRiskScores(
   }
   return stale.sort((a, b) => b.ageDays - a.ageDays);
 }
-
