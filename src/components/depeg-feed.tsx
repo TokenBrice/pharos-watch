@@ -168,11 +168,10 @@ export function DepegFeed({
               variant="ghost"
               size="sm"
               onClick={() => {
+                setVisibleCount((c) => c + pageSize);
                 if (hasMoreLoaded) {
-                  setVisibleCount((c) => c + pageSize);
                   return;
                 }
-                setVisibleCount((c) => c + pageSize);
                 onLoadMore?.();
               }}
               className="pharos-focus-ring text-xs"
