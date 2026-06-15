@@ -341,7 +341,7 @@ export function PharosWatchBotMiniAppClient() {
 
         {status === "loading" && !optimisticState ? <HomeSkeleton /> : null}
         {status === "loading" && optimisticState ? <p className="sr-only" aria-live="polite">Refreshing settings</p> : null}
-        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => void loadSession(initData)}>Retry</MiniButton></div></section> : null}
+        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => { if (initData) void loadSession(initData); }}>Retry</MiniButton></div></section> : null}
         {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
 
         {optimisticState ? (
