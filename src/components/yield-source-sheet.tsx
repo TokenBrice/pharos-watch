@@ -18,6 +18,7 @@ import {
   classifyYieldSourceFreshness,
 } from "@/lib/yield-source-risk";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { VenueRiskBreakdown } from "@/components/venue-risk-breakdown";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -187,6 +188,15 @@ function YieldSourceSheetBody({
             </p>
           )}
         </div>
+
+        {selectedSource.sourceRisk?.venueRiskScores ? (
+          <VenueRiskBreakdown
+            scores={selectedSource.sourceRisk.venueRiskScores}
+            tier={selectedSource.sourceRisk.venueRiskTier}
+            weighted={selectedSource.sourceRisk.venueRiskWeighted}
+            confidence={selectedSource.sourceRisk.venueRiskConfidence}
+          />
+        ) : null}
 
         {sourceExplorer.retainedAlternates.length > 0 && (
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
