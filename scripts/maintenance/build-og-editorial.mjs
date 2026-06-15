@@ -32,16 +32,15 @@ mkdirSync(STAGING, { recursive: true });
 mkdirSync(PUBLIC, { recursive: true });
 
 // Read the canonical methodology version label so the version pin always
-// matches what the rest of the app renders.
-const safetyScoreData = readFileSync(
-  resolve(REPO_ROOT, "shared/lib/methodology-versions/safety-score-data.ts"),
-  "utf-8",
+// matches what the rest of the app renders. Both the TS app and this script
+// consume the same current-version.json source of truth.
+const { currentVersion } = JSON.parse(
+  readFileSync(
+    resolve(REPO_ROOT, "shared/lib/methodology-versions/current-version.json"),
+    "utf-8",
+  ),
 );
-const versionMatch = safetyScoreData.match(/currentVersion:\s*"([0-9.]+)"/);
-if (!versionMatch) {
-  throw new Error("Could not extract currentVersion from safety-score-data.ts");
-}
-const METHODOLOGY_LABEL = `Methodology v${versionMatch[1]}`;
+const METHODOLOGY_LABEL = `Methodology v${currentVersion}`;
 
 const CARDS = [
   { kicker: "Daily Digest", title: "Daily Digest", file: "og-editorial-digest.png" },
