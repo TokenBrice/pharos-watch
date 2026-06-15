@@ -67,8 +67,6 @@ try {
     });
     const fileUrl = pathToFileURL(source).href;
     await page.goto(fileUrl, { waitUntil: "load", timeout: 15000 });
-    // Give Firefox a beat to resolve gradients/glyphs (mirrors svg-to-png skill).
-    await page.waitForTimeout(500);
     await page.screenshot({ path: output, omitBackground: false, timeout: 30000 });
     await page.close();
     console.log(`Wrote ${output} (${size}x${size})`);

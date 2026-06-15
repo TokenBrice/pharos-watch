@@ -189,9 +189,8 @@ try {
       viewport: { width: 1200, height: 628 },
     });
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
-    // Allow Firefox to resolve the @font-face declarations before snapshot.
+    // Wait for Firefox to resolve the @font-face declarations before snapshot.
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(400);
     await page.screenshot({
       path: outPath,
       omitBackground: false,
