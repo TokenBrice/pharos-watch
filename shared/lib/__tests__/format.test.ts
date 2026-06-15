@@ -15,6 +15,8 @@ import {
   formatCompactCount,
   formatCompactUsd,
   formatCompactUsdShort,
+  formatCompactUsdShortLowerK,
+  formatSignedCompactUsd,
   formatBps,
   formatDeathDate,
   formatEventDate,
@@ -204,6 +206,46 @@ describe("formatCompactUsdShort", () => {
   it("returns N/A for non-finite values", () => {
     expect(formatCompactUsdShort(NaN)).toBe("N/A");
     expect(formatCompactUsdShort(Infinity)).toBe("N/A");
+  });
+});
+
+describe("formatCompactUsdShortLowerK", () => {
+  it("keeps one decimal for B/M and rounds thousands to a lowercase k", () => {
+    expect(formatCompactUsdShortLowerK(4.321e9)).toBe("$4.3B");
+    expect(formatCompactUsdShortLowerK(8.76e6)).toBe("$8.8M");
+    expect(formatCompactUsdShortLowerK(12_345)).toBe("$12k");
+    expect(formatCompactUsdShortLowerK(1_000)).toBe("$1k");
+  });
+
+  it("rounds sub-thousand values without a suffix", () => {
+    expect(formatCompactUsdShortLowerK(999)).toBe("$999");
+    expect(formatCompactUsdShortLowerK(0)).toBe("$0");
+  });
+
+  it("returns $0 for non-finite values", () => {
+    expect(formatCompactUsdShortLowerK(NaN)).toBe("$0");
+    expect(formatCompactUsdShortLowerK(Infinity)).toBe("$0");
+  });
+});
+
+describe("formatSignedCompactUsd", () => {
+  it("prefixes a + for positive values and reuses formatCompactUsd tiers", () => {
+    expect(formatSignedCompactUsd(2.5e9)).toBe("+$2.50B");
+    expect(formatSignedCompactUsd(8.76e6)).toBe("+$8.8M");
+    expect(formatSignedCompactUsd(12_345)).toBe("+$12K");
+  });
+
+  it("renders negative values with the abbreviateNumber minus sign", () => {
+    expect(formatSignedCompactUsd(-2.5e9)).toBe("-$2.50B");
+    expect(formatSignedCompactUsd(-42)).toBe("-$42");
+  });
+
+  it("does not prefix zero", () => {
+    expect(formatSignedCompactUsd(0)).toBe("$0");
+  });
+
+  it("returns N/A for non-finite values", () => {
+    expect(formatSignedCompactUsd(NaN)).toBe("N/A");
   });
 });
 
