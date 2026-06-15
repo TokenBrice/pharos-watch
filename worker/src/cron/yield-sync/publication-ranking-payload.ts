@@ -9,6 +9,10 @@ import type {
 } from "@shared/types/yield";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
+import {
+  isRealSourceSwitch,
+  LEGACY_BEST_YIELD_SOURCE_KEY,
+} from "../../lib/yield-history-ownership-handoffs";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS, getRankingStaleThresholdMs } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
@@ -82,11 +86,7 @@ export function resolveApy30dDeltaFromPrevious(input: {
   candidates: EvaluatedYieldSource[];
   previousBestSourceKey: string | null;
 }): number | null {
-  if (
-    input.previousBestSourceKey == null ||
-    input.previousBestSourceKey === "legacy-best" ||
-    input.previousBestSourceKey === input.selected.sourceKey
-  ) {
+  if (!isRealSourceSwitch(input.previousBestSourceKey, input.selected.sourceKey)) {
     return null;
   }
 
@@ -160,11 +160,11 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       .sort(compareCandidates);
     const rejectedCount = candidates.filter((candidate) => candidate.rejected).length;
     const previousBestSourceKey =
-      source.previousBestSourceKey != null && source.previousBestSourceKey !== "legacy-best"
+      source.previousBestSourceKey != null &&
+      source.previousBestSourceKey !== LEGACY_BEST_YIELD_SOURCE_KEY
         ? source.previousBestSourceKey
         : null;
-    const sourceSwitch =
-      previousBestSourceKey != null && previousBestSourceKey !== source.sourceKey;
+    const sourceSwitch = isRealSourceSwitch(previousBestSourceKey, source.sourceKey);
     const apy30dDeltaFromPrevious = resolveApy30dDeltaFromPrevious({
       selected: source,
       candidates,

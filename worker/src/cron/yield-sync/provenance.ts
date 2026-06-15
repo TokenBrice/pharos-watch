@@ -1,4 +1,8 @@
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import {
+  isRealSourceSwitch,
+  LEGACY_BEST_YIELD_SOURCE_KEY,
+} from "../../lib/yield-history-ownership-handoffs";
 import { buildSelectionReason, type EvaluatedYieldSource } from "./evaluation";
 
 export function buildYieldSourceProvenance(params: {
@@ -40,13 +44,10 @@ export function buildYieldSourceProvenance(params: {
     selectionReason: isBest
       ? buildSelectionReason(source, rejectedPeers)
       : "Alternative source retained for comparison",
-    sourceSwitch:
-      isBest &&
-      source.previousBestSourceKey != null &&
-      source.previousBestSourceKey !== "legacy-best" &&
-      source.previousBestSourceKey !== source.sourceKey,
+    sourceSwitch: isBest && isRealSourceSwitch(source.previousBestSourceKey, source.sourceKey),
     previousBestSourceKey:
-      source.previousBestSourceKey != null && source.previousBestSourceKey !== "legacy-best"
+      source.previousBestSourceKey != null &&
+      source.previousBestSourceKey !== LEGACY_BEST_YIELD_SOURCE_KEY
         ? source.previousBestSourceKey
         : null,
     usedLegacyHistory: source.usedLegacyHistory,

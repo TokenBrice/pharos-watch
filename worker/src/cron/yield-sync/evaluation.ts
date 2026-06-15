@@ -11,6 +11,7 @@ import {
 import type { YieldSafetyProvenance, YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
+import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
 import {
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   computeApyVarianceScore,
@@ -306,12 +307,9 @@ function evaluateYieldSourceGroup(
     const excessYield = apy30d - benchmarkRate;
     const previousBestSourceKey = input.prevBestSourceKeyByCoin.get(stablecoinId) ?? null;
     const priorSwitches30d = input.sourceSwitchCount30dByCoin?.get(stablecoinId) ?? 0;
-    const candidateSwitchCount30d =
-      previousBestSourceKey != null &&
-      previousBestSourceKey !== "legacy-best" &&
-      previousBestSourceKey !== sourceKey
-        ? priorSwitches30d + 1
-        : priorSwitches30d;
+    const candidateSwitchCount30d = isRealSourceSwitch(previousBestSourceKey, sourceKey)
+      ? priorSwitches30d + 1
+      : priorSwitches30d;
     const prevExchangeRate = input.tier1PrevRates.get(stablecoinId) ?? null;
     const prevTvlUsd = historySelection.usedLegacyHistory
       ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
@@ -510,17 +508,9 @@ function evaluateYieldSourceGroup(
 
   accumulator.bestSourceKeyByCoin.set(stablecoinId, winner.sourceKey);
   const priorSwitches30d = input.sourceSwitchCount30dByCoin?.get(stablecoinId) ?? 0;
-  const sourceSwitchCount30d =
-    winner.previousBestSourceKey != null &&
-    winner.previousBestSourceKey !== "legacy-best" &&
-    winner.previousBestSourceKey !== winner.sourceKey
-      ? priorSwitches30d + 1
-      : priorSwitches30d;
-  if (
-    winner.previousBestSourceKey != null &&
-    winner.previousBestSourceKey !== "legacy-best" &&
-    winner.previousBestSourceKey !== winner.sourceKey
-  ) {
+  const winnerIsRealSwitch = isRealSourceSwitch(winner.previousBestSourceKey, winner.sourceKey);
+  const sourceSwitchCount30d = winnerIsRealSwitch ? priorSwitches30d + 1 : priorSwitches30d;
+  if (winnerIsRealSwitch) {
     accumulator.sourceSwitches++;
   }
 
