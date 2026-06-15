@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**132/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
+**133/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 578 | 2 | 0 | 132 | 21 |
+| Count | 578 | 1 | 0 | 133 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 53 | 0 | 0 | 202 |
-| quality | 315 | 67 | 2 | 0 | 238 |
+| quality | 315 | 68 | 1 | 0 | 238 |
 | sustainability | 152 | 12 | 0 | 0 | 138 |
 
 ## redundancy (266)
@@ -582,7 +582,7 @@
 | ⬜ | [Q-265](quality/Q-265.md) | S | error-handling | Dependency-risk ceiling detail can mislabel a mechanism-bound ceiling as 'wrapper' |  | `shared/lib/report-card-dependency.ts:109-147` |
 | ⬜ | [Q-266](quality/Q-266.md) | S | naming | getDewsFreshness: computedAt=0 (Unix epoch) silently treated as missing data |  | `src/lib/dews-signal-utils.ts:L84-L85` |
 | ⬜ | [Q-267](quality/Q-267.md) | S | complexity | CohortBucket.size duplicates scoresDescending.length and is maintained in parallel |  | `src/lib/yield-view-model.ts:785-815, 825-837` |
-| 🔄 | [Q-268](quality/Q-268.md) | S | type-safety | handleApiKeyAuditLog declares request optional but dereferences it unconditionally | codex | `worker/src/api/api-key-audit-log.ts:30-42` |
+| ✅ | [Q-268](quality/Q-268.md) | S | type-safety | handleApiKeyAuditLog declares request optional but dereferences it unconditionally | codex | `worker/src/api/api-key-audit-log.ts:30-42` |
 | ⬜ | [Q-269](quality/Q-269.md) | S | testing | bounded-queue.ts has no test for worker exception propagation leaving sparse results array |  | `worker/src/cron/shared/bounded-queue.ts:L37-64 +` |
 | ⬜ | [Q-270](quality/Q-270.md) | S | error-handling | parseTimestampLikeToUnixSeconds silently rejects any DD/MM/YY date where both day and mont |  | `worker/src/cron/reserve-adapters/freshness.ts:L9` |
 | ⬜ | [Q-271](quality/Q-271.md) | M | error-handling | circuit-breaker sendAlert fire-and-forget may drop alerts before isolate teardown |  | `worker/src/lib/circuit-breaker.ts:L108-L113, L13` |
