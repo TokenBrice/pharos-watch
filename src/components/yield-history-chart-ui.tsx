@@ -247,7 +247,7 @@ export function Controls({
   onShowBreakdownChange: (pressed: boolean) => void;
   availableSources: YieldHistorySourceOption[];
   selectedSourceKey: string;
-  onSourceChange: (sourceKey: string) => void;
+  onSourceChange?: (sourceKey: string) => void;
   hideSourceSelector?: boolean;
 }) {
   const selectedSourceLabel = selectedSourceKey === "best"
@@ -289,7 +289,7 @@ export function Controls({
           ))}
         </ToggleGroup>
 
-        {availableSources.length > 0 && !hideSourceSelector ? (
+        {availableSources.length > 0 && !hideSourceSelector && onSourceChange ? (
           <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
             <span className="uppercase tracking-[0.12em]">History</span>
             <DropdownMenu>

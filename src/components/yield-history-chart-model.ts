@@ -370,7 +370,10 @@ export function useYieldHistoryChartModel({
   const [internalSourceKey, setInternalSourceKey] = useState<string>("best");
 
   const selectedSourceKey = externalSourceKey ?? internalSourceKey;
-  const onSourceChange = externalSourceKey !== undefined ? () => {} : setInternalSourceKey;
+  // When the parent controls the source key, the internal selector cannot do
+  // anything — expose `undefined` so the dropdown is omitted rather than
+  // present-but-inert (a noop would silently discard child calls).
+  const onSourceChange = externalSourceKey !== undefined ? undefined : setInternalSourceKey;
 
   const effectiveSelectedSourceKey =
     selectedSourceKey === "best" || availableSources.some((source) => source.sourceKey === selectedSourceKey)
