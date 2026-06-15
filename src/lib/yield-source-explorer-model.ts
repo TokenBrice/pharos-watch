@@ -7,6 +7,7 @@ import {
   type YieldSourceDepthLens,
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
+import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { AltYieldSource, YieldRanking, YieldType } from "@shared/types";
 
 export type YieldRejectionHintCode =
@@ -110,10 +111,6 @@ const REJECTION_HINT_DESCRIPTIONS: Record<YieldRejectionHintCode, string> = {
   "lower-conf": "Inferred confidence is lower than the chosen source.",
   smaller: "Smaller venue TVL than the chosen source.",
 };
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function confidenceTierRank(tier: YieldSourceConfidenceTier | null): number {
   if (!tier) return YIELD_SOURCE_CONFIDENCE_ORDER.length;

@@ -1,4 +1,5 @@
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
+import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { YieldRanking, YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
@@ -67,10 +68,6 @@ export const YIELD_SOURCE_DEPTH_DEFINITIONS: Record<YieldSourceDepthLens, { labe
     description: "Depth cannot be classified because source TVL or supply-relative depth is missing.",
   },
 };
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 export function classifyYieldSourceDepth(params: {
   sourceRisk?: YieldSourceRisk | null;

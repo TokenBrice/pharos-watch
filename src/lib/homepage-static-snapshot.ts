@@ -1,6 +1,7 @@
 import topStablecoinsDataset from "../../public/datasets/top-stablecoins/latest.json";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
+import { numberValue } from "@shared/lib/type-guards";
 
 interface TopStablecoinsDatasetRow {
   id?: unknown;
@@ -25,10 +26,6 @@ export interface HomepageHeroSnapshot {
 
 const TOP_STABLECOINS_DATASET = topStablecoinsDataset as TopStablecoinsDataset;
 
-function finiteNumber(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
 function asOfISO(): string | null {
   const value = TOP_STABLECOINS_DATASET._meta?.asOfISO;
   return typeof value === "string" && value ? value : null;
@@ -47,7 +44,7 @@ export function getHomepageHeroSnapshot(): HomepageHeroSnapshot {
       continue;
     }
 
-    const circulatingUsd = finiteNumber(row.circulatingUsd);
+    const circulatingUsd = numberValue(row.circulatingUsd) ?? 0;
     totalUsd += circulatingUsd;
 
     if (row.pegType !== "peggedUSD") {
