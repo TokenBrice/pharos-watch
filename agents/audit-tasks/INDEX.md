@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**159/733 done (22%)**  `████░░░░░░░░░░░░░░░░`
+**163/733 done (22%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 542 | 11 | 0 | 159 | 21 |
+| Count | 537 | 11 | 1 | 163 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 57 | 1 | 0 | 197 |
-| quality | 315 | 88 | 10 | 0 | 209 |
+| redundancy | 266 | 57 | 2 | 0 | 196 |
+| quality | 315 | 92 | 9 | 1 | 205 |
 | sustainability | 152 | 14 | 0 | 0 | 136 |
 
 ## redundancy (266)
@@ -33,7 +33,7 @@
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
 | ✅ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
 | ✅ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules | codex | `worker/src/api/telegram-webhook-settings-mutatio` |
-| ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
+| 🔄 | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und | codex | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ✅ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp | codex | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
 | ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
 | ✅ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call | codex | `src/components/depeg-feed.tsx:L170-L177` |
@@ -347,8 +347,8 @@
 | ✅ | [Q-061](quality/Q-061.md) | S | error-handling | Single try/catch across all three CEX venue fetches silently skips venues after the first  | opus-10 | `worker/src/lib/cex-orderbooks.ts:L218-L228` |
 | ⬜ | [Q-062](quality/Q-062.md) | M | testing | api-pagination cursor-helper internals have no unit tests; multi-column disjunction untest |  | `worker/src/lib/api-pagination.ts:L1-L320 (49.6% ` |
 | ⬜ | [Q-063](quality/Q-063.md) | M | testing | reserve-presentation.ts (265 lines) has no tests; incorrect notice tone for stale/failed r |  | `src/components/stablecoin-detail/reserve-present` |
-| ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
-| 🔄 | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds | opus-02 | `src/components/table/content-table.tsx:L150-L153` |
+| 🔄 | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti | opus-01 | `src/app/methodology/methodology-shared.tsx:60,63` |
+| ✅ | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds | opus-02 | `src/components/table/content-table.tsx:L150-L153` |
 | ✅ | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics | opus-03 | `src/components/toast-container.tsx:L39, L69-L70` |
 | ✅ | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety | opus-04 | `src/components/key-info-card.tsx:L43, L253, L273` |
 | ✅ | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc | opus-05 | `src/components/yield-scatter-plot.tsx:L139-L171` |
@@ -356,7 +356,7 @@
 | ⬜ | [Q-072](quality/Q-072.md) | M | clone | Hardcoded 4% APY benchmark in yield-source diverges from per-coin benchmarkRate used by th |  | `shared/lib/selector/yield-source.ts:L75; shared/` |
 | 🔄 | [Q-073](quality/Q-073.md) | S | complexity | coverage-matrix-model.ts: three separate O(n log n) sorts over featureSummaries to extract | opus-06 | `src/lib/coverage-matrix-model.ts:185-202` |
 | ⬜ | [Q-074](quality/Q-074.md) | S | error-handling | backfillTronFromLedger returns {updated: 0} mid-loop when budget is reached, discarding al |  | `worker/src/cron/blacklist/amount-recovery.ts:L71` |
-| 🔄 | [Q-075](quality/Q-075.md) | S | type-safety | Unsafe Number(bigint) fallback for token balances loses precision on large reserves | opus-07 | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L13` |
+| ⛔ | [Q-075](quality/Q-075.md) | S | type-safety | Unsafe Number(bigint) fallback for token balances loses precision on large reserves | opus-07 | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L13` |
 | ⬜ | [Q-076](quality/Q-076.md) | M | complexity | supply7dOutcome evaluates wrong coin when symbol ranking changes day-over-day |  | `worker/src/cron/daily-digest/digest-next-trigger` |
 | ⬜ | [Q-079](quality/Q-079.md) | M | type-safety | isFallbackCronResult discriminates on 'metadata' in result — fragile structural guard |  | `worker/src/cron/sync-stablecoins/fallback.ts:22-` |
 | ✅ | [Q-080](quality/Q-080.md) | S | type-safety | Eventless fast-path result built via Object.assign with an unsafe cast | opus-08 | `worker/src/cron/dispatch-telegram-alerts.ts:L374` |
@@ -375,7 +375,7 @@
 | ⬜ | [Q-102](quality/Q-102.md) | M | error-handling | Telegram double-send risk when cache write fails after successful delivery |  | `worker/src/cron/daily-digest.ts:L284-L301` |
 | ⬜ | [Q-103](quality/Q-103.md) | M | error-handling | resolveRunStatus maps all-circuit-breaker-skipped runs to 'error', masking healthy circuit |  | `worker/src/cron/sync-live-reserves-finalize.ts:1` |
 | ⬜ | [Q-104](quality/Q-104.md) | M | complexity | Serial per-observation D1 reads in loadAlertMarkers and loadDetailWriteFailures |  | `worker/src/cron/cron-staleness-watchdog.ts:198-2` |
-| ⬜ | [Q-105](quality/Q-105.md) | S | type-safety | cap-vault silently prices all unknown assets at $1.00 regardless of underlying token |  | `worker/src/cron/reserve-adapters/cap-vault.ts:L8` |
+| 🔄 | [Q-105](quality/Q-105.md) | S | type-safety | cap-vault silently prices all unknown assets at $1.00 regardless of underlying token | opus-05 | `worker/src/cron/reserve-adapters/cap-vault.ts:L8` |
 | ⬜ | [Q-108](quality/Q-108.md) | S | clone | 'legacy-best' source-key magic string duplicated ~10x while a named constant exists |  | `worker/src/cron/yield-sync/evaluation.ts:311,515` |
 | ⬜ | [Q-110](quality/Q-110.md) | S | type-safety | buildChainRpcs uses non-null assertion on Tron public RPC in the no-Alchemy branch |  | `worker/src/lib/chain-registry.ts:L114` |
 | 🔄 | [Q-111](quality/Q-111.md) | S | error-handling | getMintBurnReconciliation parallel DB queries are unguarded — any query failure bubbles as | opus-08 | `worker/src/lib/status/derived-data.ts:L208-L229` |
@@ -387,7 +387,7 @@
 | ⬜ | [Q-126](quality/Q-126.md) | M | error-handling | linkSealedNearbyIncidentTail performs 4+ non-atomic sequential D1 writes with no compensat |  | `worker/src/lib/depeg-resolver-incident-store.ts:` |
 | ⬜ | [Q-127](quality/Q-127.md) | M | error-handling | safeErrorMessage is nearly unused — raw toErrorMessage leaks into logs throughout the work |  | `worker/src/lib/safe-error-message.ts:L1-L30` |
 | ⬜ | [Q-128](quality/Q-128.md) | M | type-safety | computePriceSignal returns available:true with value 100 when price is null — breaks evide |  | `worker/src/lib/dews/signal-families.ts:L226-L228` |
-| 🔄 | [Q-131](quality/Q-131.md) | S | error-handling | apiFetchWithMeta silently retries schema validation on the unstripped JSON body | opus-10 | `src/lib/api.ts:334-341` |
+| ✅ | [Q-131](quality/Q-131.md) | S | error-handling | apiFetchWithMeta silently retries schema validation on the unstripped JSON body | opus-10 | `src/lib/api.ts:334-341` |
 | ⬜ | [Q-133](quality/Q-133.md) | M | testing | Production routes the *Trusted backfill/remediate handlers; the auth-wrapped public varian |  | `worker/src/api/backfill-cg-prices.ts:196-211, wo` |
 | ⬜ | [Q-135](quality/Q-135.md) | M | error-handling | Broad silent catch in telegram-usage-analytics swallows all errors from non-telemetry path |  | `worker/src/lib/telegram-usage-analytics.ts:L264-` |
 | ⬜ | [Q-136](quality/Q-136.md) | M | error-handling | healNullPrices silently skips historical events (>48h old) with no alerting or escalation  |  | `worker/src/lib/mint-burn-pipeline/price-heal.ts:` |
@@ -417,7 +417,7 @@
 | ⬜ | [Q-163](quality/Q-163.md) | S | testing | Branchy pure-logic units have no direct unit tests |  | `src/app/admin/cron-severity.ts:7-12; src/app/adm` |
 | ⬜ | [Q-164](quality/Q-164.md) | M | type-safety | Mint-authority view model reads an untyped UnknownRecord candidate via stringValue/numberV |  | `src/lib/stablecoin-detail-mint-authority-view-mo` |
 | ⬜ | [Q-165](quality/Q-165.md) | M | type-safety | selectDigestIntelligence trusts unvalidated runtime shapes with bare casts after only Arra |  | `worker/src/api/digest-intelligence-summary.ts:26` |
-| ⬜ | [Q-166](quality/Q-166.md) | S | naming | getContractConfig silently hardcodes USDC as the redeem quote token, an undocumented denom |  | `worker/src/lib/authoritative-price-sources/helpe` |
+| 🔄 | [Q-166](quality/Q-166.md) | S | naming | getContractConfig silently hardcodes USDC as the redeem quote token, an undocumented denom | opus-10 | `worker/src/lib/authoritative-price-sources/helpe` |
 | ⬜ | [Q-167](quality/Q-167.md) | M | security | Site-data Pages cache key ignores Vary/CORS dimensions, allowing cross-origin ACAO bleed |  | `functions/_site-data/[[path]].ts:57-59,159-166,1` |
 | ⬜ | [Q-168](quality/Q-168.md) | M | complexity | summarizeDdrrMetrics is a 140-line monolith deriving ~50 interdependent counts/ratios in o |  | `shared/lib/depeg-resolver-review/summary.ts:109-` |
 | ⬜ | [Q-169](quality/Q-169.md) | M | error-handling | materializeTerminalEvidenceForEvent silently nulls valid terminal evidence |  | `worker/src/cron/compute-depeg-resolver-review.ts` |
@@ -453,7 +453,7 @@
 | ✅ | [Q-046](quality/Q-046.md) | S | error-handling | External links rendered via ReactMarkdown in the docs page lack rel="noopener noreferrer" | codex | `src/app/docs/[slug]/page.tsx:L82-L97` |
 | ⬜ | [Q-048](quality/Q-048.md) | S | complexity | Module-scope `readFileSync` at import time in depeg page-data.ts |  | `src/app/depeg/[event]/page-data.ts:L20-L25` |
 | ⬜ | [Q-049](quality/Q-049.md) | M | complexity | getActionGroup groups admin actions by path string matching — fragile coupling to URL stru |  | `src/components/status/admin-actions-panel.tsx:L1` |
-| 🔄 | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  | codex | `src/components/desktop-sidebar.tsx:10-22` |
+| ✅ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  | codex | `src/components/desktop-sidebar.tsx:10-22` |
 | ✅ | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps | codex | `src/components/feedback-modal.tsx:L78-L120` |
 | ✅ | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
 | ✅ | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif | codex | `scripts/maintenance/audit-redemption-v4-score-di` |
@@ -603,7 +603,7 @@
 | ⬜ | [Q-286](quality/Q-286.md) | S | complexity | ChartSkeleton exposes two partially-overlapping prop sets (`variant`/`height` vs `type`/`c |  | `src/components/chart-skeleton.tsx:L6-L147` |
 | ⬜ | [Q-287](quality/Q-287.md) | S | complexity | DepegFeed seenIds Set grows without bound across the component lifetime |  | `src/components/depeg-feed.tsx:L44, L85-L94` |
 | ⬜ | [Q-288](quality/Q-288.md) | M | complexity | usePortfolio reads window.location.search directly in getInitialPortfolioState, bypassing  |  | `src/hooks/use-portfolio.ts:L78-L99` |
-| ⬜ | [Q-289](quality/Q-289.md) | S | error-handling | cancelResponseBodyQuietly called after res.json() already consumed body — misleading dead  |  | `worker/src/cron/sync-stablecoins/enrich-prices-d` |
+| 🔄 | [Q-289](quality/Q-289.md) | S | error-handling | cancelResponseBodyQuietly called after res.json() already consumed body — misleading dead  | codex | `worker/src/cron/sync-stablecoins/enrich-prices-d` |
 | ✅ | [Q-290](quality/Q-290.md) | S | type-safety | rowToDepegEvent silently ignores unknown direction/source values after warning | codex | `worker/src/lib/depeg-helpers.ts:356-401` |
 | ⬜ | [Q-291](quality/Q-291.md) | S | naming | formatRouteAvailabilityReviewedAt is exported but semantically identical to inline formatU |  | `worker/src/lib/redemption-backstop-availability.` |
 | ⬜ | [Q-292](quality/Q-292.md) | S | naming | Two METHODOLOGY_SECTIONS nav IDs omit the '-methodology' suffix used by all other entries |  | `src/app/methodology/methodology-shared.tsx:17,21` |
@@ -628,7 +628,7 @@
 | ⬜ | [Q-311](quality/Q-311.md) | M | complexity | Front-end view-model modules approach god-module size, mixing config tables, parsing, face |  | `src/lib/yield-view-model.ts:1-1247 (33 exports; ` |
 | ✅ | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio | codex | `functions/stablecoin/[[path]].ts:1-21` |
 | ✅ | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er | codex | `functions/_site-data/[[path]].ts:159-166` |
-| 🔄 | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna | codex | `functions/lib/site-data-origin.ts:6-22; shared/l` |
+| ✅ | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna | codex | `functions/lib/site-data-origin.ts:6-22; shared/l` |
 | 🚫 | [Q-315](quality/Q-315.md) | S | security | Telegram callback queries are not re-authorized in private chats beyond the chat binding |  | `worker/src/api/telegram-webhook-callbacks.ts:49-` |
 
 ## sustainability (152)
