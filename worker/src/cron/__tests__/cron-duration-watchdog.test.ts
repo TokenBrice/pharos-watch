@@ -11,7 +11,7 @@ const SYNC_TIMEOUT_MS = CRON_TIMEOUT_MS["sync-stablecoins"];
 const LIVE_RESERVES_TIMEOUT_MS = CRON_TIMEOUT_MS["sync-live-reserves"];
 const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progress abandoned";
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
-const STALE_SLOT_METADATA_REASON_PATTERN = "%\"reason\":\"stale-slot-reconciled\"%";
+const STALE_SLOT_METADATA_REASON = "stale-slot-reconciled";
 
 function statsMatcher(stats: {
   n: number;
@@ -27,7 +27,7 @@ function statsMatcher(stats: {
       "sync-stablecoins",
       SINCE_SEC,
       STALE_SLOT_CHILD_ERROR,
-      STALE_SLOT_METADATA_REASON_PATTERN,
+      STALE_SLOT_METADATA_REASON,
     ],
     rows: [{ budget_truncations: 0, ...stats }],
     first: { budget_truncations: 0, ...stats },
@@ -48,7 +48,7 @@ function liveReservesStatsMatcher(stats: {
       "sync-live-reserves",
       SINCE_SEC,
       STALE_SLOT_CHILD_ERROR,
-      STALE_SLOT_METADATA_REASON_PATTERN,
+      STALE_SLOT_METADATA_REASON,
     ],
     rows: [{ budget_truncations: 0, ...stats }],
     first: { budget_truncations: 0, ...stats },
@@ -155,7 +155,9 @@ describe("runCronDurationWatchdog", () => {
 
     expect(result.status).toBeUndefined();
     expect(runtimeQueries.some((entry) => entry.binds.includes(STALE_SLOT_CHILD_ERROR))).toBe(true);
-    expect(runtimeQueries.some((entry) => entry.binds.includes(STALE_SLOT_METADATA_REASON_PATTERN))).toBe(true);
+    expect(runtimeQueries.some((entry) => entry.binds.includes(STALE_SLOT_METADATA_REASON))).toBe(true);
+    expect(runtimeQueries.every((entry) => !entry.sql.includes("LIKE"))).toBe(true);
+    expect(runtimeQueries.some((entry) => entry.sql.includes("json_extract(metadata, '$.reason')"))).toBe(true);
   });
 
   it("keeps live reserve run-budget truncations as runtime pressure", async () => {
@@ -200,6 +202,7 @@ describe("runCronDurationWatchdog", () => {
       breaching: ["hourlyYieldSync"],
       alerted: true,
     });
-    expect(db.getHistory().some((entry) => entry.binds.includes(`%${STALE_SLOT_ERROR}%`))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.binds.includes(STALE_SLOT_ERROR))).toBe(true);
+    expect(db.getHistory().every((entry) => !entry.sql.includes("LIKE"))).toBe(true);
   });
 });

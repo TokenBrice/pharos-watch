@@ -30,7 +30,7 @@ const ALERT_COOLDOWN_SEC = 7 * 86400;
 const ALERT_MARKER_KEY = "cron-duration-watchdog:alert";
 const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progress abandoned";
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
-const STALE_SLOT_METADATA_REASON_PATTERN = "%\"reason\":\"stale-slot-reconciled\"%";
+const STALE_SLOT_METADATA_REASON = "stale-slot-reconciled";
 
 interface JobDurationStats {
   job: string;
@@ -108,14 +108,31 @@ export async function runCronDurationWatchdog(
   const statements = watchedJobs.map(([job, timeoutMs]) =>
     db
       .prepare(
-        "SELECT COUNT(*) AS n, CAST(AVG(duration_ms) AS INT) AS avg_ms, MAX(duration_ms) AS max_ms, " +
-        "SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits, " +
-        "SUM(CASE WHEN metadata LIKE '%\"runBudgetTruncated\":true%' THEN 1 ELSE 0 END) AS budget_truncations " +
-        "FROM cron_runs WHERE job = ? AND started_at > ? " +
-        "AND (error IS NULL OR error <> ?) " +
-        "AND (metadata IS NULL OR metadata NOT LIKE ?)",
+        `SELECT
+           COUNT(*) AS n,
+           CAST(AVG(duration_ms) AS INT) AS avg_ms,
+           MAX(duration_ms) AS max_ms,
+           SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits,
+           SUM(
+             CASE
+               WHEN json_valid(metadata) THEN
+                 CASE WHEN json_extract(metadata, '$.runBudgetTruncated') = 1 THEN 1 ELSE 0 END
+               ELSE 0
+             END
+           ) AS budget_truncations
+         FROM cron_runs
+         WHERE job = ?
+           AND started_at > ?
+           AND (error IS NULL OR error <> ?)
+           AND (
+             metadata IS NULL
+             OR CASE
+               WHEN json_valid(metadata) THEN COALESCE(json_extract(metadata, '$.reason') <> ?, 1)
+               ELSE 1
+             END
+           )`,
       )
-      .bind(timeoutMs, job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON_PATTERN),
+      .bind(timeoutMs, job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON),
   );
   const results = await db.batch<StatsRow>(statements);
   throwIfAborted(signal);
@@ -137,13 +154,28 @@ export async function runCronDurationWatchdog(
 
   const slotRows = await db
     .prepare(
-      "SELECT slot_key, COUNT(*) AS slots, " +
-      "SUM(CASE WHEN result_status = 'error' THEN 1 ELSE 0 END) AS error_slots, " +
-      "SUM(CASE WHEN result_status = 'error' AND metadata LIKE ? THEN 1 ELSE 0 END) AS abandoned_slots, " +
-      "MAX(CASE WHEN result_status = 'error' AND metadata LIKE ? THEN slot_started_at ELSE NULL END) AS latest_abandoned_at " +
-      "FROM cron_slot_executions WHERE slot_started_at > ? GROUP BY slot_key",
+      `SELECT
+         slot_key,
+         COUNT(*) AS slots,
+         SUM(CASE WHEN result_status = 'error' THEN 1 ELSE 0 END) AS error_slots,
+         SUM(CASE WHEN is_abandoned = 1 THEN 1 ELSE 0 END) AS abandoned_slots,
+         MAX(CASE WHEN is_abandoned = 1 THEN slot_started_at ELSE NULL END) AS latest_abandoned_at
+       FROM (
+         SELECT
+           slot_key,
+           slot_started_at,
+           result_status,
+           CASE
+             WHEN result_status = 'error' AND json_valid(metadata) THEN
+               CASE WHEN json_extract(metadata, '$.error') = ? THEN 1 ELSE 0 END
+             ELSE 0
+           END AS is_abandoned
+         FROM cron_slot_executions
+         WHERE slot_started_at > ?
+       )
+       GROUP BY slot_key`,
     )
-    .bind(`%${STALE_SLOT_ERROR}%`, `%${STALE_SLOT_ERROR}%`, sinceSec)
+    .bind(STALE_SLOT_ERROR, sinceSec)
     .all<SlotStatsRow>();
   throwIfAborted(signal);
 
