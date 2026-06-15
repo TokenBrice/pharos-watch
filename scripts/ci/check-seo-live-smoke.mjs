@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { pathToFileURL } from "node:url";
 import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "../lib/smoke-runtime.mjs";
 
@@ -78,6 +79,10 @@ async function fetchManual(url, init = {}) {
   });
 }
 
+async function cancelResponseBody(response) {
+  await response.body?.cancel?.().catch(() => {});
+}
+
 async function mapWithConcurrency(items, limit, mapper) {
   const results = [];
   let nextIndex = 0;
@@ -109,29 +114,33 @@ async function checkSitemap(baseUrl, errors) {
   return locs;
 }
 
-async function checkSitemapUrls(locs, limit, errors) {
+export async function checkSitemapUrls(locs, limit, errors) {
   const selected = Number.isFinite(limit) ? locs.slice(0, limit) : locs;
   await mapWithConcurrency(selected, SITEMAP_CONCURRENCY, async (loc) => {
     const response = await fetchManual(loc);
-    if (response.status >= 300 && response.status < 400) {
-      errors.push(`${loc}: sitemap URL redirects with ${response.status}`);
-      return;
-    }
-    if (response.status === 404) {
-      errors.push(`${loc}: sitemap URL returns 404`);
-      return;
-    }
-    if (response.status >= 400) {
-      errors.push(`${loc}: sitemap URL returns ${response.status}`);
-      return;
-    }
-
-    const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("text/html")) {
-      const robots = extractRobots(await response.text());
-      if (/\bnoindex\b/i.test(robots)) {
-        errors.push(`${loc}: sitemap URL is noindexed (${robots})`);
+    try {
+      if (response.status >= 300 && response.status < 400) {
+        errors.push(`${loc}: sitemap URL redirects with ${response.status}`);
+        return;
       }
+      if (response.status === 404) {
+        errors.push(`${loc}: sitemap URL returns 404`);
+        return;
+      }
+      if (response.status >= 400) {
+        errors.push(`${loc}: sitemap URL returns ${response.status}`);
+        return;
+      }
+
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("text/html")) {
+        const robots = extractRobots(await response.text());
+        if (/\bnoindex\b/i.test(robots)) {
+          errors.push(`${loc}: sitemap URL is noindexed (${robots})`);
+        }
+      }
+    } finally {
+      await cancelResponseBody(response);
     }
   });
 }
@@ -244,7 +253,9 @@ async function main() {
   console.log(`OK: SEO live smoke passed for ${baseUrl.toString()} (${sitemapLabel})`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
