@@ -6,7 +6,8 @@ vi.mock("../../../lib/fetch-retry", () => ({
   fetchWithRetry: fetchWithRetryMock,
 }));
 
-import { fetchSubgraphEntities, mergePriceObservations } from "../subgraph-helpers";
+import { fetchSubgraphEntities } from "../subgraph-helpers";
+import { mergeDexPriceObservationMap } from "../orchestrator-phases/price-obs";
 
 describe("subgraph helpers", () => {
   beforeEach(() => {
@@ -17,7 +18,7 @@ describe("subgraph helpers", () => {
     const target = new Map([["usdc-circle", [{ price: 1, tvl: 100, chain: "ethereum", protocol: "curve" }]]]);
     const source = new Map([["usdc-circle", [{ price: 1.001, tvl: 200, chain: "base", protocol: "aerodrome" }]]]);
 
-    mergePriceObservations(target, source);
+    mergeDexPriceObservationMap(target, source);
 
     expect(target.get("usdc-circle")).toHaveLength(2);
   });

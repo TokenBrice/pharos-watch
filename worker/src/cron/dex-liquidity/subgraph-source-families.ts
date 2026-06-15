@@ -2,7 +2,8 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import { mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
+import { mergeDexPriceObservationMap } from "./orchestrator-phases/price-obs";
+import type { SubgraphPriceObservation } from "./subgraph-helpers";
 import type {
   AerodromeLookups,
   DexPriceObs,
@@ -170,7 +171,7 @@ export async function fetchUniV3Data(
       },
     }),
     handleResult: (lookups, _chain, result) => {
-      mergePriceObservations(lookups.uniV3PriceObs, result.observations);
+      mergeDexPriceObservationMap(lookups.uniV3PriceObs, result.observations);
     },
     buildChainSummary: (chain, result) =>
       `[dex-liquidity] Indexed ${result.entityCount} Uni V3 pools from ${chain} subgraph (${result.observationCount} price obs)`,
@@ -255,7 +256,7 @@ export async function fetchAerodromeData(
       },
     }),
     handleResult: (lookups, _chain, result) => {
-      mergePriceObservations(lookups.aerodromePriceObs, result.observations);
+      mergeDexPriceObservationMap(lookups.aerodromePriceObs, result.observations);
     },
     buildChainSummary: (chain, result) =>
       `[dex-liquidity] Indexed ${result.entityCount} Aerodrome pairs from ${chain} subgraph (${result.observationCount} price obs)`,

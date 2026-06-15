@@ -27,17 +27,6 @@ export type FetchSubgraphEntitiesResult = {
   shouldLogIndex: boolean;
 };
 
-export function mergePriceObservations(
-  target: Map<string, DexPriceObs[]>,
-  source: Map<string, DexPriceObs[]>,
-): void {
-  for (const [stablecoinId, obs] of source) {
-    const existing = target.get(stablecoinId) ?? [];
-    existing.push(...obs);
-    target.set(stablecoinId, existing);
-  }
-}
-
 export async function fetchSubgraphEntities<TEntity>(
   config: FetchSubgraphEntitiesConfig<TEntity>,
 ): Promise<FetchSubgraphEntitiesResult> {
