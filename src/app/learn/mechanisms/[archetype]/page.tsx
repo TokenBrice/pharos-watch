@@ -8,9 +8,9 @@ import {
 } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ArchetypeArticleJsonLd } from "@/lib/mechanism-json-ld";
+import { LearnPageShell } from "../../_shared/learn-page-shell";
 import { ARCHETYPE_CONTENT } from "../content";
 import { ArchetypeExplainerBody } from "../explainer-shell";
-import { ExplainerPageShell } from "../explainer-page-shell";
 
 const ARCHETYPE_SLUGS = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
 
@@ -75,19 +75,24 @@ export default async function ArchetypeExplainerPage({
   const explainerPath = getMechanismExplainerPath(slug);
 
   return (
-    <ExplainerPageShell
+    <LearnPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Mechanisms", url: "/learn/mechanisms/" },
         { name: label, url: explainerPath },
       ]}
-      breadcrumbLabel={label}
+      visibleBreadcrumbs={[
+        { label: "Dashboard", href: "/" },
+        { label: "Learn" },
+        { label },
+      ]}
       title={content.headline}
       subtitle={content.subtitle}
       leadParagraphs={content.lead}
+      titleClassName="max-w-[22ch]"
     >
       <ArchetypeArticleJsonLd archetype={slug} />
       <ArchetypeExplainerBody content={content} />
-    </ExplainerPageShell>
+    </LearnPageShell>
   );
 }

@@ -15,9 +15,9 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { MechanismJsonLd } from "@/lib/mechanism-json-ld";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
+import { LearnPageShell } from "../_shared/learn-page-shell";
 import { MechanismComparisonMatrix } from "./comparison-matrix";
 import { ARCHETYPE_CONTENT } from "./content";
-import { ExplainerPageShell } from "./explainer-page-shell";
 
 const FEATURED_MECHANISM_PATHS: ReadonlyArray<{
   archetype: MechanismArchetype;
@@ -62,14 +62,19 @@ export default function MechanismExplainersHub() {
   ) as Record<MechanismArchetype, number>;
 
   return (
-    <ExplainerPageShell
+    <LearnPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Mechanisms", url: "/learn/mechanisms/" },
       ]}
-      breadcrumbLabel="Mechanisms"
+      visibleBreadcrumbs={[
+        { label: "Dashboard", href: "/" },
+        { label: "Learn" },
+        { label: "Mechanisms" },
+      ]}
       title="Six ways a stablecoin holds its peg"
       subtitle="The mechanism a coin uses determines how it survives stress. These six explainers map each design — what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
+      titleClassName="max-w-[22ch]"
     >
       <script
         type="application/ld+json"
@@ -156,6 +161,6 @@ export default function MechanismExplainersHub() {
           );
         })}
       </ol>
-    </ExplainerPageShell>
+    </LearnPageShell>
   );
 }
