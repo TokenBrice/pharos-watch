@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Maximize2 } from "lucide-react";
-import type { AltPegLinkHubItem } from "@/lib/alt-peg-market";
 import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import { AtlasFullscreenDialog } from "@/app/alt-pegs/fiat-world-atlas/atlas-fullscreen-dialog";
@@ -47,10 +46,7 @@ function AtlasHeroHeader({
   );
 }
 
-export function FiatWorldAtlas(_props: {
-  fiatItems: readonly AltPegLinkHubItem[];
-  commodityIndexItems: readonly AltPegLinkHubItem[];
-}) {
+export function FiatWorldAtlas() {
   const [open, setOpen] = useState(false);
 
   return (
