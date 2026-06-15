@@ -40,8 +40,6 @@ import {
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
 
-const BADGE_PILL_BASE = "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold";
-
 function ClassificationBadgeLink({
   href,
   cls,
@@ -250,7 +248,7 @@ export function KeyInfoCard({
                 </ClassificationBadgeLink>
               ) : (
                 <span
-                  className={`${BADGE_PILL_BASE} ${peg.cls}`}
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
                 >
                   {peg.label}
                 </span>
@@ -270,12 +268,12 @@ export function KeyInfoCard({
               </Link>
             ))}
             {meta.flags.yieldBearing && (
-              <span className={`${BADGE_PILL_BASE} bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20`}>
+              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
                 Yield-Bearing
               </span>
             )}
             {meta.flags.rwa && (
-              <span className={`${BADGE_PILL_BASE} bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20`}>
+              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">
                 RWA
               </span>
             )}
@@ -285,13 +283,13 @@ export function KeyInfoCard({
                   <AttestorTierBadge proofOfReserves={meta.proofOfReserves} />
                 ) : (
                   <span
-                    className={`${BADGE_PILL_BASE} ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
                   >
                     {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
                   </span>
                 )
               ) : (
-                <span className={`${BADGE_PILL_BASE} bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20`}>
+                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
                   No PoR
                 </span>
               ))}
@@ -430,12 +428,12 @@ export function KeyInfoCard({
                 <div className="flex flex-wrap items-center gap-2">
                   {meta.jurisdiction && <span className="text-sm font-medium">{meta.jurisdiction.country}</span>}
                   {meta.jurisdiction?.regulator && (
-                    <span className={`${BADGE_PILL_BASE} bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20`}>
+                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
                       {meta.jurisdiction.regulator}
                     </span>
                   )}
                   {meta.jurisdiction?.license && (
-                    <span className={`${BADGE_PILL_BASE} bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20`}>
+                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20">
                       {meta.jurisdiction.license}
                     </span>
                   )}
