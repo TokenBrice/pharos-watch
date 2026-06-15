@@ -6,7 +6,7 @@ import {
   SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
 import { PUBLIC_API_HOST, PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-contract";
-import type { ApiKeySelfServeCadence } from "@shared/types";
+import { ApiKeySelfServeCadenceSchema } from "@shared/types";
 import { AlertCircle, CheckCircle2, Copy, KeyRound, Loader2, MailCheck, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -173,7 +173,10 @@ export function ApiKeyRequestForm() {
               id="api-cadence"
               className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               value={expectedCadence}
-              onChange={(event) => setExpectedCadence(event.target.value as ApiKeySelfServeCadence)}
+              onChange={(event) => {
+                const parsed = ApiKeySelfServeCadenceSchema.safeParse(event.target.value);
+                if (parsed.success) setExpectedCadence(parsed.data);
+              }}
               disabled={requestStatus === "submitting"}
             >
               {API_KEY_REQUEST_CADENCE_OPTIONS.map((option) => (

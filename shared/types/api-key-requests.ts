@@ -12,12 +12,15 @@ export type ApiKeySelfServeStatus = z.infer<typeof ApiKeySelfServeStatusSchema>;
 export const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
 export type ApiKeySelfServeClaimStatus = z.infer<typeof ApiKeySelfServeClaimStatusSchema>;
 
-export type ApiKeySelfServeCadence =
-  | "hourly"
-  | "every_5_min"
-  | "every_1_min"
-  | "manual"
-  | "other";
+export const API_KEY_SELF_SERVE_CADENCE_VALUES = [
+  "hourly",
+  "every_5_min",
+  "every_1_min",
+  "manual",
+  "other",
+] as const;
+export const ApiKeySelfServeCadenceSchema = z.enum(API_KEY_SELF_SERVE_CADENCE_VALUES);
+export type ApiKeySelfServeCadence = z.infer<typeof ApiKeySelfServeCadenceSchema>;
 
 export interface ApiKeySelfServeRequest {
   email: string;
