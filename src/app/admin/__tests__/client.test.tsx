@@ -104,7 +104,7 @@ vi.mock("@/components/status/recommended-action-strip", () => ({
 }));
 
 vi.mock("@/components/status/refresh-countdown", () => ({
-  RefreshCountdown: ({ onRefresh }: { onRefresh: () => void }) => (
+  RefreshControl: ({ onRefresh }: { onRefresh: () => void }) => (
     <button type="button" onClick={onRefresh}>
       Refresh now
     </button>

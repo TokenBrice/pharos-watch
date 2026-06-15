@@ -1,7 +1,7 @@
 "use client";
 
 import type { HealthResponse } from "@shared/types";
-import { RefreshCountdown } from "@/components/status/refresh-countdown";
+import { RefreshControl } from "@/components/status/refresh-countdown";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
@@ -154,7 +154,7 @@ export function PublicStatusHero({
               {hero.headline}
             </h2>
           </div>
-          <RefreshCountdown key={lastUpdated} onRefresh={onRefresh} />
+          <RefreshControl key={lastUpdated} onRefresh={onRefresh} />
         </div>
 
         {/* ── Watch note (only when warnings or non-healthy) ── */}
