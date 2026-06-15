@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**136/733 done (19%)**  `████░░░░░░░░░░░░░░░░`
+**137/733 done (19%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 574 | 2 | 0 | 136 | 21 |
+| Count | 561 | 14 | 0 | 137 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 54 | 1 | 0 | 200 |
-| quality | 315 | 69 | 1 | 0 | 237 |
-| sustainability | 152 | 13 | 0 | 0 | 137 |
+| redundancy | 266 | 55 | 1 | 0 | 199 |
+| quality | 315 | 69 | 12 | 0 | 226 |
+| sustainability | 152 | 13 | 1 | 0 | 136 |
 
 ## redundancy (266)
 
@@ -34,7 +34,7 @@
 | ✅ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
 | ✅ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules | codex | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
-| ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
+| 🔄 | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp | codex | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
 | ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
 | ✅ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call | codex | `src/components/depeg-feed.tsx:L170-L177` |
 | ✅ | [R-011](redundancy/R-011.md) | S | clone | Duplicated `isValidDateOnly` / `DATE_ONLY_RE` across two tooling modules | codex | `scripts/lib/hotspot-ratchet.mjs:L64-L70+L365-L37` |
@@ -242,7 +242,7 @@
 | ⬜ | [R-208](redundancy/R-208.md) | S | wrapper | computeChainEnvironmentScore is a thin single-line wrapper that is only used in tests |  | `shared/lib/chains/health.ts:L145-147` |
 | ⬜ | [R-209](redundancy/R-209.md) | S | clone | commodity-median reimplements the existing medianOf helper inline |  | `shared/lib/commodity-median.ts:74-82` |
 | ⬜ | [R-210](redundancy/R-210.md) | S | dead-code | SELECTOR_YIELD_PEG_CURRENCIES and isSelectorYieldPegCurrency are identical to ELIGIBLE set |  | `shared/lib/selector/types.ts:L32-L53` |
-| 🔄 | [R-211](redundancy/R-211.md) | S | wrapper | api-key-format.ts is a three-line file that wraps a one-line Date call | codex | `src/lib/api-key-format.ts:1-3` |
+| ✅ | [R-211](redundancy/R-211.md) | S | wrapper | api-key-format.ts is a three-line file that wraps a one-line Date call | codex | `src/lib/api-key-format.ts:1-3` |
 | ⬜ | [R-212](redundancy/R-212.md) | S | clone | Divergent deterministic hash algorithms for layout jitter (contagion vs. DEWS radar) |  | `src/lib/contagion-layout.ts:129-135, src/lib/dew` |
 | ⬜ | [R-213](redundancy/R-213.md) | S | dead-code | viewRank / rankWithinSet / comparableSetLabel are computed per row but never read in produ |  | `src/lib/yield-view-model.ts:148-150, 750-760` |
 | ⬜ | [R-214](redundancy/R-214.md) | S | clone | Duplicated BACKFILL_MIN_CONFIRM_POINTS constant across extraction and replay modules |  | `worker/src/api/backfill-depegs-extraction.ts:14 ` |
@@ -324,12 +324,12 @@
 | ✅ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts | codex | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
-| ⬜ | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi |  | `shared/lib/selector/answers-to-screener.ts:L84-L` |
-| ⬜ | [Q-022](quality/Q-022.md) | S | error-handling | Silent broad catch on stress_signals_latest hides D1 transient errors from observability |  | `worker/src/cron/dews/source-state/hydration.ts:L` |
+| 🔄 | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi | opus-02 | `shared/lib/selector/answers-to-screener.ts:L84-L` |
+| 🔄 | [Q-022](quality/Q-022.md) | S | error-handling | Silent broad catch on stress_signals_latest hides D1 transient errors from observability | opus-03 | `worker/src/cron/dews/source-state/hydration.ts:L` |
 | ✅ | [Q-023](quality/Q-023.md) | S | testing | depeg-incident-utils.ts has no tests despite being the sole parser for pending-depeg UI da | codex | `src/lib/depeg-incident-utils.ts:L57-L80` |
 | ✅ | [Q-024](quality/Q-024.md) | S | type-safety | buildResultSummaryCoordinationProps erases all prop types via Record<string, unknown> | codex | `src/app/screener/picker/handoff.ts:L128` |
 | ✅ | [Q-026](quality/Q-026.md) | S | error-handling | project-tape.ts silently returns ok status when tape projectors throw | codex | `worker/src/cron/project-tape.ts:106-125` |
-| ⬜ | [Q-028](quality/Q-028.md) | S | type-safety | Mini-app error retry passes potentially-null initData directly to loadSession |  | `src/app/pharoswatchbot/app/client.tsx:L344` |
+| 🔄 | [Q-028](quality/Q-028.md) | S | type-safety | Mini-app error retry passes potentially-null initData directly to loadSession | opus-04 | `src/app/pharoswatchbot/app/client.tsx:L344` |
 | ⬜ | [Q-031](quality/Q-031.md) | M | type-safety | DigestSnapshotInputDataSchema casts z.object({}).passthrough() to DigestInputData — snapsh |  | `shared/types/digest.ts:L428-L432` |
 | ⬜ | [Q-036](quality/Q-036.md) | M | error-handling | fetchCurrentBalanceForAddress (current-balance-cache) never uses drpcApiKey despite it bei |  | `worker/src/cron/blacklist/current-balance-cache.` |
 | ✅ | [Q-039](quality/Q-039.md) | S | error-handling | admin-action-audit.ts truncates serialized JSON at a byte boundary, producing invalid JSON | codex | `worker/src/lib/admin-action-audit.ts:L22-L23` |
@@ -339,12 +339,12 @@
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ✅ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
 | 🔄 | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response | codex | `src/app/screener/picker/use-selector.ts:L54` |
-| ⬜ | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox |  | `src/components/coin-selector.tsx:L205-L207` |
-| ⬜ | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard |  | `worker/src/handlers/scheduled/five-minute-telegr` |
-| ⬜ | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri |  | `worker/src/api/telegram-store/forget.ts:L9-L31` |
-| ⬜ | [Q-058](quality/Q-058.md) | S | error-handling | inferErrorClass misclassifies errors whose message contains the substring 'http' |  | `worker/src/cron/blacklist/amount-recovery.ts:L87` |
-| ⬜ | [Q-059](quality/Q-059.md) | S | error-handling | recordDirectApiOutcome records the circuit outcome twice on telemetry read failure |  | `worker/src/cron/dex-liquidity/orchestrator-phase` |
-| ⬜ | [Q-061](quality/Q-061.md) | S | error-handling | Single try/catch across all three CEX venue fetches silently skips venues after the first  |  | `worker/src/lib/cex-orderbooks.ts:L218-L228` |
+| 🔄 | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox | opus-05 | `src/components/coin-selector.tsx:L205-L207` |
+| 🔄 | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard | opus-06 | `worker/src/handlers/scheduled/five-minute-telegr` |
+| 🔄 | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri | opus-07 | `worker/src/api/telegram-store/forget.ts:L9-L31` |
+| 🔄 | [Q-058](quality/Q-058.md) | S | error-handling | inferErrorClass misclassifies errors whose message contains the substring 'http' | opus-08 | `worker/src/cron/blacklist/amount-recovery.ts:L87` |
+| 🔄 | [Q-059](quality/Q-059.md) | S | error-handling | recordDirectApiOutcome records the circuit outcome twice on telemetry read failure | opus-09 | `worker/src/cron/dex-liquidity/orchestrator-phase` |
+| 🔄 | [Q-061](quality/Q-061.md) | S | error-handling | Single try/catch across all three CEX venue fetches silently skips venues after the first  | opus-10 | `worker/src/lib/cex-orderbooks.ts:L218-L228` |
 | ⬜ | [Q-062](quality/Q-062.md) | M | testing | api-pagination cursor-helper internals have no unit tests; multi-column disjunction untest |  | `worker/src/lib/api-pagination.ts:L1-L320 (49.6% ` |
 | ⬜ | [Q-063](quality/Q-063.md) | M | testing | reserve-presentation.ts (265 lines) has no tests; incorrect notice tone for stale/failed r |  | `src/components/stablecoin-detail/reserve-present` |
 | ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
@@ -580,7 +580,7 @@
 | ⬜ | [Q-263](quality/Q-263.md) | S | error-handling | Feedback modal honeypot input has readOnly + value='' but still reads via body JSON |  | `src/components/feedback-modal.tsx:L251-L259, L97` |
 | ⬜ | [Q-264](quality/Q-264.md) | S | error-handling | freeze-stablecoin.ts fetches the entire /api/stablecoins payload to find one coin |  | `scripts/maintenance/freeze-stablecoin.ts:L78-L86` |
 | ⬜ | [Q-265](quality/Q-265.md) | S | error-handling | Dependency-risk ceiling detail can mislabel a mechanism-bound ceiling as 'wrapper' |  | `shared/lib/report-card-dependency.ts:109-147` |
-| ⬜ | [Q-266](quality/Q-266.md) | S | naming | getDewsFreshness: computedAt=0 (Unix epoch) silently treated as missing data |  | `src/lib/dews-signal-utils.ts:L84-L85` |
+| 🔄 | [Q-266](quality/Q-266.md) | S | naming | getDewsFreshness: computedAt=0 (Unix epoch) silently treated as missing data | codex | `src/lib/dews-signal-utils.ts:L84-L85` |
 | ⬜ | [Q-267](quality/Q-267.md) | S | complexity | CohortBucket.size duplicates scoresDescending.length and is maintained in parallel |  | `src/lib/yield-view-model.ts:785-815, 825-837` |
 | ✅ | [Q-268](quality/Q-268.md) | S | type-safety | handleApiKeyAuditLog declares request optional but dereferences it unconditionally | codex | `worker/src/api/api-key-audit-log.ts:30-42` |
 | ⬜ | [Q-269](quality/Q-269.md) | S | testing | bounded-queue.ts has no test for worker exception propagation leaving sparse results array |  | `worker/src/cron/shared/bounded-queue.ts:L37-64 +` |
@@ -627,7 +627,7 @@
 | ⬜ | [Q-310](quality/Q-310.md) | S | type-safety | Provider metadata copies arbitrary upstream fields (any) into quote.metadata without valid |  | `worker/src/lib/address-price-providers/moralis.t` |
 | ⬜ | [Q-311](quality/Q-311.md) | M | complexity | Front-end view-model modules approach god-module size, mixing config tables, parsing, face |  | `src/lib/yield-view-model.ts:1-1247 (33 exports; ` |
 | ⬜ | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio |  | `functions/stablecoin/[[path]].ts:1-21` |
-| ⬜ | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er |  | `functions/_site-data/[[path]].ts:159-166` |
+| 🔄 | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er | codex | `functions/_site-data/[[path]].ts:159-166` |
 | ⬜ | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna |  | `functions/lib/site-data-origin.ts:6-22; shared/l` |
 | 🚫 | [Q-315](quality/Q-315.md) | S | security | Telegram callback queries are not re-authorized in private chats beyond the chat binding |  | `worker/src/api/telegram-webhook-callbacks.ts:49-` |
 
@@ -637,7 +637,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| ⬜ | [S-008](sustainability/S-008.md) | M | coupling | useMotionPreference and usePrefersReducedMotion are parallel but unconnected motion-prefer |  | `src/hooks/use-motion-preference.ts:L1-L101 + src` |
+| 🔄 | [S-008](sustainability/S-008.md) | M | coupling | useMotionPreference and usePrefersReducedMotion are parallel but unconnected motion-prefer | opus-01 | `src/hooks/use-motion-preference.ts:L1-L101 + src` |
 | ⬜ | [S-062](sustainability/S-062.md) | M | scalability | Selector-snapshot public write lane relies on a spoofable origin header plus a best-effort |  | `functions/selector-snapshot/[[path]].ts:34-72,13` |
 
 ### Medium (49)
