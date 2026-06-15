@@ -1,7 +1,13 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
-import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
+import {
+  computePysComponents,
+  computePysRewardShare,
+  computeVenueRiskWeighted,
+  derivePysSourceRiskPenalty,
+  deriveVenueRiskTier,
+} from "@shared/lib/yield-scoring";
 import type { YieldSafetyProvenance, YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
@@ -315,10 +321,14 @@ function evaluateYieldSourceGroup(
     const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
+    const reviewedRiskConfig = resolveReviewedYieldRiskConfig(inferVenueProtocol(y));
+    const reviewedVenueRiskWeighted = reviewedRiskConfig
+      ? computeVenueRiskWeighted(reviewedRiskConfig.scores)
+      : null;
+    const resolvedVenueRiskWeighted = sourceRisk?.venueRiskWeighted ?? reviewedVenueRiskWeighted;
     const resolvedVenueRiskTier =
       sourceRisk?.venueRiskTier ??
-      resolveReviewedYieldRiskConfig(inferVenueProtocol(y))?.venueRiskTier ??
-      "unknown";
+      (reviewedRiskConfig ? deriveVenueRiskTier(reviewedVenueRiskWeighted) : "unknown");
     const sourceRiskPenaltyInput =
       sourceRisk?.sourceRiskPenalty ??
       derivePysSourceRiskPenalty({
@@ -328,6 +338,8 @@ function evaluateYieldSourceGroup(
         sourceSwitchCount30d: candidateSwitchCount30d,
         observationCount30d,
         venueRiskTier: resolvedVenueRiskTier,
+        venueRiskWeighted: resolvedVenueRiskWeighted,
+        dependencyConcentrationSeverity: sourceRisk?.dependencyConcentration?.severity ?? null,
       });
     const pysComponents = computePysComponents({
       apy30d,

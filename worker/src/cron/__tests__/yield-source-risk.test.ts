@@ -3,6 +3,8 @@ import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import {
   buildYieldSourceRisk,
   resolveReviewedYieldRiskConfig,
+  venueRiskTierOf,
+  venueRiskWeightedOf,
   YIELD_RISK_CONFIG,
   YIELD_RISK_CONFIG_PROTOCOLS,
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
@@ -43,21 +45,42 @@ const WAVE_2_REVIEWED_TIERS = {
 } as const;
 
 describe("yield source-risk registry", () => {
-  it("provides reviewed candidate entries with explicit evidence for every tracked tier", () => {
+  it("provides reviewed candidate entries with 5-category scores and evidence for every tracked tier", () => {
     expect(YIELD_RISK_CONFIG_REVIEW_CADENCE).toBe("monthly-yield-coverage-audit");
 
     for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
       const config = YIELD_RISK_CONFIG[protocol];
       const expectedTier = WAVE_2_REVIEWED_TIERS[protocol];
       expect(config.reviewCadence, protocol).toBe(YIELD_RISK_CONFIG_REVIEW_CADENCE);
-      expect(config.venueRiskTier, protocol).toBe(expectedTier);
-      expect(config.venueRiskTier, protocol).not.toBe("unknown");
+      // Tier is now DERIVED from the weighted 5-category score, not hand-set.
+      expect(venueRiskTierOf(config), protocol).toBe(expectedTier);
+      expect(venueRiskTierOf(config), protocol).not.toBe("unknown");
+      for (const category of ["audits", "centralization", "fundsManagement", "liquidity", "operational"] as const) {
+        expect(config.scores[category], `${protocol}.${category}`).toBeGreaterThanOrEqual(1);
+        expect(config.scores[category], `${protocol}.${category}`).toBeLessThanOrEqual(5);
+      }
       expect(config.evidence.length, protocol).toBeGreaterThan(0);
       expect(config.rationale.length, protocol).toBeGreaterThan(0);
     }
   });
 
-  it("derives matching PYS penalties for reviewed tiers", () => {
+  it("preserves calibration: low venues stay no-op, medium venues land in-band", () => {
+    for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
+      const config = YIELD_RISK_CONFIG[protocol];
+      const tier = venueRiskTierOf(config);
+      const penalty = derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(config) });
+      if (tier === "low") {
+        // Legacy `low` was a 0 penalty; that no-op is preserved exactly.
+        expect(penalty, protocol).toBe(1);
+      } else {
+        // Legacy `medium` was a flat +0.15; scored mediums are now differentiated near it.
+        expect(penalty, protocol).toBeGreaterThan(1);
+        expect(penalty, protocol).toBeLessThanOrEqual(1.25);
+      }
+    }
+  });
+
+  it("derives the continuous PYS penalty from reviewed weighted scores", () => {
     const reviewedAave = resolveReviewedYieldRiskConfig("aave-v3");
     const reviewedMorphoBlue = resolveReviewedYieldRiskConfig("morpho-blue");
     const reviewedPendle = resolveReviewedYieldRiskConfig("pendle");
@@ -65,18 +88,18 @@ describe("yield source-risk registry", () => {
     const reviewedBeefy = resolveReviewedYieldRiskConfig("beefy");
     const unknownVenue = resolveReviewedYieldRiskConfig("unreviewed-protocol");
 
-    expect(reviewedAave?.venueRiskTier).toBe("low");
-    expect(reviewedMorphoBlue?.venueRiskTier).toBe("medium");
-    expect(reviewedPendle?.venueRiskTier).toBe("low");
-    expect(reviewedMaple?.venueRiskTier).toBe("medium");
-    expect(reviewedBeefy?.venueRiskTier).toBe("medium");
+    expect(reviewedAave && venueRiskTierOf(reviewedAave)).toBe("low");
+    expect(reviewedMorphoBlue && venueRiskTierOf(reviewedMorphoBlue)).toBe("medium");
+    expect(reviewedPendle && venueRiskTierOf(reviewedPendle)).toBe("low");
+    expect(reviewedMaple && venueRiskTierOf(reviewedMaple)).toBe("medium");
+    expect(reviewedBeefy && venueRiskTierOf(reviewedBeefy)).toBe("medium");
     expect(unknownVenue).toBeNull();
-    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedAave?.venueRiskTier })).toBe(1);
-    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedMorphoBlue?.venueRiskTier })).toBeCloseTo(1.15, 5);
-    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedPendle?.venueRiskTier })).toBe(1);
-    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedMaple?.venueRiskTier })).toBeCloseTo(1.15, 5);
-    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedBeefy?.venueRiskTier })).toBeCloseTo(1.15, 5);
-    expect(derivePysSourceRiskPenalty({ venueRiskTier: unknownVenue?.venueRiskTier })).toBe(1);
+    // Low venues: zero venue contribution (weighted <= 2.0).
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedAave!) })).toBe(1);
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedPendle!) })).toBe(1);
+    // Medium venues: continuous curve (weighted-2.0)*0.15, near the legacy +0.15.
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedMorphoBlue!) })).toBeCloseTo(1.135, 5);
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedMaple!) })).toBeCloseTo(1.18, 5);
   });
 
   it("publishes the reviewed venue tier on built source-risk evidence", () => {
@@ -91,7 +114,9 @@ describe("yield source-risk registry", () => {
       venueProtocol: "aave-v3",
       venueChain: "ethereum",
       venueRiskTier: "low",
+      venueRiskScores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
     });
+    expect(sourceRisk.venueRiskWeighted).toBeCloseTo(1.3, 5);
   });
 
   it("treats fixed-yield Pendle rows as lending-market opportunities with reviewed venue risk", () => {

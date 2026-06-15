@@ -6,6 +6,7 @@
  * Frontend: uses computePysComponents() for breakdown tooltip display.
  */
 
+import type { YieldVenueRiskTier } from "../types/yield";
 import { clamp } from "./math";
 import { numberValue } from "./type-guards";
 
@@ -44,6 +45,78 @@ export function computeSourceRiskScoreFromPenalty(
   return clamp(Math.round(raw), 0, 100);
 }
 
+/**
+ * Yearn-style venue-risk rubric (yield v8.3). Five category sub-scores, each an
+ * integer 1..5 where higher = riskier, weighted into a 1..5 venue-risk score that
+ * derives the coarse {@link YieldVenueRiskTier} and a continuous PYS penalty.
+ * See `worker/src/cron/yield-sync/source-risk.ts` for the scored venue registry.
+ */
+export const VENUE_RISK_CATEGORY_WEIGHTS = {
+  audits: 0.2,
+  centralization: 0.3,
+  fundsManagement: 0.3,
+  liquidity: 0.15,
+  operational: 0.05,
+} as const;
+
+export interface YieldVenueRiskScores {
+  audits: number;
+  centralization: number;
+  fundsManagement: number;
+  liquidity: number;
+  operational: number;
+}
+
+/** Weighted 1..5 venue-risk score from the five Yearn-style category sub-scores. */
+export function computeVenueRiskWeighted(scores: YieldVenueRiskScores): number {
+  return (
+    scores.audits * VENUE_RISK_CATEGORY_WEIGHTS.audits +
+    scores.centralization * VENUE_RISK_CATEGORY_WEIGHTS.centralization +
+    scores.fundsManagement * VENUE_RISK_CATEGORY_WEIGHTS.fundsManagement +
+    scores.liquidity * VENUE_RISK_CATEGORY_WEIGHTS.liquidity +
+    scores.operational * VENUE_RISK_CATEGORY_WEIGHTS.operational
+  );
+}
+
+/**
+ * Map a weighted 1..5 venue-risk score to the coarse tier enum (kept for the DEWS
+ * structured-venue branch and UI display). Yearn Minimal+Low → low, Medium →
+ * medium, Elevated+High → high. Null/non-finite → unknown.
+ */
+export function deriveVenueRiskTier(weighted: number | null | undefined): YieldVenueRiskTier {
+  if (typeof weighted !== "number" || !Number.isFinite(weighted)) return "unknown";
+  if (weighted < 2.5) return "low";
+  if (weighted < 3.5) return "medium";
+  return "high";
+}
+
+/** Weighted-score below which a scored venue contributes no penalty (blue-chip no-op floor). */
+export const PYS_VENUE_PENALTY_THRESHOLD = 2.0;
+/** Penalty contribution per weighted-score point above the threshold. */
+export const PYS_VENUE_PENALTY_SLOPE = 0.15;
+
+/**
+ * Continuous venue-risk penalty contribution from a weighted 1..5 score.
+ * Calibration-preserving: weighted ≤ 2.0 → 0 (matches legacy `low` no-op),
+ * 3.0 → 0.15 (matches legacy `medium`), 4.0 → 0.30, 5.0 → 0.45.
+ */
+export function computeVenuePenaltyFromWeighted(weighted: number | null | undefined): number {
+  if (typeof weighted !== "number" || !Number.isFinite(weighted)) return 0;
+  return Math.max(0, weighted - PYS_VENUE_PENALTY_THRESHOLD) * PYS_VENUE_PENALTY_SLOPE;
+}
+
+export type YieldDependencyConcentrationSeverity = "low" | "medium" | "high";
+
+/** Additive PYS source-risk penalty for reviewer-set cross-venue dependency concentration. */
+export const PYS_DEPENDENCY_CONCENTRATION_PENALTY: Record<
+  YieldDependencyConcentrationSeverity,
+  number
+> = {
+  low: 0,
+  medium: 0.1,
+  high: 0.2,
+};
+
 export type PysSourceRiskPenaltyReason =
   | "provided"
   | "missing-neutral"
@@ -64,6 +137,14 @@ export interface PysSourceRiskPenaltyInput {
   sourceSwitchCount30d?: number | null;
   observationCount30d?: number | null;
   venueRiskTier?: string | null;
+  /**
+   * Weighted 1..5 venue-risk score (yield v8.3). When present, the continuous
+   * {@link computeVenuePenaltyFromWeighted} curve replaces the coarse
+   * `venueRiskTier` branch; absent → legacy tier branch (rollback-safe).
+   */
+  venueRiskWeighted?: number | null;
+  /** Reviewer-set cross-venue dependency concentration (yield v8.3). */
+  dependencyConcentrationSeverity?: YieldDependencyConcentrationSeverity | null;
 }
 
 export function yieldStabilityToApyVarianceScore(yieldStability: number | null | undefined): number {
@@ -124,10 +205,20 @@ export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): nu
   if (observationCount30d != null && observationCount30d > 0 && observationCount30d < 7) {
     penalty += 0.2;
   }
-  if (input.venueRiskTier === "high") {
+  const venueRiskWeighted = numberValue(input.venueRiskWeighted);
+  if (venueRiskWeighted != null) {
+    // Scored venue: continuous Yearn-rubric curve.
+    penalty += computeVenuePenaltyFromWeighted(venueRiskWeighted);
+  } else if (input.venueRiskTier === "high") {
+    // Legacy fallback for venues not yet scored on the 5-category rubric.
     penalty += 0.35;
   } else if (input.venueRiskTier === "medium") {
     penalty += 0.15;
+  }
+  if (input.dependencyConcentrationSeverity === "high") {
+    penalty += PYS_DEPENDENCY_CONCENTRATION_PENALTY.high;
+  } else if (input.dependencyConcentrationSeverity === "medium") {
+    penalty += PYS_DEPENDENCY_CONCENTRATION_PENALTY.medium;
   }
 
   return resolvePysSourceRiskPenalty(1 + penalty).penalty;

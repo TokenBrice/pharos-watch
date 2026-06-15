@@ -128,6 +128,21 @@ const YieldPublicationMetadataSchema = z.object({
   status: z.enum(["staged", "published", "failed"]).nullable().optional(),
 });
 
+const YieldVenueRiskScoresSchema = z.object({
+  audits: z.number().min(1).max(5),
+  centralization: z.number().min(1).max(5),
+  fundsManagement: z.number().min(1).max(5),
+  liquidity: z.number().min(1).max(5),
+  operational: z.number().min(1).max(5),
+});
+
+const YieldDependencyConcentrationSchema = z.object({
+  ecosystem: z.string(),
+  severity: z.enum(["low", "medium", "high"]),
+  note: z.string(),
+  reviewedAt: z.string(),
+});
+
 const YieldSourceRiskSchema = z.object({
   sourceRiskScore: z.number().min(0).max(100).nullable().optional(),
   sourceRiskPenalty: z.number().min(1).nullable().optional(),
@@ -140,6 +155,9 @@ const YieldSourceRiskSchema = z.object({
   venueProtocol: z.string().nullable().optional(),
   venueChain: z.string().nullable().optional(),
   venueRiskTier: z.enum(["low", "medium", "high", "unknown"]).nullable().optional(),
+  venueRiskScores: YieldVenueRiskScoresSchema.nullable().optional(),
+  venueRiskWeighted: z.number().min(1).max(5).nullable().optional(),
+  dependencyConcentration: YieldDependencyConcentrationSchema.nullable().optional(),
   trancheSide: z.enum(["senior", "junior"]).nullable().optional(),
   trancheSafetyScore: z.number().min(0).max(100).nullable().optional(),
   trancheSafetyPenalty: z.number().min(0).max(100).nullable().optional(),
@@ -293,6 +311,8 @@ const YieldRankingsProvenanceSchema = z.object({
 export type YieldHistoryPoint = z.infer<typeof YieldHistoryPointSchema>;
 export type YieldPublicationMetadata = z.infer<typeof YieldPublicationMetadataSchema>;
 export type YieldSourceRisk = z.infer<typeof YieldSourceRiskSchema>;
+export type YieldVenueRiskScoresPayload = z.infer<typeof YieldVenueRiskScoresSchema>;
+export type YieldDependencyConcentration = z.infer<typeof YieldDependencyConcentrationSchema>;
 export type YieldPublicDecisionAlternative = z.infer<typeof YieldPublicDecisionAlternativeSchema>;
 export type YieldPublicDecisionLedger = z.infer<typeof YieldPublicDecisionLedgerSchema>;
 export type YieldRankChangeAttribution = z.infer<typeof YieldRankChangeAttributionSchema>;

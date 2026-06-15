@@ -9,8 +9,13 @@ import {
   computePysRewardShare,
   computePYS,
   computeSourceRiskScoreFromPenalty,
+  computeVenuePenaltyFromWeighted,
+  computeVenueRiskWeighted,
   derivePysSourceRiskPenalty,
+  deriveVenueRiskTier,
   resolvePysSourceRiskPenalty,
+  PYS_VENUE_PENALTY_SLOPE,
+  PYS_VENUE_PENALTY_THRESHOLD,
 } from "../yield-scoring";
 import { SOURCE_RISK_GOLDEN_ROWS } from "./yield-source-risk-golden-fixtures";
 
@@ -173,6 +178,60 @@ describe("PYS source-risk golden rows", () => {
         sourceRiskPenalty: PYS_MAX_SOURCE_RISK_PENALTY,
       })).toBe(0);
     }
+  });
+});
+
+describe("venue-risk rubric (yield v8.3)", () => {
+  it("exports the calibration-preserving penalty curve constants", () => {
+    expect(PYS_VENUE_PENALTY_THRESHOLD).toBe(2.0);
+    expect(PYS_VENUE_PENALTY_SLOPE).toBe(0.15);
+  });
+
+  it("weights the five category sub-scores per the Yearn rubric", () => {
+    expect(
+      computeVenueRiskWeighted({ audits: 5, centralization: 5, fundsManagement: 5, liquidity: 5, operational: 5 }),
+    ).toBeCloseTo(5, 6);
+    expect(
+      computeVenueRiskWeighted({ audits: 1, centralization: 1, fundsManagement: 1, liquidity: 1, operational: 1 }),
+    ).toBeCloseTo(1, 6);
+    // 0.2*2 + 0.3*4 + 0.3*3 + 0.15*2 + 0.05*2 = 2.9 (morpho-blue shape)
+    expect(
+      computeVenueRiskWeighted({ audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 }),
+    ).toBeCloseTo(2.9, 6);
+  });
+
+  it("maps weighted scores to the coarse tier (Minimal+Low→low, Medium→medium, Elevated+High→high)", () => {
+    expect(deriveVenueRiskTier(1.3)).toBe("low");
+    expect(deriveVenueRiskTier(2.49)).toBe("low");
+    expect(deriveVenueRiskTier(2.5)).toBe("medium");
+    expect(deriveVenueRiskTier(3.49)).toBe("medium");
+    expect(deriveVenueRiskTier(3.5)).toBe("high");
+    expect(deriveVenueRiskTier(4.7)).toBe("high");
+    expect(deriveVenueRiskTier(null)).toBe("unknown");
+    expect(deriveVenueRiskTier(Number.NaN)).toBe("unknown");
+  });
+
+  it("applies a continuous, calibration-preserving penalty curve", () => {
+    expect(computeVenuePenaltyFromWeighted(1.5)).toBe(0); // blue-chip no-op
+    expect(computeVenuePenaltyFromWeighted(2.0)).toBe(0); // threshold
+    expect(computeVenuePenaltyFromWeighted(3.0)).toBeCloseTo(0.15, 6); // legacy medium
+    expect(computeVenuePenaltyFromWeighted(4.0)).toBeCloseTo(0.3, 6);
+    expect(computeVenuePenaltyFromWeighted(5.0)).toBeCloseTo(0.45, 6);
+    expect(computeVenuePenaltyFromWeighted(null)).toBe(0);
+  });
+
+  it("prefers the weighted curve over the legacy tier branch when a weighted score is present", () => {
+    // weighted 4.4 (clearpool) → +0.36 even though tier would coarsely be "high"
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: 4.4 })).toBeCloseTo(1.36, 6);
+    // absent weighted → legacy tier branch still applies (rollback-safe)
+    expect(derivePysSourceRiskPenalty({ venueRiskTier: "high" })).toBeCloseTo(1.35, 6);
+    expect(derivePysSourceRiskPenalty({ venueRiskTier: "medium" })).toBeCloseTo(1.15, 6);
+  });
+
+  it("adds reviewer-set dependency-concentration penalties", () => {
+    expect(derivePysSourceRiskPenalty({ dependencyConcentrationSeverity: "low" })).toBe(1);
+    expect(derivePysSourceRiskPenalty({ dependencyConcentrationSeverity: "medium" })).toBeCloseTo(1.1, 6);
+    expect(derivePysSourceRiskPenalty({ dependencyConcentrationSeverity: "high" })).toBeCloseTo(1.2, 6);
   });
 });
 

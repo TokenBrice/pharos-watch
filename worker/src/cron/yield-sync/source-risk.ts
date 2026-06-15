@@ -6,7 +6,10 @@ import type {
 import {
   computePysRewardShare,
   computeSourceRiskScoreFromPenalty,
+  computeVenueRiskWeighted,
+  deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
+import type { YieldVenueRiskScores } from "@shared/lib/yield-scoring";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 
 export const YIELD_RISK_CONFIG_REVIEW_CADENCE = "monthly-yield-coverage-audit";
@@ -29,11 +32,27 @@ export const YIELD_RISK_CONFIG_PROTOCOLS = [
 export type YieldRiskConfigProtocol = (typeof YIELD_RISK_CONFIG_PROTOCOLS)[number];
 
 export interface YieldRiskConfigEntry {
-  venueRiskTier: YieldVenueRiskTier;
+  /**
+   * Yearn-style 5-category venue-risk sub-scores (each 1..5, higher = riskier).
+   * The coarse {@link YieldVenueRiskTier} and the PYS venue penalty are DERIVED
+   * from these via the shared yield-scoring helpers (yield v8.3).
+   */
+  scores: YieldVenueRiskScores;
   rationale: string;
   evidence: string[];
   reviewedAt: string;
   reviewCadence: typeof YIELD_RISK_CONFIG_REVIEW_CADENCE;
+  confidence?: "verified" | "partial" | "low";
+}
+
+/** Weighted 1..5 venue-risk score for a reviewed config entry. */
+export function venueRiskWeightedOf(entry: YieldRiskConfigEntry): number {
+  return computeVenueRiskWeighted(entry.scores);
+}
+
+/** Coarse tier derived from a reviewed config entry's weighted score. */
+export function venueRiskTierOf(entry: YieldRiskConfigEntry): YieldVenueRiskTier {
+  return deriveVenueRiskTier(computeVenueRiskWeighted(entry.scores));
 }
 
 export const YIELD_RISK_CONFIG = {
@@ -41,7 +60,8 @@ export const YIELD_RISK_CONFIG = {
   // across 10+ chains; multiple independent audits and formal verification; mature
   // governance with safety-module stake. Low venue risk.
   "aave-v3": {
-    venueRiskTier: "low",
+    scores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
+    confidence: "verified",
     rationale:
       "Aave V3 is a mature, multi-billion-USD lending venue with repeated independent audits, formal verification, and an active governance + safety-module stake.",
     evidence: [
@@ -57,7 +77,8 @@ export const YIELD_RISK_CONFIG = {
   // Established Compound product line; isolated-asset V3 design has matured since 2022
   // with multiple audits and active COMP governance. Low venue risk.
   "compound-v3": {
-    venueRiskTier: "low",
+    scores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
+    confidence: "verified",
     rationale:
       "Compound III (Comet) is an isolated-asset lending market with a multi-year audit history, billions in TVL, and active COMP governance; the Comet codebase narrowed the protocol surface area relative to V2.",
     evidence: [
@@ -73,7 +94,8 @@ export const YIELD_RISK_CONFIG = {
   // upstream audit inheritance, has a billion-plus TVL, and is operated through Sky
   // governance. Low venue risk.
   sparklend: {
-    venueRiskTier: "low",
+    scores: { audits: 2, centralization: 2, fundsManagement: 1, liquidity: 2, operational: 1 },
+    confidence: "verified",
     rationale:
       "SparkLend is an Aave V3 fork operated by the Sky (formerly MakerDAO) ecosystem; it inherits the upstream Aave V3 audit surface, runs significant TVL, and is governed through the Sky framework.",
     evidence: [
@@ -86,7 +108,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "spark-savings": {
-    venueRiskTier: "low",
+    scores: { audits: 2, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
+    confidence: "verified",
     rationale:
       "Spark Savings wrappers route yield through the Sky/Spark savings stack rather than an external credit venue; the reviewed surface inherits Sky governance, issuer-level rate setting, and Spark operational controls.",
     evidence: [
@@ -98,7 +121,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   maple: {
-    venueRiskTier: "medium",
+    scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 4, operational: 2 },
+    confidence: "verified",
     rationale:
       "Maple is an institutional credit venue whose lender pools depend on delegate underwriting, borrower performance, and loan recovery mechanics; that credit-underwriting surface is materially broader than low-risk money-market venues.",
     evidence: [
@@ -110,7 +134,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   yearn: {
-    venueRiskTier: "low",
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
     rationale:
       "Yearn is a mature strategy-vault venue with long production history and repeated audits; vault strategy risk remains, but the reviewed stablecoin vault surface is operationally established.",
     evidence: [
@@ -122,7 +147,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "yearn-finance": {
-    venueRiskTier: "low",
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
     rationale:
       "Yearn Finance maps to the same mature strategy-vault family as Yearn; stablecoin vault risk is reviewed as low after accounting for its production history, audit cadence, and vault-level accounting.",
     evidence: [
@@ -134,7 +160,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   morpho: {
-    venueRiskTier: "medium",
+    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
+    confidence: "verified",
     rationale:
       "Morpho sources are reviewed as medium to align with Morpho Blue where vault and market parameters shift risk to market creators and allocators despite the audited lending primitive.",
     evidence: [
@@ -146,7 +173,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "morpho-v1": {
-    venueRiskTier: "medium",
+    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
+    confidence: "verified",
     rationale:
       "Morpho v1 belongs to the reviewed Morpho lending venue family and inherits allocator, market-parameter, and integration risk that is broader than mature canonical money markets.",
     evidence: [
@@ -161,7 +189,8 @@ export const YIELD_RISK_CONFIG = {
   // family but younger TVL cohort vs Aave/Compound. Medium venue risk reflects the
   // shorter live track record and the immutable design limiting remediation paths.
   "morpho-blue": {
-    venueRiskTier: "medium",
+    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
+    confidence: "verified",
     rationale:
       "Morpho Blue is an immutable singleton lending primitive launched in January 2024 with multiple audits; design choices reduce ongoing governance surface but limit remediation, and the product is still in its younger TVL cohort versus Aave/Compound.",
     evidence: [
@@ -175,7 +204,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   pendle: {
-    venueRiskTier: "low",
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
     rationale:
       "Pendle is a mature yield-tokenization venue with isolated markets and a long audit trail; reviewed stablecoin principal/yield markets are low venue risk when market and maturity data remain observable.",
     evidence: [
@@ -187,7 +217,8 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   beefy: {
-    venueRiskTier: "medium",
+    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 3 },
+    confidence: "verified",
     rationale:
       "Beefy is a multi-chain strategy-vault aggregator; reviewed yield rows inherit additional strategy, chain, bridge, and integration risk beyond canonical lending venues.",
     evidence: [
@@ -327,6 +358,7 @@ export function buildYieldSourceRisk(params: {
     params.source.venueProtocol ??
     inferVenueProtocol(params.source);
   const reviewedConfig = resolveReviewedYieldRiskConfig(venueProtocol);
+  const reviewedWeighted = reviewedConfig ? computeVenueRiskWeighted(reviewedConfig.scores) : null;
 
   return {
     sourceRiskScore:
@@ -343,7 +375,13 @@ export function buildYieldSourceRisk(params: {
     deploymentPlace: existing.deploymentPlace ?? inferDeploymentPlace(params.source),
     venueProtocol,
     venueChain: existing.venueChain ?? params.source.venueChain ?? inferVenueChain(params.source.sourceKey),
-    venueRiskTier: existing.venueRiskTier ?? reviewedConfig?.venueRiskTier ?? "unknown",
+    venueRiskTier:
+      existing.venueRiskTier ?? (reviewedConfig ? deriveVenueRiskTier(reviewedWeighted) : "unknown"),
+    venueRiskScores: existing.venueRiskScores ?? reviewedConfig?.scores ?? null,
+    venueRiskWeighted: existing.venueRiskWeighted ?? reviewedWeighted,
+    ...(existing.dependencyConcentration
+      ? { dependencyConcentration: existing.dependencyConcentration }
+      : {}),
     ...optionalSourceRiskFields(existing),
     investabilityFlags: existing.investabilityFlags ?? [],
   };
