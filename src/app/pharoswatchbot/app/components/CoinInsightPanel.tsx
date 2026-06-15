@@ -3,6 +3,7 @@
 import { ExternalLink, Info } from "lucide-react";
 import { formatCoveragePayload, formatWhyPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { ALERT_LABELS, PHAROS_COIN_PAGE_PREFIX } from "../constants";
+import { PHAROSWATCHBOT_BOT_URL } from "../../telegram-route-constants";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type {
   CatalogCoin,
@@ -12,8 +13,6 @@ import type {
   TelegramMiniAppState,
 } from "../types";
 import { MiniButton } from "./MiniButton";
-
-const BOT_USERNAME = "PharosWatchBot";
 
 function formatAlertList(alertTypes: Record<TelegramAlertType, boolean>): string {
   const enabled = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => alertTypes[type]);
@@ -40,7 +39,7 @@ export function CoinInsightPanel({ state, target, webApp, onClose }: CoinInsight
   const symbol = subscription?.symbol ?? catalog?.symbol ?? target.coinId;
   const name = subscription?.name ?? catalog?.name ?? "Unknown or no longer tracked coin";
   const botPayload = target.kind === "why" ? formatWhyPayload(target.coinId) : formatCoveragePayload(target.coinId);
-  const botUrl = `https://t.me/${BOT_USERNAME}?start=${botPayload}`;
+  const botUrl = `${PHAROSWATCHBOT_BOT_URL}?start=${botPayload}`;
   const handleOpenTelegram = () => {
     if (webApp?.openTelegramLink) webApp.openTelegramLink(botUrl);
     else webApp?.openLink?.(botUrl);
