@@ -21,6 +21,7 @@ import {
 const DEFAULT_LIMIT = 50;
 const MIN_LIMIT = 1;
 const MAX_LIMIT = 500;
+const MAX_Q_LENGTH = 200;
 const MAX_FILTER_EPOCH_MS = Date.UTC(2100, 0, 1);
 // `/api/events` advertises a 10-minute freshness budget; the projector lane
 // runs every 30 minutes, so `Warning: 110` fires after ~80 min absent.
@@ -139,6 +140,9 @@ export const handleEvents = withErrorHandler("events", async (db: D1Database, ur
   const chain = params.get("chain");
   const qRaw = params.get("q");
   const q = qRaw ? qRaw.trim().toLowerCase() : "";
+  if (q.length > MAX_Q_LENGTH) {
+    return errorResponse(400, `Invalid q: must be ${MAX_Q_LENGTH} characters or fewer`);
+  }
 
   const filters: TapeEventQueryFilters = {
     typeExact: typeFilters.exact,

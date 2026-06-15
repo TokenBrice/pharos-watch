@@ -353,7 +353,7 @@ Total documented public operations: **38**.
 
 ### `GET /api/events`
 
-Tape events surface, backed by `worker/src/api/events.ts`. The handler already accepts `type`, `class`, `coin` (multi-value), `pegCurrency`, `chain`, `q` (case-insensitive free-text search), `severityFloor`, `since` / `until` (epoch ms), `cursor`, `limit`, and `includeTotal` per the quick-reference table above. The response envelope is `{ events[], nextCursor, total, totalExact, _meta }`: `nextCursor` is a keyset cursor string (null when there are no more rows), `total` is the exact count only when `includeTotal=true` (otherwise null), and `totalExact` mirrors that boolean.
+Tape events surface, backed by `worker/src/api/events.ts`. The handler already accepts `type`, `class`, `coin` (multi-value), `pegCurrency`, `chain`, `q` (case-insensitive free-text search, max 200 characters; `%` and `_` are matched literally), `severityFloor`, `since` / `until` (epoch ms), `cursor`, `limit`, and `includeTotal` per the quick-reference table above. The response envelope is `{ events[], nextCursor, total, totalExact, _meta }`: `nextCursor` is a keyset cursor string (null when there are no more rows), `total` is the exact count only when `includeTotal=true` (otherwise null), and `totalExact` mirrors that boolean.
 
 As of the May 2026 detail-page pass, the frontend hook `useChartAnnotations` (`src/hooks/use-chart-annotations.ts`) consumes this endpoint to drive per-coin chart annotations on the stablecoin detail route. The hook is gated by `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` — see [process/feature-flags.md](process/feature-flags.md).
 

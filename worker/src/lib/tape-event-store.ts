@@ -96,6 +96,10 @@ export interface TapeEventQueryResult {
   total: number | null;
 }
 
+function escapeLikeSearch(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
 function buildWhereClause(
   filters: TapeEventQueryFilters,
   cursor: { ts: number; id: number } | null,
@@ -140,8 +144,10 @@ function buildWhereClause(
     bindings.push(filters.until);
   }
   if (filters.q && filters.q.length > 0) {
-    const like = `%${filters.q}%`;
-    conditions.push("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ? OR LOWER(coin_id) LIKE ?)");
+    const like = `%${escapeLikeSearch(filters.q)}%`;
+    conditions.push(
+      "(LOWER(title) LIKE ? ESCAPE '\\' OR LOWER(summary) LIKE ? ESCAPE '\\' OR LOWER(coin_id) LIKE ? ESCAPE '\\')",
+    );
     bindings.push(like, like, like);
   }
   if (cursor) {
