@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**86/733 done (12%)**  `██░░░░░░░░░░░░░░░░░░`
+**87/733 done (12%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 624 | 4 | 0 | 86 | 19 |
+| Count | 624 | 3 | 0 | 87 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 40 | 1 | 0 | 215 |
-| quality | 315 | 37 | 3 | 0 | 268 |
+| quality | 315 | 38 | 2 | 0 | 268 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -309,7 +309,7 @@
 | ✅ | [Q-002](quality/Q-002.md) | M | complexity | dispatchTelegramAlerts is a 590-line monolith with three distinct control paths | codex | `worker/src/cron/dispatch-telegram-alerts.ts:L167` |
 | ✅ | [Q-003](quality/Q-003.md) | S | dead-code | Slipstream pools hardcode volume24hUsd=0, triggering silent large-pool filter exclusion | codex | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ✅ | [Q-004](quality/Q-004.md) | S | type-safety | usdgo-osl rate-derived config uses benchmarkCurrency instead of benchmarkOverrideKey, spli | codex | `worker/src/cron/yield-config-rate-sources.ts:221` |
-| 🔄 | [Q-078](quality/Q-078.md) | S | type-safety | reserve-protocol-dtf compares fetchOnchainUint256 bigint result to 0n to detect non-SOUND  | codex | `worker/src/cron/reserve-adapters/reserve-protoco` |
+| ✅ | [Q-078](quality/Q-078.md) | S | type-safety | reserve-protocol-dtf compares fetchOnchainUint256 bigint result to 0n to detect non-SOUND  | codex | `worker/src/cron/reserve-adapters/reserve-protoco` |
 | ⬜ | [Q-082](quality/Q-082.md) | S | security | LIKE wildcard injection in tape-event full-text search (q parameter) |  | `worker/src/lib/tape-event-store.ts:142-145, work` |
 
 ### Medium (110)
