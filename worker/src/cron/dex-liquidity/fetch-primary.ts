@@ -8,7 +8,7 @@ import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type {
   LlamaPool, CurvePool, CurvePoolEntry, DexPriceObs,
-  DataSources, CurveLookups, UniV3Lookups, AerodromeLookups,
+  DataSources, CurveLookups,
 } from "./types";
 import {
   DEFILLAMA_YIELDS_URL, DEFILLAMA_PROTOCOLS_URL,
@@ -28,10 +28,6 @@ import {
 import {
   resolveTrackedStablecoinId,
 } from "./token-resolution";
-import {
-  fetchAerodromeData as fetchAerodromeSubgraphData,
-  fetchUniV3Data as fetchUniV3SubgraphData,
-} from "./subgraph-source-families";
 import { toErrorMessage } from "../../lib/error-utils";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
@@ -321,40 +317,6 @@ export async function buildCurveLookups(
   console.log(`[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${priceObservations.size} coins with Curve price obs`);
 
   return { curvePoolMap, priceObservations };
-}
-
-/** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. */
-export async function fetchUniV3Data(
-  graphApiKey: string | null,
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
-  chainAddressToId: Map<string, string>,
-  signal?: AbortSignal,
-  references?: PriceValidationReferences,
-): Promise<UniV3Lookups> {
-  return fetchUniV3SubgraphData(
-    graphApiKey,
-    symbolToChainScopedIds,
-    chainAddressToId,
-    signal,
-    references,
-  );
-}
-
-/** Fetch Aerodrome subgraph data for price observations and pool stability flags. */
-export async function fetchAerodromeData(
-  graphApiKey: string | null,
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
-  chainAddressToId: Map<string, string>,
-  signal?: AbortSignal,
-  references?: PriceValidationReferences,
-): Promise<AerodromeLookups> {
-  return fetchAerodromeSubgraphData(
-    graphApiKey,
-    symbolToChainScopedIds,
-    chainAddressToId,
-    signal,
-    references,
-  );
 }
 
 /** Collect all pool addresses from existing sources for dedup against GT */

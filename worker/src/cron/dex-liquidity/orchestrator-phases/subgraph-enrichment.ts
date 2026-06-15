@@ -1,6 +1,6 @@
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
-import { fetchUniV3Data, fetchAerodromeData } from "../fetch-primary";
+import { fetchUniV3Data, fetchAerodromeData } from "../subgraph-source-families";
 import type { DexPriceObs, SymbolLookups } from "../types";
 
 export interface SubgraphEnrichmentPhaseResult {

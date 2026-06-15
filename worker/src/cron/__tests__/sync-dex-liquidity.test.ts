@@ -17,15 +17,18 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-vi.mock("../dex-liquidity/fetch-primary", () => ({
-  fetchDataSources: vi.fn(async () => null),
-  buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
+vi.mock("../dex-liquidity/subgraph-source-families", () => ({
   fetchUniV3Data: vi.fn(async () => ({
     uniV3PoolFees: new Map(),
     uniV3SymbolFees: new Map(),
     uniV3PriceObs: new Map(),
   })),
   fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
+}));
+
+vi.mock("../dex-liquidity/fetch-primary", () => ({
+  fetchDataSources: vi.fn(async () => null),
+  buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
   buildKnownPoolAddresses: vi.fn(() => ({
     exactKeys: new Set<string>(),
     derivedKeyCounts: new Map<string, number>(),
@@ -107,7 +110,8 @@ vi.mock("../../lib/cex-orderbooks", () => ({
 import { syncDexLiquidity } from "../dex-liquidity/orchestrator";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
-import { fetchAerodromeData, fetchDataSources, fetchUniV3Data } from "../dex-liquidity/fetch-primary";
+import { fetchDataSources } from "../dex-liquidity/fetch-primary";
+import { fetchAerodromeData, fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
