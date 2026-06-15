@@ -15,7 +15,7 @@ import {
   resolveReviewedYieldRiskConfig,
   venueRiskTierOf,
   venueRiskWeightedOf,
-} from "../../worker/src/cron/yield-sync/source-risk";
+} from "@shared/lib/yield-source-risk-registry";
 
 function loadKey(): string {
   if (process.env.PHAROS_API_KEY) return process.env.PHAROS_API_KEY;

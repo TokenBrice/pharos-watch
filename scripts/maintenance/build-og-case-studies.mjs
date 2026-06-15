@@ -73,7 +73,7 @@ function field(src, key) {
 }
 
 const CARDS = readdirSync(CONTENT_DIR)
-  .filter((f) => f.endsWith(".ts") && f !== "types.ts" && f !== "index.ts")
+  .filter((f) => f.endsWith(".ts") && f !== "types.ts" && f !== "index.ts" && f !== "client-index.ts")
   .map((f) => {
     const src = readFileSync(resolve(CONTENT_DIR, f), "utf-8");
     return {
