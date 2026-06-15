@@ -132,6 +132,23 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     expect(dropped).toBe(1);
   });
 
+  it("drops logs with a non-hex logIndex to avoid a NaN event id", () => {
+    const config = makeUsdtConfig();
+    const badLog = makeLog({ logIndex: "not-hex" });
+    const { rows, dropped } = parseMintBurnLogs(
+      config,
+      usdtIssueEventDef,
+      [badLog],
+      blockTimestamps,
+      prices,
+      priceHistory,
+      runTimestamp,
+    );
+
+    expect(rows).toHaveLength(0);
+    expect(dropped).toBe(1);
+  });
+
   it("sets counterparty to null for Issue events (no address topics)", () => {
     const config = makeUsdtConfig();
     const log = makeLog({ topics: [usdtIssueEventDef.topicHash] });

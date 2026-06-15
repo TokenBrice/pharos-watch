@@ -62,7 +62,7 @@ export function parseMintBurnLogs(
     const blockNum = parseInt(log.blockNumber, 16);
     const logIndex = parseInt(log.logIndex, 16);
     const timestamp = blockTimestamps.get(blockNum) ?? 0;
-    if (isNaN(blockNum) || !timestamp) {
+    if (isNaN(blockNum) || isNaN(logIndex) || !timestamp) {
       dropped++;
       continue;
     }
