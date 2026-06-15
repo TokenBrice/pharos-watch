@@ -11,6 +11,7 @@ import type {
   RedemptionSettlementModel,
   RedemptionSourceMode,
 } from "../types";
+import { roundScore } from "./math";
 
 export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
   access: 0.2,
@@ -299,7 +300,7 @@ export function applyCapacityConstraintScoreEffects(args: {
   }
 
   return {
-    score: Math.round(Math.max(0, Math.min(100, score))),
+    score: roundScore(score),
     capsApplied,
   };
 }
@@ -372,7 +373,7 @@ export function computeRedemptionBackstopScore(args: {
   }
 
   return {
-    score: Math.round(Math.max(0, Math.min(100, score))),
+    score: roundScore(score),
     capsApplied,
   };
 }
@@ -398,7 +399,7 @@ export function computeEffectiveExitScore(
     rawRedemption != null && options
       ? rawRedemption * resolveEffectiveExitCapacityFactor(options) * resolveEffectiveExitConfidenceFactor(options.modelConfidence)
       : rawRedemption;
-  const roundedRedemption = redemption != null ? Math.round(Math.max(0, Math.min(100, redemption))) : null;
+  const roundedRedemption = redemption != null ? roundScore(redemption) : null;
 
   if (liquidity != null && roundedRedemption != null) {
     const bestPath = Math.max(liquidity, roundedRedemption);

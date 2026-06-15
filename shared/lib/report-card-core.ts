@@ -1,5 +1,5 @@
 import type { DimensionKey, ReportCardGrade } from "../types";
-import { clampScore } from "./math";
+import { bandFromThresholds, clampScore } from "./math";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "./safety-score-version";
 
 export const METHODOLOGY_VERSION = SAFETY_SCORE_METHODOLOGY_VERSION;
@@ -105,11 +105,7 @@ export const GRADE_RADAR_COLORS: Record<string, string> = {
 
 export function scoreToGrade(score: number | null): ReportCardGrade {
   if (score === null) return "NR";
-  const clamped = clampScore(score);
-  for (const { grade, min } of GRADE_THRESHOLDS) {
-    if (clamped >= min) return grade;
-  }
-  return "F";
+  return bandFromThresholds(clampScore(score), GRADE_THRESHOLDS, { grade: "F" as const, min: 0 }).grade;
 }
 
 export function gradeRange(grade: ReportCardGrade): ReportCardGradeRange {

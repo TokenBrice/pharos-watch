@@ -1,7 +1,7 @@
 import type { ChainResilienceTier } from "./index";
 import type { ChainEnvironmentEvidence, ChainHealthFactors, HealthBand } from "../../types/chains";
 import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
-import { BPS_PER_UNIT } from "../math";
+import { BPS_PER_UNIT, bandFromThresholds } from "../math";
 
 export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "./health-version";
 
@@ -159,11 +159,16 @@ export function computeHealthScore(factors: ChainHealthFactors): number | null {
   return Math.round(raw);
 }
 
+const HEALTH_BANDS: readonly { min: number; band: HealthBand }[] = [
+  { min: ROBUST_HEALTH_BAND_MIN, band: "robust" },
+  { min: HEALTHY_HEALTH_BAND_MIN, band: "healthy" },
+  { min: MIXED_HEALTH_BAND_MIN, band: "mixed" },
+  { min: FRAGILE_HEALTH_BAND_MIN, band: "fragile" },
+];
+
+const CONCENTRATED_HEALTH_BAND = { min: Number.NEGATIVE_INFINITY, band: "concentrated" } as const;
+
 export function getHealthBand(score: number | null): HealthBand | null {
   if (score == null) return null;
-  if (score >= ROBUST_HEALTH_BAND_MIN) return "robust";
-  if (score >= HEALTHY_HEALTH_BAND_MIN) return "healthy";
-  if (score >= MIXED_HEALTH_BAND_MIN) return "mixed";
-  if (score >= FRAGILE_HEALTH_BAND_MIN) return "fragile";
-  return "concentrated";
+  return bandFromThresholds(score, HEALTH_BANDS, CONCENTRATED_HEALTH_BAND).band;
 }

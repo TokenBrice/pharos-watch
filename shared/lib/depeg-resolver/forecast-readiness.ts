@@ -3,6 +3,7 @@ import {
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
   DDR_FORECAST_READINESS_VERSION,
 } from "../depeg-resolver-version";
+import { clamp, roundTo } from "../math";
 import { DDR_INSUFFICIENT_LIVE_PRICE_REASON } from "./resolution";
 import type {
   DdrCellState,
@@ -22,13 +23,10 @@ export type DdrForecastReadinessInput = Pick<
   "ageSec" | "currentDeviationBps" | "duration" | "resolution"
 >;
 
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
-}
-
-function roundScore(value: number): number {
-  return Math.round(clamp01(value) * 1000) / 1000;
+function roundReadiness01(value: number): number {
+  // Preserve the prior clamp01 semantics exactly: all non-finite inputs → 0
+  // (shared clamp maps +Infinity → 1, which would diverge).
+  return Number.isFinite(value) ? roundTo(clamp(value, 0, 1), 3) : 0;
 }
 
 function component(
@@ -38,7 +36,7 @@ function component(
   weight: number,
   reason: string,
 ): DdrForecastReadinessComponent {
-  return { key, label, score: roundScore(score), weight, reason };
+  return { key, label, score: roundReadiness01(score), weight, reason };
 }
 
 function inputCoverageComponent(input: DdrForecastReadinessInput): DdrForecastReadinessComponent {
@@ -201,7 +199,7 @@ export function forecastReadinessScore(input: DdrForecastReadinessInput): DdrFor
   const totalWeight = components.reduce((sum, entry) => sum + entry.weight, 0);
   const score = totalWeight === 0
     ? 0
-    : roundScore(components.reduce((sum, entry) => sum + entry.score * entry.weight, 0) / totalWeight);
+    : roundReadiness01(components.reduce((sum, entry) => sum + entry.score * entry.weight, 0) / totalWeight);
 
   const readiness: DdrForecastReadiness = {
     version: DDR_FORECAST_READINESS_VERSION,

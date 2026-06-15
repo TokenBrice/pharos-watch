@@ -8,6 +8,7 @@ import type {
   MintAuthorityType,
   StablecoinMeta,
 } from "../types/core";
+import { bandFromThresholds } from "./math";
 
 const MINT_AUTHORITY_COMPONENT_WEIGHTS = {
   route: 0.3,
@@ -156,6 +157,15 @@ export const MINT_AUTHORITY_SCORE_BANDS: Record<
   exposed: { min: Number.NEGATIVE_INFINITY, label: "Exposed" },
 };
 
+/** Descending-min ordered table for the band walk; mirrors MINT_AUTHORITY_SCORE_BANDS. */
+const MINT_AUTHORITY_SCORE_BAND_TABLE: readonly { band: MintAuthorityScoreBand; min: number }[] = [
+  { band: "hardened", min: MINT_AUTHORITY_SCORE_BANDS.hardened.min },
+  { band: "governed", min: MINT_AUTHORITY_SCORE_BANDS.governed.min },
+  { band: "managed", min: MINT_AUTHORITY_SCORE_BANDS.managed.min },
+  { band: "concentrated", min: MINT_AUTHORITY_SCORE_BANDS.concentrated.min },
+  { band: "exposed", min: MINT_AUTHORITY_SCORE_BANDS.exposed.min },
+];
+
 export type MintAuthorityCapKind = "incident-cap" | "unbounded-cap" | "eoa-cap" | "confidence-cap";
 
 export interface MintAuthorityScoringControlInput {
@@ -217,11 +227,10 @@ export function isMintCapableAbility(ability: MintAuthorityDirectMintAbility): b
 
 export function resolveMintAuthorityScoreBand(score: number | null | undefined): MintAuthorityScoreBand | null {
   if (score == null || !Number.isFinite(score)) return null;
-  if (score >= MINT_AUTHORITY_SCORE_BANDS.hardened.min) return "hardened";
-  if (score >= MINT_AUTHORITY_SCORE_BANDS.governed.min) return "governed";
-  if (score >= MINT_AUTHORITY_SCORE_BANDS.managed.min) return "managed";
-  if (score >= MINT_AUTHORITY_SCORE_BANDS.concentrated.min) return "concentrated";
-  return "exposed";
+  return bandFromThresholds(score, MINT_AUTHORITY_SCORE_BAND_TABLE, {
+    band: "exposed" as const,
+    min: Number.NEGATIVE_INFINITY,
+  }).band;
 }
 
 function toMintAuthorityScoringInput(
