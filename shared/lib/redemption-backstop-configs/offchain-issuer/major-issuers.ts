@@ -2,12 +2,24 @@ import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
+  expandIds,
   undisclosedReviewedFee,
   fixedFee,
   issuerBase,
   sourceRef,
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
+
+/** usdq-quantoz and eurq-quantoz are byte-identical (same base, cost, docs). */
+const quantozBase: RedemptionBackstopConfig = {
+  ...issuerBase,
+  ...reviewedDirectRedemptionSupplyFull,
+  costModel: fixedFee(0, "Issuer docs describe redemption as free of charge; bank fees may still apply"),
+  docs: [
+    sourceRef("Quantoz transparency", "https://www.quantoz.com/transparency", ["route", "capacity"]),
+    sourceRef("Quantoz fees", "https://www.quantoz.com/fees", ["fees"]),
+  ],
+};
 
 export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "pyusd-paypal": {
@@ -304,24 +316,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Banking Circle documents redemption at par within five business days after the request and required checks",
     ],
   },
-  "usdq-quantoz": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: fixedFee(0, "Issuer docs describe redemption as free of charge; bank fees may still apply"),
-    docs: [
-      sourceRef("Quantoz transparency", "https://www.quantoz.com/transparency", ["route", "capacity"]),
-      sourceRef("Quantoz fees", "https://www.quantoz.com/fees", ["fees"]),
-    ],
-  },
-  "eurq-quantoz": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: fixedFee(0, "Issuer docs describe redemption as free of charge; bank fees may still apply"),
-    docs: [
-      sourceRef("Quantoz transparency", "https://www.quantoz.com/transparency", ["route", "capacity"]),
-      sourceRef("Quantoz fees", "https://www.quantoz.com/fees", ["fees"]),
-    ],
-  },
+  ...expandIds(["usdq-quantoz", "eurq-quantoz"], quantozBase),
   "usd1-world-liberty-financial": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

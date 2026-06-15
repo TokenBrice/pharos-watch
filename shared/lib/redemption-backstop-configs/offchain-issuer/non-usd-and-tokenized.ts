@@ -2,6 +2,7 @@ import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
+  expandIds,
   undisclosedReviewedFee,
   fixedFee,
   issuerBase,
@@ -11,6 +12,31 @@ import {
   reviewedDirectRedemptionSupplyFull,
   reviewedIssuerApiExpansionSupplyFull,
 } from "./shared";
+
+/** vchf-vnx and vgbp-vnx share an identical issuer-redemption shape and the
+ *  VNX gitbook docs[]; veur-vnx differs (transparency docs) and stays inline. */
+const vnxGitbookBase: RedemptionBackstopConfig = {
+  ...issuerBase,
+  ...reviewedDirectRedemptionSupplyFull,
+  costModel: undisclosedReviewedFee(
+    "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
+  ),
+  docs: [
+    sourceRef("VNX docs", "https://vnx.gitbook.io/vnx-platform/", ["route", "capacity"]),
+    sourceRef("VNX website", "https://vnx.li/", ["route"]),
+  ],
+};
+
+/** eurau-allunity and chfau-allunity are byte-identical (same base, cost, docs). */
+const allunityBase: RedemptionBackstopConfig = {
+  ...issuerBase,
+  ...reviewedDirectRedemptionSupplyFull,
+  costModel: undisclosedReviewedFee("Direct 1:1 redemption through AllUnity; public fee schedule not disclosed"),
+  docs: [
+    sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
+    sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
+  ],
+};
 
 export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "cadc-cad-coin": {
@@ -35,28 +61,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("VNX website", "https://vnx.li/", ["route"]),
     ],
   },
-  "vchf-vnx": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
-    ),
-    docs: [
-      sourceRef("VNX docs", "https://vnx.gitbook.io/vnx-platform/", ["route", "capacity"]),
-      sourceRef("VNX website", "https://vnx.li/", ["route"]),
-    ],
-  },
-  "vgbp-vnx": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
-    ),
-    docs: [
-      sourceRef("VNX docs", "https://vnx.gitbook.io/vnx-platform/", ["route", "capacity"]),
-      sourceRef("VNX website", "https://vnx.li/", ["route"]),
-    ],
-  },
+  ...expandIds(["vchf-vnx", "vgbp-vnx"], vnxGitbookBase),
   "tryb-bilira": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -158,24 +163,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-audits/", ["capacity"]),
     ],
   },
-  "eurau-allunity": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee("Direct 1:1 redemption through AllUnity; public fee schedule not disclosed"),
-    docs: [
-      sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
-      sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
-    ],
-  },
-  "chfau-allunity": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee("Direct 1:1 redemption through AllUnity; public fee schedule not disclosed"),
-    docs: [
-      sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
-      sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
-    ],
-  },
+  ...expandIds(["eurau-allunity", "chfau-allunity"], allunityBase),
   "usda-anzens": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

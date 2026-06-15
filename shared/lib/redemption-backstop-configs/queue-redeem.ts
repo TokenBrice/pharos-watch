@@ -59,6 +59,27 @@ const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.
   }),
 );
 
+/** syrupUSDC and syrupUSDT share this 3-element docs[]; their cost/notes prose
+ *  diverges and stays inline at each entry. */
+const mapleSyrupDocs = () => [
+  sourceRef("Maple syrupUSDC / syrupUSDT withdrawals", "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk", [
+    "route",
+    "capacity",
+    "settlement",
+    "fees",
+  ]),
+  sourceRef("Maple Pools technical reference", "https://docs.maple.finance/technical-resources/pools/pools", [
+    "route",
+    "access",
+    "settlement",
+  ]),
+  sourceRef(
+    "Maple WithdrawalManager queue",
+    "https://docs.maple.finance/technical-resources/withdrawal-managers/withdrawal-manager-queue",
+    ["route", "capacity", "settlement"],
+  ),
+];
+
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
     ...queueRedeemBase,
@@ -148,23 +169,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       0,
       "Maple WithdrawalManager docs process queued shares into assets at the current exchange rate, with no separate protocol redemption fee described",
     ),
-    docs: [
-      sourceRef(
-        "Maple syrupUSDC / syrupUSDT withdrawals",
-        "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
-        ["route", "capacity", "settlement", "fees"],
-      ),
-      sourceRef("Maple Pools technical reference", "https://docs.maple.finance/technical-resources/pools/pools", [
-        "route",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
-        "Maple WithdrawalManager queue",
-        "https://docs.maple.finance/technical-resources/withdrawal-managers/withdrawal-manager-queue",
-        ["route", "capacity", "settlement"],
-      ),
-    ],
+    docs: mapleSyrupDocs(),
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
       "Modeled route excludes secondary-market exits on Uniswap or Balancer and instead scores the documented protocol withdrawal rail",
@@ -180,23 +185,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       0,
       "Maple docs state syrupUSDC and syrupUSDT are redeemed at the smart-contract exchange rate with no slippage and no separate protocol redemption fee (mirrors syrupUSDC)",
     ),
-    docs: [
-      sourceRef(
-        "Maple syrupUSDC / syrupUSDT withdrawals",
-        "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
-        ["route", "capacity", "settlement", "fees"],
-      ),
-      sourceRef("Maple Pools technical reference", "https://docs.maple.finance/technical-resources/pools/pools", [
-        "route",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
-        "Maple WithdrawalManager queue",
-        "https://docs.maple.finance/technical-resources/withdrawal-managers/withdrawal-manager-queue",
-        ["route", "capacity", "settlement"],
-      ),
-    ],
+    docs: mapleSyrupDocs(),
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
       "Modeled route excludes secondary-market exits and instead scores the documented protocol withdrawal rail",

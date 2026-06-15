@@ -1,5 +1,11 @@
-import { documentedBoundSupplyFull, stablecoinRedeemBase, type RedemptionBackstopConfig } from "../shared";
-import { REVIEWED_FIRST_WAVE_AT } from "../review-dates";
+import {
+  documentedBoundSupplyFull,
+  fixedFee,
+  sourceRef,
+  stablecoinRedeemBase,
+  type RedemptionBackstopConfig,
+} from "../shared";
+import { REVIEWED_FIRST_WAVE_AT, REVIEWED_STABLECOIN_AUDIT_AT } from "../review-dates";
 
 export {
   REVIEWED_REMEDIATION_AT,
@@ -11,6 +17,54 @@ export {
  *  `stablecoinRedeemBase` defaults so each module only states its overrides. */
 export function defineStablecoinRedeemConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig {
   return { ...stablecoinRedeemBase, ...overrides };
+}
+
+/** steakUSDC and steakUSDT use the identical Steakhouse Prime Instant config, differing
+ *  only by the redeemed-token symbol in the fee description and telemetry note. */
+export function steakhousePrimeInstantConfig(symbol: "USDC" | "USDT"): RedemptionBackstopConfig {
+  return defineStablecoinRedeemConfig({
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(
+      0,
+      `Steakhouse Prime Instant uses Morpho vaults; withdrawals redeem to ${symbol} when liquidity is available and Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.`,
+    ),
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    docs: [
+      sourceRef("Steakhouse Prime Instant", "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Morpho vault integration", "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/", ["route"]),
+    ],
+    notes: [
+      `Fresh ERC-4626 reserve telemetry reads the vault's idle ${symbol} balance as current direct redemption capacity; the prior reviewed 5% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.`,
+    ],
+  });
+}
+
+/** gtUSDC and gtUSDCP use the identical Gauntlet MetaMorpho config, differing only in
+ *  the per-vault docs[1] label and URL. */
+export function gauntletMorphoConfig(vaultLabel: string, vaultUrl: string): RedemptionBackstopConfig {
+  return defineStablecoinRedeemConfig({
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(
+      0,
+      "MetaMorpho vault withdrawals redeem to USDC when vault liquidity is available; Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.",
+    ),
+    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    docs: [
+      sourceRef("Morpho vault docs", "https://docs.morpho.org/curation/overview", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef(vaultLabel, vaultUrl, ["route", "capacity", "access"]),
+    ],
+    notes: [
+      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as current direct redemption capacity; the prior reviewed 5% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
+    ],
+  });
 }
 
 export const REVIEWED_DIRECT_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;

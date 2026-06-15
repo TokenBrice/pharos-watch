@@ -1,3 +1,4 @@
+import type { RedemptionDocSource } from "../../../types";
 import type { RedemptionBackstopConfig } from "../shared";
 import {
   cloneRedemptionBackstopConfig,
@@ -89,6 +90,112 @@ const spikoProspectus = () =>
     "settlement",
   ]);
 
+/** Eight Spiko funds share the same issuer-API NAV-redemption base, the ticker-templated
+ *  cost note, and the SICAV prospectus ref; EUR funds reference the instant-redemption API
+ *  while USD/GBP funds reference the standard redemption API. Each fund appends its own
+ *  product-page ref (some have none) and keeps its bespoke modeling note. */
+const SPIKO_FUNDS: readonly [
+  id: string,
+  ticker: string,
+  currency: "eur" | "non-eur",
+  productRef: RedemptionDocSource | null,
+  note: string,
+][] = [
+  [
+    "ustbl-spiko",
+    "USTBL",
+    "non-eur",
+    null,
+    "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+  ],
+  [
+    "safo-spiko-usd",
+    "SAFO",
+    "non-eur",
+    sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
+    "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+  ],
+  [
+    "spkcc-spiko",
+    "SPKCC",
+    "non-eur",
+    sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
+    "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+  ],
+  [
+    "uktbl-spiko",
+    "UKTBL",
+    "non-eur",
+    sourceRef("Spiko UK Treasury bills fund", "https://www.spiko.io/spiko-treasury-bills-pound", [
+      "capacity",
+      "fees",
+      "access",
+    ]),
+    "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+  ],
+  [
+    "gbpsafo-spiko",
+    "GBPSAFO",
+    "non-eur",
+    sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
+    "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+  ],
+  [
+    "eutbl-spiko",
+    "EUTBL",
+    "eur",
+    null,
+    "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+  ],
+  [
+    "eursafo-spiko",
+    "EURSAFO",
+    "eur",
+    sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
+    "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+  ],
+  [
+    "eurspkcc-spiko",
+    "EURSPKCC",
+    "eur",
+    sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
+    "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+  ],
+];
+
+const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
+  SPIKO_FUNDS.map(([id, ticker, currency, productRef, note]): [string, RedemptionBackstopConfig] => {
+    const baseDocs = currency === "eur" ? spikoEurBaseDocs() : spikoBaseDocs();
+    return [
+      id,
+      {
+        ...issuerBase,
+        ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+        settlementModel: "days",
+        outputAssetType: "nav",
+        costModel: undisclosedReviewedFee(
+          `Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
+        ),
+        docs: [...baseDocs, ...(productRef ? [productRef] : []), spikoProspectus()],
+        notes: [note],
+      },
+    ];
+  }),
+);
+
+/** bIB01 and bC3M share these two Backed sourceRefs verbatim (the redemption docs and
+ *  the product-structure page); each product keeps its own middle docRef, cost, and notes. */
+const backedRedemptionRef = () =>
+  sourceRef("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption", [
+    "route",
+    "capacity",
+    "fees",
+    "access",
+    "settlement",
+  ]);
+const backedProductStructureRef = () =>
+  sourceRef("Backed product structure", "https://assets.backed.fi/structure", ["capacity", "access"]);
+
 export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "usdt-tether": {
     ...issuerBase,
@@ -99,21 +206,6 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),
       sourceRef("Tether legal terms", "https://tether.to/en/legal/", ["route", "capacity", "access"]),
       sourceRef("Tether fees", "https://tether.to/en/fees/", ["fees", "access"]),
-    ],
-  },
-  "usdc-circle": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    reviewedAt: REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
-    costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
-    docs: [
-      sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
-      sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", [
-        "route",
-        "capacity",
-        "access",
-        "fees",
-      ]),
     ],
   },
   "bfusd-binance": {
@@ -420,146 +512,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Modeled as qualified-investor NAV redemption through the Anemoy / Centrifuge issuer rail, mirroring the Apollo credit fund template while preserving queued private-credit settlement risk.",
     ],
   },
-  "ustbl-spiko": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed USTBL redemption fee",
-    ),
-    docs: [...spikoBaseDocs(), spikoProspectus()],
-    notes: [
-      "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    ],
-  },
-  "safo-spiko-usd": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SAFO redemption fee",
-    ),
-    docs: [
-      ...spikoBaseDocs(),
-      sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
-      spikoProspectus(),
-    ],
-    notes: [
-      "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    ],
-  },
-  "spkcc-spiko": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SPKCC redemption fee",
-    ),
-    docs: [
-      ...spikoBaseDocs(),
-      sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", [
-        "capacity",
-        "fees",
-        "access",
-      ]),
-      spikoProspectus(),
-    ],
-    notes: [
-      "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    ],
-  },
-  "uktbl-spiko": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed UKTBL redemption fee",
-    ),
-    docs: [
-      ...spikoBaseDocs(),
-      sourceRef("Spiko UK Treasury bills fund", "https://www.spiko.io/spiko-treasury-bills-pound", [
-        "capacity",
-        "fees",
-        "access",
-      ]),
-      spikoProspectus(),
-    ],
-    notes: [
-      "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    ],
-  },
-  "gbpsafo-spiko": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed GBPSAFO redemption fee",
-    ),
-    docs: [
-      ...spikoBaseDocs(),
-      sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
-      spikoProspectus(),
-    ],
-    notes: [
-      "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    ],
-  },
-  "eutbl-spiko": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EUTBL redemption fee",
-    ),
-    docs: [...spikoEurBaseDocs(), spikoProspectus()],
-    notes: [
-      "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    ],
-  },
-  "eursafo-spiko": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSAFO redemption fee",
-    ),
-    docs: [
-      ...spikoEurBaseDocs(),
-      sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
-      spikoProspectus(),
-    ],
-    notes: [
-      "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    ],
-  },
-  "eurspkcc-spiko": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSPKCC redemption fee",
-    ),
-    docs: [
-      ...spikoEurBaseDocs(),
-      sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", [
-        "capacity",
-        "fees",
-        "access",
-      ]),
-      spikoProspectus(),
-    ],
-    notes: [
-      "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    ],
-  },
+  ...SPIKO_FUND_CONFIGS,
   "stac-securitize": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
@@ -621,15 +574,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Backed documents bToken redemption into stablecoins or cash within T+3; public materials reviewed do not publish one fixed bIB01 redemption fee",
     ),
     docs: [
-      sourceRef("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      backedRedemptionRef(),
       sourceRef("Backed bIB01 product", "https://assets.backed.fi/products/bib01", ["capacity", "fees", "access"]),
-      sourceRef("Backed product structure", "https://assets.backed.fi/structure", ["capacity", "access"]),
+      backedProductStructureRef(),
     ],
     notes: [
       "Modeled as Backed primary-market redemption for approved customers; T+3 processing and market-hours execution make it slower than secondary DEX exits.",
@@ -644,15 +591,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Backed documents bToken redemption into stablecoins or cash within T+3; public materials reviewed do not publish one fixed bC3M redemption fee",
     ),
     docs: [
-      sourceRef("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      backedRedemptionRef(),
       sourceRef("Backed bC3M product", "https://assets.backed.fi/products/bc3m", ["capacity", "fees", "access"]),
-      sourceRef("Backed product structure", "https://assets.backed.fi/structure", ["capacity", "access"]),
+      backedProductStructureRef(),
     ],
     notes: [
       "Modeled as Backed primary-market redemption for approved customers; bC3M remains a EUR-denominated NAV tracker rather than a euro stablecoin cash claim.",
