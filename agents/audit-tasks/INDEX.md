@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**170/733 done (23%)**  `█████░░░░░░░░░░░░░░░`
+**174/733 done (24%)**  `█████░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 530 | 11 | 1 | 170 | 21 |
+| Count | 527 | 10 | 1 | 174 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 58 | 2 | 0 | 195 |
-| quality | 315 | 98 | 9 | 1 | 199 |
+| redundancy | 266 | 59 | 1 | 0 | 195 |
+| quality | 315 | 101 | 9 | 1 | 196 |
 | sustainability | 152 | 14 | 0 | 0 | 136 |
 
 ## redundancy (266)
@@ -215,7 +215,7 @@
 | ✅ | [R-181](redundancy/R-181.md) | S | wrapper | pricing-source-policy.ts is a pure re-export shim with no added value | codex | `worker/src/lib/pricing-source-policy.ts:L1-L11` |
 | ⬜ | [R-182](redundancy/R-182.md) | S | clone | Generic object/number/string/boolean accessor helpers cloned across three locations |  | `worker/src/lib/status/yield-health.ts:L99-L121, ` |
 | ⬜ | [R-183](redundancy/R-183.md) | S | wrapper | getTelegramBotStats re-exported through derived-data.ts adding an unnecessary barrel hop |  | `worker/src/lib/status/derived-data.ts:L14, worke` |
-| 🔄 | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s | codex | `src/generated/depeg-event-related-data.json.d.ts` |
+| ✅ | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s | codex | `src/generated/depeg-event-related-data.json.d.ts` |
 | ⬜ | [R-185](redundancy/R-185.md) | S | clone | Local CAUSE_OF_DEATH_LABELS in event-card.tsx duplicates shared CAUSE_META |  | `src/components/tape/event-card.tsx:L345-L354` |
 | ⬜ | [R-186](redundancy/R-186.md) | S | clone | renderDelta and renderMetric are near-identical local render helpers in telegram-bot-stats |  | `src/components/status/telegram-bot-stats.tsx:L24` |
 | 🚫 | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches | codex | `shared/lib/classification/domain.ts:L63-L71` |
@@ -375,10 +375,10 @@
 | ⬜ | [Q-102](quality/Q-102.md) | M | error-handling | Telegram double-send risk when cache write fails after successful delivery |  | `worker/src/cron/daily-digest.ts:L284-L301` |
 | ⬜ | [Q-103](quality/Q-103.md) | M | error-handling | resolveRunStatus maps all-circuit-breaker-skipped runs to 'error', masking healthy circuit |  | `worker/src/cron/sync-live-reserves-finalize.ts:1` |
 | ⬜ | [Q-104](quality/Q-104.md) | M | complexity | Serial per-observation D1 reads in loadAlertMarkers and loadDetailWriteFailures |  | `worker/src/cron/cron-staleness-watchdog.ts:198-2` |
-| 🔄 | [Q-105](quality/Q-105.md) | S | type-safety | cap-vault silently prices all unknown assets at $1.00 regardless of underlying token | opus-05 | `worker/src/cron/reserve-adapters/cap-vault.ts:L8` |
+| ✅ | [Q-105](quality/Q-105.md) | S | type-safety | cap-vault silently prices all unknown assets at $1.00 regardless of underlying token | opus-05 | `worker/src/cron/reserve-adapters/cap-vault.ts:L8` |
 | 🔄 | [Q-108](quality/Q-108.md) | S | clone | 'legacy-best' source-key magic string duplicated ~10x while a named constant exists | opus-06 | `worker/src/cron/yield-sync/evaluation.ts:311,515` |
 | ✅ | [Q-110](quality/Q-110.md) | S | type-safety | buildChainRpcs uses non-null assertion on Tron public RPC in the no-Alchemy branch | opus-07 | `worker/src/lib/chain-registry.ts:L114` |
-| 🔄 | [Q-111](quality/Q-111.md) | S | error-handling | getMintBurnReconciliation parallel DB queries are unguarded — any query failure bubbles as | opus-08 | `worker/src/lib/status/derived-data.ts:L208-L229` |
+| ✅ | [Q-111](quality/Q-111.md) | S | error-handling | getMintBurnReconciliation parallel DB queries are unguarded — any query failure bubbles as | opus-08 | `worker/src/lib/status/derived-data.ts:L208-L229` |
 | ⬜ | [Q-112](quality/Q-112.md) | M | complexity | DEWS projector scans and classifies all band-change samples for both variants independentl |  | `worker/src/lib/tape-projectors/dews.ts:L198-L240` |
 | ⬜ | [Q-113](quality/Q-113.md) | M | complexity | FlowsClient unconditionally issues three concurrent API calls, one always redundant |  | `src/app/flows/client.tsx:L56-L78` |
 | 🔄 | [Q-119](quality/Q-119.md) | S | type-safety | Module-scoped mutable singleton searchTimer leaks across client navigations | opus-09 | `src/lib/analytics.ts:L58-L66` |
@@ -399,8 +399,8 @@
 | ⬜ | [Q-144](quality/Q-144.md) | M | error-handling | Admin reject mutation is non-atomic: key can be deactivated while request stays pending/is |  | `worker/src/api/api-key-requests/admin-handlers.t` |
 | ✅ | [Q-145](quality/Q-145.md) | S | error-handling | SSE data: line concatenation omits the newline separator required by the spec | codex | `worker/src/cron/digest/anthropic-stream.ts:L111-` |
 | ⬜ | [Q-146](quality/Q-146.md) | M | testing | Identity disambiguation resolver (a financial-signal correctness path) has no unit tests |  | `worker/src/cron/yield-sync/identity.ts:81-148` |
-| ⬜ | [Q-147](quality/Q-147.md) | S | complexity | derivePoolVolume24hUsd averages USD estimates instead of summing, producing incorrect mult |  | `worker/src/lib/dex-api-token-pricing.ts:L99-L144` |
-| ⬜ | [Q-148](quality/Q-148.md) | S | clone | Local median() diverges from canonical stats.median for even-length inputs, biasing aggreg |  | `worker/src/lib/address-price-providers/shared.ts` |
+| 🔄 | [Q-147](quality/Q-147.md) | S | complexity | derivePoolVolume24hUsd averages USD estimates instead of summing, producing incorrect mult | opus-04 | `worker/src/lib/dex-api-token-pricing.ts:L99-L144` |
+| 🔄 | [Q-148](quality/Q-148.md) | S | clone | Local median() diverges from canonical stats.median for even-length inputs, biasing aggreg | opus-05 | `worker/src/lib/address-price-providers/shared.ts` |
 | ⬜ | [Q-149](quality/Q-149.md) | S | error-handling | isMissingColumnError schema shim is still live in depeg.ts after methodology_version migra |  | `worker/src/lib/tape-projectors/depeg.ts:L75-L85,` |
 | ⬜ | [Q-150](quality/Q-150.md) | M | testing | Deterministic on-chain health/cooldown state machine is untested |  | `worker/src/cron/yield-sync/state-loading.ts:181-` |
 | 🔄 | [Q-152](quality/Q-152.md) | S | complexity | remediate-blacklist-amount-gaps parses limit/maxAttempts twice with inconsistent validatio | opus-07 | `worker/src/api/remediate-blacklist-amount-gaps.t` |
@@ -411,13 +411,13 @@
 | ⬜ | [Q-157](quality/Q-157.md) | M | complexity | buildStablecoinDetailHeroViewModel is a ~205-line monolith assembling 8 unrelated sub-stru |  | `src/lib/stablecoin-detail-view-model.ts:546-751` |
 | ⬜ | [Q-158](quality/Q-158.md) | M | complexity | buildBlacklistSummaryPayload is a ~250-line god function with triple-branched currentBalan |  | `worker/src/api/blacklist-summary.ts:473-727` |
 | ⬜ | [Q-159](quality/Q-159.md) | L | complexity | audit-depeg-history is a ~1145-line god module mixing parsing, 3 repair engines, CG I/O, a |  | `worker/src/api/audit-depeg-history.ts:1-1145` |
-| ⬜ | [Q-160](quality/Q-160.md) | S | error-handling | Bare catch in tape-evidence loader masks all D1 read failures |  | `worker/src/cron/compute-depeg-resolver-review.ts` |
+| 🔄 | [Q-160](quality/Q-160.md) | S | error-handling | Bare catch in tape-evidence loader masks all D1 read failures | opus-08 | `worker/src/cron/compute-depeg-resolver-review.ts` |
 | ⬜ | [Q-161](quality/Q-161.md) | M | complexity | appendPoolFamilyYieldSources is a 165-line god-function blending three discovery strategie |  | `worker/src/cron/yield-sync/resolve-helpers.ts:35` |
 | ⬜ | [Q-162](quality/Q-162.md) | L | complexity | runYieldCoverageAudit is a ~190-line orchestration monolith mixing IO, derivation, and two |  | `worker/src/cron/yield-coverage-audit.ts:809-1001` |
 | ⬜ | [Q-163](quality/Q-163.md) | S | testing | Branchy pure-logic units have no direct unit tests |  | `src/app/admin/cron-severity.ts:7-12; src/app/adm` |
 | ⬜ | [Q-164](quality/Q-164.md) | M | type-safety | Mint-authority view model reads an untyped UnknownRecord candidate via stringValue/numberV |  | `src/lib/stablecoin-detail-mint-authority-view-mo` |
 | ⬜ | [Q-165](quality/Q-165.md) | M | type-safety | selectDigestIntelligence trusts unvalidated runtime shapes with bare casts after only Arra |  | `worker/src/api/digest-intelligence-summary.ts:26` |
-| 🔄 | [Q-166](quality/Q-166.md) | S | naming | getContractConfig silently hardcodes USDC as the redeem quote token, an undocumented denom | opus-10 | `worker/src/lib/authoritative-price-sources/helpe` |
+| ✅ | [Q-166](quality/Q-166.md) | S | naming | getContractConfig silently hardcodes USDC as the redeem quote token, an undocumented denom | opus-10 | `worker/src/lib/authoritative-price-sources/helpe` |
 | ⬜ | [Q-167](quality/Q-167.md) | M | security | Site-data Pages cache key ignores Vary/CORS dimensions, allowing cross-origin ACAO bleed |  | `functions/_site-data/[[path]].ts:57-59,159-166,1` |
 | ⬜ | [Q-168](quality/Q-168.md) | M | complexity | summarizeDdrrMetrics is a 140-line monolith deriving ~50 interdependent counts/ratios in o |  | `shared/lib/depeg-resolver-review/summary.ts:109-` |
 | ⬜ | [Q-169](quality/Q-169.md) | M | error-handling | materializeTerminalEvidenceForEvent silently nulls valid terminal evidence |  | `worker/src/cron/compute-depeg-resolver-review.ts` |
