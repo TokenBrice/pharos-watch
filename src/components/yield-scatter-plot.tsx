@@ -162,7 +162,6 @@ function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false
           <circle r={radius + 0.5} fill="var(--color-card)" stroke={ringStroke} strokeWidth={emphasized ? 2 : 1} />
           <image
             href={payload.logoSrc}
-            xlinkHref={payload.logoSrc}
             x={-radius}
             y={-radius}
             width={diameter}
