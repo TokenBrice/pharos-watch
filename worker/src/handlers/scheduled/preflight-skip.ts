@@ -17,6 +17,7 @@ export async function logSkippedCronRun(
   const status = options.status ?? "degraded";
   const metadata = JSON.stringify({
     ...options.metadata,
+    skipped: options.reason,
     skippedReason: options.reason,
     message: options.message ?? null,
     slotStartedAt: runtime.slotStartedAt,

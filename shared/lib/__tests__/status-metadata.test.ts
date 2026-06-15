@@ -120,4 +120,12 @@ describe("status-metadata", () => {
       launch: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
     });
   });
+
+  it("accepts skippedReason as the skip reason fallback for preflight rows", () => {
+    const metadata = parseTelegramDispatchCronMetadata({
+      skippedReason: "missing-telegram-bot-token",
+    });
+
+    expect(metadata?.skipped).toBe("missing-telegram-bot-token");
+  });
 });
