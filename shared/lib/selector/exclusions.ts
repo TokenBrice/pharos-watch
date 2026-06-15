@@ -114,6 +114,18 @@ function fail(
   return detail != null ? { id, reason, severity, detail } : { id, reason, severity };
 }
 
+function failPegScoreFloor(row: MergedRow, floor: number): ExclusionRecord | null {
+  if (row.pegScore != null && row.pegScore < floor) {
+    return fail(
+      row.id,
+      "peg-score-floor",
+      "hard",
+      `PegScore ${Math.round(row.pegScore)} below ${floor}`,
+    );
+  }
+  return null;
+}
+
 /**
  * Universal exclusions (apply to every profile). Returns the first matching
  * record or `null`.
@@ -185,14 +197,9 @@ function treasuryExclusions(row: MergedRow, input: SelectorInput): ExclusionReco
   if (row.dewsScore != null && row.dewsScore > 60) {
     return fail(row.id, "dews-ceiling");
   }
-  const pegScoreFloor = treasuryPegScoreFloor(input.depegTolerance);
-  if (row.pegScore != null && row.pegScore < pegScoreFloor) {
-    return fail(
-      row.id,
-      "peg-score-floor",
-      "hard",
-      `PegScore ${Math.round(row.pegScore)} below ${pegScoreFloor}`,
-    );
+  const treasuryFloorRecord = failPegScoreFloor(row, treasuryPegScoreFloor(input.depegTolerance));
+  if (treasuryFloorRecord != null) {
+    return treasuryFloorRecord;
   }
   if (row.bluechipGrade === "D" || row.bluechipGrade === "F") {
     return fail(row.id, "bluechip-d-or-f");
@@ -228,14 +235,9 @@ function yieldExclusions(row: MergedRow, input: SelectorInput): ExclusionRecord 
   if (row.warningSignals.includes("thin-tvl")) {
     return fail(row.id, "yield-warning-thin-tvl");
   }
-  const pegScoreFloor = yieldPegScoreFloor(input.depegTolerance);
-  if (row.pegScore != null && row.pegScore < pegScoreFloor) {
-    return fail(
-      row.id,
-      "peg-score-floor",
-      "hard",
-      `PegScore ${Math.round(row.pegScore)} below ${pegScoreFloor}`,
-    );
+  const yieldFloorRecord = failPegScoreFloor(row, yieldPegScoreFloor(input.depegTolerance));
+  if (yieldFloorRecord != null) {
+    return yieldFloorRecord;
   }
   return null;
 }
@@ -247,14 +249,9 @@ function tradingExclusions(row: MergedRow, input: SelectorInput): ExclusionRecor
   if (row.liquidityScore != null && row.liquidityScore < 50) {
     return fail(row.id, "liquidity-floor");
   }
-  const pegScoreFloor = tradingPegScoreFloor(input.depegTolerance);
-  if (row.pegScore != null && row.pegScore < pegScoreFloor) {
-    return fail(
-      row.id,
-      "peg-score-floor",
-      "hard",
-      `PegScore ${Math.round(row.pegScore)} below ${pegScoreFloor}`,
-    );
+  const tradingFloorRecord = failPegScoreFloor(row, tradingPegScoreFloor(input.depegTolerance));
+  if (tradingFloorRecord != null) {
+    return tradingFloorRecord;
   }
   const dewsCeiling = tradingDewsCeiling(input.exitSpeed);
   if (row.dewsScore != null && row.dewsScore > dewsCeiling) {

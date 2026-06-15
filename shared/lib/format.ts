@@ -215,9 +215,9 @@ export function formatElapsedSeconds(seconds: number): string {
 }
 
 /** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */
-export function timeAgo(epochSec: number): string {
+export function timeAgo(epochSec: number, nowSec = Date.now() / 1000): string {
   if (!Number.isFinite(epochSec)) return "N/A";
-  const diffMin = Math.floor((Date.now() / 1000 - epochSec) / SECONDS_PER_MINUTE);
+  const diffMin = Math.floor((nowSec - epochSec) / SECONDS_PER_MINUTE);
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffH = Math.floor(diffMin / 60);
@@ -301,7 +301,7 @@ export function formatScoreTrimmed(value: number | null | undefined): string {
   return formatScore(value, { trimInteger: true });
 }
 
-type ChartDateFormat = "short" | "month-year" | "compact" | "with-time" | "long" | "full";
+type ChartDateFormat = "short" | "short-year" | "month-year" | "compact" | "with-time" | "long" | "full";
 
 /** Centralized date formatter for chart axes and tooltips. */
 export function formatChartDate(
@@ -314,6 +314,8 @@ export function formatChartDate(
   switch (format) {
     case "short":
       return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    case "short-year":
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     case "month-year":
       return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
     case "compact": {

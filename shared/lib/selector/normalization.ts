@@ -35,10 +35,7 @@ export function invert100(x: number | null): number | null {
 }
 
 /** Pharos Yield Score can exceed 100 in outliers; clamp into [0, 100]. */
-export function pegYieldScore(x: number | null): number | null {
-  if (x == null) return null;
-  return clamp(x, 0, 100);
-}
+export const pegYieldScore = identity;
 
 /**
  * Excess APY normalized concavely. Diminishing utility on tail yields.

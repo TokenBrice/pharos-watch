@@ -368,24 +368,21 @@ describe("formatDuration", () => {
 });
 
 describe("timeAgo", () => {
+  const nowSec = 1_700_000_000;
   it("returns 'just now' for recent timestamps", () => {
-    const nowSec = Date.now() / 1000;
-    expect(timeAgo(nowSec)).toBe("just now");
-    expect(timeAgo(nowSec - 30)).toBe("just now");
+    expect(timeAgo(nowSec, nowSec)).toBe("just now");
+    expect(timeAgo(nowSec - 30, nowSec)).toBe("just now");
   });
   it("returns minutes ago", () => {
-    const nowSec = Date.now() / 1000;
-    expect(timeAgo(nowSec - 5 * 60)).toBe("5m ago");
-    expect(timeAgo(nowSec - 59 * 60)).toBe("59m ago");
+    expect(timeAgo(nowSec - 5 * 60, nowSec)).toBe("5m ago");
+    expect(timeAgo(nowSec - 59 * 60, nowSec)).toBe("59m ago");
   });
   it("returns hours ago", () => {
-    const nowSec = Date.now() / 1000;
-    expect(timeAgo(nowSec - 2 * 3600)).toBe("2h ago");
-    expect(timeAgo(nowSec - 23 * 3600)).toBe("23h ago");
+    expect(timeAgo(nowSec - 2 * 3600, nowSec)).toBe("2h ago");
+    expect(timeAgo(nowSec - 23 * 3600, nowSec)).toBe("23h ago");
   });
   it("returns days ago", () => {
-    const nowSec = Date.now() / 1000;
-    expect(timeAgo(nowSec - 3 * 86400)).toBe("3d ago");
+    expect(timeAgo(nowSec - 3 * 86400, nowSec)).toBe("3d ago");
   });
   it("returns N/A for NaN", () => {
     expect(timeAgo(NaN)).toBe("N/A");

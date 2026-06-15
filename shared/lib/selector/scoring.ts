@@ -145,7 +145,7 @@ function normalizeFor(
     case "yieldVariance":
       return yieldVariance(raw);
     case "sourceRiskInverted":
-      return raw == null ? 50 : sourceRiskInverted(raw);
+      return sourceRiskInverted(raw);
     case "liquidityDiversification":
       return hhiToDiversity(raw);
   }

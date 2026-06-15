@@ -323,7 +323,7 @@ function buildRecommendationPhase(
       rank,
       input.profile,
       input,
-      () => [],
+      [],
       rankRobustnessFor(ranked, i),
     );
     if (rec == null) {
@@ -351,7 +351,7 @@ function buildRecommendationPhase(
         rank,
         input.profile,
         input,
-        () => ["coverage-thin"],
+        ["coverage-thin"],
         rankRobustnessFor(relaxed, i),
       );
       if (rec == null) continue;
@@ -376,7 +376,7 @@ function appendSelectorDebug(
       rank,
       input.profile,
       input,
-      () => [],
+      [],
       rankRobustnessFor(ranked, index),
     );
     if (rec != null) allSurvivors.push(rec);

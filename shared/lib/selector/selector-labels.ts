@@ -97,26 +97,6 @@ const SELECTOR_COMPONENT_READING_LABELS: Readonly<Record<WeightKey, string>> = {
   liquidityDiversification: "liquidity diversification",
 };
 
-const SELECTOR_COMPONENT_LOWEST_SUB_DIMENSION_LABELS: Readonly<Record<WeightKey, string>> = {
-  safetyOverall: "Safety",
-  resilience: "resilience",
-  dependencyRisk: "dependency risk",
-  pegStabilityHistory: "peg history",
-  pegStabilityLive: "live peg stability",
-  pegScoreNow: "current peg score",
-  decentralization: "decentralization",
-  dewsInverted: "DEWS stress",
-  bluechip: "blue-chip alignment",
-  supplyLog: "market depth",
-  pharosYieldScore: "Pharos Yield Score",
-  excessApy: "net yield",
-  yieldVariance: "yield variance",
-  sourceRiskInverted: "source risk",
-  effectiveExit: "effective exit",
-  liquidity: "liquidity",
-  liquidityDiversification: "liquidity diversification",
-};
-
 function lookupSelectorLabel<T extends string>(
   labels: Readonly<Record<T, string>>,
   key: string,
@@ -148,5 +128,7 @@ export function selectorComponentReadingLabel(key: string): string | undefined {
 }
 
 export function selectorComponentLowestSubDimensionLabel(key: string): string | undefined {
-  return lookupSelectorLabel(SELECTOR_COMPONENT_LOWEST_SUB_DIMENSION_LABELS, key);
+  // Identical to the reading labels except safetyOverall ("Safety" vs "Safety Score").
+  if (key === "safetyOverall") return "Safety";
+  return lookupSelectorLabel(SELECTOR_COMPONENT_READING_LABELS, key);
 }

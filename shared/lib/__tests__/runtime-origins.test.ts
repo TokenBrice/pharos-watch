@@ -12,7 +12,6 @@ import {
   SITE_ORIGIN,
   isCanonicalSiteHostname,
   isPagesAppHostname,
-  isSiteDataUiHostname,
   resolveOrigin,
 } from "../runtime-origins";
 
@@ -47,10 +46,5 @@ describe("runtime origins", () => {
   it("keeps the site-data host gate narrower than the broader canonical-site helper", () => {
     expect(isPagesAppHostname("stablecoin-dashboard.pages.dev")).toBe(true);
     expect(isPagesAppHostname("branch.stablecoin-dashboard.pages.dev")).toBe(true);
-    expect(isSiteDataUiHostname("pharos.watch")).toBe(true);
-    expect(isSiteDataUiHostname("ops.pharos.watch")).toBe(true);
-    expect(isSiteDataUiHostname("branch.stablecoin-dashboard.pages.dev")).toBe(true);
-    expect(isSiteDataUiHostname("preview.pharos.watch")).toBe(false);
-    expect(isSiteDataUiHostname("example.com")).toBe(false);
   });
 });

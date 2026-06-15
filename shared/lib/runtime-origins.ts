@@ -60,18 +60,10 @@ export function resolvePublicApiBase(
 export function isCanonicalSiteHostname(hostname: string): boolean {
   return hostname === SITE_HOSTNAME ||
     hostname.endsWith(`.${SITE_HOSTNAME}`) ||
-    hostname === PAGES_APP_HOSTNAME ||
-    hostname.endsWith(`.${PAGES_APP_HOSTNAME}`);
+    isPagesAppHostname(hostname);
 }
 
 /** True for the Cloudflare Pages app hostname or any of its preview subdomains. */
 export function isPagesAppHostname(hostname: string): boolean {
   return hostname === PAGES_APP_HOSTNAME || hostname.endsWith(`.${PAGES_APP_HOSTNAME}`);
-}
-
-/** True when the hostname is an authorized UI consumer of site-data endpoints (canonical site, ops UI, or Pages preview). */
-export function isSiteDataUiHostname(hostname: string): boolean {
-  return hostname === SITE_HOSTNAME ||
-    hostname === OPS_UI_HOSTNAME ||
-    isPagesAppHostname(hostname);
 }

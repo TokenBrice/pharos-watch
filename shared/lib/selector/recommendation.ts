@@ -162,7 +162,7 @@ export function buildRecommendation(
   rank: 1 | 2 | 3,
   profile: SelectorProfile,
   input: SelectorInput,
-  contextKeysFor: (row: MergedRow) => ContextKey[],
+  extraContextKeys: readonly ContextKey[] = [],
   rankRobustness?: SelectorRankRobustness,
 ): SelectorRecommendation | null {
   const lowest = selectLowestSubDimension(entry.row, profile, entry.components);
@@ -170,7 +170,7 @@ export function buildRecommendation(
     return null;
   }
   const safetyGrade: ReportCardGrade = entry.row.safetyGrade ?? "NR";
-  const contextKeys = Array.from(new Set([...lowest.contextKeys, ...contextKeysFor(entry.row)]));
+  const contextKeys = Array.from(new Set([...lowest.contextKeys, ...extraContextKeys]));
   const lowestWithContext = {
     ...lowest,
     contextKeys,

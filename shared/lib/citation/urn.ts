@@ -36,18 +36,19 @@ const ID_ALPHABET = /^[a-z0-9-]+$/;
 const QUALIFIER_ALPHABET = /^[a-z0-9.\-]+$/;
 const ALPHANUMERIC = /^[a-z0-9]$/;
 
-function isValidId(value: string): boolean {
+function isValidSegment(value: string, alphabet: RegExp): boolean {
   if (value.length === 0) return false;
   if (!ALPHANUMERIC.test(value[0])) return false;
   if (!ALPHANUMERIC.test(value[value.length - 1])) return false;
-  return ID_ALPHABET.test(value);
+  return alphabet.test(value);
+}
+
+function isValidId(value: string): boolean {
+  return isValidSegment(value, ID_ALPHABET);
 }
 
 function isValidQualifier(value: string): boolean {
-  if (value.length === 0) return false;
-  if (!ALPHANUMERIC.test(value[0])) return false;
-  if (!ALPHANUMERIC.test(value[value.length - 1])) return false;
-  return QUALIFIER_ALPHABET.test(value);
+  return isValidSegment(value, QUALIFIER_ALPHABET);
 }
 
 function isEntityClass(value: string): value is PharosUrnEntityClass {
