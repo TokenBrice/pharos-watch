@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**137/733 done (19%)**  `████░░░░░░░░░░░░░░░░`
+**142/733 done (19%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 561 | 14 | 0 | 137 | 21 |
+| Count | 561 | 9 | 0 | 142 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 55 | 1 | 0 | 199 |
-| quality | 315 | 69 | 12 | 0 | 226 |
+| quality | 315 | 74 | 7 | 0 | 226 |
 | sustainability | 152 | 13 | 1 | 0 | 136 |
 
 ## redundancy (266)
@@ -329,7 +329,7 @@
 | ✅ | [Q-023](quality/Q-023.md) | S | testing | depeg-incident-utils.ts has no tests despite being the sole parser for pending-depeg UI da | codex | `src/lib/depeg-incident-utils.ts:L57-L80` |
 | ✅ | [Q-024](quality/Q-024.md) | S | type-safety | buildResultSummaryCoordinationProps erases all prop types via Record<string, unknown> | codex | `src/app/screener/picker/handoff.ts:L128` |
 | ✅ | [Q-026](quality/Q-026.md) | S | error-handling | project-tape.ts silently returns ok status when tape projectors throw | codex | `worker/src/cron/project-tape.ts:106-125` |
-| 🔄 | [Q-028](quality/Q-028.md) | S | type-safety | Mini-app error retry passes potentially-null initData directly to loadSession | opus-04 | `src/app/pharoswatchbot/app/client.tsx:L344` |
+| ✅ | [Q-028](quality/Q-028.md) | S | type-safety | Mini-app error retry passes potentially-null initData directly to loadSession | opus-04 | `src/app/pharoswatchbot/app/client.tsx:L344` |
 | ⬜ | [Q-031](quality/Q-031.md) | M | type-safety | DigestSnapshotInputDataSchema casts z.object({}).passthrough() to DigestInputData — snapsh |  | `shared/types/digest.ts:L428-L432` |
 | ⬜ | [Q-036](quality/Q-036.md) | M | error-handling | fetchCurrentBalanceForAddress (current-balance-cache) never uses drpcApiKey despite it bei |  | `worker/src/cron/blacklist/current-balance-cache.` |
 | ✅ | [Q-039](quality/Q-039.md) | S | error-handling | admin-action-audit.ts truncates serialized JSON at a byte boundary, producing invalid JSON | codex | `worker/src/lib/admin-action-audit.ts:L22-L23` |
@@ -339,12 +339,12 @@
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ✅ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
 | 🔄 | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response | codex | `src/app/screener/picker/use-selector.ts:L54` |
-| 🔄 | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox | opus-05 | `src/components/coin-selector.tsx:L205-L207` |
+| ✅ | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox | opus-05 | `src/components/coin-selector.tsx:L205-L207` |
 | 🔄 | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard | opus-06 | `worker/src/handlers/scheduled/five-minute-telegr` |
 | 🔄 | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri | opus-07 | `worker/src/api/telegram-store/forget.ts:L9-L31` |
-| 🔄 | [Q-058](quality/Q-058.md) | S | error-handling | inferErrorClass misclassifies errors whose message contains the substring 'http' | opus-08 | `worker/src/cron/blacklist/amount-recovery.ts:L87` |
+| ✅ | [Q-058](quality/Q-058.md) | S | error-handling | inferErrorClass misclassifies errors whose message contains the substring 'http' | opus-08 | `worker/src/cron/blacklist/amount-recovery.ts:L87` |
 | 🔄 | [Q-059](quality/Q-059.md) | S | error-handling | recordDirectApiOutcome records the circuit outcome twice on telemetry read failure | opus-09 | `worker/src/cron/dex-liquidity/orchestrator-phase` |
-| 🔄 | [Q-061](quality/Q-061.md) | S | error-handling | Single try/catch across all three CEX venue fetches silently skips venues after the first  | opus-10 | `worker/src/lib/cex-orderbooks.ts:L218-L228` |
+| ✅ | [Q-061](quality/Q-061.md) | S | error-handling | Single try/catch across all three CEX venue fetches silently skips venues after the first  | opus-10 | `worker/src/lib/cex-orderbooks.ts:L218-L228` |
 | ⬜ | [Q-062](quality/Q-062.md) | M | testing | api-pagination cursor-helper internals have no unit tests; multi-column disjunction untest |  | `worker/src/lib/api-pagination.ts:L1-L320 (49.6% ` |
 | ⬜ | [Q-063](quality/Q-063.md) | M | testing | reserve-presentation.ts (265 lines) has no tests; incorrect notice tone for stale/failed r |  | `src/components/stablecoin-detail/reserve-present` |
 | ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
@@ -627,7 +627,7 @@
 | ⬜ | [Q-310](quality/Q-310.md) | S | type-safety | Provider metadata copies arbitrary upstream fields (any) into quote.metadata without valid |  | `worker/src/lib/address-price-providers/moralis.t` |
 | ⬜ | [Q-311](quality/Q-311.md) | M | complexity | Front-end view-model modules approach god-module size, mixing config tables, parsing, face |  | `src/lib/yield-view-model.ts:1-1247 (33 exports; ` |
 | ⬜ | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio |  | `functions/stablecoin/[[path]].ts:1-21` |
-| 🔄 | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er | codex | `functions/_site-data/[[path]].ts:159-166` |
+| ✅ | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er | codex | `functions/_site-data/[[path]].ts:159-166` |
 | ⬜ | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna |  | `functions/lib/site-data-origin.ts:6-22; shared/l` |
 | 🚫 | [Q-315](quality/Q-315.md) | S | security | Telegram callback queries are not re-authorized in private chats beyond the chat binding |  | `worker/src/api/telegram-webhook-callbacks.ts:49-` |
 
