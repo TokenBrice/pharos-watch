@@ -70,7 +70,6 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     doc: "docs/report-cards.md",
     timelineDoc: "docs/report-cards-timeline.md",
     versionFile: "shared/lib/methodology-versions/safety-score.ts",
-    extraProvenanceFiles: ["shared/lib/methodology-versions/safety-score-data.ts"],
     expectedLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
   },
   {

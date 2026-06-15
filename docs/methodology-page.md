@@ -32,7 +32,7 @@
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/pricing-pipeline-version.ts`                              |
 | Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts`                                                                                                                                                         |
-| Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/safety-score-data.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                   |
+| Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/safety-score.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                   |
 | Mint Authority Score  | `shared/lib/mint-authority-scoring.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/mint-authority-version.ts`, `shared/data/stablecoins/coins/*.json`                                                                          |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/liquidity-score-version.ts` |
 | Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
@@ -91,7 +91,7 @@ If the pricing pipeline's source roster or live-price selection semantics change
 
 For the safety-score changelog specifically, update both:
 
-1. `shared/lib/methodology-versions/safety-score-data.ts` for the machine-readable safety-score changelog and current version exported through `shared/lib/safety-score-version.ts`.
+1. `shared/lib/methodology-versions/safety-score.ts` for the machine-readable safety-score changelog and current version exported through `shared/lib/safety-score-version.ts`.
 2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v8.tsx`, `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form version cards and reference tables (with `content-v6.tsx` composing from `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`).
 
 ---

@@ -320,7 +320,7 @@ New types: `ChainRisk`, `CollateralQuality`, `CustodyModel`. Defaults inferred f
 
 **Commit:** `69ea4c9`
 
-Unversioned note for the steeper chain-risk penalties already applied inside the v3.0 era (stage1-l2 −15, established-alt-l1 −50, unproven −65). This was not a machine-readable methodology version in `shared/lib/methodology-versions/safety-score-data.ts`.
+Unversioned note for the steeper chain-risk penalties already applied inside the v3.0 era (stage1-l2 −15, established-alt-l1 −50, unproven −65). This was not a machine-readable methodology version in `shared/lib/methodology-versions/safety-score.ts`.
 
 ### v3.2 — Dependency type ceilings (Feb 27)
 

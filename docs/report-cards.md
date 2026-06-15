@@ -7,7 +7,7 @@ The stablecoin registry currently contains 406 tracked metadata entries. Report-
 ## Methodology Versioning
 
 - **Current methodology version:** `v8.12`
-- **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
+- **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
