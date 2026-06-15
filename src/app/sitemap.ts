@@ -40,10 +40,6 @@ interface DepegEventSitemapEntry {
   peakDeviationBps: number;
 }
 
-type SitemapDigestEntry = Pick<DigestContentEntry, "date" | "generatedAt" | "digestType">;
-
-export const DIGEST_DAILY_SITEMAP_LIMIT = 14;
-
 export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = [
   "/methodology/scoring-changelog/",
   "/methodology/depeg-changelog/",
@@ -112,23 +108,6 @@ function comparisonLastModified(page: (typeof STATIC_COMPARISON_PAGES)[number]):
       lastEdited(buildStablecoinUrl(page.right.id)).getTime(),
     ),
   );
-}
-
-function sortNewestDigestFirst<T extends SitemapDigestEntry>(entries: readonly T[]): T[] {
-  return [...entries].sort((left, right) => {
-    if (right.generatedAt !== left.generatedAt) return right.generatedAt - left.generatedAt;
-    return right.date.localeCompare(left.date);
-  });
-}
-
-export function selectSitemapDigestEntries<T extends SitemapDigestEntry>(entries: readonly T[]): readonly T[] {
-  const weekly = entries.filter((entry) => entry.digestType === "weekly");
-  const daily = sortNewestDigestFirst(entries.filter((entry) => entry.digestType !== "weekly")).slice(
-    0,
-    DIGEST_DAILY_SITEMAP_LIMIT,
-  );
-
-  return sortNewestDigestFirst([...weekly, ...daily]);
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -399,7 +378,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  const digestPages: MetadataRoute.Sitemap = selectSitemapDigestEntries(DIGEST_ENTRIES).map((d) => ({
+  const digestPages: MetadataRoute.Sitemap = DIGEST_ENTRIES.map((d) => ({
     url: `${SITE_URL}/digest/${d.date}/`,
     lastModified: new Date(d.generatedAt * 1000),
     changeFrequency: "never" as const,

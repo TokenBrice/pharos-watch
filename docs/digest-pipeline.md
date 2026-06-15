@@ -167,7 +167,7 @@ After the digest is stored in D1, it is posted to the configured Telegram channe
 
 ### Web archive and sitemap policy
 
-`/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Individual digest detail pages stay indexable, but `src/app/sitemap.ts` only promotes weekly recaps plus the newest bounded daily slice selected by `selectSitemapDigestEntries(...)` (`DIGEST_DAILY_SITEMAP_LIMIT`). Older daily briefs remain reachable from the archive for readers and citations without asking crawlers to treat every generated daily recap as a first-class sitemap URL.
+`/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Individual digest detail pages stay indexable and sitemap-listed because they are durable archive/citation pages with unique editorial text and point-in-time snapshots. Crawl and URL Inspection quota should be managed through post-deploy GSC prioritization, not by dropping older daily digests from `src/app/sitemap.ts`.
 
 ### Twitter
 

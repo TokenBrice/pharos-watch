@@ -7,11 +7,8 @@ import docsMetadata from "@/generated/docs-metadata.json";
 import { changelogs } from "@/data/changelogs";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { buildStablecoinUrl } from "@/lib/urls";
-import sitemap, {
-  DIGEST_DAILY_SITEMAP_LIMIT,
-  METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
-  selectSitemapDigestEntries,
-} from "../sitemap";
+import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
+import digests from "../../../data/digests.json";
 
 describe("sitemap", () => {
   it("includes every frozen detail page (TRACKED source preserves indexability)", () => {
@@ -80,22 +77,17 @@ describe("sitemap", () => {
     expect(Number.isNaN((entry?.lastModified as Date).getTime())).toBe(false);
   });
 
-  it("promotes weekly digests plus a bounded newest-daily digest slice", () => {
-    const weekly = { date: "2026-01-01-weekly", generatedAt: 1_767_264_000, digestType: "weekly" as const };
-    const daily = Array.from({ length: DIGEST_DAILY_SITEMAP_LIMIT + 2 }, (_, index) => ({
-      date: `2026-01-${String(index + 1).padStart(2, "0")}`,
-      generatedAt: 1_767_264_001 + index,
-      digestType: "daily" as const,
-    }));
+  it("lists every digest detail page as durable archive content", () => {
+    const entries = sitemap();
+    const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
 
-    const selected = selectSitemapDigestEntries([weekly, ...daily]);
+    for (const digest of digests) {
+      const entry = entriesByUrl.get(`${SITE_ORIGIN}/digest/${digest.date}/`);
 
-    expect(selected).toHaveLength(DIGEST_DAILY_SITEMAP_LIMIT + 1);
-    expect(selected.map((entry) => entry.date)).toContain(weekly.date);
-    expect(selected.map((entry) => entry.date)).toContain("2026-01-16");
-    expect(selected.map((entry) => entry.date)).toContain("2026-01-03");
-    expect(selected.map((entry) => entry.date)).not.toContain("2026-01-02");
-    expect(selected.map((entry) => entry.date)).not.toContain("2026-01-01");
+      expect(entry).toBeDefined();
+      expect(entry?.lastModified).toEqual(new Date(digest.generatedAt * 1000));
+      expect(entry?.changeFrequency).toBe("never");
+    }
   });
 
   it("uses an explicit sitemap allowlist for methodology changelog pages", () => {
