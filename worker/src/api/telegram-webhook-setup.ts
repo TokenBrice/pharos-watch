@@ -31,6 +31,7 @@ import {
   type SetupWizardTarget,
 } from "./telegram-webhook-shared";
 import {
+  clearPendingDisambiguation,
   loadSubscriptionsByIds,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguationRow,
@@ -198,13 +199,6 @@ async function persistSetupState(
   });
 }
 
-async function clearSetupState(db: D1Database, chatId: string): Promise<void> {
-  await db
-    .prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?")
-    .bind(chatId)
-    .run();
-}
-
 export function parseSetupState(
   actionPayload: string | null | undefined,
   initiatorUserId: string | null,
@@ -332,7 +326,7 @@ export async function handleSetupBranch(
     return { text: "Pick alert types." };
   }
   if (arg === "skip") {
-    await clearSetupState(context.db, context.chatId);
+    await clearPendingDisambiguation(context.db, context.chatId);
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_choice",
       sourceCategory: "wizard",
@@ -553,7 +547,7 @@ export async function handleSetupConfirm(
 
   if (state.target.kind === "all") {
     await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes);
-    await clearSetupState(context.db, context.chatId);
+    await clearPendingDisambiguation(context.db, context.chatId);
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
@@ -644,7 +638,7 @@ export async function handleSetupCancel(
   if (state && state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
     return { text: "Only the user who started this setup can cancel." };
   }
-  await clearSetupState(context.db, context.chatId);
+  await clearPendingDisambiguation(context.db, context.chatId);
   await sendSetupReply(context, "Setup cancelled. Send /start to begin again.");
   return { text: "Cancelled." };
 }
