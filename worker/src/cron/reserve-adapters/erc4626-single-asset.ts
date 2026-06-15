@@ -20,9 +20,7 @@ import {
   computeErc4626CollateralizationRatio,
   makeContractRawCaller,
 } from "./erc4626";
-import { parseBoundedDecimals } from "./slice-math";
-
-const RATIO_SCALE = 1_000_000_000_000n;
+import { parseBoundedDecimals, ratioFromRaw } from "./slice-math";
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -58,13 +56,6 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
 
 function decodeErc20Decimals(raw: bigint | null): number | null {
   return raw == null ? null : parseBoundedDecimals(raw);
-}
-
-function ratioFromRaw(numerator: bigint, denominator: bigint): number | undefined {
-  if (denominator <= 0n) return undefined;
-  if (numerator >= denominator) return 1;
-  const ratio = Number((numerator * RATIO_SCALE) / denominator) / Number(RATIO_SCALE);
-  return Number.isFinite(ratio) ? ratio : undefined;
 }
 
 function buildRedemptionCapacityTelemetry(

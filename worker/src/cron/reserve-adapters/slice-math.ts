@@ -12,6 +12,7 @@ const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
 };
 
 const MAX_DECIMALS = 36;
+export const RATIO_SCALE = 1_000_000_000_000n;
 
 export function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSlice["risk"] {
   return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;
@@ -38,6 +39,13 @@ export function validateDecimals(value: unknown, context = "token decimals"): nu
     throw new Error(`${context} invalid: ${String(value)} (expected safe integer 0-${MAX_DECIMALS})`);
   }
   return decimals;
+}
+
+export function ratioFromRaw(numerator: bigint, denominator: bigint): number | undefined {
+  if (denominator <= 0n) return undefined;
+  if (numerator >= denominator) return 1;
+  const ratio = Number((numerator * RATIO_SCALE) / denominator) / Number(RATIO_SCALE);
+  return Number.isFinite(ratio) ? ratio : undefined;
 }
 
 /**

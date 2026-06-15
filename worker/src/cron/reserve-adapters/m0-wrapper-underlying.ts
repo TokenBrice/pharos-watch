@@ -20,6 +20,7 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
+import { ratioFromRaw } from "./slice-math";
 import type { AdapterContext, AdapterResult } from "./types";
 
 const ADAPTER_KEY = "m0-wrapper-underlying";
@@ -28,7 +29,6 @@ const DEFAULT_SWAP_FACILITY_SELECTOR = "0xae06b7e4"; // swapFacility()
 const DEFAULT_PAUSED_SELECTOR = "0x5c975abb"; // paused()
 const DEFAULT_CAN_SWAP_VIA_PATH_SELECTOR = "0xd8e21132"; // canSwapViaPath(address,address,address)
 
-const RATIO_SCALE = 1_000_000_000_000n;
 type M0WrapperUnderlyingParams = LiveReserveAdapterParamsByKey[typeof ADAPTER_KEY];
 
 interface SliceConfig {
@@ -53,13 +53,6 @@ function encodeCanSwapViaPathCall(
   toToken: string,
 ): `0x${string}` {
   return `${selector}${encodeAddress(swapper)}${encodeAddress(fromToken)}${encodeAddress(toToken)}` as `0x${string}`;
-}
-
-function ratioFromRaw(numerator: bigint, denominator: bigint): number | undefined {
-  if (denominator <= 0n) return undefined;
-  if (numerator >= denominator) return 1;
-  const ratio = Number((numerator * RATIO_SCALE) / denominator) / Number(RATIO_SCALE);
-  return Number.isFinite(ratio) ? ratio : undefined;
 }
 
 function ratioFromTokenAmounts(
