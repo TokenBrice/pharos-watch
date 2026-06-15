@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**104/733 done (14%)**  `███░░░░░░░░░░░░░░░░░`
+**105/733 done (14%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 609 | 1 | 0 | 104 | 19 |
+| Count | 606 | 3 | 0 | 105 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 46 | 0 | 0 | 210 |
-| quality | 315 | 49 | 1 | 0 | 258 |
+| redundancy | 266 | 46 | 1 | 0 | 209 |
+| quality | 315 | 50 | 2 | 0 | 256 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -195,7 +195,7 @@
 | ✅ | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null | codex | `src/lib/sidebar-signals.ts:L55-L57` |
 | ⬜ | [R-162](redundancy/R-162.md) | S | clone | MONTH_INDEX and MONTH_LABEL arrays duplicated between attestation-pdf-index and usdh-nativ |  | `worker/src/cron/reserve-adapters/attestation-pdf` |
 | ⬜ | [R-163](redundancy/R-163.md) | S | dead-code | Report-card cache envelope path (generation-mismatch / invalid-envelope) is unreachable at |  | `worker/src/lib/report-card-cache.ts:L102-L130, L` |
-| ⬜ | [R-164](redundancy/R-164.md) | S | wrapper | toRedemptionBackstopVersionLabel re-export aliases a base utility only for one methodology |  | `shared/lib/methodology-versions/redemption-backs` |
+| 🔄 | [R-164](redundancy/R-164.md) | S | wrapper | toRedemptionBackstopVersionLabel re-export aliases a base utility only for one methodology | codex | `shared/lib/methodology-versions/redemption-backs` |
 | ⬜ | [R-165](redundancy/R-165.md) | M | clone | Desktop/mobile diagram JSX trees duplicated verbatim in two methodology sections |  | `src/app/methodology/sections/core-sections-prici` |
 | ⬜ | [R-166](redundancy/R-166.md) | S | wrapper | createAboutEditorialSection is a single-consumer factory wrapper |  | `src/app/about/editorial-helpers.tsx:L9-L31, src/` |
 | ⬜ | [R-167](redundancy/R-167.md) | S | clone | Venue resolution logic duplicated across `venueFromInput` and `compareVenueParam` |  | `src/app/screener/picker/handoff.ts:L77-L111` |
@@ -332,7 +332,7 @@
 | ⬜ | [Q-028](quality/Q-028.md) | S | type-safety | Mini-app error retry passes potentially-null initData directly to loadSession |  | `src/app/pharoswatchbot/app/client.tsx:L344` |
 | ⬜ | [Q-031](quality/Q-031.md) | M | type-safety | DigestSnapshotInputDataSchema casts z.object({}).passthrough() to DigestInputData — snapsh |  | `shared/types/digest.ts:L428-L432` |
 | ⬜ | [Q-036](quality/Q-036.md) | M | error-handling | fetchCurrentBalanceForAddress (current-balance-cache) never uses drpcApiKey despite it bei |  | `worker/src/cron/blacklist/current-balance-cache.` |
-| ⬜ | [Q-039](quality/Q-039.md) | S | error-handling | admin-action-audit.ts truncates serialized JSON at a byte boundary, producing invalid JSON |  | `worker/src/lib/admin-action-audit.ts:L22-L23` |
+| 🔄 | [Q-039](quality/Q-039.md) | S | error-handling | admin-action-audit.ts truncates serialized JSON at a byte boundary, producing invalid JSON | codex | `worker/src/lib/admin-action-audit.ts:L22-L23` |
 | ✅ | [Q-040](quality/Q-040.md) | S | error-handling | mapWithConcurrency early-abort skips when task rejects with a falsy value | codex | `worker/src/lib/concurrency.ts:37-43` |
 | ⬜ | [Q-041](quality/Q-041.md) | M | clone | Alert-safety explain snapshot re-derives stage scores from rounded baseScore, diverging fr |  | `worker/src/lib/alert-safety-source-cache.ts:L470` |
 | ⬜ | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh |  | `worker/src/lib/__tests__/safety-score-golden.tes` |
@@ -443,7 +443,7 @@
 | ⬜ | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic |  | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
 | ⬜ | [Q-029](quality/Q-029.md) | M | complexity | IIFE inside JSX render obscures dominance-breakdown logic in chains/client.tsx |  | `src/app/chains/client.tsx:L292-L385` |
 | ⬜ | [Q-030](quality/Q-030.md) | S | type-safety | psiBand is cast to ConditionBand without membership guard in digest-archive-client |  | `src/components/digest-archive-client.tsx:296, 31` |
-| 🔄 | [Q-032](quality/Q-032.md) | S | error-handling | chart-export.ts silently swallows errors; caller has no way to surface failure to the user | codex | `src/lib/chart-export.ts:15-17` |
+| ✅ | [Q-032](quality/Q-032.md) | S | error-handling | chart-export.ts silently swallows errors; caller has no way to surface failure to the user | codex | `src/lib/chart-export.ts:15-17` |
 | ⬜ | [Q-033](quality/Q-033.md) | S | type-safety | normalizeDependencyMeta in homepage-bootstrap-runtime.ts uses as never cast to work around |  | `src/lib/homepage-bootstrap-runtime.ts:51-75` |
 | ✅ | [Q-034](quality/Q-034.md) | S | type-safety | useHomeAltFilters passes the clear-sentinel "all" through setParams, causing a no-op URL w | codex | `src/hooks/use-home-alt-filters.ts:L36-L38` |
 | ⬜ | [Q-035](quality/Q-035.md) | S | complexity | setup.ts callback issues a raw D1 query for telegram_pending_disambiguation instead of usi |  | `worker/src/api/webhook-callbacks/setup.ts:L51-L6` |
@@ -456,7 +456,7 @@
 | ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
 | ⬜ | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps |  | `src/components/feedback-modal.tsx:L78-L120` |
 | ✅ | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
-| ⬜ | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif |  | `scripts/maintenance/audit-redemption-v4-score-di` |
+| 🔄 | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif | codex | `scripts/maintenance/audit-redemption-v4-score-di` |
 | ⬜ | [Q-055](quality/Q-055.md) | S | complexity | getCoinsByLifecycleStatus rebuilds a full Map on every call; called in a hot build-time lo |  | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [Q-060](quality/Q-060.md) | S | complexity | price-consensus medianPrice uses floor-index, systematically biasing high for even-sized c |  | `worker/src/lib/price-consensus.ts:L248-L251` |
 | ⬜ | [Q-069](quality/Q-069.md) | M | complexity | `validateRedemptionBackstopRegistry` is a 1117-line god function with nested function decl |  | `scripts/lib/redemption-backstop-validation.ts:L1` |
