@@ -252,6 +252,13 @@ export async function fetchDsFallbackPools(
         const { side, priceUsd } = getDsTrackedTokenPriceUsd(pair, contract.address);
         if (!side) continue;
 
+        const pairIdentity = buildPoolIdentity({
+          chain: contract.chain,
+          protocol: pair.dexId,
+          poolAddressOrId: pair.pairAddress,
+          tokenAddresses: [baseAddr, quoteAddr],
+        });
+
         // Extract price observation BEFORE dedup check.
         // DL yields pools provide pool metrics but never prices; DexScreener pairs
         // carry priceUsd. These observations still feed diagnostics and later
@@ -262,21 +269,15 @@ export async function fetchDsFallbackPools(
           isPlausibleDexObservationPrice(meta.id, priceUsd, references) &&
           tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
         ) {
-          const identity = buildPoolIdentity({
-            chain: contract.chain,
-            protocol: pair.dexId,
-            poolAddressOrId: pair.pairAddress,
-            tokenAddresses: [baseAddr, quoteAddr],
-          });
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({
             price: priceUsd,
             tvl,
             chain: contract.chain,
             protocol: pair.dexId,
-            poolKey: identity.exactPoolKey ?? undefined,
-            derivedMatchKey: identity.derivedMatchKey ?? undefined,
-            identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_ambiguous" : "none",
+            poolKey: pairIdentity.exactPoolKey ?? undefined,
+            derivedMatchKey: pairIdentity.derivedMatchKey ?? undefined,
+            identityConfidence: pairIdentity.exactPoolKey ? "exact" : pairIdentity.derivedMatchKey ? "derived_ambiguous" : "none",
             sourceFamily: "dexscreener",
           });
           priceObs.set(meta.id, obs);
@@ -303,12 +304,7 @@ export async function fetchDsFallbackPools(
 
         candidates.push({
           stablecoinId: meta.id,
-          identity: buildPoolIdentity({
-            chain: contract.chain,
-            protocol: pair.dexId,
-            poolAddressOrId: pair.pairAddress,
-            tokenAddresses: [baseAddr, quoteAddr],
-          }),
+          identity: pairIdentity,
           pool: {
           address: pair.pairAddress.toLowerCase(),
           chain: contract.chain,
