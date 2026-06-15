@@ -3,7 +3,7 @@
 import { useCallback, useMemo, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { HomepageSectionBand } from "@/components/homepage-sections";
-import { SectionSkeleton } from "@/components/homepage-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -18,7 +18,7 @@ import type {
 
 const StablecoinTable = dynamic(
   () => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable),
-  { loading: () => <SectionSkeleton className="h-[720px] w-full rounded-xl" /> },
+  { loading: () => <Skeleton className="h-[720px] w-full rounded-xl" /> },
 );
 
 const ALT_PEG_GROUPS = buildAltPegLinkHubGroups();
