@@ -93,6 +93,15 @@ export async function loadDewsRows(db: D1Database, nowSec: number): Promise<Dews
     latestRows = [];
   }
 
+  // stress_signals_latest is the current primary source and is upserted as a
+  // complete snapshot each DEWS run. When it is present and fresh it already
+  // covers every current coin, so skip the legacy stress_signals query (and its
+  // correlated MAX(computed_at) sub-query) entirely rather than always paying
+  // for a redundant round-trip on every 5-minute dispatch.
+  if (latestRows.length > 0 && !areDewsLatestRowsStale(latestRows, nowSec)) {
+    return latestRows;
+  }
+
   const legacyStmt = db.prepare(
     completedAt == null
       ?

@@ -69,4 +69,35 @@ describe("loadDewsRows", () => {
       entry.binds[0] === completedDewsAt
     )).toBe(true);
   });
+
+  it("skips the legacy stress_signals query when latest rows are fresh", async () => {
+    const latestRow = {
+      stablecoin_id: "usdc-circle",
+      score: 8,
+      band: "CALM",
+      signals_json: signalsJson,
+      computed_at: completedDewsAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [freshnessRow(completedDewsAt)],
+        first: freshnessRow(completedDewsAt),
+      },
+      {
+        match: "pharos:telegram-dispatch:dews-latest",
+        matchBinds: [completedDewsAt],
+        rows: [latestRow],
+      },
+    ]);
+
+    const rows = await loadDewsRows(db, nowSec);
+
+    expect(rows).toEqual([latestRow]);
+    const history = db.getHistory();
+    expect(history.some((entry) =>
+      entry.sql.includes("pharos:telegram-dispatch:dews-legacy")
+    )).toBe(false);
+  });
 });
