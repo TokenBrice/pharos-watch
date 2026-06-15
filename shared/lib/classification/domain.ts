@@ -17,6 +17,13 @@ export const GOVERNANCE_LABELS_SHORT: Record<GovernanceType, string> = {
   decentralized: "DeFi",
 };
 
+/** Lowercase prose phrases used inline in metadata descriptions and sentences. */
+export const GOVERNANCE_PROSE_LABELS: Record<GovernanceType, string> = {
+  centralized: "centralized",
+  "centralized-dependent": "CeFi-dependent",
+  decentralized: "decentralized",
+};
+
 // ---------------------------------------------------------------------------
 // Filter option tuples — used by heatmap and depeg filter UIs
 // ---------------------------------------------------------------------------
@@ -44,6 +51,13 @@ export const BACKING_LABELS_SHORT: Record<BackingType, string> = {
   "rwa-backed": "RWA",
   "crypto-backed": "Crypto",
   algorithmic: "Algo",
+};
+
+/** Prose phrases used inline in metadata descriptions. */
+export const BACKING_PROSE_LABELS: Record<BackingType, string> = {
+  "rwa-backed": "backed by real-world assets",
+  "crypto-backed": "collateralized by crypto assets",
+  algorithmic: "algorithmic stablecoin",
 };
 
 export function getBackingLabelShort(value: string): string {

@@ -3,13 +3,9 @@ import type {
   GeniusAuthorizationStatus,
   GeniusIssuerPathway,
 } from "../types/core";
+import type { BadgeStyle } from "./classification";
 
-interface GeniusBadgeStyle {
-  label: string;
-  cls: string;
-}
-
-export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES: Record<GeniusAuthorizationStatus, GeniusBadgeStyle> = {
+export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES: Record<GeniusAuthorizationStatus, BadgeStyle> = {
   "ppsi-approved": {
     label: "PPSI Approved",
     cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",

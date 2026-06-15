@@ -817,11 +817,6 @@ export function resolveL2BeatProjectId(chainId: string): keyof typeof L2BEAT_CHA
   return (L2BEAT_CHAIN_ALIASES as Partial<Record<string, keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT>>)[chainId] ?? null;
 }
 
-export function resolveL2BeatChainRisk(chainId: string): L2BeatChainRiskSnapshot | null {
-  const projectId = resolveL2BeatProjectId(chainId);
-  return projectId ? L2BEAT_CHAIN_RISK_SNAPSHOT[projectId] : null;
-}
-
 export function computeL2BeatRiskScore(snapshot: L2BeatChainRiskSnapshot): number {
   const total = L2BEAT_CHAIN_RISK_FIELDS.reduce((sum, field) => {
     return sum + L2BEAT_RISK_SENTIMENT_SCORES[snapshot.risks[field].sentiment];

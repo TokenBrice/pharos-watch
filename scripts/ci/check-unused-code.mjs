@@ -82,8 +82,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_SENTIMENT_SCORES",
   "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_WEIGHT",
   "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_WEIGHT",
-  "shared/lib/chains/l2beat-risk.ts::resolveL2BeatChainRisk",
-  "shared/lib/chains/l2beat-risk.ts::computeL2BeatRiskScore",
   // Backward-compatible type export for callers that imported the old lib path.
   "shared/lib/cause-of-death.ts::CauseOfDeath",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",

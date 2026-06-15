@@ -207,8 +207,7 @@ export function resolveChainId(raw: string): string | null {
   // Try case-insensitive name lookup (DL uses "BSC", "Ethereum", etc.)
   const byName = CHAIN_NAME_TO_ID.get(raw.toLowerCase());
   if (byName) {
-    const canonical = CHAIN_ALIASES[byName] ?? byName;
-    return CHAIN_META[canonical] ? canonical : null;
+    return byName;
   }
 
   return null;

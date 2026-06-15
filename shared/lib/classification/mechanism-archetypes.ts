@@ -49,10 +49,6 @@ export function getMechanismArchetypeLabel(value: MechanismArchetype): string {
   return MECHANISM_ARCHETYPE_LABELS[value];
 }
 
-export function getMechanismArchetypeShortLabel(value: MechanismArchetype): string {
-  return MECHANISM_ARCHETYPE_SHORT_LABELS[value];
-}
-
 export function getMechanismArchetypeCtaNoun(value: MechanismArchetype): string {
   return MECHANISM_ARCHETYPE_CTA_NOUNS[value];
 }

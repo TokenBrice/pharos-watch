@@ -1,4 +1,5 @@
 import type { MicaAuthorizationType, MicaStatus, MicaTokenType } from "../types/core";
+import type { BadgeStyle } from "./classification";
 
 /**
  * MiCA (Regulation (EU) 2023/1114) presentation metadata.
@@ -11,9 +12,7 @@ import type { MicaAuthorizationType, MicaStatus, MicaTokenType } from "../types/
  * coin taxonomy. Tailwind classes are static strings per the repo gotcha.
  */
 
-interface MicaBadgeStyle {
-  label: string;
-  cls: string;
+interface MicaBadgeStyle extends BadgeStyle {
   /** Text-only projection of the pill hue for flat surfaces (hero passport entries) that carry no pill background. */
   textCls?: string;
 }

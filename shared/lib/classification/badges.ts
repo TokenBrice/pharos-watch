@@ -11,24 +11,6 @@ import type {
 import type { BadgeStyle, PegChartColor, PegMetadata } from "./common";
 import { mapPegMetadata, PEG_METADATA } from "./pegs";
 
-// Badge color classes (for table/detail badges with bg + text + border)
-// ---------------------------------------------------------------------------
-
-/** Governance badge colors used in the main table. */
-export const GOVERNANCE_COLORS: Record<GovernanceType, string> = {
-  centralized: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-  "centralized-dependent": "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  decentralized: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-};
-
-/** Backing badge colors used in the main table. */
-export const BACKING_COLORS: Record<BackingType, string> = {
-  "rwa-backed": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  "crypto-backed": "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
-  algorithmic: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-};
-
-// ---------------------------------------------------------------------------
 // Combined label+class style maps (for detail page pill badges)
 // ---------------------------------------------------------------------------
 
@@ -62,6 +44,21 @@ export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = {
     cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
   },
 };
+
+// ---------------------------------------------------------------------------
+// Badge color classes (for table/detail badges with bg + text + border)
+// Derived from the `.cls` field of the BADGE_STYLES maps above.
+// ---------------------------------------------------------------------------
+
+/** Governance badge colors used in the main table. */
+export const GOVERNANCE_COLORS = Object.fromEntries(
+  Object.entries(GOVERNANCE_BADGE_STYLES).map(([key, value]) => [key, value.cls]),
+) as Record<GovernanceType, string>;
+
+/** Backing badge colors used in the main table. */
+export const BACKING_COLORS = Object.fromEntries(
+  Object.entries(BACKING_BADGE_STYLES).map(([key, value]) => [key, value.cls]),
+) as Record<BackingType, string>;
 
 /** Peg currency badge styles for the detail page. */
 export const PEG_BADGE_STYLES = mapPegMetadata((metadata) => metadata.badge);
