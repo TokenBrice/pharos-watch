@@ -13,10 +13,7 @@ import {
   STATUS_RESERVE_HIGH_DEFERRED_RATIO,
   STATUS_RESERVE_REPEATED_TRUNCATION_COUNT,
 } from "./evaluation-state";
-
-function formatRatio(value: number): string {
-  return `${(value * 100).toFixed(2)}%`;
-}
+import { formatRatio } from "./format";
 
 function formatPersistentStaleIndependentFeeds(
   coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],

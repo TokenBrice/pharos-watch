@@ -3,10 +3,7 @@ import {
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
-
-function formatRatio(value: number): string {
-  return `${(value * 100).toFixed(2)}%`;
-}
+import { formatRatio } from "./format";
 
 /**
  * Minimum `trackedCoins` value at which the `onchain_monitor_low_sample` info
