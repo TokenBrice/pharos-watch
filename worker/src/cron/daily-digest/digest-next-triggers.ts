@@ -238,13 +238,11 @@ function supply1dOutcome(trigger: DigestNextTrigger, data: DigestInputData, thre
 }
 
 function supply7dOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const mover = data.biggestSupplyChange?.symbol.toUpperCase() === trigger.symbol?.toUpperCase()
-    ? data.biggestSupplyChange
-    : null;
-  if (!mover) return { status: "missed" as const, detail: `${trigger.symbol} is no longer the largest weekly supply mover.` };
+  const velocity = (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === trigger.symbol?.toUpperCase());
+  if (!velocity) return { status: "missed" as const, detail: `${trigger.symbol} has no current weekly supply signal.` };
   return {
-    status: Math.abs(mover.changeUsd) >= threshold ? "hit" as const : "missed" as const,
-    detail: `${trigger.symbol} moved ${signedCurrency(mover.changeUsd)} over 7d versus ${trigger.thresholdLabel}.`,
+    status: Math.abs(velocity.change7d) >= threshold ? "hit" as const : "missed" as const,
+    detail: `${trigger.symbol} moved ${signedCurrency(velocity.change7d)} over 7d versus ${trigger.thresholdLabel}.`,
   };
 }
 

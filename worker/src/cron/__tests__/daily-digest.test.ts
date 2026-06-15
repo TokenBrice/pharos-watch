@@ -1383,6 +1383,41 @@ describe("digest intelligence enrichment", () => {
     expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({ status: "hit", triggerId: "trigger:depeg:usdt" });
     expect(intelligence.calmNarrativeFrame?.label).toBe("Supply rotation");
   });
+
+  it("evaluates a supply-7d trigger against the coin's own velocity even when a different coin is the biggest weekly mover", () => {
+    const previous: DigestInputData = {
+      ...current,
+      dataQuality: { generatedAt: 1_772_668_800, stablecoinsCacheUpdatedAt: null, stablecoinsCacheAgeSec: null, windows: current.dataQuality?.windows ?? {
+        blacklistActivity: { label: "x", start: 0, end: 0 },
+        mintBurnFlows: { label: "x", start: 0, end: 0 },
+        supplyVelocity: { label: "x", dates: [] },
+        psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
+      } },
+      nextTriggers: [{
+        id: "trigger:supply-7d:usdc",
+        label: "USDC weekly supply move",
+        metric: "supply-7d-usd",
+        comparator: "abs-gte",
+        thresholdValue: 30_000_000,
+        thresholdLabel: "$30M 7d move",
+        symbol: "USDC",
+        rationale: "The largest weekly mover stays useful only if the move keeps scaling.",
+        detail: "If USDC's 7d supply move clears $30M, the story has follow-through.",
+      }],
+    };
+    // Current day: USDT is now the biggest weekly mover, but USDC still moved $40M over 7d.
+    const today: DigestInputData = {
+      ...current,
+      biggestSupplyChange: { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 90_000_000, currentMcap: 100_000_000 },
+    };
+
+    const intelligence = buildDigestIntelligence(today, previous);
+
+    expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({
+      status: "hit",
+      triggerId: "trigger:supply-7d:usdc",
+    });
+  });
 });
 
 describe("totalMcapAth enrichment", () => {
