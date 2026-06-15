@@ -26,9 +26,12 @@ export function SectionBanner({
     ) {
       return;
     }
-    void navigator.clipboard.writeText(
-      `${window.location.origin}${window.location.pathname}#${id}`,
-    );
+    navigator.clipboard
+      .writeText(`${window.location.origin}${window.location.pathname}#${id}`)
+      .catch(() => {
+        // Clipboard write can reject (denied permission / insecure context);
+        // the anchor still navigates to #id, so the user can copy the URL bar.
+      });
   };
   return (
     <div
