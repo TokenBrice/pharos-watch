@@ -451,7 +451,6 @@ export async function snapshotPublicDataset(
           finalStablecoinsCacheUpdatedAt: stablecoinsCache.updatedAt,
         }
         : {}),
-      psiPresent: psiRow !== null,
       dewsCount: stressRows.length,
       liquidityCount: dexRows.length,
     }),
