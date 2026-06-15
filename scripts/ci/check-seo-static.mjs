@@ -1134,11 +1134,13 @@ export function collectSeoStaticCheckResult({
   } else {
     const sitemapXml = fs.readFileSync(sitemapPath, "utf8");
     const locs = parseSitemapLocs(sitemapXml);
-    if (!locs.has("https://pharos.watch/stability-index/")) {
-      errors.push("sitemap.xml missing https://pharos.watch/stability-index/");
+    const stabilityIndexUrl = `${PHAROS_ORIGIN}/stability-index/`;
+    const alternateStabilityIndexUrl = `${PHAROS_ORIGIN}/stability-index-alt/`;
+    if (!locs.has(stabilityIndexUrl)) {
+      errors.push(`sitemap.xml missing ${stabilityIndexUrl}`);
     }
-    if (locs.has("https://pharos.watch/stability-index-alt/")) {
-      errors.push("sitemap.xml should not include https://pharos.watch/stability-index-alt/");
+    if (locs.has(alternateStabilityIndexUrl)) {
+      errors.push(`sitemap.xml should not include ${alternateStabilityIndexUrl}`);
     }
 
     const pageUrlSet = new Set(
