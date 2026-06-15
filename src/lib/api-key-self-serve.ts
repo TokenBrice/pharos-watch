@@ -85,7 +85,7 @@ export async function verifyApiKeyRequestToken(token: string): Promise<ApiKeySel
     throw new Error(resolveErrorMessage(response.status, errorPayload));
   }
   if (!isApiKeySelfServeIssueResponse(payload)) {
-    throw new Error("Verification succeeded, but the API key was not returned. Please contact me@tokenbrice.com before leaving this page.");
+    throw new Error("Verification succeeded, but the API key was not returned. Please contact support via the link on the API page before leaving this page.");
   }
   return payload;
 }
