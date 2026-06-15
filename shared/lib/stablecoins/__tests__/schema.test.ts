@@ -734,6 +734,27 @@ describe("StablecoinMeta schema — reserves depType valid cases", () => {
   });
 });
 
+describe("StablecoinMeta schema — error formatting", () => {
+  it("appends a hidden-issue count when more than 8 issues are surfaced", () => {
+    // Ten fully-empty objects each fail multiple required-field checks, so the
+    // aggregate ZodError carries well over 8 issues.
+    const json = Array.from({ length: 10 }, () => ({}));
+    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/… \(\+\d+ more\)/);
+  });
+
+  it("does not append a suffix when 8 or fewer issues exist", () => {
+    // A single object missing only its required top-level fields stays at or
+    // below the 8-issue cap, so no truncation suffix should appear.
+    let message = "";
+    try {
+      parseStablecoinMetaAssets([{ id: "fixture-few-issues" }], "fixture");
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).not.toMatch(/more\)/);
+  });
+});
+
 describe("StablecoinMeta schema — real fixture smoke tests", () => {
   const fixtures = [
     "usdt-tether",

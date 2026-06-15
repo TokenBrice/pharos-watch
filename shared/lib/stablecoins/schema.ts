@@ -393,13 +393,15 @@ export const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = z
 export const DeadStablecoinAssetArraySchema: z.ZodType<DeadStablecoin[]> = z.array(DeadStablecoinAssetSchema);
 
 function formatSchemaIssues(error: z.ZodError): string {
-  return error.issues
+  const issues = error.issues;
+  const shown = issues
     .slice(0, 8)
     .map((issue) => {
       const path = issue.path.length > 0 ? issue.path.join(".") : "<root>";
       return `${path}: ${issue.message}`;
     })
     .join("; ");
+  return issues.length > 8 ? `${shown} … (+${issues.length - 8} more)` : shown;
 }
 
 function parseWithSchema<T>(schema: z.ZodType<T>, input: unknown, label: string): T {
