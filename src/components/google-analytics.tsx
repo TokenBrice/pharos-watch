@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { clearAllTrackingTimers } from "@/lib/analytics";
 
 declare global {
   interface Window {
@@ -69,6 +70,9 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
 
   useEffect(() => {
     if (typeof window === "undefined" || !pathname) return;
+    // Cancel any debounced search timer from the previous route so it cannot
+    // fire a search_performed event attributed to the page we just left.
+    clearAllTrackingTimers();
     const search = window.location.search ?? "";
     const pagePath = pathname + search;
     window.gtag?.("event", "page_view", {

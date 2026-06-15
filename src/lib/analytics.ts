@@ -64,3 +64,16 @@ export function trackSearch(page: string, queryLength: number): void {
     trackEvent("search_performed", { page, query_length: queryLength });
   }, 1000);
 }
+
+/**
+ * Cancel any pending debounced tracking timers. Call this on client-side
+ * navigation so a mid-debounce search timer does not fire after the user has
+ * left the page, which would emit a search_performed event attributed to the
+ * previous page captured in the closure.
+ */
+export function clearAllTrackingTimers(): void {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+  }
+}
