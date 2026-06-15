@@ -24,7 +24,7 @@ export function defineBackstopRegistry(
     }
 
     configs[entry.id] = cloneRedemptionBackstopConfig(entry.config);
-    if (hasExistingConfig && entry.overrideReason) {
+    if (entry.overrideReason) {
       overrideReasons.set(entry.id, entry.overrideReason);
     }
     if (entry.sourceFilePath) {

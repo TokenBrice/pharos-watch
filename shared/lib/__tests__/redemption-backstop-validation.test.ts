@@ -4,6 +4,7 @@ import {
   defineBatch,
   defineOverride,
   getBackstopRegistryOverrideReasons,
+  getBackstopRegistrySourceFilePaths,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
 import {
@@ -176,6 +177,42 @@ describe("validateRedemptionBackstopRegistry", () => {
     ).toThrow(
       'Duplicate redemption backstop config id "usdt-tether" appears in both issuer-a (issuer-a.ts) and issuer-b (issuer-b.ts).',
     );
+  });
+
+  it("attaches override and source-file metadata to the merged runtime registry", () => {
+    const issuerRegistry = defineBackstopRegistry([
+      ...defineBatch(["usdt-tether"], baseConfig, { sourceFilePath: "issuer-base.ts" }),
+      defineOverride(
+        "usdt-tether",
+        baseConfig,
+        { settlementModel: "days" },
+        "Reviewed issuer terms document slower settlement.",
+        { sourceFilePath: "issuer-override.ts" },
+      ),
+    ]);
+
+    const registry = buildRedemptionBackstopRegistry([
+      {
+        name: "issuer",
+        filePath: "issuer.ts",
+        configs: issuerRegistry,
+        allowedRouteFamilies: ["offchain-issuer"],
+      },
+      {
+        name: "plain",
+        filePath: "plain.ts",
+        configs: {
+          "usdc-circle": baseConfig,
+        },
+        allowedRouteFamilies: ["offchain-issuer"],
+      },
+    ]);
+
+    expect(getBackstopRegistryOverrideReasons(registry).get("usdt-tether")).toBe(
+      "Reviewed issuer terms document slower settlement.",
+    );
+    expect(getBackstopRegistrySourceFilePaths(registry).get("usdt-tether")).toBe("issuer-override.ts");
+    expect(getBackstopRegistrySourceFilePaths(registry).get("usdc-circle")).toBe("plain.ts");
   });
 
   it("reports route family mismatches with owner metadata", () => {

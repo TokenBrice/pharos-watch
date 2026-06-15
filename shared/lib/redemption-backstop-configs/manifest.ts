@@ -1,6 +1,12 @@
 import type { RedemptionRouteFamily } from "../../types";
 import type { RedemptionBackstopConfig } from "./shared";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "./collateral-redeem";
+import {
+  defineBackstopRegistry,
+  getBackstopRegistryOverrideReasons,
+  getBackstopRegistrySourceFilePaths,
+  type RedemptionBackstopRegistryEntry,
+} from "./factory";
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "./offchain-issuer/index";
 import { PSM_AND_BASKET_BACKSTOP_CONFIGS } from "./psm-and-basket";
 import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "./queue-redeem";
@@ -129,10 +135,12 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
 export function buildRedemptionBackstopRegistry(
   manifest: readonly RedemptionBackstopConfigManifestEntry[] = REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
 ): Record<string, RedemptionBackstopConfig> {
-  const registry: Record<string, RedemptionBackstopConfig> = {};
+  const entries: RedemptionBackstopRegistryEntry[] = [];
   const seenById = new Map<string, Pick<RedemptionBackstopConfigManifestEntry, "name" | "filePath">>();
 
   for (const entry of manifest) {
+    const overrideReasons = getBackstopRegistryOverrideReasons(entry.configs);
+    const sourceFilePaths = getBackstopRegistrySourceFilePaths(entry.configs);
     for (const [id, config] of Object.entries(entry.configs)) {
       const previous = seenById.get(id);
       if (previous) {
@@ -141,9 +149,14 @@ export function buildRedemptionBackstopRegistry(
         );
       }
       seenById.set(id, entry);
-      registry[id] = config;
+      entries.push({
+        id,
+        config,
+        ...(overrideReasons.has(id) ? { overrideReason: overrideReasons.get(id) } : {}),
+        sourceFilePath: sourceFilePaths.get(id) ?? entry.filePath,
+      });
     }
   }
 
-  return registry;
+  return defineBackstopRegistry(entries);
 }
