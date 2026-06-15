@@ -45,10 +45,6 @@ function isStatusLevel(value: unknown): value is StatusLevel {
   return value === "healthy" || value === "degraded" || value === "stale";
 }
 
-function getErrorMessage(error: unknown): string {
-  return toErrorMessage(error);
-}
-
 function truncateString(value: string, limit = SNAPSHOT_STRING_LIMIT): string {
   if (value.length <= limit) return value;
   return `${value.slice(0, limit)}... [truncated ${value.length - limit} chars]`;
@@ -215,7 +211,7 @@ export async function loadStatusRawSnapshot(
       updatedAt: null,
       ageSec: null,
       maxAgeSec,
-      error: getErrorMessage(error),
+      error: toErrorMessage(error),
     };
   }
 }
