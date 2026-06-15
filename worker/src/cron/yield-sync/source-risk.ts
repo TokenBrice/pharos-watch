@@ -2,10 +2,9 @@ import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield"
 import {
   computePysRewardShare,
   computeSourceRiskScoreFromPenalty,
-  computeVenueRiskWeighted,
   deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
-import { resolveReviewedYieldRiskConfig } from "@shared/lib/yield-source-risk-registry";
+import { resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "@shared/lib/yield-source-risk-registry";
 export {
   findStaleVenueRiskScores,
   resolveDependencyConcentration,
@@ -106,7 +105,7 @@ export function buildYieldSourceRisk(params: {
     params.source.venueProtocol ??
     inferVenueProtocol(params.source);
   const reviewedConfig = resolveReviewedYieldRiskConfig(venueProtocol);
-  const reviewedWeighted = reviewedConfig ? computeVenueRiskWeighted(reviewedConfig.scores) : null;
+  const reviewedWeighted = reviewedConfig ? venueRiskWeightedOf(reviewedConfig) : null;
 
   return {
     sourceRiskScore:

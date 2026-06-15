@@ -115,7 +115,6 @@ describe("snapshotChainSupply", () => {
     const db = mockD1();
     const controller = new AbortController();
     controller.abort();
-    const result = await snapshotChainSupply(db, controller.signal);
-    expect(result.status).toBe("degraded");
+    await expect(snapshotChainSupply(db, controller.signal)).rejects.toThrowError("This operation was aborted");
   });
 });

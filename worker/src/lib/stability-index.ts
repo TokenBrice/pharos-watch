@@ -22,6 +22,7 @@
 
 import type { ConditionBand } from "@shared/lib/psi-colors";
 export type { ConditionBand } from "@shared/lib/psi-colors";
+import { bandFromThresholds, clampScore, round1, roundTo } from "@shared/lib/math";
 
 export interface StabilityInput {
   depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
@@ -80,16 +81,16 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult | 
   const stressBreadth = Math.min(5, stressBreadthRaw); // Cap at 5 additional points
 
   const raw = 100 - severity - breadth - stressBreadth + trend;
-  const score = Math.round(Math.max(0, Math.min(100, raw)) * 10) / 10;
+  const score = round1(clampScore(raw));
 
   return {
     score,
     band: getConditionBand(score),
     components: {
-      severity: Math.round(severity * 100) / 100,
-      breadth: Math.round(breadth * 100) / 100,
-      stressBreadth: Math.round(stressBreadth * 100) / 100,
-      trend: Math.round(trend * 100) / 100,
+      severity: roundTo(severity, 2),
+      breadth: roundTo(breadth, 2),
+      stressBreadth: roundTo(stressBreadth, 2),
+      trend: roundTo(trend, 2),
     },
   };
 }
@@ -108,13 +109,17 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult | 
  * @param score - PSI score in [0, 100].
  * @returns The corresponding {@link ConditionBand} label.
  */
+const CONDITION_BANDS: readonly { min: number; band: ConditionBand }[] = [
+  { min: 90, band: "BEDROCK" },
+  { min: 75, band: "STEADY" },
+  { min: 60, band: "TREMOR" },
+  { min: 40, band: "FRACTURE" },
+  { min: 20, band: "CRISIS" },
+  { min: 0, band: "MELTDOWN" },
+];
+
 export function getConditionBand(score: number): ConditionBand {
-  if (score >= 90) return "BEDROCK";
-  if (score >= 75) return "STEADY";
-  if (score >= 60) return "TREMOR";
-  if (score >= 40) return "FRACTURE";
-  if (score >= 20) return "CRISIS";
-  return "MELTDOWN";
+  return bandFromThresholds(score, CONDITION_BANDS, { min: 0, band: "MELTDOWN" as const }).band;
 }
 
 /** Re-export hex colors from shared module. */
