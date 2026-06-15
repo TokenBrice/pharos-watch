@@ -30,13 +30,6 @@ const MODULE_ALLOWLIST = new Set([
   // is now consumed by src/components/command-palette.tsx.)
   "src/lib/filter-summaries.ts",
   "src/lib/route-labels.ts",
-  // URL codec schemas waiting for per-tracker adoption (compare / yield /
-  // liquidity / safety-scores / freezewatch).
-  "src/lib/url-schemas/compare.ts",
-  "src/lib/url-schemas/freezewatch.ts",
-  "src/lib/url-schemas/liquidity.ts",
-  "src/lib/url-schemas/safety-scores.ts",
-  "src/lib/url-schemas/yield.ts",
 ]);
 const EXPORT_ALLOWLIST = new Set([
   // Identity markers consumed by worker/src/__mocks__/__tests__/vitest-aliases.test.ts via vitest path aliases (not visible to static analysis).
@@ -147,12 +140,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/components/ui/dropdown-menu.tsx::DropdownMenuSubContent",
   "src/components/ui/sheet.tsx::SheetClose",
   "src/components/ui/sheet.tsx::SheetFooter",
-  "src/components/ui/table.tsx::TableHeader",
-  "src/components/ui/table.tsx::TableHead",
-  "src/components/ui/table.tsx::TableRow",
-  "src/components/ui/table.tsx::TableCell",
-  "src/components/ui/table.tsx::TableFooter",
-  "src/components/ui/table.tsx::TableCaption",
   "src/hooks/use-api-query.ts::createApiQueryFnWithMeta",
   "src/hooks/use-preferences.ts::isColumnId",
   "src/lib/compare-config.ts::ID_TO_COMPARE_COIN",
@@ -199,27 +186,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/filter-summaries.ts::getMechanismArchetypeLabel",
   "src/lib/route-labels.ts::ROUTE_LABELS",
   "src/lib/route-labels.ts::normalizeRoutePath",
-  // Generic URL-codec hook + schemas: staged P2 infra. The codec is ready and the
-  // per-surface schemas exist; tracker adoption (compare/yield/liquidity/etc.) lands
-  // incrementally. Consumed together once a tracker swaps to useTypedUrlState.
-  "src/hooks/use-url-filters.ts::useTypedUrlState",
-  "src/lib/url-schemas/compare.ts::COMPARE_RANGES",
-  "src/lib/url-schemas/compare.ts::COMPARE_URL_SCHEMA",
-  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_EVENT_TYPES",
-  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_SORT_KEYS",
-  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_SORT_DIRECTIONS",
-  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_STATUS_BUCKETS",
-  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_URL_SCHEMA",
-  "src/lib/url-schemas/liquidity.ts::LIQUIDITY_URL_SCHEMA",
-  "src/lib/url-schemas/safety-scores.ts::SAFETY_STRESS_GRADES",
-  "src/lib/url-schemas/safety-scores.ts::SAFETY_SCORES_URL_SCHEMA",
-  "src/lib/url-schemas/yield.ts::YIELD_WARNINGS_VALUES",
-  "src/lib/url-schemas/yield.ts::YIELD_OPPORTUNITY_VALUES",
-  "src/lib/url-schemas/yield.ts::YIELD_DEPTH_VALUES",
-  "src/lib/url-schemas/yield.ts::YIELD_SOURCE_CHANGED_VALUES",
-  "src/lib/url-schemas/yield.ts::YIELD_TRENDING_VALUES",
-  "src/lib/url-schemas/yield.ts::YIELD_WATCHLIST_VALUES",
-  "src/lib/url-schemas/yield.ts::YIELD_URL_SCHEMA",
   "worker/src/api/mint-burn-flows-shared.ts::FLOW_CACHE_PREFIX",
   "worker/src/api/mint-burn-flows-shared.ts::readCachedFlow",
   // Thin admin handler wrappers kept for direct test/script compatibility.

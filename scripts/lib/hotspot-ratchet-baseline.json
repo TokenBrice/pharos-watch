@@ -12,9 +12,9 @@
     "notes": "Report-card scoring and projection logic are still concentrated here. The next pass should separate scoring families, blacklist/live-slice enrichment, and presentation-oriented shaping."
   },
   "shared/lib/format.ts": {
-    "fileLines": 337,
-    "maxFunctionLines": 30,
-    "branchCount": 83,
+    "fileLines": 344,
+    "maxFunctionLines": 32,
+    "branchCount": 84,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 306,
@@ -264,9 +264,9 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 851,
-    "maxFunctionLines": 208,
-    "branchCount": 35,
+    "fileLines": 859,
+    "maxFunctionLines": 206,
+    "branchCount": 33,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,
@@ -324,9 +324,9 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 348,
-    "maxFunctionLines": 324,
-    "branchCount": 18,
+    "fileLines": 347,
+    "maxFunctionLines": 322,
+    "branchCount": 17,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 191,
@@ -336,7 +336,7 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 771,
+    "fileLines": 759,
     "maxFunctionLines": 592,
     "branchCount": 21,
     "disposition": "deferred",
@@ -348,7 +348,7 @@
     "notes": "Alert orchestration, suppression logic, payload shaping, and delivery policy remain intertwined. The next split should isolate candidate selection, rendering, and delivery-side effects."
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 477,
+    "fileLines": 478,
     "maxFunctionLines": 173,
     "branchCount": 40,
     "disposition": "deferred",

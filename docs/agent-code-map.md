@@ -246,7 +246,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-share-image.ts` - ShareCoinData, ShareRadarData, canvasToBlob, loadImage, renderCompareShareImage
 - `src/lib/compare-types.ts` - CoinOption, ComparePreset
 - `src/lib/confidence.ts` - confidenceClass
-- ... 136 more files omitted; use `rg --files src/lib` for the full list.
+- ... 134 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -278,7 +278,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/changelog-entry-card.tsx` - ChangelogEntryCard, formatDateRange
 - `src/components/changelog-week-nav.tsx` - ChangelogWeekNav
 - `src/components/chart-primitives/annotations.tsx` - AnnotationDensityStrip, ChartAnnotationLegend, ChartAnnotationLines
-- `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartLegendChip, DateTooltip, MONO_Y_AXIS_WIDTH, MonoYAxis, TimeGrid
+- `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartAreaGradient, ChartLegendChip, DateTooltip, MONO_Y_AXIS_WIDTH, MonoYAxis
 - `src/components/chart-primitives/data-table.tsx` - ChartDataTable, ChartDataTableColumn, capDataForTable
 - `src/components/chart-primitives/market-data-x-tick.tsx` - MarketDataXTick
 - `src/components/chart-primitives/scale-toggle.tsx` - ChartScale, ChartScaleToggle
@@ -299,7 +299,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `functions/admin-api/[[path]].ts` - serveOpsAssetWithHostGate
 - `functions/admin/[[path]].ts` - serveOpsAssetWithHostGate
 - `functions/api/admin/[[path]].ts` - onRequest
-- `functions/lib/noindex.ts` - noindexTextNotFoundResponse, withNoindex
+- `functions/lib/noindex.ts` - NOINDEX_HEADER_VALUE, noindexTextNotFoundResponse, withNoindex
 - `functions/lib/ops-asset-host-gate.ts` - OpsAssetHostGateEnv, serveOpsAssetWithHostGate
 - `functions/lib/ops-env.ts` - DEFAULT_OPS_API_ORIGIN, OpsAdminProxyEnv, OpsProxyEnvIssue, PAGES_FUNCTIONS_ACTIVE_ENV_KEYS, PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS, PAGES_FUNCTIONS_REQUIRED_ENV_KEYS
 - `functions/lib/ops-origin.ts` - DEFAULT_OPS_UI_ORIGIN, hasMatchingOpsUiOriginHeader, normalizeOrigin, rejectIfNotOpsUiOrigin, resolveOpsUiOrigin
@@ -307,7 +307,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `functions/lib/proxy-paths.ts` - OPS_ADMIN_PROXY_PREFIX, SITE_DATA_PROXY_PREFIX, resolveOpsAdminUpstreamPath, resolveSiteDataRequestedPath
 - `functions/lib/proxy-utils.ts` - buildProxyResponse, buildUpstreamHeaders, isHtmlResponse, jsonError, summarizeFetchError
 - `functions/lib/request-attribution.ts` - REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV, isRequestSourceAttributionDisabled, recordSiteDataRequest, resetSiteDataRequestAttributionStateForTests
-- `functions/lib/site-api-env.ts` - SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS, SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS, SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS, SiteDataProxyEnv, SiteDataProxyEnvIssue, isProductionSiteDataHostname
+- `functions/lib/site-api-env.ts` - SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS, SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS, SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS, SiteDataProxyEnv, SiteDataProxyEnvIssue, resolveSiteApiOrigin
 - `functions/lib/site-data-origin.ts` - rejectIfNotSiteDataUiOrigin
 - `functions/lib/upstream-proxy.ts` - DEFAULT_PROXY_TIMEOUT_MS, fetchUpstreamProxy, resolveWildcardProxyPath
 - `functions/selector-snapshot/[[path]].ts` - onRequest
@@ -353,7 +353,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/classification.ts`
 - `shared/lib/classification/badges.ts` - BACKING_BADGE_STYLES, BACKING_COLORS, BLACKLIST_CHART_COLORS, EVENT_BADGE_STYLES, EVENT_LABELS, GOVERNANCE_BADGE_STYLES
 - `shared/lib/classification/common.ts`
-- `shared/lib/classification/domain.ts` - BACKING_LABELS, BACKING_LABELS_SHORT, GOVERNANCE_FILTER_OPTIONS, GOVERNANCE_LABELS, GOVERNANCE_LABELS_SHORT, getBackingLabelShort
+- `shared/lib/classification/domain.ts` - BACKING_LABELS, BACKING_LABELS_SHORT, BACKING_PROSE_LABELS, GOVERNANCE_FILTER_OPTIONS, GOVERNANCE_LABELS, GOVERNANCE_LABELS_SHORT
 - `shared/lib/classification/index.ts`
 - `shared/lib/classification/mechanism-archetypes.ts` - MECHANISM_ARCHETYPE_CTA_NOUNS, MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, MECHANISM_ARCHETYPE_SHORT_LABELS, getMechanismArchetypeCtaNoun, getMechanismArchetypeLabel
 - `shared/lib/classification/pegs.ts` - PEG_FILTER_OPTIONS, PEG_FILTER_TAG_LABELS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA, PegCurrencyFilterTag
@@ -616,7 +616,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- ... 316 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 317 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -664,6 +664,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/backfill-fx.ts` - COMMODITY_PEGS, FxTimeSeries, OTHER_COIN_FX, PEG_TO_FX, SECONDARY_PEG_TO_FX, buildCommodityMedianSeriesFromCg
 - `worker/src/lib/backfill-query.ts` - noCoinsInBatchResponse, selectBackfillCoins
 - `worker/src/lib/backtest-anchors.ts` - BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS, BacktestAnchor, BacktestNegativeControl
+- `worker/src/lib/base64url.ts` - base64UrlToBytes, bytesToBase64Url
 - `worker/src/lib/bigint.ts` - bigIntToDecimal, decimalNumberFromBigInt, decimalStringFromBigInt, finiteDecimalNumberFromBigInt
 - `worker/src/lib/binary-search.ts` - binarySearchNearest
 - `worker/src/lib/blacklist-api.ts` - BlacklistEventRow, mapBlacklistEventRow
@@ -679,8 +680,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-config.ts` - ChainConfig, chainConfig
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
-- `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 225 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 226 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

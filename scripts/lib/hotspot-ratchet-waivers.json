@@ -175,14 +175,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
   },
-  "worker/src/lib/redemption-backstop-live-metadata.ts": {
-    "disposition": "queued-p4",
-    "notes": "Live redemption backstop metadata surfaced as a repo-wide hotspot candidate during the final merge-gate pass. It owns adapter row interpretation and live metadata projection for multiple backstop families; keep it queued for a dedicated redemption-backstop cleanup rather than widening this release verification pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-06",
-    "reviewAfter": "2026-09-06",
-    "nextAction": "Split adapter row parsing and projection helpers behind the existing live metadata API."
-  },
   "worker/src/cron/yield-coverage-audit.ts": {
     "disposition": "queued-p4",
     "notes": "Coverage-audit module crossed the file-lines hotspot floor when the v8.291 stale-auto-lending-override queue lane landed. The growth is additive queue/recommendation assembly, not deeper branching; keep it queued for a dedicated split of queue-item builders from audit orchestration.",
