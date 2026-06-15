@@ -5,11 +5,14 @@ export interface CommitRef {
 
 export type SummaryTag = "feature" | "security" | "coverage" | "infra" | "design";
 
+export type SummaryHref = `/${string}`;
+
 export interface SummaryItem {
   label: string;
   description: string;
   tag: SummaryTag;
-  href?: string;
+  /** Internal absolute path, for example `/methodology/`; external URLs are not valid here. */
+  href?: SummaryHref;
 }
 
 export interface ChangelogEntry {

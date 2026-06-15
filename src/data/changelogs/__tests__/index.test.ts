@@ -20,6 +20,11 @@ describe("changelogs barrel", () => {
       expect(entry.dateRange.from).toBeTruthy();
       expect(entry.dateRange.to).toBeTruthy();
       expect(entry.summary.length).toBeGreaterThan(0);
+      for (const item of entry.summary) {
+        if (item.href != null) {
+          expect(item.href).toMatch(/^\/(?!\/)/);
+        }
+      }
       expect(entry.stats.totalCommits).toBeGreaterThan(0);
       expect(entry.commits.length).toBeGreaterThan(0);
     }
