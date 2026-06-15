@@ -65,7 +65,7 @@ function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestEx
   const weeklyLabel = entry.editionNumber ? `Pharos Weekly Recap #${entry.editionNumber}` : "Pharos Weekly Recap";
 
   return (
-    <div className="mt-6 border-t-2 border-foreground/10 pt-4">
+    <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
           {weeklyLabel}
@@ -86,6 +86,18 @@ function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestEx
       >
         Read the full recap &rarr;
       </Link>
+    </div>
+  );
+}
+
+function WireSectionRule({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span aria-hidden className="h-px flex-1 bg-border" />
+      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+        {label}
+      </span>
+      <span aria-hidden className="h-px flex-1 bg-border" />
     </div>
   );
 }
@@ -167,35 +179,37 @@ export function DigestArchiveClient() {
   }
 
   return (
-    <div>
+    <div className="space-y-8">
       <StaleDataBanner
         queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: !!data?.digests?.length, meta }]}
       />
 
-      {/* Lead story: today's digest */}
-      <DailyDigest variant="preview" detailHref={latestSlug ? `/digest/${latestSlug}/` : undefined} />
+      {/* Lead story: today's digest (nameplate above carries the edition + date) */}
+      <section aria-label="Today's lead digest" className="space-y-4">
+        <WireSectionRule label="Today's Lead" />
+        <DailyDigest
+          variant="preview"
+          hideMasthead
+          detailHref={latestSlug ? `/digest/${latestSlug}/` : undefined}
+        />
+      </section>
 
       {/* Weekly column: compact teaser */}
       {latestWeekly && latestWeekly.digestExtended && (
-        <WeeklyTeaser entry={latestWeekly} />
+        <section aria-label="Weekly recap" className="space-y-4">
+          <WireSectionRule label="The Week in Review" />
+          <WeeklyTeaser entry={latestWeekly} />
+        </section>
       )}
 
-      {/* Archive divider (double-rule) */}
-      <div className="my-6 space-y-0.5">
-        <div className="border-t border-border" />
-        <div className="flex items-center gap-3">
-          <div className="flex-1 border-t border-border" />
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Archive
-          </span>
-          <div className="flex-1 border-t border-border" />
-        </div>
-      </div>
+      {/* Archive */}
+      <section aria-label="Digest archive" className="space-y-4">
+        <WireSectionRule label="Archive" />
 
-      {/* Month picker */}
-      {monthOptions.length > 1 && (
-        <div className="mb-4">
-          <select
+        {/* Month picker */}
+        {monthOptions.length > 1 && (
+          <div>
+            <select
             aria-label="Filter by month"
             value={activeMonth ?? ""}
             onChange={(e) => setSelectedMonth(e.target.value)}
@@ -226,7 +240,7 @@ export function DigestArchiveClient() {
               className={cn(
                 "pharos-focus-ring flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
                 isWeekly
-                  ? "py-3.5 border-border/60 hover:bg-muted/30 border-l-2 border-l-foreground/20"
+                  ? "py-3.5 border-border/60 bg-muted/25 hover:bg-muted/40"
                   : "py-3 md:py-2.5 border-border/30 hover:bg-muted/20",
               )}
             >
@@ -300,7 +314,8 @@ export function DigestArchiveClient() {
             </Link>
           );
         })}
-      </div>
+        </div>
+      </section>
     </div>
   );
 }

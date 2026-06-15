@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, Send } from "lucide-react";
+import { Send } from "lucide-react";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
-import { CalloutBanner } from "@/components/callout-banner";
-import { FeaturePageShell } from "@/components/feature-page-shell";
-import { formatDigestDateLabel } from "@/lib/digest";
+import { DigestNameplate } from "@/components/digest-nameplate";
+import { DigestColophon } from "@/components/digest-colophon";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -24,123 +24,68 @@ const digestEntries = digests as {
   text: string;
   generatedAt?: number;
   digestType?: "daily" | "weekly";
+  editionNumber?: number;
 }[];
 
-const weeklyDigestEntries = digestEntries.filter((entry) => entry.digestType === "weekly");
-const visibleWeeklyDigestEntries = weeklyDigestEntries.slice(0, 2);
-const olderWeeklyDigestEntries = weeklyDigestEntries.slice(2);
-
-function formatDigestDate(dateStr: string): string {
-  return formatDigestDateLabel(dateStr, "short");
-}
-
-function WeeklyDigestCard({ entry }: { entry: (typeof digestEntries)[number] }) {
-  return (
-    <Link
-      href={`/digest/${entry.date}/`}
-      className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
-    >
-      <p className="font-mono text-xs uppercase text-muted-foreground">{formatDigestDate(entry.date)}</p>
-      <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
-        {entry.title}
-      </h3>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{entry.text}</p>
-    </Link>
-  );
-}
+const latestDaily = digestEntries.find((entry) => entry.digestType !== "weekly") ?? digestEntries[0];
 
 export default function DigestArchivePage() {
   return (
-    <FeaturePageShell
-      breadcrumbName="Daily Digest Archive"
-      path="/digest/"
-      title="Daily Digest Archive"
-      containerClassName="mx-auto max-w-4xl"
-      preface={(
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd([
-              {
-                "@context": "https://schema.org",
-                "@type": "CollectionPage",
-                "@id": `${SITE_URL}/digest/#collection`,
-                name: "Daily Digest Archive",
-                description: "Every Pharos stablecoin recap, newest first.",
-                url: `${SITE_URL}/digest/`,
-                mainEntity: { "@id": `${SITE_URL}/digest/#itemlist` },
-                isPartOf: { "@id": `${SITE_URL}#website` },
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "ItemList",
-                "@id": `${SITE_URL}/digest/#itemlist`,
-                name: "Pharos Digest Archive",
-                numberOfItems: digestEntries.length,
-                itemListElement: digestEntries.map((entry, index) => ({
-                  "@type": "ListItem",
-                  position: index + 1,
-                  item: {
-                    "@type": "WebPage",
-                    "@id": `${SITE_URL}/digest/${entry.date}/`,
-                    name: entry.title,
-                    url: `${SITE_URL}/digest/${entry.date}/`,
-                    description: entry.text,
-                  },
-                })),
-              },
-            ]),
-          }}
-        />
-      )}
-      leadParagraphs={[
-        "Every Pharos stablecoin recap, newest first.",
-      ]}
-    >
-      <CalloutBanner icon={<Send className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-        Wake up to the Pharos daily digest, straight in your feed.{" "}
+    <div className="mx-auto max-w-4xl space-y-6">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Daily Digest Archive", url: "/digest/" },
+        ]}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd([
+            {
+              "@context": "https://schema.org",
+              "@type": "CollectionPage",
+              "@id": `${SITE_URL}/digest/#collection`,
+              name: "Daily Digest Archive",
+              description: "Every Pharos stablecoin recap, newest first.",
+              url: `${SITE_URL}/digest/`,
+              mainEntity: { "@id": `${SITE_URL}/digest/#itemlist` },
+              isPartOf: { "@id": `${SITE_URL}#website` },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "@id": `${SITE_URL}/digest/#itemlist`,
+              name: "Pharos Digest Archive",
+              numberOfItems: digestEntries.length,
+              itemListElement: digestEntries.map((entry, index) => ({
+                "@type": "ListItem",
+                position: index + 1,
+                item: {
+                  "@type": "WebPage",
+                  "@id": `${SITE_URL}/digest/${entry.date}/`,
+                  name: entry.title,
+                  url: `${SITE_URL}/digest/${entry.date}/`,
+                  description: entry.text,
+                },
+              })),
+            },
+          ]),
+        }}
+      />
+
+      <DigestNameplate issueNumber={latestDaily?.editionNumber} date={latestDaily?.date} />
+
+      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-border/60 pb-4 text-center text-sm text-muted-foreground">
+        <Send className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
+        <span>Wake up to the daily digest in your feed.</span>
         <Link
           href="/pharoswatchbot/#channel"
-          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+          className="pharos-focus-ring rounded-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
         >
-          Join the Pharos Telegram channel&nbsp;&rarr;
+          Join the Telegram channel&nbsp;&rarr;
         </Link>
-      </CalloutBanner>
-
-      {weeklyDigestEntries.length > 0 ? (
-        <section aria-labelledby="weekly-recap-index" className="space-y-4 border-y border-border/60 py-5">
-          <div className="space-y-2">
-            <p className="pharos-kicker">Weekly Recaps</p>
-            <h2 id="weekly-recap-index" className="text-xl font-semibold text-foreground">
-              Weekly market recaps
-            </h2>
-            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              Weekly recaps synthesize the daily tape into higher-signal archive pages for market context, PSI shifts,
-              depeg pressure, flows, liquidity, and safety-grade movement.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {visibleWeeklyDigestEntries.map((entry) => (
-              <WeeklyDigestCard key={entry.date} entry={entry} />
-            ))}
-          </div>
-          {olderWeeklyDigestEntries.length > 0 ? (
-            <details className="group rounded-lg border border-border/60 bg-muted/20">
-              <summary className="pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-foreground marker:hidden">
-                <span>Show {olderWeeklyDigestEntries.length} older weekly recaps</span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-              </summary>
-              <div className="max-h-[26rem] overflow-y-auto border-t border-border/60 p-3">
-                <div className="grid gap-3 md:grid-cols-2">
-                  {olderWeeklyDigestEntries.map((entry) => (
-                    <WeeklyDigestCard key={entry.date} entry={entry} />
-                  ))}
-                </div>
-              </div>
-            </details>
-          ) : null}
-        </section>
-      ) : null}
+      </p>
 
       <DigestArchiveClient />
 
@@ -153,6 +98,7 @@ export default function DigestArchivePage() {
         ))}
       </nav>
 
-    </FeaturePageShell>
+      <DigestColophon />
+    </div>
   );
 }

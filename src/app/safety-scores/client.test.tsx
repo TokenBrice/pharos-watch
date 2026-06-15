@@ -163,7 +163,7 @@ describe("ReportCardsClient", () => {
   it("renders report-card groups and filters the visible cards by grade", () => {
     render(<ReportCardsClient />);
 
-    expect(screen.getByText("Safety Landscape")).toBeTruthy();
+    expect(screen.getByText(/Showing\s+2\s+coins/i)).toBeTruthy();
     expect(screen.getByTestId("report-card-usdc-circle")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdt-tether")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdc-circle").getAttribute("data-grade-version-variant")).toBe("tooltip-only");

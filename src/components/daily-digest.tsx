@@ -160,9 +160,11 @@ interface DailyDigestProps {
   variant?: "preview" | "full";
   /** Override the CTA link target (e.g. point to the detail page instead of the archive). */
   detailHref?: string;
+  /** Suppress the running masthead line (the archive nameplate already carries the edition + date). */
+  hideMasthead?: boolean;
 }
 
-export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) {
+export function DailyDigest({ variant = "full", detailHref, hideMasthead = false }: DailyDigestProps) {
   const { data, isLoading, error, refetch } = useDailyDigest();
   const paragraphs = getDigestBodyParagraphs({
     digest: data?.digest,
@@ -231,16 +233,18 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
   return (
     <div className="animate-in fade-in duration-300 space-y-5">
       {/* Masthead (preview) */}
-      <div className="border-t border-b border-border py-3 text-left flex flex-wrap items-end justify-between gap-3">
-        <p className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.34em] text-muted-foreground/90 sm:text-[0.8rem]">
-          {editionLabel}
-        </p>
-        {data?.generatedAt && (
-          <p className="mt-0.5 text-xs text-muted-foreground/85">
-            {formatMasthead(data.generatedAt)}
+      {!hideMasthead && (
+        <div className="border-t border-b border-border py-3 text-left flex flex-wrap items-end justify-between gap-3">
+          <p className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.34em] text-muted-foreground/90 sm:text-[0.8rem]">
+            {editionLabel}
           </p>
-        )}
-      </div>
+          {data?.generatedAt && (
+            <p className="mt-0.5 text-xs text-muted-foreground/85">
+              {formatMasthead(data.generatedAt)}
+            </p>
+          )}
+        </div>
+      )}
 
       {(() => {
         const bodyBlock = (

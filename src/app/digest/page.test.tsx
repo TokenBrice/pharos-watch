@@ -1,52 +1,51 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import DigestArchivePage from "./page";
-import digests from "../../../data/digests.json";
+
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
 
 vi.mock("@/components/digest-archive-client", () => ({
   DigestArchiveClient: () => <section data-testid="digest-archive-client" />,
 }));
 
-vi.mock("@/components/feature-page-shell", () => ({
-  FeaturePageShell: ({ title, children }: { title: string; children: ReactNode }) => (
-    <main>
-      <h1>{title}</h1>
-      {children}
-    </main>
-  ),
-}));
+import DigestArchivePage from "./page";
+import digests from "../../../data/digests.json";
+
+const latestDaily = digests.find((entry) => entry.digestType !== "weekly") ?? digests[0];
 
 afterEach(() => {
   cleanup();
 });
 
 describe("DigestArchivePage", () => {
-  it("keeps only the two newest weekly recaps expanded by default", () => {
-    const weeklyDigests = digests.filter((entry) => entry.digestType === "weekly");
-    const [newest, secondNewest, oldestHidden] = weeklyDigests;
+  it("renders the broadsheet nameplate with the latest edition and writer credit", () => {
+    const { container } = render(<DigestArchivePage />);
 
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.textContent).toContain("Pharos Digest");
+
+    expect(container.textContent).toContain(`Issue #${latestDaily.editionNumber}`);
+    expect(container.textContent).toContain("Written by Claude Opus 4.8");
+  });
+
+  it("drops the duplicated weekly recap module", () => {
     render(<DigestArchivePage />);
+    expect(screen.queryByText("Weekly market recaps")).toBeNull();
+  });
 
-    const weeklySection = screen.getByRole("heading", { name: "Weekly market recaps" }).closest("section");
-    expect(weeklySection).toBeTruthy();
+  it("keeps every digest in the crawlable archive index", () => {
+    render(<DigestArchivePage />);
+    const index = screen.getByRole("navigation", { name: "Digest archive index" });
+    expect(within(index).getAllByRole("link")).toHaveLength(digests.length);
+  });
 
-    const visibleGrid = weeklySection?.querySelector(":scope > div.grid") as HTMLElement | null;
-    expect(visibleGrid).toBeTruthy();
-
-    const visibleWeeklyLinks = within(visibleGrid as HTMLElement).getAllByRole("link");
-    expect(visibleWeeklyLinks).toHaveLength(2);
-    expect(within(visibleGrid as HTMLElement).getByRole("link", { name: new RegExp(newest.title, "i") })).toBeTruthy();
-    expect(within(visibleGrid as HTMLElement).getByRole("link", { name: new RegExp(secondNewest.title, "i") })).toBeTruthy();
-    expect(within(visibleGrid as HTMLElement).queryByRole("link", { name: new RegExp(oldestHidden.title, "i") })).toBeNull();
-
-    const olderRecaps = within(weeklySection as HTMLElement).getByText(
-      `Show ${weeklyDigests.length - 2} older weekly recaps`,
-    );
-    const details = olderRecaps.closest("details");
-    expect(details).toBeTruthy();
-    expect(within(details as HTMLElement).getByRole("link", { name: new RegExp(oldestHidden.title, "i") })).toBeTruthy();
+  it("renders the Telegram subscribe wire and one-line colophon", () => {
+    const { container } = render(<DigestArchivePage />);
+    expect(screen.getByRole("link", { name: /Join the Telegram channel/ })).toBeTruthy();
+    expect(container.textContent).toContain("Watching the peg");
+    expect(container.textContent).toContain("Not financial advice");
   });
 });

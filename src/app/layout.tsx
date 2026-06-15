@@ -12,7 +12,7 @@ import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
 import { CoreTopRail } from "@/components/core-top-rail";
-import { MainContent, RouteChrome } from "@/components/route-chrome";
+import { GlobalFooterChrome, MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
@@ -121,9 +121,9 @@ export default function RootLayout({
               </RouteChrome>
               <div className="flex-1 flex flex-col min-w-0">
                 <MainContent>{children}</MainContent>
-                <RouteChrome>
+                <GlobalFooterChrome>
                   <Footer />
-                </RouteChrome>
+                </GlobalFooterChrome>
               </div>
             </div>
           </SidebarProvider>

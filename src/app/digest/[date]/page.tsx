@@ -141,7 +141,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
           }),
         }}
       />
-      <EditorialMasthead date={formatted} />
+      <EditorialMasthead date={formatted} editor="Claude Opus 4.8" />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">

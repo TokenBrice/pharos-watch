@@ -60,7 +60,7 @@ export function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number;
   );
 }
 
-export function YieldRankChangeChip({ rankChip }: { rankChip: YieldRankChangeChipDisplay }) {
+function YieldRankChangeChip({ rankChip }: { rankChip: YieldRankChangeChipDisplay }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -83,7 +83,7 @@ export function YieldRankChangeChip({ rankChip }: { rankChip: YieldRankChangeChi
   );
 }
 
-export function YieldBenchmarkMismatchDot({
+function YieldBenchmarkMismatchDot({
   label,
   peg,
   interactive,

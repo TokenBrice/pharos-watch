@@ -9,6 +9,10 @@ function isChromelessPath(pathname: string | null): boolean {
   return pathname === "/pharoswatchbot/app" || pathname?.startsWith("/pharoswatchbot/app/") === true;
 }
 
+function isDigestPath(pathname: string | null): boolean {
+  return pathname === "/digest" || pathname?.startsWith("/digest/") === true;
+}
+
 function CollapsedPageChip() {
   const { pinned, togglePin } = useSidebar();
   const pathname = usePathname();
@@ -35,6 +39,17 @@ function CollapsedPageChip() {
 export function RouteChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   if (isChromelessPath(pathname)) return null;
+  return children;
+}
+
+/**
+ * Wraps the standard global footer. The digest section ships its own editorial
+ * colophon (one-line on the archive, full provenance on each dated page), so
+ * the sitemap-style site footer is suppressed across /digest.
+ */
+export function GlobalFooterChrome({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  if (isChromelessPath(pathname) || isDigestPath(pathname)) return null;
   return children;
 }
 
