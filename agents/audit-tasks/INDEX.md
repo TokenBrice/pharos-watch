@@ -7,12 +7,12 @@
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 618 | 2 | 0 | 94 | 19 |
+| Count | 617 | 3 | 0 | 94 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 42 | 0 | 0 | 214 |
+| redundancy | 266 | 42 | 1 | 0 | 213 |
 | quality | 315 | 43 | 2 | 0 | 263 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
@@ -75,7 +75,7 @@
 | ⬜ | [R-046](redundancy/R-046.md) | S | clone | Duplicate CoinLockup component — reviewer module vs shared row-card |  | `src/components/depeg-resolver-reviewer-module.ts` |
 | ⬜ | [R-047](redundancy/R-047.md) | S | clone | Duplicated resolveApiBase() and fetchHeaders() in two sibling scripts |  | `scripts/maintenance/generate-homepage-bootstrap.` |
 | ⬜ | [R-048](redundancy/R-048.md) | S | clone | normalizeStablecoinRows has near-identical field-building blocks for two payload shapes |  | `scripts/maintenance/audit-dex-pricing-source-gap` |
-| ⬜ | [R-049](redundancy/R-049.md) | S | dead-code | Duplicate path string literals in validation.ts shadow canonical API_PATHS entries |  | `shared/lib/api-endpoints/validation.ts:L16-17` |
+| 🔄 | [R-049](redundancy/R-049.md) | S | dead-code | Duplicate path string literals in validation.ts shadow canonical API_PATHS entries | codex | `shared/lib/api-endpoints/validation.ts:L16-17` |
 | ⬜ | [R-050](redundancy/R-050.md) | S | dead-code | Two ExclusionReason enum values are never emitted by the exclusion engine |  | `shared/lib/selector/types.ts:L349,L352; shared/l` |
 | ⬜ | [R-051](redundancy/R-051.md) | S | clone | Duplicate buildReportCardMap implementations |  | `src/lib/stablecoin-lookups.ts:L14-L19, src/hooks` |
 | ⬜ | [R-052](redundancy/R-052.md) | S | clone | Parallel CSV download implementations: csv-export.ts vs exports/csv.ts |  | `src/lib/csv-export.ts:1-20 + src/lib/exports/csv` |
