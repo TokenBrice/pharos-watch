@@ -1,6 +1,6 @@
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { excludeFrozenIds } from "../shared/exclude-frozen";
-import { getLastBlock } from "../../lib/db";
+import { normalizeBlacklistSyncStateKey } from "../../lib/db";
 import { backfillTronFromLedger } from "./amount-recovery";
 import type { BlacklistRunBudget } from "./run-budget";
 
@@ -53,13 +53,28 @@ export async function loadBlacklistConfigStates(
   db: D1Database,
 ): Promise<{ configStates: BlacklistConfigState[]; zeroCursorConfigs: string[] }> {
   const eligibleConfigs = excludeFrozenIds(CONTRACT_CONFIGS, (c) => c.stablecoinId);
-  const configStates = await Promise.all(
-    eligibleConfigs.map(async (config) => {
-      const configKey = config.configKey;
-      const lastBlock = await getLastBlock(db, configKey);
-      return { config, configKey, lastBlock };
-    }),
-  );
+
+  // Single bulk fetch instead of one getLastBlock D1 round-trip per config.
+  // The per-config key-normalization that getLastBlock applies is replicated
+  // in-memory below: each config's last_block is the max over rows matching
+  // either its raw config_key or its normalized form, defaulting to 0.
+  const rows = await db
+    .prepare(`SELECT config_key, last_block FROM blacklist_sync_state`)
+    .all<{ config_key: string; last_block: number }>();
+  const lastBlockByKey = new Map<string, number>();
+  for (const row of rows.results ?? []) {
+    lastBlockByKey.set(row.config_key, row.last_block);
+  }
+
+  const configStates = eligibleConfigs.map((config) => {
+    const configKey = config.configKey;
+    const keyCandidates = [...new Set([configKey, normalizeBlacklistSyncStateKey(configKey)])];
+    const lastBlock = Math.max(
+      0,
+      ...keyCandidates.map((key) => lastBlockByKey.get(key) ?? 0),
+    );
+    return { config, configKey, lastBlock };
+  });
 
   return {
     configStates,
