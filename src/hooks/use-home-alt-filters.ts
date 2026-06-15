@@ -34,7 +34,8 @@ export function useHomeAltFilters(): UseHomeAltFiltersReturn {
   const activePeg = useMemo(() => normalizePeg(searchParams.get("peg")), [searchParams]);
 
   const setActivePeg = useCallback((next: HomeAltPegFilter) => {
-    setParams({ peg: next === "all" ? "all" : next });
+    // `all` is the useUrlFilters clear sentinel for this query key.
+    setParams({ peg: next });
   }, [setParams]);
 
   const activeFilters = useMemo<readonly FilterTag[]>(

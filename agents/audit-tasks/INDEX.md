@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**65/733 done (9%)**  `██░░░░░░░░░░░░░░░░░░`
+**70/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 644 | 5 | 0 | 65 | 19 |
+| Count | 642 | 2 | 0 | 70 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 32 | 2 | 0 | 222 |
-| quality | 315 | 25 | 2 | 0 | 281 |
-| sustainability | 152 | 8 | 1 | 0 | 141 |
+| redundancy | 266 | 34 | 0 | 0 | 222 |
+| quality | 315 | 27 | 2 | 0 | 279 |
+| sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
 
@@ -173,7 +173,7 @@
 | ⬜ | [R-139](redundancy/R-139.md) | S | clone | intensity is clamped twice in the FlowMachine pipeline |  | `src/components/flow-machine-scene.tsx:49-53, src` |
 | ✅ | [R-140](redundancy/R-140.md) | S | dead-code | Redundant alias `handleFocusSearch` that is the same function as `openGlobalCommandPalette | codex | `src/components/providers.tsx:L66, L129, L140` |
 | ⬜ | [R-141](redundancy/R-141.md) | S | clone | `sleep` defined independently in sync-from-api.ts and smoke-runtime.mjs |  | `scripts/lib/sync-from-api.ts:L64, scripts/lib/sm` |
-| 🔄 | [R-142](redundancy/R-142.md) | S | wrapper | deriveVariantAwareDependencies is a zero-logic pass-through wrapper | codex | `shared/lib/stablecoins/variants.ts:L13-L17` |
+| ✅ | [R-142](redundancy/R-142.md) | S | wrapper | deriveVariantAwareDependencies is a zero-logic pass-through wrapper | codex | `shared/lib/stablecoins/variants.ts:L13-L17` |
 | ⬜ | [R-143](redundancy/R-143.md) | S | clone | stablecoinRouteSearchText called twice per coin in buildL2BeatBridgeRouteReviewAudit |  | `shared/lib/chains/l2beat-audit.ts:L551, L589` |
 | ✅ | [R-144](redundancy/R-144.md) | S | clone | escapeSqlString defined independently in two maintenance scripts instead of using the shar | codex | `worker/scripts/repair-non-usd-fiat-depeg-history` |
 | ⬜ | [R-145](redundancy/R-145.md) | S | clone | InlineKeyboardButton interface duplicated in setup and messages modules |  | `worker/src/api/telegram-webhook-setup.ts:L77-L82` |
@@ -235,7 +235,7 @@
 | ⬜ | [R-201](redundancy/R-201.md) | S | clone | FlowChart computes the data range twice — once from raw hourly buckets, once from shaped c |  | `src/components/flow-chart.tsx:L133-L140, L175-L1` |
 | ⬜ | [R-202](redundancy/R-202.md) | S | clone | String-join dependency trick duplicated across two scroll-spy components |  | `src/components/api-reference-layout.tsx:L20-L36 ` |
 | ⬜ | [R-203](redundancy/R-203.md) | S | clone | IterationOne is a private named sub-component of FlowBrrrOverview that adds an indirection |  | `src/components/flow-brrr-overview.tsx:L112-L298` |
-| 🔄 | [R-204](redundancy/R-204.md) | S | dead-code | Thin free-function wrappers `d1Query`, `d1QueryParsed`, `d1ExecFile` are unused outside te | codex | `scripts/lib/remote-d1.ts:L91-L101` |
+| ✅ | [R-204](redundancy/R-204.md) | S | dead-code | Thin free-function wrappers `d1Query`, `d1QueryParsed`, `d1ExecFile` are unused outside te | codex | `scripts/lib/remote-d1.ts:L91-L101` |
 | ⬜ | [R-205](redundancy/R-205.md) | S | dead-code | refresh-reserve-html-fixtures.ts fetches the same URL four times for four Circle fixture f |  | `scripts/maintenance/refresh-reserve-html-fixture` |
 | ✅ | [R-206](redundancy/R-206.md) | S | dead-code | generate-cemetery-dataset.ts and generate-postman-collection.ts run side effects at module | codex | `scripts/maintenance/generate-cemetery-dataset.ts` |
 | ⬜ | [R-207](redundancy/R-207.md) | S | dead-code | incident-groups computes reopenWithin24h (and REOPEN_FLAG_GAP_SEC) but nothing ever reads  |  | `shared/lib/depeg-resolver/incident-groups.ts:22,` |
@@ -319,7 +319,7 @@
 | ✅ | [Q-007](quality/Q-007.md) | S | security | gitSubcommandTokens bypass: multiple -C flags or git global options defeat agent hook guar | codex | `scripts/ci/pharos-change-contract.mjs:L669-L681` |
 | 🔄 | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
 | ⬜ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read |  | `worker/src/cron/reserve-adapters/sky-makercore.t` |
-| 🔄 | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
+| ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
 | ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
 | ⬜ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts |  | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
@@ -445,7 +445,7 @@
 | ⬜ | [Q-030](quality/Q-030.md) | S | type-safety | psiBand is cast to ConditionBand without membership guard in digest-archive-client |  | `src/components/digest-archive-client.tsx:296, 31` |
 | ⬜ | [Q-032](quality/Q-032.md) | S | error-handling | chart-export.ts silently swallows errors; caller has no way to surface failure to the user |  | `src/lib/chart-export.ts:15-17` |
 | ⬜ | [Q-033](quality/Q-033.md) | S | type-safety | normalizeDependencyMeta in homepage-bootstrap-runtime.ts uses as never cast to work around |  | `src/lib/homepage-bootstrap-runtime.ts:51-75` |
-| ⬜ | [Q-034](quality/Q-034.md) | S | type-safety | useHomeAltFilters passes the clear-sentinel "all" through setParams, causing a no-op URL w |  | `src/hooks/use-home-alt-filters.ts:L36-L38` |
+| ✅ | [Q-034](quality/Q-034.md) | S | type-safety | useHomeAltFilters passes the clear-sentinel "all" through setParams, causing a no-op URL w | codex | `src/hooks/use-home-alt-filters.ts:L36-L38` |
 | ⬜ | [Q-035](quality/Q-035.md) | S | complexity | setup.ts callback issues a raw D1 query for telegram_pending_disambiguation instead of usi |  | `worker/src/api/webhook-callbacks/setup.ts:L51-L6` |
 | ⬜ | [Q-037](quality/Q-037.md) | S | error-handling | Wrong bootstrap-source key passed to resolveBootstrapAllowed for yield-rankings loader |  | `worker/src/cron/dews/source-state/hydration.ts:L` |
 | ⬜ | [Q-038](quality/Q-038.md) | S | error-handling | loadDewsRows always issues two DB queries; legacy table queried even when latest is comple |  | `worker/src/cron/dispatch-telegram-state.ts:L70-L` |
@@ -499,7 +499,7 @@
 | ✅ | [Q-182](quality/Q-182.md) | S | docs | check-phishing-signatures.mjs: spec comment diverges from implementation; 'yellow' severit | codex | `scripts/ci/check-phishing-signatures.mjs:L7-L11,` |
 | ✅ | [Q-183](quality/Q-183.md) | S | complexity | injectCashtags rebuilds a large RegExp from all tracked stablecoin symbols on every call | codex | `worker/src/lib/twitter.ts:L61-L66` |
 | 🚫 | [Q-184](quality/Q-184.md) | S | naming | pricing-pipeline/v1.ts uses 4-space indentation; all other changelog data files use 2-spac |  | `shared/data/methodology-changelogs/pricing-pipel` |
-| ⬜ | [Q-185](quality/Q-185.md) | S | naming | window.setTimeout used instead of global setTimeout in client component |  | `src/app/learn/case-studies/case-study-share.tsx:` |
+| 🔄 | [Q-185](quality/Q-185.md) | S | naming | window.setTimeout used instead of global setTimeout in client component | codex | `src/app/learn/case-studies/case-study-share.tsx:` |
 | ✅ | [Q-186](quality/Q-186.md) | S | naming | check-node-modules-fresh.mjs uses console.warn for all output including success, making CI | codex | `scripts/ci/check-node-modules-fresh.mjs:L25-L58` |
 | ⬜ | [Q-187](quality/Q-187.md) | L | type-safety | StatusResponseSchema and StatusHistoryResponseSchema use passthrough().transform(v => v as |  | `shared/types/status.ts:L1046, L1056` |
 | ⬜ | [Q-188](quality/Q-188.md) | S | error-handling | snapshot-safety-grade-history uses manual signal?.aborted throws instead of throwIfAborted |  | `worker/src/cron/snapshot-safety-grade-history.ts` |
@@ -768,7 +768,7 @@
 | ⬜ | [S-118](sustainability/S-118.md) | M | scalability | Fluid pool enrichment makes 3 concurrent RPC calls sequentially per pool, risks connection |  | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L87` |
 | ⬜ | [S-119](sustainability/S-119.md) | S | dead-code | telegram-pending-queue.ts is a trivial compatibility barrel with no added value |  | `worker/src/cron/telegram-pending-queue.ts:L1-L3` |
 | ⬜ | [S-120](sustainability/S-120.md) | S | config | TVL/seconds-per-year thresholds hardcoded inline instead of using the named constants besi |  | `worker/src/cron/yield-sync/sources-optional-prot` |
-| 🔄 | [S-121](sustainability/S-121.md) | S | config | SAFE_SCORE_THRESHOLD and RISKY_SCORE_THRESHOLD are undocumented magic numbers not linked t | codex | `worker/src/lib/flight-to-quality-classification.` |
+| ✅ | [S-121](sustainability/S-121.md) | S | config | SAFE_SCORE_THRESHOLD and RISKY_SCORE_THRESHOLD are undocumented magic numbers not linked t | codex | `worker/src/lib/flight-to-quality-classification.` |
 | ⬜ | [S-122](sustainability/S-122.md) | S | config | Hardcoded 30-second Etherscan timeout in evm-logs with no caller override path |  | `worker/src/lib/evm-logs.ts:L284` |
 | ⬜ | [S-123](sustainability/S-123.md) | S | complexity | yield-health.ts buildCoverageAuditQueue maintains two parallel legacy-item construction pa |  | `worker/src/lib/status/yield-health.ts:L464-L531` |
 | ⬜ | [S-124](sustainability/S-124.md) | S | scalability | Sub-decimal countdown versioning (3.997, 5.99…) creates a finite runway with no migration  |  | `shared/data/methodology-changelogs/blacklist-tra` |
