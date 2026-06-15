@@ -294,7 +294,7 @@ export function DigestArchiveClient() {
                       )}
                       {d.psiBand && d.psiScore != null && (
                         <span
-                          className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
+                          className={`text-xs font-mono font-medium ${d.psiBand in PSI_BAND_CLASSES ? PSI_BAND_CLASSES[d.psiBand as ConditionBand] : ""}`}
                         >
                           {d.psiBand} {d.psiScore.toFixed(1)}
                         </span>
@@ -309,7 +309,7 @@ export function DigestArchiveClient() {
                 </div>
                 {d.psiBand && d.psiScore != null && (
                   <span
-                    className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
+                    className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${d.psiBand in PSI_BAND_CLASSES ? PSI_BAND_CLASSES[d.psiBand as ConditionBand] : ""}`}
                   >
                     {d.psiBand} {d.psiScore.toFixed(1)}
                   </span>
