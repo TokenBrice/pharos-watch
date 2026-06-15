@@ -4,10 +4,16 @@
  * CoinGecko blocks Cloudflare Workers, so this must run from a local machine.
  */
 
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import stablecoins from "../../shared/data/stablecoins/coins.generated.json";
 
 const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
 const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LOGO_OUTPUT_DIR = path.join(__dirname, "..", "..", "data");
+const LOGO_OUTPUT_PATH = path.join(LOGO_OUTPUT_DIR, "logos.json");
 
 const EXTRA_GECKO_IDS: Record<string, string> = {
   "tether-gold": "xaut-tether",
@@ -87,17 +93,11 @@ async function fetchLogos(): Promise<void> {
 
   // Write to data/logos.json — preserve manually-placed local entries (those
   // pointing to /logos/... paths) so downloaded images survive script reruns.
-  const fs = await import("fs");
-  const path = await import("path");
-  const { fileURLToPath } = await import("url");
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const outDir = path.join(__dirname, "..", "..", "data");
-  fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, "logos.json");
+  fs.mkdirSync(LOGO_OUTPUT_DIR, { recursive: true });
 
   let existing: Record<string, string> = {};
   try {
-    existing = JSON.parse(fs.readFileSync(outPath, "utf-8"));
+    existing = JSON.parse(fs.readFileSync(LOGO_OUTPUT_PATH, "utf-8"));
   } catch {
     // file doesn't exist yet — start fresh
   }
@@ -107,8 +107,8 @@ async function fetchLogos(): Promise<void> {
     }
   }
 
-  fs.writeFileSync(outPath, JSON.stringify(logoMap, null, 2));
-  console.log(`Wrote ${Object.keys(logoMap).length} logos to ${outPath}`);
+  fs.writeFileSync(LOGO_OUTPUT_PATH, JSON.stringify(logoMap, null, 2));
+  console.log(`Wrote ${Object.keys(logoMap).length} logos to ${LOGO_OUTPUT_PATH}`);
 }
 
 fetchLogos();
