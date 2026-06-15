@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DepegEvent } from "@shared/types/market";
-import { assignSlugs, selectConfirmedEvents } from "../maintenance/sync-depeg-events";
+import { assignSlugs } from "../maintenance/sync-depeg-events";
 
 function event(overrides: Partial<DepegEvent> = {}): DepegEvent {
   return {
@@ -24,12 +24,6 @@ function event(overrides: Partial<DepegEvent> = {}): DepegEvent {
 }
 
 describe("sync-depeg-events", () => {
-  it("keeps confirmed API events even when pendingReason is retained as provenance", () => {
-    const events = [event({ pendingReason: "large-cap" })];
-
-    expect(selectConfirmedEvents(events)).toEqual(events);
-  });
-
   it("assigns deterministic slugs for same-coin same-day events", () => {
     const entries = assignSlugs([event({ id: 2, direction: "above" }), event({ id: 1, direction: "below" })]);
 

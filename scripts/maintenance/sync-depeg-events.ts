@@ -80,10 +80,6 @@ export function assignSlugs(events: readonly DepegEvent[]): DepegEventEntry[] {
   return result;
 }
 
-export function selectConfirmedEvents(events: readonly DepegEvent[]): DepegEvent[] {
-  return [...events];
-}
-
 async function main() {
   const apiUrl = resolveApiUrl({
     argName: "--api-url",
@@ -127,7 +123,7 @@ async function main() {
       // The /api/depeg-events handler already excludes pending unless includePending=true.
       // Do not filter on pendingReason here: confirmed events can retain that field
       // as provenance for how they entered confirmation.
-      const confirmed = selectConfirmedEvents(collected);
+      const confirmed = [...collected];
 
       // Deduplicate on event id (defensive in case pagination yields overlap).
       const seen = new Set<number>();
