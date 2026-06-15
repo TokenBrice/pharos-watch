@@ -88,18 +88,6 @@ export function createD1Client(databaseName: string, options: D1ClientOptions = 
   };
 }
 
-export function d1Query(databaseName: string, sql: string): string {
-  return createD1Client(databaseName).queryRaw(sql);
-}
-
-export function d1QueryParsed<T>(databaseName: string, sql: string): T[] {
-  return createD1Client(databaseName).query<T>(sql);
-}
-
-export function d1ExecFile(databaseName: string, statements: string[], prefix: string): void {
-  createD1Client(databaseName).executeStatements(statements, prefix);
-}
-
 export function d1BatchExec(
   databaseName: string,
   statements: string[],

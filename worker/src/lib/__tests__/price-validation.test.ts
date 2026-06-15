@@ -136,6 +136,34 @@ describe("loadPriceValidationReferences", () => {
     expect(result.rates).toEqual({ peggedEUR: 1.09 });
   });
 
+  it("logs and falls back to static references when the FX cache lookup fails", async () => {
+    const error = new Error("D1 unavailable");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        throwError: error,
+      },
+    ]);
+
+    const result = await loadPriceValidationReferences(db, {
+      staticRates: { peggedEUR: 1.09 },
+    });
+
+    expect(result).toEqual({
+      rates: { peggedEUR: 1.09 },
+      type: "static",
+      updatedAt: null,
+    });
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[price-validation] Failed to load FX validation references; falling back to static references",
+      error,
+    );
+    warnSpy.mockRestore();
+  });
+
   it("keeps cached-fallback references stale when source timestamps are old", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([

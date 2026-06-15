@@ -188,7 +188,8 @@ export async function loadPriceValidationReferences(
       updatedAtByPeg,
       typeByPeg,
     };
-  } catch {
+  } catch (error) {
+    console.warn("[price-validation] Failed to load FX validation references; falling back to static references", error);
     return {
       rates: staticRates,
       type: Object.keys(staticRates).length > 0 ? "static" : "none",
