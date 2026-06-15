@@ -10,6 +10,11 @@ import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
+import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
+import {
+  CASE_STUDY_OUTCOME_CHIPS,
+  CASE_STUDY_OUTCOME_LABELS,
+} from "@/app/learn/case-studies/case-study-outcomes";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
 import {
   CrossLinksFooter,
@@ -61,6 +66,10 @@ export function ArchetypeExplainerBody({
         kickerClass={content.visuals.kickerClass}
       />
       <TrackedCoinList
+        archetype={content.archetype}
+        kickerClass={content.visuals.kickerClass}
+      />
+      <MechanismCaseStudies
         archetype={content.archetype}
         kickerClass={content.visuals.kickerClass}
       />
@@ -413,6 +422,58 @@ function TrackedCoinList({
           </p>
         ) : null}
       </div>
+    </section>
+  );
+}
+
+function MechanismCaseStudies({
+  archetype,
+  kickerClass,
+}: {
+  archetype: MechanismArchetype;
+  kickerClass: string;
+}) {
+  // Auto-generated from the case-study registry: every study tagged with this
+  // archetype, in canonical list order. Server-rendered, so the full registry
+  // never reaches a client bundle.
+  const studies = CASE_STUDY_LIST.filter((study) => study.archetype === archetype);
+  if (studies.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <SectionKicker className={kickerClass}>Case studies</SectionKicker>
+        <SectionHeading>When this mechanism met a stress test</SectionHeading>
+      </div>
+      <ul className="divide-y divide-border/40">
+        {studies.map((study) => (
+          <li key={study.slug}>
+            <Link
+              href={`/learn/case-studies/${study.slug}/`}
+              className="pharos-focus-ring group grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-6"
+            >
+              <div className="space-y-1">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  {study.eyebrow}
+                </p>
+                <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-lg">
+                  {study.title}
+                </h3>
+              </div>
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center self-start rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] sm:self-baseline",
+                  CASE_STUDY_OUTCOME_CHIPS[study.outcome],
+                )}
+              >
+                {CASE_STUDY_OUTCOME_LABELS[study.outcome]}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

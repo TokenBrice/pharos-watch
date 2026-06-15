@@ -111,6 +111,10 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
       "Depeg Early Warning System. A forward-looking per-coin stress score, 0–100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.",
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
     methodologyVersion: "v6.0",
+    example: {
+      label: "Example: TerraUSD's death spiral — read the case study →",
+      href: "/learn/case-studies/terra-ust-2022/",
+    },
     seeAlso: ["pegscore", "psi", "calm-watch-alert-warning-danger"],
   },
   {

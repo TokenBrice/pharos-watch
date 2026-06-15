@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, ChevronRight } from "lucide-react";
 import { CAUSE_META } from "@shared/lib/dead-stablecoins";
-import { CASE_STUDY_BY_CEMETERY_ID } from "@/app/learn/case-studies/content";
+import { CASE_STUDY_CLIENT_BY_CEMETERY_ID } from "@/app/learn/case-studies/content/client-index";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CHAIN_META } from "@shared/lib/chains";
 import { buildExplorerUrl } from "@shared/lib/explorer";
@@ -197,9 +197,9 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
                   View archived data →
                 </Link>
               ) : null}
-              {CASE_STUDY_BY_CEMETERY_ID[coin.id] ? (
+              {CASE_STUDY_CLIENT_BY_CEMETERY_ID[coin.id] ? (
                 <Link
-                  href={`/learn/case-studies/${CASE_STUDY_BY_CEMETERY_ID[coin.id].slug}/`}
+                  href={`/learn/case-studies/${CASE_STUDY_CLIENT_BY_CEMETERY_ID[coin.id].slug}/`}
                   className="pharos-focus-ring text-xs font-medium text-frost-blue underline-offset-2 hover:underline transition-colors"
                 >
                   Read the case study →
