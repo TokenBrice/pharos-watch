@@ -19,14 +19,6 @@ const PAGES_UI_EXACT_PATHS = new Set([
   "package.json",
   "package-lock.json",
 ]);
-const PAGES_UI_PREFIXES = [
-  "src/",
-  "public/",
-  "shared/",
-  "functions/",
-  "data/",
-];
-
 const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefixes;
 const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
 const WORKER_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.prefixes;
@@ -143,7 +135,7 @@ export function hasPagesDeployImpact(files) {
 export function hasPagesUiImpact(files) {
   return files.some((file) =>
     PAGES_UI_EXACT_PATHS.has(file)
-    || PAGES_UI_PREFIXES.some((prefix) => file.startsWith(prefix)),
+    || PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)),
   );
 }
 
