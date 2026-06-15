@@ -707,7 +707,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
     },
     {
       ts: Date.UTC(2021, 10, 6), // 2021-11-06 — Metapool virtual-price exploit drains ~$8M nUSD
-      kind: "governance",
+      kind: "exploit",
       label: "Synapse Metapool exploit — ~$8M nUSD drained, LPs refunded",
       severity: "high",
     },
@@ -1045,14 +1045,14 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       // 2022-04-02 — Frontier oracle exploit (~$15.6M); INV price manipulation
       // via TWAP attack. Larger of the two 2022 issuer-damaging events.
       ts: Date.UTC(2022, 3, 2),
-      kind: "governance",
+      kind: "exploit",
       label: "Frontier oracle exploit — $15.6M, INV price manipulation",
       severity: "high",
     },
     {
       // 2022-06-16 — Second flash-loan oracle exploit on Frontier (~$5.8M).
       ts: Date.UTC(2022, 5, 16),
-      kind: "governance",
+      kind: "exploit",
       label: "Frontier flash-loan oracle exploit — ~$5.8M DOLA borrowed",
       severity: "med",
       href: "https://cointelegraph.com/news/inverse-finance-exploited-again-for-1-2m-in-flashloan-oracle-attack",
@@ -1069,7 +1069,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
     {
       // 2026-03-17 — dTRINITY dLEND exploit created ~$257K dUSD bad debt.
       ts: Date.UTC(2026, 2, 17),
-      kind: "governance",
+      kind: "exploit",
       label: "dLEND exploit — ~$257K dUSD bad debt",
       severity: "high",
       href: "https://blocksec.com/blog/weekly-web3-security-incident-roundup-mar-16-mar-22-2026",
@@ -1080,7 +1080,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       // 2026-03-17 — sdUSD is the tracked dUSD savings wrapper and inherits
       // the dTRINITY dLEND exploit risk through its parent collateral.
       ts: Date.UTC(2026, 2, 17),
-      kind: "governance",
+      kind: "exploit",
       label: "dLEND exploit — sdUSD inherits dUSD bad-debt risk",
       severity: "high",
       href: "https://nomoslabs.io/archive/dtrinity-2026",
@@ -1462,7 +1462,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       // 2025-03-25 — GMX cauldron exploit drained ~$13M MIM from Arbitrum
       // markets.
       ts: Date.UTC(2025, 2, 25),
-      kind: "governance",
+      kind: "exploit",
       label: "GMX cauldron exploit — ~$13M MIM drained from Arbitrum",
       severity: "high",
     },
@@ -1680,7 +1680,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       // dForce's lending market, impairing the protocol backing USX.
       // Funds were eventually largely returned.
       ts: Date.UTC(2020, 3, 19),
-      kind: "governance",
+      kind: "exploit",
       label: "Lendf.Me imBTC reentrancy — $25M drained, dForce lending impaired",
       severity: "high",
       href: "https://medium.com/dforcenet/dforce-lendf-me-incident-summary-and-recovery-plan-7e2d2b3e2c66",
@@ -1877,7 +1877,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
     {
       // 2025-03-01 — Zoth collateral-accounting bug enabled unbacked ZeUSD.
       ts: Date.UTC(2025, 2, 1),
-      kind: "governance",
+      kind: "exploit",
       label: "Zoth exploit — $285K unbacked ZeUSD mint",
       severity: "high",
       href: "https://blog.verichains.io/p/anatomy-of-a-hack-how-a-simple-logic",
@@ -1885,7 +1885,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
     {
       // 2025-03-21 — Compromised admin key enabled a malicious Zoth upgrade.
       ts: Date.UTC(2025, 2, 21),
-      kind: "governance",
+      kind: "exploit",
       label: "Zoth key exploit — ~$8.4M USD0++ drained",
       severity: "high",
       href: "https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025",

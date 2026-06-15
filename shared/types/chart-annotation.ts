@@ -13,6 +13,7 @@ export const CHART_ANNOTATION_KINDS = [
   "depeg",
   "mint-burn-spike",
   "blacklist-surge",
+  "exploit",
   "governance",
   "regulatory",
   "methodology-change",

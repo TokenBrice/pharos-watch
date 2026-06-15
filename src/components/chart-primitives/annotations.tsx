@@ -14,6 +14,7 @@ const ANNOTATION_HEX_COLORS: Record<ChartAnnotationKind, string> = {
   depeg: "#ef4444", // red-500
   "mint-burn-spike": "#3b82f6", // blue-500
   "blacklist-surge": "#f59e0b", // amber-500
+  exploit: "#ea580c", // orange-600
   governance: "#a855f7", // purple-500
   regulatory: "#64748b", // slate-500
   "methodology-change": "#facc15", // amber-400
