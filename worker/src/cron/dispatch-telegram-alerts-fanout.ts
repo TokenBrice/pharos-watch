@@ -1,7 +1,6 @@
+import type { TelegramAlertType } from "@shared/types/status";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PendingCapacitySnapshot } from "./telegram-pending-queue";
-
-type AlertType = "dews" | "depeg" | "safety" | "launch";
 
 export interface AlertStablecoinIds {
   dewsIds: string[];
@@ -34,16 +33,16 @@ interface FanoutSubscriptionLoaders {
   loadSubscriberRowsBatch: (
     db: D1Database,
     stablecoinIds: string[],
-    type: AlertType,
+    type: TelegramAlertType,
     nowSec: number,
   ) => Promise<Map<string, SubscriberRow[]>>;
   loadPresetSubscriberRowsBatch: (
     db: D1Database,
     stablecoinIds: string[],
-    type: Exclude<AlertType, "launch">,
+    type: Exclude<TelegramAlertType, "launch">,
     nowSec: number,
   ) => Promise<PresetSubscriberLoadResult>;
-  loadGlobalSubscriberRows: (db: D1Database, type: AlertType, nowSec: number) => Promise<SubscriberRow[]>;
+  loadGlobalSubscriberRows: (db: D1Database, type: TelegramAlertType, nowSec: number) => Promise<SubscriberRow[]>;
   loadPerCoinSnoozeMap: (
     db: D1Database,
     stablecoinIds: readonly string[],

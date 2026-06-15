@@ -1,11 +1,10 @@
+import type { TelegramAlertType } from "@shared/types/status";
 import { buildInClause, chunkArray } from "../lib/db";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
 import { toErrorMessage } from "../lib/error-utils";
-
-export type DispatchAlertType = "dews" | "depeg" | "safety" | "launch";
 
 const ALERT_COLUMN_BY_TYPE = {
   dews: "alert_dews",
@@ -28,7 +27,7 @@ type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal"> & { stablecoin_id: st
 export async function loadSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
-  type: DispatchAlertType,
+  type: TelegramAlertType,
   nowSec: number,
 ): Promise<Map<string, SubscriberRow[]>> {
   if (stablecoinIds.length === 0) return new Map();
@@ -89,7 +88,7 @@ export async function loadSubscriberRowsBatch(
 
 export async function loadGlobalSubscriberRows(
   db: D1Database,
-  type: DispatchAlertType,
+  type: TelegramAlertType,
   nowSec: number,
 ): Promise<SubscriberRow[]> {
   const alertColumn = GLOBAL_ALERT_COLUMN_BY_TYPE[type];
@@ -184,7 +183,7 @@ export function mergeSubscriberMaps(
 export async function loadPresetSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
-  type: Exclude<DispatchAlertType, "launch">,
+  type: Exclude<TelegramAlertType, "launch">,
   nowSec: number,
 ): Promise<PresetSubscriberLoadResult> {
   if (stablecoinIds.length === 0) return { kind: "ok", rows: new Map() };
