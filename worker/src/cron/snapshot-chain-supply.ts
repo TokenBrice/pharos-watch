@@ -1,5 +1,6 @@
 import { batchExecute } from "../lib/db";
 import { CHAIN_META } from "@shared/lib/chains";
+import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
@@ -10,9 +11,7 @@ import { startOfUtcDaySec } from "../lib/time-constants";
 const CACHE_MAX_AGE_SEC = 1200;
 
 export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
-  if (signal?.aborted) {
-    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "aborted" }) };
-  }
+  throwIfAborted(signal);
 
   const cache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
   if (cache.kind !== "ok") {
@@ -84,6 +83,7 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
     await batchExecute(db, stmts, { signal });
     await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({ snapshotDate }));
   } catch (err) {
+    rethrowIfAborted(err, signal);
     recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "batchExecute" } });
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
   }

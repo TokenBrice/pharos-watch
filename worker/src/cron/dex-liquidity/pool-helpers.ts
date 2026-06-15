@@ -376,7 +376,7 @@ export function buildSymbolLookups(): SymbolLookups {
     }
     for (const contract of meta.tradedContracts ?? []) {
       const key = buildChainAddressKey(contract.chain, contract.address);
-      chainAddressToId.set(key, meta.id);
+      if (!chainAddressToId.has(key)) chainAddressToId.set(key, meta.id);
       if (!contractMetaByChainAddress.has(key)) {
         contractMetaByChainAddress.set(key, {
           stablecoinId: meta.id,

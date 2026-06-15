@@ -30,7 +30,7 @@ export function ChartCardShell({
   }
 
   return (
-    <Card className={cn("rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300", className)}>
+    <Card className={cn("rounded-xl animate-in fade-in duration-300", className)}>
       <CardHeader>{header}</CardHeader>
       <CardContent>{body}</CardContent>
       {legend ? <CardContent className="pt-0">{legend}</CardContent> : null}

@@ -200,7 +200,7 @@ export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
           href={hero.href}
           className={`pharos-focus-ring group relative flex aspect-[3/2] flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl border-2 px-3 py-3 transition-colors ${hero.colorClass}`}
         >
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="pharos-kicker">
             {hero.label}
           </span>
           <span
@@ -285,7 +285,7 @@ export function HeroPriceCard({
           <PegGauge deviationBps={gaugeDeviationBps} className={mobile ? "w-12" : "w-16 xl:w-20"} />
         )}
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="pharos-kicker">
             Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
           </p>
           <p
@@ -348,7 +348,7 @@ export function HeroMarketCapCard({
           : "rounded-xl bg-background/30 px-4 py-3"
       }
     >
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="pharos-kicker">
         Market Cap
       </p>
       <p className={`font-bold font-mono tracking-tight ${mobile ? "text-lg" : "text-2xl"}`}>
@@ -396,7 +396,7 @@ export function HeroSupplyCard({
       <div className="mt-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="pharos-kicker">
               Supply
             </p>
             <p className="text-base font-bold font-mono">
@@ -423,7 +423,7 @@ export function HeroSupplyCard({
 
   return (
     <div className="rounded-xl bg-background/30 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="pharos-kicker">
         Supply
       </p>
       <p className="text-2xl font-bold font-mono tracking-tight">

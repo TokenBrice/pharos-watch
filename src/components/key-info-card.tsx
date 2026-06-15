@@ -329,7 +329,7 @@ export function KeyInfoCard({
           >
             {meta.collateral && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                <p className="pharos-kicker mb-1.5">
                   Collateral
                 </p>
                 <p className="text-base leading-relaxed">{meta.collateral}</p>
@@ -337,7 +337,7 @@ export function KeyInfoCard({
             )}
             {meta.pegMechanism && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                <p className="pharos-kicker mb-1.5">
                   Peg Stability
                 </p>
                 {effectiveArchetype ? (
@@ -373,7 +373,7 @@ export function KeyInfoCard({
 
         {infrastructureSummaries.length > 0 && (
           <div className="border-t border-border/40 pt-3 sm:pt-4 space-y-3">
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="pharos-kicker mb-1.5">
               Infrastructure
             </p>
             {infrastructureSummaries.map(({ value, label, summary, href }) => (
@@ -397,7 +397,7 @@ export function KeyInfoCard({
               id="attestation"
               className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
             >
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+              <p className="pharos-kicker mb-1.5">
                 Proof of Reserves
               </p>
               {meta.proofOfReserves ? (
@@ -423,7 +423,7 @@ export function KeyInfoCard({
               id="jurisdiction"
               className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
             >
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+              <p className="pharos-kicker mb-1.5">
                 Jurisdiction
               </p>
               {meta.jurisdiction || meta.mica ? (
@@ -460,7 +460,7 @@ export function KeyInfoCard({
         {/* Launch date — proof line for the hero passport's "Issued" field */}
         {launchDateDisplay && (
           <div className="border-t border-border/40 pt-3 sm:pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Launched</p>
+            <p className="pharos-kicker mb-1.5">Launched</p>
             <p className="text-sm font-medium">{launchDateDisplay}</p>
           </div>
         )}
@@ -471,7 +471,7 @@ export function KeyInfoCard({
             id="contracts"
             className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] border-t border-border/40 pt-3 sm:pt-4 lg:scroll-mt-6"
           >
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+            <p className="pharos-kicker mb-1.5">
               Contract Deployments
             </p>
             {contractSummary && <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>}
