@@ -114,10 +114,15 @@ describe("site-data proxy", () => {
   });
 
   it("returns a cached response and records a Pages cache-hit request", async () => {
+    vi.setSystemTime(new Date("2026-06-15T10:00:00.000Z"));
     cacheMatch.mockResolvedValueOnce(
       new Response(JSON.stringify({ cached: true }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Cache-Control": "public, max-age=60",
+          "Content-Type": "application/json",
+          Date: "Mon, 15 Jun 2026 09:59:30 GMT",
+        },
       }),
     );
     const fetchSpy = vi.fn();
@@ -148,6 +153,44 @@ describe("site-data proxy", () => {
             entry.binds[4] === "",
         ),
     ).toBe(true);
+  });
+
+  it("bypasses a stale Pages cache response and refreshes upstream", async () => {
+    vi.setSystemTime(new Date("2026-06-15T10:02:00.000Z"));
+    cacheMatch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ cached: true }), {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=60",
+          "Content-Type": "application/json",
+          Date: "Mon, 15 Jun 2026 10:00:00 GMT",
+        },
+      }),
+    );
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ refreshed: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ refreshed: true });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(cachePut).toHaveBeenCalledTimes(1);
   });
 
   it("bypasses the Pages cache for conditional requests", async () => {

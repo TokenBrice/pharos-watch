@@ -38,6 +38,7 @@ const FORWARDED_RESPONSE_HEADERS = [
 ] as const;
 
 type SiteDataProxyContext = PagesProxyContext<SiteDataProxyEnv>;
+const CACHE_MAX_AGE_DIRECTIVE_RE = /(?:^|,\s*)(s-maxage|max-age)=(\d+)(?:\s*(?:,|$))/gi;
 
 function methodNotAllowed(): Response {
   return jsonError(405, "Method not allowed", { Allow: SITE_DATA_ALLOWED_METHOD });
@@ -71,6 +72,41 @@ function canCacheResponse(response: Response): boolean {
     !/\bno-store\b/i.test(cacheControl) &&
     !/(?:^|,\s*)110\b/.test(warning)
   );
+}
+
+function getCacheMaxAgeSeconds(response: Response): number | null {
+  const cacheControl = response.headers.get("Cache-Control") ?? "";
+  let maxAge: number | null = null;
+  for (const match of cacheControl.matchAll(CACHE_MAX_AGE_DIRECTIVE_RE)) {
+    const directive = match[1].toLowerCase();
+    const parsed = Number.parseInt(match[2], 10);
+    if (!Number.isSafeInteger(parsed) || parsed < 0) continue;
+    if (directive === "s-maxage") return parsed;
+    maxAge = parsed;
+  }
+  return maxAge;
+}
+
+function getCachedResponseAgeSeconds(response: Response): number | null {
+  const ageHeader = response.headers.get("Age");
+  if (ageHeader != null) {
+    const age = Number.parseInt(ageHeader, 10);
+    if (Number.isSafeInteger(age) && age >= 0) return age;
+  }
+
+  const dateHeader = response.headers.get("Date");
+  if (dateHeader == null) return null;
+  const dateMs = Date.parse(dateHeader);
+  if (!Number.isFinite(dateMs)) return null;
+  return Math.max(0, Math.floor((Date.now() - dateMs) / 1000));
+}
+
+function canServeCachedResponse(response: Response): boolean {
+  if (!canCacheResponse(response)) return false;
+  const maxAge = getCacheMaxAgeSeconds(response);
+  if (maxAge == null) return true;
+  const age = getCachedResponseAgeSeconds(response);
+  return age != null && age <= maxAge;
 }
 
 function queuePagesCacheWrite(context: SiteDataProxyContext, cacheKey: Request, response: Response): void {
@@ -158,6 +194,9 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
 
       const cached = await getDefaultCache().match(buildCacheKey(request));
       if (!cached) {
+        return null;
+      }
+      if (!canServeCachedResponse(cached)) {
         return null;
       }
 
