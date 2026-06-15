@@ -29,8 +29,8 @@ function parseAuditDetail(row: AuditLogRow): unknown {
 
 export function handleApiKeyAuditLog(
   db: D1Database,
-  trustedAdmin: boolean = false,
-  request?: Request,
+  trustedAdmin: boolean,
+  request: Request,
 ): Promise<Response> {
   return runAdminRoute(
     {
@@ -39,7 +39,7 @@ export function handleApiKeyAuditLog(
       trustedAdmin,
     },
     async () => {
-      const url = new URL(request!.url);
+      const url = new URL(request.url);
       const limitParam = parseOptionalPositiveIntegerParam(url.searchParams.get("limit"), "limit", {
         max: AUDIT_LOG_MAX_LIMIT,
       });
