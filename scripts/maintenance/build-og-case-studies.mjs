@@ -76,15 +76,27 @@ const CARDS = readdirSync(CONTENT_DIR)
   .filter((f) => f.endsWith(".ts") && f !== "types.ts" && f !== "index.ts" && f !== "client-index.ts")
   .map((f) => {
     const src = readFileSync(resolve(CONTENT_DIR, f), "utf-8");
+    const slug = field(src, "slug");
+    const title = field(src, "title");
+    const outcome = field(src, "outcome");
+    const missingFields = [
+      slug ? null : "slug",
+      title ? null : "title",
+      outcome ? null : "outcome",
+    ].filter(Boolean);
+    if (missingFields.length > 0) {
+      console.warn(`[build-og-case-studies] Skipping ${f}: missing ${missingFields.join(", ")}`);
+      return null;
+    }
     return {
-      slug: field(src, "slug"),
+      slug,
       kicker: field(src, "eyebrow"),
-      title: field(src, "title"),
-      outcome: field(src, "outcome"),
+      title,
+      outcome,
       logoPath: resolveLogoPath(field(src, "primaryCoinId"), field(src, "cemeteryId")),
     };
   })
-  .filter((c) => c.slug && c.title);
+  .filter(Boolean);
 
 function escapeXml(s) {
   return s

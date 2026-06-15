@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**89/733 done (12%)**  `██░░░░░░░░░░░░░░░░░░`
+**94/733 done (13%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 622 | 3 | 0 | 89 | 19 |
+| Count | 618 | 2 | 0 | 94 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 41 | 0 | 0 | 215 |
-| quality | 315 | 39 | 3 | 0 | 266 |
+| redundancy | 266 | 42 | 0 | 0 | 214 |
+| quality | 315 | 43 | 2 | 0 | 263 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -184,7 +184,7 @@
 | ⬜ | [R-150](redundancy/R-150.md) | S | wrapper | Four single-line wrapper functions add no value over direct shouldSkipFreshMatchingCache c |  | `worker/src/lib/telegram-webhook-registration.ts:` |
 | ⬜ | [R-151](redundancy/R-151.md) | S | dead-code | Dead else-if branch in buildCacheStatuses statusFloor finalization |  | `worker/src/lib/api-freshness.ts:L414-L422` |
 | ⬜ | [R-152](redundancy/R-152.md) | S | clone | bigIntToDecimal is a one-line wrapper over decimalNumberFromBigInt |  | `worker/src/lib/bigint.ts:L26-L28` |
-| ⬜ | [R-153](redundancy/R-153.md) | S | dead-code | Unused `field` parameter in loadOptionalTelegramTelemetry |  | `worker/src/lib/status/telegram-bot-stats.ts:L307` |
+| ✅ | [R-153](redundancy/R-153.md) | S | dead-code | Unused `field` parameter in loadOptionalTelegramTelemetry | codex | `worker/src/lib/status/telegram-bot-stats.ts:L307` |
 | ⬜ | [R-154](redundancy/R-154.md) | S | wrapper | loadMintBurnPriceContext is a trivial single-id wrapper that adds no value |  | `worker/src/lib/mint-burn-pipeline/context.ts:L74` |
 | ⬜ | [R-155](redundancy/R-155.md) | S | dead-code | scopeNodeIds Set in computeVisibleGraph is redundant with the nodeIds loop |  | `src/components/contagion-graph-graph.ts:58-95` |
 | ⬜ | [R-156](redundancy/R-156.md) | S | clone | Three private formatDeviation functions with near-identical logic |  | `src/app/depeg/[event]/page.tsx:78-85 + src/app/d` |
@@ -310,7 +310,7 @@
 | ✅ | [Q-003](quality/Q-003.md) | S | dead-code | Slipstream pools hardcode volume24hUsd=0, triggering silent large-pool filter exclusion | codex | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ✅ | [Q-004](quality/Q-004.md) | S | type-safety | usdgo-osl rate-derived config uses benchmarkCurrency instead of benchmarkOverrideKey, spli | codex | `worker/src/cron/yield-config-rate-sources.ts:221` |
 | ✅ | [Q-078](quality/Q-078.md) | S | type-safety | reserve-protocol-dtf compares fetchOnchainUint256 bigint result to 0n to detect non-SOUND  | codex | `worker/src/cron/reserve-adapters/reserve-protoco` |
-| ⬜ | [Q-082](quality/Q-082.md) | S | security | LIKE wildcard injection in tape-event full-text search (q parameter) |  | `worker/src/lib/tape-event-store.ts:142-145, work` |
+| 🔄 | [Q-082](quality/Q-082.md) | S | security | LIKE wildcard injection in tape-event full-text search (q parameter) | codex | `worker/src/lib/tape-event-store.ts:142-145, work` |
 
 ### Medium (110)
 
@@ -326,9 +326,9 @@
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
 | ⬜ | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi |  | `shared/lib/selector/answers-to-screener.ts:L84-L` |
 | ⬜ | [Q-022](quality/Q-022.md) | S | error-handling | Silent broad catch on stress_signals_latest hides D1 transient errors from observability |  | `worker/src/cron/dews/source-state/hydration.ts:L` |
-| 🔄 | [Q-023](quality/Q-023.md) | S | testing | depeg-incident-utils.ts has no tests despite being the sole parser for pending-depeg UI da | codex | `src/lib/depeg-incident-utils.ts:L57-L80` |
+| ✅ | [Q-023](quality/Q-023.md) | S | testing | depeg-incident-utils.ts has no tests despite being the sole parser for pending-depeg UI da | codex | `src/lib/depeg-incident-utils.ts:L57-L80` |
 | ⬜ | [Q-024](quality/Q-024.md) | S | type-safety | buildResultSummaryCoordinationProps erases all prop types via Record<string, unknown> |  | `src/app/screener/picker/handoff.ts:L128` |
-| ⬜ | [Q-026](quality/Q-026.md) | S | error-handling | project-tape.ts silently returns ok status when tape projectors throw |  | `worker/src/cron/project-tape.ts:106-125` |
+| 🔄 | [Q-026](quality/Q-026.md) | S | error-handling | project-tape.ts silently returns ok status when tape projectors throw | codex | `worker/src/cron/project-tape.ts:106-125` |
 | ⬜ | [Q-028](quality/Q-028.md) | S | type-safety | Mini-app error retry passes potentially-null initData directly to loadSession |  | `src/app/pharoswatchbot/app/client.tsx:L344` |
 | ⬜ | [Q-031](quality/Q-031.md) | M | type-safety | DigestSnapshotInputDataSchema casts z.object({}).passthrough() to DigestInputData — snapsh |  | `shared/types/digest.ts:L428-L432` |
 | ⬜ | [Q-036](quality/Q-036.md) | M | error-handling | fetchCurrentBalanceForAddress (current-balance-cache) never uses drpcApiKey despite it bei |  | `worker/src/cron/blacklist/current-balance-cache.` |
@@ -438,8 +438,8 @@
 | ✅ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be | codex | `src/components/exploit-notice-banner.tsx:L11-L35` |
 | ✅ | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function | codex | `scripts/maintenance/fetch-logos.ts:90-96` |
 | ✅ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block | codex | `worker/src/handlers/scheduled/hourly-live-reserv` |
-| 🔄 | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function | codex | `worker/src/cron/sync-live-reserves-run-state.ts:` |
-| 🔄 | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key | codex | `src/components/status/admin-action-button.tsx:L3` |
+| ✅ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function | codex | `worker/src/cron/sync-live-reserves-run-state.ts:` |
+| ✅ | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key | codex | `src/components/status/admin-action-button.tsx:L3` |
 | ⬜ | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic |  | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
 | ⬜ | [Q-029](quality/Q-029.md) | M | complexity | IIFE inside JSX render obscures dominance-breakdown logic in chains/client.tsx |  | `src/app/chains/client.tsx:L292-L385` |
 | ⬜ | [Q-030](quality/Q-030.md) | S | type-safety | psiBand is cast to ConditionBand without membership guard in digest-archive-client |  | `src/components/digest-archive-client.tsx:296, 31` |
@@ -541,7 +541,7 @@
 | ⬜ | [Q-224](quality/Q-224.md) | S | docs | MNEE event signatures omit 'indexed' qualifiers, creating misleading human-readable docume |  | `worker/src/lib/blacklist-contracts.ts:L409-L427` |
 | ⬜ | [Q-225](quality/Q-225.md) | S | error-handling | logIndex NaN not guarded in parse.ts — produces corrupted event ID and silent DB collision |  | `worker/src/lib/mint-burn-pipeline/parse.ts:L62-L` |
 | ⬜ | [Q-226](quality/Q-226.md) | S | complexity | result-pane.tsx buildClosestSurvivorsFromOutput uses an unsafe cast to access an optional  |  | `src/app/screener/picker/result-pane.tsx:500-511` |
-| ⬜ | [Q-227](quality/Q-227.md) | S | error-handling | build-og-case-studies.mjs silently drops case-study cards when regex-based field extractio |  | `scripts/maintenance/build-og-case-studies.mjs:68` |
+| ✅ | [Q-227](quality/Q-227.md) | S | error-handling | build-og-case-studies.mjs silently drops case-study cards when regex-based field extractio | codex | `scripts/maintenance/build-og-case-studies.mjs:68` |
 | ⬜ | [Q-228](quality/Q-228.md) | S | error-handling | useCompareShareActions silently swallows all canvas/render errors in handleTwitterShare |  | `src/hooks/use-compare-share-actions.ts:L123-L150` |
 | ⬜ | [Q-229](quality/Q-229.md) | S | docs | fieldNotes word-count constraint is JSDoc-only and unverifiable at authoring time |  | `src/data/changelogs/types.ts:L21-26` |
 | ⬜ | [Q-230](quality/Q-230.md) | S | complexity | pickRelatedStudies performs two O(n) linear scans per call inside an O(n) loop |  | `src/app/learn/case-studies/case-study-body.tsx:L` |
