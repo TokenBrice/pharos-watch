@@ -1,10 +1,11 @@
-import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
+import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { runChunkedInRead } from "./db";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
   DDR_LOCK_STATE_INSERT_COLUMNS_SQL,
+  type DdrLockTrigger,
   assertHash,
   assertLockMetadata,
   assertNonEmpty,
@@ -32,7 +33,7 @@ export type DdrLockState =
   | "publication_failed"
   | "published";
 export type DdrLockHealthStatus = "healthy" | "degraded" | "skipped";
-export type DdrLockTrigger = "scheduled_24h" | "forecast_readiness" | "readiness_backstop";
+export type { DdrLockTrigger };
 export type DdrLockAuditAction =
   | "pending"
   | "deferred"
@@ -43,8 +44,6 @@ export type DdrLockAuditAction =
   | "publication_failed"
   | "published";
 
-const DEFAULT_DDR_V2_EFFECTIVE_AT = DDR_V2_EFFECTIVE_AT;
-const DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600;
 // Unix ts for 2100-01-01T00:00:00Z; far-future sentinel = effectively non-expiring.
 const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
 const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
@@ -244,11 +243,11 @@ function optionNowSec(options: EnsureCanonicalIncidentsOptions): number {
 }
 
 function optionEffectiveAt(options: EnsureCanonicalIncidentsOptions): number {
-  return options.ddrV2EffectiveAt ?? options.policyEffectiveAt ?? DEFAULT_DDR_V2_EFFECTIVE_AT;
+  return options.ddrV2EffectiveAt ?? options.policyEffectiveAt ?? DDR_V2_EFFECTIVE_AT;
 }
 
 function optionPolicyDelaySec(options?: { policyDelaySec?: number }): number {
-  return options?.policyDelaySec ?? DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC;
+  return options?.policyDelaySec ?? DDR_PUBLIC_PREDICTION_DELAY_SEC;
 }
 
 async function sourceFingerprintForEvent(event: DdrCanonicalIncidentEventInput): Promise<string> {
@@ -326,9 +325,45 @@ function policyMembershipForEvent(
   };
 }
 
+function buildFreshIncident(args: {
+  incidentKey: string;
+  event: DdrCanonicalIncidentEventInput;
+  sourceFingerprint: string;
+  policyMembership: DdrIncidentPolicyMembership;
+  nowSec: number;
+  policyDelaySec: number;
+}): DdrCanonicalIncident {
+  const { incidentKey, event, sourceFingerprint, policyMembership, nowSec, policyDelaySec } = args;
+  return {
+    incidentKey,
+    stablecoinId: event.stablecoinId,
+    pegCurrency: event.pegCurrency,
+    direction: event.direction,
+    firstEventId: event.eventId,
+    currentEventId: event.eventId,
+    firstStartedAt: event.startedAt,
+    currentStartedAt: event.startedAt,
+    firstObservedPeakBucketBps: peakBucketBps(event.peakDeviationBps),
+    incidentState: "active",
+    supersededByIncidentKey: null,
+    sourceFingerprint,
+    createdAt: nowSec,
+    updatedAt: nowSec,
+    eventId: event.eventId,
+    relation: "observed",
+    policyMembership,
+    startedAt: event.startedAt,
+    eligibleAt: event.startedAt + policyDelaySec,
+    policyUniverseIncluded: policyMembership.policyUniverseIncluded,
+    rolloutActiveAtEnablement: policyMembership.rolloutActiveAtEnablement,
+    confirmedAt: null,
+    lockState: null,
+  };
+}
+
 function mapIncidentRow(
   row: IncidentRow,
-  policyDelaySec = DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC,
+  policyDelaySec = DDR_PUBLIC_PREDICTION_DELAY_SEC,
 ): DdrCanonicalIncident {
   const policyMembership =
     row.membership_incident_key == null
@@ -390,7 +425,7 @@ function mapIncidentRow(
 async function loadIncidentsByEventIds(
   db: D1Database,
   eventIds: number[],
-  policyDelaySec = DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC,
+  policyDelaySec = DDR_PUBLIC_PREDICTION_DELAY_SEC,
 ): Promise<Map<number, DdrCanonicalIncident>> {
   const linked = new Map<number, DdrCanonicalIncident>();
   const rows = await runChunkedInRead(
@@ -762,31 +797,10 @@ export async function ensureCanonicalIncidents(
 
     const policyMembership = policyMembershipForEvent(event, incidentKey, options);
     await insertNewIncident(db, event, incidentKey, sourceFingerprint, policyMembership, options);
-    ensured.set(event.eventId, {
-      incidentKey,
-      stablecoinId: event.stablecoinId,
-      pegCurrency: event.pegCurrency,
-      direction: event.direction,
-      firstEventId: event.eventId,
-      currentEventId: event.eventId,
-      firstStartedAt: event.startedAt,
-      currentStartedAt: event.startedAt,
-      firstObservedPeakBucketBps: peakBucketBps(event.peakDeviationBps),
-      incidentState: "active",
-      supersededByIncidentKey: null,
-      sourceFingerprint,
-      createdAt: nowSec,
-      updatedAt: nowSec,
-      eventId: event.eventId,
-      relation: "observed",
-      policyMembership,
-      startedAt: event.startedAt,
-      eligibleAt: event.startedAt + policyDelaySec,
-      policyUniverseIncluded: policyMembership.policyUniverseIncluded,
-      rolloutActiveAtEnablement: policyMembership.rolloutActiveAtEnablement,
-      confirmedAt: null,
-      lockState: null,
-    });
+    ensured.set(
+      event.eventId,
+      buildFreshIncident({ incidentKey, event, sourceFingerprint, policyMembership, nowSec, policyDelaySec }),
+    );
   }
 
   return events

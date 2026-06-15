@@ -301,8 +301,7 @@ function isRecommendedSourceShape(value: unknown): boolean {
 function isPerInputStalenessShape(value: unknown): boolean {
   if (!isRecord(value)) return false;
   const entries = Object.entries(value);
-  return entries.length > 0
-    && entries.every(([key, age]) => PER_INPUT_STALENESS_KEYS.has(key) && isNonNegativeNumber(age));
+  return entries.every(([key, age]) => PER_INPUT_STALENESS_KEYS.has(key) && isNonNegativeNumber(age));
 }
 
 function isRecommendationSourceSlotsShape(value: Record<string, unknown>): boolean {

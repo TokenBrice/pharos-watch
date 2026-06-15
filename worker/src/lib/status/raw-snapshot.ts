@@ -1,5 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import type { RawStatusComputation } from "../status-evaluation";
+import { setCacheIfNewer } from "../db-cache";
 import { toErrorMessage } from "../error-utils";
 import {
   STATUS_SYSTEM_FRESHNESS_SEC,
@@ -231,16 +232,13 @@ export async function writeStatusRawSnapshot(
   };
 
   try {
-    const result = await db
-      .prepare(
-        `INSERT INTO cache (key, value, updated_at)
-         VALUES (?, ?, ?)
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-         WHERE cache.updated_at <= excluded.updated_at`,
-      )
-      .bind(STATUS_RAW_SNAPSHOT_CACHE_KEY, JSON.stringify(payload), now)
-      .run();
-    return (result.meta.changes ?? 0) > 0;
+    const { written } = await setCacheIfNewer(
+      db,
+      STATUS_RAW_SNAPSHOT_CACHE_KEY,
+      JSON.stringify(payload),
+      now,
+    );
+    return written;
   } catch (error) {
     logWorkerEvent({
       scope: "status",

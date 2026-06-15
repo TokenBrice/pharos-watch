@@ -205,25 +205,62 @@ function parseStageSnapshot(value: unknown): AlertSafetyStageSnapshot | null {
   };
 }
 
+interface SharedRawFields {
+  pegScore: number | null | undefined;
+  activeDepegBps: number | null | undefined;
+  liquidityScore: number | null | undefined;
+  effectiveExitScore: number | null | undefined;
+  redemptionBackstopScore: number | null | undefined;
+  redemptionImmediateCapacityUsd: number | null | undefined;
+  redemptionImmediateCapacityRatio: number | null | undefined;
+  concentrationHhi: number | null | undefined;
+  canBeBlacklisted: AlertSafetyRawInputSnapshot["canBeBlacklisted"] | undefined;
+  redemptionRouteFamily: string | null | undefined;
+  redemptionModelConfidence: string | null | undefined;
+  variantParentId: string | null | undefined;
+}
+
+// Extracts the fields parsed identically by both the cached-record validator
+// and the live-card projector. Each caller keeps its own undefined guards and
+// its divergent fields (e.g. redemptionExclusionReason, dependencyCount).
+function parseSharedRawFields(record: Record<string, unknown>): SharedRawFields {
+  return {
+    pegScore: parseNumberOrNull(record.pegScore),
+    activeDepegBps: parseNumberOrNull(record.activeDepegBps),
+    liquidityScore: parseNumberOrNull(record.liquidityScore),
+    effectiveExitScore: parseNumberOrNull(record.effectiveExitScore),
+    redemptionBackstopScore: parseNumberOrNull(record.redemptionBackstopScore),
+    redemptionImmediateCapacityUsd: parseNumberOrNull(record.redemptionImmediateCapacityUsd),
+    redemptionImmediateCapacityRatio: parseNumberOrNull(record.redemptionImmediateCapacityRatio),
+    concentrationHhi: parseNumberOrNull(record.concentrationHhi),
+    canBeBlacklisted: parseBlacklistStatus(record.canBeBlacklisted),
+    redemptionRouteFamily: parseStringOrNull(record.redemptionRouteFamily),
+    redemptionModelConfidence: parseStringOrNull(record.redemptionModelConfidence),
+    variantParentId: parseStringOrNull(record.variantParentId),
+  };
+}
+
 function parseRawInputSnapshot(value: unknown): AlertSafetyRawInputSnapshot | null {
   const record = asRecord(value);
   if (!record) return null;
 
-  const pegScore = parseNumberOrNull(record.pegScore);
-  const activeDepegBps = parseNumberOrNull(record.activeDepegBps);
-  const liquidityScore = parseNumberOrNull(record.liquidityScore);
-  const effectiveExitScore = parseNumberOrNull(record.effectiveExitScore);
-  const redemptionBackstopScore = parseNumberOrNull(record.redemptionBackstopScore);
-  const redemptionImmediateCapacityUsd = parseNumberOrNull(record.redemptionImmediateCapacityUsd);
-  const redemptionImmediateCapacityRatio = parseNumberOrNull(record.redemptionImmediateCapacityRatio);
-  const concentrationHhi = parseNumberOrNull(record.concentrationHhi);
-  const canBeBlacklisted = parseBlacklistStatus(record.canBeBlacklisted);
-  const redemptionRouteFamily = parseStringOrNull(record.redemptionRouteFamily);
-  const redemptionModelConfidence = parseStringOrNull(record.redemptionModelConfidence);
+  const {
+    pegScore,
+    activeDepegBps,
+    liquidityScore,
+    effectiveExitScore,
+    redemptionBackstopScore,
+    redemptionImmediateCapacityUsd,
+    redemptionImmediateCapacityRatio,
+    concentrationHhi,
+    canBeBlacklisted,
+    redemptionRouteFamily,
+    redemptionModelConfidence,
+    variantParentId,
+  } = parseSharedRawFields(record);
   const redemptionExclusionReason = record.redemptionExclusionReason === undefined
     ? null
     : parseStringOrNull(record.redemptionExclusionReason);
-  const variantParentId = parseStringOrNull(record.variantParentId);
 
   if (
     pegScore === undefined ||
@@ -352,18 +389,20 @@ function buildRawInputSnapshotFromCard(card: ReportCard): AlertSafetyRawInputSna
   const record = asRecord((card as { rawInputs?: unknown }).rawInputs);
   if (!record) return null;
 
-  const pegScore = parseNumberOrNull(record.pegScore);
-  const activeDepegBps = parseNumberOrNull(record.activeDepegBps);
-  const liquidityScore = parseNumberOrNull(record.liquidityScore);
-  const effectiveExitScore = parseNumberOrNull(record.effectiveExitScore);
-  const redemptionBackstopScore = parseNumberOrNull(record.redemptionBackstopScore);
-  const redemptionImmediateCapacityUsd = parseNumberOrNull(record.redemptionImmediateCapacityUsd);
-  const redemptionImmediateCapacityRatio = parseNumberOrNull(record.redemptionImmediateCapacityRatio);
-  const concentrationHhi = parseNumberOrNull(record.concentrationHhi);
-  const canBeBlacklisted = parseBlacklistStatus(record.canBeBlacklisted);
-  const redemptionRouteFamily = parseStringOrNull(record.redemptionRouteFamily);
-  const redemptionModelConfidence = parseStringOrNull(record.redemptionModelConfidence);
-  const variantParentId = parseStringOrNull(record.variantParentId);
+  const {
+    pegScore,
+    activeDepegBps,
+    liquidityScore,
+    effectiveExitScore,
+    redemptionBackstopScore,
+    redemptionImmediateCapacityUsd,
+    redemptionImmediateCapacityRatio,
+    concentrationHhi,
+    canBeBlacklisted,
+    redemptionRouteFamily,
+    redemptionModelConfidence,
+    variantParentId,
+  } = parseSharedRawFields(record);
   const collateralFromLive = typeof record.collateralFromLive === "boolean" ? record.collateralFromLive : false;
   const dependencyFromLive = typeof record.dependencyFromLive === "boolean" ? record.dependencyFromLive : false;
 

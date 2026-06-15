@@ -1,9 +1,9 @@
 import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
 
-type DdrStoreLockTrigger = "scheduled_24h" | "forecast_readiness" | "readiness_backstop";
+export type DdrLockTrigger = "scheduled_24h" | "forecast_readiness" | "readiness_backstop";
 
 export interface DdrStoreLockMetadataInput {
-  lockTrigger?: DdrStoreLockTrigger | null;
+  lockTrigger?: DdrLockTrigger | null;
   forecastReadinessScore?: number | null;
   forecastReadinessVersion?: string | null;
   readinessThreshold?: number | null;
@@ -40,7 +40,7 @@ export function lockAuditInsertValuesSql(
 
 export function bindLockMetadata(
   input: DdrStoreLockMetadataInput,
-): [DdrStoreLockTrigger | null, number | null, string | null, number | null, number | null, number | null] {
+): [DdrLockTrigger | null, number | null, string | null, number | null, number | null, number | null] {
   return [
     input.lockTrigger ?? null,
     input.forecastReadinessScore ?? null,

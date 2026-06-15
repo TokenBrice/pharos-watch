@@ -266,6 +266,31 @@ describe("selector snapshot contract", () => {
     );
   });
 
+  it("round-trips a trading snapshot with empty perInputStaleness through persist->load", () => {
+    const output = buildSelectorSnapshotOutput();
+    const input = { ...(output.input as Record<string, unknown>), profile: "trading" };
+
+    const built = buildSelectorSnapshotOutput({
+      profile: "trading",
+      input,
+      recommended: [
+        buildTradingSnapshotRecommendation({
+          perInputStaleness: {},
+        }),
+      ],
+    });
+
+    // Persist path: the validator gates the POST, so an empty {} must validate.
+    const persisted = expectValid(built);
+    const sid = computeSelectorSnapshotSid(persisted);
+    expect(sid).toMatch(/^[0-9a-f]{32}$/);
+
+    // Load path: re-validating the same payload (as read back) keeps the {} and sid.
+    const loaded = expectValid(JSON.parse(JSON.stringify(persisted)));
+    expect((loaded.recommended[0] as { perInputStaleness: unknown }).perInputStaleness).toEqual({});
+    expect(computeSelectorSnapshotSid(loaded)).toBe(sid);
+  });
+
   it("rejects unknown trading staleness inputs", () => {
     const output = buildSelectorSnapshotOutput();
     const input = { ...(output.input as Record<string, unknown>), profile: "trading" };
