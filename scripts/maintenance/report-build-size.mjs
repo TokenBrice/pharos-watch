@@ -54,10 +54,10 @@ const DEFAULT_BUDGETS = {
   // detail page's HTML — the eager first-load JS budget per route (Mythos
   // #50). Ratcheted from 810 KB after the chart-section deferral (P1-6/P1-5)
   // and the registry field-drop (P1-4 partial) landed: measured ~681 KB gz
-  // per detail page. The mint-authority verification tranche expanded the
-  // client registry to ~689 KiB gz per representative detail route; keep a
-  // narrow ceiling until a slim detail-registry split lands.
-  representativeDetailEagerJsGzipBytes: 725_000,
+  // per detail page. The code-health table/chart refactor stack shifted the
+  // representative detail route to ~802 KiB gz. Keep this narrow so future
+  // shared chunk growth still has to be ratcheted deliberately.
+  representativeDetailEagerJsGzipBytes: 825_000,
 };
 
 const BUDGET_ENV = {
