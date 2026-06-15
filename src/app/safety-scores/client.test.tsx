@@ -163,7 +163,8 @@ describe("ReportCardsClient", () => {
   it("renders report-card groups and filters the visible cards by grade", () => {
     render(<ReportCardsClient />);
 
-    expect(screen.getByText(/Showing\s+2\s+coins/i)).toBeTruthy();
+    const summary = screen.getByText("Showing", { exact: false });
+    expect(summary.textContent).toMatch(/Showing\s+2\s+coins/i);
     expect(screen.getByTestId("report-card-usdc-circle")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdt-tether")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdc-circle").getAttribute("data-grade-version-variant")).toBe("tooltip-only");
