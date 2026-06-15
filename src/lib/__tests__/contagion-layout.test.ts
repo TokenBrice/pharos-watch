@@ -6,9 +6,11 @@ import {
   clampGraphPosition,
   buildGraphData,
   buildSupernodeState,
+  runSimulation,
   WIDTH,
   HEIGHT,
   MAX_NODES,
+  MAX_COLLISION_PASS_NODES,
   PAD,
   SUPERNODE_CONFIG,
   type GraphNode,
@@ -398,5 +400,58 @@ describe("buildSupernodeState", () => {
     const state = buildSupernodeState([], []);
     expect(state.tierById.size).toBe(0);
     expect(state.scoreById.size).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runSimulation — O(n²) collision-pass bound
+// ---------------------------------------------------------------------------
+
+describe("runSimulation", () => {
+  function makeRing(count: number): { nodes: GraphNode[]; links: GraphLink[] } {
+    const nodes: GraphNode[] = Array.from({ length: count }, (_, i) => ({
+      id: `n${i}`,
+      symbol: `N${i}`,
+      grade: "B",
+      mcap: (count - i) * 1_000_000,
+      r: 12,
+    }));
+    // Connect each node to the next so none are isolated.
+    const links: GraphLink[] = Array.from({ length: count - 1 }, (_, i) => ({
+      source: `n${i}`,
+      target: `n${i + 1}`,
+      weight: 1,
+      type: "collateral",
+    }));
+    return { nodes, links };
+  }
+
+  it("returns a position for every node even past the collision-pass cap", () => {
+    const count = MAX_COLLISION_PASS_NODES + 25;
+    const { nodes, links } = makeRing(count);
+    const state = buildSupernodeState(nodes, links);
+    const positions = runSimulation(nodes, links, state);
+    expect(positions.size).toBe(count);
+    for (const [, pos] of positions) {
+      expect(Number.isFinite(pos.x)).toBe(true);
+      expect(Number.isFinite(pos.y)).toBe(true);
+    }
+  });
+
+  it("keeps every node inside the padded canvas bounds", () => {
+    const { nodes, links } = makeRing(MAX_COLLISION_PASS_NODES + 25);
+    const state = buildSupernodeState(nodes, links);
+    const positions = runSimulation(nodes, links, state);
+    for (const node of nodes) {
+      const pos = positions.get(node.id)!;
+      expect(pos.x).toBeGreaterThanOrEqual(PAD - node.r);
+      expect(pos.x).toBeLessThanOrEqual(WIDTH - PAD + node.r);
+      expect(pos.y).toBeGreaterThanOrEqual(PAD - node.r);
+      expect(pos.y).toBeLessThanOrEqual(HEIGHT - PAD + node.r);
+    }
+  });
+
+  it("returns an empty map for an empty graph", () => {
+    expect(runSimulation([], [], buildSupernodeState([], [])).size).toBe(0);
   });
 });

@@ -67,6 +67,12 @@ export const ALL_NODE_LIMIT = "all";
 export const NODE_LIMIT_OPTIONS = [50, 100, 200, ALL_NODE_LIMIT] as const;
 export type NodeLimitOption = (typeof NODE_LIMIT_OPTIONS)[number];
 export type GraphNodeLimit = number | typeof ALL_NODE_LIMIT;
+// The post-simulation collision-correction pass is O(n²) per outer pass. Selecting
+// ALL bypasses the 50/100/200 node caps and can feed the full live coin set into it,
+// blocking the main thread. Bound the manual pass to the top-ranked nodes (the largest
+// 200 NODE_LIMIT_OPTIONS value) so the 50/100/200 selections are unaffected and only
+// the ALL view is capped; the long tail keeps its d3-force forceCollide positions.
+export const MAX_COLLISION_PASS_NODES = 200;
 export const DEFAULT_NODE_LIMIT: NodeLimitOption = 50;
 export const MIN_RADIUS = 10;
 const MAX_RADIUS = 34;
@@ -496,11 +502,16 @@ export function runSimulation(
   const yMin = PAD;
   const yMax = HEIGHT - PAD;
 
+  // Bound the O(n²) all-pairs correction to the top-ranked nodes; simNodes is rank
+  // ordered, so the 50/100/200 selections (all <= MAX_COLLISION_PASS_NODES) are
+  // unchanged and only the ALL view is capped. See MAX_COLLISION_PASS_NODES.
+  const collisionNodeCount = Math.min(simNodes.length, MAX_COLLISION_PASS_NODES);
+
   for (let pass = 0; pass < MAX_PASSES; pass++) {
     let violations = 0;
 
-    for (let i = 0; i < simNodes.length; i++) {
-      for (let j = i + 1; j < simNodes.length; j++) {
+    for (let i = 0; i < collisionNodeCount; i++) {
+      for (let j = i + 1; j < collisionNodeCount; j++) {
         const a = simNodes[i];
         const b = simNodes[j];
         const dx = (b.x ?? 0) - (a.x ?? 0);
