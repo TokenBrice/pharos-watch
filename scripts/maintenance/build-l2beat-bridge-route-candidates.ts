@@ -2,7 +2,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   buildL2BeatBridgeRouteReviewAudit,
   type L2BeatBridgeRouteReviewAudit,
@@ -222,7 +222,7 @@ export async function runCli(
   return 0;
 }
 
-if (process.argv[1]?.endsWith("build-l2beat-bridge-route-candidates.ts")) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   runCli()
     .then((code) => {
       process.exitCode = code;
