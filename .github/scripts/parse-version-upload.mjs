@@ -3,12 +3,22 @@ import fs from "node:fs";
 
 const outputPath = process.env.WRANGLER_OUTPUT_FILE_PATH ?? "/tmp/wrangler-output.jsonl";
 
+function parseJsonLine(line, index) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    console.warn(`[parse-version-upload] Ignoring non-JSON Wrangler output line ${index + 1}: ${line.slice(0, 200)}`);
+    return null;
+  }
+}
+
 // eslint-disable-next-line security/detect-non-literal-fs-filename -- CI-trusted path from workflow env (Wrangler output)
 const entries = fs
   .readFileSync(outputPath, "utf8")
   .split("\n")
   .filter(Boolean)
-  .map((line) => JSON.parse(line));
+  .map(parseJsonLine)
+  .filter((entry) => entry !== null);
 
 const uploadEvent = [...entries].reverse().find((entry) => entry.type === "version-upload");
 if (!uploadEvent?.version_id) {
