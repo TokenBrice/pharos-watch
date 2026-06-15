@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**39/733 done (5%)**  `█░░░░░░░░░░░░░░░░░░░`
+**40/733 done (5%)**  `█░░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 673 | 2 | 0 | 39 | 19 |
+| Count | 673 | 1 | 0 | 40 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 24 | 0 | 0 | 232 |
-| quality | 315 | 7 | 2 | 0 | 299 |
+| quality | 315 | 8 | 1 | 0 | 299 |
 | sustainability | 152 | 8 | 0 | 0 | 142 |
 
 ## redundancy (266)
@@ -305,7 +305,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| 🔄 | [Q-001](quality/Q-001.md) | M | complexity | Sequential per-market RPC loops in crvusd make N round-trips per LLAMMA market with no par | codex | `worker/src/cron/reserve-adapters/crvusd.ts:L314-` |
+| ✅ | [Q-001](quality/Q-001.md) | M | complexity | Sequential per-market RPC loops in crvusd make N round-trips per LLAMMA market with no par | codex | `worker/src/cron/reserve-adapters/crvusd.ts:L314-` |
 | ✅ | [Q-002](quality/Q-002.md) | M | complexity | dispatchTelegramAlerts is a 590-line monolith with three distinct control paths | codex | `worker/src/cron/dispatch-telegram-alerts.ts:L167` |
 | ✅ | [Q-003](quality/Q-003.md) | S | dead-code | Slipstream pools hardcode volume24hUsd=0, triggering silent large-pool filter exclusion | codex | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ✅ | [Q-004](quality/Q-004.md) | S | type-safety | usdgo-osl rate-derived config uses benchmarkCurrency instead of benchmarkOverrideKey, spli | codex | `worker/src/cron/yield-config-rate-sources.ts:221` |
