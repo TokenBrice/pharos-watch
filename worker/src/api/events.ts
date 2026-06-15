@@ -21,6 +21,7 @@ import {
 const DEFAULT_LIMIT = 50;
 const MIN_LIMIT = 1;
 const MAX_LIMIT = 500;
+const MAX_FILTER_EPOCH_MS = Date.UTC(2100, 0, 1);
 // `/api/events` advertises a 10-minute freshness budget; the projector lane
 // runs every 30 minutes, so `Warning: 110` fires after ~80 min absent.
 const FRESHNESS_MAX_AGE_SEC = 600;
@@ -43,9 +44,10 @@ function isValidSlug(value: string): boolean {
 
 function parseIntOrNull(value: string | null): number | null | "invalid" {
   if (value == null || value === "") return null;
-  if (!/^-?\d+$/.test(value)) return "invalid";
+  if (!/^\d+$/.test(value)) return "invalid";
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : "invalid";
+  if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > MAX_FILTER_EPOCH_MS) return "invalid";
+  return parsed;
 }
 
 interface CursorPayload {

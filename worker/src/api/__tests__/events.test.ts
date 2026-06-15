@@ -134,6 +134,22 @@ describe("handleEvents", () => {
     expect(dataQuery?.binds).toContain(2000);
   });
 
+  it("rejects invalid epoch-ms since and until filters with 400", async () => {
+    for (const query of [
+      "since=-1",
+      "since=0",
+      "since=9007199254740993",
+      "since=4102444800001",
+      "until=-1",
+      "until=0",
+      "until=9007199254740993",
+      "until=4102444800001",
+    ]) {
+      const res = await handleEvents(mockD1([]), new URL(`https://x/api/events?${query}`));
+      expect(res.status, query).toBe(400);
+    }
+  });
+
   it("includes total only when includeTotal=true", async () => {
     const dbWith = mockD1([
       { match: "COUNT(*)", rows: [{ total: 42 }] },

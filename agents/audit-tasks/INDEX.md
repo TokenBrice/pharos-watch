@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**78/733 done (11%)**  `██░░░░░░░░░░░░░░░░░░`
+**83/733 done (11%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 633 | 3 | 0 | 78 | 19 |
+| Count | 627 | 4 | 0 | 83 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 36 | 2 | 0 | 218 |
-| quality | 315 | 33 | 1 | 0 | 274 |
+| redundancy | 266 | 39 | 1 | 0 | 216 |
+| quality | 315 | 35 | 3 | 0 | 270 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -35,7 +35,7 @@
 | ⬜ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules |  | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
-| 🔄 | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
+| ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
 | ⬜ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call |  | `src/components/depeg-feed.tsx:L170-L177` |
 | ✅ | [R-011](redundancy/R-011.md) | S | clone | Duplicated `isValidDateOnly` / `DATE_ONLY_RE` across two tooling modules | codex | `scripts/lib/hotspot-ratchet.mjs:L64-L70+L365-L37` |
 | ✅ | [R-012](redundancy/R-012.md) | S | clone | stringValue() defined six times across scripts with identical body | codex | `scripts/maintenance/audit-dex-pricing-source-gap` |
@@ -180,7 +180,7 @@
 | ✅ | [R-146](redundancy/R-146.md) | S | dead-code | requireGroupAdminForCallback carries a _db parameter that is never used | codex | `worker/src/api/telegram-webhook-auth.ts:L80-L93` |
 | ⬜ | [R-147](redundancy/R-147.md) | S | clone | DRPC_NETWORK map duplicated in balance-providers.ts and chainlink-feeds.ts |  | `worker/src/cron/blacklist/balance-providers.ts:L` |
 | ⬜ | [R-148](redundancy/R-148.md) | S | wrapper | loadLastRunSec / recordLastRunSec re-implement the shared cache abstraction |  | `worker/src/cron/telegram-inactive-cleanup.ts:L51` |
-| ⬜ | [R-149](redundancy/R-149.md) | S | clone | cex-tickers.ts duplicates parsePositiveNumber from number-utils.ts |  | `worker/src/lib/cex-tickers.ts:L65-L68` |
+| 🔄 | [R-149](redundancy/R-149.md) | S | clone | cex-tickers.ts duplicates parsePositiveNumber from number-utils.ts | codex | `worker/src/lib/cex-tickers.ts:L65-L68` |
 | ⬜ | [R-150](redundancy/R-150.md) | S | wrapper | Four single-line wrapper functions add no value over direct shouldSkipFreshMatchingCache c |  | `worker/src/lib/telegram-webhook-registration.ts:` |
 | ⬜ | [R-151](redundancy/R-151.md) | S | dead-code | Dead else-if branch in buildCacheStatuses statusFloor finalization |  | `worker/src/lib/api-freshness.ts:L414-L422` |
 | ⬜ | [R-152](redundancy/R-152.md) | S | clone | bigIntToDecimal is a one-line wrapper over decimalNumberFromBigInt |  | `worker/src/lib/bigint.ts:L26-L28` |
@@ -204,7 +204,7 @@
 | ⬜ | [R-170](redundancy/R-170.md) | S | wrapper | flow-machine-scene-shredder.tsx performs a one-shot matchMedia read inside useState initia |  | `src/components/flow-machine-scene-shredder.tsx:L` |
 | ⬜ | [R-171](redundancy/R-171.md) | S | clone | FeedbackModal dynamic import duplicated across FeedbackButton and MobileUtilityDock |  | `src/components/feedback-button.tsx:L7-L10, src/c` |
 | ✅ | [R-172](redundancy/R-172.md) | S | wrapper | `PAGES_UI_PREFIXES` in deploy-impact.mjs is a hard-coded clone of `DEPLOY_IMPACT_REGISTRY. | codex | `scripts/lib/deploy-impact.mjs:L22-L28` |
-| ⬜ | [R-173](redundancy/R-173.md) | S | wrapper | getResolvedDynamicEndpointDescriptor performs a redundant third descriptor lookup for admi |  | `shared/lib/api-endpoints/validation.ts:L181-193` |
+| ✅ | [R-173](redundancy/R-173.md) | S | wrapper | getResolvedDynamicEndpointDescriptor performs a redundant third descriptor lookup for admi | codex | `shared/lib/api-endpoints/validation.ts:L181-193` |
 | 🚫 | [R-174](redundancy/R-174.md) | S | dead-code | variant-display.badgeClass is never read and is byte-identical to chipClass |  | `shared/lib/variant-display.ts:8-34` |
 | ⬜ | [R-175](redundancy/R-175.md) | S | clone | Parallel CSV download implementation in csv-export.ts and exports/csv.ts |  | `src/lib/csv-export.ts:1-20, src/lib/exports/csv.` |
 | ✅ | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row | codex | `worker/src/handlers/scheduled/preflight-skip.ts:` |
@@ -212,7 +212,7 @@
 | ⬜ | [R-178](redundancy/R-178.md) | S | clone | Preset label lookup duplicated between setup wizard and action-runner |  | `worker/src/api/telegram-webhook-setup.ts:L93-L98` |
 | ⬜ | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly |  | `worker/src/cron/dex-liquidity/token-batch-runner` |
 | ⬜ | [R-180](redundancy/R-180.md) | S | clone | normalizeStringArray duplicated between response.ts and digest-intelligence.ts |  | `worker/src/cron/daily-digest/response.ts:L128-L1` |
-| 🔄 | [R-181](redundancy/R-181.md) | S | wrapper | pricing-source-policy.ts is a pure re-export shim with no added value | codex | `worker/src/lib/pricing-source-policy.ts:L1-L11` |
+| ✅ | [R-181](redundancy/R-181.md) | S | wrapper | pricing-source-policy.ts is a pure re-export shim with no added value | codex | `worker/src/lib/pricing-source-policy.ts:L1-L11` |
 | ⬜ | [R-182](redundancy/R-182.md) | S | clone | Generic object/number/string/boolean accessor helpers cloned across three locations |  | `worker/src/lib/status/yield-health.ts:L99-L121, ` |
 | ⬜ | [R-183](redundancy/R-183.md) | S | wrapper | getTelegramBotStats re-exported through derived-data.ts adding an unnecessary barrel hop |  | `worker/src/lib/status/derived-data.ts:L14, worke` |
 | ⬜ | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s |  | `src/generated/depeg-event-related-data.json.d.ts` |
@@ -309,7 +309,7 @@
 | ✅ | [Q-002](quality/Q-002.md) | M | complexity | dispatchTelegramAlerts is a 590-line monolith with three distinct control paths | codex | `worker/src/cron/dispatch-telegram-alerts.ts:L167` |
 | ✅ | [Q-003](quality/Q-003.md) | S | dead-code | Slipstream pools hardcode volume24hUsd=0, triggering silent large-pool filter exclusion | codex | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ✅ | [Q-004](quality/Q-004.md) | S | type-safety | usdgo-osl rate-derived config uses benchmarkCurrency instead of benchmarkOverrideKey, spli | codex | `worker/src/cron/yield-config-rate-sources.ts:221` |
-| ⬜ | [Q-078](quality/Q-078.md) | S | type-safety | reserve-protocol-dtf compares fetchOnchainUint256 bigint result to 0n to detect non-SOUND  |  | `worker/src/cron/reserve-adapters/reserve-protoco` |
+| 🔄 | [Q-078](quality/Q-078.md) | S | type-safety | reserve-protocol-dtf compares fetchOnchainUint256 bigint result to 0n to detect non-SOUND  | codex | `worker/src/cron/reserve-adapters/reserve-protoco` |
 | ⬜ | [Q-082](quality/Q-082.md) | S | security | LIKE wildcard injection in tape-event full-text search (q parameter) |  | `worker/src/lib/tape-event-store.ts:142-145, work` |
 
 ### Medium (110)
@@ -435,9 +435,9 @@
 | ✅ | [Q-006](quality/Q-006.md) | S | dead-code | Dead null-coalescence in yield-source risk scoring (sourceRiskInverted always returns numb | codex | `shared/lib/selector/yield-source.ts:L70-L71` |
 | ✅ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA | codex | `src/components/selector/selector-shortlist-card.` |
 | ✅ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise | codex | `scripts/maintenance/serve-static-export.mjs:L119` |
-| 🔄 | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be | codex | `src/components/exploit-notice-banner.tsx:L11-L35` |
+| ✅ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be | codex | `src/components/exploit-notice-banner.tsx:L11-L35` |
 | ✅ | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function | codex | `scripts/maintenance/fetch-logos.ts:90-96` |
-| ⬜ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block |  | `worker/src/handlers/scheduled/hourly-live-reserv` |
+| 🔄 | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block | codex | `worker/src/handlers/scheduled/hourly-live-reserv` |
 | ⬜ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function |  | `worker/src/cron/sync-live-reserves-run-state.ts:` |
 | ⬜ | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key |  | `src/components/status/admin-action-button.tsx:L3` |
 | ⬜ | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic |  | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
@@ -516,7 +516,7 @@
 | ⬜ | [Q-199](quality/Q-199.md) | S | error-handling | SectionBanner swallows clipboard write rejection silently |  | `src/components/stablecoin-detail/section-banner.` |
 | ✅ | [Q-200](quality/Q-200.md) | S | naming | Malformed aria-label on the peak supply-move link | codex | `src/components/home-alt-mini-cards/supply-moves-` |
 | ⬜ | [Q-201](quality/Q-201.md) | S | complexity | HomeAltHeroChart calls makeScales redundantly — once per area path and once per top-line p |  | `src/components/home-alt-hero-chart.tsx:L119-L173` |
-| ⬜ | [Q-202](quality/Q-202.md) | S | error-handling | ExploitNoticeBanner uses list index as React key for critical security notices |  | `src/components/exploit-notice-banner.tsx:L49` |
+| 🔄 | [Q-202](quality/Q-202.md) | S | error-handling | ExploitNoticeBanner uses list index as React key for critical security notices | codex | `src/components/exploit-notice-banner.tsx:L49` |
 | ⬜ | [Q-203](quality/Q-203.md) | S | error-handling | formatSchemaIssues truncates Zod errors to 8 issues, potentially hiding validation failure |  | `shared/lib/stablecoins/schema.ts:L398-L406` |
 | ⬜ | [Q-204](quality/Q-204.md) | S | error-handling | sourceRiskInverted silent-null contract breaks the special-case detection in scoreRow |  | `shared/lib/selector/normalization.ts:L63, shared` |
 | ⬜ | [Q-205](quality/Q-205.md) | S | type-safety | ApiKeySelfServeCadence is a plain TypeScript union type with no Zod schema — unlike every  |  | `shared/types/api-key-requests.ts:L15-L20` |
@@ -619,7 +619,7 @@
 | ⬜ | [Q-302](quality/Q-302.md) | M | error-handling | Inline AbortSignal.any timeout composition in worker fetch-retry bypasses the shared creat |  | `worker/src/lib/fetch-retry.ts:42-49 vs shared/li` |
 | ⬜ | [Q-303](quality/Q-303.md) | S | type-safety | Unsafe key cast into CRON_STATUS_COLORS duplicated in two render paths |  | `src/app/admin/sections/cron-lane-table.tsx:106, ` |
 | ⬜ | [Q-304](quality/Q-304.md) | S | naming | OG card 24h change derived from adjacent daily supply_history snapshots, not a true 24h wi |  | `worker/src/api/og.tsx:236-243,288-291` |
-| ⬜ | [Q-305](quality/Q-305.md) | S | type-safety | events.ts accepts negative since/until and unbounded epoch values without validating they  |  | `worker/src/api/events.ts:44-49,111-114` |
+| ✅ | [Q-305](quality/Q-305.md) | S | type-safety | events.ts accepts negative since/until and unbounded epoch values without validating they  | codex | `worker/src/api/events.ts:44-49,111-114` |
 | ⬜ | [Q-306](quality/Q-306.md) | M | type-safety | digest-snapshot casts DB-stored JSON straight to DigestInputData without shape validation |  | `worker/src/api/digest-snapshot.ts:89-107` |
 | ⬜ | [Q-307](quality/Q-307.md) | S | security | Client-supplied X-Forwarded-For used as rate-limit IP fallback when CF-Connecting-IP is ab |  | `worker/src/api/api-key-requests/request.ts:121-1` |
 | ⬜ | [Q-308](quality/Q-308.md) | S | error-handling | Non-deterministic Math.random idempotency-key fallback can collide and weakens the dedupe  |  | `src/lib/api-key-request-admin-view-model.ts:86-9` |
