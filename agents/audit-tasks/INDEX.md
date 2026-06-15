@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**130/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
+**132/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 580 | 2 | 0 | 130 | 21 |
+| Count | 578 | 2 | 0 | 132 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 53 | 0 | 0 | 202 |
-| quality | 315 | 65 | 2 | 0 | 240 |
+| quality | 315 | 67 | 2 | 0 | 238 |
 | sustainability | 152 | 12 | 0 | 0 | 138 |
 
 ## redundancy (266)
@@ -454,7 +454,7 @@
 | ⬜ | [Q-048](quality/Q-048.md) | S | complexity | Module-scope `readFileSync` at import time in depeg page-data.ts |  | `src/app/depeg/[event]/page-data.ts:L20-L25` |
 | ⬜ | [Q-049](quality/Q-049.md) | M | complexity | getActionGroup groups admin actions by path string matching — fragile coupling to URL stru |  | `src/components/status/admin-actions-panel.tsx:L1` |
 | ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
-| 🔄 | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps | codex | `src/components/feedback-modal.tsx:L78-L120` |
+| ✅ | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps | codex | `src/components/feedback-modal.tsx:L78-L120` |
 | ✅ | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
 | ✅ | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif | codex | `scripts/maintenance/audit-redemption-v4-score-di` |
 | ✅ | [Q-055](quality/Q-055.md) | S | complexity | getCoinsByLifecycleStatus rebuilds a full Map on every call; called in a hot build-time lo | codex | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
@@ -529,7 +529,7 @@
 | ⬜ | [Q-212](quality/Q-212.md) | S | type-safety | Hardcoded magic index accesses into PRINCIPLES_AXIOMS array in AboutPage |  | `src/app/about/page.tsx:L244-L250` |
 | ⬜ | [Q-213](quality/Q-213.md) | S | naming | inspection-board.tsx uses a data-driven colored left-stripe in violation of the repo's fla |  | `src/app/safety-scores/inspection-board.tsx:93` |
 | ✅ | [Q-214](quality/Q-214.md) | S | naming | Function named `tradingShareStaleExceeded` while the check is named `tradingStaleExceeded` | codex | `src/app/screener/picker/client.tsx:L167, L430` |
-| ⬜ | [Q-215](quality/Q-215.md) | S | error-handling | check-depeg-operational-integrity.mjs: FAIL/ok output goes to stdout, not stderr |  | `scripts/ci/check-depeg-operational-integrity.mjs` |
+| ✅ | [Q-215](quality/Q-215.md) | S | error-handling | check-depeg-operational-integrity.mjs: FAIL/ok output goes to stdout, not stderr | codex | `scripts/ci/check-depeg-operational-integrity.mjs` |
 | ⬜ | [Q-216](quality/Q-216.md) | S | naming | ShareBar's topMargin boolean prop is an inverted-concern design smell |  | `src/components/status/request-source-attribution` |
 | ⬜ | [Q-217](quality/Q-217.md) | S | error-handling | depeg-provenance-badges.tsx builds className strings with manual template-literal + .trim( |  | `src/components/depeg-provenance-badges.tsx:71, 8` |
 | ⬜ | [Q-218](quality/Q-218.md) | S | complexity | Universal safetyGrade === 'F' check in applyUniversalExclusions is made unreachable by pri |  | `shared/lib/selector/exclusions.ts:L162-L163, L18` |
@@ -582,7 +582,7 @@
 | ⬜ | [Q-265](quality/Q-265.md) | S | error-handling | Dependency-risk ceiling detail can mislabel a mechanism-bound ceiling as 'wrapper' |  | `shared/lib/report-card-dependency.ts:109-147` |
 | ⬜ | [Q-266](quality/Q-266.md) | S | naming | getDewsFreshness: computedAt=0 (Unix epoch) silently treated as missing data |  | `src/lib/dews-signal-utils.ts:L84-L85` |
 | ⬜ | [Q-267](quality/Q-267.md) | S | complexity | CohortBucket.size duplicates scoresDescending.length and is maintained in parallel |  | `src/lib/yield-view-model.ts:785-815, 825-837` |
-| ⬜ | [Q-268](quality/Q-268.md) | S | type-safety | handleApiKeyAuditLog declares request optional but dereferences it unconditionally |  | `worker/src/api/api-key-audit-log.ts:30-42` |
+| 🔄 | [Q-268](quality/Q-268.md) | S | type-safety | handleApiKeyAuditLog declares request optional but dereferences it unconditionally | codex | `worker/src/api/api-key-audit-log.ts:30-42` |
 | ⬜ | [Q-269](quality/Q-269.md) | S | testing | bounded-queue.ts has no test for worker exception propagation leaving sparse results array |  | `worker/src/cron/shared/bounded-queue.ts:L37-64 +` |
 | ⬜ | [Q-270](quality/Q-270.md) | S | error-handling | parseTimestampLikeToUnixSeconds silently rejects any DD/MM/YY date where both day and mont |  | `worker/src/cron/reserve-adapters/freshness.ts:L9` |
 | ⬜ | [Q-271](quality/Q-271.md) | M | error-handling | circuit-breaker sendAlert fire-and-forget may drop alerts before isolate teardown |  | `worker/src/lib/circuit-breaker.ts:L108-L113, L13` |
