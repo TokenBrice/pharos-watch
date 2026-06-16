@@ -212,15 +212,20 @@ export async function writeReportCardCache(
     };
   }
 
+  const cachePayload: ReportCardCachePayload = {
+    scores,
+    updatedAt,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    degradedInputs: buildReportCardCacheInputStatus(options),
+  };
   await setCache(
     db,
     REPORT_CARD_CACHE_KEY,
     JSON.stringify({
-      scores,
-      updatedAt,
+      generation: REPORT_CARD_CACHE_GENERATION,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      degradedInputs: buildReportCardCacheInputStatus(options),
-    } satisfies ReportCardCachePayload),
+      payload: cachePayload,
+    }),
   );
 
   return { writtenCount: Object.keys(scores).length };
