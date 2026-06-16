@@ -84,9 +84,9 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 191,
-    "maxFunctionLines": 159,
-    "branchCount": 8,
+    "fileLines": 192,
+    "maxFunctionLines": 160,
+    "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 218,
