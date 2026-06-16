@@ -20,8 +20,7 @@
     "type": "independent-audit",
     "url": "https://mxnb.mx/transparency",
     "attestorTier": "big4",
-    "cadence": "monthly",
-    "provider": "Unnamed Big Four auditor"
+    "cadence": "monthly"
   },
   "links": [
     {

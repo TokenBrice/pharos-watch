@@ -83,7 +83,7 @@
       }
     ]
   },
-  "collateralQuality": "rwa",
+  "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
   "reserves": [

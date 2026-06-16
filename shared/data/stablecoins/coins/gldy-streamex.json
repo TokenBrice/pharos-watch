@@ -164,6 +164,5 @@
     "yieldSource": "Streamex gold leasing yield",
     "yieldType": "fee-sharing"
   },
-  "launchDate": "2026-02-25",
-  "mechanismArchetype": "rwa-credit-fund"
+  "launchDate": "2026-02-25"
 }

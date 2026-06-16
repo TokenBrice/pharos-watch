@@ -20,7 +20,6 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://comtechgold.com/proof-of-gold-audit",
-    "provider": "unnamed",
     "attestorTier": "niche",
     "cadence": "monthly"
   },

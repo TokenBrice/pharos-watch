@@ -109,6 +109,7 @@
   ],
   "deploymentModel": "single-chain",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

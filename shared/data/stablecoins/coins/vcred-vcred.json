@@ -147,6 +147,5 @@
     "params": {
       "rpcUrl": "https://rpc.hemi.network/rpc"
     }
-  },
-  "launchDate": "1970-01-01"
+  }
 }

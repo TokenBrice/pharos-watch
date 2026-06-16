@@ -1257,14 +1257,13 @@
     "symbol": "avUSD",
     "oneLiner": "avUSD is Avant's centralized dollar stablecoin, redeemable 1:1 for USDC and deployed into actively managed market-neutral strategies for yield.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "avant-usd",
     "launchDate": "2024-11-15",
     "genius": {
@@ -7543,7 +7542,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "goldfish-gold",
     "launchDate": "2025-10-06",
     "commodityOunces": 0.001,
@@ -7752,7 +7750,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "gold-token",
     "launchDate": "2025-07-09",
     "commodityOunces": 0.000321507467,
@@ -7796,7 +7793,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "streamex-gldy",
     "launchDate": "2026-02-25",
     "commodityOunces": 1,
@@ -7848,7 +7844,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "gram-gold",
     "launchDate": "2023-08-28",
     "commodityOunces": 0.0321507466,
@@ -7898,7 +7893,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "gram-silver",
     "launchDate": "2023-08-28",
     "commodityOunces": 0.0321507466,
@@ -9115,7 +9109,6 @@
       "rwa": true,
       "navToken": true
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
     "launchDate": "2025-07-24",
     "reserves": [
@@ -13303,7 +13296,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "pax-gold",
     "protocolSlug": "paxos-gold",
     "launchDate": "2019-08-26",
@@ -13505,7 +13497,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "pleasing-gold",
     "protocolSlug": "pleasing-gold",
     "launchDate": "2025-10-22",
@@ -15555,7 +15546,6 @@
       "navToken": true
     },
     "mechanismArchetype": "cdp",
-    "geckoId": "aave-stkgho",
     "variantOf": "gho-aave",
     "variantKind": "savings-passthrough",
     "launchDate": "2026-05-05",
@@ -20161,7 +20151,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "usdkg",
     "launchDate": "2025-03-12",
     "canBeBlacklisted": true,
@@ -23642,7 +23631,6 @@
     "mechanismArchetype": "cdp",
     "geckoId": "vcred",
     "protocolSlug": "vcred",
-    "launchDate": "1970-01-01",
     "canBeBlacklisted": false,
     "reserves": [
       {
@@ -23870,7 +23858,6 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "vnx-gold",
     "protocolSlug": "vnx",
     "launchDate": "2021-12-15",
@@ -24260,7 +24247,7 @@
         "risk": "high"
       }
     ],
-    "collateralQuality": "rwa",
+    "collateralQuality": "exotic",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",

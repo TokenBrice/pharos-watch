@@ -4466,7 +4466,7 @@
     "symbol": "avUSD",
     "oneLiner": "avUSD is Avant's centralized dollar stablecoin, redeemable 1:1 for USDC and deployed into actively managed market-neutral strategies for yield.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
@@ -4475,7 +4475,6 @@
     },
     "collateral": "avUSD is fully backed 1:1 by USDC and is the non-yield-bearing, 1:1-redeemable receipt for deposited USDC. The actively managed market-neutral strategies (basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals) generate yield that accrues to the staked savUSD senior tranche, with the avUSDx junior tranche and a dedicated avUSD Reserve Fund absorbing strategy losses ahead of savUSD; avUSD holders themselves receive no yield",
     "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "avant-usd",
     "links": [
       {
@@ -10893,7 +10892,6 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://comtechgold.com/proof-of-gold-audit",
-      "provider": "unnamed",
       "attestorTier": "niche",
       "cadence": "monthly"
     },
@@ -25314,7 +25312,6 @@
     },
     "collateral": "Each GGBR token represents 1/1000th of a troy ounce of LBMA-priced physical gold, sourced from I-ON Digital Corp's ION.au gold reserve and reported as 5:1 overcollateralized, with the underlying gold secured via UCC-1 liens in ION Treasury and reserves held in Fireblocks MPC custody",
     "pegMechanism": "GGBR price tracks the LBMA Gold Spot Price in real time at 1/1000th of a troy ounce per token; supply is created and redeemed through issuer-controlled mint/redeem contracts, with physical gold redemption available through regulated precious-metals dealers and on-chain proof-of-reserve oracles for collateral verification",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.001,
     "geckoId": "goldfish-gold",
     "links": [
@@ -26041,7 +26038,6 @@
     },
     "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
     "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.000321507467,
     "geckoId": "gold-token",
     "proofOfReserves": {
@@ -26186,7 +26182,6 @@
     },
     "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
     "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 1,
     "geckoId": "streamex-gldy",
     "proofOfReserves": {
@@ -26355,7 +26350,6 @@
     },
     "collateral": "One gram of physical gold per GRAMG, with Token Teknoloji proof pages listing Turkish bank custody at Kuveyt Türk, Ziraat Participation, and central-bank FATSI routes",
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-gold",
     "proofOfReserves": {
@@ -26553,7 +26547,6 @@
     },
     "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-silver",
     "cmcSlug": "silver-grams",
@@ -28553,6 +28546,7 @@
       "reviewedAt": "2026-05-12"
     },
     "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "status": "pre-launch",
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-H2",
@@ -29968,7 +29962,6 @@
     },
     "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Gold Trust (IAU), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
     "pegMechanism": "NAV-style tokenized ETF tracker rather than a $1 peg; subscriptions, redemptions, and market pricing follow the underlying IAU economic exposure through Ondo Global Markets and eligible investor flows",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -41015,7 +41008,6 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://mxnb.mx/transparency",
-      "provider": "Unnamed Big Four auditor",
       "attestorTier": "big4",
       "cadence": "monthly"
     },
@@ -44465,7 +44457,6 @@
     },
     "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
     "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 1,
     "geckoId": "pax-gold",
     "pythFeedId": "0x273717b49430906f4b0c230e99aa1007f83758e3199edbc887c0d06c3e332494",
@@ -45162,7 +45153,6 @@
     },
     "collateral": "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support",
     "pegMechanism": "Issuer-managed gold-backed token with off-chain custody and redemption workflow; documentation describes physical redemption and delivery through the Pleasing platform subject to KYC and size requirements",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 1,
     "geckoId": "pleasing-gold",
     "protocolSlug": "pleasing-gold",
@@ -46114,7 +46104,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "Cayman Islands"
+      "country": "Marshall Islands"
     },
     "genius": {
       "applicability": "unclear",
@@ -51835,7 +51825,6 @@
     "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
     "pegMechanism": "Deposit GHO into the ERC-4626 sGHO vault to mint sGHO shares; the share-to-GHO exchange rate rises as the Aave-governance-set savings rate accrues. The vault's `asset()` is GHO and standard ERC-4626 `convertToAssets()` / `totalAssets()` reads expose NAV per share. Pharos prices this entry from the vault's share exchange rate rather than secondary-market liquidity.",
     "mechanismArchetype": "cdp",
-    "geckoId": "aave-stkgho",
     "links": [
       {
         "label": "Website",
@@ -52618,6 +52607,7 @@
     },
     "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "reserves": [
       {
         "name": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",
@@ -67150,7 +67140,6 @@
     },
     "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
     "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "usdkg",
     "cmcSlug": "usdkg",
     "proofOfReserves": {
@@ -78110,8 +78099,7 @@
       "params": {
         "rpcUrl": "https://rpc.hemi.network/rpc"
       }
-    },
-    "launchDate": "1970-01-01"
+    }
   },
   {
     "id": "veur-vnx",
@@ -78826,7 +78814,6 @@
     },
     "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
     "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
-    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.0321507466,
     "geckoId": "vnx-gold",
     "protocolSlug": "vnx",
@@ -80410,7 +80397,7 @@
     },
     "chainTier": "unproven",
     "deploymentModel": "native-multichain",
-    "collateralQuality": "rwa",
+    "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
     "bridgeRouteRisk": {

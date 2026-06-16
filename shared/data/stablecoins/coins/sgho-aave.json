@@ -70,7 +70,6 @@
   "pegMechanism": "Deposit GHO into the ERC-4626 sGHO vault to mint sGHO shares; the share-to-GHO exchange rate rises as the Aave-governance-set savings rate accrues. The vault's `asset()` is GHO and standard ERC-4626 `convertToAssets()` / `totalAssets()` reads expose NAV per share. Pharos prices this entry from the vault's share exchange rate rather than secondary-market liquidity.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
-  "geckoId": "aave-stkgho",
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "sGHO uses internal savings-token accounting but inherits GHO collateral-oracle risk from Aave reserve oracle contracts.",
