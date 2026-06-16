@@ -1,7 +1,14 @@
-import type {
-  BlacklistAmountStatus,
-  BlacklistStablecoin,
+import {
+  BLACKLIST_STABLECOINS,
+  type BlacklistAmountStatus,
+  type BlacklistStablecoin,
 } from "../types/market";
+
+const BLACKLIST_STABLECOIN_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);
+
+export function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
+  return BLACKLIST_STABLECOIN_SET.has(value);
+}
 
 export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "XAUT" | "XAUM" {
   return symbol === "PAXG" || symbol === "XAUT" || symbol === "XAUM";

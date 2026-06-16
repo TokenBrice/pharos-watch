@@ -34,6 +34,7 @@ import {
   buildBlacklistQuarterlyChartFromSnapshots,
   sortKeyToLabel,
 } from "@shared/lib/blacklist-aggregates";
+import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 import {
   buildBlacklistActiveRecords,
@@ -43,7 +44,6 @@ import {
   type BlacklistCurrentBalanceSnapshot,
 } from "@shared/lib/blacklist-active-records";
 
-const BLACKLIST_STABLECOIN_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 1;
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY = `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
 const BLACKLIST_SUMMARY_PRODUCER_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
@@ -60,10 +60,6 @@ interface CachedBlacklistSummarySnapshot {
   materializedAt: number;
   freshnessTs: number;
   payload: BlacklistSummaryPayload;
-}
-
-function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
-  return BLACKLIST_STABLECOIN_SET.has(value);
 }
 
 const BLACKLIST_IDENTITY_PARTITION_SQL = `

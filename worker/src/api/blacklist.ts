@@ -18,15 +18,13 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getSupportedBlacklistChainIds, getSupportedBlacklistChainNames } from "../lib/blacklist-coverage-manifest";
 import {
-  BLACKLIST_STABLECOINS,
   type BlacklistEvent,
   type BlacklistSortDirection,
   type BlacklistSortKey,
-  type BlacklistStablecoin,
 } from "@shared/types/market";
+import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 
-const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const VALID_CHAIN_NAMES = getSupportedBlacklistChainNames();
 const VALID_CHAIN_IDS = getSupportedBlacklistChainIds();
 const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
@@ -50,10 +48,6 @@ const BLACKLIST_ORDER_BY: Record<BlacklistSortKey, Record<BlacklistSortDirection
     desc: "event_type DESC, timestamp DESC, id DESC",
   },
 };
-
-function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
-  return VALID_STABLECOINS.has(value as BlacklistStablecoin);
-}
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
