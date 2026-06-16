@@ -193,6 +193,7 @@ describe("syncLiveReserves", () => {
         throw args.error;
       },
       breakerCanFetch: new Map([[`live-reserves:${args.coin.liveReservesConfig.breakerScope ?? args.coin.liveReservesConfig.adapter}`, true]]),
+      d1FinalizeTimeoutMs: 30_000,
       previousState: {
         stablecoinId: args.coin.id,
         adapterKey: args.coin.liveReservesConfig.adapter,
@@ -1176,6 +1177,7 @@ describe("syncLiveReserves", () => {
         metadata: { freshnessMode: "not-applicable" as const },
       }),
       breakerCanFetch: new Map([[`live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`, true]]),
+      d1FinalizeTimeoutMs: 30_000,
       previousState: {
         stablecoinId: coin.id,
         adapterKey: coin.liveReservesConfig.adapter,
@@ -1255,6 +1257,7 @@ describe("syncLiveReserves", () => {
       adapter: adapterForCoin(coin),
       runAdapter,
       breakerCanFetch: new Map([[`live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`, false]]),
+      d1FinalizeTimeoutMs: 30_000,
       previousState: {
         stablecoinId: coin.id,
         adapterKey: coin.liveReservesConfig.adapter,

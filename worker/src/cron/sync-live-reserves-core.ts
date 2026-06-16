@@ -40,8 +40,6 @@ export type ReserveAdapterRunner = (
   adapter: ReserveAdapterDefinition,
 ) => Promise<AdapterResult>;
 
-const D1_WRITE_FINALIZE_TIMEOUT_MS = 30_000;
-
 function getScoringRelevantWarnings(
   warnings: readonly LiveReserveWarning[],
   config: LiveReserveConfig,
@@ -60,7 +58,7 @@ export async function syncReserveCoin(args: {
   runAdapter: ReserveAdapterRunner;
   breakerCanFetch: Map<string, boolean>;
   previousState: ReserveSyncStateRecord | null;
-  d1FinalizeTimeoutMs?: number;
+  d1FinalizeTimeoutMs: number;
 }): Promise<ReserveCoinSyncResult> {
   if (args.signal.aborted) {
     throw args.signal.reason ?? new Error("sync-live-reserves aborted");
@@ -214,9 +212,9 @@ export async function syncReserveCoin(args: {
           db,
           compositionRecord,
           successState,
-          Date.now() + (args.d1FinalizeTimeoutMs ?? D1_WRITE_FINALIZE_TIMEOUT_MS),
+          Date.now() + args.d1FinalizeTimeoutMs,
         ),
-        args.d1FinalizeTimeoutMs ?? D1_WRITE_FINALIZE_TIMEOUT_MS,
+        args.d1FinalizeTimeoutMs,
         `D1 write timeout for ${coin.id}`,
       );
       finalizeSucceeded = finalizeResult.finalized;

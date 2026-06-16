@@ -72,6 +72,7 @@ describe("reserve adapter real-registry smoke", () => {
           requestCache: new Map(),
         }),
       breakerCanFetch: new Map(),
+      d1FinalizeTimeoutMs: 30_000,
       previousState: null,
     });
 
