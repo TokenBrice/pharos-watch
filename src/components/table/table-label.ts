@@ -24,6 +24,14 @@ export function withFallbackTableAriaLabel<T extends Omit<React.ComponentProps<"
   } as T;
 }
 
+export function resolveTableFrameProps<T extends Omit<React.ComponentProps<"table">, "children" | "className">>(
+  tableId: TableId | undefined,
+  tableProps: T | undefined,
+  children: React.ReactNode,
+): T | undefined {
+  return withFallbackTableAriaLabel(tableId, tableProps, { hasCaption: hasTableCaptionChild(children) });
+}
+
 export function hasTableCaptionChild(children: React.ReactNode): boolean {
   let found = false;
 

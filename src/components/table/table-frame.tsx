@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import { TableElement } from "./table-element";
-import { hasTableCaptionChild, withFallbackTableAriaLabel } from "./table-label";
+import { resolveTableFrameProps } from "./table-label";
 import { TableSurface, type TableSurfaceProps } from "./table-surface";
 import { TableViewport, type TableViewportProps } from "./table-viewport";
 
@@ -26,9 +26,7 @@ export function TableFrame({
   viewportProps,
   ...surfaceProps
 }: TableFrameProps) {
-  const resolvedTableProps = withFallbackTableAriaLabel(surfaceProps.tableId, tableProps, {
-    hasCaption: hasTableCaptionChild(children),
-  });
+  const resolvedTableProps = resolveTableFrameProps(surfaceProps.tableId, tableProps, children);
 
   return (
     <TableSurface {...surfaceProps}>
