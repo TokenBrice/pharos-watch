@@ -96,15 +96,6 @@ function markMalformedRedemptionTelemetry(redemption: object): void {
   });
 }
 
-function isHttpUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReserveSnapshotMetadata {
   const normalized: LiveReserveSnapshotMetadata = { ...metadata };
   const knownNumberKeys: Array<keyof LiveReserveSnapshotMetadata> = [
@@ -224,8 +215,15 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     if (Array.isArray(rawRedemption.sourceUrls)) {
       const seen = new Set<string>();
       redemption.sourceUrls = rawRedemption.sourceUrls.flatMap((url) => {
-        if (typeof url !== "string" || !isHttpUrl(url)) return [];
-        const normalizedUrl = new URL(url).toString();
+        if (typeof url !== "string") return [];
+        let parsed: URL;
+        try {
+          parsed = new URL(url);
+        } catch {
+          return [];
+        }
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return [];
+        const normalizedUrl = parsed.toString();
         if (seen.has(normalizedUrl)) return [];
         seen.add(normalizedUrl);
         return [normalizedUrl];
