@@ -13,6 +13,7 @@ import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-
 
 const COINGECKO_GAP_THRESHOLD_RATIO = 1.05;
 const COINGECKO_GAP_HISTORY_DAYS = 40;
+const MAX_SUPPLY_GAP_CANDIDATES = 15;
 const DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP = 1_000_000;
 const MAX_CURRENT_POINT_AGE_MS = 2 * 24 * 60 * 60 * 1000;
 const MAX_LOOKBACK_POINT_DISTANCE_MS = 3 * 24 * 60 * 60 * 1000;
@@ -434,7 +435,13 @@ export async function reconcileTrackedSupplyGaps(
   )];
 
   const currentMarketCaps = await fetchCurrentCoinGeckoMarketCaps(candidateGeckoIds, signal, coingeckoApiKey);
-  const candidates = buildSupplyGapCandidates(assets, currentMarketCaps);
+  const allCandidates = buildSupplyGapCandidates(assets, currentMarketCaps);
+  if (allCandidates.length > MAX_SUPPLY_GAP_CANDIDATES) {
+    console.warn(
+      `[sync-stablecoins] Supply gap reconciliation capped at ${MAX_SUPPLY_GAP_CANDIDATES} of ${allCandidates.length} candidates to bound per-cron API calls`,
+    );
+  }
+  const candidates = allCandidates.slice(0, MAX_SUPPLY_GAP_CANDIDATES);
   if (candidates.length === 0) {
     return {
       reconciledIds: [],
