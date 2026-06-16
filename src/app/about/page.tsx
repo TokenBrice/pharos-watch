@@ -36,6 +36,8 @@ import {
   PRE_LAUNCH_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
+// Intentionally extends pharos-prose-link with inline-flex/gap-1 for icon-paired links (ExternalLink icon)
+// and frost-blue hover for visual differentiation. Cannot collapse to pharos-prose-link which has no flex layout.
 const INLINE_EXTERNAL_LINK_CLASS =
   "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
 const CTA_BUTTON_CLASS =
