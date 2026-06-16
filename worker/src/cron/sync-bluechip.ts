@@ -10,6 +10,7 @@ import { validatePayloadWithSchema } from "../lib/api-utils";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { parseBluechipRatingsCache } from "../lib/bluechip-cache";
+import { sleepWithSignal } from "../lib/abort";
 import { z } from "zod";
 
 const CACHE_KEY = "bluechip-ratings";
@@ -124,7 +125,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   const failedSlugs: { slug: string; reason: string }[] = [];
 
   for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 500));
+    if (i > 0) await sleepWithSignal(500, signal);
     const batch = entries.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.allSettled(
       batch.map(async ([slug, pharosId]) => {
