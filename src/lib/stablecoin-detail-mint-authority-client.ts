@@ -7,7 +7,7 @@ import {
   MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
   MINT_AUTHORITY_POSTURE_VALUES,
   MINT_AUTHORITY_TYPE_VALUES,
-} from "@shared/types";
+} from "@shared/types/core";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 

@@ -6,7 +6,7 @@ import {
   SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
 import { PUBLIC_API_HOST, PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-contract";
-import { ApiKeySelfServeCadenceSchema } from "@shared/types";
+import { ApiKeySelfServeCadenceSchema } from "@shared/types/api-key-requests";
 import { AlertCircle, CheckCircle2, Copy, KeyRound, Loader2, MailCheck, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

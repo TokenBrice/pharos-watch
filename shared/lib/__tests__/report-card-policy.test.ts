@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { inferResilienceDefaults, inferGovernanceQuality } from "../report-card-policy";
+import { BACKING_TYPE_VALUES, GOVERNANCE_TYPE_VALUES } from "@shared/types/core";
 import {
-  BACKING_TYPE_VALUES,
-  GOVERNANCE_TYPE_VALUES,
   type BackingType,
   type ChainTier,
   type CollateralQuality,
