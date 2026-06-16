@@ -7,7 +7,7 @@ import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils"
 import { assertNotFrozen } from "../lib/frozen-guards";
 import type { TopicFilter } from "../lib/evm-logs";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
-import { loadMintBurnPriceContext } from "../lib/mint-burn-pipeline/context";
+import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
 import {
   persistMintBurnRows,
@@ -187,7 +187,7 @@ export async function handleBackfillMintBurn(
     }
 
     const chunkSize = Math.max(1, Math.min(chunkSizeParam, chunkMax));
-    const { prices, priceHistory } = await loadMintBurnPriceContext(db, config.stablecoinId);
+    const { prices, priceHistory } = await loadMintBurnPriceContextBatch(db, [config.stablecoinId]);
     const runTimestamp = Math.floor(Date.now() / 1000);
     const localTimestampCache = new Map<number, number>();
 

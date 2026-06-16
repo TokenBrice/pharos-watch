@@ -71,13 +71,6 @@ export async function loadMintBurnPriceHistoryBatch(
   return priceHistory;
 }
 
-export async function loadMintBurnPriceContext(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<MintBurnPriceContext> {
-  return loadMintBurnPriceContextBatch(db, [stablecoinId]);
-}
-
 export async function loadMintBurnPriceContextBatch(
   db: D1Database,
   stablecoinIds: string[],
