@@ -1,16 +1,35 @@
-import type {
-  DigestChangeSummary,
-  DigestForwardLookOutcome,
-  DigestNextTrigger,
-  DigestRiskTapeItem,
+import {
+  DigestChangeSummarySchema,
+  DigestForwardLookOutcomeSchema,
+  DigestNextTriggerSchema,
+  DigestRiskTapeItemSchema,
+  type DigestChangeSummary,
+  type DigestForwardLookOutcome,
+  type DigestNextTrigger,
+  type DigestRiskTapeItem,
 } from "@shared/types/digest";
 import { isRecord } from "@shared/lib/type-guards";
+import type { ZodType } from "zod";
 
 export interface DigestIntelligenceSummary {
   changeSummary: DigestChangeSummary | null;
   nextTriggers: DigestNextTrigger[] | null;
   forwardLookOutcomes: DigestForwardLookOutcome[] | null;
   riskTape: DigestRiskTapeItem[] | null;
+}
+
+// Validate each element against its schema and drop malformed entries so the
+// public DigestIntelligenceSummary cannot carry structurally-invalid items.
+// Source rows come from a best-effort JSON decode of daily_digest.input_data,
+// so legacy/corrupt arrays must not flow through as if well-typed.
+function parseArray<T>(input: unknown, schema: ZodType<T>): T[] | null {
+  if (!Array.isArray(input)) return null;
+  const valid: T[] = [];
+  for (const item of input) {
+    const result = schema.safeParse(item);
+    if (result.success) valid.push(result.data);
+  }
+  return valid;
 }
 
 export function selectDigestIntelligence(input: unknown): DigestIntelligenceSummary {
@@ -23,13 +42,12 @@ export function selectDigestIntelligence(input: unknown): DigestIntelligenceSumm
     };
   }
 
+  const changeSummary = DigestChangeSummarySchema.safeParse(input.changeSummary);
+
   return {
-    // Cast: isRecord runtime check narrows unknown → record but TS can't validate the inner field shape; trusting the runtime contract
-    changeSummary: isRecord(input.changeSummary) ? input.changeSummary as unknown as DigestChangeSummary : null,
-    nextTriggers: Array.isArray(input.nextTriggers) ? input.nextTriggers as DigestNextTrigger[] : null,
-    forwardLookOutcomes: Array.isArray(input.forwardLookOutcomes)
-      ? input.forwardLookOutcomes as DigestForwardLookOutcome[]
-      : null,
-    riskTape: Array.isArray(input.riskTape) ? input.riskTape as DigestRiskTapeItem[] : null,
+    changeSummary: changeSummary.success ? changeSummary.data : null,
+    nextTriggers: parseArray(input.nextTriggers, DigestNextTriggerSchema),
+    forwardLookOutcomes: parseArray(input.forwardLookOutcomes, DigestForwardLookOutcomeSchema),
+    riskTape: parseArray(input.riskTape, DigestRiskTapeItemSchema),
   };
 }

@@ -267,7 +267,7 @@ export interface DigestInputData {
 
 const DigestRiskTapeToneSchema = z.enum(["critical", "warning", "neutral", "positive"]);
 
-const DigestRiskTapeItemSchema = z.object({
+export const DigestRiskTapeItemSchema = z.object({
   id: z.string(),
   label: z.string(),
   value: z.string(),
@@ -298,7 +298,7 @@ const DigestSignalChangeSchema = z.object({
 });
 export type DigestSignalChange = z.infer<typeof DigestSignalChangeSchema>;
 
-const DigestChangeSummarySchema = z.object({
+export const DigestChangeSummarySchema = z.object({
   previousDate: z.string().nullable().optional(),
   newSignals: z.array(DigestSignalChangeSchema),
   worsenedSignals: z.array(DigestSignalChangeSchema),
@@ -308,7 +308,7 @@ const DigestChangeSummarySchema = z.object({
 });
 export type DigestChangeSummary = z.infer<typeof DigestChangeSummarySchema>;
 
-const DigestNextTriggerSchema = z.object({
+export const DigestNextTriggerSchema = z.object({
   id: z.string(),
   label: z.string(),
   metric: z.enum(["depeg-bps", "supply-1d-usd", "supply-7d-usd", "bank-run-gauge", "dews-band", "psi-score"]),
@@ -322,7 +322,7 @@ const DigestNextTriggerSchema = z.object({
 });
 export type DigestNextTrigger = z.infer<typeof DigestNextTriggerSchema>;
 
-const DigestForwardLookOutcomeSchema = z.object({
+export const DigestForwardLookOutcomeSchema = z.object({
   id: z.string(),
   triggerId: z.string(),
   label: z.string(),
