@@ -282,6 +282,20 @@ export function formatSignedCurrency(value: number, decimals = 2): string {
 }
 
 /** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
+const decimalFormatterCache = new Map<string, Intl.NumberFormat>();
+
+/** Format a number with grouping separators and a fixed fraction-digit range, caching the
+ *  underlying Intl.NumberFormat by digit range. Use instead of hand-rolled module-level formatters. */
+export function formatDecimal(value: number, minimumFractionDigits = 2, maximumFractionDigits = 2): string {
+  const cacheKey = `${minimumFractionDigits}:${maximumFractionDigits}`;
+  let formatter = decimalFormatterCache.get(cacheKey);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("en-US", { minimumFractionDigits, maximumFractionDigits });
+    decimalFormatterCache.set(cacheKey, formatter);
+  }
+  return formatter.format(value);
+}
+
 export function formatPercent(value: number | null | undefined, decimals = 2): string {
   return isFiniteNumber(value) ? `${value.toFixed(decimals)}%` : "-";
 }

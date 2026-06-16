@@ -5,7 +5,7 @@ import { useYieldHistory } from "@/hooks/api-hooks";
 import { DAY_MS } from "@/lib/constants";
 import { toTimestampMs } from "@/lib/time";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
-import { formatChartDate } from "@shared/lib/format";
+import { formatChartDate, formatDecimal } from "@shared/lib/format";
 import type { YieldHistoryPoint } from "@shared/types";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
@@ -209,19 +209,8 @@ export function formatTooltipDate(timestamp: number) {
   return formatChartDate(timestamp, "full");
 }
 
-const numberFormatterCache = new Map<string, Intl.NumberFormat>();
-
 export function formatChartNumber(value: number, minimumFractionDigits = 2, maximumFractionDigits = 2) {
-  const formatterKey = `${minimumFractionDigits}:${maximumFractionDigits}`;
-  let formatter = numberFormatterCache.get(formatterKey);
-  if (!formatter) {
-    formatter = new Intl.NumberFormat("en-US", {
-      minimumFractionDigits,
-      maximumFractionDigits,
-    });
-    numberFormatterCache.set(formatterKey, formatter);
-  }
-  return formatter.format(value);
+  return formatDecimal(value, minimumFractionDigits, maximumFractionDigits);
 }
 
 export function formatTickPercent(value: number) {

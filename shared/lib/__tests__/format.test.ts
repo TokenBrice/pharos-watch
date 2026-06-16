@@ -5,6 +5,7 @@ import {
   formatScore,
   formatChartDate,
   formatChartPercent,
+  formatDecimal,
   formatPercent,
   formatPercentFromRatio,
   formatPrice,
@@ -78,6 +79,19 @@ describe("formatPercent", () => {
   it("returns dash for non-finite values", () => {
     expect(formatPercent(Infinity)).toBe("-");
     expect(formatPercent(NaN)).toBe("-");
+  });
+});
+
+describe("formatDecimal", () => {
+  it("defaults to two fraction digits", () => {
+    expect(formatDecimal(12.3)).toBe("12.30");
+  });
+  it("respects a custom digit range", () => {
+    expect(formatDecimal(12.345, 1, 1)).toBe("12.3");
+    expect(formatDecimal(5, 0, 2)).toBe("5");
+  });
+  it("adds grouping separators", () => {
+    expect(formatDecimal(1234.5)).toBe("1,234.50");
   });
 });
 
