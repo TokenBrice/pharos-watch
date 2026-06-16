@@ -166,7 +166,7 @@ export async function fetchDsFallbackPools(
         eventType: "dexscreener-fallback-budget-exhausted",
         severity: "warning",
         message: "DexScreener fallback budget exhausted; yielding partial results.",
-        metadata: { requests },
+        metadata: { requests, phase: "between-coins" },
       });
       await recordFallbackOutcome();
       return { newPools, priceObs };
@@ -182,7 +182,7 @@ export async function fetchDsFallbackPools(
           eventType: "dexscreener-fallback-budget-exhausted",
           severity: "warning",
           message: "DexScreener fallback budget exhausted; yielding partial results.",
-          metadata: { requests },
+          metadata: { requests, phase: "mid-coin" },
         });
         await recordFallbackOutcome();
         return { newPools, priceObs };

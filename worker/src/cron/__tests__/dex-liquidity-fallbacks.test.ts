@@ -219,4 +219,33 @@ describe("fetchDsFallbackPools circuit breaker", () => {
       }),
     );
   });
+
+  it("tags the between-coins budget-exhausted event with phase metadata", async () => {
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
+
+    const metrics = new Map<string, ReturnType<typeof initMetrics>>();
+    const zeroPools = initMetrics("usdt-tether", "USDT");
+    zeroPools.poolCount = 0;
+    metrics.set("usdt-tether", zeroPools);
+
+    const db = createMockDb();
+    // Deadline already in the past: the per-coin (outer) check fires before any request.
+    await fetchDsFallbackPools(
+      db,
+      metrics,
+      new Map(),
+      createKnownPoolIdentityIndex(),
+      undefined,
+      Date.now() - 1,
+    );
+
+    expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
+    expect(logCronEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: "dexscreener-fallback-budget-exhausted",
+        metadata: expect.objectContaining({ phase: "between-coins" }),
+      }),
+    );
+  });
 });
