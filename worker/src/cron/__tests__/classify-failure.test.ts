@@ -47,6 +47,12 @@ const CASES: Case[] = [
     lastError: "SQLITE_BUSY: database is locked",
     expected: "storage-write",
   },
+  {
+    name: "generic database error",
+    reason: "adapter-exception",
+    lastError: "Database connection lost",
+    expected: "storage-write",
+  },
 
   // validation
   { name: "validation-failed reason", reason: "validation-failed", lastError: null, expected: "validation" },
@@ -124,6 +130,22 @@ const CASES: Case[] = [
     name: "no-response",
     reason: "adapter-exception",
     lastError: "no-response from upstream",
+    expected: "network",
+  },
+  {
+    name: "explicit network keyword",
+    reason: "adapter-exception",
+    lastError: "network error: connection reset",
+    expected: "network",
+  },
+  {
+    // Known limitation: the substring "aborted" branch cannot distinguish a network
+    // abort from a parent-signal cancellation mid-run, so such cancellations are
+    // currently classified as network. This case pins that behaviour so any future
+    // refinement (e.g. a structured error code) is a visible, intentional change.
+    name: "parent-signal cancellation is currently classified as network (known limitation)",
+    reason: "adapter-exception",
+    lastError: "Sync aborted: parent run cancelled",
     expected: "network",
   },
 
