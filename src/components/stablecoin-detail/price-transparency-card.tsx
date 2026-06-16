@@ -95,9 +95,11 @@ export function PriceTransparencyCard({
     label: getPricingSourceLabel(key),
   }));
 
-  const usedSources = sources.filter((s) => s.status === "used");
-  const availableSources = sources.filter((s) => s.status === "available");
-  const noDataSources = sources.filter((s) => s.status === "no-data");
+  const usedSources = sources.filter((s): s is SourceInfo & { status: "used" } => s.status === "used");
+  const availableSources = sources.filter(
+    (s): s is SourceInfo & { status: "available" } => s.status === "available",
+  );
+  const noDataSources = sources.filter((s): s is SourceInfo & { status: "no-data" } => s.status === "no-data");
   const sourceDepthCount = effectiveConsensusSources.length;
   const sourceDepthTone =
     sourceDepthCount >= 3
@@ -193,18 +195,18 @@ export function PriceTransparencyCard({
 
             {/* Used Sources */}
             {usedSources.map((source) => (
-              <SourceChip key={source.key} label={source.label} status="used" />
+              <SourceChip key={source.key} label={source.label} status={source.status} />
             ))}
 
             {/* Available Sources */}
             {availableSources.map((source) => (
-              <SourceChip key={source.key} label={source.label} status="available" />
+              <SourceChip key={source.key} label={source.label} status={source.status} />
             ))}
 
             {/* Expandable No-Data Sources */}
             {showAll &&
               noDataSources.map((source) => (
-                <SourceChip key={source.key} label={source.label} status="no-data" />
+                <SourceChip key={source.key} label={source.label} status={source.status} />
               ))}
           </div>
 
