@@ -31,6 +31,16 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
 });
+/**
+ * Rough manual estimate of how many active Telegram chats the bot can serve
+ * before delivery/rate-limit headroom becomes a concern. Drives the capacity
+ * gauge on the public /pharoswatchbot page (Math: activeWatchers / this * 100).
+ *
+ * Not sourced from an authoritative limit — revisit and bump (or replace with a
+ * server-reported value) once `activeWatchers` exceeds ~80% of this number, or
+ * the gauge will trend toward a misleading 100%.
+ * Last reviewed: 2026-06-16 — o1-08.
+ */
 const TELEGRAM_ESTIMATED_CAPACITY_WATCHERS = 5_000;
 
 function formatCount(value: number): string {
