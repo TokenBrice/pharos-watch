@@ -53,9 +53,10 @@ export function buildLiquidityRows(
     .filter((row): row is LiquidityRow => row.liq != null);
 }
 
-export function buildLiquidityStats(liquidityMap: DexLiquidityMap | undefined): LiquidityStatsData | null {
-  if (!liquidityMap) return null;
-
+function computeLiquidityStats(
+  liquidityMap: DexLiquidityMap,
+  allRows: LiquidityRow[],
+): LiquidityStatsData {
   const globalData = liquidityMap[DEX_GLOBAL_KEY];
   const totalTvl = globalData?.totalTvlUsd ?? 0;
   const totalVol = globalData?.totalVolume24hUsd ?? 0;
@@ -71,10 +72,7 @@ export function buildLiquidityStats(liquidityMap: DexLiquidityMap | undefined): 
   let totalOrganic = 0;
   let organicWeight = 0;
 
-  for (const meta of ACTIVE_STABLECOINS) {
-    const liq = liquidityMap[meta.id];
-    if (!liq) continue;
-
+  for (const { liq } of allRows) {
     if (liq.liquidityScore != null) {
       scoreSum += liq.liquidityScore;
       scoreCount++;
@@ -115,16 +113,36 @@ export function buildLiquidityStats(liquidityMap: DexLiquidityMap | undefined): 
   };
 }
 
+export function buildLiquidityStats(liquidityMap: DexLiquidityMap | undefined): LiquidityStatsData | null {
+  if (!liquidityMap) return null;
+  // Build all rows once (no filter) to avoid re-iterating ACTIVE_STABLECOINS.
+  const allRows = ACTIVE_STABLECOINS
+    .map((meta) => ({ meta, liq: liquidityMap[meta.id] }))
+    .filter((row): row is LiquidityRow => row.liq != null);
+  return computeLiquidityStats(liquidityMap, allRows);
+}
+
 export function buildLiquidityViewModel(
   liquidityMap: DexLiquidityMap | undefined,
   pegFilter: PegCurrency | "all",
   searchQuery: string,
 ): LiquidityViewModel {
-  const rows = buildLiquidityRows(liquidityMap, pegFilter, searchQuery);
+  if (!liquidityMap) {
+    return { rows: [], scoredRows: [], unratedRows: [], summaryStats: null };
+  }
+  // Single pass: build all rows, then filter for display.
+  const q = searchQuery.toLowerCase().trim();
+  const allRows = ACTIVE_STABLECOINS
+    .map((meta) => ({ meta, liq: liquidityMap[meta.id] }))
+    .filter((row): row is LiquidityRow => row.liq != null);
+  const rows = allRows.filter(({ meta }) => {
+    if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
+    return !q || meta.name.toLowerCase().includes(q) || meta.symbol.toLowerCase().includes(q);
+  });
   return {
     rows,
     scoredRows: rows.filter((row) => row.liq.liquidityScore != null),
     unratedRows: rows.filter((row) => row.liq.liquidityScore == null),
-    summaryStats: buildLiquidityStats(liquidityMap),
+    summaryStats: computeLiquidityStats(liquidityMap, allRows),
   };
 }
