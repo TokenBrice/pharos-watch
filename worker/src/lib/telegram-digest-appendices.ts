@@ -1,6 +1,6 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { formatCurrency } from "@shared/lib/format";
-import { FROZEN_IDS, FROZEN_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_IDS, FROZEN_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CauseOfDeath, DeadStablecoin } from "@shared/types/market";
 import { getCache, setCache } from "./db-cache";
 import { escapeHtml } from "./telegram";
@@ -33,7 +33,6 @@ export const CEMETERY_FOOTERS = [
 ] as const;
 
 type TrackedStablecoinMeta = (typeof TRACKED_STABLECOINS)[number];
-const TRACKED_META_BY_ID = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin]));
 
 interface CacheWrite {
   key: string;
