@@ -114,14 +114,7 @@ export async function syncFxRates(
         console.warn(
           `[sync-fx-rates] Frankfurter API unavailable (${frankfurterResult.statusCode ?? "no response"}), using ${cachedRateCount} cached rates`,
         );
-        syncState.seedCachedFallbackFromPrevious();
-        syncState.mode = "cached-fallback";
-        syncState.fallbackMode = "cached-fx-rates";
-        syncState.sources = {
-          ...syncState.sources,
-          frankfurter: "error",
-          cache: "ok",
-        };
+        syncState.enterCachedFallback("error");
       }
       if (syncState.mode !== "cached-fallback" && Object.keys(syncState.usableRates).length === 0) {
         throw new Error(`Frankfurter API returned ${frankfurterResult.statusCode ?? "no response"}`);
@@ -164,14 +157,7 @@ export async function syncFxRates(
           console.warn("[sync-fx-rates] Invalid Frankfurter payload, using live FX fallback");
         } else if (cachedRateCount > 0) {
           console.warn(`[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
-          syncState.seedCachedFallbackFromPrevious();
-          syncState.mode = "cached-fallback";
-          syncState.fallbackMode = "cached-fx-rates";
-          syncState.sources = {
-            ...syncState.sources,
-            frankfurter: "invalid-payload",
-            cache: "ok",
-          };
+          syncState.enterCachedFallback("invalid-payload");
         } else {
           throw new Error(`Frankfurter API payload validation failed: ${frankfurterResult.issues}`);
         }

@@ -252,7 +252,7 @@ export class FxSyncRunState {
     });
   }
 
-  seedCachedFallbackFromPrevious(): void {
+  private seedCachedFallbackFromPrevious(): void {
     this.usableRates = { ...this.prevRates };
     Object.keys(this.usableRates).forEach((pegKey) => this.inheritPrevious(pegKey));
     this.ecbDate = this.prevState?.ecbDate ?? null;
@@ -648,6 +648,22 @@ export class FxSyncRunState {
         this.markLive(pegKey, resolved.updatedAt ?? this.syncStartSec);
       }
     }
+  }
+
+  /**
+   * Seed cached rates from the previous state and transition the run into
+   * cached-fallback mode, keeping `mode`, `fallbackMode`, and `sources` in sync
+   * so callers can't set one without the others.
+   */
+  enterCachedFallback(frankfurterStatus: string): void {
+    this.seedCachedFallbackFromPrevious();
+    this.mode = "cached-fallback";
+    this.fallbackMode = "cached-fx-rates";
+    this.sources = {
+      ...this.sources,
+      frankfurter: frankfurterStatus,
+      cache: "ok",
+    };
   }
 
   maybeRecoverFromCachedFallback(): void {
