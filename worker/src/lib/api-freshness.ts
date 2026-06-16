@@ -418,8 +418,6 @@ export async function buildCacheStatuses(
         : worstRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded
           ? "degraded"
       : statusFloor;
-  } else if (worstRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
-    statusFloor = "stale";
   }
 
   for (const [key, cache] of Object.entries(caches)) {
