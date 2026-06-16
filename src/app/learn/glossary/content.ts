@@ -1,3 +1,12 @@
+import { BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/blacklist-tracker";
+import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-dews";
+import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/liquidity-score";
+import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/mint-burn-flow";
+import { PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/pricing-pipeline";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/safety-score";
+import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/stability-index";
+import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/yield-methodology";
+
 export interface GlossaryEntryExample {
   label: string;
   href: string;
@@ -33,7 +42,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Pharos's gated designation for stablecoins clearing strict floors across safety, liquidity, and resilience simultaneously. There is no weighted blend and no soft cutoff: an asset is Bluechip only when every floor is cleared at the same moment. The label is withdrawn the day a floor breaks. Bluechip is a rating in the S&P AAA sense, not a marketing badge.",
     methodologyAnchor: "/methodology/#safety-scores-methodology",
-    methodologyVersion: "v7.26",
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["pegscore", "liquidity-score", "safety-score"],
   },
   {
@@ -43,7 +52,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "The five DEWS bands, ordered from cool to hot. Calm covers scores at or below 15; Watch up to 35; Alert up to 55; Warning up to 75; Danger above 75. Each band is a Title-Case proper noun in product copy. Lowercased forms (“a calmer week”) refer to ordinary weather and never name the band.",
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
-    methodologyVersion: "v6.0",
+    methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["dews", "pegscore"],
   },
   {
@@ -67,7 +76,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "A deviation from peg that crosses a publishable band threshold. Pharos expresses deviations in basis points below one percent and percent at or above. A confirmed depeg requires same-direction corroboration across source families; contradictory secondary evidence is treated as contradiction, not weak support. Events with peak deviation at or above 500 bps earn a dedicated incident page.",
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
-    methodologyVersion: "v6.0",
+    methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     example: {
       label: "Example: USDC, March 11, 2023 — see incident page →",
       href: "/depeg/usdc-2023-03-11/",
@@ -81,7 +90,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Depeg Early Warning System. A forward-looking per-coin stress score, 0–100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.",
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
-    methodologyVersion: "v6.0",
+    methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     example: {
       label: "Example: TerraUSD's death spiral — read the case study →",
       href: "/learn/case-studies/terra-ust-2022/",
@@ -95,7 +104,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Pharos's editorial daily, published at /digest/. The Digest reads the previous day's stablecoin movements as a single briefing — mint/burn pressure, PSI shifts, confirmed depegs, FreezeWatch entries — not as a feed dump. Capitalized when referring to the publication ritual; “daily digest” is the descriptive phrase. The Digest carries the editorial signature for the platform.",
     methodologyAnchor: "/methodology/#pricing-pipeline-methodology",
-    methodologyVersion: "v6.06",
+    methodologyVersion: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["tape", "cemetery"],
   },
   {
@@ -105,7 +114,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "The live ledger of issuer-intervention events — freeze, unfreeze, pause, block, wipe — across supported centralized stablecoin contracts. Events are normalized by chain, action type, native amount, and USD amount, with provenance attached. FreezeWatch is the surface Pharos publishes for issuer power; the underlying methodology is the Blacklist Tracker. One word, capital F, capital W.",
     methodologyAnchor: "/methodology/#blacklist-tracker-methodology",
-    methodologyVersion: "v3.993",
+    methodologyVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "safety-score"],
   },
   {
@@ -115,7 +124,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "DEX liquidity score, 0–100, combining TVL depth (30%), 24-hour volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Discovery is source-aware: thin, stale, or identity-poor pools remain visible for diagnostics but do not receive scoring weight. LiquidityScore measures exit capacity, not market presence. One word, capital L, capital S.",
     methodologyAnchor: "/methodology/#liquidity-methodology",
-    methodologyVersion: "v5.7",
+    methodologyVersion: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "safety-score"],
   },
   {
@@ -125,7 +134,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Net mint-versus-burn flow across supported issuance-chain contracts, scored against trailing closed-day baselines. Transfers are classified into mint, burn, bridge-mint, bridge-burn, atomic roundtrip, and ignored noise so the gauge reflects meaningful supply movement rather than mechanical churn. Pressure shifts when risky outflows and safer inflows diverge.",
     methodologyAnchor: "/methodology/#mint-burn-flow-methodology",
-    methodologyVersion: "v6.11",
+    methodologyVersion: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["pressureshift", "dews"],
   },
   {
@@ -135,7 +144,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Composite peg-stability score, 0–100. PegScore combines time-at-peg (50%) and event severity (50%) over a window capped by the coin's actual age, then enters the safety grade through a power-curve multiplier at exponent 0.40. The multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. One word, capital P, capital S.",
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
-    methodologyVersion: "v6.0",
+    methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["dews", "safety-score", "depeg"],
   },
   {
@@ -145,7 +154,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "The publication and the platform. Pharos tracks every meaningful stablecoin: what backs it, what could freeze it, and how the peg holds under stress. The work is independent, methodological, and citable. Used as a proper noun without article — Pharos tracks, Pharos publishes, Pharos refuses. Never “the Pharos.”",
     methodologyAnchor: "/methodology/",
-    methodologyVersion: "v7.26",
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["digest", "tape", "cemetery"],
   },
   {
@@ -155,7 +164,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "A measured change in DEWS pressure or PSI band that crosses a publishable threshold. Treated as an event, not a metric: a PressureShift is the moment something on the tape changes register, not the running number underneath. Surfaces on the Tape and in the Digest. One word, two capitals.",
     methodologyAnchor: "/methodology/#stability-index-methodology",
-    methodologyVersion: "v3.3",
+    methodologyVersion: PSI_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["psi", "dews", "tape"],
   },
   {
@@ -165,7 +174,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Pharos Stability Index. A 30-minute ecosystem-wide condition score, 0–100, that subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term. The result maps into six condition bands from BEDROCK to MELTDOWN. PSI is conservative by design: one small depeg should not move the index, but simultaneous broad stress should. Always uppercase.",
     methodologyAnchor: "/methodology/#stability-index-methodology",
-    methodologyVersion: "v3.3",
+    methodologyVersion: PSI_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["dews", "pressureshift"],
   },
   {
@@ -175,7 +184,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Pharos's overall grade for a stablecoin. The score weights four base dimensions — Liquidity / Exit (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies the PegScore power-curve multiplier. Grades run A+ (87+) through F (0–39), with NR for insufficient data. Eleven grades, no half-steps outside that alphabet.",
     methodologyAnchor: "/methodology/#safety-scores-methodology",
-    methodologyVersion: "v7.26",
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "pegscore", "liquidity-score"],
   },
   {
@@ -185,7 +194,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "The wire-service stream at /timeline/. The Tape is set in Courier and reads like a newsroom feed: PressureShifts, confirmed depegs, FreezeWatch entries, blacklist actions, and PSI band changes, time-stamped in UTC and source-attributed. Capitalized when referring to the surface; lowercase when referring to the underlying stream (“on tape”).",
     methodologyAnchor: "/methodology/#pricing-pipeline-methodology",
-    methodologyVersion: "v6.06",
+    methodologyVersion: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["digest", "pressureshift"],
   },
   {
@@ -195,7 +204,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Pharos's yield-confidence rating for stablecoins and NAV-bearing instruments. The Pharos Yield Score (PYS) combines source-risk-adjusted yield efficiency with sustainability; high APY is not automatically good. Unstable rates, weak safety scores, low TVL, source-risk penalties, or ambiguous exposure reduce the recommendation quality. Withheld where the asset is not meant to hold a fixed price.",
     methodologyAnchor: "/methodology/#yield-intelligence-methodology",
-    methodologyVersion: "v8.17",
+    methodologyVersion: YIELD_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["safety-score"],
   },
 ];
