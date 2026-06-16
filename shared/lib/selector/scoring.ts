@@ -203,6 +203,11 @@ export function scoreRow(
       confidenceReasons.add(`missing-critical-${slot.key}`);
       scoreCap = Math.min(scoreCap, 78);
     }
+    // Intentional slot shape: sourceRiskInverted has rawValue == null (no
+    // sourceRiskScore on the row) but normalizedValue != null because
+    // sourceRiskInverted() always returns a number (neutral 50). It is counted
+    // as present-but-neutral with a confidence hit, not as plain missing. This
+    // relies on sourceRiskInverted() never returning null (see its overloads).
     if (slot.key === "sourceRiskInverted" && slot.normalizedValue != null) {
       present.push(slot);
       neutralMissing.add(slot);

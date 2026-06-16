@@ -59,7 +59,15 @@ export function yieldVariance(v: number | null): number | null {
 /**
  * Inverted source-risk score. Per design §6, null normalizes to neutral 50;
  * Penalty + redistribute is still applied to confidence in the engine.
+ *
+ * The return type is `number` (never null) by contract: this is load-bearing
+ * for the special-case branch in scoring.ts:scoreRow (the rawValue-null /
+ * normalizedValue-non-null slot shape). The explicit overloads keep that
+ * contract visible — widening the return to `number | null` here would force
+ * the overloads to change too, surfacing the break in review.
  */
+export function sourceRiskInverted(score: number): number;
+export function sourceRiskInverted(score: number | null): number;
 export function sourceRiskInverted(score: number | null): number {
   if (score == null) return 50;
   return clamp(100 - score, 0, 100);
