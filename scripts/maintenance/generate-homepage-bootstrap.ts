@@ -202,7 +202,7 @@ async function generatePayload(apiBase: string): Promise<HomepageBootstrapPayloa
         descriptor.path,
         maxAgeSec,
         descriptor.schema,
-      ).then((query) => [id, query] as const),
+      ).then((query) => [id, query] as const);
     }),
   );
 
