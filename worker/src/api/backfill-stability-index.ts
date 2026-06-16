@@ -13,6 +13,7 @@ import {
   type PsiHistoricalDewsRow,
   usesHistoricalStressBreadth,
 } from "../lib/psi-replay";
+import type { PsiUniverseCache } from "../lib/psi-history-universe";
 import { runAdminJob } from "../lib/admin-job";
 import { acquireCronLease, createLeaseOwner, releaseCronLease } from "../lib/cron-lease";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
@@ -172,6 +173,7 @@ export async function handleBackfillStabilityIndex(
       let daysEvaluated = 0;
       let daysChanged = 0;
       let maxAbsoluteScoreDelta = 0;
+      const universeCache: PsiUniverseCache = new Map();
 
       for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
         daysEvaluated++;
@@ -183,6 +185,7 @@ export async function handleBackfillStabilityIndex(
           depegEvents,
           supplyByCoin,
           dewsByDay,
+          universeCache,
         });
         const { input, result } = replay;
         const existing = existingByDay.get(day);

@@ -85,3 +85,24 @@ export function buildPsiHistoricalUniverseForDay(
     shadowCoverageCount,
   };
 }
+
+/**
+ * Per-batch memoization cache keyed by day. Create one per `supplyByCoin`
+ * (i.e. one per backfill/replay batch) so the same day's universe is scanned
+ * once instead of recomputed for every consumer (current day, 7-day-ago
+ * lookup, DEWS stress breadth).
+ */
+export type PsiUniverseCache = Map<number, PsiHistoricalUniverse>;
+
+export function getPsiHistoricalUniverseForDay(
+  supplyByCoin: SupplySnapshotMap,
+  day: number,
+  cache?: PsiUniverseCache,
+): PsiHistoricalUniverse {
+  if (!cache) return buildPsiHistoricalUniverseForDay(supplyByCoin, day);
+  const cached = cache.get(day);
+  if (cached) return cached;
+  const computed = buildPsiHistoricalUniverseForDay(supplyByCoin, day);
+  cache.set(day, computed);
+  return computed;
+}

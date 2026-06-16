@@ -5,7 +5,10 @@ import {
   type PsiDepegEventRow,
   type PsiSupplyRow,
 } from "../psi-recompute";
-import { findNearestSupplySnapshot } from "../psi-history-universe";
+import {
+  findNearestSupplySnapshot,
+  type PsiUniverseCache,
+} from "../psi-history-universe";
 
 const DAY = 86_400;
 
@@ -492,5 +495,31 @@ describe("buildStabilityInputForDay", () => {
     expect(input.depegs).toEqual([
       { bps: -120, mcapUsd: 100_000_000, depegAgeDays: 1 },
     ]);
+  });
+
+  it("produces identical output with and without a universe cache and memoizes by day", () => {
+    const day = 30 * DAY;
+    const now = day + 2 * DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1000 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 900 },
+    ]);
+
+    const uncached = buildStabilityInputForDay(day, now, [], supplyByCoin);
+
+    const cache: PsiUniverseCache = new Map();
+    const cached = buildStabilityInputForDay(day, now, [], supplyByCoin, cache);
+
+    expect(cached).toEqual(uncached);
+    // The current day and the 7-day-ago day are both memoized after one call.
+    expect(cache.has(day)).toBe(true);
+    expect(cache.has(day - 7 * DAY)).toBe(true);
+
+    // A second day reuses the prior day's universe (day-7d of the next call may
+    // hit an already-cached entry); the cache only ever grows by distinct days.
+    const sizeAfterFirst = cache.size;
+    buildStabilityInputForDay(day + 7 * DAY, now, [], supplyByCoin, cache);
+    // day+7d and (day+7d)-7d===day; day already cached, so only +1 new entry.
+    expect(cache.size).toBe(sizeAfterFirst + 1);
   });
 });

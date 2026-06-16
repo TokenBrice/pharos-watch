@@ -1,7 +1,7 @@
 import { isDewsAlertBand } from "@shared/lib/classification";
 import { computeStabilityIndex, type StabilityInput, type StabilityResult } from "./stability-index";
-import type { SupplySnapshotMap } from "./psi-history-universe";
-import { buildPsiHistoricalUniverseForDay } from "./psi-history-universe";
+import type { SupplySnapshotMap, PsiUniverseCache } from "./psi-history-universe";
+import { getPsiHistoricalUniverseForDay } from "./psi-history-universe";
 import { buildStabilityInputForDay, type PsiDepegEventRow } from "./psi-recompute";
 
 export interface PsiHistoricalDewsRow {
@@ -30,11 +30,12 @@ export function computeHistoricalDewsStressBreadth(
   day: number,
   supplyByCoin: SupplySnapshotMap,
   dewsByDay: PsiHistoricalDewsMap,
+  universeCache?: PsiUniverseCache,
 ): number {
   const rows = dewsByDay.get(day) ?? [];
   if (rows.length === 0) return 0;
 
-  const universe = buildPsiHistoricalUniverseForDay(supplyByCoin, day);
+  const universe = getPsiHistoricalUniverseForDay(supplyByCoin, day, universeCache);
   let stressBreadth = 0;
 
   for (const row of rows) {
@@ -53,6 +54,7 @@ export interface HistoricalPsiReplayInput {
   depegEvents: PsiDepegEventRow[];
   supplyByCoin: SupplySnapshotMap;
   dewsByDay?: PsiHistoricalDewsMap;
+  universeCache?: PsiUniverseCache;
 }
 
 export interface HistoricalPsiReplayResult {
@@ -70,7 +72,13 @@ export interface HistoricalPsiReplayResult {
 export function replayHistoricalPsiForDay(
   input: HistoricalPsiReplayInput,
 ): HistoricalPsiReplayResult {
-  const baseInput = buildStabilityInputForDay(input.day, input.now, input.depegEvents, input.supplyByCoin);
+  const baseInput = buildStabilityInputForDay(
+    input.day,
+    input.now,
+    input.depegEvents,
+    input.supplyByCoin,
+    input.universeCache,
+  );
   const stabilityInput: StabilityInput = {
     depegs: baseInput.depegs,
     totalMcapUsd: baseInput.totalMcapUsd,
@@ -81,6 +89,7 @@ export function replayHistoricalPsiForDay(
           input.day,
           input.supplyByCoin,
           input.dewsByDay ?? new Map(),
+          input.universeCache,
         ),
       }
       : {}),

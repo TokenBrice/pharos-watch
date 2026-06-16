@@ -19,6 +19,7 @@ import {
   type PsiDepegEventRow,
   type PsiSupplyRow,
 } from "../lib/psi-recompute";
+import type { PsiUniverseCache } from "../lib/psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 
@@ -613,9 +614,10 @@ async function buildRecomputeStabilityStatements(
 
   const statements: D1PreparedStatement[] = [];
   let daysRecomputed = 0;
+  const universeCache: PsiUniverseCache = new Map();
 
   for (const day of sortedDays) {
-    const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin);
+    const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin, universeCache);
     const indexResult = computeStabilityIndex({
       depegs: input.depegs,
       totalMcapUsd: input.totalMcapUsd,

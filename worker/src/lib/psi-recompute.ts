@@ -1,8 +1,9 @@
 import {
   buildPsiHistoricalSupplySnapshotMap,
-  buildPsiHistoricalUniverseForDay,
+  getPsiHistoricalUniverseForDay,
   findNearestSupplySnapshot,
   type SupplySnapshotMap,
+  type PsiUniverseCache,
 } from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
@@ -109,6 +110,7 @@ export function buildStabilityInputForDay(
   now: number,
   depegEvents: PsiDepegEventRow[],
   supplyByCoin: SupplySnapshotMap,
+  universeCache?: PsiUniverseCache,
 ): StabilityInputForDay {
   const dayEnd = day + DAY_SECONDS;
   const activeDepegs = depegEvents.filter(
@@ -161,8 +163,8 @@ export function buildStabilityInputForDay(
     });
   }
 
-  const universe = buildPsiHistoricalUniverseForDay(supplyByCoin, day);
-  const universe7dAgo = buildPsiHistoricalUniverseForDay(supplyByCoin, day - 7 * DAY_SECONDS);
+  const universe = getPsiHistoricalUniverseForDay(supplyByCoin, day, universeCache);
+  const universe7dAgo = getPsiHistoricalUniverseForDay(supplyByCoin, day - 7 * DAY_SECONDS, universeCache);
   const totalMcapUsd = universe.totalMcapUsd;
   const totalMcap7dAgo = universe7dAgo.totalMcapUsd;
   const mcap7dChangePct =
