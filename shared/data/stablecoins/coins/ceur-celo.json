@@ -23,6 +23,23 @@
     "attestorTier": "self",
     "cadence": "real-time"
   },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Mento V3 routes EURm pricing through Chainlink-backed SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-peg feeds before FPMM swaps use them.",
+    "reviewedAt": "2026-06-16",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento V3 smart contracts docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+      },
+      {
+        "label": "Mento BreakerBox docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -10789,6 +10789,23 @@
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes EURm pricing through Chainlink-backed SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-peg feeds before FPMM swaps use them.",
+      "reviewedAt": "2026-06-16",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
     "bridgeRouteRisk": {
       "tier": "single-chain-or-native",
       "summary": "EURm is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
