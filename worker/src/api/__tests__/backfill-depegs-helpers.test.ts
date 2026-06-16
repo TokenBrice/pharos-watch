@@ -170,6 +170,30 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(primaryCancel).toHaveBeenCalledOnce();
     expect(fallbackCancel).toHaveBeenCalledOnce();
   });
+
+  it("rejects a malformed secondary FX day payload instead of caching bad rates", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFetch([
+      {
+        match: "@2025-06-14/v1/currencies/usd.min.json",
+        body: { date: "2025-06-14", usd: { cnh: "not-a-number" } },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
+
+    expect(series.CNH).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX validation failed"));
+  });
 });
 
 describe("extractDepegEvents", () => {

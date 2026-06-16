@@ -43,3 +43,9 @@ export const FrankfurterTimeSeriesSchema = z.object({
   end_date: z.string(),
   rates: z.record(z.string(), z.record(z.string(), z.number())),
 });
+
+// --- Secondary FX (fawazahmed0 currency-api) day response (Q252) ---
+export const SecondaryFxResponseSchema = z.object({
+  date: z.string().optional(),
+  usd: z.record(z.string(), z.number()).optional(),
+}).passthrough();

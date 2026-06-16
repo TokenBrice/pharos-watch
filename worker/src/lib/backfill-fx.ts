@@ -11,7 +11,7 @@ import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { getCache, setCache } from "./db-cache";
-import { FrankfurterTimeSeriesSchema } from "./external-api-schemas";
+import { FrankfurterTimeSeriesSchema, SecondaryFxResponseSchema } from "./external-api-schemas";
 import { rethrowIfAborted } from "./abort";
 import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "../api/backfill-price-sources";
@@ -65,11 +65,6 @@ export const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 
 export type FxTimeSeries = TimestampedRatePoint;
 export type { CommodityPeg } from "@shared/lib/commodity-median";
-
-interface SecondaryFxResponse {
-  date?: string;
-  usd?: Record<string, number>;
-}
 
 /**
  * Fetch daily historical FX rates from api.frankfurter.dev (ECB data).
@@ -156,8 +151,13 @@ async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal)
     return null;
   }
 
-  const data = await res.json() as SecondaryFxResponse;
-  return data.usd ?? null;
+  const raw = await res.json();
+  const parsed = SecondaryFxResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    console.warn(`[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);
+    return null;
+  }
+  return parsed.data.usd ?? null;
 }
 
 export async function fetchHistoricalSecondaryFxRates(
