@@ -897,6 +897,49 @@ function isAsciiWordChar(char: string): boolean {
   );
 }
 
+function collectVariableDeclarationFiles(
+  node: ts.Node,
+  filePath: string,
+  declarationFileByIdentifier: Map<string, string>,
+): void {
+  if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+    declarationFileByIdentifier.set(node.name.text, filePath);
+  }
+  ts.forEachChild(node, (child) =>
+    collectVariableDeclarationFiles(child, filePath, declarationFileByIdentifier),
+  );
+}
+
+function resolveRegistrySourceFiles(
+  node: ts.Node,
+  moduleFilePath: string,
+  declarationFileByIdentifier: ReadonlyMap<string, string>,
+  sourceFileById: Map<string, string>,
+): void {
+  if (
+    ts.isVariableDeclaration(node) &&
+    ts.isIdentifier(node.name) &&
+    node.name.text.endsWith("BACKSTOP_CONFIGS") &&
+    node.initializer &&
+    ts.isObjectLiteralExpression(node.initializer)
+  ) {
+    for (const property of node.initializer.properties) {
+      if (!ts.isPropertyAssignment(property)) continue;
+      const id = propertyNameText(property.name);
+      if (!id || sourceFileById.has(id)) continue;
+      const initializer = unwrapExpression(property.initializer);
+      if (!ts.isIdentifier(initializer)) continue;
+      const sourceFilePath = declarationFileByIdentifier.get(initializer.text);
+      if (sourceFilePath && sourceFilePath !== moduleFilePath) {
+        sourceFileById.set(id, sourceFilePath);
+      }
+    }
+  }
+  ts.forEachChild(node, (child) =>
+    resolveRegistrySourceFiles(child, moduleFilePath, declarationFileByIdentifier, sourceFileById),
+  );
+}
+
 function inferStaticConfigSourceFilePaths(
   manifest: readonly RedemptionBackstopConfigManifestEntry[],
   sourceTextByPath: ReadonlyMap<string, string> | undefined,
@@ -907,42 +950,14 @@ function inferStaticConfigSourceFilePaths(
   const declarationFileByIdentifier = new Map<string, string>();
   for (const [filePath, sourceText] of sourceTextByPath) {
     const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true);
-    function visitDeclaration(node: ts.Node): void {
-      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-        declarationFileByIdentifier.set(node.name.text, filePath);
-      }
-      ts.forEachChild(node, visitDeclaration);
-    }
-    visitDeclaration(sourceFile);
+    collectVariableDeclarationFiles(sourceFile, filePath, declarationFileByIdentifier);
   }
 
   for (const moduleEntry of manifest) {
     const sourceText = sourceTextByPath.get(moduleEntry.filePath);
     if (sourceText == null) continue;
     const sourceFile = ts.createSourceFile(moduleEntry.filePath, sourceText, ts.ScriptTarget.Latest, true);
-    function visitRegistry(node: ts.Node): void {
-      if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.name.text.endsWith("BACKSTOP_CONFIGS") &&
-        node.initializer &&
-        ts.isObjectLiteralExpression(node.initializer)
-      ) {
-        for (const property of node.initializer.properties) {
-          if (!ts.isPropertyAssignment(property)) continue;
-          const id = propertyNameText(property.name);
-          if (!id || sourceFileById.has(id)) continue;
-          const initializer = unwrapExpression(property.initializer);
-          if (!ts.isIdentifier(initializer)) continue;
-          const sourceFilePath = declarationFileByIdentifier.get(initializer.text);
-          if (sourceFilePath && sourceFilePath !== moduleEntry.filePath) {
-            sourceFileById.set(id, sourceFilePath);
-          }
-        }
-      }
-      ts.forEachChild(node, visitRegistry);
-    }
-    visitRegistry(sourceFile);
+    resolveRegistrySourceFiles(sourceFile, moduleEntry.filePath, declarationFileByIdentifier, sourceFileById);
   }
 }
 
