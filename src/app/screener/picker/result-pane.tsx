@@ -499,9 +499,10 @@ function SnapshotComparisonPanel({
 }
 
 function buildClosestSurvivorsFromOutput(output: SelectorOutput): SelectorClosestSurvivor[] {
-  const fromEngine = (output as SelectorOutput & {
-    closestSurvivors?: readonly SelectorClosestSurvivor[];
-  }).closestSurvivors;
+  // closestSurvivors is a required field on SelectorOutput (and validated as a
+  // required array when a snapshot is reconstructed), so it is always defined;
+  // the coverage-warning fallback below stays for defensive runtime safety only.
+  const fromEngine: readonly SelectorClosestSurvivor[] | undefined = output.closestSurvivors;
   if (fromEngine !== undefined) return fromEngine.slice(0, 3);
   return output.coverageWarnings.skippedForCoverage.slice(0, 3).map((coin) => ({
     id: coin.id,
@@ -512,9 +513,7 @@ function buildClosestSurvivorsFromOutput(output: SelectorOutput): SelectorCloses
 }
 
 function buildRelaxableConstraintsFromOutput(output: SelectorOutput): SelectorRelaxableConstraint[] {
-  const fromEngine = (output as SelectorOutput & {
-    relaxableConstraints?: readonly SelectorRelaxableConstraint[];
-  }).relaxableConstraints;
+  const fromEngine: readonly SelectorRelaxableConstraint[] | undefined = output.relaxableConstraints;
   return fromEngine ? fromEngine.slice(0, 3) : [];
 }
 
