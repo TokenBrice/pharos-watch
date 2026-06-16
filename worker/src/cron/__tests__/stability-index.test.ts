@@ -87,16 +87,22 @@ function makeDb(opts: {
         if (opts.dewsUnavailable) {
           throw new Error("no such table: stress_signals");
         }
-        const cutoff = typeof binds[0] === "number" ? binds[0] : null;
+        const bound = typeof binds[0] === "number" ? binds[0] : null;
         const dewsRows = opts.dewsRows ?? [{
           stablecoin_id: "usdt-tether",
           score: 72,
           band: "WARNING",
           computed_at: Math.floor(Date.now() / 1000) - 300,
         }];
-        return {
-          results: (cutoff == null ? dewsRows : dewsRows.filter((row) => row.computed_at <= cutoff)) as T[],
-        };
+        // Normal path filters with `computed_at <= ?` (published generation upper bound);
+        // the no-pointer fallback path filters with `computed_at >= ?` (scan-window floor).
+        let filtered = dewsRows;
+        if (bound != null) {
+          filtered = sql.includes("computed_at >= ?")
+            ? dewsRows.filter((row) => row.computed_at >= bound)
+            : dewsRows.filter((row) => row.computed_at <= bound);
+        }
+        return { results: filtered as T[] };
       }
       return { results: [] as T[] };
     };
@@ -264,6 +270,40 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(
       db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
     ).toBe(false);
+  });
+
+  it("bounds the no-publication-pointer fallback scan to a recent window", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const fallbackWindowSec = CRON_INTERVALS["compute-dews"] * 4;
+    const beyondWindowAt = nowSec - fallbackWindowSec - 1;
+    const freshAt = nowSec - 300;
+    const db = makeDb({
+      // No dewsPublishedAt → readDewsPublishedGeneration resolves null → fallback path.
+      dewsRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 72,
+          band: "WARNING",
+          computed_at: beyondWindowAt,
+        },
+        {
+          stablecoin_id: "usdt-tether",
+          score: 60,
+          band: "WARNING",
+          computed_at: freshAt,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      dewsRowsRead: number;
+      dewsLatestComputedAt: number | null;
+    };
+    // The row beyond the scan window is excluded by the SQL `computed_at >= ?` floor.
+    expect(metadata.dewsRowsRead).toBe(1);
+    expect(metadata.dewsLatestComputedAt).toBe(freshAt);
   });
 
   it("ignores DEWS rows newer than the published generation when computing PSI stress breadth", async () => {
