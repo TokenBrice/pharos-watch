@@ -23,9 +23,16 @@ export const UNIV3_SUBGRAPHS: Record<string, string> = {
   polygon: "3hCPRGf4z88VC5rsBKU5AA9FBBq5nF3jbKJG7VZCbhjm",
 };
 
-export const UNIV3_POOL_QUERY = `{
+// The Graph caps `first` at 1000 per page; paginate via `skip` to reach pools
+// beyond the first page (queries are ordered by TVL desc, so deeper pages hold
+// strictly lower-TVL pools).
+export const UNIV3_POOL_PAGE_SIZE = 1000;
+export const UNIV3_POOL_MAX_PAGES = 5;
+
+export const buildUniV3PoolQuery = (skip: number): string => `{
   pools(
-    first: 1000,
+    first: ${UNIV3_POOL_PAGE_SIZE},
+    skip: ${skip},
     orderBy: totalValueLockedUSD,
     orderDirection: desc,
     where: { totalValueLockedUSD_gt: "10000" }
@@ -47,9 +54,13 @@ export const AERODROME_SUBGRAPHS: Record<string, string> = {
   base: "GENunSHWLBXm59mBSgPzQ8metBEp9YDfdqwFr91Av1UM",
 };
 
-export const AERODROME_PAIR_QUERY = `{
+export const AERODROME_PAIR_PAGE_SIZE = 500;
+export const AERODROME_PAIR_MAX_PAGES = 5;
+
+export const buildAerodromePairQuery = (skip: number): string => `{
   pairs(
-    first: 500,
+    first: ${AERODROME_PAIR_PAGE_SIZE},
+    skip: ${skip},
     orderBy: reserveUSD,
     orderDirection: desc,
     where: { reserveUSD_gt: "10000" }

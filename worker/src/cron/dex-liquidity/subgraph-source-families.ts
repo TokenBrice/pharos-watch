@@ -10,10 +10,14 @@ import type {
   UniV3Lookups,
 } from "./types";
 import {
-  AERODROME_PAIR_QUERY,
+  AERODROME_PAIR_MAX_PAGES,
+  AERODROME_PAIR_PAGE_SIZE,
   AERODROME_SUBGRAPHS,
-  UNIV3_POOL_QUERY,
+  UNIV3_POOL_MAX_PAGES,
+  UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
+  buildAerodromePairQuery,
+  buildUniV3PoolQuery,
 } from "./constants";
 import { buildPoolIdentity } from "./pool-identity";
 import { resolveTrackedStablecoinId } from "./token-resolution";
@@ -113,7 +117,9 @@ export async function fetchUniV3Data(
       subgraphUrl,
       sourceLabel: "Uni V3 subgraph",
       chain,
-      buildQuery: () => UNIV3_POOL_QUERY,
+      buildQuery: (skip) => buildUniV3PoolQuery(skip),
+      pageSize: UNIV3_POOL_PAGE_SIZE,
+      maxPages: UNIV3_POOL_MAX_PAGES,
       signal: combinedSignal,
       extractEntities: (data) => (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools,
       mapEntity: (pool) => {
@@ -199,7 +205,9 @@ export async function fetchAerodromeData(
       subgraphUrl,
       sourceLabel: "Aerodrome subgraph",
       chain,
-      buildQuery: () => AERODROME_PAIR_QUERY,
+      buildQuery: (skip) => buildAerodromePairQuery(skip),
+      pageSize: AERODROME_PAIR_PAGE_SIZE,
+      maxPages: AERODROME_PAIR_MAX_PAGES,
       signal: combinedSignal,
       extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
       mapEntity: (pair) => {
