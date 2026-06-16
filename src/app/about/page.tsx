@@ -240,13 +240,20 @@ export default function AboutPage() {
     deadStablecoins: DEAD_STABLECOIN_COUNT,
   });
   const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: ACTIVE_STABLECOIN_COUNT });
-  const operatingPrinciples = [
-    PRINCIPLES_AXIOMS[0],
-    PRINCIPLES_AXIOMS[1],
-    PRINCIPLES_AXIOMS[6],
-    PRINCIPLES_AXIOMS[8],
-    PRINCIPLES_AXIOMS[9],
+  const operatingPrincipleIds = [
+    "independence",
+    "risk-over-price",
+    "dependency-is-contagion",
+    "methodology-versioned",
+    "open-code-open-data",
   ];
+  const operatingPrinciples = operatingPrincipleIds.map((id) => {
+    const principle = PRINCIPLES_AXIOMS.find((axiom) => axiom.id === id);
+    if (!principle) {
+      throw new Error(`Unknown operating principle id: ${id}`);
+    }
+    return principle;
+  });
 
   return (
     <FeaturePageShell
