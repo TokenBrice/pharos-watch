@@ -16,6 +16,7 @@ import {
 import { percentileLinear } from "@shared/lib/stats";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { DependencyType, ReportCard } from "@shared/types";
+import { deterministicHash } from "@/lib/layout-utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,10 +134,7 @@ export function minMaxNormalize(ids: string[], valueById: Map<string, number>): 
 }
 
 export function deterministicJitter(id: string, salt: number, range: number): number {
-  let hash = salt;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 33 + id.charCodeAt(i)) >>> 0;
-  }
+  const hash = deterministicHash(id, salt);
   return ((hash % 1000) / 999 - 0.5) * 2 * range;
 }
 
