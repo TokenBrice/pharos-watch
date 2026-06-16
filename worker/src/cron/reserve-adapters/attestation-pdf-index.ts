@@ -71,6 +71,22 @@ async function fetchAttestationIndexHtml(
   }
 }
 
+// Full-name month index for adapters that encounter full lowercase month names (e.g. "january").
+export const MONTH_INDEX: Record<string, number> = {
+  january: 0,
+  february: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  august: 7,
+  september: 8,
+  october: 9,
+  november: 10,
+  december: 11,
+};
+
 const MONTH_INDEX_BY_PREFIX: Record<string, number> = {
   jan: 0,
   feb: 1,
@@ -86,7 +102,7 @@ const MONTH_INDEX_BY_PREFIX: Record<string, number> = {
   dec: 11,
 };
 
-const MONTH_LABEL = [
+export const MONTH_LABEL = [
   "January",
   "February",
   "March",
