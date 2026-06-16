@@ -185,10 +185,7 @@ export function getOverflowRoutes(mode) {
   return OVERFLOW_ROUTE_DEFAULTS;
 }
 
-function buildSmokeRunCode(config) {
-  const serialized = JSON.stringify(config);
-  return `async (page) => {
-  const config = ${serialized};
+async function runSmokeRun(page, config) {
   const waitForRetryDelay = async (ms) => {
     if (typeof page.waitForTimeout === "function") {
       await page.waitForTimeout(ms);
@@ -197,21 +194,21 @@ function buildSmokeRunCode(config) {
     await page.evaluate((timeoutMs) => new Promise((resolve) => window.setTimeout(resolve, timeoutMs)), ms);
   };
   const joinUrl = (baseUrl, route) => {
-    const normalizedRoute = !route || route === "/" ? "/" : route.startsWith("/") ? route : \`/\${route}\`;
+    const normalizedRoute = !route || route === "/" ? "/" : route.startsWith("/") ? route : `/${route}`;
     if (normalizedRoute === "/") {
       return baseUrl;
     }
-    return baseUrl.endsWith("/") ? \`\${baseUrl.slice(0, -1)}\${normalizedRoute}\` : \`\${baseUrl}\${normalizedRoute}\`;
+    return baseUrl.endsWith("/") ? `${baseUrl.slice(0, -1)}${normalizedRoute}` : `${baseUrl}${normalizedRoute}`;
   };
 
   async function captureHomepageSummary() {
-    return page.evaluate(async ({ waitTimeoutMs }) => {
+    return page.evaluate(async ({ recentEventsPath, waitTimeoutMs }) => {
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const matchesAny = (text, values) => values.some((value) => text.includes(value));
       const timeoutAt = Date.now() + waitTimeoutMs;
       const captureRecentEventsContract = async () => {
         try {
-          const response = await fetch(${JSON.stringify(HOMEPAGE_RECENT_EVENTS_SMOKE_PATH)}, {
+          const response = await fetch(recentEventsPath, {
             cache: "no-store",
             headers: { Accept: "application/json" },
           });
@@ -260,13 +257,13 @@ function buildSmokeRunCode(config) {
         hasConnectionIssue: matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]),
         hasDataNotYetAvailable: matchesAny(text, ["Data not yet available", "Waiting for first sync"]),
         hasFailedToLoad: matchesAny(text, ["Failed to load data", "Failed to load this dataset"]),
-        hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
+        hasKnownTicker: /\bUSDT\b|\bUSDC\b/.test(text),
         hasLiveRefreshDelayed: matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]),
         hasNoStablecoinData: text.includes("No stablecoin data available"),
         hasStablecoins404: text.includes("stablecoins:404"),
         recentEvents: await captureRecentEventsContract(),
         rows,
-        textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
+        textPreview: text.replace(/\s+/g, " ").trim().slice(0, 180),
         timedOut,
         title: document.title,
         waitTimeoutMs,
@@ -297,7 +294,7 @@ function buildSmokeRunCode(config) {
 
       const text = document.body?.innerText ?? "";
       return buildSummary(text, document.querySelectorAll("table tbody tr").length, true);
-    }, { waitTimeoutMs: config.waitTimeoutMs });
+    }, { recentEventsPath: HOMEPAGE_RECENT_EVENTS_SMOKE_PATH, waitTimeoutMs: config.waitTimeoutMs });
   }
 
   async function captureAnalyticsRuntime() {
@@ -526,7 +523,6 @@ function buildSmokeRunCode(config) {
   }
 
   return { analyticsRuntime, homepage, overflowChecks };
-}`;
 }
 
 function formatRecentEventsSmoke(summary) {
@@ -826,8 +822,7 @@ export async function run() {
       });
 
       try {
-        const smokeRunner = Function(`return (${buildSmokeRunCode(smokeConfig)});`)();
-        const result = await smokeRunner(page);
+        const result = await runSmokeRun(page, smokeConfig);
         if (smokeConfig.expectedGaId) {
           analyticsNetwork.violations = await page.evaluate(() => window.__pharosSmokeCspViolations ?? []);
         }
