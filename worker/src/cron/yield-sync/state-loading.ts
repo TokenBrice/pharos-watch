@@ -58,7 +58,7 @@ export interface YieldSyncLoadedState {
   riskFreeRateMeta: YieldBenchmarkMeta;
   stablecoinSupplyById: Map<string, number>;
   safetySnapshot: SafetyScoresResultMap;
-  safetyScores: Map<string, { score: number; grade: string }>;
+  safetyScores: SafetyScoresResultMap["scores"];
   safetyCoverageRatio: number;
   safetySnapshotDegraded: boolean;
 }
