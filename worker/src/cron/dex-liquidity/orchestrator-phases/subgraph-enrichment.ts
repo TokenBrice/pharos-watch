@@ -13,7 +13,6 @@ export interface SubgraphEnrichmentPhaseResult {
 
 export async function fetchSubgraphEnrichmentPhase(params: {
   graphApiKey: string | null;
-  symbolToIds: SymbolLookups["symbolToIds"];
   symbolToChainScopedIds: SymbolLookups["symbolToChainScopedIds"];
   chainAddressToId: SymbolLookups["chainAddressToId"];
   signal?: AbortSignal;

@@ -352,7 +352,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   });
   const subgraphEnrichment = await fetchSubgraphEnrichmentPhase({
     graphApiKey: ctx.graphApiKey,
-    symbolToIds: lookups.symbolToIds,
     symbolToChainScopedIds: lookups.symbolToChainScopedIds,
     chainAddressToId: lookups.chainAddressToId,
     signal: ctx.signal,
