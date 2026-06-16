@@ -34,7 +34,14 @@ export const STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC = 1800;
  */
 export const STATUS_DEGRADED_TO_STALE_THRESHOLD = 2 as const;
 
+/**
+ * Isolate-scoped dedup set: suppresses repeat `code:operation` error logs within
+ * a single Worker isolate (it resets on isolate recycle, so the same error logs
+ * again after a restart — this is log-noise reduction, not durable dedup).
+ * Capped to avoid unbounded growth in a high-cardinality error scenario.
+ */
 const LOGGED_STATUS_PERSISTENCE_FAILURES = new Set<string>();
+const MAX_LOGGED_STATUS_PERSISTENCE_FAILURES = 200;
 
 export interface StatusPersistenceIssue {
   code: string;
@@ -153,7 +160,9 @@ export function reportStatusPersistenceIssue(
   const message = toErrorMessage(error);
   const logKey = `${code}:${operation}`;
   if (!LOGGED_STATUS_PERSISTENCE_FAILURES.has(logKey)) {
-    LOGGED_STATUS_PERSISTENCE_FAILURES.add(logKey);
+    if (LOGGED_STATUS_PERSISTENCE_FAILURES.size < MAX_LOGGED_STATUS_PERSISTENCE_FAILURES) {
+      LOGGED_STATUS_PERSISTENCE_FAILURES.add(logKey);
+    }
     console.error(`[status-reliability] ${operation} failed: ${message}`);
   }
   report?.({
