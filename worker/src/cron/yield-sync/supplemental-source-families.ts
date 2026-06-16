@@ -16,6 +16,7 @@ import {
 } from "./sources";
 import { runOptionalSourceFamily } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
+import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-keys";
 import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
@@ -48,15 +49,6 @@ export interface SupplementalSourceFamilyResult {
 }
 
 type SupplementalSourceFamilyStatus = SupplementalSourceFamilyResult["status"];
-
-export type SupplementalSourceFamilyKey =
-  | "morpho"
-  | "pendle"
-  | "yearnKong"
-  | "beefy"
-  | "compoundV3"
-  | "aaveV3"
-  | "roycoDawn";
 
 type SourceFamilyCountRecord = Record<SupplementalSourceFamilyKey, number>;
 type SourceFamilyExampleRecord = Record<SupplementalSourceFamilyKey, string[]>;

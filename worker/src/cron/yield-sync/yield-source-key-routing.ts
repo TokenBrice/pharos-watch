@@ -1,4 +1,4 @@
-import type { SupplementalSourceFamilyKey } from "./supplemental-source-families";
+import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-keys";
 
 /**
  * Canonical source-key prefix routing table.

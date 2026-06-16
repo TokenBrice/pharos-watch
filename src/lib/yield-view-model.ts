@@ -20,7 +20,17 @@ import {
   YIELD_RISK_BUDGET_SPECS,
   compareYieldPegs,
   getYieldPegLabel,
+  type YieldBenchmarkFilter,
+  type YieldDepthFilter,
+  type YieldOpportunityFilter,
+  type YieldPegFilter,
   type YieldPresetSpec,
+  type YieldSourceChangedFilter,
+  type YieldSourceConfidenceFilter,
+  type YieldTrendingFilter,
+  type YieldViewModelFilters,
+  type YieldWarningsFilter,
+  type YieldWatchlistFilter,
   type YieldRiskBudgetSpec,
 } from "@/lib/yield-view-config";
 import { normalizeFilters } from "@/lib/yield-view-url";
@@ -37,17 +47,18 @@ import {
   type YieldType,
 } from "@shared/types";
 
-export type YieldPegFilter = PegCurrency | "all" | "non-usd" | "aud-cad" | "other";
-export type YieldWarningsFilter = "all" | "hide" | "only";
-export type YieldSourceConfidenceFilter =
-  | "all"
-  | NonNullable<NonNullable<YieldRanking["provenance"]>["confidenceTier"]>;
-export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
-export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
-export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
-export type YieldSourceChangedFilter = "all" | "only" | "none";
-export type YieldTrendingFilter = "all" | "rising";
-export type YieldWatchlistFilter = "all" | "only";
+export type {
+  YieldPegFilter,
+  YieldWarningsFilter,
+  YieldSourceConfidenceFilter,
+  YieldBenchmarkFilter,
+  YieldOpportunityFilter,
+  YieldDepthFilter,
+  YieldSourceChangedFilter,
+  YieldTrendingFilter,
+  YieldWatchlistFilter,
+  YieldViewModelFilters,
+};
 
 export interface YieldViewModelUrlParams {
   peg?: string | null;
@@ -69,22 +80,6 @@ export interface YieldFilterOption<T extends string = string> {
   value: T;
   label: string;
   count: number;
-}
-
-export interface YieldViewModelFilters {
-  peg: YieldPegFilter;
-  yieldType: YieldType | "all";
-  q: string;
-  warnings: YieldWarningsFilter;
-  minSafety: number | null;
-  minTvl: number | null;
-  sourceConfidence: YieldSourceConfidenceFilter;
-  benchmark: YieldBenchmarkFilter;
-  opportunity: YieldOpportunityFilter;
-  depth: YieldDepthFilter;
-  sourceChanged: YieldSourceChangedFilter;
-  trending: YieldTrendingFilter;
-  watchlist: YieldWatchlistFilter;
 }
 
 export interface YieldViewModelOptions {

@@ -4,7 +4,7 @@ import { getCache } from "../../lib/db-cache";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { isYieldRelevantDlPool } from "./pool-filter";
-import { filterValidDlPools, parseDlStablecoinPoolsCache } from "./cache";
+import { filterValidDlPools, parseDlStablecoinPoolsCache } from "./cache/defillama-pool-cache";
 import type { DlPool } from "./types";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";

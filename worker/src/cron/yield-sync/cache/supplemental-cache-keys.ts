@@ -1,6 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import type { ResolvedYieldCandidate } from "../types";
-import type { SupplementalSourceFamilyKey } from "../supplemental-source-families";
+import type { SupplementalSourceFamilyKey } from "../supplemental-source-family-keys";
 import {
   isFiniteNumber,
   isNullableFiniteNumber,

@@ -2,12 +2,47 @@ import { PEG_BADGE_STYLES } from "@shared/lib/classification";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import { type PegCurrency, type YieldBenchmarkKey, type YieldType } from "@shared/types";
 
-import type {
-  YieldPresetKey,
-  YieldRiskBudgetKey,
-  YieldSourceConfidenceFilter,
-  YieldViewModelFilters,
-} from "@/lib/yield-view-model";
+export type YieldSourceConfidenceFilter =
+  | "all"
+  | "deterministic"
+  | "curated"
+  | "discovered"
+  | "fallback";
+export type YieldPresetKey =
+  | "treasury-grade"
+  | "best-dollar"
+  | "non-usd"
+  | "new-rising"
+  | "watchlist-warnings";
+export type YieldRiskBudgetKey =
+  | "conservative"
+  | "balanced"
+  | "opportunistic"
+  | "all";
+export type YieldPegFilter = PegCurrency | "all" | "non-usd" | "aud-cad" | "other";
+export type YieldWarningsFilter = "all" | "hide" | "only";
+export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
+export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
+export type YieldDepthFilter = "all" | "direct" | "inferred" | "thin" | "hide-thin";
+export type YieldSourceChangedFilter = "all" | "only" | "none";
+export type YieldTrendingFilter = "all" | "rising";
+export type YieldWatchlistFilter = "all" | "only";
+
+export interface YieldViewModelFilters {
+  peg: YieldPegFilter;
+  yieldType: YieldType | "all";
+  q: string;
+  warnings: YieldWarningsFilter;
+  minSafety: number | null;
+  minTvl: number | null;
+  sourceConfidence: YieldSourceConfidenceFilter;
+  benchmark: YieldBenchmarkFilter;
+  opportunity: YieldOpportunityFilter;
+  depth: YieldDepthFilter;
+  sourceChanged: YieldSourceChangedFilter;
+  trending: YieldTrendingFilter;
+  watchlist: YieldWatchlistFilter;
+}
 
 // Priority order for the "other" peg bucket sort. USD is excluded because it is
 // surfaced first/separately via buildPegOptions. SGD and MXN are excluded because

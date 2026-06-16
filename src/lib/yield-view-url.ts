@@ -3,10 +3,43 @@ import type {
   YieldPegFilter,
   YieldTrendingFilter,
   YieldViewModelFilters,
-  YieldViewModelOptions,
-  YieldViewModelUrlParams,
   YieldWatchlistFilter,
-} from "@/lib/yield-view-model";
+} from "@/lib/yield-view-config";
+import type { YieldType } from "@shared/types";
+
+interface YieldViewModelUrlParams {
+  peg?: string | null;
+  yieldType?: string | null;
+  q?: string | null;
+  warnings?: string | null;
+  minSafety?: string | null;
+  minTvl?: string | null;
+  sourceConfidence?: string | null;
+  benchmark?: string | null;
+  opportunity?: string | null;
+  depth?: string | null;
+  sourceChanged?: string | null;
+  trending?: string | null;
+  watchlist?: string | null;
+}
+
+interface YieldFilterOption<T extends string = string> {
+  value: T;
+  label: string;
+  count: number;
+}
+
+interface YieldViewModelOptions {
+  peg: YieldFilterOption<YieldPegFilter>[];
+  currencyTabs: YieldFilterOption<YieldPegFilter>[];
+  yieldType: YieldFilterOption<YieldType | "all">[];
+  warnings: YieldFilterOption[];
+  sourceConfidence: YieldFilterOption[];
+  benchmark: YieldFilterOption[];
+  opportunity: YieldFilterOption[];
+  depth: YieldFilterOption[];
+  sourceChanged: YieldFilterOption[];
+}
 
 function normalizeTextParam(value: string | null | undefined): string {
   return (value ?? "").trim().slice(0, 80);
