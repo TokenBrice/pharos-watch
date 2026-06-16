@@ -38,6 +38,7 @@ const SNAPSHOT_BODY_ENCODER = new TextEncoder();
  * Isolate-local state is best-effort (resets on isolate recycle, not shared
  * across colos) but bounds the realistic single-source write-spam case.
  * Legitimate use is 1-2 snapshot creations per session.
+ * Accepted residual risk and KV cost ceiling: see functions/AGENTS.md (S-062).
  */
 const POST_RATE_LIMIT_WINDOW_MS = 60_000;
 const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;

@@ -19,6 +19,14 @@ See root AGENTS.md / CLAUDE.md § High-Value Gotchas for cross-cutting rules. Th
 - Keep Pages env contracts aligned with `functions/lib/ops-env.ts`, `functions/lib/site-api-env.ts`, and `.env.example`.
 - Do not import `worker/src/**`; shared cross-runtime policy belongs in `shared/lib/**`.
 
+## Accepted residual risk — selector-snapshot write lane (S-062)
+
+`POST /selector-snapshot` (`functions/selector-snapshot/[[path]].ts`) is the only unauthenticated KV write path in this slice. Its gates are: a spoofable Origin/Referer check (`rejectIfNotSiteDataUiOrigin`), a 100 KiB payload cap, content-addressed dedupe of identical bodies, and a per-isolate hashed-IP throttle (10 writes / 60s window). The zone WAF rate limits only cover `api.pharos.watch/api/*`, and the isolate-local limiter resets on isolate recycle and is not shared across colos, so a single source rotating colos/isolates can exceed 10/min.
+
+Accepted because the blast radius is bounded write-amplification / KV cost, not data integrity: read-side sid recomputation and shape validation reject tampered values, and abusive entries fall off the 90-day unread TTL (`SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS`) unless read. Worst-case per-attacker cost ceiling is roughly `100 KiB x 10 writes/min x (isolates reached) x 90 days` of KV storage before unread expiry, with each entry surviving only if it is also read at least once.
+
+If this lane sees real abuse, escalate to a Cloudflare WAF / rate-limiting rule on `pharos.watch/selector-snapshot*` or move the throttle to a Durable Object / KV-backed counter that survives isolate recycling.
+
 ## Common Checks
 
 - Pages Functions tests under `functions/__tests__`
