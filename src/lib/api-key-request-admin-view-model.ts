@@ -64,6 +64,10 @@ export function formatApiKeyRequestTime(epochSeconds: number | null): string {
   return new Date(epochSeconds * 1000).toLocaleString();
 }
 
+// Intentionally local, not shared/lib/relative-time.ts: this variant is bidirectional
+// (renders future "in Nm/Nh/Nd" as well as past "Nm/Nh/Nd ago") and uses admin-specific
+// thresholds (90 minutes, 48 hours) that formatRelativeAgeSeconds does not expose — it
+// clamps negatives and only supports an "ago"/"old" suffix. Do not fold into the shared helper.
 export function formatApiKeyRequestRelativeTime(epochSeconds: number | null, nowSeconds: number): string {
   if (epochSeconds == null) return "never";
   const delta = epochSeconds - nowSeconds;
