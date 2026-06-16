@@ -27,6 +27,11 @@ const CURRENCY_TO_COUNTRY: Record<string, string> = {
 // 20×15 in the table. Designed for recognition next to the ISO code, not for
 // vexillological accuracy — fine detail (stars, mottoes) is intentionally
 // omitted so the glyph stays sharp at small sizes.
+//
+// Intentionally a subset of CURRENCY_TO_COUNTRY: country codes without an entry
+// here (MX, ZA, CN, TR, ID, SG, PH) deliberately fall back to the two-letter
+// text box in CurrencyFlag below rather than ship a low-fidelity glyph for a
+// rarely-shown benchmark. Add an entry here when a currency becomes prominent.
 const FLAGS: Record<string, ReactNode> = {
   US: (
     <>
