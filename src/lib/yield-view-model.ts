@@ -1078,8 +1078,12 @@ function buildEmptyStateSuggestions(
   return scored.slice(0, EMPTY_STATE_SUGGESTION_LIMIT);
 }
 
+function applyOverrides(overrides: Partial<YieldViewModelFilters>): YieldViewModelFilters {
+  return { ...DEFAULT_FILTERS, ...overrides };
+}
+
 function presetFilters(spec: YieldPresetSpec): YieldViewModelFilters {
-  return { ...DEFAULT_FILTERS, ...spec.overrides };
+  return applyOverrides(spec.overrides);
 }
 
 function filtersMatchPreset(filters: YieldViewModelFilters, spec: YieldPresetSpec): boolean {
@@ -1119,7 +1123,10 @@ const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] = [
 function riskBudgetTargetFilters(spec: YieldRiskBudgetSpec): YieldViewModelFilters {
   // A risk-budget stop only constrains the four risk-axis keys; other filters
   // are normalized to defaults for the purpose of computing the stop's count.
-  return { ...DEFAULT_FILTERS, ...spec.overrides };
+  const riskOverrides = Object.fromEntries(
+    RISK_BUDGET_FILTER_KEYS.filter((k) => k in spec.overrides).map((k) => [k, spec.overrides[k]]),
+  ) as Partial<YieldViewModelFilters>;
+  return applyOverrides(riskOverrides);
 }
 
 function filtersMatchRiskBudget(
