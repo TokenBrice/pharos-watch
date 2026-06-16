@@ -191,6 +191,10 @@ export function getApiKeyRuntimeState() {
   return _ak.state;
 }
 
+// LRU eviction: Map iterates in insertion order, so the first key is the
+// least-recently inserted (oldest). The cache hit path re-inserts entries via
+// delete+set to promote them to newest, which makes "oldest" mean
+// least-recently-used. Do not change that hit path without revisiting this.
 function pruneOldestMapEntries<K, V>(map: Map<K, V>, maxEntries: number): void {
   while (map.size > maxEntries) {
     const oldest = map.keys().next().value as K | undefined;
@@ -208,6 +212,9 @@ function pruneExpiredApiKeyCache(nowMs: number): void {
   }
 }
 
+// Caps a Map at maxEntries by evicting oldest-first (LRU; see
+// pruneOldestMapEntries). Callers (e.g. api-key-rate-limit.ts) must use
+// delete+set on access to keep the LRU ordering meaningful.
 export function capApiKeyMapEntries<K, V>(map: Map<K, V>, maxEntries: number): void {
   pruneOldestMapEntries(map, maxEntries);
 }
@@ -401,6 +408,9 @@ export function getCachedApiKeyByPrefix(
   if (!cached) {
     return null;
   }
+  // LRU promotion: re-insert on every hit so the entry moves to the newest
+  // Map position; pruneOldestMapEntries evicts the first (oldest) entry. Do not
+  // simplify away the delete+set or the cache degrades to FIFO.
   if (cached.freshUntilMs > nowMs) {
     cache.delete(keyPrefix);
     cache.set(keyPrefix, cached);
