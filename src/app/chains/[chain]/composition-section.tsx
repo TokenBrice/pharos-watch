@@ -143,13 +143,12 @@ export function CompositionSection({ model }: { model: ChainRouteViewModel }) {
           }}
         >
           {displayCoins.map((coin) => {
-            const pct = totalUsd > 0 ? coin.supplyOnChain / totalUsd : 0;
-            const shouldSpan = pct > 0.35 && cols >= 3;
+            const shouldSpan = coin.chainShare > 0.35 && cols >= 3;
             return (
               <CompositionBlock
                 key={coin.id}
                 coin={coin}
-                percentage={pct}
+                percentage={coin.chainShare}
                 shouldSpan={shouldSpan}
               />
             );
