@@ -31,15 +31,17 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
 export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartConfig[] =
   ACTIVE_STABLECOINS
     .filter((meta) => meta.detailProvider && meta.detailProvider !== "defillama")
-    .map((meta) => {
+    .flatMap((meta) => {
       const pegType = pegTypeFromCurrency(meta.flags.pegCurrency);
       if (!pegType) {
-        throw new Error(`Unsupported peg currency for stablecoin-charts reconciliation: ${meta.id}`);
+        // Skip rather than throw so a new peg currency can roll out without a
+        // simultaneous worker code change crashing the Worker on startup.
+        console.warn(
+          `[stablecoin-charts] skipping ${meta.id}: unsupported peg currency ${meta.flags.pegCurrency}`,
+        );
+        return [];
       }
-      return {
-        id: meta.id,
-        pegType,
-      };
+      return [{ id: meta.id, pegType }];
     });
 
 function addBucketValue(target: Record<string, number>, pegType: string, value: number): void {
