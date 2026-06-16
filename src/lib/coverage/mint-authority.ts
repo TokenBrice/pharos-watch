@@ -3,7 +3,7 @@ import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/c
 import {
   breakdownItem,
   createBreakdownCounter,
-  createStatus,
+  createPresetStatus,
   defineCoverageFeature,
   type CoverageLegendItem,
 } from "./shared";
@@ -21,15 +21,7 @@ function resolveMintAuthority(summary?: MintAuthorityCoverageSummary | null): Co
   const status = resolveMintAuthorityStatus(summary);
   const score = resolveMintAuthorityScoreDisplay(undefined, summary);
   return {
-    ...createStatus(
-      status.kind,
-      status.label,
-      status.tone,
-      status.available,
-      status.coverageSortRank,
-      status.detail,
-      status.spokenLabel,
-    ),
+    ...createPresetStatus(status),
     score: score.result.score,
     scoreBand: score.bandKey,
   };

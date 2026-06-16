@@ -28,7 +28,7 @@ interface MintAuthorityStatusConfig {
   spokenLabel: string;
   tone: MintAuthorityTone;
   available: boolean;
-  coverageSortRank: number;
+  sortRank: number;
   detail: string;
   badgeClassName: string;
 }
@@ -62,7 +62,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     spokenLabel: "No privileged mint",
     tone: "emerald",
     available: true,
-    coverageSortRank: 1,
+    sortRank: 1,
     detail:
       "A curated review says durable minting is limited to protocol or user mechanics, with no privileged mint, cap, or upgrade path resolved.",
     badgeClassName:
@@ -74,7 +74,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     spokenLabel: "Governed mint",
     tone: "sky",
     available: true,
-    coverageSortRank: 1,
+    sortRank: 1,
     detail:
       "Minting is user or protocol based, but governance, facilitators, caps, or parameter authorities can affect minting.",
     badgeClassName:
@@ -86,7 +86,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     spokenLabel: "Multisig mint",
     tone: "violet",
     available: true,
-    coverageSortRank: 1,
+    sortRank: 1,
     detail:
       "A Safe or multisig can directly mint, authorize minters, raise mint caps, or upgrade mint logic.",
     badgeClassName:
@@ -98,7 +98,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     spokenLabel: "Issuer or backend mint",
     tone: "amber",
     available: true,
-    coverageSortRank: 1,
+    sortRank: 1,
     detail:
       "An issuer role, EOA, backend signer, custodian, or service role controls minting.",
     badgeClassName:
@@ -110,7 +110,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     spokenLabel: "Bridge mint",
     tone: "sky",
     available: true,
-    coverageSortRank: 1,
+    sortRank: 1,
     detail:
       "Mint authority is primarily bridge, OFT, lockbox, messenger, or attestation-route based.",
     badgeClassName:
@@ -122,7 +122,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     spokenLabel: "Inherited authority",
     tone: "slate",
     available: true,
-    coverageSortRank: 1,
+    sortRank: 1,
     detail:
       "A wrapper, savings, staked, or variant asset inherits mint-authority context from a reviewed parent plus wrapper mechanics.",
     badgeClassName:
@@ -134,7 +134,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     spokenLabel: "Unknown mint authority",
     tone: "slate",
     available: false,
-    coverageSortRank: 0,
+    sortRank: 0,
     detail: "No curated mint-authority review is available for this asset.",
     badgeClassName: "border-border/60 bg-muted/20 text-muted-foreground",
   },
