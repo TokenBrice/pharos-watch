@@ -46,14 +46,20 @@ interface FakeFailureRow {
   updated_at: number;
 }
 
-// Minimal D1 stand-in for the raw detail-write-failure marker queries
-// (everything else goes through the mocked db-cache module).
+// Minimal D1 stand-in for the raw cache queries that bypass the mocked
+// db-cache module: detail-write-failure marker scans plus the batched
+// `IN (...)` reads/deletes for alert markers and detail updated_at lookups.
 function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
   return {
     prepare: (sql: string) => ({
       bind: (...args: unknown[]) => ({
         run: async () => {
-          if (sql.startsWith("DELETE")) {
+          if (sql.startsWith("DELETE FROM cache WHERE key IN")) {
+            for (const key of args as string[]) {
+              cacheStore.delete(key);
+              deletedCacheKeys.push(key);
+            }
+          } else if (sql.startsWith("DELETE")) {
             const cutoff = args[1] as number;
             for (let i = failureRows.length - 1; i >= 0; i -= 1) {
               if (failureRows[i].updated_at < cutoff) failureRows.splice(i, 1);
@@ -61,9 +67,27 @@ function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
           }
           return { meta: { changes: 0 } };
         },
-        all: async () => ({
-          results: failureRows.filter((row) => row.updated_at >= (args[1] as number)),
-        }),
+        all: async () => {
+          if (sql.startsWith("SELECT key, value FROM cache WHERE key IN")) {
+            const keys = args as string[];
+            return {
+              results: keys
+                .filter((key) => cacheStore.has(key))
+                .map((key) => ({ key, value: cacheStore.get(key) })),
+            };
+          }
+          if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
+            const keys = args as string[];
+            return {
+              results: keys
+                .filter((key) => detailUpdatedAtStore.has(key))
+                .map((key) => ({ key, updated_at: detailUpdatedAtStore.get(key) })),
+            };
+          }
+          return {
+            results: failureRows.filter((row) => row.updated_at >= (args[1] as number)),
+          };
+        },
       }),
     }),
   } as unknown as D1Database;

@@ -10,7 +10,8 @@ import { readAlertMarker } from "../lib/alert-marker";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
-import { deleteCache, getCache, getCacheUpdatedAt, setCache } from "../lib/db-cache";
+import { deleteCache, getCache, setCache } from "../lib/db-cache";
+import { runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
 
 const WATCHED_LANE_KEYS = [
@@ -53,16 +54,43 @@ export async function loadDetailWriteFailures(
     .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_FRESH_SEC)
     .all<{ key: string; value: string; updated_at: number }>());
 
+  const markerRows = rows.results ?? [];
+
+  // Batch-read the corresponding detail rows' updated_at in a single IN query
+  // instead of one getCacheUpdatedAt round-trip per marker.
+  const detailKeyByMarkerKey = new Map(
+    markerRows.map((row) => [
+      row.key,
+      `detail:${row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length)}`,
+    ]),
+  );
+  const detailUpdatedAtByKey = new Map<string, number>();
+  if (detailKeyByMarkerKey.size > 0) {
+    await runChunkedInFilter(
+      [...new Set(detailKeyByMarkerKey.values())],
+      (inClauseSql) => `SELECT key, updated_at FROM cache WHERE key IN (${inClauseSql})`,
+      async (sql, binds) => {
+        const detailRows = await runWithOverloadRetry(() =>
+          db.prepare(sql).bind(...binds).all<{ key: string; updated_at: number }>(),
+        );
+        for (const detailRow of detailRows.results ?? []) {
+          detailUpdatedAtByKey.set(detailRow.key, detailRow.updated_at);
+        }
+      },
+    );
+  }
+
   const failures: DetailWriteFailureObservation[] = [];
-  for (const row of rows.results ?? []) {
+  const recoveredMarkerKeys: string[] = [];
+  for (const row of markerRows) {
     const stablecoinId = row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length);
 
     // A detail row written after the marker means a later cache write
     // succeeded; the coin has recovered, so drop the stale marker instead of
     // degrading runs and re-alerting for up to 24h.
-    const detailUpdatedAt = await getCacheUpdatedAt(db, `detail:${stablecoinId}`);
+    const detailUpdatedAt = detailUpdatedAtByKey.get(detailKeyByMarkerKey.get(row.key) ?? "");
     if (detailUpdatedAt != null && detailUpdatedAt > row.updated_at) {
-      await deleteCache(db, row.key);
+      recoveredMarkerKeys.push(row.key);
       continue;
     }
 
@@ -81,6 +109,17 @@ export async function loadDetailWriteFailures(
       bytes,
       ageSeconds: Math.max(0, nowSec - row.updated_at),
     });
+  }
+
+  // Drop recovered markers in a single batched delete instead of per-row.
+  if (recoveredMarkerKeys.length > 0) {
+    await runChunkedInFilter(
+      recoveredMarkerKeys,
+      (inClauseSql) => `DELETE FROM cache WHERE key IN (${inClauseSql})`,
+      async (sql, binds) => {
+        await runWithOverloadRetry(() => db.prepare(sql).bind(...binds).run());
+      },
+    );
   }
   return failures;
 }
@@ -190,9 +229,27 @@ async function loadAlertMarkers(
   observations: readonly CronStalenessObservation[],
 ): Promise<Map<string, AlertMarker | null>> {
   const markers = new Map<string, AlertMarker | null>();
-  for (const observation of observations) {
-    const row = await getCache(db, alertCacheKey(observation.cacheKey));
-    markers.set(observation.cacheKey, readMarker(row?.value));
+  if (observations.length === 0) return markers;
+
+  const alertKeyToCacheKey = new Map(
+    observations.map((observation) => [alertCacheKey(observation.cacheKey), observation.cacheKey]),
+  );
+  const valueByAlertKey = new Map<string, string>();
+  await runChunkedInFilter(
+    [...alertKeyToCacheKey.keys()],
+    (inClauseSql) => `SELECT key, value FROM cache WHERE key IN (${inClauseSql})`,
+    async (sql, binds) => {
+      const rows = await runWithOverloadRetry(() =>
+        db.prepare(sql).bind(...binds).all<{ key: string; value: string }>(),
+      );
+      for (const row of rows.results ?? []) {
+        valueByAlertKey.set(row.key, row.value);
+      }
+    },
+  );
+
+  for (const [alertKey, cacheKey] of alertKeyToCacheKey) {
+    markers.set(cacheKey, readMarker(valueByAlertKey.get(alertKey)));
   }
   return markers;
 }
