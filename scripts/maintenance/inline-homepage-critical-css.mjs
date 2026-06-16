@@ -107,12 +107,20 @@ try {
     `[critical-css] Optimized out/index.html (${homepage.beforeBytes} -> ${homepage.afterBytes} bytes).`,
   );
 
+  // Pages have no ordering dependency; process them in bounded-concurrency
+  // batches so the ~60ms/page cost overlaps instead of running serially.
+  const CONCURRENCY = 8;
   let detailBefore = 0;
   let detailAfter = 0;
-  for (const filePath of detailPagePaths) {
-    const result = await optimizePage(filePath, path.relative(root, filePath));
-    detailBefore += result.beforeBytes;
-    detailAfter += result.afterBytes;
+  for (let i = 0; i < detailPagePaths.length; i += CONCURRENCY) {
+    const batch = detailPagePaths.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map((filePath) => optimizePage(filePath, path.relative(root, filePath))),
+    );
+    for (const result of results) {
+      detailBefore += result.beforeBytes;
+      detailAfter += result.afterBytes;
+    }
   }
   if (detailPagePaths.length > 0) {
     console.log(
