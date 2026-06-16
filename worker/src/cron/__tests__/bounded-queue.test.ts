@@ -50,4 +50,25 @@ describe("runBoundedQueue", () => {
       }),
     ).rejects.toThrow("queue aborted");
   });
+
+  it("rejects with the worker error so callers never consume a sparse result array", async () => {
+    let onProgressCalls = 0;
+
+    await expect(
+      runBoundedQueue({
+        items: [1, 2, 3],
+        concurrency: 2,
+        worker: async (item) => {
+          if (item === 2) throw new Error("worker exploded");
+          return item * 10;
+        },
+        onProgress: () => {
+          onProgressCalls += 1;
+        },
+      }),
+    ).rejects.toThrow("worker exploded");
+
+    // onProgress only fires for slots that resolved, never for the thrown slot.
+    expect(onProgressCalls).toBeLessThan(3);
+  });
 });
