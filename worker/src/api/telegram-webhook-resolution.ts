@@ -52,6 +52,12 @@ export function resolveCoinTargets(
   return { kind: "complete", coins };
 }
 
+// Result of onComplete. The `gated` variant means the handler has already sent
+// its own reply (e.g. a bulk-confirm prompt), so the flow must not send another.
+export type CoinResolutionCompletion =
+  | { kind: "gated" }
+  | { kind: "message"; text: string; replyMarkup?: unknown };
+
 interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   db: D1Database;
   chatId: string;
@@ -64,7 +70,7 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   onComplete: (
     coins: ResolvedCoin[],
     options: { clearPending: boolean },
-  ) => Promise<{ message: string; replyMarkup?: unknown }>;
+  ) => Promise<CoinResolutionCompletion>;
   alertTypes?: Set<string>;
   initialCoins?: ResolvedCoin[];
   clearPendingOnTerminal?: boolean;
@@ -133,8 +139,9 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
     return;
   }
 
-  const { message, replyMarkup } = await onComplete(resolution.coins, {
+  const completion = await onComplete(resolution.coins, {
     clearPending: clearPendingOnTerminal,
   });
-  await reply(message, replyMarkup ? { replyMarkup } : undefined);
+  if (completion.kind === "gated") return;
+  await reply(completion.text, completion.replyMarkup ? { replyMarkup: completion.replyMarkup } : undefined);
 }

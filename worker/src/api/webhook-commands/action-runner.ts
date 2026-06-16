@@ -21,7 +21,7 @@ import {
   buildSubscriptionSummaryMessage,
   buildUnsubscribeSuccessMessage,
 } from "../telegram-webhook-messages";
-import { runCoinResolutionFlow } from "../telegram-webhook-resolution";
+import { runCoinResolutionFlow, type CoinResolutionCompletion } from "../telegram-webhook-resolution";
 import {
   applySettingToSubscriptions,
   clearPendingDisambiguation,
@@ -263,15 +263,13 @@ function shouldGateBulk(coinCount: number): boolean {
   return coinCount > BULK_CONFIRM_COIN_THRESHOLD;
 }
 
-const GATED_SENTINEL = "\0__gated__";
-
 async function persistAndPromptBulkConfirm(
   context: TelegramActionContext,
   botToken: string,
   gate: BulkGate,
   coins: ResolvedCoin[],
   clearPending: boolean,
-): Promise<string> {
+): Promise<CoinResolutionCompletion> {
   if (clearPending) {
     await clearPendingDisambiguation(context.db, context.chatId);
   }
@@ -300,7 +298,7 @@ async function persistAndPromptBulkConfirm(
   });
   if (!persisted) {
     await sendAuditedTelegramReply(context.db, context.chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken);
-    return GATED_SENTINEL;
+    return { kind: "gated" };
   }
   await sendAuditedTelegramReply(
     context.db,
@@ -314,10 +312,9 @@ async function persistAndPromptBulkConfirm(
     botToken,
     { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
   );
-  // Sentinel: runCoinResolutionFlow will send this string. We have already
-  // replied with the inline keyboard, so return an empty string and short-circuit
-  // the outer reply via the GATED_SENTINEL check below.
-  return GATED_SENTINEL;
+  // We have already replied with the inline keyboard, so signal the flow to skip
+  // its own outer reply.
+  return { kind: "gated" };
 }
 
 export function makeActionRunner(
@@ -327,7 +324,6 @@ export function makeActionRunner(
   runnerOptions: ActionRunnerOptions = {},
 ): BoundActionRunner {
   const reply = async (message: string, options?: { replyMarkup?: unknown }) => {
-    if (message === GATED_SENTINEL) return;
     await sendAuditedTelegramReply(
       context.db,
       context.chatId,
@@ -360,16 +356,15 @@ export function makeActionRunner(
       },
       onComplete: async (coins, resolutionOptions) => {
         if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
-          const message = await persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);
-          return { message };
+          return persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);
         }
-        const message = await completionHandlers[actionType](context, coins, actionPayload, resolutionOptions);
+        const text = await completionHandlers[actionType](context, coins, actionPayload, resolutionOptions);
         const replyMarkup = runnerOptions.replyMarkupForCompletion?.({
           actionType,
           coins,
           payload: actionPayload as ActionPayloadMap[CompletionActionType],
         });
-        return { message, replyMarkup };
+        return { kind: "message", text, replyMarkup };
       },
     });
 }
