@@ -2,11 +2,12 @@ import type {
   DependencyType,
   GovernanceType,
   ReportCardDimension,
+  ReportCardDetailItem,
   DependencyWeight,
   VariantKind,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
-import { detailItemsFromParts, joinReportCardDetail, plural } from "./report-card-detail";
+import { joinReportCardDetail, labeledDetailItem, plural } from "./report-card-detail";
 import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
 import { roundScore } from "./math";
 
@@ -132,31 +133,35 @@ export function scoreDependencyRisk(
 
   score = roundScore(score);
 
-  const parts: string[] = [];
-  parts.push(
-    `Upstream: ${plural(resolved.length, "upstream dep")} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`,
+  const detailItems: ReportCardDetailItem[] = [];
+  detailItems.push(
+    labeledDetailItem(
+      "Upstream",
+      `${plural(resolved.length, "upstream dep")} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`,
+    ),
   );
-  parts.push(`Declared dependency weight: ${Math.round(Math.min(1, declaredWeight) * 100)}%`);
+  detailItems.push(
+    labeledDetailItem("Declared dependency weight", `${Math.round(Math.min(1, declaredWeight) * 100)}%`),
+  );
   if (missingDependencies.length > 0) {
-    parts.push(
-      `Unavailable upstream scores: ${plural(missingDependencies.length, "dep")} (${Math.round(missingWeight * 100)}% weight, scored at ${UNAVAILABLE_DEPENDENCY_SCORE})`,
+    detailItems.push(
+      labeledDetailItem(
+        "Unavailable upstream scores",
+        `${plural(missingDependencies.length, "dep")} (${Math.round(missingWeight * 100)}% weight, scored at ${UNAVAILABLE_DEPENDENCY_SCORE})`,
+      ),
     );
   }
   if (resolvedWeight !== rawTotal) {
-    parts.push(`Resolved upstream weight: ${Math.round(resolvedWeight * 100)}%`);
+    detailItems.push(labeledDetailItem("Resolved upstream weight", `${Math.round(resolvedWeight * 100)}%`));
   }
-  parts.push(`Self-backed: ${GOVERNANCE_DETAIL_LABEL[governance]} (${selfBackedScore})`);
+  detailItems.push(labeledDetailItem("Self-backed", `${GOVERNANCE_DETAIL_LABEL[governance]} (${selfBackedScore})`));
   if (weakDependencies.length > 0) {
-    parts.push(
-      `Penalty: ${plural(weakDependencies.length, "weak dep")} below 75 (-10)`,
-    );
+    detailItems.push(labeledDetailItem("Penalty", `${plural(weakDependencies.length, "weak dep")} below 75 (-10)`));
   }
   if (ceiling < Infinity) {
     const ceilingType = ceilingDepType === "wrapper" ? "wrapper" : "mechanism-critical";
-    parts.push(`Ceiling: ${ceilingType} dependency ceiling (${Math.round(ceiling)})`);
+    detailItems.push(labeledDetailItem("Ceiling", `${ceilingType} dependency ceiling (${Math.round(ceiling)})`));
   }
-
-  const detailItems = detailItemsFromParts(parts);
 
   return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
 }

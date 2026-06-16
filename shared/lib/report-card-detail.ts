@@ -16,6 +16,16 @@ export function plural(count: number, word: string, pluralWord = `${word}s`): st
   return `${count} ${count === 1 ? word : pluralWord}`;
 }
 
+/**
+ * Build a structured detail item from a label and a value, rendering as
+ * `label: value`. Prefer this over assembling `label: value` strings and
+ * re-parsing them with {@link detailItemsFromParts}, which splits on the first
+ * `": "` and mis-splits when a label or value contains that separator.
+ */
+export function labeledDetailItem(label: string, value: string): ReportCardDetailItem {
+  return { label, value, detail: `${label}: ${value}` };
+}
+
 export function detailItemsFromParts(parts: readonly string[]): ReportCardDetailItem[] {
   return parts.map((part) => {
     const separator = part.indexOf(": ");
