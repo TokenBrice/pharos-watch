@@ -65,6 +65,9 @@ const TAPE_EVENTS_LIMIT = 200;
  * enough on large issuers (USDT mints dozens of times per month) to flood the
  * legend and drown the curated SVB/CFTC-tier events visually. They remain
  * visible on the tape stream UI; chart overlays restrict to high-signal kinds.
+ * The `mint-burn-spike` and `blacklist-surge` annotation kinds in
+ * `CHART_ANNOTATION_KINDS` / `ANNOTATION_HEX_COLORS` are reserved for these
+ * tape event families should they ever be promoted to chart overlays.
  *
  * `depeg.resolved` is intentionally NOT mapped — pairing each `depeg.opened`
  * with its matching resolution doubles the visual count without adding
