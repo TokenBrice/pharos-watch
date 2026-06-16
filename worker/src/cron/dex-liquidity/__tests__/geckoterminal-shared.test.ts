@@ -51,7 +51,14 @@ describe("geckoterminal shared helpers", () => {
 
   it("derives the correct GT pool type labels", () => {
     expect(getGtPoolType("uniswap-v3")).toBe("gt-concentrated");
+    expect(getGtPoolType("uniswap-v4")).toBe("gt-concentrated");
+    expect(getGtPoolType("pancakeswap-v3")).toBe("gt-concentrated");
     expect(getGtPoolType("curve-stable")).toBe("gt-stable-amm");
     expect(getGtPoolType("camelot")).toBe("gt-amm");
+  });
+
+  it("does not misclassify DEX IDs that merely contain v3/v4 substrings", () => {
+    expect(getGtPoolType("traderv3-stable")).toBe("gt-stable-amm");
+    expect(getGtPoolType("solidv4")).toBe("gt-amm");
   });
 });

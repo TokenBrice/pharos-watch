@@ -63,8 +63,20 @@ export function parseGtPool(pool: GtPool): ParsedPool | null {
   };
 }
 
+// Concentrated-liquidity DEX IDs (GeckoTerminal `relationships.dex.data.id`).
+// Prefix allowlist rather than a bare `v3`/`v4` substring match so DEXes whose
+// names merely contain those substrings (e.g. "traderv3-stable") aren't
+// misclassified. Add new concentrated-liquidity venues here as they appear.
+const CONCENTRATED_DEX_PREFIXES = [
+  "uniswap-v3",
+  "uniswap-v4",
+  "pancakeswap-v3",
+  "sushiswap-v3",
+  "quickswap-v3",
+];
+
 export function getGtPoolKind(dexId: string): GtPoolKind {
-  if (dexId.includes("v3") || dexId.includes("v4")) {
+  if (CONCENTRATED_DEX_PREFIXES.some((prefix) => dexId.startsWith(prefix))) {
     return "concentrated";
   }
   if (dexId.includes("stable")) {
