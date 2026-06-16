@@ -232,6 +232,11 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/__mocks__/resvg-stub.ts::resvgWasmModule",
   "worker/src/__mocks__/satori-stub.ts::init",
   "worker/src/__mocks__/satori-stub.ts::satori",
+  // Consumed only by test files (live-reserve-adapters-schemas.test.ts); the
+  // static scan counts test imports as usage but the CI unused-code guard does
+  // not, so it must be allowlisted explicitly. Keep exported until a production
+  // reserve-adapter config adopts this wider staleness window.
+  "shared/lib/live-reserve-adapters-schemas.ts::LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC",
 ]);
 
 const files = collectSourceFiles();
