@@ -97,6 +97,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0151     | `0151_cron_runs_ok_started_index.sql`                    | Add a partial cron_runs(job, started_at DESC) index for latest successful-run freshness lookups                                                  |
 | 0152     | `0152_dex_liquidity_publication_generations.sql`         | Add DEX-liquidity publication generations and per-run row staging before current-table publication                                               |
 | 0153     | `0153_status_reliability_idempotency.sql`                | Add nullable idempotency keys and partial unique indexes for retry-safe status transitions and probe runs                                        |
+| 0154     | `0154_apxusd_ddr_tail_90203_link.sql`                    | Link APXUSD tail event 90203 into the sealed June 2 DDR incident and supersede the accidental fresh incident                                    |
 
 ## Retired Individual Migrations
 

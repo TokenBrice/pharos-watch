@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.09`
+- **Current methodology version:** `v6.091`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -187,6 +187,7 @@ Whenever a row is written to `depeg_pending`, the worker now upserts directional
 **Path C -- Deviation < threshold AND event open**
 
 - If a supported direct native-peg quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
+- If a fresh trusted aggregate DEX row still crosses the depeg threshold in the existing event direction, with at least 2 protocol-level DEX groups corroborating that direction: keep the event open and ignore the primary recovery print
 - Close immediately when the primary price is authoritative, or when a fresh non-cached multi-source primary cluster is already back inside threshold
 - If the remaining primary input is ambiguous, close only when a trusted aggregate DEX row also shows recovery, at least 2 protocol-level DEX groups are also back inside threshold, and no qualifying challenger pool still shows the old depeg direction
 - Otherwise keep the event open rather than letting cached/low-confidence prices silently resolve it

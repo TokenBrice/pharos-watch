@@ -56,9 +56,11 @@ interface DecisionContext {
   dexRow: DexPriceRow | undefined;
   dexAbsBps: number | null;
   dexDirectionProtocolCount: number;
+  dexExistingDirectionProtocolCount: number;
   dexRecoveryProtocolCount: number;
   dexRecoveryChallenged: boolean;
   dexSupportsDirection: boolean;
+  dexSupportsExistingDirection: boolean;
   dexSupportsSecondaryBarDirection: boolean;
   dexSupportsRecovery: boolean;
   primarySupportsRecovery: boolean;
@@ -186,9 +188,11 @@ function requiresTieredMarketCapConfirmation(params: {
 interface DexEvidence {
   dexAbsBps: number | null;
   dexDirectionProtocolCount: number;
+  dexExistingDirectionProtocolCount: number;
   dexRecoveryProtocolCount: number;
   dexRecoveryChallenged: boolean;
   dexSupportsDirection: boolean;
+  dexSupportsExistingDirection: boolean;
   dexSupportsSecondaryBarDirection: boolean;
   dexSupportsRecovery: boolean;
 }
@@ -211,16 +215,30 @@ function deriveDexEvidence(params: {
     : null;
   const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
   const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm");
+  const existingDirection = existing?.direction === "above" || existing?.direction === "below"
+    ? existing.direction
+    : direction;
+  const dexExistingDirectionProtocolCount = countDexProtocolCorroborations(
+    input.protocolSources,
+    pegRef,
+    threshold,
+    existingDirection,
+    "confirm",
+  );
   const dexSecondaryDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, secondaryBar, direction, "confirm");
   const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "recover");
-  const recoveryVetoDirection: DepegDirection =
-    existing?.direction === "above" ? "above" : existing?.direction === "below" ? "below" : direction;
+  const recoveryVetoDirection: DepegDirection = existingDirection;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
   const dexSupportsDirection =
     dexSignal != null &&
     signalCrossesThreshold(dexSignal, threshold) &&
     signalsShareDirection(dexSignal, direction) &&
     dexDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
+  const dexSupportsExistingDirection =
+    dexSignal != null &&
+    signalCrossesThreshold(dexSignal, threshold) &&
+    signalsShareDirection(dexSignal, existingDirection) &&
+    dexExistingDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
   const dexSupportsSecondaryBarDirection =
     dexSignal != null &&
     signalCrossesThreshold(dexSignal, secondaryBar) &&
@@ -234,9 +252,11 @@ function deriveDexEvidence(params: {
   return {
     dexAbsBps: dexSignal?.absBps ?? null,
     dexDirectionProtocolCount,
+    dexExistingDirectionProtocolCount,
     dexRecoveryProtocolCount,
     dexRecoveryChallenged,
     dexSupportsDirection,
+    dexSupportsExistingDirection,
     dexSupportsSecondaryBarDirection,
     dexSupportsRecovery,
   };
@@ -309,9 +329,11 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const {
     dexAbsBps,
     dexDirectionProtocolCount,
+    dexExistingDirectionProtocolCount,
     dexRecoveryProtocolCount,
     dexRecoveryChallenged,
     dexSupportsDirection,
+    dexSupportsExistingDirection,
     dexSupportsSecondaryBarDirection,
     dexSupportsRecovery,
   } = dexEvidence;
@@ -353,9 +375,11 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       dexRow: input.dexRow,
       dexAbsBps,
       dexDirectionProtocolCount,
+      dexExistingDirectionProtocolCount,
       dexRecoveryProtocolCount,
       dexRecoveryChallenged,
       dexSupportsDirection,
+      dexSupportsExistingDirection,
       dexSupportsSecondaryBarDirection,
       dexSupportsRecovery,
       primarySupportsRecovery,
@@ -591,15 +615,17 @@ function decideRecovery(
     threshold,
     dexRow,
     dexAbsBps,
+    dexExistingDirectionProtocolCount,
     dexRecoveryProtocolCount,
     dexRecoveryChallenged,
+    dexSupportsExistingDirection,
     dexSupportsRecovery,
   } = ctx;
   const commands: DepegPersistenceCommand[] = [];
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
 
-  if (primarySupportsRecovery) {
+  if (primarySupportsRecovery && !(isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection)) {
     // Price recovered - close the event.
     commands.push({
       type: "close-event",
@@ -618,7 +644,14 @@ function decideRecovery(
     });
   } else {
     seenEventIds.push(existing.id);
-    if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+    if (isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) {
+      diagnostics.push(withDiagnostic(
+        "warn",
+        `[depeg] Kept ${asset.symbol} open despite primary recovery: ` +
+        `primary recovery is contradicted by ${dexExistingDirectionProtocolCount} ` +
+        `DEX protocol group(s) still showing the ${existing.direction} depeg`,
+      ));
+    } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
       diagnostics.push(withDiagnostic(
         "warn",
         `[depeg] Ignored aggregate DEX recovery for ${asset.symbol}: ` +

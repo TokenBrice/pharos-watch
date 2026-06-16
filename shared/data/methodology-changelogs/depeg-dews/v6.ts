@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.091",
+    title: "DEX-contradicted recoveries keep active depegs open",
+    date: "2026-06-16",
+    effectiveAt: 1781568000,
+    summary:
+      "Live depeg detection no longer closes an existing event from an authoritative near-peg primary print when fresh trusted DEX evidence with multiple independent protocol groups still shows the event's original depeg direction.",
+    impact: [
+      "Authoritative primary recovery still closes an event when there is no qualifying DEX contradiction",
+      "When trusted aggregate DEX price and at least two protocol groups still cross the threshold in the existing event direction, the event remains open and the contradictory recovery is logged",
+      "This prevents brief off-chain or consensus near-peg prints from splitting unresolved long-running incidents such as the APXUSD June 2026 underpeg",
+      "DEX-confirmed recoveries remain supported: ambiguous primary recoveries can still close when aggregate DEX and enough protocol groups are back inside threshold with no challenger contradiction",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.09",
     title: "Wider venue-risk coverage feeds the structured-venue branch",
     date: "2026-06-15",

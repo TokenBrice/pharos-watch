@@ -1149,6 +1149,66 @@ describe("detectDepegEvents", () => {
     expect(closures.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("keeps an ongoing event open when authoritative primary recovery conflicts with trusted DEX depeg evidence", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -1059, started_at: now - 10 * 24 * 3600,
+          start_price: 0.989, peak_price: 0.894, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      {
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.9439,
+          deviation_from_primary_bps: -566,
+          source_pool_count: 6,
+          source_total_tvl: 19_900_000,
+          updated_at: now - 60,
+        }],
+      },
+      {
+        match: "price_sources_json",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          price_sources_json: JSON.stringify([
+            { protocol: "curve", chain: "ethereum", price: 0.9438, tvl: 11_000_000 },
+            { protocol: "pancakeswap", chain: "bsc", price: 0.9461, tvl: 5_000_000 },
+            { protocol: "uniswap-v4", chain: "ethereum", price: 0.9442, tvl: 3_000_000 },
+          ]),
+          updated_at: now - 60,
+        }],
+      },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 1.0006,
+        priceSource: "coingecko",
+        priceConfidence: "high",
+        priceUpdatedAt: now - 60,
+      }),
+    ]);
+
+    const closures = preparedSqls.filter((sql) =>
+      sql.includes("UPDATE depeg_events SET ended_at")
+    );
+    expect(closures).toHaveLength(0);
+  });
+
   it("does not suppress a new event when aggregate DEX recovery lacks corroborating protocol support", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];

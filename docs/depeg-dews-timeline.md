@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.09` (2026-02-18 -> 2026-06-15).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.091` (2026-02-18 -> 2026-06-16).
+
+---
+
+## v6.091 — DEX-contradicted recoveries keep active depegs open (Jun 16, 2026)
+
+Live depeg detection no longer closes an existing event from an authoritative near-peg primary print when fresh trusted DEX evidence with multiple independent protocol groups still shows the event's original depeg direction.
+
+- Authoritative primary recovery still closes an event when there is no qualifying DEX contradiction
+- When trusted aggregate DEX price and at least two protocol groups still cross the threshold in the existing event direction, the event remains open and the contradictory recovery is logged
+- This prevents brief off-chain or consensus near-peg prints from splitting unresolved long-running incidents such as the APXUSD June 2026 underpeg
+- DEX-confirmed recoveries remain supported: ambiguous primary recoveries can still close when aggregate DEX and enough protocol groups are back inside threshold with no challenger contradiction
 
 ---
 
