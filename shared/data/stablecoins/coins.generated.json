@@ -3772,11 +3772,12 @@
     "geckoId": "agora-dollar",
     "pythFeedId": "0xd9912df360b5b7f21a122f15bdd5e27f62ce5e72bd316c291f7c86620e07fb2a",
     "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://oracles.chaoslabs.xyz/por-feeds/agora",
-      "provider": "Chaos Labs",
-      "attestorTier": "niche",
-      "cadence": "real-time"
+      "type": "independent-audit",
+      "url": "https://docs.agora.finance/developer/transparency",
+      "provider": "Grant Thornton LLP",
+      "attestorTier": "regional",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States"
     },
     "links": [
       {
