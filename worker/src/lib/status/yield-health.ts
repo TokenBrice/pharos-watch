@@ -12,6 +12,8 @@ import type {
 } from "@shared/types/status";
 import { YIELD_SUPPLEMENTAL_CACHE_KEY, getYieldSupplementalFamilyCacheKey } from "../../cron/yield-sync/cache";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../cron/yield-sync/supplemental-source-families";
+import { getBoolean, getNumber, getObject, getString } from "../../cron/dews/source-state/legacy-bridge";
+import { safeJsonParse } from "../api-cache-read";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
@@ -59,17 +61,6 @@ interface CacheRow {
   updated_at: number | null;
 }
 
-function safeJson(value: string | null): Record<string, unknown> | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : null;
-  } catch {
-    return null;
-  }
-}
 
 function ageSeconds(now: number, updatedAt: number | null | undefined): number | null {
   return typeof updatedAt === "number" && Number.isFinite(updatedAt)
@@ -94,24 +85,6 @@ function worstStatus(statuses: YieldHealthFieldStatus[]): Exclude<YieldHealthFie
   if (statuses.includes("stale")) return "stale";
   if (statuses.includes("degraded") || statuses.includes("unknown")) return "degraded";
   return "healthy";
-}
-
-function getObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function getNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function getString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function getBoolean(value: unknown): boolean | null {
-  return typeof value === "boolean" ? value : null;
 }
 
 function getStringArray(value: unknown): string[] | null {
@@ -545,7 +518,7 @@ function buildSupplementalHealth(
   const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
     const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     const ageSec = ageSeconds(now, row?.updated_at);
-    const payload = safeJson(row?.value ?? null);
+    const payload = safeJsonParse<Record<string, unknown> | null>(row?.value ?? null, null);
     const sourceCount = getNumber(payload?.sourceCount);
     const status = freshnessStatus(
       ageSec,
@@ -630,7 +603,7 @@ export async function loadYieldHealthSummary(
   const byKey = new Map((rows.results ?? []).map((row) => [row.key, row]));
 
   const rankingsRow = byKey.get(YIELD_RANKINGS_CACHE_KEY) ?? null;
-  const rankingsPayload = safeJson(rankingsRow?.value ?? null);
+  const rankingsPayload = safeJsonParse<Record<string, unknown> | null>(rankingsRow?.value ?? null, null);
   const rankingUpdatedAt = rankingsRow?.updated_at ?? getNumber(rankingsPayload?.updatedAt);
   const rankingAgeSec = ageSeconds(now, rankingUpdatedAt);
   const rankingStatus = rankingsPayload == null
@@ -665,7 +638,7 @@ export async function loadYieldHealthSummary(
     : benchmarkStaleness;
 
   const coverageAuditUpdatedAt = byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.updated_at ?? null;
-  const coverageAuditPayload = safeJson(byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.value ?? null);
+  const coverageAuditPayload = safeJsonParse<Record<string, unknown> | null>(byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.value ?? null, null);
   const coverageAuditAgeSec = ageSeconds(now, coverageAuditUpdatedAt);
   const coverageAuditStatus = freshnessStatus(
     coverageAuditAgeSec,
