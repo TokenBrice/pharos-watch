@@ -236,6 +236,29 @@ const EXPORT_ALLOWLIST = new Set([
   // not, so it must be allowlisted explicitly. Keep exported until a production
   // reserve-adapter config adopts this wider staleness window.
   "shared/lib/live-reserve-adapters-schemas.ts::LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC",
+  // Public/script/test helper surfaces intentionally kept exported even when no
+  // runtime source currently imports them.
+  "shared/lib/api-endpoints/datasets.ts::PUBLIC_DATASET_TOPICS",
+  "src/components/command-palette-model.ts::scoreStablecoinSearchMatch",
+  "src/components/command-palette-model.ts::isExactStablecoinSymbolMatch",
+  "src/components/command-palette-model.ts::stablecoinProminenceBonus",
+  "src/components/table/table-label.ts::withFallbackTableAriaLabel",
+  "src/components/table/table-label.ts::hasTableCaptionChild",
+  "src/hooks/use-sidebar-nav-signal-data.ts::useSidebarStabilityIndexSignal",
+  "src/lib/alt-peg-packing.ts::DEFAULT_COLLISION_ITERATIONS",
+  "src/lib/api-key-request-admin-view-model.ts::REQUEST_RISK_FLAG_SCORE",
+  "src/lib/api.ts::normalizeApiDependencyMeta",
+  "src/lib/constants.ts::HOUR_MS",
+  "src/lib/exports/csv.ts::escapeCsvField",
+  "src/lib/exports/csv.ts::buildCsv",
+  "src/lib/homepage-bootstrap-shared.ts::descriptorMaxAgeMs",
+  "src/lib/yield-data-source.ts::YIELD_DATA_SOURCE_META",
+  "worker/src/api/dex-liquidity-evidence.ts::isTrendworthyLiquiditySnapshot",
+  "worker/src/cron/daily-digest/voice-guards.ts::FORBIDDEN_TICS_ANYWHERE",
+  "worker/src/cron/daily-digest/voice-guards.ts::FORBIDDEN_TICS_CLOSER",
+  "worker/src/cron/reserve-adapters/slice-math.ts::RATIO_SCALE",
+  "worker/src/lib/fx-rate-state.ts::resetFxRateStateForTests",
+  "worker/src/lib/psi-history-universe.ts::buildPsiHistoricalUniverseForDay",
 ]);
 
 const files = collectSourceFiles();
