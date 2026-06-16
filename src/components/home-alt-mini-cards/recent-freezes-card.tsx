@@ -77,7 +77,11 @@ function aggregate(
     ) {
       recent.push({
         id: ev.id,
-        stablecoinId: resolveId(ev.stablecoin),
+        // Prefer the event's canonical stablecoinId; the symbol heuristic is a
+        // fallback for older events that lack it (it returns the first
+        // insertion-order id sharing the symbol prefix, which is ambiguous for
+        // coins like usdt-tron / usdt-ethereum). [audit Q-260]
+        stablecoinId: ev.stablecoinId ?? resolveId(ev.stablecoin),
         symbol: ev.stablecoin,
         amountUsdAtEvent: ev.amountUsdAtEvent,
         ageSec: Math.max(0, nowSeconds - ev.timestamp),
