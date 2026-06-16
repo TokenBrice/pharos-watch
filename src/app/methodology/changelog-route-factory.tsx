@@ -90,18 +90,21 @@ export function createMethodologyChangelogRoute(
 interface StandardMethodologyChangelogRouteConfig extends Omit<MethodologyChangelogRouteConfig, "lead"> {
   leadSubject: string;
   versionLabel: string;
+  /** First version in the changelog. Defaults to "v1.0". */
+  fromVersion?: string;
 }
 
 export function createStandardMethodologyChangelogRoute({
   leadSubject,
   versionLabel,
+  fromVersion = "v1.0",
   ...config
 }: StandardMethodologyChangelogRouteConfig): MethodologyChangelogRouteDefinition {
   return createMethodologyChangelogRoute({
     ...config,
     lead: (
       <>
-        Full version history of {leadSubject} methodology decisions, from v1.0 to {versionLabel}.
+        Full version history of {leadSubject} methodology decisions, from {fromVersion} to {versionLabel}.
       </>
     ),
   });
