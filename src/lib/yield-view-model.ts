@@ -5,10 +5,28 @@ import {
   classifyYieldSourceDepth,
   type YieldSourceDepthLens,
 } from "@/lib/yield-source-risk";
-import { PEG_BADGE_STYLES, YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import {
+  BENCHMARK_ORDER,
+  CURRENCY_TAB_AUD_CAD_PEGS,
+  CURRENCY_TAB_ENUMERATED_PEGS,
+  CURRENCY_TAB_PEGS,
+  DEFAULT_FILTERS,
+  EXTERNAL_OPPORTUNITY_YIELD_TYPES,
+  HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS,
+  MIN_SAFETY_OPTIONS,
+  MIN_TVL_OPTIONS,
+  SOURCE_CONFIDENCE_ORDER,
+  YIELD_PRESET_SPECS,
+  YIELD_RISK_BUDGET_SPECS,
+  compareYieldPegs,
+  getYieldPegLabel,
+  type YieldPresetSpec,
+  type YieldRiskBudgetSpec,
+} from "@/lib/yield-view-config";
+import { normalizeFilters } from "@/lib/yield-view-url";
+import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { median } from "@shared/lib/stats";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import {
   type PegCurrency,
   type ReportCardGrade,
@@ -195,172 +213,14 @@ export interface BuildYieldViewModelOptions {
   watchlistIds?: ReadonlySet<string> | null;
 }
 
-// Priority order for the "other" peg bucket sort. USD is excluded because it is
-// surfaced first/separately via buildPegOptions. SGD and MXN are excluded because
-// they are hidden individual pegs (HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS). Any peg
-// absent from this list falls back to alphabetical label order in compareYieldPegs.
-const YIELD_PEG_PRIORITY: readonly PegCurrency[] = [
-  "EUR",
-  "CHF",
-  "GOLD",
-  "GBP",
-  "JPY",
-  "AUD",
-  "CAD",
-  "BRL",
-  "ZAR",
-  "CNH",
-  "CNY",
-  "PHP",
-  "TRY",
-  "IDR",
-  "RUB",
-  "UAH",
-  "ARS",
-  "SILVER",
-  "VAR",
-  "OTHER",
-];
-
-const HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS = new Set<PegCurrency>(["SGD", "MXN"]);
-// Currencies that get their own tab in the leaderboard currency tab strip.
-// Anything not in this set rolls into the "Other" tab. AUD + CAD share a tab.
-const CURRENCY_TAB_PEGS: readonly PegCurrency[] = ["USD", "EUR", "GBP", "JPY", "CHF", "MXN", "BRL"];
-const CURRENCY_TAB_AUD_CAD_PEGS: readonly PegCurrency[] = ["AUD", "CAD"];
-const CURRENCY_TAB_ENUMERATED_PEGS = new Set<PegCurrency>([
-  ...CURRENCY_TAB_PEGS,
-  ...CURRENCY_TAB_AUD_CAD_PEGS,
-]);
-const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilter, "all">[] = [
-  "deterministic",
-  "curated",
-  "discovered",
-  "fallback",
-];
-const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = YIELD_BENCHMARK_KEY_VALUES;
-const MIN_SAFETY_OPTIONS = [50, 60, 70, 80] as const;
-const MIN_TVL_OPTIONS = [1_000_000, 10_000_000, 100_000_000] as const;
-const EXTERNAL_OPPORTUNITY_YIELD_TYPES = new Set<YieldType>([
-  "lending-opportunity",
-  "fixed-yield",
-  "structured-tranche",
-]);
-
-const DEFAULT_FILTERS: YieldViewModelFilters = {
-  peg: "all",
-  yieldType: "all",
-  q: "",
-  warnings: "all",
-  minSafety: null,
-  minTvl: null,
-  sourceConfidence: "all",
-  benchmark: "all",
-  opportunity: "all",
-  depth: "all",
-  sourceChanged: "all",
-  trending: "all",
-  watchlist: "all",
-};
-
-interface YieldPresetSpec {
-  key: YieldPresetKey;
-  label: string;
-  description: string;
-  overrides: Partial<YieldViewModelFilters>;
-}
-
-// Treasury-grade approximates "rate-derived, NAV, lending vaults, lending opportunities"
-// via safety+depth+confidence instead of multi-value yieldType (which is single-select).
-// Best-dollar approximates ">5% APY" via PYS ranking + safety floor; the leaderboard
-// is already sorted by PYS which correlates with APY for safe rows.
-interface YieldRiskBudgetSpec {
-  key: YieldRiskBudgetKey;
-  label: string;
-  description: string;
-  overrides: Partial<YieldViewModelFilters>;
-}
-
-// Single source of truth for the per-budget safety floors. Consumed by the
-// SPECS below and by the scatter-plot legend so the thresholds cannot drift.
-export const YIELD_RISK_BUDGET_MIN_SAFETY = {
-  conservative: 80,
-  balanced: 70,
-  opportunistic: 50,
-} as const;
-
-// Risk budget collapses safety/depth/source-confidence/warnings into a single
-// conservative→all dimension. Stops are stackable on top of other
-// filters via merge semantics in `handleApplyRiskBudget`.
-export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
-  {
-    key: "conservative",
-    label: "Conservative",
-    description: "A- safety, hide thin venues, hide warnings",
-    overrides: {
-      minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.conservative,
-      depth: "hide-thin",
-      warnings: "hide",
-    },
-  },
-  {
-    key: "balanced",
-    label: "Balanced",
-    description: "B- safety, hide thin venues, hide warnings",
-    overrides: {
-      minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.balanced,
-      depth: "hide-thin",
-      warnings: "hide",
-    },
-  },
-  {
-    key: "opportunistic",
-    label: "Opportunistic",
-    description: "C+ safety, hide warnings",
-    overrides: {
-      minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic,
-      warnings: "hide",
-    },
-  },
-  {
-    key: "all",
-    label: "All",
-    description: "No constraints — show all rows",
-    overrides: {},
-  },
-];
-
-export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
-  {
-    key: "treasury-grade",
-    label: "Treasury-grade picks",
-    description: "A- safety, non-thin depth, deterministic source",
-    overrides: { minSafety: 80, depth: "hide-thin", sourceConfidence: "deterministic" },
-  },
-  {
-    key: "best-dollar",
-    label: "Best dollar yields",
-    description: "USD-pegged, A- safety, ranked by PYS",
-    overrides: { peg: "USD", minSafety: 80 },
-  },
-  {
-    key: "non-usd",
-    label: "Non-USD opportunities",
-    description: "EUR, GBP, JPY, MXN, BRL and other non-USD pegs",
-    overrides: { peg: "non-usd" },
-  },
-  {
-    key: "new-rising",
-    label: "New & rising",
-    description: "Current APY above 30d average, 7+ daily observations",
-    overrides: { trending: "rising" },
-  },
-  {
-    key: "watchlist-warnings",
-    label: "Watchlist warnings",
-    description: "Rows surfacing one or more warning signals",
-    overrides: { warnings: "only" },
-  },
-];
+// Static filter-config tables (peg orderings, currency tabs, presets, risk-budget
+// specs, default filter state) live in `yield-view-config.ts`. The exports below
+// are re-surfaced here so existing consumers keep importing from this module.
+export {
+  YIELD_PRESET_SPECS,
+  YIELD_RISK_BUDGET_MIN_SAFETY,
+  YIELD_RISK_BUDGET_SPECS,
+} from "@/lib/yield-view-config";
 
 function formatCountLabel(label: string, count: number): string {
   return `${label} (${count})`;
@@ -372,44 +232,8 @@ function formatTvlOption(value: number): string {
   return `$${value.toLocaleString()}+`;
 }
 
-function getYieldPegLabel(peg: PegCurrency): string {
-  return PEG_BADGE_STYLES[peg].label.replace(/\s+Peg$/, "");
-}
-
 function getYieldRankingPeg(rankingId: string): PegCurrency | null {
   return TRACKED_META_BY_ID.get(rankingId)?.flags.pegCurrency ?? null;
-}
-
-function compareYieldPegs(a: PegCurrency, b: PegCurrency): number {
-  const aIndex = YIELD_PEG_PRIORITY.indexOf(a);
-  const bIndex = YIELD_PEG_PRIORITY.indexOf(b);
-
-  if (aIndex !== -1 || bIndex !== -1) {
-    if (aIndex === -1) return 1;
-    if (bIndex === -1) return -1;
-    return aIndex - bIndex;
-  }
-
-  return getYieldPegLabel(a).localeCompare(getYieldPegLabel(b));
-}
-
-function normalizeTextParam(value: string | null | undefined): string {
-  return (value ?? "").trim().slice(0, 80);
-}
-
-function parseNumberParam(value: string | null | undefined, max: number): number | null {
-  if (value == null || value.trim() === "") return null;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > max) return null;
-  return parsed;
-}
-
-function normalizeOption<T extends string>(
-  value: string | null | undefined,
-  validValues: ReadonlySet<T>,
-  fallback: T,
-): T {
-  return value != null && validValues.has(value as T) ? value as T : fallback;
 }
 
 function getBenchmarkKey(row: YieldRanking): YieldBenchmarkKey {
@@ -645,67 +469,6 @@ function countRowsMatchingFilters(facets: readonly YieldRowFacet[], filters: Yie
     if (rowMatchesFilters(facet, filters)) count += 1;
   }
   return count;
-}
-
-function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewModelOptions): {
-  filters: YieldViewModelFilters;
-  normalizedParams: Record<keyof YieldViewModelUrlParams, string | null>;
-  invalidParamKeys: Array<keyof YieldViewModelUrlParams>;
-} {
-  const validPegValues = new Set<YieldPegFilter>([
-    ...options.peg.map((option) => option.value),
-    ...options.currencyTabs.map((option) => option.value),
-  ]);
-  const validYieldTypes = new Set(options.yieldType.map((option) => option.value));
-  const validWarnings = new Set(options.warnings.map((option) => option.value));
-  const validConfidence = new Set(options.sourceConfidence.map((option) => option.value));
-  const validBenchmarks = new Set(options.benchmark.map((option) => option.value));
-  const validOpportunities = new Set(options.opportunity.map((option) => option.value));
-  const validDepth = new Set(options.depth.map((option) => option.value));
-  const validSourceChanged = new Set(options.sourceChanged.map((option) => option.value));
-  const validTrending = new Set<YieldTrendingFilter>(["all", "rising"]);
-  const validWatchlist = new Set<YieldWatchlistFilter>(["all", "only"]);
-
-  const filters: YieldViewModelFilters = {
-    peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
-    yieldType: normalizeOption(params.yieldType, validYieldTypes, DEFAULT_FILTERS.yieldType),
-    q: normalizeTextParam(params.q),
-    warnings: normalizeOption(params.warnings, validWarnings, DEFAULT_FILTERS.warnings),
-    minSafety: parseNumberParam(params.minSafety, 100),
-    minTvl: parseNumberParam(params.minTvl, Number.MAX_SAFE_INTEGER),
-    sourceConfidence: normalizeOption(params.sourceConfidence, validConfidence, DEFAULT_FILTERS.sourceConfidence),
-    benchmark: normalizeOption(params.benchmark, validBenchmarks, DEFAULT_FILTERS.benchmark),
-    opportunity: normalizeOption(params.opportunity, validOpportunities, DEFAULT_FILTERS.opportunity),
-    depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth),
-    sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged),
-    trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
-    watchlist: normalizeOption(params.watchlist, validWatchlist, DEFAULT_FILTERS.watchlist),
-  };
-
-  const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
-    peg: filters.peg === DEFAULT_FILTERS.peg ? null : filters.peg,
-    yieldType: filters.yieldType === DEFAULT_FILTERS.yieldType ? null : filters.yieldType,
-    q: filters.q === DEFAULT_FILTERS.q ? null : filters.q,
-    warnings: filters.warnings === DEFAULT_FILTERS.warnings ? null : filters.warnings,
-    minSafety: filters.minSafety === null ? null : String(filters.minSafety),
-    minTvl: filters.minTvl === null ? null : String(filters.minTvl),
-    sourceConfidence: filters.sourceConfidence === DEFAULT_FILTERS.sourceConfidence ? null : filters.sourceConfidence,
-    benchmark: filters.benchmark === DEFAULT_FILTERS.benchmark ? null : filters.benchmark,
-    opportunity: filters.opportunity === DEFAULT_FILTERS.opportunity ? null : filters.opportunity,
-    depth: filters.depth === DEFAULT_FILTERS.depth ? null : filters.depth,
-    sourceChanged: filters.sourceChanged === DEFAULT_FILTERS.sourceChanged ? null : filters.sourceChanged,
-    trending: filters.trending === DEFAULT_FILTERS.trending ? null : filters.trending,
-    watchlist: filters.watchlist === DEFAULT_FILTERS.watchlist ? null : filters.watchlist,
-  };
-
-  const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
-    .filter((key) => {
-      const raw = params[key];
-      const normalized = normalizedParams[key];
-      return raw != null && raw.trim() !== "" && raw !== normalized;
-    });
-
-  return { filters, normalizedParams, invalidParamKeys };
 }
 
 function rowMatchesFilters(facet: YieldRowFacet, filters: YieldViewModelFilters): boolean {
