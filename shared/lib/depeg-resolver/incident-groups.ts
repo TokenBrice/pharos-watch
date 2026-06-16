@@ -9,6 +9,7 @@
  * (a dead coin can show "recovered" backfill fragments — handled in resolution).
  */
 
+import { median } from "../stats";
 import type { DdrHistoricalEvent } from "./inputs";
 import {
   currencyClass,
@@ -132,13 +133,6 @@ export function groupIncidents(
   return incidents;
 }
 
-function averageMiddleMedian(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
 /**
  * Coins whose history is too fragmented/noisy to inform duration. Excluded from
  * the Stage 2 training set (the >50-incidents, sub-30min-median detector rule).
@@ -155,7 +149,7 @@ export function quarantinedCoins(incidents: DdrIncident[]): Set<string> {
   for (const [coin, durations] of byCoin) {
     // Quarantine uses the conventional average-of-middle median; Stage 2 p50
     // remains duration.ts's nearest-rank percentile for public estimates.
-    if (durations.length > QUARANTINE_MIN_INCIDENTS && averageMiddleMedian(durations) < QUARANTINE_MEDIAN_DURATION_SEC) {
+    if (durations.length > QUARANTINE_MIN_INCIDENTS && (median(durations) ?? 0) < QUARANTINE_MEDIAN_DURATION_SEC) {
       out.add(coin);
     }
   }

@@ -1,3 +1,4 @@
+import { mean, median } from "../stats";
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { DDR_PREDICTION_POLICY_VERSION } from "../depeg-resolver-version";
 import {
@@ -29,19 +30,6 @@ type DdrrDurationScoredPredictionRow = DdrrV2PredictionReviewRow & {
   signedDurationErrorSec: number;
   absoluteDurationErrorSec: number;
 };
-
-function mean(values: number[]): number | null {
-  if (values.length === 0) return null;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[mid];
-  return (sorted[mid - 1] + sorted[mid]) / 2;
-}
 
 function pct(numerator: number, denominator: number): number | null {
   return denominator === 0 ? null : numerator / denominator;
