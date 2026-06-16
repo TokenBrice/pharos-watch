@@ -65,9 +65,10 @@ function normalizeMintBurnFlowsResponse(response: MintBurnFlowsResponse): MintBu
 }
 
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
-export function useMintBurnFlows(hours = 24) {
+export function useMintBurnFlows(hours = 24, opts?: { enabled?: boolean }) {
   const query = useRegisteredApiQueryWithMeta<MintBurnFlowsResponse>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.mintBurnFlows(hours),
+    { enabled: opts?.enabled ?? true },
   );
   const normalizedData = useMemo(
     () => (query.data ? normalizeMintBurnFlowsResponse(query.data) : undefined),

@@ -62,20 +62,37 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
     dataUpdatedAt: summaryUpdatedAt,
     refetch: refetchSummary,
   } = useMintBurnFlows(24);
+  // When hours === 24 the chart query key matches the summary query (both
+  // useMintBurnFlows(24)); reuse summaryData instead of mounting a second hook.
+  const isChartFromSummary = hours === 24;
   const {
-    data: chartData,
-    meta: chartMeta,
-    isLoading: isChartLoading,
-    error: chartError,
-    dataUpdatedAt: chartUpdatedAt,
+    data: chartQueryData,
+    meta: chartQueryMeta,
+    isLoading: isChartQueryLoading,
+    error: chartQueryError,
+    dataUpdatedAt: chartQueryUpdatedAt,
     refetch: refetchChart,
-  } = useMintBurnFlows(hours);
-  const { data: weeklyData, isLoading: isWeeklyLoading, refetch: refetchWeekly } = useMintBurnFlows(168);
+  } = useMintBurnFlows(hours, { enabled: !isChartFromSummary });
+  // When hours === 168 the weekly series is the same query as the chart;
+  // derive weeklyHourly from chartData and skip the dedicated weekly query.
+  const isWeeklyFromChart = hours === 168;
+  const {
+    data: weeklyData,
+    isLoading: isWeeklyQueryLoading,
+    refetch: refetchWeekly,
+  } = useMintBurnFlows(168, { enabled: !isWeeklyFromChart });
+
+  const chartData = isChartFromSummary ? summaryData : chartQueryData;
+  const chartMeta = isChartFromSummary ? summaryMeta : chartQueryMeta;
+  const isChartLoading = isChartFromSummary ? isSummaryLoading : isChartQueryLoading;
+  const chartError = isChartFromSummary ? summaryError : chartQueryError;
+  const chartUpdatedAt = isChartFromSummary ? summaryUpdatedAt : chartQueryUpdatedAt;
+  const isWeeklyLoading = isWeeklyFromChart ? isChartLoading : isWeeklyQueryLoading;
 
   const gauge = summaryData?.gauge;
   const coins = summaryData?.coins ?? [];
   const hourly = chartData?.hourly ?? [];
-  const weeklyHourly = (hours === 168 ? chartData?.hourly : weeklyData?.hourly) ?? [];
+  const weeklyHourly = (isWeeklyFromChart ? chartData?.hourly : weeklyData?.hourly) ?? [];
   const error = summaryError ?? chartError;
   const hasData = !!summaryData || !!chartData;
   const scopeLabel = summaryData?.scope?.label ?? "Configured issuance chains";
@@ -94,8 +111,10 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         hasData={hasData}
         onRetry={() => {
           void refetchSummary();
-          void refetchWeekly();
-          if (hours !== 24) {
+          if (!isWeeklyFromChart) {
+            void refetchWeekly();
+          }
+          if (!isChartFromSummary) {
             void refetchChart();
           }
         }}
@@ -107,7 +126,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
             hasData: !!summaryData,
             meta: summaryMeta,
           },
-          ...(hours !== 24
+          ...(!isChartFromSummary
             ? [
                 {
                   label: "Mint/Burn Flows (Chart)",
