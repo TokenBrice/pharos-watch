@@ -59,6 +59,17 @@ function wrapTreemapLabel(name: string, maxChars: number, maxLines: number): str
   );
 }
 
+interface TreemapCellProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  name: string;
+  risk: ReserveRisk;
+  pct: number;
+  depth?: number;
+}
+
 function TreemapCell({
   x,
   y,
@@ -68,16 +79,7 @@ function TreemapCell({
   risk,
   pct,
   depth,
-}: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  name: string;
-  risk: ReserveRisk;
-  pct: number;
-  depth?: number;
-}) {
+}: TreemapCellProps) {
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
 
@@ -202,7 +204,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
                 data={data}
                 dataKey="size"
                 nameKey="name"
-                content={<TreemapCell x={0} y={0} width={0} height={0} name="" risk="low" pct={0} depth={1} />}
+                content={(props) => <TreemapCell {...(props as TreemapCellProps)} />}
                 isAnimationActive={false}
               >
                 <Tooltip content={<ReserveTooltip />} />
