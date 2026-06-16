@@ -1,5 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import type { ResolvedYieldCandidate } from "../types";
+import type { SupplementalSourceFamilyKey } from "../supplemental-source-families";
 import {
   isFiniteNumber,
   isNullableFiniteNumber,
@@ -13,15 +14,6 @@ import {
 import { toErrorMessage } from "../../../lib/error-utils";
 
 export const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
-
-type SupplementalSourceFamilyKey =
-  | "morpho"
-  | "pendle"
-  | "yearnKong"
-  | "beefy"
-  | "compoundV3"
-  | "aaveV3"
-  | "roycoDawn";
 
 export function getYieldSupplementalFamilyCacheKey(family: SupplementalSourceFamilyKey): string {
   return `${YIELD_SUPPLEMENTAL_CACHE_KEY}:${family}`;
