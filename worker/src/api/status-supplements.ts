@@ -33,7 +33,11 @@ import {
   type DiscoveryCandidateRow,
 } from "../lib/discovery-candidates";
 import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+import {
+  hasUsableStablecoinsPayload,
+  loadStablecoinsCache,
+  type StablecoinsCacheLoadResult,
+} from "../lib/stablecoins-cache";
 import { getCacheBlobSizes, getD1UsageSummary } from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
@@ -167,8 +171,10 @@ async function loadCoinGeckoPriceDiff(
   db: D1Database,
   now: number,
   coingeckoApiKey: string,
+  preloadedCache?: StablecoinsCacheLoadResult,
 ): Promise<CoinGeckoPriceDiff> {
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCache = preloadedCache
+    ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
   if (!hasUsableStablecoinsPayload(stablecoinsCache)) {
     throw new Error(`stablecoins cache ${stablecoinsCache.reason}`);
   }
@@ -241,6 +247,11 @@ export async function loadStatusSupplements(
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings,
 ): Promise<StatusSupplements> {
   const sectionErrors: StatusSectionErrors = {};
+
+  // Load the large stablecoins cache blob once per request; loadCoinGeckoPriceDiff,
+  // loadSourceDepthDistribution, and getMintBurnReconciliation all consume it, so a
+  // single read avoids three D1 round-trips for the same row (audit S-018).
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
 
   let discoveryCandidates: DiscoveryCandidate[] | null = null;
   try {
@@ -316,7 +327,7 @@ export async function loadStatusSupplements(
     if (metadata?.priceSourceHealth) {
       priceSourceHealth = metadata.priceSourceHealth as PriceSourceHealth;
       try {
-        const sourceDepthDistribution = await loadSourceDepthDistribution(db);
+        const sourceDepthDistribution = await loadSourceDepthDistribution(db, stablecoinsCache);
         if (sourceDepthDistribution) {
           priceSourceHealth = {
             ...priceSourceHealth,
@@ -354,7 +365,7 @@ export async function loadStatusSupplements(
   let coingeckoPriceDiff: CoinGeckoPriceDiff | null = null;
   if (coingeckoApiKey) {
     try {
-      coingeckoPriceDiff = await loadCoinGeckoPriceDiff(db, now, coingeckoApiKey);
+      coingeckoPriceDiff = await loadCoinGeckoPriceDiff(db, now, coingeckoApiKey, stablecoinsCache);
     } catch (err) {
       logWorkerEvent({
         scope: "status",
@@ -410,7 +421,7 @@ export async function loadStatusSupplements(
 
   let mintBurnReconciliation: MintBurnReconciliationSummary | null = null;
   try {
-    mintBurnReconciliation = await getMintBurnReconciliation(db, now);
+    mintBurnReconciliation = await getMintBurnReconciliation(db, now, stablecoinsCache);
   } catch (err) {
     logStatusSupplementWarning(
       "mint_burn_reconciliation_query_failed",

@@ -2,6 +2,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,
+  type StablecoinsCacheLoadResult,
 } from "../stablecoins-cache";
 import type {
   PriceSourceDepthBucket,
@@ -51,8 +52,10 @@ export function buildSourceDepthDistribution(
 
 export async function loadSourceDepthDistribution(
   db: D1Database,
+  preloadedCache?: StablecoinsCacheLoadResult,
 ): Promise<PriceSourceDepthDistribution | null> {
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCache = preloadedCache
+    ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
   if (!hasUsableStablecoinsPayload(stablecoinsCache)) {
     return null;
   }

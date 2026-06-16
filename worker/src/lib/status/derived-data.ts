@@ -8,7 +8,11 @@ import type {
 } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
+import {
+  hasUsableStablecoinsPayload,
+  loadStablecoinsCache,
+  type StablecoinsCacheLoadResult,
+} from "../stablecoins-cache";
 import { emptyReserveCompositionOverview } from "../live-reserves-store";
 import { logWorkerEvent } from "../structured-log";
 
@@ -176,8 +180,10 @@ export async function getDatasetFreshness(db: D1Database): Promise<StatusRespons
 export async function getMintBurnReconciliation(
   db: D1Database,
   now: number,
+  preloadedCache?: StablecoinsCacheLoadResult,
 ): Promise<MintBurnReconciliationSummary | null> {
-  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCacheResult = preloadedCache
+    ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
   if (!hasUsableStablecoinsPayload(stablecoinsCacheResult)) {
     return null;
   }
