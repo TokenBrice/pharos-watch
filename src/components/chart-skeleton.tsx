@@ -3,13 +3,8 @@ import { cn } from "@/lib/utils";
 
 export { ChartShellSkeleton } from "@/components/chart-primitives/skeleton";
 
-interface ChartSkeletonProps {
+interface ChartSkeletonBaseProps {
   className?: string;
-  /** "area" shows a fake area chart shape; "bars" shows horizontal bar placeholders */
-  variant?: "area" | "bars";
-  /** Homepage skeleton variants keep the route-local loading chrome intact. */
-  type?: "area" | "bar" | "radar";
-  height?: string;
   /**
    * When set, the skeleton fades out over 180ms so the resolved chart can
    * cross-fade in (M7). Defaults to false; consumers that mount the skeleton
@@ -18,13 +13,32 @@ interface ChartSkeletonProps {
   fadingOut?: boolean;
 }
 
-export function ChartSkeleton({
-  className = "h-[250px] sm:h-[350px]",
-  variant = "area",
-  type,
-  height = "h-[300px]",
-  fadingOut = false,
-}: ChartSkeletonProps) {
+/**
+ * The two rendering modes are mutually exclusive — they share only the outer
+ * wrapper. The `type` mode renders route-local loading chrome (header, y-axis,
+ * x-axis) and reads `height`; the default mode renders a standalone skeleton
+ * and reads `variant`. Expressed as a discriminated union so a caller cannot
+ * silently mix props that the active branch ignores. [audit Q-286]
+ */
+type ChartSkeletonProps =
+  | (ChartSkeletonBaseProps & {
+      /** Homepage skeleton chrome variant; activates the route-local layout. */
+      type: "area" | "bar" | "radar";
+      height?: string;
+      variant?: never;
+    })
+  | (ChartSkeletonBaseProps & {
+      /** "area" shows a fake area chart shape; "bars" shows horizontal bar placeholders */
+      variant?: "area" | "bars";
+      type?: never;
+      height?: never;
+    });
+
+export function ChartSkeleton(props: ChartSkeletonProps) {
+  const { className = "h-[250px] sm:h-[350px]", fadingOut = false } = props;
+  const type = "type" in props ? props.type : undefined;
+  const variant = "variant" in props ? props.variant ?? "area" : "area";
+  const height = "height" in props && props.height != null ? props.height : "h-[300px]";
   if (type) {
     return (
       <div
