@@ -13,6 +13,8 @@ import {
   REVIEWED_YIELD_COVERAGE_WAVE_AT,
 } from "../review-dates";
 
+// Re-exported from review-dates as a convenience barrel so per-coin files in
+// this directory can import cross-cutting review dates from a single local import.
 export {
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
