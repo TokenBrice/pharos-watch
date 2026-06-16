@@ -714,7 +714,7 @@ export async function backfillTronFromLedger(
   for (const row of candidates.results ?? []) {
     throwIfAborted(options.signal);
     if (budgetReached()) {
-      return { updated: 0 };
+      break;
     }
     const scopedBalanceId = buildBlacklistContractBalanceKey(
       row.stablecoin,
@@ -736,7 +736,7 @@ export async function backfillTronFromLedger(
   for (const chunk of chunkArray(uniqueBalanceIds, TRON_LEDGER_LOOKUP_CHUNK_SIZE)) {
     throwIfAborted(options.signal);
     if (budgetReached()) {
-      return { updated: 0 };
+      break;
     }
     const { sql, binds } = buildInClause(chunk);
     const balances = await db
@@ -764,9 +764,6 @@ export async function backfillTronFromLedger(
 
   if (matchedByEventId.size === 0) return { updated: 0 };
   throwIfAborted(options.signal);
-  if (budgetReached()) {
-    return { updated: 0 };
-  }
 
   const attemptedAt = Math.floor(Date.now() / 1000);
   const stmts = [...matchedByEventId.entries()].map(([eventId, balance]) =>

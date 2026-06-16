@@ -11,6 +11,7 @@ import {
   extractDestroyAmountFromReceiptLogs,
 } from "../amount-recovery";
 import { fetchEvmTokenBalance } from "../balance-providers";
+import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { shouldSuppressAsMirrorZero } from "../shared";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import type { BlacklistRow } from "../shared";
@@ -150,6 +151,54 @@ describe("enrichRowBalances", () => {
     expect(lookup?.binds).toContain("USDT:tron:troncontract:tron-contract:tblacklisted");
     const update = history.find((entry) => entry.sql.includes("blacklist-tron-ledger-backfill-update"));
     expect(update?.binds).toEqual([25, 25, expect.any(Number), "tron-row-1"]);
+  });
+
+  it("commits already-fetched Tron ledger balances when the budget is reached mid-loop", async () => {
+    // 50 candidates -> 100 unique balance ids -> 2 lookup chunks (size 90).
+    const candidates = Array.from({ length: 50 }, (_, i) => ({
+      id: `tron-row-${i}`,
+      stablecoin: "USDT",
+      chain_id: "tron",
+      address: `TBlacklisted${i}`,
+      config_key: "tron-contract",
+      contract_address: "TRONCONTRACT",
+    }));
+    const scopedKey = (c: (typeof candidates)[number]) =>
+      buildBlacklistContractBalanceKey(c.stablecoin, c.chain_id, c.address, c.config_key, c.contract_address);
+    const balanceRows = candidates.map((c) => ({ id: scopedKey(c), amount_native: 7, amount_usd: 7 }));
+
+    const db = mockD1([
+      { match: "blacklist-tron-ledger-backfill-candidates", rows: candidates },
+      { match: "blacklist-tron-ledger-balance-lookup", rows: balanceRows },
+      { match: "blacklist-tron-ledger-backfill-update", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    // Budget reads as "not reached" until the first balance-lookup query runs,
+    // then flips reached so the second chunk loop iteration breaks.
+    const runBudget = {
+      subrequestBudget: { count: 0, limit: 1000 },
+      minimumConfigWindowMs: 0,
+      get deadlineMs() {
+        const lookupRan = db.getHistory().some((entry) =>
+          entry.sql.includes("blacklist-tron-ledger-balance-lookup"),
+        );
+        return lookupRan ? Date.now() - 1 : Date.now() + 10_000;
+      },
+    } as unknown as BlacklistRunBudget;
+
+    const result = await backfillTronFromLedger(db, { runBudget });
+
+    // Previously returned { updated: 0 }, discarding the first chunk's fetched balances.
+    expect(result.updated).toBeGreaterThan(0);
+    const history = db.getHistory();
+    const lookupCount = history.filter((entry) =>
+      entry.sql.includes("blacklist-tron-ledger-balance-lookup"),
+    ).length;
+    expect(lookupCount).toBe(1); // second chunk skipped after budget reached
+    const updateCount = history.filter((entry) =>
+      entry.sql.includes("blacklist-tron-ledger-backfill-update"),
+    ).length;
+    expect(updateCount).toBeGreaterThan(0); // accumulated matches were committed
   });
 
   it("values rows that already have native amounts without provider calls", async () => {
