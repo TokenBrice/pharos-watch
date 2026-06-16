@@ -53,6 +53,12 @@ interface ModuleSpec {
 // the PSM slice without a `coinId` attribution (rather than hardcoding one)
 // and surface the composition note in metadata.details.
 const SKY_PSM_COMPOSITION_NOTE = "Sky PSM pool aggregates USDC, USDT, USDP without per-stable breakdown from the module-groups API";
+// [audit S-099] These stay module-level constants rather than adapter params on purpose:
+// they are the canonical Sky LitePSM mainnet contracts, and fetchSkyLitePsmUsdcCapacity
+// verifies them on-chain each run via gem()/pocket() (returns null capacity on any mismatch),
+// so a stale/wrong address fails safe — config-plumbing them would add a schema + threading
+// for zero real flexibility and nonzero risk on this pricing-adjacent path. (RPC URLs were
+// the config-worthy half and were moved to the public RPC registry.)
 const SKY_LITE_PSM_ADDRESS = "0xf6e72db5454dd049d0788e411b06cfaf16853042";
 const SKY_LITE_PSM_USDC_POCKET = "0x37305b1cd40574e4c5ce33f8e8306be057fd7341";
 const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
