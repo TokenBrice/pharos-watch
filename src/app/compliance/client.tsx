@@ -528,7 +528,7 @@ function GeniusAuthorityCell({ row }: { row: Extract<ComplianceRow, { regime: "g
 }
 
 function GeniusReserveCell({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
-  if (!row.reserveDisclosurePresent) return <EmptyCell />;
+  if (!row.hasAnyDisclosure) return <EmptyCell />;
   const content = (
     <>
       Disclosure

@@ -50,7 +50,7 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   licensingRegulator?: string;
   primaryFederalRegulator?: GeniusPrimaryFederalRegulator;
   stateRegulator?: string;
-  reserveDisclosurePresent: boolean;
+  hasAnyDisclosure: boolean;
   reserveDisclosureUrl?: string;
   redemptionPolicyPresent: boolean;
   latestReportDate?: string;
@@ -194,7 +194,7 @@ function buildGeniusRow(
     licensingRegulator: genius.licensingRegulator,
     primaryFederalRegulator: genius.primaryFederalRegulator,
     stateRegulator: genius.stateRegulator,
-    reserveDisclosurePresent: Boolean(
+    hasAnyDisclosure: Boolean(
       genius.reserveDisclosureUrl || genius.redemptionPolicyPresent || genius.latestReportDate,
     ),
     reserveDisclosureUrl: genius.reserveDisclosureUrl,
