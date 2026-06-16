@@ -104,8 +104,6 @@ export async function runCoingeckoOnchainAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets: Math.min(targets.length, CG_ONCHAIN_ADDRESS_MAX_REQUESTS * 30),
-    matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,
     attemptedRequests,

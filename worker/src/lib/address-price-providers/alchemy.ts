@@ -106,8 +106,6 @@ export async function runAlchemyAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets: Math.min(targets.length, ALCHEMY_ADDRESS_MAX_REQUESTS * 25),
-    matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,
     attemptedRequests,

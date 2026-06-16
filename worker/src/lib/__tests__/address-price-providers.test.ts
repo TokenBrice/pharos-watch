@@ -180,7 +180,6 @@ describe("address price providers", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.attemptedRequests).toBe(1);
-    expect(result.attemptedTargets).toBe(30);
     expect(result.successfulRequests).toBe(1);
   });
 
@@ -264,7 +263,6 @@ describe("address price providers", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(60);
-    expect(result.attemptedTargets).toBe(60);
     expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
       source: "dexpaprika-address",
       endpoint: "dexpaprika-address:request-cap",
@@ -313,8 +311,6 @@ describe("address price providers", () => {
       quotes: [],
       attemptedRequests: 0,
       successfulRequests: 0,
-      attemptedTargets: 0,
-      matchedTargets: 0,
     });
     expect(result.diagnostics).toEqual([
       expect.objectContaining({

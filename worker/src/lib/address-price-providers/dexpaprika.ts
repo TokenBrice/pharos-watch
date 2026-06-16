@@ -87,8 +87,6 @@ export async function runDexPaprikaAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets: Math.min(targets.length, DEXPAPRIKA_MAX_REQUESTS),
-    matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,
     attemptedRequests,

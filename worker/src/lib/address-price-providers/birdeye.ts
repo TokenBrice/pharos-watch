@@ -99,8 +99,6 @@ export async function runBirdeyeAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets: Math.min(targets.length, BIRDEYE_ADDRESS_MAX_REQUESTS),
-    matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,
     attemptedRequests,

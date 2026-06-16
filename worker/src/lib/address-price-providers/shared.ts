@@ -171,8 +171,6 @@ export function emptyProviderResult(
       candidateCount,
       rejectionReasonCounts: { [reason]: candidateCount },
     }],
-    attemptedTargets: 0,
-    matchedTargets: 0,
     rejectedTargets: { [reason]: candidateCount },
     successfulRequests: 0,
     attemptedRequests: 0,

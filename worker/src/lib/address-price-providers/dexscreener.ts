@@ -132,8 +132,7 @@ export async function runDexScreenerAddressProvider(
     if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
   }
 
-  const attemptedTargets = Math.min(targets.length, DEXSCREENER_ADDRESS_MAX_REQUESTS * 30);
-  const cappedTargets = Math.max(0, targets.length - attemptedTargets);
+  const cappedTargets = Math.max(0, targets.length - Math.min(targets.length, DEXSCREENER_ADDRESS_MAX_REQUESTS * 30));
   if (cappedTargets > 0) {
     diagnostics.push(buildCapSkipDiagnostic({ source: "dexscreener-address", label: "DexScreener" }, cappedTargets));
   }
@@ -141,8 +140,6 @@ export async function runDexScreenerAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets,
-    matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,
     attemptedRequests,

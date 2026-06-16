@@ -128,8 +128,6 @@ export async function runMoralisAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets: Math.min(targets.length, MORALIS_ADDRESS_MAX_REQUESTS * MORALIS_ADDRESS_BATCH_SIZE),
-    matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,
     attemptedRequests,

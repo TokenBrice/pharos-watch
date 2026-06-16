@@ -60,8 +60,6 @@ export interface AddressPriceQuote {
 export interface AddressPriceProviderRunResult {
   quotes: AddressPriceQuote[];
   diagnostics: PricingProviderAttemptDiagnostic[];
-  attemptedTargets: number;
-  matchedTargets: number;
   rejectedTargets: Partial<Record<PricingProviderRejectionReason, number>>;
   successfulRequests: number;
   attemptedRequests: number;

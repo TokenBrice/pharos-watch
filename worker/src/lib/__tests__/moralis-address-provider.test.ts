@@ -58,8 +58,6 @@ describe("runMoralisAddressProvider", () => {
     expect(result).toMatchObject({
       attemptedRequests: 3,
       successfulRequests: 3,
-      attemptedTargets: 300,
-      matchedTargets: 300,
     });
     expect(result.diagnostics.map((diagnostic) => diagnostic.matchedCount)).toEqual([100, 100, 100]);
   });
