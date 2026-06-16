@@ -1,6 +1,7 @@
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isBlacklistAmountGapStatus } from "@shared/lib/blacklist";
+import { BLACKLIST_AMOUNT_STATUS_VALUES } from "@shared/types/market";
 
 export interface BlacklistGapMetrics {
   totalEvents: number;
@@ -160,16 +161,22 @@ async function writeMetricsCacheRow(
     .run();
 }
 
+// Derived from the shared enum — never hardcode these strings in SQL.
+const PERMANENTLY_UNAVAILABLE_STATUS = BLACKLIST_AMOUNT_STATUS_VALUES.find(
+  (s) => s === "permanently_unavailable",
+)!;
+const REPEATED_FAILURE_STATUSES = BLACKLIST_AMOUNT_STATUS_VALUES.filter(
+  (s) => s === "provider_failed" || s === "ambiguous",
+);
+
 async function queryLiveBlacklistGapMetrics(
   db: D1Database,
   now: number,
   options: Required<BlacklistGapMetricsOptions>,
 ): Promise<BlacklistGapMetrics> {
-  const gapStatuses = [
-    "recoverable_pending",
-    "provider_failed",
-    "ambiguous",
-  ].filter((status) => isBlacklistAmountGapStatus(status as Parameters<typeof isBlacklistAmountGapStatus>[0]));
+  const gapStatuses = BLACKLIST_AMOUNT_STATUS_VALUES.filter((status) =>
+    isBlacklistAmountGapStatus(status),
+  );
   const gapStatusSql = gapStatuses.map((status) => `'${status}'`).join(", ");
   const rowPromise = db
     .prepare(
@@ -208,7 +215,7 @@ async function queryLiveBlacklistGapMetrics(
            ) as never_attempted,
            SUM(
              CASE
-               WHEN amount_status IN ('provider_failed', 'ambiguous')
+               WHEN amount_status IN (${REPEATED_FAILURE_STATUSES.map((s) => `'${s}'`).join(", ")})
                  AND COALESCE(amount_attempt_count, 0) >= 3
                THEN 1
                ELSE 0
@@ -216,7 +223,7 @@ async function queryLiveBlacklistGapMetrics(
            ) as repeated_failures,
            SUM(
              CASE
-               WHEN amount_status = 'permanently_unavailable'
+               WHEN amount_status = '${PERMANENTLY_UNAVAILABLE_STATUS}'
                THEN 1
                ELSE 0
              END
