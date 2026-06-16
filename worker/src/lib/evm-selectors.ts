@@ -1,5 +1,6 @@
 export const DECIMALS_SELECTOR = "0x313ce567";
 export const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
+export const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
 export const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
 const BALANCE_OF_SELECTOR = "0x70a08231";
 const UINT256_MAX = (1n << 256n) - 1n;

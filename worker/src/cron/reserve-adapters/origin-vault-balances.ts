@@ -2,7 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { encodeAddress, encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { encodeAddress, encodeBalanceOfCallData, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
 import {
   buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
@@ -14,7 +14,6 @@ import {
 } from "./helpers";
 
 const CHECK_BALANCE_SELECTOR = "0x5f515226";
-const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
 
 interface OriginVaultAssetConfig {
   address: string;

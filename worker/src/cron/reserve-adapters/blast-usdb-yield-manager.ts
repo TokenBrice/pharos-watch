@@ -1,7 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { TOTAL_SUPPLY_SELECTOR, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
@@ -10,8 +10,6 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
-
-const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
 
 interface BlastUsdbYieldManagerParams {
   yieldManagerAddress: string;
