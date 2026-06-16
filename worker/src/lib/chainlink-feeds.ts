@@ -188,6 +188,68 @@ async function fetchChainlinkFeedCallHex(
   return proxyHex;
 }
 
+type SummaryCounterKey = Exclude<keyof ChainlinkReferenceQuoteSummary, "configuredFeeds" | "usableQuotes">;
+
+interface SingleFeedResult {
+  counter: SummaryCounterKey | null;
+  quote: ChainlinkReferenceQuote | null;
+}
+
+async function fetchSingleFeedQuote(
+  feed: ChainlinkReferenceFeed,
+  nowSec: number,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  drpcApiKey?: string | null,
+  etherscanApiKey?: string | null,
+): Promise<SingleFeedResult> {
+  try {
+    const decimals = await fetchFeedDecimals(feed, signal, chainRpcs, drpcApiKey, etherscanApiKey);
+    if (decimals == null) {
+      return { counter: "decimalsUnavailable", quote: null };
+    }
+    if (!Number.isFinite(decimals) || decimals < 0 || decimals > 36) {
+      return { counter: "invalidDecimals", quote: null };
+    }
+    const roundHex = await fetchChainlinkFeedCallHex(
+      feed,
+      LATEST_ROUND_DATA_SELECTOR,
+      signal,
+      chainRpcs,
+      drpcApiKey,
+      etherscanApiKey,
+    );
+    if (!roundHex) {
+      return { counter: "roundDataUnavailable", quote: null };
+    }
+    const { answer, updatedAt } = parseChainlinkLatestRoundData(roundHex);
+    if (answer <= 0n || updatedAt <= 0) {
+      return { counter: "invalidAnswers", quote: null };
+    }
+    if ((nowSec - updatedAt) > feed.staleAfterSec) {
+      return { counter: "staleQuotes", quote: null };
+    }
+    const price = Number(answer) / (10 ** decimals);
+    if (!Number.isFinite(price) || price <= 0) {
+      return { counter: "invalidPrices", quote: null };
+    }
+    return {
+      counter: null,
+      quote: {
+        pegKey: feed.pegKey,
+        price,
+        updatedAt,
+        chainId: feed.chainId,
+        proxyAddress: feed.proxyAddress,
+      },
+    };
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn(`[chainlink-feeds] ${feed.pegKey} fetch failed:`, err);
+    return { counter: "fetchErrors", quote: null };
+  }
+}
+
 export async function fetchChainlinkReferenceQuotes(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
@@ -229,56 +291,23 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   };
   const perFeedOutcomes: Record<string, ChainlinkFeedOutcome> = {};
 
-  for (const feed of CHAINLINK_REFERENCE_FEEDS) {
-    throwIfAborted(signal);
-    let succeeded = false;
-    try {
-      const decimals = await fetchFeedDecimals(feed, signal, chainRpcs, drpcApiKey, etherscanApiKey);
-      if (decimals == null) {
-        summary.decimalsUnavailable++;
-      } else if (!Number.isFinite(decimals) || decimals < 0 || decimals > 36) {
-        summary.invalidDecimals++;
-      } else {
-        const roundHex = await fetchChainlinkFeedCallHex(
-          feed,
-          LATEST_ROUND_DATA_SELECTOR,
-          signal,
-          chainRpcs,
-          drpcApiKey,
-          etherscanApiKey,
-        );
-        if (!roundHex) {
-          summary.roundDataUnavailable++;
-        } else {
-          const { answer, updatedAt } = parseChainlinkLatestRoundData(roundHex);
-          if (answer <= 0n || updatedAt <= 0) {
-            summary.invalidAnswers++;
-          } else if ((nowSec - updatedAt) > feed.staleAfterSec) {
-            summary.staleQuotes++;
-          } else {
-            const price = Number(answer) / (10 ** decimals);
-            if (!Number.isFinite(price) || price <= 0) {
-              summary.invalidPrices++;
-            } else {
-              quotes.set(feed.pegKey, {
-                pegKey: feed.pegKey,
-                price,
-                updatedAt,
-                chainId: feed.chainId,
-                proxyAddress: feed.proxyAddress,
-              });
-              succeeded = true;
-            }
-          }
-        }
-      }
-    } catch (err) {
-      summary.fetchErrors++;
-      console.warn(`[chainlink-feeds] ${feed.pegKey} fetch failed:`, err);
-    }
+  throwIfAborted(signal);
+  const results = await Promise.all(
+    CHAINLINK_REFERENCE_FEEDS.map((feed) =>
+      fetchSingleFeedQuote(feed, nowSec, signal, chainRpcs, drpcApiKey, etherscanApiKey),
+    ),
+  );
 
-    perFeedOutcomes[feed.pegKey] = succeeded ? "success" : "failure";
-  }
+  CHAINLINK_REFERENCE_FEEDS.forEach((feed, index) => {
+    const { counter, quote } = results[index];
+    if (counter) {
+      summary[counter]++;
+    }
+    if (quote) {
+      quotes.set(feed.pegKey, quote);
+    }
+    perFeedOutcomes[feed.pegKey] = quote ? "success" : "failure";
+  });
 
   summary.usableQuotes = quotes.size;
 
