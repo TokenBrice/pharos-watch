@@ -290,7 +290,7 @@ describe("EventCard enrichment", () => {
       sourceUrl: "/cemetery/",
     });
     render(<EventCard event={event} />);
-    expect(screen.getByText("Abandoned")).toBeTruthy();
+    expect(screen.getByText("abandoned")).toBeTruthy();
   });
 
   it("lifecycle renders the cause pill and the frozen date in absolute form", () => {
@@ -311,7 +311,7 @@ describe("EventCard enrichment", () => {
       sourceUrl: "/stablecoin/usdx-issuer/",
     });
     render(<EventCard event={event} />);
-    expect(screen.getByText("Regulatory")).toBeTruthy();
+    expect(screen.getByText("regulatory")).toBeTruthy();
     expect(screen.getByText(/Archived Apr 30, 2026/)).toBeTruthy();
   });
 

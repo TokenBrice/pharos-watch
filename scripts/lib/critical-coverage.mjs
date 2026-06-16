@@ -218,7 +218,6 @@ export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/lib/native-peg-implied-prices.ts",
   "worker/src/lib/pricing-provider-diagnostics.ts",
   "worker/src/lib/pricing-provider-lifecycle.ts",
-  "worker/src/lib/pricing-source-policy.ts",
 ];
 
 export const CRITICAL_COVERAGE_WAIVERS = Object.fromEntries(

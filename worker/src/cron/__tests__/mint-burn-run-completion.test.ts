@@ -78,7 +78,7 @@ describe("completeMintBurnRun", () => {
 
     try {
       await completeMintBurnRun(buildRunInput());
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Historical NULL amount_usd backlog 51"));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"historical":51'));
     } finally {
       warnSpy.mockRestore();
     }

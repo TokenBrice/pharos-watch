@@ -131,7 +131,7 @@ describe("SelectorShortlistCard", () => {
     expect(breakdown.textContent).toMatch(/Weight\s*20\s*%/);
     expect(breakdown.textContent).toMatch(/Normalized\s*91/);
     expect(breakdown.textContent).toMatch(/\+18\.2\s*pts/);
-    expect(breakdown.textContent).toMatch(/Missing signal; redistributed/);
+    expect(breakdown.textContent).toMatch(/Redistributed/);
   });
 
   it("discloses yield rail risk and freshness", () => {
