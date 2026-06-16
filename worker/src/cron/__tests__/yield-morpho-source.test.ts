@@ -74,6 +74,37 @@ describe("fetchMorphoVaultSources", () => {
     expect(results).toEqual([]);
   });
 
+  it("skips a malformed item but keeps a valid one on the same page", async () => {
+    mockFetch([{
+      match: "api.morpho.org",
+      body: {
+        data: {
+          vaults: {
+            items: [
+              {
+                name: "Missing address",
+                asset: { symbol: "USDC" },
+                chain: { id: 1 },
+                state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
+              },
+              {
+                address: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
+                name: "Gauntlet USDC Prime",
+                asset: { symbol: "USDC" },
+                chain: { id: 1 },
+                state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
+              },
+            ],
+          },
+        },
+      },
+    }]);
+
+    const results = await fetchMorphoVaultSources();
+    expect(results).toHaveLength(1);
+    expect(results[0].symbol).toBe("USDC");
+  });
+
   it("uses tracked chain/address identity before returned symbols", async () => {
     mockFetch([{
       match: "api.morpho.org",

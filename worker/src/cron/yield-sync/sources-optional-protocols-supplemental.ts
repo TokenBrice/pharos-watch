@@ -52,6 +52,10 @@ interface TrackedMorphoFilters {
   assetsByChainAddress: Map<string, TrackedMorphoAsset>;
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
 const MORPHO_PAGE_SIZE = 100;
 const MORPHO_MIN_TVL_USD = 100_000;
 const PENDLE_MIN_EXPIRY_DAYS = 3;
@@ -155,6 +159,7 @@ export async function fetchMorphoVaultSources(
 
         const tvl = vault.state?.totalAssetsUsd;
         if (typeof tvl !== "number" || tvl < MORPHO_MIN_TVL_USD) continue;
+        if (!isNonEmptyString(vault.address) || !isNonEmptyString(vault.asset?.symbol)) continue;
         const chain = resolveCanonicalChain(vault.chain?.id);
         if (!chain) continue;
         const trackedAsset = resolveMorphoTrackedAsset(filters, chain, vault.asset);
@@ -234,6 +239,13 @@ export async function fetchPendleMarketSources(
 
             const tvl = market.liquidity?.usd;
             if (typeof tvl !== "number" || tvl < 100_000) continue;
+            if (
+              !isNonEmptyString(market.address) ||
+              !isNonEmptyString(market.underlyingAsset?.symbol) ||
+              !isNonEmptyString(market.underlyingAsset?.address)
+            ) {
+              continue;
+            }
             const chain = resolveCanonicalChain(market.chainId);
             if (!chain) continue;
 
@@ -318,6 +330,13 @@ export async function fetchYearnKongSources(
         if (!Array.isArray(vaults)) continue;
 
         for (const vault of vaults) {
+          if (
+            !isNonEmptyString(vault.address) ||
+            !isNonEmptyString(vault.name) ||
+            !isNonEmptyString(vault.asset?.symbol)
+          ) {
+            continue;
+          }
           if (seenAddresses.has(vault.address.toLowerCase())) continue;
           if (vault.meta?.isRetired) continue;
           if (vault.meta?.category !== "Stablecoin") continue;
@@ -409,11 +428,12 @@ export async function fetchBeefySources(
 
     const results: ResolvedYieldCandidate[] = [];
     for (const vault of vaults) {
+      if (!vault || !isNonEmptyString(vault.id)) continue;
       if (vault.status !== "active") continue;
-      if (!vault.assets || vault.assets.length !== 1) continue;
+      if (!vault.assets || vault.assets.length !== 1 || !isNonEmptyString(vault.assets[0])) continue;
       const chain = resolveCanonicalChain(vault.chain);
       if (!chain) continue;
-      if (!vault.tokenAddress) continue;
+      if (!isNonEmptyString(vault.tokenAddress)) continue;
 
       const apy = apyMap[vault.id];
       if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0 || apy > BEEFY_MAX_APY) continue;
