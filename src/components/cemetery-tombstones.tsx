@@ -4,7 +4,7 @@ import { memo, useState, useEffect, useCallback, useMemo, useRef, type CSSProper
 import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
-import { formatCurrency, formatDeathDate } from "@shared/lib/format";
+import { formatCurrency, formatDeathDate, formatYearMonth } from "@shared/lib/format";
 import type { CauseOfDeath } from "@shared/types";
 import { buildCemeteryYearSections } from "@/lib/cemetery";
 import { YEAR_MS } from "@/lib/constants";
@@ -196,23 +196,6 @@ function getObituaryLead(obituary: string): string {
   return lead.endsWith(".") ? lead : `${lead}.`;
 }
 
-/**
- * Format the obituary kicker date in long-form for the editorial header
- * (e.g. "2022-05" → "May 2022"). Falls back to the raw value if the input
- * does not match the expected YYYY-MM pattern.
- */
-function formatObituaryKickerDate(deathDate: string): string {
-  const match = /^(\d{4})-(\d{2})/.exec(deathDate);
-  if (!match) return deathDate;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const MONTHS = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
-  const monthName = MONTHS[month - 1];
-  return monthName ? `${monthName} ${year}` : deathDate;
-}
 
 function Tombstone({
   coin,
@@ -455,7 +438,7 @@ function Tombstone({
           </span>
           <span className="min-w-0 flex-1">
             <span className="pharos-kicker block">
-              Obituary &middot; {formatObituaryKickerDate(coin.deathDate)}
+              Obituary &middot; {formatYearMonth(coin.deathDate)}
             </span>
             <span className="mt-1 block truncate text-[13px] font-semibold leading-tight text-popover-foreground">
               {coin.name}

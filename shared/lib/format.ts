@@ -201,6 +201,20 @@ export function formatDuration(startSec: number, endSec: number | null): string 
   return `${minutes}m`;
 }
 
+/**
+ * Format a "YYYY-MM" partial date as the long-form prose month and year
+ * (e.g. "2022-05" → "May 2022"). Locale-correct via Intl.DateTimeFormat.
+ * Returns the raw value if the input does not match the expected pattern.
+ */
+export function formatYearMonth(yearMonth: string): string {
+  const match = /^(\d{4})-(\d{2})/.exec(yearMonth);
+  if (!match) return yearMonth;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return yearMonth;
+  return new Date(y, m - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 /** Format "YYYY-MM" death date as "Jan 2023" */
 export function formatDeathDate(d: string): string {
   const [year, month] = d.split("-");
@@ -346,4 +360,17 @@ export function formatChartDate(
     case "full":
       return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
   }
+}
+
+/**
+ * Format a deviation in basis points as a percent string.
+ * Returns "—" for non-finite or zero values.
+ * Values ≥1000 bps (10%) use 1 decimal; smaller values use 2 decimals.
+ */
+export function formatDeviationBps(bps: number): string {
+  if (!Number.isFinite(bps) || bps === 0) return "—";
+  const magnitude = Math.abs(bps);
+  return magnitude >= 1000
+    ? `${(magnitude / 100).toFixed(1)}%`
+    : `${(magnitude / 100).toFixed(2)}%`;
 }
