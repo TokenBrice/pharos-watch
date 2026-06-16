@@ -181,4 +181,10 @@ export function validateValidationCommandImpactRegistry(commands = [
   }
 }
 
-validateValidationCommandImpactRegistry();
+// Self-validation is opt-in so that merely importing a constant (e.g. tests
+// pulling in NONCRITICAL_TEST_SHARD_COUNT) does not trigger the full registry
+// scan or throw. The validate-ci-parity test calls this explicitly, and CI can
+// force it via VALIDATE_CONTRACT_SELF_CHECK=1.
+if (process.env.VALIDATE_CONTRACT_SELF_CHECK === "1") {
+  validateValidationCommandImpactRegistry();
+}

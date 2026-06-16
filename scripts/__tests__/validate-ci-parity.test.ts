@@ -9,6 +9,7 @@ import {
   VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
+  validateValidationCommandImpactRegistry,
 } from "../lib/validate-contract.mjs";
 import {
   GENERATED_ARTIFACT_REGISTRY,
@@ -380,6 +381,10 @@ describe("validate-ci parity", () => {
 
   it("keeps deploy-impact exact path registries duplicate-free", () => {
     expect(findDuplicateDeployImpactExactPaths()).toEqual([]);
+  });
+
+  it("classifies every validation command in the deploy-impact registry", () => {
+    expect(() => validateValidationCommandImpactRegistry()).not.toThrow();
   });
 
   it("derives the Worker root runtime package set from the lockfile", () => {
