@@ -74,8 +74,10 @@ function buildEditorialAudit(params: {
     ? candidates.find((candidate) => candidate.id === leadCandidateId)
     : null;
   const qualityIssueCodes = unique(params.qualityIssues.map((issue) => issue.code).filter(Boolean));
-  const usedCandidateIds = normalizeStringArray(meta?.usedCandidateIds) ?? [];
-  const modelSuppressedCandidateIds = normalizeStringArray(meta?.suppressedCandidateIds) ?? [];
+  // dedup: LLM-emitted meta can repeat ids; the shared normalizeStringArray no longer
+  // dedups (response.ts intentionally keeps duplicates), so dedup here for editorialAudit.
+  const usedCandidateIds = unique(normalizeStringArray(meta?.usedCandidateIds) ?? []);
+  const modelSuppressedCandidateIds = unique(normalizeStringArray(meta?.suppressedCandidateIds) ?? []);
   const requiredLeadCandidateIds = unique((params.leadRequirements ?? []).flatMap((requirement) => requirement.candidateIds));
 
   return {
