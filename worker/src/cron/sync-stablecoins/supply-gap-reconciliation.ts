@@ -58,7 +58,6 @@ export interface SupplyGapReconciliationAsset {
 }
 
 export interface SupplyGapReconciliationResult {
-  reconciledCount: number;
   reconciledIds: string[];
   totalReconciled: number;
   byReason: Record<SupplyGapReconciliationReason, number>;
@@ -438,7 +437,6 @@ export async function reconcileTrackedSupplyGaps(
   const candidates = buildSupplyGapCandidates(assets, currentMarketCaps);
   if (candidates.length === 0) {
     return {
-      reconciledCount: 0,
       reconciledIds: [],
       totalReconciled: 0,
       byReason: createEmptyReasonCounts(),
@@ -521,7 +519,6 @@ export async function reconcileTrackedSupplyGaps(
   }
 
   return {
-    reconciledCount: reconciledIds.length,
     reconciledIds,
     totalReconciled: reconciledIds.length,
     byReason,

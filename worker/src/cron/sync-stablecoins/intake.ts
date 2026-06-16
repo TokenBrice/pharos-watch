@@ -359,9 +359,9 @@ export async function loadStablecoinsIntake(
     input.chainRpcs,
     input.fxFallbackRates,
   );
-  if (supplyGapReconciliation.reconciledCount > 0) {
+  if (supplyGapReconciliation.totalReconciled > 0) {
     console.warn(
-      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.reconciledCount} tracked supply gap(s) from gap repair: ` +
+      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.totalReconciled} tracked supply gap(s) from gap repair: ` +
       supplyGapReconciliation.reconciledIds.join(", "),
     );
   }
