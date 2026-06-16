@@ -1,4 +1,4 @@
-import { handleHttpRequest } from "./handlers/http";
+import { handleHttpRequestImpl as handleHttpRequest } from "./handlers/http/request-dispatch";
 import { handleScheduledEvent } from "./handlers/scheduled";
 import type { Env } from "./lib/env";
 
