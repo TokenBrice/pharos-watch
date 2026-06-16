@@ -48,28 +48,6 @@ interface WarningCandidateRow {
   last_active_at: number;
 }
 
-async function loadLastRunSec(db: D1Database): Promise<number | null> {
-  try {
-    const row = await db
-      .prepare("SELECT value FROM cache WHERE key = ?")
-      .bind(CACHE_LAST_RUN_KEY)
-      .first<{ value: string }>();
-    if (!row) return null;
-    const parsed = Number(row.value);
-    return Number.isFinite(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-async function recordLastRunSec(db: D1Database, now: number): Promise<void> {
-  await db
-    .prepare(
-      "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-    )
-    .bind(CACHE_LAST_RUN_KEY, String(now), now)
-    .run();
-}
 
 async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: number): Promise<string[]> {
   const result = await db
@@ -240,7 +218,8 @@ export async function runTelegramInactiveCleanup(
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
 
-  const lastRunSec = await loadLastRunSec(db);
+  const lastRunRow = await getCache(db, CACHE_LAST_RUN_KEY);
+  const lastRunSec = lastRunRow ? (Number.isFinite(Number(lastRunRow.value)) ? Number(lastRunRow.value) : null) : null;
   if (lastRunSec != null && now - lastRunSec < RUN_INTERVAL_SEC) {
     return {
       status: "ok",
@@ -277,7 +256,7 @@ export async function runTelegramInactiveCleanup(
   });
   const deleted = deletionResults.reduce((sum, count) => sum + count, 0);
 
-  await recordLastRunSec(db, now);
+  await setCache(db, CACHE_LAST_RUN_KEY, String(now));
 
   return {
     status: "ok",
