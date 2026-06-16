@@ -1,4 +1,5 @@
-import { CIRCUIT_SOURCE, USER_AGENT } from "../lib/constants";
+import { CIRCUIT_SOURCE, D1_BATCH_SIZE, USER_AGENT } from "../lib/constants";
+import { batchExecute } from "../lib/db";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -51,79 +52,66 @@ export function filterDiscoveryCandidates(
     }));
 }
 
+const DISCOVERY_UPSERT_CONFLICT_CLAUSE = `
+  last_seen = excluded.last_seen,
+  market_cap = excluded.market_cap,
+  name = excluded.name,
+  source = CASE
+    WHEN discovery_candidates.source != excluded.source AND discovery_candidates.source != 'both'
+    THEN 'both'
+    ELSE COALESCE(excluded.source, discovery_candidates.source)
+  END,
+  dismissed = CASE
+    WHEN discovery_candidates.dismissed = 1
+      AND excluded.market_cap > discovery_candidates.dismissed_mcap * 10
+    THEN 0
+    ELSE discovery_candidates.dismissed
+  END,
+  dismissed_at = CASE
+    WHEN discovery_candidates.dismissed = 1
+      AND excluded.market_cap > discovery_candidates.dismissed_mcap * 10
+    THEN NULL
+    ELSE discovery_candidates.dismissed_at
+  END`;
+
 export async function upsertDiscoveryCandidates(
   db: D1Database,
   candidates: { geckoId?: string; llamaId?: number; name: string; symbol: string; marketCap: number; source: string }[],
 ): Promise<number> {
   if (candidates.length === 0) return 0;
   const nowSec = Math.floor(Date.now() / 1000);
-  let upserted = 0;
 
+  const stmts: D1PreparedStatement[] = [];
   for (const c of candidates) {
-    try {
-      if (c.geckoId) {
-        await db.prepare(`
+    if (c.geckoId) {
+      stmts.push(
+        db.prepare(`
           INSERT INTO discovery_candidates (gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (gecko_id) DO UPDATE SET
-            last_seen = excluded.last_seen,
-            market_cap = excluded.market_cap,
-            name = excluded.name,
-            source = CASE
-              WHEN discovery_candidates.source != excluded.source AND discovery_candidates.source != 'both'
-              THEN 'both'
-              ELSE COALESCE(excluded.source, discovery_candidates.source)
-            END,
-            dismissed = CASE
-              WHEN discovery_candidates.dismissed = 1
-                AND excluded.market_cap > discovery_candidates.dismissed_mcap * 10
-              THEN 0
-              ELSE discovery_candidates.dismissed
-            END,
-            dismissed_at = CASE
-              WHEN discovery_candidates.dismissed = 1
-                AND excluded.market_cap > discovery_candidates.dismissed_mcap * 10
-              THEN NULL
-              ELSE discovery_candidates.dismissed_at
-            END
+          ON CONFLICT (gecko_id) DO UPDATE SET${DISCOVERY_UPSERT_CONFLICT_CLAUSE}
         `).bind(
           c.geckoId, c.llamaId ?? null, c.name, c.symbol, c.marketCap, c.source, nowSec, nowSec,
-        ).run();
-      } else if (c.llamaId) {
-        await db.prepare(`
+        ),
+      );
+    } else if (c.llamaId) {
+      stmts.push(
+        db.prepare(`
           INSERT INTO discovery_candidates (gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen)
           VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (llama_id) DO UPDATE SET
-            last_seen = excluded.last_seen,
-            market_cap = excluded.market_cap,
-            name = excluded.name,
-            source = CASE
-              WHEN discovery_candidates.source != excluded.source AND discovery_candidates.source != 'both'
-              THEN 'both'
-              ELSE COALESCE(excluded.source, discovery_candidates.source)
-            END,
-            dismissed = CASE
-              WHEN discovery_candidates.dismissed = 1
-                AND excluded.market_cap > discovery_candidates.dismissed_mcap * 10
-              THEN 0
-              ELSE discovery_candidates.dismissed
-            END,
-            dismissed_at = CASE
-              WHEN discovery_candidates.dismissed = 1
-                AND excluded.market_cap > discovery_candidates.dismissed_mcap * 10
-              THEN NULL
-              ELSE discovery_candidates.dismissed_at
-            END
+          ON CONFLICT (llama_id) DO UPDATE SET${DISCOVERY_UPSERT_CONFLICT_CLAUSE}
         `).bind(
           c.llamaId, c.name, c.symbol, c.marketCap, c.source, nowSec, nowSec,
-        ).run();
-      }
-      upserted++;
-    } catch (err) {
-      console.warn(`[discovery] Upsert failed for ${c.symbol}:`, err);
+        ),
+      );
     }
   }
-  return upserted;
+
+  try {
+    return await batchExecute(db, stmts, D1_BATCH_SIZE);
+  } catch (err) {
+    console.warn("[discovery] Upsert batch failed:", err);
+    return 0;
+  }
 }
 
 async function cleanupOldDismissed(db: D1Database): Promise<number> {

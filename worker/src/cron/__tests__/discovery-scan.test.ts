@@ -19,7 +19,7 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { filterDiscoveryCandidates, runDiscoveryScan } from "../discovery-scan";
+import { filterDiscoveryCandidates, runDiscoveryScan, upsertDiscoveryCandidates } from "../discovery-scan";
 
 describe("filterDiscoveryCandidates", () => {
   const TRACKED_GECKO_IDS = new Set(["tether", "usd-coin", "dai"]);
@@ -59,6 +59,29 @@ describe("filterDiscoveryCandidates", () => {
     ];
     const result = filterDiscoveryCandidates(cgCoins, TRACKED_GECKO_IDS, 5_000_000);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe("upsertDiscoveryCandidates", () => {
+  it("returns 0 without touching the db for an empty candidate list", async () => {
+    const db = mockD1();
+    const upserted = await upsertDiscoveryCandidates(db, []);
+    expect(upserted).toBe(0);
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("upserts candidates via a single batch and returns the change count", async () => {
+    const db = mockD1();
+    const upserted = await upsertDiscoveryCandidates(db, [
+      { geckoId: "new-stable", name: "NewStable", symbol: "NST", marketCap: 10_000_000, source: "coingecko" },
+      { llamaId: 42, name: "LlamaStable", symbol: "LST", marketCap: 8_000_000, source: "defillama" },
+    ]);
+    expect(upserted).toBe(2);
+
+    const history = db.getHistory();
+    expect(history).toHaveLength(2);
+    expect(history[0].sql).toContain("ON CONFLICT (gecko_id)");
+    expect(history[1].sql).toContain("ON CONFLICT (llama_id)");
   });
 });
 
