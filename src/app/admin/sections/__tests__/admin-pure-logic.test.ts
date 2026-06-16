@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { CronRun, CronStatus, StatusResponse } from "@shared/types";
 import { getCronSeverity, sortCronGroupsBySeverity } from "@/app/admin/cron-severity";
+import { countConsecutiveStatus, getLastSuccessfulRun } from "@/lib/status/cron-run-utils";
 import type { CronGroup } from "@/app/admin/sections/cron-lane-types";
-import { countConsecutiveStatus, getLastSuccessfulRun } from "@/app/admin/sections/cron-lane-table";
 import { deriveInitialPipelineTab } from "@/app/admin/sections/pipeline-section";
 
 function makeCron(overrides: Partial<CronStatus>): CronStatus {
