@@ -29,7 +29,7 @@ describe("sendToChat", () => {
     fetchSpy.mockResolvedValueOnce(response);
 
     await expect(postDigestToTelegram("Daily Digest", "PSI held steady.", "2026-03-21", digestCreds)).rejects.toThrow(
-      "Telegram API 403: Forbidden",
+      "Telegram API 403:",
     );
     expect(response.bodyUsed).toBe(true);
   });

@@ -54,24 +54,10 @@ export function buildTelegramMessage(
 
 /** Post a raw text message to a Telegram channel. Throws on API error. */
 export async function postTelegramMessage(text: string, creds: TelegramCreds): Promise<void> {
-  const url = `https://api.telegram.org/bot${creds.botToken}/sendMessage`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: creds.chatId,
-      text,
-      parse_mode: "HTML",
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Telegram API ${res.status}: ${body.slice(0, 300)}`);
+  const result = await sendToChat(creds.chatId, text, creds.botToken);
+  if (!result.ok) {
+    throw new Error(`Telegram API ${result.statusCode ?? "?"}: ${result.errorClass}`);
   }
-
-  await drainResponseBody(res);
 }
 
 /**
