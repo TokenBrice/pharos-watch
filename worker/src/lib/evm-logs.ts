@@ -246,6 +246,7 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
+  timeoutMs = 30_000,
 ): Promise<EvmLogFetchResult> {
   const unscannedBlock = fromBlock - 1;
   if (budgetExhausted(budget)) {
@@ -281,7 +282,7 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
   if (apiKey) params.set("apikey", apiKey);
 
   budget.count++;
-  const timeout = AbortSignal.timeout(30_000);
+  const timeout = AbortSignal.timeout(timeoutMs);
   const json = await rateLimit(async () => {
     const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, {
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
@@ -325,11 +326,11 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
 
     // Sequential splits to avoid fanning out into 2^depth concurrent connections.
     // Matches the sequential pattern in alchemy-logs.ts.
-    const first = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal);
+    const first = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal, timeoutMs);
     if (!first.complete) {
       return first;
     }
-    const second = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal);
+    const second = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal, timeoutMs);
     return {
       logs: [...first.logs, ...second.logs],
       complete: second.complete,
