@@ -2,7 +2,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewer-module";
+import {
+  DepegResolverReviewerModule,
+  DepegResolverReviewerSkeleton,
+} from "@/components/depeg-resolver-reviewer-module";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import type { DdrrResponse, DdrrRow, DdrrSummary } from "@shared/types";
 
@@ -250,5 +253,15 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.queryByText("Recovery calls")).toBeNull();
     expect(screen.queryByText("Duration calls")).toBeNull();
     expect(screen.queryByText("N/A")).toBeNull();
+  });
+
+  it("renders a busy skeleton fallback that reserves the section layout", () => {
+    const { container } = render(<DepegResolverReviewerSkeleton />);
+
+    const section = screen.getByLabelText("Depeg Duration Resolver Reviewer");
+    expect(section.getAttribute("aria-busy")).toBe("true");
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    // No real stats should leak into the placeholder.
+    expect(screen.queryByText("Recovery calls")).toBeNull();
   });
 });

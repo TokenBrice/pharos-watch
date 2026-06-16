@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CoinLockup } from "@/components/depeg-resolver-row-card-shared";
 import {
   Tooltip,
@@ -677,6 +678,47 @@ function ReviewerNote({ text }: { text: string }) {
 }
 
 // --- public component -------------------------------------------------------
+
+/**
+ * Loading fallback that reserves the rendered height of the reviewer's header,
+ * calibration + coverage ledgers, and track-record timeline. Use as a lazy-load
+ * `loading` fallback or while reviewer data is in flight so the section does not
+ * produce a layout shift when content arrives. Mirrors the feature-flag gate of
+ * the module itself.
+ */
+export function DepegResolverReviewerSkeleton() {
+  if (!isDepegResolverReviewerEnabled()) return null;
+
+  return (
+    <section aria-label="Depeg Duration Resolver Reviewer" aria-busy className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-5 w-24" />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+
+      <div className="space-y-2.5">
+        <Skeleton className="h-4 w-28" />
+        <div className="pharos-card-shell px-4 py-3 sm:px-5">
+          <Skeleton className="h-16 w-full rounded-lg" />
+        </div>
+      </div>
+
+      <div className="space-y-2.5">
+        <Skeleton className="h-4 w-36" />
+        <div className="space-y-px overflow-hidden rounded-xl border border-border/60 bg-card/40">
+          <Skeleton className="h-14 w-full rounded-none" />
+          <Skeleton className="h-14 w-full rounded-none" />
+          <Skeleton className="h-14 w-full rounded-none" />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function DepegResolverReviewerModule({ data, error, logos }: DepegResolverReviewerModuleProps) {
   if (!isDepegResolverReviewerEnabled()) return null;
