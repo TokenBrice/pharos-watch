@@ -51,6 +51,27 @@ describe("createMethodologyVersion", () => {
     expect(methodology.getVersionAt(1000)).toBe("3.9");
     expect(methodology.getVersionAt(999)).toBe("3.7");
   });
+
+  it("throws in dev/test when currentVersion drifts from the latest changelog entry", () => {
+    expect(() =>
+      createMethodologyVersion({
+        currentVersion: "1.0",
+        changelogPath: "/methodology/drift-test/",
+        changelog: [
+          {
+            version: "2.0",
+            title: "",
+            date: "",
+            effectiveAt: 1000,
+            summary: "",
+            impact: [],
+            commits: [],
+            reconstructed: false,
+          },
+        ],
+      }),
+    ).toThrow(/drift/i);
+  });
 });
 
 describe("DDR methodology version constants", () => {

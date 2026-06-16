@@ -77,6 +77,20 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
     return versionDiff !== 0 ? versionDiff : b.effectiveAt - a.effectiveAt;
   });
 
+  // Drift guard: the hand-maintained currentVersion must match the latest
+  // changelog entry. Without this, adding a changelog entry but forgetting to
+  // bump currentVersion silently mismatches the displayed label vs. what
+  // getVersionAt() returns as latest. Dev/test only — never throws in prod.
+  if (process.env.NODE_ENV !== "production") {
+    const latest = sortedChangelog[0]?.version;
+    if (latest && latest !== currentVersion) {
+      throw new Error(
+        `Methodology version drift for ${changelogPath}: currentVersion="${currentVersion}" ` +
+          `but latest changelog entry is "${latest}". Update currentVersion to match.`,
+      );
+    }
+  }
+
   const windows: VersionWindow[] = sortedChangelog
     .map((entry) => ({ version: entry.version, effectiveAt: entry.effectiveAt }))
     .sort((a, b) => {

@@ -49,7 +49,8 @@ describe("createMethodologyVersion", () => {
 
   it("sorts changelog versions numerically, not lexically", () => {
     const sorted = createMethodologyVersion({
-      currentVersion: "2.10",
+      // currentVersion must match the latest changelog entry (drift guard).
+      currentVersion: "2.17",
       changelogPath: "/methodology/test-changelog/",
       changelog: [
         {
