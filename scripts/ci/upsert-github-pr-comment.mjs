@@ -26,6 +26,33 @@ async function readJsonResponse(response) {
   return text ? JSON.parse(text) : null;
 }
 
+/** Extracts the `rel="next"` URL from a GitHub Link header, or null. */
+export function parseNextLink(linkHeader) {
+  if (!linkHeader) return null;
+  for (const part of linkHeader.split(",")) {
+    const match = part.match(/<([^>]+)>\s*;\s*rel="next"/);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/**
+ * Fetches every comment page for the PR, following GitHub's Link pagination
+ * so a marker comment beyond the first 100 is still found.
+ */
+async function fetchAllComments(firstUrl, headers, fetchImpl) {
+  const comments = [];
+  let url = firstUrl;
+  while (url) {
+    const response = await fetchImpl(url, { headers });
+    const nextUrl = parseNextLink(response.headers?.get?.("link"));
+    const page = await readJsonResponse(response);
+    if (Array.isArray(page)) comments.push(...page);
+    url = nextUrl;
+  }
+  return comments;
+}
+
 export async function upsertPrComment(
   {
     body,
@@ -52,11 +79,12 @@ export async function upsertPrComment(
       "X-GitHub-Api-Version": "2022-11-28",
     };
 
-    const commentsResponse = await fetchImpl(`${baseUrl}/issues/${prNumber}/comments?per_page=100`, {
+    const comments = await fetchAllComments(
+      `${baseUrl}/issues/${prNumber}/comments?per_page=100`,
       headers,
-    });
-    const comments = await readJsonResponse(commentsResponse);
-    const existing = findExistingComment(Array.isArray(comments) ? comments : [], marker);
+      fetchImpl,
+    );
+    const existing = findExistingComment(comments, marker);
     const payload = JSON.stringify({ body });
 
     if (existing?.id) {

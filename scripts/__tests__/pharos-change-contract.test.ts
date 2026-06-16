@@ -18,7 +18,7 @@ import {
   formatContractMarkdown,
   normalizeChangedFiles,
 } from "../ci/pharos-change-contract.mjs";
-import { findExistingComment, upsertPrComment } from "../ci/upsert-github-pr-comment.mjs";
+import { findExistingComment, parseNextLink, upsertPrComment } from "../ci/upsert-github-pr-comment.mjs";
 
 describe("normalizeChangedFiles", () => {
   it("normalizes path separators, blanks, and duplicates", () => {
@@ -537,6 +537,43 @@ describe("repo Claude hook config", () => {
 });
 
 describe("upsert GitHub PR comment", () => {
+  it("parses the rel=next URL from a Link header", () => {
+    const header =
+      '<https://api.github.com/repos/o/r/issues/1/comments?page=2>; rel="next", ' +
+      '<https://api.github.com/repos/o/r/issues/1/comments?page=5>; rel="last"';
+    expect(parseNextLink(header)).toBe("https://api.github.com/repos/o/r/issues/1/comments?page=2");
+    expect(parseNextLink('<https://x>; rel="last"')).toBeNull();
+    expect(parseNextLink(null)).toBeNull();
+  });
+
+  it("follows Link pagination to find a marker comment beyond the first page", async () => {
+    const page2Url = "https://api.github.com/repos/owner/repo/issues/12/comments?page=2";
+    const calls: string[] = [];
+    const fetchImpl = async (url: string) => {
+      calls.push(url);
+      if (url.endsWith("/issues/12/comments?per_page=100")) {
+        return new Response(JSON.stringify([{ id: 1, body: "noise" }]), {
+          headers: { link: `<${page2Url}>; rel="next"` },
+        });
+      }
+      if (url === page2Url) {
+        return new Response(JSON.stringify([{ id: 77, body: "<!-- pharos-change-contract --> old" }]));
+      }
+      return new Response(JSON.stringify({ id: 77 }));
+    };
+
+    await expect(
+      upsertPrComment({
+        body: "<!-- pharos-change-contract -->\nbody",
+        prNumber: "12",
+        repo: "owner/repo",
+        token: "token",
+      }, { fetchImpl }),
+    ).resolves.toEqual({ action: "updated", commentId: 77 });
+
+    expect(calls).toContain(page2Url);
+  });
+
   it("finds the most recent marker comment", () => {
     expect(
       findExistingComment([
