@@ -21,15 +21,6 @@ interface TelegramBotStatsProps {
   nowSeconds: number;
 }
 
-function renderDelta(label: string, value: number | null) {
-  return (
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-mono tabular-nums">{value ?? "—"}</span>
-    </div>
-  );
-}
-
 function renderMetric(label: string, value: string | number | null | undefined) {
   return (
     <div className="flex items-center justify-between gap-4 text-sm">
@@ -134,16 +125,16 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
             <CardTitle className="text-base">Alert Coverage</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {renderDelta("DEWS enabled", telegramBot.alertTypeChats.dews)}
-            {renderDelta("Depeg enabled", telegramBot.alertTypeChats.depeg)}
-            {renderDelta("Safety enabled", telegramBot.alertTypeChats.safety)}
-            {renderDelta("Launch enabled", telegramBot.alertTypeChats.launch)}
-            {renderDelta("All 4 alert types", telegramBot.alertTypeChats.allTypes)}
+            {renderMetric("DEWS enabled", telegramBot.alertTypeChats.dews)}
+            {renderMetric("Depeg enabled", telegramBot.alertTypeChats.depeg)}
+            {renderMetric("Safety enabled", telegramBot.alertTypeChats.safety)}
+            {renderMetric("Launch enabled", telegramBot.alertTypeChats.launch)}
+            {renderMetric("All 4 alert types", telegramBot.alertTypeChats.allTypes)}
             <div className="border-t pt-3">
-              {renderDelta("Custom preference chats", telegramBot.customPreferenceChats)}
-              {renderDelta("Quiet hours enabled", telegramBot.quietHoursEnabledChats)}
-              {renderDelta("Flags on, no coins", telegramBot.emptyAlertChats)}
-              {renderDelta("Muted with saved coins", telegramBot.mutedChatsWithSubscriptions)}
+              {renderMetric("Custom preference chats", telegramBot.customPreferenceChats)}
+              {renderMetric("Quiet hours enabled", telegramBot.quietHoursEnabledChats)}
+              {renderMetric("Flags on, no coins", telegramBot.emptyAlertChats)}
+              {renderMetric("Muted with saved coins", telegramBot.mutedChatsWithSubscriptions)}
             </div>
             <div className="border-t pt-3">
               <div className="mb-2 text-xs font-medium text-muted-foreground">
@@ -230,26 +221,26 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                       : ""}
                   </div>
                 ) : null}
-                {renderDelta("Subscribers notified", dispatchMeta?.subscribersNotified ?? null)}
-                {renderDelta("Messages sent", dispatchMeta?.messagesSent ?? lastDispatch.itemCount ?? null)}
-                {renderDelta("Fresh attempted", dispatchMeta?.freshAttempted ?? null)}
-                {renderDelta("Fresh retries queued", dispatchMeta?.freshRetryQueued ?? null)}
-                {renderDelta("Fresh permanent failures", dispatchMeta?.freshPermanentFailures ?? null)}
-                {renderDelta("Pending attempted", dispatchMeta?.pendingAttempted ?? null)}
-                {renderDelta("Pending sent", dispatchMeta?.pendingDrained ?? null)}
-                {renderDelta("Pending retries queued", dispatchMeta?.pendingRetryQueued ?? null)}
-                {renderDelta("Pending deferred", dispatchMeta?.pendingDeferred ?? null)}
-                {renderDelta("Pending dropped", dispatchMeta?.pendingDropped ?? null)}
-                {renderDelta("Pending newly enqueued", dispatchMeta?.pendingEnqueued ?? null)}
-                {renderDelta("Pending retry after", dispatchMeta?.pendingRetryAfterSec ?? null)}
-                {renderDelta("Blocked cleaned up", dispatchMeta?.blockedUsersCleanedUp ?? null)}
-                {renderDelta("Safety source age", dispatchMeta?.safetyAlertSourceAgeSeconds ?? null)}
-                {renderDelta("DEWS changes", dispatchMeta?.eventsDetected?.dews ?? null)}
-                {renderDelta("Depeg changes", dispatchMeta?.eventsDetected?.depeg ?? null)}
-                {renderDelta("Depeg worsening", dispatchMeta?.eventsDetected?.depegWorsening ?? null)}
-                {renderDelta("Safety changes", dispatchMeta?.eventsDetected?.safety ?? null)}
-                {renderDelta("Launch changes", dispatchMeta?.eventsDetected?.launch ?? null)}
-                {renderDelta("Methodology suppressions", dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null)}
+                {renderMetric("Subscribers notified", dispatchMeta?.subscribersNotified ?? null)}
+                {renderMetric("Messages sent", dispatchMeta?.messagesSent ?? lastDispatch.itemCount ?? null)}
+                {renderMetric("Fresh attempted", dispatchMeta?.freshAttempted ?? null)}
+                {renderMetric("Fresh retries queued", dispatchMeta?.freshRetryQueued ?? null)}
+                {renderMetric("Fresh permanent failures", dispatchMeta?.freshPermanentFailures ?? null)}
+                {renderMetric("Pending attempted", dispatchMeta?.pendingAttempted ?? null)}
+                {renderMetric("Pending sent", dispatchMeta?.pendingDrained ?? null)}
+                {renderMetric("Pending retries queued", dispatchMeta?.pendingRetryQueued ?? null)}
+                {renderMetric("Pending deferred", dispatchMeta?.pendingDeferred ?? null)}
+                {renderMetric("Pending dropped", dispatchMeta?.pendingDropped ?? null)}
+                {renderMetric("Pending newly enqueued", dispatchMeta?.pendingEnqueued ?? null)}
+                {renderMetric("Pending retry after", dispatchMeta?.pendingRetryAfterSec ?? null)}
+                {renderMetric("Blocked cleaned up", dispatchMeta?.blockedUsersCleanedUp ?? null)}
+                {renderMetric("Safety source age", dispatchMeta?.safetyAlertSourceAgeSeconds ?? null)}
+                {renderMetric("DEWS changes", dispatchMeta?.eventsDetected?.dews ?? null)}
+                {renderMetric("Depeg changes", dispatchMeta?.eventsDetected?.depeg ?? null)}
+                {renderMetric("Depeg worsening", dispatchMeta?.eventsDetected?.depegWorsening ?? null)}
+                {renderMetric("Safety changes", dispatchMeta?.eventsDetected?.safety ?? null)}
+                {renderMetric("Launch changes", dispatchMeta?.eventsDetected?.launch ?? null)}
+                {renderMetric("Methodology suppressions", dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null)}
                 {dispatchMeta?.perAlertType ? (
                   <div className="border-t pt-3">
                     <div className="mb-2 text-xs font-medium text-muted-foreground">
