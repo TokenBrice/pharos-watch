@@ -1,6 +1,6 @@
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
-import { escapeHtml } from "../lib/telegram";
+import { escapeHtml, type InlineKeyboardButton } from "../lib/telegram";
 import { formatTelegramAge } from "../lib/telegram-format-age";
 import { MANAGE_PAGE_SIZE } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
@@ -19,12 +19,6 @@ import type { StatusForCoin } from "./telegram-webhook-status";
 export { MANAGE_PAGE_SIZE };
 
 const GLOBAL_SAFETY_LABEL = "Safety (downgrades; 3-point drop when scored)";
-
-interface InlineKeyboardButton {
-  text: string;
-  callback_data?: string;
-  web_app?: { url: string };
-}
 
 export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
   const lines = [`Ticker or preset "${ticker}" not found.`];

@@ -5,6 +5,25 @@ export interface TelegramCreds {
   chatId: string;
 }
 
+/** Telegram Bot API inline keyboard button shape. */
+export interface InlineKeyboardButton {
+  text: string;
+  callback_data?: string;
+  web_app?: { url: string };
+}
+
+/** Telegram Bot API inline keyboard markup. */
+export interface InlineKeyboardMarkup {
+  inline_keyboard: InlineKeyboardButton[][];
+}
+
+/** Telegram Bot API force-reply markup. */
+export interface ForceReplyMarkup {
+  force_reply: true;
+  input_field_placeholder?: string;
+  selective?: boolean;
+}
+
 export interface TelegramBotApiPostOptions {
   signal?: AbortSignal;
   timeoutMs?: number;

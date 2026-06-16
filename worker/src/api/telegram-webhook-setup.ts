@@ -8,7 +8,7 @@
  * Callback namespace: `setup:*` (see telegram-webhook-callbacks.ts).
  */
 
-import { escapeHtml } from "../lib/telegram";
+import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../lib/telegram";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
@@ -74,22 +74,6 @@ const PRESET_PICKER_ORDER: TelegramPresetId[] = [
   "mcap-ge-100m",
   "mcap-ge-1b",
 ];
-
-interface InlineKeyboardButton {
-  text: string;
-  callback_data?: string;
-  web_app?: { url: string };
-}
-
-interface InlineKeyboardMarkup {
-  inline_keyboard: InlineKeyboardButton[][];
-}
-
-interface ForceReplyMarkup {
-  force_reply: true;
-  input_field_placeholder?: string;
-  selective?: boolean;
-}
 
 function presetLabelById(presetId: string): string {
   for (const definition of listTelegramPresets()) {
