@@ -40,7 +40,6 @@ const EXPORT_ALLOWLIST = new Set([
   // each export IS consumed by a sibling file in the same folder but the static scan
   // doesn't reach sibling consumption. Allowlist rather than drop because each is
   // genuinely consumed within its cluster.
-  "worker/src/cron/dews/source-state/fallback.ts::isMissingTableError",
   "worker/src/cron/dews/source-state/fallback.ts::isBootstrapAllowedMissingTableSource",
   "worker/src/cron/dews/source-state/hydration.ts::DEWS_STALE_DEX_LIQUIDITY_SEC",
   "worker/src/cron/dews/source-state/hydration.ts::DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC",
@@ -187,9 +186,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/route-labels.ts::normalizeRoutePath",
   "worker/src/api/mint-burn-flows-shared.ts::FLOW_CACHE_PREFIX",
   "worker/src/api/mint-burn-flows-shared.ts::readCachedFlow",
-  // Thin admin handler wrappers kept for direct test/script compatibility.
-  "worker/src/api/api-key-requests/admin-handlers.ts::handleApiKeyRequestReleaseClaim",
-  "worker/src/api/api-keys.ts::handleApiKeyDeactivate",
   "worker/src/api/telegram-webhook-messages.ts::describeSubscriptionSettings",
   "worker/src/api/telegram-webhook-messages.ts::describeGlobalAlertSettings",
   "worker/src/api/telegram-webhook-messages.ts::formatCoinLines",
@@ -306,11 +302,20 @@ if (unusedExports.length > 0) {
 if (AUDIT_ALLOWLIST) {
   const stale = [];
   for (const entry of EXPORT_ALLOWLIST) {
-    const [file] = entry.split("::");
+    const [file, symbol] = entry.split("::");
     try {
       statSync(file);
     } catch {
       stale.push({ entry, reason: "file does not exist" });
+      continue;
+    }
+    // Beyond file existence, verify the allowlisted symbol is still exported.
+    // A renamed/deleted export would otherwise pass this audit silently and
+    // keep masking a now-nonexistent symbol. Wildcard re-exports (`export *`)
+    // can surface a symbol the static export set doesn't list, so skip those.
+    const info = analyzeModule(resolve(ROOT, file));
+    if (!info.hasWildcardExports && !info.exports.has(symbol) && !info.typeExports.has(symbol)) {
+      stale.push({ entry, reason: "symbol no longer exported from file" });
     }
   }
   for (const mod of MODULE_ALLOWLIST) {
@@ -378,6 +383,11 @@ function analyzeModule(file) {
   );
 
   const exports = new Set();
+  // Fully type-only export declarations (`export type { X }` / `export type { X } from`)
+  // are intentionally excluded from `exports` (they are never runtime-dead), but the
+  // allowlist audit still needs to know they exist so it doesn't false-flag a valid
+  // type-only allowlist entry as a stale symbol.
+  const typeExports = new Set();
   const dependencies = [];
   let hasWildcardExports = false;
   let hasSideEffectsOnly = true;
@@ -418,6 +428,11 @@ function analyzeModule(file) {
       }
 
       if (node.isTypeOnly) {
+        if (node.exportClause && ts.isNamedExports(node.exportClause)) {
+          for (const element of node.exportClause.elements) {
+            typeExports.add(element.name.text);
+          }
+        }
         return;
       }
 
@@ -452,7 +467,7 @@ function analyzeModule(file) {
   });
 
   exports.delete("default");
-  return { exports, dependencies, hasWildcardExports, hasSideEffectsOnly };
+  return { exports, typeExports, dependencies, hasWildcardExports, hasSideEffectsOnly };
 }
 
 function collectImportDependencies(node, resolved) {
