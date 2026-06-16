@@ -6,6 +6,8 @@ import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
+const EMPTY_BAILOUT_TEMPLATE_PATTERN =
+  /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
 const PHAROS_ORIGIN = "https://pharos.watch";
 const PHAROS_HOSTNAME = new URL(PHAROS_ORIGIN).hostname;
 const RETIRED_INTERNAL_ROUTE_PREFIXES = [
@@ -546,6 +548,14 @@ function retiredInternalRouteMatch(normalizedHref) {
   );
 }
 
+function isRetiredInternalRoute(route) {
+  return retiredInternalRouteMatch(route) !== null;
+}
+
+function hasFatalCsrBailoutMarker(html) {
+  return BAILOUT_PATTERN.test(html.replace(EMPTY_BAILOUT_TEMPLATE_PATTERN, ""));
+}
+
 function extractJsonLdBlocks(html) {
   const blocks = [];
   const lowerHtml = html.toLowerCase();
@@ -916,9 +926,10 @@ export function collectSeoStaticCheckResult({
   const pageRecords = indexFiles.map((filePath) => {
     const html = fs.readFileSync(filePath, "utf8");
     const robotsTags = getMetaContents(html, "name", "robots");
+    const route = routeFromFile(filePath, outDir);
     return {
       filePath,
-      route: routeFromFile(filePath, outDir),
+      route,
       html,
       title: decodeHtml(extractAttr(html, /<title>([^<]*)<\/title>/i)),
       description: getMetaContents(html, "name", "description")[0] ?? "",
@@ -930,6 +941,7 @@ export function collectSeoStaticCheckResult({
       twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
       twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
       robotsTags,
+      retired: isRetiredInternalRoute(route),
       googleBotTags: getMetaContents(html, "name", "googlebot"),
       h1Count: (html.match(/<h1\b/gi) ?? []).length,
       structuredData: [],
@@ -940,13 +952,13 @@ export function collectSeoStaticCheckResult({
   validateStaticHeaders(outDir, errors);
 
   for (const record of pageRecords) {
-    if (BAILOUT_PATTERN.test(record.html)) {
+    if (hasFatalCsrBailoutMarker(record.html)) {
       errors.push(`${record.route}: CSR bailout marker found in HTML`);
     }
 
     if (!record.title) errors.push(`${record.route}: missing <title>`);
     if (!record.description) errors.push(`${record.route}: missing meta description`);
-    const indexable = isIndexable(record.robotsTags);
+    const indexable = !record.retired && isIndexable(record.robotsTags);
     if (indexable && enforceSnippetQuality) {
       if (record.title && record.title.length < INDEXABLE_SNIPPET_LENGTHS.title.min) {
         errors.push(
@@ -1103,7 +1115,7 @@ export function collectSeoStaticCheckResult({
   }
 
   for (const record of pageRecords) {
-    if (!isIndexable(record.robotsTags)) continue;
+    if (record.retired || !isIndexable(record.robotsTags)) continue;
 
     const d = depth.get(record.route);
     if (d === undefined) {
@@ -1136,7 +1148,7 @@ export function collectSeoStaticCheckResult({
 
     const pageUrlSet = new Set(
       pageRecords
-        .filter((p) => isIndexable(p.robotsTags))
+        .filter((p) => !p.retired && isIndexable(p.robotsTags))
         .map((p) => `https://pharos.watch${p.route === "/" ? "/" : p.route}`),
     );
 
