@@ -426,6 +426,17 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
   };
 }
 
+/**
+ * Additive structured-yield risk signal. Each condition contributes a fixed
+ * increment (theoretical max ~175) and the total is clamped to [0, 100]. The
+ * saturation past 100 is intentional: any combination of conditions severe
+ * enough to clear ~60 already represents a maxed-out structured-yield risk, so
+ * the *meaningful* discriminating range is roughly 0-60. Beyond that the signal
+ * deliberately stops distinguishing between "very bad" and "even worse" — the
+ * individual increment weights are tuned for ordering within that lower band,
+ * not for an exact additive curve at the ceiling. Re-tuning the increments (or
+ * needing per-bucket resolution at saturation) is the trigger to revisit caps.
+ */
 function computeStructuredYieldSignal(
   input: Pick<DEWSInput, "yieldSourceRisk" | "yieldRankChangeAttribution">,
 ): { value: number; warnings: string[] } | null {
