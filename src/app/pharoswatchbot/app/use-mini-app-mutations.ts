@@ -375,11 +375,15 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
 
   const forgetMe = useCallback(() => {
     const confirmFn = webApp?.showConfirm;
-    const fire = () => mutate({ kind: "forget-me" });
+    // Destructive, irreversible op with no optimistic-state effect: dispatch
+    // imperatively (like remove/unfollowPreset) rather than through the
+    // optimistic `mutate` layer, whose React 19 transition-revert path is
+    // inert here and merely inconsistent with the other danger-zone actions.
+    const fire = () => void performMutation({ kind: "forget-me" });
     confirmThenFire(confirmFn, "Delete all your Pharos alert data? This cannot be undone.", () => {
       confirmThenFire(confirmFn, "Are you absolutely sure? Your subscriber row will be deleted.", fire);
     });
-  }, [mutate, webApp?.showConfirm]);
+  }, [performMutation, webApp?.showConfirm]);
 
   const addToHomeScreen = useCallback(() => {
     webApp?.addToHomeScreen?.();
