@@ -94,13 +94,7 @@ function compareVenueParam(input: SelectorInput, state: SelectorWizardState): st
     return state.venue.join(",");
   }
 
-  if (input.profile === "treasury") {
-    if (input.composability === "none") return "custody";
-    if (input.composability === "high") return "active";
-    return "some";
-  }
-  if (input.composability === "high") return "all";
-  return input.profile === "yield" ? "lend" : "cex";
+  return venueFromInput(input).join(",");
 }
 
 export function venueFromInput(input: SelectorInput): readonly SelectorVenue[] {
