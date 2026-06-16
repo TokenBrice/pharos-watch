@@ -25,6 +25,8 @@ This file is mirrored to `CLAUDE.md`. Durable process guidance belongs in `/docs
 
 ## Hard Rules
 
+The *why* behind these locked decisions lives in the [Architectural Decision Records](docs/architecture.md#architectural-decision-records).
+
 - Tailwind classes must be static strings.
 - Classification labels/colors live in `shared/lib/classification.ts`.
 - Use `getCirculatingRaw()` from `shared/lib/supply.ts`; DefiLlama list `circulating` values are already USD-denominated.
