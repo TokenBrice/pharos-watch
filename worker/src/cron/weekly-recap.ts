@@ -1,5 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatIsoDate } from "@shared/lib/format";
 import { round1 } from "@shared/lib/math";
 import {
   getDepegEditorialImpactScore,
@@ -303,7 +303,7 @@ async function deliverWeeklyDigestToTelegram(params: {
     deliver: async (creds) => {
       const weekLabel = `Week of ${params.weekStartLabel}`;
       const tgTitle = `Weekly Recap: ${params.digestTitle || weekLabel}`;
-      const date = new Date(params.generatedAt * 1000).toISOString().slice(0, 10);
+      const date = formatIsoDate(params.generatedAt);
       await postDigestToTelegram(
         tgTitle,
         params.digestExtended ?? params.digestText,
@@ -458,7 +458,7 @@ function parseDailyRows(
   for (const row of dailyRows) {
     try {
       const inputData = JSON.parse(row.input_data) as DigestInputData;
-      const date = new Date(row.generated_at * 1000).toISOString().slice(0, 10);
+      const date = formatIsoDate(row.generated_at);
       parsed.push({ date, title: row.digest_title ?? "Untitled", text: row.digest_text, inputData });
     } catch (error) {
       logMalformedJsonPath({
@@ -1005,7 +1005,7 @@ export async function generateWeeklyRecap(
       digestText: existing.digest_text,
       generatedAt: existing.generated_at,
       weekStartLabel: weeklyMetaString(existingMeta, "weekStart")
-        ?? new Date(existing.generated_at * 1000).toISOString().slice(0, 10),
+        ?? formatIsoDate(existing.generated_at),
     });
     await updateWeeklyTelegramDeliveryMeta(db, existing, {
       nowSec: Math.floor(Date.now() / 1000),

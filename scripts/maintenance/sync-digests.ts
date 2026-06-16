@@ -4,8 +4,9 @@
  *   DIGEST_API_URL=https://ops-api.example.com tsx scripts/maintenance/sync-digests.ts
  */
 
+import { formatIsoDate } from "@shared/lib/format";
 import { getArgValue, parseCheckMode } from "../lib/cli.mjs";
-import { fetchWithRetry, resolveApiUrl, syncJson, tsToDate } from "../lib/sync-from-api";
+import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
 
 interface ApiDigest {
   digestText: string;
@@ -76,7 +77,7 @@ async function main() {
       console.log(`Fetched ${digests.length} digests`);
       return digests
         .map((d) => ({
-          date: tsToDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
+          date: formatIsoDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
           title: d.digestTitle || "Signal & Noise",
           text: d.digestText,
           extended: d.digestExtended || "",

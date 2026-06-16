@@ -1,6 +1,7 @@
 import { batchExecute } from "../lib/db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
+import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -144,6 +145,6 @@ export async function snapshotSupply(
     };
   }
 
-  console.log(`[snapshot-supply] Inserted ${stmts.length} rows for date ${new Date(snapshotDate * 1000).toISOString().slice(0, 10)}`);
+  console.log(`[snapshot-supply] Inserted ${stmts.length} rows for date ${formatIsoDate(snapshotDate)}`);
   return { itemCount: stmts.length };
 }

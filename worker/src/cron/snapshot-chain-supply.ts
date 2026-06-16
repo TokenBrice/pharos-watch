@@ -4,6 +4,7 @@ import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
+import { formatIsoDate } from "@shared/lib/format";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { startOfUtcDaySec } from "../lib/time-constants";
 
@@ -95,6 +96,6 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
   }
 
-  console.log(`[snapshot-chain-supply] Inserted ${stmts.length} rows for ${new Date(snapshotDate * 1000).toISOString().slice(0, 10)}`);
+  console.log(`[snapshot-chain-supply] Inserted ${stmts.length} rows for ${formatIsoDate(snapshotDate)}`);
   return { itemCount: stmts.length };
 }

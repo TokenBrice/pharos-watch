@@ -12,12 +12,13 @@
  */
 
 import type { DepegEvent } from "@shared/types/market";
+import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { getArgValue } from "../lib/cli.mjs";
-import { fetchWithRetry, resolveApiUrl, syncJson, tsToDate } from "../lib/sync-from-api";
+import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
 
 interface DepegEventsResponse {
   events: DepegEvent[];
@@ -36,7 +37,7 @@ function symbolToSlugPart(symbol: string): string {
 function baseSlug(event: DepegEvent): string {
   const sanitized = symbolToSlugPart(event.symbol);
   const symbolPart = sanitized.length > 0 ? sanitized : event.stablecoinId;
-  return `${symbolPart}-${tsToDate(event.startedAt)}`;
+  return `${symbolPart}-${formatIsoDate(event.startedAt)}`;
 }
 
 function resolveOutputPath(): URL {

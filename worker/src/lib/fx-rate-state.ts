@@ -1,6 +1,7 @@
 import type { CacheStatus } from "@shared/types/status";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { formatIsoDate } from "@shared/lib/format";
 import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
@@ -166,7 +167,7 @@ export function getFxRatesMetaKey(): string {
 }
 
 function formatUtcDate(dayStartSec: number): string {
-  return new Date(dayStartSec * 1000).toISOString().slice(0, 10);
+  return formatIsoDate(dayStartSec);
 }
 
 function parseIsoDayStartSec(dateText: string | null | undefined): number | null {

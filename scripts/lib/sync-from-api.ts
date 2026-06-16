@@ -2,8 +2,8 @@
  * Shared helpers for `sync-*.ts` maintenance scripts that pull a snapshot
  * from a Pharos API endpoint and write a JSON mirror under `data/`.
  *
- * Extracts the URL-resolution, timestamp formatting, and file-write
- * boilerplate common to sync-digests.ts and sync-depeg-events.ts.
+ * Extracts the URL-resolution and file-write boilerplate common to
+ * sync-digests.ts and sync-depeg-events.ts.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -45,13 +45,6 @@ export function resolveApiUrl(options: ResolveApiUrlOptions): string {
   }
   if (explicit.endsWith(apiPath)) return explicit;
   return `${explicit.replace(/\/+$/, "")}${apiPath}`;
-}
-
-/**
- * Convert a UNIX epoch in seconds to an ISO date (`YYYY-MM-DD`).
- */
-export function tsToDate(seconds: number): string {
-  return new Date(seconds * 1000).toISOString().slice(0, 10);
 }
 
 interface FetchWithRetryOptions {

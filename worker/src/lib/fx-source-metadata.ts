@@ -1,10 +1,11 @@
 import type { FxRateSourceMode, FxRateState } from "./fx-rate-state";
 import { getFxSourceStatus } from "./fx-rate-state";
 import { getNaturalFxCadence, type FxSourceCadence } from "./fx-cadence";
+import { formatIsoDate } from "@shared/lib/format";
 
 function formatIsoDateFromTimestamp(updatedAt: number | null | undefined): string | null {
   if (updatedAt == null || !Number.isFinite(updatedAt) || updatedAt <= 0) return null;
-  return new Date(updatedAt * 1000).toISOString().slice(0, 10);
+  return formatIsoDate(updatedAt);
 }
 
 function normalizeFiatCarryForwardMetadata(

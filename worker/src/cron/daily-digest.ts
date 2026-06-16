@@ -2,6 +2,7 @@ import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
+import { formatIsoDate } from "@shared/lib/format";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { getCache, setCache, deleteCache } from "../lib/db-cache";
 import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
@@ -277,7 +278,7 @@ export async function generateDailyDigest(
         console.error("[daily-digest] Failed to prepare Telegram digest appendices:", err);
       }
 
-      const date = new Date(now * 1000).toISOString().slice(0, 10);
+      const date = formatIsoDate(now);
       const markerKey = getTelegramSentMarkerKey(date);
       const sentMarker = await getCache(db, markerKey);
 

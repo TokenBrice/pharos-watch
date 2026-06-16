@@ -1,5 +1,6 @@
 import type { TelegramAlertTypeChats, TelegramWatcherHistoryPoint } from "@shared/types/status";
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
+import { formatIsoDate } from "@shared/lib/format";
 import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
@@ -178,7 +179,7 @@ function coerceNullableTimestamp(value: unknown): number | null {
 }
 
 function dayFromUnixSeconds(nowSec: number): string {
-  return new Date(nowSec * 1000).toISOString().slice(0, 10);
+  return formatIsoDate(nowSec);
 }
 
 function dayStartSeconds(day: string): number {
