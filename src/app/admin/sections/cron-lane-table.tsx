@@ -10,6 +10,7 @@ import { CronInFlightProgress } from "@/components/status/cron-in-flight-progres
 import { formatInterval, formatLatency } from "@/components/status/format";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { classifyCronState } from "../cron-severity";
 import type { CronGroup } from "./cron-lane-types";
 
 type CronEntry = CronGroup["entries"][number];
@@ -52,11 +53,11 @@ function getCronStatusColor(status: string | undefined): string {
 }
 
 function getRowTone(row: CronLaneRow): string {
-  const latestStatus = row.cron.lastRun?.status;
-  if (row.cron.telemetryUnknown) return "border-l-slate-500/60";
-  if (!row.cron.healthy || latestStatus === "error") return "border-l-red-500/70";
-  if (latestStatus === "degraded") return "border-l-amber-500/70";
-  if (row.cron.inFlight && !row.cron.inFlight.stale) return "border-l-sky-500/70";
+  const state = classifyCronState(row.cron);
+  if (state === "unhealthy") return "border-l-red-500/70";
+  if (state === "degraded") return "border-l-amber-500/70";
+  if (state === "running") return "border-l-sky-500/70";
+  if (state === "unknown") return "border-l-slate-500/60";
   return "border-l-green-500/60";
 }
 

@@ -1,14 +1,32 @@
 import type { StatusResponse } from "@shared/types";
 import type { CronGroup } from "./sections/cron-lane-types";
 
+export type CronState = "unhealthy" | "degraded" | "running" | "unknown" | "healthy";
+
+/**
+ * Classify a cron into a canonical state. Both severity score and row tone derive from this.
+ * - unknown: telemetry not yet available (bootstrap) — highest precedence
+ * - unhealthy: not healthy, error status, or in-flight stale
+ * - degraded: last run was degraded
+ * - running: currently in-flight and not stale
+ * - healthy: all clear
+ */
+export function classifyCronState(cron: StatusResponse["crons"][string]): CronState {
+  if (cron.telemetryUnknown) return "unknown";
+  if (!cron.healthy || cron.lastRun?.status === "error" || cron.inFlight?.stale) return "unhealthy";
+  if (cron.lastRun?.status === "degraded") return "degraded";
+  if (cron.inFlight && !cron.inFlight.stale) return "running";
+  return "healthy";
+}
+
 /**
  * Severity score for sorting admin cron rows. Higher = render first.
- * 2 = unhealthy/error/in-flight-stale, 1 = degraded or telemetry-unknown bootstrap, 0 = healthy.
+ * 2 = unhealthy/error/in-flight-stale, 1 = degraded or telemetry-unknown bootstrap, 0 = healthy/running.
  */
 export function getCronSeverity(cron: StatusResponse["crons"][string]): number {
-  if (cron.telemetryUnknown) return 1;
-  if (!cron.healthy || cron.lastRun?.status === "error" || cron.inFlight?.stale) return 2;
-  if (cron.lastRun?.status === "degraded") return 1;
+  const state = classifyCronState(cron);
+  if (state === "unhealthy") return 2;
+  if (state === "degraded" || state === "unknown") return 1;
   return 0;
 }
 
