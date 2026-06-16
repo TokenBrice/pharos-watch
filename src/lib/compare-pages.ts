@@ -139,25 +139,44 @@ function buildComparisonDescription(left: StablecoinMeta, right: StablecoinMeta)
   );
 }
 
-assertStaticComparePairs();
+function buildStaticComparisonPages(): StaticComparisonPage[] {
+  return STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => {
+    const left = getStablecoinOrThrow(leftId);
+    const right = getStablecoinOrThrow(rightId);
+    const shortTitle = `${left.symbol} vs ${right.symbol}`;
+    const slug = buildStaticComparisonSlug(left.id, right.id);
+    return {
+      slug,
+      href: `/compare/${slug}/`,
+      title: `${shortTitle}: Risk, Reserves & Liquidity Compared`,
+      shortTitle,
+      description: buildComparisonDescription(left, right),
+      intro: buildComparisonIntro(left, right),
+      summary: buildComparisonSummary(left, right),
+      left,
+      right,
+    };
+  });
+}
 
-export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => {
-  const left = getStablecoinOrThrow(leftId);
-  const right = getStablecoinOrThrow(rightId);
-  const shortTitle = `${left.symbol} vs ${right.symbol}`;
-  const slug = buildStaticComparisonSlug(left.id, right.id);
-  return {
-    slug,
-    href: `/compare/${slug}/`,
-    title: `${shortTitle}: Risk, Reserves & Liquidity Compared`,
-    shortTitle,
-    description: buildComparisonDescription(left, right),
-    intro: buildComparisonIntro(left, right),
-    summary: buildComparisonSummary(left, right),
-    left,
-    right,
-  };
-});
+// Both `assertStaticComparePairs()` and `buildStaticComparisonPages()` run at
+// module evaluation (Next.js build time). A bare throw here surfaces as an
+// opaque bundler-wrapped stack, so wrap it to prepend an actionable prefix
+// pointing back at the STATIC_COMPARE_PAIRS source before re-throwing.
+function buildStaticComparisonPagesOrThrow(): StaticComparisonPage[] {
+  try {
+    assertStaticComparePairs();
+    return buildStaticComparisonPages();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `[compare-pages] Invalid STATIC_COMPARE_PAIRS (see src/lib/compare-links.ts): ${detail}`,
+      error instanceof Error ? { cause: error } : undefined,
+    );
+  }
+}
+
+export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = buildStaticComparisonPagesOrThrow();
 
 export const STATIC_COMPARISON_PAGE_BY_SLUG = new Map(STATIC_COMPARISON_PAGES.map((page) => [page.slug, page]));
 
