@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { downloadCsv } from "@/lib/csv-export";
+import { downloadCsv } from "@/lib/exports/csv";
 
 describe("downloadCsv", () => {
   const createObjectURL = vi.fn(() => "blob:pharos-csv");

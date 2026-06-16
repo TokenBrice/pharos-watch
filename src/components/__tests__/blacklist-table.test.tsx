@@ -9,7 +9,7 @@ const { downloadCsvMock } = vi.hoisted(() => ({
   downloadCsvMock: vi.fn(),
 }));
 
-vi.mock("@/lib/csv-export", () => ({
+vi.mock("@/lib/exports/csv", () => ({
   downloadCsv: downloadCsvMock,
 }));
 

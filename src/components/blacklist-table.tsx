@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Download, ExternalLink } from "lucide-react";
-import { downloadCsv } from "@/lib/csv-export";
+import { downloadCsv } from "@/lib/exports/csv";
 import { getNextSortState } from "@/hooks/use-sort";
 import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
 import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";

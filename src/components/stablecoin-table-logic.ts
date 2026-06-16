@@ -1,4 +1,4 @@
-import { downloadCsv } from "@/lib/csv-export";
+import { downloadCsv } from "@/lib/exports/csv";
 import { createTableComparator } from "@/lib/table-comparator";
 import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
