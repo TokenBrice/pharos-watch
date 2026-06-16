@@ -18,54 +18,46 @@ import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS } from "@shared/lib/classification";
 import depegEventSearchData from "@/generated/depeg-event-search-data.json";
+import {
+  fuzzyMatch,
+  isExactStablecoinSymbolMatch,
+  rankCommandPaletteResults,
+  scoreStablecoinSearchMatch,
+  stablecoinProminenceBonus,
+} from "./command-palette-scoring";
+import type {
+  CommandPaletteActionDefinition,
+  CommandPaletteGroup,
+  CommandPaletteHistoryItem,
+  CommandPaletteResultDescriptor,
+  CommandPaletteSection,
+  CommandPaletteSectionedItem,
+  CommandPaletteStablecoinLiveMetadata,
+} from "./command-palette-types";
 
-export type CommandPaletteSection =
-  | "Run command"
-  | "Recent"
-  | "Popular"
-  | "Stablecoins"
-  | "Pages"
-  | "Chains"
-  | "Peg currencies"
-  | "Mechanism archetypes"
-  | "Recent depegs"
-  | "Actions"
-  | "Try a command";
-export type CommandPaletteActionId =
-  | "theme"
-  | "copy-url"
-  | "open-digest"
-  | "open-methodology"
-  | "open-api-docs"
-  | "compare-watchlist";
-export type CommandPaletteActionIcon =
-  | "theme-light"
-  | "theme-dark"
-  | "copy"
-  | "digest"
-  | "methodology"
-  | "api-docs"
-  | "compare-watchlist"
-  | "verb-hint"
-  | "run-command";
-
-export interface CommandPaletteActionDefinition {
-  id: string;
-  actionId: CommandPaletteActionId;
-  label: string;
-  sublabel: string;
-  keywords: string;
-  icon: CommandPaletteActionIcon;
-}
-
-export interface CommandPaletteGroup<TItem> {
-  section: string;
-  items: TItem[];
-}
-
-export interface CommandPaletteSectionedItem {
-  section: CommandPaletteSection;
-}
+// Re-export the split-out types and pure scoring helpers so existing importers
+// of this module keep working unchanged. [audit Q-130]
+export type {
+  CommandPaletteSection,
+  CommandPaletteActionId,
+  CommandPaletteActionIcon,
+  CommandPaletteActionDefinition,
+  CommandPaletteGroup,
+  CommandPaletteSectionedItem,
+  CommandPaletteHistoryItem,
+  CommandPaletteResultKind,
+  CommandPalettePegStatus,
+  CommandPaletteStablecoinHealth,
+  CommandPaletteStablecoinLiveMetadata,
+  CommandPaletteResultDescriptor,
+} from "./command-palette-types";
+export {
+  fuzzyMatch,
+  scoreStablecoinSearchMatch,
+  isExactStablecoinSymbolMatch,
+  stablecoinProminenceBonus,
+  rankCommandPaletteResults,
+} from "./command-palette-scoring";
 
 export const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
   {
@@ -143,71 +135,6 @@ export const COMMAND_PALETTE_PAGES = dedupeCommandPalettePages([
   ...NAV_ITEMS,
   ...COMMAND_PALETTE_EXTRA_PAGES,
 ]);
-type CommandPalettePage = (typeof COMMAND_PALETTE_PAGES)[number];
-
-export interface CommandPaletteHistoryItem {
-  id: string;
-  type: "stablecoin" | "page";
-  label: string;
-  sublabel?: string;
-  href: string;
-}
-
-export type CommandPaletteResultKind =
-  | "recent"
-  | "stablecoin"
-  | "page"
-  | "action"
-  | "chain"
-  | "peg"
-  | "mechanism"
-  | "depeg-event"
-  | "verb-hint"
-  | "verb-run";
-
-export type CommandPalettePegStatus = "calm" | "watch" | "alert";
-
-export type CommandPaletteStablecoinHealth =
-  | { kind: "peg"; status: CommandPalettePegStatus }
-  | { kind: "nav" };
-
-export interface CommandPaletteStablecoinLiveMetadata {
-  marketCapUsd?: number;
-  health?: CommandPaletteStablecoinHealth;
-}
-
-export interface CommandPaletteResultDescriptor {
-  id: string;
-  label: string;
-  sublabel?: string;
-  section: CommandPaletteSection;
-  kind: CommandPaletteResultKind;
-  logoId?: string;
-  /** Static image path (e.g. chain logo) when not driven by the logos hook. */
-  imagePath?: string;
-  /** Render the static image as a square thumbnail instead of a circle. */
-  imageSquare?: boolean;
-  /** Apply CSS invert in dark mode (used for chain logos with darkInvert). */
-  imageDarkInvert?: boolean;
-  marketCapUsd?: number;
-  stablecoinHealth?: CommandPaletteStablecoinHealth;
-  frozen?: boolean;
-  href?: string;
-  external?: boolean;
-  pageIcon?: CommandPalettePage["icon"];
-  actionIcon?: CommandPaletteActionIcon;
-  actionId?: CommandPaletteActionId;
-  /** For verb-hint rows: the literal text the palette input should be set to. */
-  prefill?: string;
-  history?: {
-    id: string;
-    type: "stablecoin" | "page";
-    label: string;
-    sublabel?: string;
-    href: string;
-  };
-}
-
 const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
   "Run command",
   "Recent",
@@ -261,69 +188,6 @@ const VERB_HINTS: ReadonlyArray<{ id: string; label: string; prefill: string }> 
   { id: "verb-hint-pin", label: "pin USDS", prefill: "pin USDS" },
 ];
 
-export function fuzzyMatch(query: string, target: string): boolean {
-  const q = query.toLowerCase();
-  const t = target.toLowerCase();
-  return t.includes(q) || t.split(/\s+/).some((word) => word.startsWith(q));
-}
-
-function scoreSearchField(query: string, target: string, weights: { exact: number; prefix: number; wordPrefix: number; contains: number }): number {
-  const q = query.toLowerCase();
-  const t = target.toLowerCase();
-  if (!q || !t) return 0;
-  if (t === q) return weights.exact;
-  if (t.startsWith(q)) return weights.prefix;
-  if (t.split(/\s+/).some((word) => word.startsWith(q))) return weights.wordPrefix;
-  if (t.includes(q)) return weights.contains;
-  return 0;
-}
-
-function scoreStablecoinSearchMatch(query: string, coin: (typeof COMMAND_PALETTE_STABLECOINS)[number]): number {
-  const [id, name, symbol] = coin;
-  return (
-    scoreSearchField(query, symbol, { exact: 100, prefix: 45, wordPrefix: 45, contains: 25 })
-    + scoreSearchField(query, name, { exact: 80, prefix: 18, wordPrefix: 16, contains: 10 })
-    + scoreSearchField(query, id, { exact: 70, prefix: 12, wordPrefix: 12, contains: 6 })
-  );
-}
-
-function isExactStablecoinSymbolMatch(query: string, coin: (typeof COMMAND_PALETTE_STABLECOINS)[number]): boolean {
-  return coin[2].toLowerCase() === query.toLowerCase();
-}
-
-// COMMAND_PALETTE_STABLECOINS is maintained in canonical (roughly market-cap)
-// order, so a coin's index remains a stable, fetch-free fallback prominence
-// proxy. When live metadata is present, market cap becomes the prominence
-// source so displayed cap and result order tell the same story.
-const STATIC_PROMINENCE_MAX_BONUS = 30;
-const STATIC_PROMINENCE_SPAN = 200;
-const LIVE_MARKET_CAP_PROMINENCE_MAX_BONUS = 60;
-const LIVE_MARKET_CAP_LOG_MIN = 6; // $1M and below.
-const LIVE_MARKET_CAP_LOG_MAX = 11; // $100B and above.
-
-function staticProminenceBonus(index: number): number {
-  if (index >= STATIC_PROMINENCE_SPAN) return 0;
-  return Math.round(STATIC_PROMINENCE_MAX_BONUS * (1 - index / STATIC_PROMINENCE_SPAN));
-}
-
-function liveMarketCapProminenceBonus(marketCapUsd: number): number {
-  if (!Number.isFinite(marketCapUsd) || marketCapUsd <= 0) return 0;
-  const log = Math.log10(marketCapUsd);
-  const bounded = Math.min(LIVE_MARKET_CAP_LOG_MAX, Math.max(LIVE_MARKET_CAP_LOG_MIN, log));
-  const ratio = (bounded - LIVE_MARKET_CAP_LOG_MIN) / (LIVE_MARKET_CAP_LOG_MAX - LIVE_MARKET_CAP_LOG_MIN);
-  return Math.round(LIVE_MARKET_CAP_PROMINENCE_MAX_BONUS * ratio);
-}
-
-function stablecoinProminenceBonus(
-  coinId: string,
-  index: number,
-  liveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>,
-): number {
-  const liveMarketCap = liveMetadata?.get(coinId)?.marketCapUsd;
-  if (liveMarketCap != null) return liveMarketCapProminenceBonus(liveMarketCap);
-  return staticProminenceBonus(index);
-}
-
 const STABLECOIN_BY_ID = new Map<string, (typeof COMMAND_PALETTE_STABLECOINS)[number]>(
   COMMAND_PALETTE_STABLECOINS.map((coin) => [coin[0], coin]),
 );
@@ -337,20 +201,6 @@ function projectStablecoinLiveMetadata(
     marketCapUsd: live?.marketCapUsd,
     stablecoinHealth: live?.health,
   };
-}
-
-export function rankCommandPaletteResults<T extends { score: number; status?: string; exactSymbol?: boolean }>(
-  items: T[],
-): T[] {
-  return [...items].sort((a, b) => {
-    const aExact = a.exactSymbol ? 1 : 0;
-    const bExact = b.exactSymbol ? 1 : 0;
-    if (bExact !== aExact) return bExact - aExact;
-    if (b.score !== a.score) return b.score - a.score;
-    const aFrozen = a.status === "frozen" ? 1 : 0;
-    const bFrozen = b.status === "frozen" ? 1 : 0;
-    return aFrozen - bFrozen;
-  });
 }
 
 /**
