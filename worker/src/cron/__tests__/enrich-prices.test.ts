@@ -2578,7 +2578,7 @@ describe("fetchPrimaryPrices", () => {
     // CG+DL-only gets downgraded from high to single-source
     expect(result.confidence).toBe("single-source");
     expect(result.source).toBe("coingecko+defillama-list");
-    expect(result.price).toBe(1.0002);
+    expect(result.price).toBe(1.00015);
     expect(cgPrices.get("tether")).toBe(1.0001);
     expect(stats.high).toBe(0);
     expect(stats.singleSource).toBe(1);

@@ -1488,7 +1488,7 @@ describe("handleTelegramWebhook", () => {
   it("setup:type-toggle:launch toggles Launch on in the custom alert picker", async () => {
     const db = mockD1([
       {
-        match: "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
         first: makeSetupPendingRow(
           {
@@ -1530,7 +1530,7 @@ describe("handleTelegramWebhook", () => {
   it("setup:target:type opens the force-reply ticker prompt with an inline cancel affordance", async () => {
     const db = mockD1([
       {
-        match: "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
         first: makeSetupPendingRow(
           {
@@ -1574,7 +1574,7 @@ describe("handleTelegramWebhook", () => {
   it("setup:branch:skip sends a slim command reference instead of the full start surface", async () => {
     const db = mockD1([
       {
-        match: "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
         first: makeSetupPendingRow(
           {
