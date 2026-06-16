@@ -38,7 +38,7 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
 const { deliverTelegramSubscriberQueue } = await import("../dispatch-telegram-delivery");
-const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending-queue");
+const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending");
 const { TELEGRAM_MAX_MESSAGES_PER_RUN } = await import("../../lib/telegram-constants");
 
 function makeSafetySourceCache(

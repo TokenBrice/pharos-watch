@@ -1,6 +1,6 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
-import type { PendingCapacitySnapshot } from "./telegram-pending-queue";
+import type { PendingCapacitySnapshot } from "./telegram-pending";
 
 export interface AlertStablecoinIds {
   dewsIds: string[];

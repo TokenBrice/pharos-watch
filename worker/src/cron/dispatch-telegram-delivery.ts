@@ -5,7 +5,7 @@ import {
   setTelegramGlobalBackoff,
   type PendingEnqueueOptions,
   type PendingDrainResult,
-} from "./telegram-pending-queue";
+} from "./telegram-pending";
 import { recordTelegramAlertTargetStatuses, type TelegramAlertTargetStatusUpdate } from "./telegram-alert-target-status";
 import {
   deliverFreshAlerts,

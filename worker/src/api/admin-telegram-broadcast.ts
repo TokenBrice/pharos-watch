@@ -11,7 +11,7 @@ import {
   readPendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-} from "../cron/telegram-pending-queue";
+} from "../cron/telegram-pending";
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { splitMessage } from "../lib/telegram-alerts";
 import type { BatchMessage } from "../lib/telegram";

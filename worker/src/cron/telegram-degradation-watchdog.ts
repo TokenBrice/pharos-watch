@@ -14,7 +14,7 @@ import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_OLD_AGE_ALERT_SEC,
 } from "../lib/telegram-constants";
-import { readPendingCapacitySnapshot, type PendingCapacitySnapshot } from "./telegram-pending-queue";
+import { readPendingCapacitySnapshot, type PendingCapacitySnapshot } from "./telegram-pending";
 import { toErrorMessage } from "../lib/error-utils";
 
 /**

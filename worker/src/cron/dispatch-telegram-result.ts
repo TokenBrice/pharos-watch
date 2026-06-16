@@ -1,8 +1,8 @@
 import type { TelegramDispatchCronResult } from "@shared/types";
-import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending-queue";
+import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
 import type { TelegramAlertType } from "@shared/types/status";
-import type { readPendingCapacitySnapshot } from "./telegram-pending-queue";
+import type { readPendingCapacitySnapshot } from "./telegram-pending";
 
 export type PerAlertTypeTargets = Record<TelegramAlertType, { chats: number; chunks: number }>;
 

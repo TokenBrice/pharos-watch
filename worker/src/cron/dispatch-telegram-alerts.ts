@@ -23,7 +23,7 @@ import {
   type PendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-} from "./telegram-pending-queue";
+} from "./telegram-pending";
 import {
   buildSubscriberQueue,
   routeAlertEvents,

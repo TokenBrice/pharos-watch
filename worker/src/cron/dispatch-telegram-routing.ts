@@ -11,7 +11,7 @@ import {
   buildDedupeKey,
   handleBlockedChat,
   resetChatOnSuccess,
-} from "./telegram-pending-queue";
+} from "./telegram-pending";
 import { throwIfAborted } from "../lib/abort";
 import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
 import type {

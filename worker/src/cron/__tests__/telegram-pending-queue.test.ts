@@ -286,7 +286,7 @@ const {
   TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
   SEND_BATCH_SIZE,
   buildDedupeKey,
-} = await import("../telegram-pending-queue");
+} = await import("../telegram-pending");
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {

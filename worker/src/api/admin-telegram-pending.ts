@@ -8,7 +8,7 @@ import { logAdminAction } from "../lib/admin-action-audit";
 import {
   clearPendingAlertsForAdmin,
   countPendingAlertsForAdmin,
-} from "../cron/telegram-pending-queue";
+} from "../cron/telegram-pending";
 
 function parseOlderThanSec(raw: string | null): number | null {
   if (!raw) return null;

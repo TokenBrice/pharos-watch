@@ -10,7 +10,7 @@ import {
   buildDedupeKey,
   estimateTelegramDrainTimeSec,
   hashDedupePart,
-} from "./telegram-pending-queue";
+} from "./telegram-pending";
 import {
   expandSubscriberChunks,
   type RoutedSubscriberAlert,
