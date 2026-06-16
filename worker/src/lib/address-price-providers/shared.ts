@@ -1,4 +1,5 @@
 export { isRecord } from "@shared/lib/type-guards";
+import { chunkArray } from "../collections";
 import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
 import { parsePositiveNumber } from "../number-utils";
@@ -67,13 +68,7 @@ export function narrowMetadata<T>(fields: Record<string, T | null>): Record<stri
   return result;
 }
 
-export function chunk<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size));
-  }
-  return chunks;
-}
+export const chunk = chunkArray;
 
 export function incrementReason(
   reasons: Partial<Record<PricingProviderRejectionReason, number>>,
