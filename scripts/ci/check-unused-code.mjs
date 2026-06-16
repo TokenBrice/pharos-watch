@@ -259,6 +259,8 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/cron/reserve-adapters/slice-math.ts::RATIO_SCALE",
   "worker/src/lib/fx-rate-state.ts::resetFxRateStateForTests",
   "worker/src/lib/psi-history-universe.ts::buildPsiHistoricalUniverseForDay",
+  "worker/src/cron/yield-sync/cache.ts::parseRiskFreeRatesCache",
+  "worker/src/cron/yield-sync/cache.ts::filterValidDlPools",
 ]);
 
 const files = collectSourceFiles();
