@@ -10,6 +10,7 @@ import {
 } from "../../shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "../../shared/lib/redemption-backstop-configs";
 import { resolveDefaultHolderEligibility, type RedemptionBackstopConfig } from "../../shared/lib/redemption-backstop-configs/shared";
+import { resolveStaticCostScore } from "../lib/redemption-audit-helpers";
 import {
   computeCapacityScore,
   REDEMPTION_ACCESS_SCORES,
@@ -404,16 +405,6 @@ function resolveStaticCapacity(
   };
 }
 
-function resolveStaticCostScore(config: RedemptionBackstopConfig): number {
-  if (config.costModel.kind === "dynamic-or-unclear") {
-    return config.costModel.feeDescription && config.costModel.confidence !== "undisclosed-reviewed" ? 60 : 40;
-  }
-  const feeBps = Math.max(0, config.costModel.feeBps);
-  if (feeBps <= 10) return 100;
-  if (feeBps <= 50) return 80;
-  if (feeBps <= 100) return 60;
-  return 40;
-}
 
 function computeProfileScore(args: {
   routeFamily: RedemptionRouteFamily;
