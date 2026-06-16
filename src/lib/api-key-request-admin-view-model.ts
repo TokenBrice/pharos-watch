@@ -85,11 +85,10 @@ export function describeRequester(request: ApiKeySelfServeRequestAdminSummary): 
 }
 
 export function createApiKeyRequestIdempotencyKey(action: ApiKeyRequestAction, requestId: string): string {
-  const randomPart =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `api-key-request:${action}:${requestId}:${randomPart}`;
+  if (typeof crypto === "undefined" || typeof crypto.randomUUID !== "function") {
+    throw new Error("crypto.randomUUID is required to generate a collision-resistant idempotency key");
+  }
+  return `api-key-request:${action}:${requestId}:${crypto.randomUUID()}`;
 }
 
 function hasActiveUnexpiredLinkedKey(
