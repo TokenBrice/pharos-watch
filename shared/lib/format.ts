@@ -281,7 +281,6 @@ export function formatSignedCurrency(value: number, decimals = 2): string {
   return `${getNetPrefix(value)}${formatCurrency(value, decimals)}`;
 }
 
-/** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
 const decimalFormatterCache = new Map<string, Intl.NumberFormat>();
 
 /** Format a number with grouping separators and a fixed fraction-digit range, caching the
@@ -296,6 +295,7 @@ export function formatDecimal(value: number, minimumFractionDigits = 2, maximumF
   return formatter.format(value);
 }
 
+/** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
 export function formatPercent(value: number | null | undefined, decimals = 2): string {
   return isFiniteNumber(value) ? `${value.toFixed(decimals)}%` : "-";
 }
