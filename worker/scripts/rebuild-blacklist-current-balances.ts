@@ -357,6 +357,7 @@ async function main() {
 
   d1.executeStatements(
     [
+      // SAFETY: stablecoin and chainId are constrained by getBlacklistConfigsForSymbolAndChain() before writes, and sqlString() quotes both values.
       `DELETE FROM blacklist_current_balances WHERE stablecoin = ${sqlString(options.stablecoin)} AND chain_id = ${sqlString(options.chainId)};`,
       ...rowsToWrite.map(
         (row) =>
