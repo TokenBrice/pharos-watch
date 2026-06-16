@@ -22,7 +22,7 @@ import {
   formatDuration,
   formatTrackingSpanDays,
 } from "@shared/lib/format";
-import { GRADE_THRESHOLDS } from "@shared/lib/report-cards";
+import { getReportCardGradeRank } from "@shared/lib/report-cards";
 import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
 
 // ---------------------------------------------------------------------------
@@ -31,11 +31,11 @@ import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
 
 const VISIBLE_CAP = 3;
 
-/** Rank a grade by position in GRADE_THRESHOLDS (0 = A+ = best). NR = worst. */
+/** Lower value = better grade. NR and unknown grades → Infinity (treated as worst for sort comparisons). */
 function gradeRank(grade: ReportCardGrade): number {
   if (grade === "NR") return Infinity;
-  const idx = GRADE_THRESHOLDS.findIndex((t) => t.grade === grade);
-  return idx >= 0 ? idx : Infinity;
+  const rank = getReportCardGradeRank(grade);
+  return rank == null ? Infinity : -rank;
 }
 
 // ---------------------------------------------------------------------------

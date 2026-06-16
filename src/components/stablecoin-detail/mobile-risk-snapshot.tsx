@@ -5,7 +5,7 @@ import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { cn } from "@/lib/utils";
-import { DIMENSION_LABELS, DIMENSION_ORDER, GRADE_THRESHOLDS } from "@shared/lib/report-cards";
+import { DIMENSION_LABELS, DIMENSION_ORDER, getReportCardGradeRank } from "@shared/lib/report-cards";
 import { formatBps } from "@shared/lib/format";
 import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types";
 
@@ -14,9 +14,7 @@ interface MobileRiskSnapshotProps {
 }
 
 function gradeRank(grade: ReportCardGrade): number {
-  if (grade === "NR") return -1;
-  const index = GRADE_THRESHOLDS.findIndex((entry) => entry.grade === grade);
-  return index >= 0 ? GRADE_THRESHOLDS.length - index : -1;
+  return getReportCardGradeRank(grade) ?? -1;
 }
 
 function detailValue(card: ReportCard, label: string): string | null {
