@@ -213,6 +213,38 @@ describe("handleBackfillMintBurn", () => {
     expect(body.nextFromBlock).toBe(200);
   });
 
+  it("clamps a body-supplied out-of-range maxChunks to the allowed bounds", async () => {
+    // readAdminIntegerParam only digit-checks, so a body maxChunks bypasses the
+    // parseQueryParams max bound; the handler must re-clamp it (audit Q-234).
+    // maxChunks: 0 would otherwise skip the loop entirely (0 chunks); clamped to
+    // the min of 1, exactly one chunk runs over the single-chunk range.
+    const request = makeApiRequest("/api/backfill-mint-burn", {
+      method: "POST",
+      adminKey: "secret",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        fromBlock: 100,
+        toBlock: 140,
+        chunkSize: 50,
+        maxChunks: 0,
+      }),
+    });
+
+    const response = await handleBackfillMintBurn(
+      makeDb(),
+      makeApiUrl("/api/backfill-mint-burn"),
+      true,
+      request,
+      "alchemy-key",
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { done: boolean; chunksProcessed: number };
+    expect(body.chunksProcessed).toBe(1);
+    expect(body.done).toBe(true);
+  });
+
   it("updates flow_type on existing rows when classifier output differs", async () => {
     // Seed a USDC mint log for a CCTP bridge tx. The classifier should tag it
     // bridge_transfer under the new CCIP/CCTP mint-tagging rule (Task 1.1).

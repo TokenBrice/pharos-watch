@@ -109,11 +109,12 @@ export async function handleBackfillMintBurn(
 
     const chunkMax = ETHEREUM_CHUNK_SIZE;
     const defaultChunkSize = chunkMax;
+    const maxChunksLimit = 500;
     const numericParams = parseQueryParams(url.searchParams, {
       fromBlock: { type: "int", default: -1, min: -1, max: Number.MAX_SAFE_INTEGER },
       toBlock: { type: "int", default: -1, min: -1, max: Number.MAX_SAFE_INTEGER },
       chunkSize: { type: "int", default: defaultChunkSize, min: 1, max: chunkMax },
-      maxChunks: { type: "int", default: DEFAULT_MAX_CHUNKS, min: 1, max: 500 },
+      maxChunks: { type: "int", default: DEFAULT_MAX_CHUNKS, min: 1, max: maxChunksLimit },
     });
     if (numericParams instanceof Response) {
       return numericParams;
@@ -128,7 +129,12 @@ export async function handleBackfillMintBurn(
     const fromBlockParam = readAdminIntegerParam(body, url.searchParams, "fromBlock") ?? parsedFromBlock;
     const toBlockParam = readAdminIntegerParam(body, url.searchParams, "toBlock") ?? parsedToBlock;
     const chunkSizeParam = readAdminIntegerParam(body, url.searchParams, "chunkSize") ?? parsedChunkSize;
-    const maxChunks = readAdminIntegerParam(body, url.searchParams, "maxChunks") ?? parsedMaxChunks;
+    // Re-clamp: readAdminIntegerParam only digit-checks, so a body-supplied
+    // maxChunks bypasses the parseQueryParams max bound (see audit Q-234).
+    const maxChunks = Math.max(
+      1,
+      Math.min(readAdminIntegerParam(body, url.searchParams, "maxChunks") ?? parsedMaxChunks, maxChunksLimit),
+    );
 
     const budget = createBudget(BACKFILL_BUDGET_LIMIT);
     const chainHeads = new Map<string, number>();
