@@ -4,6 +4,16 @@ import type { YieldVenueRiskScores } from "./yield-scoring";
 
 export const YIELD_RISK_CONFIG_REVIEW_CADENCE = "monthly-yield-coverage-audit";
 
+// Shared scores for all Morpho venue slugs (morpho, morpho-v1, morpho-blue).
+// Edit this constant to update all three entries simultaneously.
+const MORPHO_VENUE_SCORES: YieldVenueRiskScores = {
+  audits: 2,
+  centralization: 4,
+  fundsManagement: 3,
+  liquidity: 2,
+  operational: 2,
+};
+
 export const YIELD_RISK_CONFIG_PROTOCOLS = [
   "aave-v3",
   "compound-v3",
@@ -202,9 +212,8 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-06-09",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
-  // `scores` must stay in sync with the canonical `morpho-blue` entry below; only the rationale/evidence are intentionally distinct.
   morpho: {
-    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
+    scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
     rationale:
       "Morpho sources are reviewed as medium to align with Morpho Blue where vault and market parameters shift risk to market creators and allocators despite the audited lending primitive.",
@@ -216,9 +225,8 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-06-09",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
-  // `scores` must stay in sync with the canonical `morpho-blue` entry below; only the rationale/evidence are intentionally distinct.
   "morpho-v1": {
-    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
+    scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
     rationale:
       "Morpho v1 belongs to the reviewed Morpho lending venue family and inherits allocator, market-parameter, and integration risk that is broader than mature canonical money markets.",
@@ -234,7 +242,7 @@ export const YIELD_RISK_CONFIG = {
   // family but younger TVL cohort vs Aave/Compound. Medium venue risk reflects the
   // shorter live track record and the immutable design limiting remediation paths.
   "morpho-blue": {
-    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
+    scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
     rationale:
       "Morpho Blue is an immutable singleton lending primitive launched in January 2024 with multiple audits; design choices reduce ongoing governance surface but limit remediation, and the product is still in its younger TVL cohort versus Aave/Compound.",
