@@ -148,8 +148,19 @@ export type PsiVisibleEvent = PsiEvent & { hideLabel: boolean; position: PsiEven
 const PSI_EVENT_LABEL_POSITIONS: readonly PsiEventLabelPosition[] = ["top", "insideBottom"] as const;
 const DEFAULT_HIDE_THRESHOLD_RATIO = 0.05;
 
+// Label positions are assigned by interleaving events across the available
+// slots (index modulo position count): consecutive events alternate top /
+// insideBottom so adjacent labels don't overlap. Adding events therefore shifts
+// every subsequent event's slot — that interleaving is intentional. Because the
+// modulo of a non-empty positions array is always in bounds, the indexed value
+// is guaranteed defined; the assertion below makes that explicit and removes the
+// previously unreachable `?? "top"` fallback.
 function getPsiEventLabelPosition(index: number): PsiEventLabelPosition {
-  return PSI_EVENT_LABEL_POSITIONS[index % PSI_EVENT_LABEL_POSITIONS.length] ?? "top";
+  const position = PSI_EVENT_LABEL_POSITIONS[index % PSI_EVENT_LABEL_POSITIONS.length];
+  if (position === undefined) {
+    throw new Error("PSI_EVENT_LABEL_POSITIONS must not be empty");
+  }
+  return position;
 }
 
 export function buildVisiblePsiChartEvents(
