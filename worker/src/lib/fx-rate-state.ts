@@ -6,6 +6,7 @@ import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
 import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
 import { startOfUtcDaySec } from "./time-constants";
+import { IsolateLocalState } from "./isolate-local-state";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
@@ -180,7 +181,13 @@ function isWeekendDay(dayStartSec: number): boolean {
   return day === 0 || day === 6;
 }
 
-const targetClosingDaysByYear = new Map<number, Set<string>>();
+const _fxCalendar = new IsolateLocalState(() => ({
+  targetClosingDaysByYear: new Map<number, Set<string>>(),
+}));
+
+export function resetFxRateStateForTests(): void {
+  _fxCalendar.reset();
+}
 
 function computeEasterSundayDayStartSec(year: number): number {
   // Meeus/Jones/Butcher Gregorian computus.
@@ -202,7 +209,8 @@ function computeEasterSundayDayStartSec(year: number): number {
 }
 
 function getTargetClosingDays(year: number): Set<string> {
-  const cached = targetClosingDaysByYear.get(year);
+  const byYear = _fxCalendar.state.targetClosingDaysByYear;
+  const cached = byYear.get(year);
   if (cached) return cached;
 
   const easterSundaySec = computeEasterSundayDayStartSec(year);
@@ -214,7 +222,7 @@ function getTargetClosingDays(year: number): Set<string> {
     formatUtcDate(easterSundaySec - (2 * DAY_SECONDS)),
     formatUtcDate(easterSundaySec + DAY_SECONDS),
   ]);
-  targetClosingDaysByYear.set(year, closingDays);
+  byYear.set(year, closingDays);
   return closingDays;
 }
 
