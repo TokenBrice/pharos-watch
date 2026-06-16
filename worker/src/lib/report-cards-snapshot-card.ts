@@ -487,17 +487,27 @@ export function topologicalOrder(
       ? collectDependenciesById(buildEffectiveDependencySetsById(metas, options.liveReserveMap))
       : null);
   const visited = new Set<string>();
+  const visiting = new Set<string>();
   const result: StablecoinMeta[] = [];
 
   function visit(id: string) {
     if (visited.has(id)) return;
-    visited.add(id);
+    if (visiting.has(id)) {
+      console.warn(`[report-cards] dependency cycle detected at "${id}"; breaking edge to avoid wrong ordering`);
+      return;
+    }
+    visiting.add(id);
     const meta = metaMap.get(id);
-    if (!meta) return;
+    if (!meta) {
+      visiting.delete(id);
+      return;
+    }
     const dependencies = dependenciesById?.get(meta.id) ?? deriveEffectiveDependencies(meta);
     for (const dep of dependencies) {
       if (metaMap.has(dep.id)) visit(dep.id);
     }
+    visiting.delete(id);
+    visited.add(id);
     result.push(meta);
   }
 

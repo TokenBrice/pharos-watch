@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { topologicalOrder } from "../report-cards-snapshot";
 import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
 import type { StablecoinMeta, GovernanceType } from "@shared/types/core";
@@ -60,14 +60,17 @@ describe("topologicalOrder", () => {
     expect(ids.indexOf("c")).toBeLessThan(ids.indexOf("d"));
   });
 
-  it("does not hang on circular dependencies", () => {
+  it("does not hang on circular dependencies and warns when a cycle is detected", () => {
     const metas = [
       makeMeta("x", [{ coinId: "y", pct: 50, name: "Y", risk: "low" }]),
       makeMeta("y", [{ coinId: "x", pct: 50, name: "X", risk: "low" }]),
     ];
-    // Should not hang — visited set prevents infinite recursion
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // Should not hang — visiting set breaks the back-edge and emits a warning
     const sorted = topologicalOrder(metas);
     expect(sorted).toHaveLength(2);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("dependency cycle detected"));
+    warnSpy.mockRestore();
   });
 
   it("places a tracked variant after its parent even when reserves would imply a different edge type", () => {
