@@ -476,6 +476,7 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
   - Gold/silver assets need a `geckoId` for the commodity supplemental path.
   - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
 - If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
+- If the asset is a dominant centralized issuer (a top stablecoin or a major centralized RWA token), add its ID to the curated `MAJOR_CENTRALIZED_IDS` allowlist in `src/lib/portfolio-analysis.ts` so the portfolio grouped-exposure view folds it into the "Major Centralized Stablecoins" row.
 - Use `npm run check:stablecoin-data` before moving on.
 
 ---

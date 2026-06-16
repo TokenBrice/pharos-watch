@@ -81,6 +81,14 @@ const COLLATERAL_CATEGORIES: Array<{ pattern: RegExp; label: string }> = [
   },
 ];
 
+// Curated allowlist of major centralized stablecoins + major centralized RWA
+// issuers (BUIDL, USYC, TBILL, M, USDY) that the grouped-exposure view folds
+// into a single "Major Centralized Stablecoins" row. This is deliberately NOT
+// derived from flags.governance — it mixes governance-centralized stablecoins
+// with major RWA issuer tokens by editorial intent, and a flag-based filter
+// would both omit the RWA entries and sweep in many small centralized coins.
+// MAINTENANCE: when a new dominant centralized issuer is added to the tracked
+// set, add its id here. See docs/process/adding-a-stablecoin.md.
 const MAJOR_CENTRALIZED_IDS = new Set([
   "usdt-tether",
   "usdc-circle",
