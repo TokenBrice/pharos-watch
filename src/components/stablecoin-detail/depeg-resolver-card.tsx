@@ -1,6 +1,6 @@
 "use client";
 
-import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card";
+import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { useDepegResolver } from "@/hooks/api-hooks";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 

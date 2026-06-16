@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
-import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card";
+import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
 import type { DdrResponse, DdrRow } from "@shared/types";
 
