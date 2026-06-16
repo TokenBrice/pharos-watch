@@ -266,7 +266,8 @@ export function buildAlertReplyMarkup(
     // entry point pointed at the watchlist view so the user can tune alerts
     // across multiple coins without copy-pasting symbols. Telegram rejects
     // `web_app` buttons in groups/channels, so this is gated on `privateChat`.
-    if (privateChat && chunkIndex === 0 && hasMultipleStablecoinIds(alerts)) {
+    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length > 0;
+    if (privateChat && chunkIndex === 0 && hasAlerts) {
       return {
         inline_keyboard: [
           [...SNOOZE_REPLY_MARKUP.inline_keyboard[0]],
@@ -316,24 +317,6 @@ export function buildAlertReplyMarkup(
   return { inline_keyboard: baseRows };
 }
 
-function hasMultipleStablecoinIds(alerts: ConsolidatedAlerts): boolean {
-  const ids = new Set<string>();
-  const allLists = [
-    alerts.dews,
-    alerts.depegTriggered,
-    alerts.depegResolved,
-    alerts.depegWorsening,
-    alerts.safety,
-    alerts.launch,
-  ];
-  for (const list of allLists) {
-    for (const e of list) {
-      ids.add(e.stablecoinId);
-      if (ids.size > 1) return true;
-    }
-  }
-  return false;
-}
 
 /**
  * Resolve the Bot API 7.0+ `link_preview_options` payload for a single chunk
