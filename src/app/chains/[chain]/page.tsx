@@ -5,6 +5,7 @@ import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
+import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -40,10 +41,6 @@ export async function generateMetadata({ params }: { params: Promise<{ chain: st
   });
 }
 
-function stablecoinCountLabel(count: number): string {
-  return `${count} stablecoin${count === 1 ? "" : "s"}`;
-}
-
 function formatSymbolList(deployments: readonly Pick<ChainTrackedDeployment, "symbol">[]): string {
   const symbols = [...new Set(deployments.map((deployment) => deployment.symbol))].slice(0, 3);
   if (symbols.length === 0) return "";
@@ -74,10 +71,6 @@ function buildChainMetaDescription(chainName: string, deployments: readonly Chai
     `${lead} Compare supply, market share, Chain Health, backing mix, concentration risk, and Pharos-tracked assets.`,
     160,
   );
-}
-
-function deploymentCountLabel(count: number): string {
-  return `${count} tracked deployment${count === 1 ? "" : "s"}`;
 }
 
 function formatDeploymentList(deployments: readonly Pick<ChainTrackedDeployment, "name" | "symbol">[]): string {
