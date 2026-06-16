@@ -10,7 +10,6 @@ export function InfrastructureMethodologySection() {
     <MethodologySectionShell
       id={INFRASTRUCTURE_SECTION_CONTENT.id}
       title={INFRASTRUCTURE_SECTION_CONTENT.title}
-      versionBadge={{ label: "v1.0", className: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400" }}
     >
       <p>
         Infrastructure identifies the shared technical foundation a stablecoin was built on.

@@ -11,7 +11,6 @@ export function ContagionStressTestMethodologySection() {
           <MethodologySectionShell
             id={CONTAGION_SECTION_CONTENT.id}
             title={CONTAGION_SECTION_CONTENT.title}
-            versionBadge={{ label: "v1.0", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" }}
           >
               <p>
                 The stress test simulates dependency failures to reveal systemic concentration risk across the stablecoin
