@@ -13,7 +13,7 @@ import type {
   MintAuthorityDetailScoreViewModel,
   MintAuthorityDetailViewModel,
   MintAuthorityPostureTone,
-} from "@/lib/stablecoin-detail-view-model";
+} from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { cn } from "@/lib/utils";
 
 const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {

@@ -9,9 +9,9 @@ import { THREAT_BAND_COLORS } from "@shared/lib/classification";
 import type { ReportCard } from "@shared/types";
 import type {
   HeroCardViewModel,
-  HeroDewsDisplay,
   HeroTertiaryMetricViewModel,
 } from "@/lib/stablecoin-detail-view-model";
+import type { HeroDewsDisplay } from "@/lib/stablecoin-detail-hero-metrics";
 import {
   HeroCardDesktopSection,
   HeroCardHeader,

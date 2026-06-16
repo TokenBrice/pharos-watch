@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
-  buildMintAuthorityDetailViewModel,
-  buildStablecoinDetailClientCoin,
   buildStablecoinDetailHeroViewModel,
   buildStablecoinDetailViewModel,
 } from "../stablecoin-detail-view-model";
+import {
+  buildMintAuthorityDetailViewModel,
+  buildStablecoinDetailClientCoin,
+} from "../stablecoin-detail-mint-authority-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];
 

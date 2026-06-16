@@ -53,21 +53,6 @@ import {
   type MintAuthorityDetailViewModel,
   type StablecoinDetailCoinMeta,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
-export {
-  buildMintAuthorityDetailViewModel,
-  buildStablecoinDetailClientCoin,
-} from "@/lib/stablecoin-detail-mint-authority-view-model";
-export type {
-  MintAuthorityDetailControlViewModel,
-  MintAuthorityDetailIncidentViewModel,
-  MintAuthorityDetailScoreComponentViewModel,
-  MintAuthorityDetailScoreViewModel,
-  MintAuthorityDetailSourceViewModel,
-  MintAuthorityDetailStatus,
-  MintAuthorityDetailViewModel,
-  MintAuthorityPostureTone,
-  StablecoinDetailCoinMeta,
-} from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { getClientVariantParent, getClientVariantRelationship, getClientVariants } from "@/lib/client-variant-registry";
 import {
@@ -86,10 +71,7 @@ import {
   type HeroDewsDisplay,
   type HeroDisplayValue,
 } from "@/lib/stablecoin-detail-hero-metrics";
-
-export type { HeroDewsDisplay, HeroDisplayValue } from "@/lib/stablecoin-detail-hero-metrics";
 import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
-export type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/app/learn/case-studies/content/client-index";
 import {
   CASE_STUDY_OUTCOME_CHIPS,

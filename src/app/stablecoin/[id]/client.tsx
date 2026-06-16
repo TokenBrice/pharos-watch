@@ -34,7 +34,8 @@ import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/ho
 import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
-import { buildStablecoinDetailHeroViewModel, type StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-view-model";
+import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
+import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";

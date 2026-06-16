@@ -3,7 +3,7 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-view-model";
+import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MintAuthoritySection } from "../mint-authority-section";
-import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-view-model";
+import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
 
 const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   status: "reviewed",

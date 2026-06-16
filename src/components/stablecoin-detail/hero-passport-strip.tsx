@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-view-model";
+import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 
 function alignSection(sectionId: string) {
   // scrollIntoView honors the targets' CSS scroll-margin-top (sticky-chrome

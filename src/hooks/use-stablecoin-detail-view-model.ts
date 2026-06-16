@@ -16,10 +16,10 @@ import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
 import {
   buildStablecoinDetailViewModel,
-  type StablecoinDetailCoinMeta,
   type StablecoinDetailSummary,
   type StablecoinDetailViewModel as BaseStablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model";
+import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-authority-view-model";
 
 interface UseStablecoinDetailViewModelParams {
   id: string;
