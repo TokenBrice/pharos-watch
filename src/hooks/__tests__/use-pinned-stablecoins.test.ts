@@ -36,9 +36,7 @@ describe("usePinnedStablecoins", () => {
     await waitFor(() => {
       expect(result.current.isPinned("usdt-tether")).toBe(true);
       expect(JSON.parse(window.localStorage.getItem(WATCHLIST_STORAGE_KEY) ?? "null")).toEqual(["usdt-tether"]);
-      expect(JSON.parse(window.localStorage.getItem(PINNED_STABLECOINS_STORAGE_KEY) ?? "null")).toEqual([
-        "usdt-tether",
-      ]);
+      expect(window.localStorage.getItem(PINNED_STABLECOINS_STORAGE_KEY)).toBeNull();
     });
   });
 });

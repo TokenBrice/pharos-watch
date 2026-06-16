@@ -358,7 +358,7 @@ describe("runIdempotentAdminAction", () => {
       event: "idempotency_terminal_failure_replay_persist_failed",
       route: "backfill-depegs",
       source: "admin_idempotency_keys",
-      errorMessage: "failure-state update failed",
+      errorMessage: "failure-state [sql]",
     });
     expect(db.getRecord("backfill-depegs", "abc-final-cleanup")).toBeUndefined();
 

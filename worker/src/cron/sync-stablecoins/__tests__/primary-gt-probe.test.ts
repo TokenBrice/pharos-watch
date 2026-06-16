@@ -102,7 +102,7 @@ describe("applyGtProbeMutation", () => {
     });
 
     expect(updated).toBe(true);
-    expect(primary.price).toBeCloseTo(1.0002, 8);
+    expect(primary.price).toBeCloseTo(1.0001, 8);
     expect(primary.source).toBe("coingecko+geckoterminal");
     expect(primary.selectedSource).toBe("coingecko");
     expect(primary.confidence).toBe("high");

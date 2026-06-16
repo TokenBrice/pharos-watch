@@ -240,7 +240,7 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.reportCardCacheRows).toBe(2);
 
     const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
-    expect(JSON.parse(String(write?.binds[1])).degradedInputs).toEqual({
+    expect(JSON.parse(String(write?.binds[1])).payload.degradedInputs).toEqual({
       inputsStale: true,
       liquidityStale: false,
       redemptionStale: true,

@@ -2,6 +2,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
+const TRACKED_STABLECOINS_MOCK = [
+  {
+    id: "usdt-tether",
+    symbol: "USDT",
+    name: "Tether",
+    status: "active",
+    flags: { yieldBearing: false },
+  },
+  {
+    id: "usdx-example",
+    symbol: "USDX",
+    name: "Example USD",
+    status: "active",
+    flags: { yieldBearing: false },
+  },
+  {
+    id: "eurx-example",
+    symbol: "EURX",
+    name: "Example Euro",
+    status: "pre-launch",
+    flags: { yieldBearing: false },
+  },
+];
 
 vi.mock("@shared/lib/dead-stablecoins", () => ({
   DEAD_STABLECOINS: [
@@ -48,29 +71,8 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => ({
-  TRACKED_STABLECOINS: [
-    {
-      id: "usdt-tether",
-      symbol: "USDT",
-      name: "Tether",
-      status: "active",
-      flags: { yieldBearing: false },
-    },
-    {
-      id: "usdx-example",
-      symbol: "USDX",
-      name: "Example USD",
-      status: "active",
-      flags: { yieldBearing: false },
-    },
-    {
-      id: "eurx-example",
-      symbol: "EURX",
-      name: "Example Euro",
-      status: "pre-launch",
-      flags: { yieldBearing: false },
-    },
-  ],
+  TRACKED_STABLECOINS: TRACKED_STABLECOINS_MOCK,
+  TRACKED_META_BY_ID: new Map(TRACKED_STABLECOINS_MOCK.map((coin) => [coin.id, coin])),
   FROZEN_IDS: new Set<string>(),
   FROZEN_META_BY_ID: new Map<string, never>(),
 }));
