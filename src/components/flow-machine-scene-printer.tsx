@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buildPrinterMachineModel, type FlowMachineSceneSize } from "./flow-machine-scene-model";
+import styles from "./flow-machine-scene-printer.module.css";
 
 export function FlowMachinePrinter({
   size,
@@ -44,7 +45,7 @@ export function FlowMachinePrinter({
         style={{ top: `${model.dims.slotTop}px`, width: `${model.dims.slotW}px`, height: `${model.dims.slotH}px` }}
       />
       <div
-        className="pointer-events-none absolute rounded-full border border-slate-500/70 bg-slate-500/45 fm-roller"
+        className={cn("pointer-events-none absolute rounded-full border border-slate-500/70 bg-slate-500/45", styles.roller)}
         style={{
           top: `${model.dims.rollerTop}px`,
           left: `calc(50% - ${Math.abs(model.dims.rollerLeftOffset)}px)`,
@@ -54,7 +55,7 @@ export function FlowMachinePrinter({
         }}
       />
       <div
-        className="pointer-events-none absolute rounded-full border border-slate-500/70 bg-slate-500/45 fm-roller"
+        className={cn("pointer-events-none absolute rounded-full border border-slate-500/70 bg-slate-500/45", styles.roller)}
         style={{
           top: `${model.dims.rollerTop}px`,
           left: `calc(50% + ${model.dims.rollerRightOffset}px)`,
@@ -66,7 +67,7 @@ export function FlowMachinePrinter({
 
       {model.dims.hasStatusLight ? (
         <div
-          className="pointer-events-none absolute rounded-full border border-emerald-300/45 bg-emerald-400/25 fm-light"
+          className={cn("pointer-events-none absolute rounded-full border border-emerald-300/45 bg-emerald-400/25", styles.light)}
           style={{
             top: `${model.dims.statusLightTop}px`,
             left: `calc(50% + ${model.dims.statusLightLeftOffset}px)`,
@@ -79,7 +80,7 @@ export function FlowMachinePrinter({
       ) : null}
 
       <div
-        className={cn("pointer-events-none absolute origin-[2px_50%]", model.isCrankChoppy ? "fm-crank-stutter" : "fm-crank")}
+        className={cn("pointer-events-none absolute origin-[2px_50%]", model.isCrankChoppy ? styles.crankStutter : styles.crank)}
         style={{
           ...model.crankStyle,
           top: `${model.dims.crankTop}px`,
@@ -108,152 +109,13 @@ export function FlowMachinePrinter({
           key={sheet.key}
           className={cn(
             "pointer-events-none absolute flex -translate-x-1/2 items-center justify-center rounded-sm border border-emerald-500/45 bg-emerald-300/75 text-emerald-950",
-            sheet.className,
+            sheet.misfeed ? styles.paperMisfeed : styles.paperFly,
           )}
           style={sheet.style}
         >
           <Banknote className={cn(model.isMini ? "h-2.5 w-2.5" : "h-3 w-3")} />
         </div>
       ))}
-
-      <style jsx>{`
-        .fm-paper-fly {
-          animation-name: fm-paper-fly;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .fm-paper-misfeed {
-          animation-name: fm-paper-misfeed;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
-        }
-        .fm-roller {
-          animation-name: fm-roller-spin;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .fm-light {
-          animation-name: fm-status-blink;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
-        }
-        .fm-crank {
-          animation-name: fm-crank-spin;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .fm-crank-stutter {
-          animation-name: fm-crank-stutter;
-          animation-timing-function: cubic-bezier(0.55, 0.02, 0.64, 0.96);
-          animation-iteration-count: infinite;
-        }
-
-        @keyframes fm-paper-fly {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, 0) scale(0.72) rotate(0deg);
-          }
-          10% {
-            opacity: 1;
-          }
-          64% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-            transform: translate(calc(-50% + var(--paper-dx)), calc(-1 * var(--paper-dy))) scale(1.02) rotate(var(--note-rot));
-          }
-        }
-
-        @keyframes fm-paper-misfeed {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, 0) scale(0.68) rotate(0deg);
-          }
-          14% {
-            opacity: 1;
-          }
-          46% {
-            opacity: 1;
-            transform: translate(calc(-50% + var(--misfeed-dx)), 16px) scale(0.86) rotate(var(--misfeed-rot));
-          }
-          100% {
-            opacity: 0;
-            transform: translate(calc(-50% + var(--misfeed-dx)), var(--misfeed-drop)) scale(0.8) rotate(var(--misfeed-rot));
-          }
-        }
-
-        @keyframes fm-roller-spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes fm-status-blink {
-          0%, 100% {
-            opacity: 0.45;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes fm-crank-spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes fm-crank-stutter {
-          0% {
-            transform: translateY(0) rotate(0deg);
-          }
-          10% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(34deg + var(--crank-kick)));
-          }
-          16% {
-            transform: translateY(0) rotate(calc(22deg - var(--crank-kick)));
-          }
-          30% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(112deg + var(--crank-kick)));
-          }
-          36% {
-            transform: translateY(0) rotate(calc(98deg - var(--crank-kick)));
-          }
-          52% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(204deg + var(--crank-kick)));
-          }
-          58% {
-            transform: translateY(0) rotate(calc(188deg - var(--crank-kick)));
-          }
-          74% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(294deg + var(--crank-kick)));
-          }
-          80% {
-            transform: translateY(0) rotate(calc(280deg - var(--crank-kick)));
-          }
-          100% {
-            transform: translateY(0) rotate(360deg);
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .fm-paper-fly,
-          .fm-paper-misfeed,
-          .fm-roller,
-          .fm-light,
-          .fm-crank,
-          .fm-crank-stutter {
-            animation-duration: 6s !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

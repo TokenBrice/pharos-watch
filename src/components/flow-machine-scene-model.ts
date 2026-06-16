@@ -307,7 +307,7 @@ export function buildPrinterMachineModel(
 
     return {
       key: index,
-      className: misfeed ? "fm-paper-misfeed" : "fm-paper-fly",
+      misfeed,
       style: {
         left: calcOffset(dims.emissionOffset),
         top: `${dims.outputTop}px`,

@@ -1,0 +1,141 @@
+.paperFly {
+  animation-name: fm-paper-fly;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.paperMisfeed {
+  animation-name: fm-paper-misfeed;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.roller {
+  animation-name: fm-roller-spin;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.light {
+  animation-name: fm-status-blink;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.crank {
+  animation-name: fm-crank-spin;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.crankStutter {
+  animation-name: fm-crank-stutter;
+  animation-timing-function: cubic-bezier(0.55, 0.02, 0.64, 0.96);
+  animation-iteration-count: infinite;
+}
+
+@keyframes fm-paper-fly {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.72) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--paper-dx)), calc(-1 * var(--paper-dy))) scale(1.02) rotate(var(--note-rot));
+  }
+}
+
+@keyframes fm-paper-misfeed {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.68) rotate(0deg);
+  }
+  14% {
+    opacity: 1;
+  }
+  46% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--misfeed-dx)), 16px) scale(0.86) rotate(var(--misfeed-rot));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--misfeed-dx)), var(--misfeed-drop)) scale(0.8) rotate(var(--misfeed-rot));
+  }
+}
+
+@keyframes fm-roller-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fm-status-blink {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes fm-crank-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fm-crank-stutter {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  10% {
+    transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(34deg + var(--crank-kick)));
+  }
+  16% {
+    transform: translateY(0) rotate(calc(22deg - var(--crank-kick)));
+  }
+  30% {
+    transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(112deg + var(--crank-kick)));
+  }
+  36% {
+    transform: translateY(0) rotate(calc(98deg - var(--crank-kick)));
+  }
+  52% {
+    transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(204deg + var(--crank-kick)));
+  }
+  58% {
+    transform: translateY(0) rotate(calc(188deg - var(--crank-kick)));
+  }
+  74% {
+    transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(294deg + var(--crank-kick)));
+  }
+  80% {
+    transform: translateY(0) rotate(calc(280deg - var(--crank-kick)));
+  }
+  100% {
+    transform: translateY(0) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paperFly,
+  .paperMisfeed,
+  .roller,
+  .light,
+  .crank,
+  .crankStutter {
+    animation: none !important;
+  }
+}
