@@ -103,7 +103,6 @@ describe("command palette action helpers", () => {
     const executor = makeExecutor();
 
     expect(executeParsedVerb({ kind: "pin", coinSymbol: "zzz", resolvedCoinId: null }, executor)).toBe(false);
-    expect(executeParsedVerb({ kind: "view", viewName: "ops" }, executor)).toBe(false);
     expect(executor.closePalette).not.toHaveBeenCalled();
   });
 

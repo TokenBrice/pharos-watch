@@ -11,7 +11,6 @@
  *   screen filter=value [...]     → /screener?<encoded>
  *   pin TOKEN                     → mutates watchlist (add)
  *   unpin TOKEN | all             → mutates watchlist (remove or clear)
- *   view: NAME                    → navigates to a saved view
  *   tape: filters                 → /timeline?<encoded>
  */
 
@@ -32,7 +31,6 @@ export type ParsedVerb =
   | { kind: "screen"; filters: Record<string, string | string[] | number>; href: string }
   | { kind: "pin"; coinSymbol: string; resolvedCoinId: string | null }
   | { kind: "unpin"; coinSymbol: string | "all"; resolvedCoinId: string | null }
-  | { kind: "view"; viewName: string }
   | { kind: "tape"; filters: Record<string, string>; href: string }
   | { kind: "none" };
 
@@ -80,7 +78,7 @@ export function resolveCoinIdFromToken(token: string): string | null {
 
 // ── Verb keyword detection ──────────────────────────────────────────────────
 
-const VERB_KEYWORDS = ["compare", "screen", "pin", "unpin", "view:", "tape:"] as const;
+const VERB_KEYWORDS = ["compare", "screen", "pin", "unpin", "tape:"] as const;
 type VerbKeyword = (typeof VERB_KEYWORDS)[number];
 
 interface VerbLead {
@@ -339,10 +337,6 @@ export function parsePaletteInput(input: string): ParsedVerb {
       }
       const resolvedCoinId = token ? resolveCoinIdFromToken(token) : null;
       return { kind: "unpin", coinSymbol: token, resolvedCoinId };
-    }
-
-    case "view:": {
-      return { kind: "view", viewName: lead.rest };
     }
 
     case "tape:": {

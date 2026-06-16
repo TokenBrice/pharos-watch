@@ -50,9 +50,6 @@ export function executeParsedVerb(
       executor.closePalette();
       return true;
     }
-    case "view": {
-      return false;
-    }
     case "tape": {
       executor.push(parsedVerb.href);
       executor.closePalette();
@@ -138,20 +135,6 @@ export function buildVerbPreview(parsedVerb: ParsedVerb): CommandPaletteVerbPrev
         label: `Unpin ${parsedVerb.coinSymbol.toUpperCase()}`,
         sublabel: "Remove from your watchlist",
         runnable: true,
-      };
-    }
-    case "view": {
-      if (!parsedVerb.viewName) {
-        return {
-          label: "View:",
-          sublabel: "Saved views land in a follow-up release",
-          runnable: false,
-        };
-      }
-      return {
-        label: `View: ${parsedVerb.viewName}`,
-        sublabel: "Saved views land in a follow-up release",
-        runnable: false,
       };
     }
     case "tape": {

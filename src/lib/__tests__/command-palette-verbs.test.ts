@@ -69,13 +69,6 @@ describe("parsePaletteInput", () => {
     });
   });
 
-  it("parses saved-view commands as non-runnable placeholders", () => {
-    expect(parsePaletteInput("view: high quality")).toEqual({
-      kind: "view",
-      viewName: "high quality",
-    });
-  });
-
   it("maps tape stablecoin aliases to the timeline coin filter", () => {
     const parsed = parsePaletteInput("tape: stablecoin=usdc-circle severity=critical");
 
