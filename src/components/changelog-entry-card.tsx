@@ -2,13 +2,21 @@ import { cn } from "@/lib/utils";
 import { digestDisplay } from "@/lib/fonts/digest";
 import type { ChangelogEntry } from "@/data/changelogs/types";
 
+function toLocalMidnight(ymd: string): Date {
+  return new Date(ymd + "T00:00:00");
+}
+
+function toUTCMidnight(ymd: string): Date {
+  return new Date(ymd + "T00:00:00Z");
+}
+
 export function formatDateRange(
   from: string,
   to: string,
   options?: { compact?: boolean },
 ): string {
-  const fromDate = new Date(from + "T00:00:00");
-  const toDate = new Date(to + "T00:00:00");
+  const fromDate = toLocalMidnight(from);
+  const toDate = toLocalMidnight(to);
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const sameMonth = fromDate.getMonth() === toDate.getMonth();
   const fromYear = fromDate.getFullYear();
@@ -42,7 +50,7 @@ function isoDate(ymd: string): string {
 
 /** ISO 8601 week number derived from the closing date of the changelog window. */
 function isoWeekNumber(ymd: string): number {
-  const date = new Date(ymd + "T00:00:00Z");
+  const date = toUTCMidnight(ymd);
   const dayNum = date.getUTCDay() || 7;
   date.setUTCDate(date.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
@@ -58,7 +66,7 @@ interface ChangelogEntryCardProps {
 }
 
 function formatFieldNotesKicker(from: string): string {
-  const fromDate = new Date(from + "T00:00:00");
+  const fromDate = toLocalMidnight(from);
   const month = fromDate.toLocaleDateString("en-US", { month: "long" });
   return `Editor's note · Week of ${month} ${fromDate.getDate()}`;
 }
