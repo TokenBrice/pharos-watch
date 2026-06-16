@@ -210,7 +210,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/cron/sync-stablecoins/shared.ts::sumPegBuckets",
   "worker/src/cron/telegram-alert-snapshots.ts::SNAPSHOT_MAX_AGE_SEC",
   "worker/src/cron/telegram-alert-snapshots.ts::SAFETY_GRADE_RANK",
-  "worker/src/cron/telegram-pending-queue.ts::PENDING_TTL_SEC",
   "worker/src/lib/chain-registry.ts::CG_CHAIN_REVERSE",
   "worker/src/lib/chain-registry.ts::GT_CHAIN_REVERSE",
   "worker/src/lib/coingecko-onchain.ts::CG_CHAIN_REVERSE",
