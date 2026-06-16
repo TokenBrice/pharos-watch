@@ -128,7 +128,8 @@ export function adaptUsddLatestCollateral(
   }
 
   const historyItems = history ? (assertSuccess(history, "usdd collateral history").data?.items ?? []) : [];
-  const statisticTimeMs = historyItems.reduce<number | null>((latestPoint, item) => {
+  // statisticTime may be a millisecond epoch; parseTimestampLikeToUnixSeconds auto-detects the unit.
+  const statisticTimeRaw = historyItems.reduce<number | null>((latestPoint, item) => {
     if (typeof item.statisticTime !== "number" || !Number.isFinite(item.statisticTime)) {
       return latestPoint;
     }
@@ -179,7 +180,7 @@ export function adaptUsddLatestCollateral(
     ? [createUnknownVaultWarning(unknownVaultTypes, unknownExposurePct)]
     : [];
   const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.directUsdtUsd;
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(statisticTimeMs);
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(statisticTimeRaw);
 
   return {
     slices: slicesFromValues(bucketSlices.sort((left, right) => right.value - left.value)),
