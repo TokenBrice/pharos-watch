@@ -119,8 +119,13 @@ export function validateIntendedEndpoints(endpoints: string[] | undefined): stri
 }
 
 function resolveClientIp(request: Request): string {
-  const forwardedFor = request.headers.get("X-Forwarded-For");
-  return request.headers.get("CF-Connecting-IP") ?? forwardedFor?.split(",")[0]?.trim() ?? "unknown";
+  // CF-Connecting-IP is injected by the Cloudflare edge for every real inbound
+  // request and cannot be spoofed by the client. We deliberately do NOT fall
+  // back to the client-controlled X-Forwarded-For header — trusting it would let
+  // a caller rotate the IP-scoped rate-limit bucket. If CF-Connecting-IP is
+  // absent (e.g. off-edge), all such requests collapse into one fixed sentinel
+  // bucket rather than attacker-chosen ones.
+  return request.headers.get("CF-Connecting-IP") ?? "unknown";
 }
 
 export async function hashForLookup(secret: string, input: string): Promise<string> {
