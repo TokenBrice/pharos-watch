@@ -183,6 +183,65 @@ function requiresTieredMarketCapConfirmation(params: {
   return params.supply >= DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD && params.sourceDepth < 2 && severe;
 }
 
+interface DexEvidence {
+  dexAbsBps: number | null;
+  dexDirectionProtocolCount: number;
+  dexRecoveryProtocolCount: number;
+  dexRecoveryChallenged: boolean;
+  dexSupportsDirection: boolean;
+  dexSupportsSecondaryBarDirection: boolean;
+  dexSupportsRecovery: boolean;
+}
+
+/**
+ * Derives the DEX-corroboration signals (direction/secondary-bar/recovery support
+ * and the recovery challenge veto) from the trusted DEX price row and protocol sources.
+ */
+function deriveDexEvidence(params: {
+  input: DepegAssetDecisionInput;
+  existing: DepegRow | undefined;
+  now: number;
+  pegRef: number;
+  threshold: number;
+  direction: DepegDirection;
+}): DexEvidence {
+  const { input, existing, now, pegRef, threshold, direction } = params;
+  const dexSignal = input.dexRow && isTrustedDexPriceRow(input.dexRow, now, "depeg")
+    ? deriveDepegSignal(input.dexRow.dex_price_usd, pegRef)
+    : null;
+  const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
+  const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm");
+  const dexSecondaryDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, secondaryBar, direction, "confirm");
+  const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "recover");
+  const recoveryVetoDirection: DepegDirection =
+    existing?.direction === "above" ? "above" : existing?.direction === "below" ? "below" : direction;
+  const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
+  const dexSupportsDirection =
+    dexSignal != null &&
+    signalCrossesThreshold(dexSignal, threshold) &&
+    signalsShareDirection(dexSignal, direction) &&
+    dexDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
+  const dexSupportsSecondaryBarDirection =
+    dexSignal != null &&
+    signalCrossesThreshold(dexSignal, secondaryBar) &&
+    signalsShareDirection(dexSignal, direction) &&
+    dexSecondaryDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
+  const dexSupportsRecovery =
+    dexSignal != null &&
+    dexSignal.absBps < threshold &&
+    dexRecoveryProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN &&
+    !dexRecoveryChallenged;
+  return {
+    dexAbsBps: dexSignal?.absBps ?? null,
+    dexDirectionProtocolCount,
+    dexRecoveryProtocolCount,
+    dexRecoveryChallenged,
+    dexSupportsDirection,
+    dexSupportsSecondaryBarDirection,
+    dexSupportsRecovery,
+  };
+}
+
 function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextDerivation {
   const { now, asset, meta, existing } = input;
   if (!meta) return { kind: "skip", decision: emptyDecision() };
@@ -246,32 +305,16 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const { bps, absBps, direction } = primarySignal;
   const threshold = getDepegThresholdBps(asset.pegType);
   const nativeSignal = input.nativePegQuote ? deriveDepegSignal(input.nativePegQuote.price, 1) : null;
-  const dexSignal = input.dexRow && isTrustedDexPriceRow(input.dexRow, now, "depeg")
-    ? deriveDepegSignal(input.dexRow.dex_price_usd, pegRef)
-    : null;
-  const dexAbsBps = dexSignal?.absBps ?? null;
-  const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
-  const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm");
-  const dexSecondaryDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, secondaryBar, direction, "confirm");
-  const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "recover");
-  const recoveryVetoDirection: DepegDirection =
-    existing?.direction === "above" ? "above" : existing?.direction === "below" ? "below" : direction;
-  const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
-  const dexSupportsDirection =
-    dexSignal != null &&
-    signalCrossesThreshold(dexSignal, threshold) &&
-    signalsShareDirection(dexSignal, direction) &&
-    dexDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
-  const dexSupportsSecondaryBarDirection =
-    dexSignal != null &&
-    signalCrossesThreshold(dexSignal, secondaryBar) &&
-    signalsShareDirection(dexSignal, direction) &&
-    dexSecondaryDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
-  const dexSupportsRecovery =
-    dexSignal != null &&
-    dexSignal.absBps < threshold &&
-    dexRecoveryProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN &&
-    !dexRecoveryChallenged;
+  const dexEvidence = deriveDexEvidence({ input, existing, now, pegRef, threshold, direction });
+  const {
+    dexAbsBps,
+    dexDirectionProtocolCount,
+    dexRecoveryProtocolCount,
+    dexRecoveryChallenged,
+    dexSupportsDirection,
+    dexSupportsSecondaryBarDirection,
+    dexSupportsRecovery,
+  } = dexEvidence;
   const sourceDepth = getPrimarySourceDepth(asset);
   const tieredMarketCapRequiresConfirmation = requiresTieredMarketCapConfirmation({
     supply,
