@@ -1,8 +1,8 @@
-import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
-  ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
   capacityModel: { kind: "reserve-sync-metadata" },
   settlementModel: "queued",
   executionModel: "rules-based-nav",

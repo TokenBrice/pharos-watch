@@ -1,8 +1,8 @@
-import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_YIELD_EXPANSION_AT } from "./shared";
 
 export const SUSDD_TRON_DAO_RESERVE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
-  ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+  reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   costModel: fixedFee(0, "USDD docs describe sUSDD withdrawals to USDD with no lock-up or protocol fee"),

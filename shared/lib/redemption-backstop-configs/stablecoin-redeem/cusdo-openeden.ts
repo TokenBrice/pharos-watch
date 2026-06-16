@@ -1,8 +1,8 @@
-import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_WRAPPER_REDEMPTION_AT } from "./shared";
 
 export const CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
-  ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
+  reviewedAt: REVIEWED_WRAPPER_REDEMPTION_AT,
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   costModel: fixedFee(

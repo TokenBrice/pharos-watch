@@ -1,8 +1,8 @@
-import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_YIELD_EXPANSION_AT } from "./shared";
 
 export const SUSN_NOON_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
-  ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+  reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
   capacityModel: { kind: "reserve-sync-metadata" },
   accessModel: "whitelisted-onchain",
   executionModel: "rules-based-nav",
