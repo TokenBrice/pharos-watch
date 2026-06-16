@@ -775,7 +775,6 @@ const COHORT_GRADE_BAND: Readonly<Record<ReportCardGrade, string>> = {
 const COHORT_MIN_SIZE = 8;
 
 interface CohortBucket {
-  size: number;
   scoresDescending: number[];
 }
 
@@ -794,10 +793,9 @@ function buildCohortIndex(rows: readonly YieldRanking[]): Map<string, CohortBuck
     if (key === null) continue;
     const existing = buckets.get(key);
     if (existing) {
-      existing.size += 1;
       existing.scoresDescending.push(row.pharosYieldScore!);
     } else {
-      buckets.set(key, { size: 1, scoresDescending: [row.pharosYieldScore!] });
+      buckets.set(key, { scoresDescending: [row.pharosYieldScore!] });
     }
   }
   for (const bucket of buckets.values()) {
@@ -814,8 +812,9 @@ function computeRowCohortPercentile(
   if (key === null) return null;
   const bucket = cohortIndex.get(key);
   if (!bucket) return null;
-  if (bucket.size < COHORT_MIN_SIZE) {
-    return { value: null, cohortSize: bucket.size, cohortKey: key };
+  const cohortSize = bucket.scoresDescending.length;
+  if (cohortSize < COHORT_MIN_SIZE) {
+    return { value: null, cohortSize, cohortKey: key };
   }
   const score = row.pharosYieldScore!;
   // Rank: how many cohort members have a strictly higher PYS, plus 1 for self.
@@ -826,8 +825,8 @@ function computeRowCohortPercentile(
     if (candidate > score) higherCount += 1;
     else break;
   }
-  const percentile = Math.round(((bucket.size - higherCount) / bucket.size) * 100);
-  return { value: percentile, cohortSize: bucket.size, cohortKey: key };
+  const percentile = Math.round(((cohortSize - higherCount) / cohortSize) * 100);
+  return { value: percentile, cohortSize, cohortKey: key };
 }
 
 function buildStats(
