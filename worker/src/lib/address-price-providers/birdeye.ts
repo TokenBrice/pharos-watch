@@ -36,7 +36,8 @@ export async function runBirdeyeAddressProvider(
   let successfulRequests = 0;
   let attemptedRequests = 0;
 
-  for (const target of targets.filter((entry) => entry.providerChainId === "solana").slice(0, BIRDEYE_ADDRESS_MAX_REQUESTS)) {
+  // targets are pre-filtered to solana-only by buildAddressPriceTargetsByProvider (index.ts)
+  for (const target of targets.slice(0, BIRDEYE_ADDRESS_MAX_REQUESTS)) {
     throwIfAborted(signal);
     if (Date.now() >= deadlineMs) break;
     if (attemptedRequests > 0) {
