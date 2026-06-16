@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { selectorProfileLabel } from "@shared/lib/selector/selector-labels";
 import { SelectorQuestionCard, type SelectorOption } from "@/components/selector/selector-question-card";
 import type {
   SelectorDepeg,
@@ -73,7 +74,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
 
   const skipExit = shouldSkipExitStep(profile, state.horizon, state.depegTolerance);
   const venueValue = isVenueMulti ? state.venue : (state.venue[0] ?? null);
-  const profileLabel = capitalize(profile);
+  const profileLabel = selectorProfileLabel(profile);
   const totalSteps = skipExit ? 5 : 6;
   const q5Topic = profile === "treasury" ? "Rails" : "Venues";
 
@@ -180,10 +181,6 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
       </div>
     </div>
   );
-}
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function answeredCount(state: SelectorWizardState, skipExit: boolean): number {
