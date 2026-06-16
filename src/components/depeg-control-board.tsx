@@ -12,12 +12,20 @@ import { compareDepegTrackerRows, type DepegTableSortKey } from "@/components/de
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { cn } from "@/lib/utils";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
-import { clampScore } from "@shared/lib/math";
+import {
+  statusLabel,
+  statusClassName,
+  rowToneClassName,
+  metricTone,
+} from "@/components/depeg-board-model";
+import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg-board-primitives";
 import type { PegSummaryStats } from "@shared/types";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { formatCurrency, formatElapsedSeconds, formatPercent, formatTrackingSpanDays } from "@shared/lib/format";
 import type { ThreatBand } from "@shared/lib/classification";
+
+export { getDeviationBarWidthPercent } from "@/components/depeg-board-model";
 
 interface DepegControlBoardProps {
   rows: DepegTrackerRow[];
@@ -53,32 +61,6 @@ const METRIC_HELP = {
   events: "Confirmed depeg event count for the asset, with the worst historical deviation shown below.",
   dexCheck: "DEX check compares trusted DEX prices with the primary peg signal when available.",
 };
-
-function statusLabel(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "live";
-  if (row.pendingIncident) return "pending";
-  if (row.coin.depegEventCoverageLimited) return "floor";
-  if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return row.dews.band.toLowerCase();
-  return "clear";
-}
-
-function statusClassName(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
-  if (row.pendingIncident) return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
-  if (row.coin.depegEventCoverageLimited) return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
-  if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") {
-    return "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300";
-  }
-  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
-}
-
-function rowToneClassName(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "bg-red-500/[0.07] ring-1 ring-inset ring-red-500/15";
-  if (row.pendingIncident) return "bg-amber-500/[0.06]";
-  if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return "bg-orange-500/[0.05]";
-  if (row.coin.depegEventCoverageLimited) return "bg-sky-500/[0.04]";
-  return "";
-}
 
 function ThreatTickerStrip({
   worstAbs,
@@ -137,82 +119,6 @@ function ThreatTickerStrip({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-export function getDeviationBarWidthPercent(abs: number): number {
-  if (abs <= 200) return (abs / 200) * 35;
-  if (abs <= 500) return 35 + ((abs - 200) / 300) * 25;
-  const severeRatio = Math.log10(Math.min(abs, 10_000) / 500) / Math.log10(10_000 / 500);
-  return 60 + severeRatio * 35;
-}
-
-function DeviationBar({ bps }: { bps: number | null }) {
-  if (bps === null) {
-    return <div className="h-1.5 rounded-full bg-muted" aria-label="Deviation unavailable" />;
-  }
-  const abs = Math.abs(bps);
-  const width = clampScore(getDeviationBarWidthPercent(abs));
-  const barClass =
-    abs >= 500
-      ? "bg-red-500"
-      : abs >= 200
-        ? "bg-orange-500"
-        : abs >= 50
-          ? "bg-amber-500"
-          : "bg-emerald-500";
-  return (
-    <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-label={`Deviation ${bps > 0 ? "+" : ""}${bps} basis points`}>
-      <div className={cn("h-full rounded-full", barClass)} style={{ width: `${Math.max(3, width)}%` }} />
-    </div>
-  );
-}
-
-function LinearGauge({
-  value,
-  max = 100,
-  tone = "bg-emerald-500",
-  ariaLabel,
-}: {
-  value: number | null | undefined;
-  max?: number;
-  tone?: string;
-  ariaLabel: string;
-}) {
-  const pct = value == null ? 0 : clampScore((Math.abs(value) / max) * 100);
-  return (
-    <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-label={ariaLabel}>
-      <div className={cn("h-full rounded-full", tone)} style={{ width: value == null ? "0%" : `${Math.max(3, pct)}%` }} />
-    </div>
-  );
-}
-
-function metricTone(value: number | null | undefined, goodHigh = true): string {
-  if (value == null) return "bg-muted-foreground";
-  if (goodHigh) {
-    if (value >= 80) return "bg-emerald-500";
-    if (value >= 55) return "bg-amber-500";
-    return "bg-red-500";
-  }
-  if (value >= 75) return "bg-red-500";
-  if (value >= 36) return "bg-amber-500";
-  return "bg-emerald-500";
-}
-
-function EventLoadMeter({ count, symbol }: { count: number; symbol: string }) {
-  const filled = count <= 0 ? 0 : Math.max(1, Math.min(5, Math.ceil(Math.log10(count + 1))));
-  return (
-    <div className="flex gap-1" aria-label={`Historical depeg event load for ${symbol}: ${count}`}>
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span
-          key={index}
-          className={cn(
-            "h-1.5 flex-1 rounded-[2px] border border-border/50",
-            index < filled ? "border-orange-500/40 bg-orange-500" : "bg-muted/35",
-          )}
-        />
-      ))}
     </div>
   );
 }
