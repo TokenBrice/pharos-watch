@@ -249,6 +249,15 @@ Current explicitly deferred major cohort:
 - `@types/node@25` — next review: 2026-08-15
 - `typescript@6` — next review: 2026-08-15
 
+Current risk-accepted transitive advisories (triage reference for the weekly `dependency-audit.yml` run):
+
+The production-scope gate is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`), which runs in the deploy `validate` set and reflects the deployed surface (a static Pages export plus the Worker runtime). The weekly `dependency-audit.yml` job deliberately runs the broader `npm audit --audit-level=high` over the full lockfile (dev + build chain) as advisory input, so it can surface advisories the production gate omits. The following transitive advisories are not reachable in the deployed runtime and are accepted rather than force-fixed, because the only available `npm audit fix --force` remedies are breaking downgrades (`viem@0.2.1`, `next@9.3.3`):
+
+- `ws` (high, GHSA-96hv-2xvq-fx4p memory-exhaustion DoS) — pulled in only by `viem`'s WebSocket transport, which Pharos does not use (no `ws` server, no websocket transport in the Worker). Reachable code path: none in production. Revisit when `viem` ships a non-breaking `ws` bump.
+- `postcss` (moderate, GHSA-qx2v-qp2m-jg93 XSS in CSS stringify) — under `next`'s build toolchain only; runs at build time, never in the deployed static export or Worker. Revisit when `next` ships a non-breaking `postcss` bump.
+
+When the weekly job reds on one of the above, treat it as a no-op against this list rather than running `npm audit fix --force`. A new high/critical advisory NOT on this list, or any of these becoming reachable in the deployed runtime, is blocking per the cadence rule above.
+
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
 Schedule: `10 8 * * *` and `25 8 * * *` UTC. The first slot follows the 08:05 UTC daily digest cron closely; the second is a catch-up for slower digest generation or a missed GitHub schedule tick.

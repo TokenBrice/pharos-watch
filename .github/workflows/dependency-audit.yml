@@ -15,5 +15,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
+      # Advisory full-lockfile scope (dev + build chain), broader than the
+      # production deploy gate `npm run audit:deps` (--omit=dev). Risk-accepted
+      # transitive advisories (ws via viem, postcss via next) and the triage
+      # path are documented in docs/deployment-process.md → "Current
+      # risk-accepted transitive advisories". Do not run `npm audit fix --force`
+      # for those; the only remedies are breaking downgrades.
       - run: npm audit --audit-level=high
       - run: npm audit signatures
