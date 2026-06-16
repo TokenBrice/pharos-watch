@@ -13,6 +13,10 @@ import {
 } from "../../methodology-shared";
 import { YIELD_SECTION_CONTENT } from "../methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
+
+const YIELD_OVERVIEW_PARAGRAPH =
+  "Pharos tracks native stablecoin yield plus selected lending opportunities and computes a risk-adjusted ranking via the Pharos Yield Score (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when multiple valid yield paths exist, address-first identity is used before symbol fallback, curated exact-pool overrides can cover named non-stablecoin venues, confidence-weighted arbitration selects the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper ecosystems do not surface as recommended base-asset routes. Eligible tracked wrapper variants can also surface their native/wrapper sources as linked parent routes, so parent assets such as BOLD can show yBOLD and sBOLD context without removing the variants' own rows. The curated auto-discovery lane also pins current Felix, Sovryn, Loopscale, Resupply, Sovryn XUSD, and Anzens exact venues when they pass the normal source-quality gates, and the allowlist now includes reviewed Tier C venues such as AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin. Future allowlist rounds start from the monthly unmatched-high-TVL audit queue and protocol-category gate rather than broad protocol hunting. Rate-derived coverage includes cgUSD, USDN, BENJI, WTGXX, USTBL, EUTBL, and wiTRY, while commodity exact-pool coverage includes XAUT on Lista Lending and PAXG on Hydration. Published lending-opportunity rows now also require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin's current supply before they can become the live recommendation. PYS is benchmark-aware and source-risk-aware, with missing source-risk evidence treated as neutral. Royco Dawn structured-tranche rows now attach senior and junior opportunities to the tracked underlying stablecoin when the deposit token resolves, using opportunity-level tranche safety for PYS without changing the underlying Report Card score. Midas mMEV now has a curated NAV-oracle row, and Curve Savings crvUSD now follows the active on-chain profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible as intentional gaps but cannot publish into the live leaderboard before launch.";
+
 export function YieldIntelligenceMethodologySection() {
   return (
           <MethodologySectionShell
@@ -23,24 +27,7 @@ export function YieldIntelligenceMethodologySection() {
             versionNote="Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or eligibility rules for discovered yield sources change."
             changelogClassName="hover:text-violet-700 dark:text-violet-400"
           >
-              <p>
-                Pharos tracks native stablecoin yield plus selected lending opportunities and computes a risk-adjusted ranking via the Pharos Yield Score (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
-                supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when
-                multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
-                exact-pool overrides can cover named non-stablecoin venues, confidence-weighted arbitration selects
-                the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper
-                ecosystems do not surface as recommended base-asset routes. Eligible tracked wrapper variants can also
-                surface their native/wrapper sources as linked parent routes, so parent assets such as BOLD can show
-                yBOLD and sBOLD context without removing the variants&apos; own rows. The curated auto-discovery lane also
-                pins current Felix, Sovryn, Loopscale, Resupply, Sovryn XUSD, and Anzens exact venues when they pass the normal source-quality gates, and the allowlist now includes reviewed Tier C venues such as AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin. Future allowlist rounds start from the monthly unmatched-high-TVL audit queue and protocol-category gate rather than broad protocol hunting. Rate-derived coverage includes cgUSD, USDN, BENJI, WTGXX, USTBL, EUTBL, and wiTRY, while commodity exact-pool coverage includes XAUT on Lista Lending and PAXG on Hydration. Published lending-opportunity rows now also
-                require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
-                supply before they can become the live recommendation. PYS is benchmark-aware and source-risk-aware,
-                with missing source-risk evidence treated as neutral. Royco Dawn structured-tranche rows now attach senior
-                and junior opportunities to the tracked underlying stablecoin when the deposit token resolves, using
-                opportunity-level tranche safety for PYS without changing the underlying Report Card score. Midas mMEV now has a curated NAV-oracle row, and Curve Savings crvUSD now follows the active on-chain
-                profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible
-                as intentional gaps but cannot publish into the live leaderboard before launch.
-              </p>
+              <p>{YIELD_OVERVIEW_PARAGRAPH}</p>
               <YieldMethodologyRelatedLinks />
               <MethodologyFacts
                 facts={[
