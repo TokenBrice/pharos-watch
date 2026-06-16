@@ -19,7 +19,8 @@ import {
   findBestLendingPool,
   isBlockedYieldOpportunitySource,
 } from "../yield-helpers";
-import { computeTvlWeightedMedianApy, parseWarningSignals } from "../yield-sync/rankings";
+import { computeTvlWeightedMedianApy } from "../yield-sync/rankings";
+import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
 import { LENDING_PROTOCOL_ALLOWLIST } from "../yield-config";
 
 // computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration

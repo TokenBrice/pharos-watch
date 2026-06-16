@@ -6,9 +6,6 @@
  *
  * Pure computation counterparts live in ../yield-helpers.ts.
  */
-import { parseYieldWarningSignals } from "../../lib/yield-utils";
-export const parseWarningSignals = parseYieldWarningSignals;
-
 export function computeTvlWeightedMedianApy(
   rows: Array<{ apy_30d: number; source_tvl_usd: number | null }>,
 ): number {
