@@ -155,6 +155,105 @@ describe("site-data proxy", () => {
     ).toBe(true);
   });
 
+  it("partitions the Pages cache key by caller origin to honor Vary: Origin", async () => {
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+            Vary: "Origin",
+            "Access-Control-Allow-Origin": "https://pharos.watch",
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(cachePut).toHaveBeenCalledTimes(1);
+
+    const matchKey = cacheMatch.mock.calls[0]?.[0] as Request;
+    const putKey = cachePut.mock.calls[0]?.[0] as Request;
+    expect(new URL(matchKey.url).searchParams.get("__cors_origin")).toBe("https://pharos.watch");
+    expect(new URL(putKey.url).searchParams.get("__cors_origin")).toBe("https://pharos.watch");
+
+    // A request from a different allowed origin must not collide with this key,
+    // otherwise it would receive pharos.watch's reflected ACAO.
+    const otherKeyOrigin = new URL(matchKey.url).searchParams.get("__cors_origin");
+    expect(otherKeyOrigin).not.toBe("https://ops.pharos.watch");
+  });
+
+  it("does not serve a cache entry written for a different origin", async () => {
+    // The cache mock keys on the synthetic __cors_origin param: an entry stored
+    // for pharos.watch must not be returned to an ops.pharos.watch request.
+    const store = new Map<string, Response>();
+    cacheMatch.mockImplementation(async (key: Request) => store.get(key.url)?.clone() ?? undefined);
+    cachePut.mockImplementation(async (key: Request, value: Response) => {
+      store.set(key.url, value);
+    });
+
+    const cachedForSite = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ acao: "https://pharos.watch" }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+            Vary: "Origin",
+            "Access-Control-Allow-Origin": "https://pharos.watch",
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", cachedForSite);
+
+    // Populate the cache from pharos.watch.
+    await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+    expect(store.size).toBe(1);
+
+    // An ops.pharos.watch request must miss and refetch (its own ACAO), not
+    // reuse the pharos.watch entry.
+    const cachedForOps = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ acao: "https://ops.pharos.watch" }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+            Vary: "Origin",
+            "Access-Control-Allow-Origin": "https://ops.pharos.watch",
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", cachedForOps);
+
+    const opsResponse = await onRequest({
+      request: new Request("https://ops.pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://ops.pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(cachedForOps).toHaveBeenCalledOnce();
+    expect(opsResponse.headers.get("Access-Control-Allow-Origin")).toBe("https://ops.pharos.watch");
+    expect(store.size).toBe(2);
+  });
+
   it("bypasses a stale Pages cache response and refreshes upstream", async () => {
     vi.setSystemTime(new Date("2026-06-15T10:02:00.000Z"));
     cacheMatch.mockResolvedValueOnce(

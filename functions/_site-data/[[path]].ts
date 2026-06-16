@@ -55,14 +55,25 @@ function buildProxyResponse(upstreamResponse: Response): Response {
   return buildProxyResponseShared(upstreamResponse, FORWARDED_RESPONSE_HEADERS);
 }
 
+// Upstream replies with `Vary: Origin` and reflects the caller's Origin into
+// Access-Control-Allow-Origin (worker/src/handlers/http/cors.ts). The Pages
+// cache key must carry that dimension, otherwise one allowed origin's
+// origin-specific ACAO would be served to a different allowed origin (the
+// site-data gate admits SITE_ORIGIN, OPS_UI_ORIGIN, and *.pages.dev previews).
 function buildCacheKey(request: Request): Request {
-  return new Request(request.url, { method: "GET" });
+  const callerOrigin = request.headers.get("Origin")?.trim() ?? "";
+  const keyUrl = new URL(request.url);
+  keyUrl.searchParams.set("__cors_origin", callerOrigin);
+  return new Request(keyUrl.toString(), { method: "GET" });
 }
 
 function getDefaultCache(): Cache {
   return (caches as CacheStorage & { default: Cache }).default;
 }
 
+// Invariant: cached entries are partitioned per caller Origin via buildCacheKey,
+// so the upstream's `Vary: Origin` / per-origin Access-Control-Allow-Origin is
+// honored — a response is only ever served to the same origin that produced it.
 function canCacheResponse(response: Response): boolean {
   const cacheControl = response.headers.get("Cache-Control") ?? "";
   const warning = response.headers.get("Warning") ?? "";
