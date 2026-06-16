@@ -1,3 +1,4 @@
+import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../lib/telegram";
 import {
   formatAdministratorMentions,
@@ -103,7 +104,9 @@ const PENDING_PASSTHROUGH_COMMANDS = new Set([
   "/health",
 ]);
 
-const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
+// `botMention` is lowercased at parse time (telegram-webhook-parsing.ts), so
+// compare against the lowercased canonical handle.
+const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
 
 /**
  * Local `my_chat_member` shape. Defined here rather than in
@@ -991,7 +994,7 @@ function buildGroupWelcomeMessage(adderMention: string): string {
     "",
     "I send stablecoin alerts into this chat: DEWS stress, depeg events, safety grade changes, and launches.",
     "",
-    "Group admins can run <code>/subscribe@PharosWatchBot dews usd-top25</code> here. For your own watchlist and quiet hours, message me in DM.",
+    `Group admins can run <code>/subscribe@${TELEGRAM_BOT_USERNAME} dews usd-top25</code> here. For your own watchlist and quiet hours, message me in DM.`,
   ].join("\n");
 }
 
@@ -1000,8 +1003,8 @@ function buildGroupWelcomeReplyMarkup(): {
 } {
   return {
     inline_keyboard: [
-      [{ text: "Read the docs →", url: "https://pharos.watch/pharoswatchbot/" }],
-      [{ text: "Personal alerts in DM →", url: "https://t.me/PharosWatchBot?start=setup" }],
+      [{ text: "Read the docs →", url: `https://pharos.watch/${TELEGRAM_BOT_USERNAME.toLowerCase()}/` }],
+      [{ text: "Personal alerts in DM →", url: `https://t.me/${TELEGRAM_BOT_USERNAME}?start=setup` }],
     ],
   };
 }

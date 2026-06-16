@@ -6,6 +6,7 @@ import {
   TELEGRAM_BOT_GROUP_COMMANDS,
   TELEGRAM_BOT_NAME,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
+  TELEGRAM_BOT_USERNAME,
 } from "@shared/lib/telegram-bot-registration";
 import { getCache, setCache } from "./db-cache";
 import { sha256Hex } from "./hash";
@@ -22,7 +23,7 @@ export {
 
 const DEFAULT_SELF_URL = API_ORIGIN;
 const TELEGRAM_WEBHOOK_PATH = "/api/telegram-webhook";
-const TELEGRAM_MINI_APP_PATH = "/pharoswatchbot/app/";
+const TELEGRAM_MINI_APP_PATH = `/${TELEGRAM_BOT_USERNAME.toLowerCase()}/app/`;
 const TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY = "telegram:webhook-reconciled";
 const TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY = "telegram:commands-reconciled";
 const TELEGRAM_PROFILE_RECONCILED_CACHE_KEY = "telegram:profile-reconciled";
