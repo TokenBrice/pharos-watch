@@ -23,8 +23,19 @@ export interface MethodologyChangelogEntry {
   effectiveAt: number;
   summary: string;
   impact: readonly string[];
-  /** Real commit hashes only. Empty means commit provenance was not recorded. */
+  /**
+   * Real commit hashes only; best-effort and independent of `reconstructed`.
+   * Empty means commit provenance was not recorded — this is expected for many
+   * contemporaneous (`reconstructed: false`) entries too, not just reconstructed
+   * ones, so an empty `commits` array does not contradict `reconstructed: false`.
+   */
   commits: readonly string[];
+  /**
+   * Origin of the entry, not a statement about commit evidence:
+   * `false` = written contemporaneously with the methodology change;
+   * `true` = reconstructed after the fact from git history.
+   * The `commits` field is best-effort in both cases (it may be empty either way).
+   */
   reconstructed: boolean;
 }
 
