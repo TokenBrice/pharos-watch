@@ -49,10 +49,39 @@ try {
 
 // Strip block + line comments AND template/string literals so the dynamic-env
 // regex doesn't match prose mentions like `process.env[name]` in JSDoc.
+// A stack of contexts tracks nesting so that `${...}` interpolations inside a
+// template literal are parsed as code (and may themselves contain nested
+// strings/templates), preserving any real `process.env[...]` access there while
+// still discarding the surrounding literal text.
 function stripCommentsAndStrings(input) {
   let out = "";
   let i = 0;
+  // Each frame is { kind: "code" | "template", brace: <depth> }. "code" frames
+  // entered via `${` pop back to the template when their brace depth returns to 0.
+  const stack = [{ kind: "code", brace: 0 }];
   while (i < input.length) {
+    const top = stack[stack.length - 1];
+    const ch = input[i];
+    if (top.kind === "template") {
+      if (ch === "\\") {
+        i += 2;
+        continue;
+      }
+      if (ch === "`") {
+        stack.pop();
+        i += 1;
+        continue;
+      }
+      if (ch === "$" && input[i + 1] === "{") {
+        out += "${";
+        stack.push({ kind: "code", brace: 0 });
+        i += 2;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+    // code context
     const two = input.slice(i, i + 2);
     if (two === "//") {
       const nl = input.indexOf("\n", i);
@@ -64,13 +93,36 @@ function stripCommentsAndStrings(input) {
       i = end === -1 ? input.length : end + 2;
       continue;
     }
-    const ch = input[i];
-    if (ch === '"' || ch === "'" || ch === "`") {
+    if (ch === '"' || ch === "'") {
       i += 1;
       while (i < input.length && input[i] !== ch) {
         if (input[i] === "\\") i += 2;
         else i += 1;
       }
+      i += 1;
+      continue;
+    }
+    if (ch === "`") {
+      stack.push({ kind: "template", brace: 0 });
+      i += 1;
+      continue;
+    }
+    if (ch === "{") {
+      top.brace += 1;
+      out += ch;
+      i += 1;
+      continue;
+    }
+    if (ch === "}") {
+      if (top.brace === 0 && stack.length > 1) {
+        // Closes a `${...}` interpolation; resume the enclosing template.
+        out += "}";
+        stack.pop();
+        i += 1;
+        continue;
+      }
+      top.brace -= 1;
+      out += ch;
       i += 1;
       continue;
     }
