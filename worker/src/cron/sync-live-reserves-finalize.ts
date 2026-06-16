@@ -38,6 +38,8 @@ export interface FinalizeReserveSyncRunArgs {
   synced: number;
   failed: number;
   skipped: number;
+  circuitSkipped: number;
+  deferredSkipped: number;
   warningMessages: string[];
   coinsWithErrors: string[];
   coinsWithWarnings: string[];
@@ -148,7 +150,18 @@ async function recordFinalizationWarning(
 }
 
 function resolveRunStatus(args: FinalizeReserveSyncRunArgs): CronResult["status"] {
-  if (args.synced === 0 && (args.failed > 0 || args.skipped > 0)) return "error";
+  if (args.synced === 0 && (args.failed > 0 || args.skipped > 0)) {
+    // A run that synced nothing because the circuit breaker legitimately held
+    // every candidate (no genuine failures, no budget-deferred tail) is healthy
+    // recovery behavior, not an error. Surface it as "degraded" so alerting can
+    // distinguish a quiet breaker from an all-adapters-failed run. "error" stays
+    // reserved for real adapter/storage failures and the first-run-all-deferred
+    // case (budget exhausted before anything could sync).
+    if (args.failed === 0 && args.deferredSkipped === 0 && args.circuitSkipped > 0) {
+      return "degraded";
+    }
+    return "error";
+  }
   return (args.failed + args.skipped) > Math.ceil(args.total * 0.1) ? "degraded" : "ok";
 }
 

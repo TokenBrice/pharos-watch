@@ -361,7 +361,7 @@ describe("syncLiveReserves", () => {
     expect(metadata.warningCount).toBeGreaterThanOrEqual(configuredCoinCount);
   });
 
-  it("records a skipped sync state when the circuit is open", async () => {
+  it("records a skipped sync state and reports degraded (not error) when the circuit holds every coin", async () => {
     shouldAttemptFetchMock.mockResolvedValue(false);
     mockAdapterRegistry(async () => {
       throw new Error("adapter should not run when circuit is open");
@@ -371,7 +371,10 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const result = await syncLiveReserves(db, new AbortController().signal, {});
 
-    expect(result?.status).toBe("error");
+    // An all-circuit-open run synced nothing but had no genuine failures and no
+    // budget-deferred tail; this is healthy recovery behavior, surfaced as
+    // "degraded" rather than masked as "error".
+    expect(result?.status).toBe("degraded");
     expect(result?.itemCount).toBe(0);
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
     expect(recordOutcomeSafeMock).not.toHaveBeenCalled();

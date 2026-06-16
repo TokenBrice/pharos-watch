@@ -35,6 +35,8 @@ interface ReserveCoinQueueResult {
   synced: number;
   failed: number;
   skipped: number;
+  circuitSkipped: number;
+  deferredSkipped: number;
   warningMessages: string[];
   coinsWithErrors: string[];
   coinsWithWarnings: string[];
@@ -247,6 +249,8 @@ async function runReserveCoinQueue(args: {
   let synced = 0;
   let failed = 0;
   let skipped = 0;
+  let circuitSkipped = 0;
+  let deferredSkipped = 0;
   let deferredCoins = 0;
   let nextCursorStablecoinId: string | null = null;
   let cursorTailState: LiveReserveCursorTailState | null = null;
@@ -289,6 +293,7 @@ async function runReserveCoinQueue(args: {
       cursorTailError = deferred.cursorTailError;
       runBudgetTruncationCount = deferred.runBudgetTruncationCount;
       skipped += deferredCoins;
+      deferredSkipped += deferredCoins;
       break;
     }
 
@@ -324,6 +329,7 @@ async function runReserveCoinQueue(args: {
       synced++;
     } else if (result.status === "skipped") {
       skipped++;
+      circuitSkipped++;
     } else {
       failed++;
       coinsWithErrors.push(coin.id);
@@ -353,6 +359,8 @@ async function runReserveCoinQueue(args: {
     synced,
     failed,
     skipped,
+    circuitSkipped,
+    deferredSkipped,
     warningMessages,
     coinsWithErrors,
     coinsWithWarnings,
