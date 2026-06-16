@@ -4,6 +4,7 @@ import type {
   MintAuthorityClientSummary,
 } from "@shared/types/stablecoin-client-meta";
 import { buildExplorerUrl } from "@shared/lib/explorer";
+import { formatAddress } from "@shared/lib/format";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { isRecord, stringValue } from "@shared/lib/type-guards";
 import {
@@ -303,10 +304,6 @@ function formatTimelock(seconds: number | null): string | null {
   return `${minutes}m timelock`;
 }
 
-function shortenAddress(address: string): string {
-  if (address.length <= 18) return address;
-  return `${address.slice(0, 8)}...${address.slice(-6)}`;
-}
 
 function readSources(value: unknown): MintAuthorityDetailSourceViewModel[] {
   if (!Array.isArray(value)) return [];
@@ -423,7 +420,7 @@ function buildMintAuthorityControlViewModel(
   const authorityTypeLabel = labelFromMap(control.authorityType, AUTHORITY_TYPE_LABELS);
   const custodyAttestationLabel = formatMintAuthorityCustodyAttestation(control.keyCustodyAttestation);
   const locationLabel =
-    [chain, address ? shortenAddress(address) : null].filter(Boolean).join(" / ") || "No address published";
+    [chain, address ? formatAddress(address, 8, 6) : null].filter(Boolean).join(" / ") || "No address published";
   const addressUrl = address
     ? buildExplorerUrl({ chainKey: chain ?? undefined, entityType: "address", value: address })
     : null;

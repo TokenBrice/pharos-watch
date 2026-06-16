@@ -133,9 +133,9 @@ export function formatTokenAmount(value: number): string {
   return trimTrailingZeros(value.toFixed(4));
 }
 
-export function formatAddress(address: string): string {
-  if (address.length <= 12) return address;
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+export function formatAddress(address: string, head = 6, tail = 4): string {
+  if (address.length <= head + tail + 2) return address;
+  return `${address.slice(0, head)}...${address.slice(-tail)}`;
 }
 
 export function slugifyId(value: string, options: { stripPunctuation?: boolean } = {}): string {
