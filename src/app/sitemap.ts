@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { MetadataRoute } from "next";
-import { PUBLIC_DATASET_TOPICS } from "@shared/lib/api-endpoints/datasets";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
@@ -455,17 +454,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  // RSS feeds live at /feed/<topic>.xml as XML (Content-Type:
-  // application/rss+xml). They're discoverable via the <link rel="alternate">
-  // tags in layout.tsx and the footer "Subscribe" cluster; sitemap inclusion
-  // would fail the SEO check (no HTML artifact at those paths).
-  const feedPages: MetadataRoute.Sitemap = [];
-
-  // Public dataset + Sheets mirrors live at non-HTML URLs (.csv/.json),
-  // so sitemap inclusion isn't appropriate — the SEO check rejects URLs
-  // without HTML artifacts. They remain discoverable via /llms.txt,
-  // /about/api/, and direct linking.
-  const datasetPages: MetadataRoute.Sitemap = PUBLIC_DATASET_TOPICS.flatMap(() => []);
+  // RSS feeds (/feed/<topic>.xml) and public datasets (.csv/.json) are excluded
+  // from the sitemap — both are non-HTML URLs and the SEO check rejects entries
+  // without HTML artifacts. They remain discoverable via <link rel="alternate">
+  // tags, the footer "Subscribe" cluster, /llms.txt, and /about/api/.
 
   return [
     ...staticPages,
@@ -480,7 +472,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...depegEventPages,
     ...docsIndex,
     ...docsPages,
-    ...feedPages,
-    ...datasetPages,
   ];
 }
