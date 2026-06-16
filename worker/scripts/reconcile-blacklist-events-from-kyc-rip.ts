@@ -230,7 +230,8 @@ export async function runEventReconciliation(
   const d1 = dependencies.d1 ?? createRemoteD1Client(options.database);
   const existing = loadExistingEthereumBlacklistSet(d1);
   const candidates = rows.filter((row) => !existing.has(buildAddressKey(row.asset, row.address)));
-  const client = dependencies.client ?? createPublicClient({ chain: mainnet, transport: http("https://ethereum-rpc.publicnode.com") });
+  const rpcUrl = process.env.ETHEREUM_RPC_URL ?? "https://ethereum-rpc.publicnode.com";
+  const client = dependencies.client ?? createPublicClient({ chain: mainnet, transport: http(rpcUrl) });
   const insertedRows: BlacklistRow[] = [];
 
   for (const candidate of candidates) {
