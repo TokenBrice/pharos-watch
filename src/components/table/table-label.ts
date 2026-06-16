@@ -34,10 +34,13 @@ export function hasTableCaptionChild(children: React.ReactNode): boolean {
       found = true;
       return;
     }
+    // Rely solely on displayName (set explicitly on TableCaption); `type.name`
+    // is mangled in minified production builds. Any HOC wrapping TableCaption
+    // must forward `displayName = "TableCaption"` for caption detection to work.
     const displayName = typeof type === "function"
       ? (type as { displayName?: string }).displayName
       : undefined;
-    if (displayName === "TableCaption" || (typeof type === "function" && type.name === "TableCaption")) {
+    if (displayName === "TableCaption") {
       found = true;
       return;
     }
