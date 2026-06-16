@@ -32,11 +32,9 @@ export function useAutoLoadInfinitePages({
   useEffect(() => {
     if (!autoLoadAll) {
       retryCountRef.current = 0;
+      return;
     }
-  }, [autoLoadAll]);
-
-  useEffect(() => {
-    if (!autoLoadAll || !enabled || hasNextPage !== true || isFetchingNextPage) {
+    if (!enabled || hasNextPage !== true || isFetchingNextPage) {
       return;
     }
     if (maxAutoPages != null && pageCount != null && pageCount >= maxAutoPages) {
