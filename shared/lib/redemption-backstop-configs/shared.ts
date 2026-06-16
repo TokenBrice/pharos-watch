@@ -129,6 +129,12 @@ export function applyTrackedReviewedDocs(
   }
 }
 
+/**
+ * Fan out one base config to a plain object keyed by stablecoin id.
+ * Use this for plain-object merges outside of defineBackstopRegistry
+ * (e.g. in offchain-issuer data files that spread the result into a larger map).
+ * For use inside defineBackstopRegistry, prefer defineBatch() in factory.ts.
+ */
 export function expandIds(
   ids: readonly string[],
   config: RedemptionBackstopConfig,

@@ -37,6 +37,11 @@ export function defineBackstopRegistry(
   return configs;
 }
 
+/**
+ * Fan out one base config to an array of RedemptionBackstopRegistryEntry values.
+ * Use this inside defineBackstopRegistry to register multiple ids sharing the same config.
+ * For plain-object merges outside the registry, use expandIds() in shared.ts instead.
+ */
 export function defineBatch(
   ids: readonly string[],
   config: RedemptionBackstopConfig,
