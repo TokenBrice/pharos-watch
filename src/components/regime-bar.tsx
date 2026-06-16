@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 
 const DAY_SECONDS = 86_400;
 const BAND_STRIP_WINDOW_DAYS = 30;
+type StabilityIndexLightData = {
+  current?: Parameters<typeof getDisplayedPsi>[0];
+  history?: Array<{ date: number; band: string }>;
+};
 
 function buildBandStripCells(
   history: ReadonlyArray<{ date: number; band: string }> | undefined,
@@ -30,9 +34,10 @@ function buildBandStripCells(
 /** Persistent 3px bar at the top of every page, colored by current PSI band. */
 export function RegimeBar() {
   const { data: psiData } = useStabilityIndexLight();
+  const lightData = psiData as StabilityIndexLightData | undefined;
   const [expanded, setExpanded] = useState(false);
 
-  const current = psiData?.current;
+  const current = lightData?.current;
   if (!current) return <div className="fixed left-0 right-0 top-0 z-[60] h-[3px] max-w-[100vw]" />;
 
   const displayedPsi = getDisplayedPsi(current);
@@ -46,12 +51,12 @@ export function RegimeBar() {
   const useDarkText = band === "BEDROCK" || band === "STEADY";
 
   // Walk history to compute days in current band
-  const daysInBand = psiData?.history?.length
-    ? getPsiBandStreak(psiData.history, current.computedAt, band)
+  const daysInBand = lightData?.history?.length
+    ? getPsiBandStreak(lightData.history, current.computedAt, band)
     : null;
 
   // 30-day band history strip (oldest → newest). Empty cells until history hydrates.
-  const bandStripCells = buildBandStripCells(psiData?.history, current.computedAt);
+  const bandStripCells = buildBandStripCells(lightData?.history, current.computedAt);
 
   return (
     <button

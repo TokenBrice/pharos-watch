@@ -1,6 +1,7 @@
 import { PEG_BADGE_STYLES } from "@shared/lib/classification";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import { type PegCurrency, type YieldBenchmarkKey, type YieldType } from "@shared/types";
+import type { YieldSourceDepthLens } from "@/lib/yield-source-risk";
 
 export type YieldSourceConfidenceFilter =
   | "all"
@@ -23,7 +24,7 @@ export type YieldPegFilter = PegCurrency | "all" | "non-usd" | "aud-cad" | "othe
 export type YieldWarningsFilter = "all" | "hide" | "only";
 export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
 export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
-export type YieldDepthFilter = "all" | "direct" | "inferred" | "thin" | "hide-thin";
+export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
 export type YieldSourceChangedFilter = "all" | "only" | "none";
 export type YieldTrendingFilter = "all" | "rising";
 export type YieldWatchlistFilter = "all" | "only";

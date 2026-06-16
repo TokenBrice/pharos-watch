@@ -192,15 +192,18 @@ async function fetchBootstrapQuery(
 
 async function generatePayload(apiBase: string): Promise<HomepageBootstrapPayload> {
   const entries = await Promise.all(
-    HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS.map(({ id, descriptor }) =>
-      fetchBootstrapQuery(
+    HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS.map(({ id, descriptor }) => {
+      const maxAgeSec = descriptor.metaMaxAgeSec ?? (
+        "producerIntervalMs" in descriptor ? descriptor.producerIntervalMs / 1000 : 0
+      );
+      return fetchBootstrapQuery(
         apiBase,
         id,
         descriptor.path,
-        descriptor.metaMaxAgeSec ?? descriptor.producerIntervalMs / 1000,
+        maxAgeSec,
         descriptor.schema,
       ).then((query) => [id, query] as const),
-    ),
+    }),
   );
 
   const queries: HomepageBootstrapPayload["queries"] = {};

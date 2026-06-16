@@ -81,7 +81,7 @@ export function KpiBar() {
     color7Class: mcap7ColorClass,
     usdtShareDisplay,
   } = buildMcapDisplay({ mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct }, hasStablecoinsData);
-  const pegStatusDisplay = buildPegStatusDisplay(summary);
+  const pegStatusDisplay = buildPegStatusDisplay(summary ?? undefined);
   const {
     volDisplay: dexVolDisplay,
     deltaDisplay: dexDeltaDisplay,

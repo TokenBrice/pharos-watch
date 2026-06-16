@@ -204,7 +204,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
                 data={data}
                 dataKey="size"
                 nameKey="name"
-                content={(props) => <TreemapCell {...(props as TreemapCellProps)} />}
+                content={(props) => <TreemapCell {...(props as unknown as TreemapCellProps)} />}
                 isAnimationActive={false}
               >
                 <Tooltip content={<ReserveTooltip />} />

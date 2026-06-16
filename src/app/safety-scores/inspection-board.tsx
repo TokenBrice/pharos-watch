@@ -96,7 +96,7 @@ export function SafetyInspectionBoard({
   const totalFindings = model.rows.reduce((sum, row) => sum + row.findingCount, 0);
 
   return (
-    <Card className={cn("overflow-hidden rounded-xl border-l-[3px]", leadTone.borderL)}>
+    <Card className={cn("overflow-hidden rounded-xl border-l-[3px]", leadTone.bar)}>
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">

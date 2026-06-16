@@ -1,9 +1,15 @@
 import { DEFAULT_FILTERS } from "@/lib/yield-view-config";
 import type {
+  YieldBenchmarkFilter,
+  YieldDepthFilter,
+  YieldOpportunityFilter,
   YieldPegFilter,
+  YieldSourceChangedFilter,
+  YieldSourceConfidenceFilter,
   YieldTrendingFilter,
   YieldViewModelFilters,
   YieldWatchlistFilter,
+  YieldWarningsFilter,
 } from "@/lib/yield-view-config";
 import type { YieldType } from "@shared/types";
 
@@ -83,14 +89,14 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
     peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
     yieldType: normalizeOption(params.yieldType, validYieldTypes, DEFAULT_FILTERS.yieldType),
     q: normalizeTextParam(params.q),
-    warnings: normalizeOption(params.warnings, validWarnings, DEFAULT_FILTERS.warnings),
+    warnings: normalizeOption(params.warnings, validWarnings, DEFAULT_FILTERS.warnings) as YieldWarningsFilter,
     minSafety: parseNumberParam(params.minSafety, 100),
     minTvl: parseNumberParam(params.minTvl, Number.MAX_SAFE_INTEGER),
-    sourceConfidence: normalizeOption(params.sourceConfidence, validConfidence, DEFAULT_FILTERS.sourceConfidence),
-    benchmark: normalizeOption(params.benchmark, validBenchmarks, DEFAULT_FILTERS.benchmark),
-    opportunity: normalizeOption(params.opportunity, validOpportunities, DEFAULT_FILTERS.opportunity),
-    depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth),
-    sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged),
+    sourceConfidence: normalizeOption(params.sourceConfidence, validConfidence, DEFAULT_FILTERS.sourceConfidence) as YieldSourceConfidenceFilter,
+    benchmark: normalizeOption(params.benchmark, validBenchmarks, DEFAULT_FILTERS.benchmark) as YieldBenchmarkFilter,
+    opportunity: normalizeOption(params.opportunity, validOpportunities, DEFAULT_FILTERS.opportunity) as YieldOpportunityFilter,
+    depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth) as YieldDepthFilter,
+    sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged) as YieldSourceChangedFilter,
     trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
     watchlist: normalizeOption(params.watchlist, validWatchlist, DEFAULT_FILTERS.watchlist),
   };
