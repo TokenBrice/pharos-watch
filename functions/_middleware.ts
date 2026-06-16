@@ -1,12 +1,9 @@
 import {
-  addNonceToInlineScripts,
   buildContentSecurityPolicy,
-  createCspNonce,
   isTelegramMiniAppPath,
 } from "@shared/lib/site-csp";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { NOINDEX_HEADER_VALUE } from "./lib/noindex";
-import { isHtmlResponse } from "./lib/proxy-utils";
+import { injectHtmlCsp } from "./lib/csp-inject";
 
 interface MiddlewareEnv {
   ASSETS?: { fetch: typeof fetch };
@@ -125,17 +122,6 @@ function addDirectMarkdownAssetSeoHeaders(headers: Headers, canonicalPath: strin
   headers.set("Link", existingLink ? `${existingLink}, ${canonicalLink}` : canonicalLink);
 }
 
-function addCspHeaders(headers: Headers, nonce: string, options: { telegramMiniApp?: boolean } = {}): void {
-  headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce, options));
-  headers.set("Cloudflare-CDN-Cache-Control", "no-store");
-  headers.set("CDN-Cache-Control", "no-store");
-  headers.delete("Content-Length");
-  if (options.telegramMiniApp) {
-    headers.delete("X-Frame-Options");
-    headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
-  }
-}
-
 function cloneForMethod(response: Response, method: string, headers: Headers): Response {
   return new Response(method === "HEAD" ? null : response.body, {
     status: response.status,
@@ -150,30 +136,11 @@ function withNegotiationHeaders(response: Response, method: string): Response {
   return cloneForMethod(response, method, headers);
 }
 
-async function withHtmlCsp(response: Response, request: Request, pathname: string): Promise<Response> {
-  if (!isHtmlResponse(response)) return response;
-
-  const method = request.method;
-  const nonce = createCspNonce();
-  const headers = new Headers(response.headers);
-  addCspHeaders(headers, nonce, { telegramMiniApp: isTelegramMiniAppPath(pathname) });
-  addVaryAcceptEncoding(headers);
-
-  if (method === "HEAD") {
-    return cloneForMethod(response, method, headers);
-  }
-
-  const html = addNonceToInlineScripts(await response.text(), nonce);
-
-  // `response.text()` yields the decoded body, so any inherited upstream
-  // Content-Encoding is now stale. Return decoded HTML and let Cloudflare's edge
-  // compression handle the final transport encoding for Pages Functions.
-  headers.delete("Content-Encoding");
-
-  return new Response(html, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
+function withHtmlCsp(response: Response, request: Request, pathname: string): Promise<Response> {
+  return injectHtmlCsp(response, {
+    method: request.method,
+    cspOptions: { telegramMiniApp: isTelegramMiniAppPath(pathname) },
+    mutateHeaders: addVaryAcceptEncoding,
   });
 }
 

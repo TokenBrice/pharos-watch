@@ -36,7 +36,11 @@ describe("admin host gate", () => {
     const assetsFetch = vi.fn(async () =>
       new Response(html, {
         status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8", "Content-Length": String(html.length) },
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Length": String(html.length),
+          "Content-Encoding": "gzip",
+        },
       }),
     );
     const response = await onRequest({
@@ -55,6 +59,7 @@ describe("admin host gate", () => {
     expect(scriptSrc).toContain("script-src 'self' 'nonce-");
     expect(scriptSrc).not.toContain("'unsafe-inline'");
     expect(response.headers.get("Content-Length")).toBeNull();
+    expect(response.headers.get("Content-Encoding")).toBeNull();
     expect(response.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
     expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
