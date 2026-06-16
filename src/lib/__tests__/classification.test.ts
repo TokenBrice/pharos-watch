@@ -6,8 +6,8 @@ import {
   BACKING_LABELS_SHORT,
   PEG_LABELS,
   PEG_LABELS_SHORT,
-  GOVERNANCE_COLORS,
-  BACKING_COLORS,
+  GOVERNANCE_BADGE_STYLES,
+  BACKING_BADGE_STYLES,
 } from "@shared/lib/classification";
 
 // ---------------------------------------------------------------------------
@@ -114,32 +114,32 @@ describe("PEG_LABELS_SHORT", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Color maps exist and have matching keys
+// Badge style maps exist and have matching keys
 // ---------------------------------------------------------------------------
-describe("Color maps", () => {
-  it("GOVERNANCE_COLORS has the same keys as GOVERNANCE_LABELS", () => {
-    expect(Object.keys(GOVERNANCE_COLORS).sort()).toEqual(
+describe("Badge style maps", () => {
+  it("GOVERNANCE_BADGE_STYLES has the same keys as GOVERNANCE_LABELS", () => {
+    expect(Object.keys(GOVERNANCE_BADGE_STYLES).sort()).toEqual(
       Object.keys(GOVERNANCE_LABELS).sort()
     );
   });
 
-  it("BACKING_COLORS has the same keys as BACKING_LABELS", () => {
-    expect(Object.keys(BACKING_COLORS).sort()).toEqual(
+  it("BACKING_BADGE_STYLES has the same keys as BACKING_LABELS", () => {
+    expect(Object.keys(BACKING_BADGE_STYLES).sort()).toEqual(
       Object.keys(BACKING_LABELS).sort()
     );
   });
 
-  it("all GOVERNANCE_COLORS values are non-empty strings", () => {
-    for (const v of Object.values(GOVERNANCE_COLORS)) {
-      expect(typeof v).toBe("string");
-      expect(v.length).toBeGreaterThan(0);
+  it("all GOVERNANCE_BADGE_STYLES cls values are non-empty strings", () => {
+    for (const v of Object.values(GOVERNANCE_BADGE_STYLES)) {
+      expect(typeof v.cls).toBe("string");
+      expect(v.cls.length).toBeGreaterThan(0);
     }
   });
 
-  it("all BACKING_COLORS values are non-empty strings", () => {
-    for (const v of Object.values(BACKING_COLORS)) {
-      expect(typeof v).toBe("string");
-      expect(v.length).toBeGreaterThan(0);
+  it("all BACKING_BADGE_STYLES cls values are non-empty strings", () => {
+    for (const v of Object.values(BACKING_BADGE_STYLES)) {
+      expect(typeof v.cls).toBe("string");
+      expect(v.cls.length).toBeGreaterThan(0);
     }
   });
 });

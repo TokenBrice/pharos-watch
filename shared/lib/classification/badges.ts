@@ -45,21 +45,6 @@ export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Badge color classes (for table/detail badges with bg + text + border)
-// Derived from the `.cls` field of the BADGE_STYLES maps above.
-// ---------------------------------------------------------------------------
-
-/** Governance badge colors used in the main table. */
-export const GOVERNANCE_COLORS = Object.fromEntries(
-  Object.entries(GOVERNANCE_BADGE_STYLES).map(([key, value]) => [key, value.cls]),
-) as Record<GovernanceType, string>;
-
-/** Backing badge colors used in the main table. */
-export const BACKING_COLORS = Object.fromEntries(
-  Object.entries(BACKING_BADGE_STYLES).map(([key, value]) => [key, value.cls]),
-) as Record<BackingType, string>;
-
 /** Peg currency badge styles for the detail page. */
 export const PEG_BADGE_STYLES = mapPegMetadata((metadata) => metadata.badge);
 

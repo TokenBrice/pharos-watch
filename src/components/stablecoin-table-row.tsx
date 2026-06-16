@@ -6,8 +6,8 @@ import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/table";
 import {
-  BACKING_COLORS,
-  GOVERNANCE_COLORS,
+  BACKING_BADGE_STYLES,
+  GOVERNANCE_BADGE_STYLES,
   BACKING_LABELS_SHORT,
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
@@ -402,7 +402,7 @@ function StablecoinVirtualRowBase({
       {isVisible("backing") && (
         <TableCell key="backing" className="text-center">
           {meta && (
-            <Badge variant="outline" className={`text-xs ${BACKING_COLORS[meta.flags.backing] ?? ""}`}>
+            <Badge variant="outline" className={`text-xs ${BACKING_BADGE_STYLES[meta.flags.backing]?.cls ?? ""}`}>
               {BACKING_LABELS_SHORT[meta.flags.backing]}
             </Badge>
           )}
@@ -411,7 +411,7 @@ function StablecoinVirtualRowBase({
       {isVisible("type") && (
         <TableCell key="type" className="text-center">
           {meta && (
-            <Badge variant="outline" className={`text-xs ${GOVERNANCE_COLORS[meta.flags.governance] ?? ""}`}>
+            <Badge variant="outline" className={`text-xs ${GOVERNANCE_BADGE_STYLES[meta.flags.governance]?.cls ?? ""}`}>
               {GOVERNANCE_LABELS_SHORT[meta.flags.governance]}
             </Badge>
           )}
