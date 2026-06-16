@@ -35,7 +35,7 @@ const OPENEDEN_BROWSER_HEADERS = buildBrowserHeaders(
   "https://openeden.com/usdo/transparency",
 );
 
-function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResponse): AdapterResult {
+export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): AdapterResult {
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.date ?? null);
   const componentTotal =
     payload.totalTbillAmountInUsd
@@ -157,12 +157,6 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
   };
 }
 
-export function adaptOpenEdenUsdo(
-  payload: OpenEdenReserveCompositionResponse,
-): AdapterResult {
-  return adaptOpenEdenReserveComposition(payload);
-}
-
 // The fetch budget keeps all retry attempts inside the orchestrator's 20s
 // per-attempt wall, so a slow or unreachable gateway surfaces a labeled fetch
 // error in attempt history instead of a bare "adapter-timeout".
@@ -224,5 +218,5 @@ export async function fetchOpenEdenUsdoReserves(
     const detail = toErrorMessage(error);
     throw new Error(`openeden-usdo reserve composition fetch failed: ${detail}`);
   }
-  return adaptOpenEdenReserveComposition(payload);
+  return adaptOpenEdenUsdo(payload);
 }
