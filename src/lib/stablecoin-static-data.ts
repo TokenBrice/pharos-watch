@@ -10,8 +10,8 @@ export const DEAD_STABLECOIN_COUNT = 88;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
   centralized: 182,
-  "centralized-dependent": 168,
-  decentralized: 21,
+  "centralized-dependent": 169,
+  decentralized: 20,
 } as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {

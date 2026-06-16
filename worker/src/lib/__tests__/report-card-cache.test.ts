@@ -244,16 +244,20 @@ describe("writeReportCardCache", () => {
     const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
     expect(write?.binds[0]).toBe("report_card_cache");
     expect(JSON.parse(String(write?.binds[1]))).toEqual({
-      scores: {
-        rated: { score: 82, grade: "B+" },
-      },
-      updatedAt: 1_777_000_000,
+      generation: REPORT_CARD_CACHE_GENERATION,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      degradedInputs: {
-        inputsStale: true,
-        liquidityStale: true,
-        redemptionStale: false,
-        staleInputs: ["dexLiquidity"],
+      payload: {
+        scores: {
+          rated: { score: 82, grade: "B+" },
+        },
+        updatedAt: 1_777_000_000,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        degradedInputs: {
+          inputsStale: true,
+          liquidityStale: true,
+          redemptionStale: false,
+          staleInputs: ["dexLiquidity"],
+        },
       },
     });
   });
