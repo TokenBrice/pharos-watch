@@ -15,6 +15,16 @@ const GOLDEN_ANGLE_DEG = 137.5;
 const INITIAL_ANGLE_DEG = -90;
 const DEFAULT_COLLISION_PADDING_PX = 5;
 
+/**
+ * Default cap on relaxation passes for {@link resolvePackedCoinOverlaps}. Each
+ * pass is O(n²) over the cluster, so total work is O(iterations · n²). Current
+ * callers pack small clusters (fiat-map and sky cohorts are well under ~30
+ * coins), where the `if (!moved) break` early-exit converges in far fewer than
+ * this many passes. Exported so UI tests can lower it for speed; if clusters
+ * ever grow much larger, prefer a spatial grid over raising this ceiling.
+ */
+export const DEFAULT_COLLISION_ITERATIONS = 90;
+
 function centerDistancePx(a: PackedCoin, b: PackedCoin): number {
   const dx = (a.x - b.x) * (FRAME_W / 100);
   const dy = (a.y - b.y) * (FRAME_H / 100);
@@ -86,7 +96,7 @@ export function resolvePackedCoinOverlaps<T extends PackedCoin>(
     frameWidthPx = FRAME_W,
     frameHeightPx = FRAME_H,
     paddingPx = DEFAULT_COLLISION_PADDING_PX,
-    iterations = 90,
+    iterations = DEFAULT_COLLISION_ITERATIONS,
     getMobility = defaultMobility,
   }: {
     frameWidthPx?: number;
