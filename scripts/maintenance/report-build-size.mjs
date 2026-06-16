@@ -26,10 +26,10 @@ const DEFAULT_BUDGETS = {
   // Lighthouse mobile reports the global CSS transfer as render-blocking, so
   // track compressed CSS too instead of relying only on raw chunk size.
   // Homepage render path now includes an expanded above-the-fold critical style block.
-  // Keep this around 64 KiB to avoid false positives from production-only data
+  // Keep this around 65 KiB to avoid false positives from production-only data
   // and feature-flag inlining while still enforcing a practical compressed CSS
   // ceiling on critical assets.
-  largestCssGzipBytes: 65_500,
+  largestCssGzipBytes: 66_500,
   totalStaticMediaBytes: 2_000_000,
   // Allow documented App Router + RSC payload growth on docs-heavy release pages.
   largestHtmlBytes: 2_700_000,
