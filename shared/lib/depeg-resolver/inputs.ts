@@ -18,11 +18,8 @@ export interface DdrCoinStructural {
   mechanismArchetype?: string | null;
   mintPath?: string | null;
   authorityPosture?: string | null;
-  mintConfidence?: string | null;
   collateralQuality?: string | null;
   custodyModel?: string | null;
-  deploymentModel?: string | null;
-  governanceQuality?: string | null;
   reserves?: { risk: string; pct: number }[];
   canBeBlacklisted?: boolean | "possible" | "inherited" | null;
   /** True when any dependency resolves to a frozen/dead coin at material weight. */
