@@ -379,8 +379,6 @@ export async function integrateDirectApiLiquidityPhase(params: {
   directApiSkippedUntracked = directApiPools.length - trackedDirectApiPools.length;
   if (directApiSkippedUntracked > 0) {
     incrementReason(excludedByReason, "untracked_token", directApiSkippedUntracked);
-  }
-  if (directApiSkippedUntracked > 0) {
     console.log(
       `[dex-liquidity] Retained ${trackedDirectApiPools.length} direct API pools with tracked tokens ` +
         `(skipped ${directApiSkippedUntracked} untracked pools before identity processing)`,
@@ -485,13 +483,6 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.stablecoinPriceById,
     );
     mergeDexPriceObservationMap(params.priceObservations, directApiPriceObs);
-  }
-
-  if (directApiDedupSkippedByAddress > 0 || directApiDedupSkippedByDerivedIdentity > 0) {
-    console.log(
-      `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} direct API pools by exact identity and ` +
-        `${directApiDedupSkippedByDerivedIdentity} by unique derived identity`,
-    );
   }
 
   return {
