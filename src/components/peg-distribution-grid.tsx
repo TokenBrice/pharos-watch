@@ -86,13 +86,15 @@ export function PegBrowseStrip({
 }) {
   const [expanded, setExpanded] = useState(false);
   const groups = useMemo(() => groupPegs(pegs), [pegs]);
+  const fiatGroup = useMemo(() => groups.find((group) => group.label === "Fiat") ?? null, [groups]);
   const fiatPreview = useMemo(
-    () => buildCollapsedFiatPreview(groups.find((group) => group.label === "Fiat")?.pegs ?? [], countFn, fiatExceptUsdHref),
-    [countFn, fiatExceptUsdHref, groups],
+    () => buildCollapsedFiatPreview(fiatGroup?.pegs ?? [], countFn, fiatExceptUsdHref),
+    [countFn, fiatExceptUsdHref, fiatGroup],
   );
 
   // Collapsed: selected fiat previews + an aggregate non-USD fiat lens.
-  const hasFiatOverflow = (groups.find((group) => group.label === "Fiat")?.pegs.length ?? 0) > fiatPreview.length;
+  const fiatPegCount = fiatGroup?.pegs.length ?? 0;
+  const hasFiatOverflow = fiatPegCount > fiatPreview.length;
 
   return (
     <div className="space-y-2">
@@ -103,7 +105,7 @@ export function PegBrowseStrip({
             onClick={() => setExpanded((v) => !v)}
             className="pharos-focus-ring min-h-11 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-0 sm:px-0 sm:py-0"
           >
-            {expanded ? "Show fewer" : `+${(groups.find((group) => group.label === "Fiat")?.pegs.length ?? 0) - fiatPreview.length} more pegs`}
+            {expanded ? "Show fewer" : `+${fiatPegCount - fiatPreview.length} more pegs`}
           </button>
         )}
       </div>
