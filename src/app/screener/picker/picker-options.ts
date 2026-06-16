@@ -1,8 +1,5 @@
 import { PEG_METADATA } from "@shared/lib/classification";
-import {
-  SELECTOR_ELIGIBLE_PEG_CURRENCIES,
-  SELECTOR_YIELD_PEG_CURRENCIES,
-} from "@shared/lib/selector";
+import { SELECTOR_ELIGIBLE_PEG_CURRENCIES } from "@shared/lib/selector";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
 import {
   shouldSkipExitStep,
@@ -46,7 +43,7 @@ export const PEG_OPTIONS: readonly SelectorOption<SelectorPeg>[] =
     sublabel: PEG_SUBLABEL[value],
   }));
 
-export const YIELD_PEG_SET = new Set<string>(SELECTOR_YIELD_PEG_CURRENCIES);
+export const YIELD_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
 
 export const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
   { value: "lt24h", label: "Under 24 hours" },

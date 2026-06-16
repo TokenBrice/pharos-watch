@@ -3,7 +3,6 @@ import { ENGINE_VERSION, runSelector } from "../engine";
 import { scoreRow } from "../scoring";
 import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
-  SELECTOR_YIELD_PEG_CURRENCIES,
   type MergedRow,
   type SelectorInput,
   type SelectorProfile,
@@ -48,7 +47,7 @@ function routeInputs(): SelectorInput[] {
     for (const profile of SELECTOR_PROFILES_FOR_ROUTES) {
       if (
         profile === "yield" &&
-        !(SELECTOR_YIELD_PEG_CURRENCIES as readonly string[]).includes(pegCurrency)
+        !(SELECTOR_ELIGIBLE_PEG_CURRENCIES as readonly string[]).includes(pegCurrency)
       ) {
         continue;
       }

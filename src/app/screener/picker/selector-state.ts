@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
-  isSelectorYieldPegCurrency,
+  isSelectorEligiblePegCurrency,
   type SelectorEligiblePegCurrency,
   type SelectorInput,
 } from "@shared/lib/selector";
@@ -210,7 +210,7 @@ function normalizePegForProfile(
   profile: SelectorProfile | null,
   pegCurrency: SelectorPeg,
 ): SelectorPeg {
-  if (profile === "yield" && !isSelectorYieldPegCurrency(pegCurrency)) {
+  if (profile === "yield" && !isSelectorEligiblePegCurrency(pegCurrency)) {
     return "USD";
   }
   return pegCurrency;
@@ -371,7 +371,7 @@ function previousStep(state: SelectorWizardState): SelectorStep {
 export function toSelectorInput(state: SelectorWizardState): SelectorInput | null {
   if (
     !state.profile ||
-    (state.profile === "yield" && !isSelectorYieldPegCurrency(state.pegCurrency)) ||
+    (state.profile === "yield" && !isSelectorEligiblePegCurrency(state.pegCurrency)) ||
     !state.horizon ||
     !state.depegTolerance ||
     !hasValidVenue(state)

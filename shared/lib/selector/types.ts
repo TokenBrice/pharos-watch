@@ -29,27 +29,12 @@ export const SELECTOR_ELIGIBLE_PEG_CURRENCIES = [
 export type SelectorEligiblePegCurrency =
   (typeof SELECTOR_ELIGIBLE_PEG_CURRENCIES)[number];
 
-export const SELECTOR_YIELD_PEG_CURRENCIES = [
-  "USD",
-  "EUR",
-  "CHF",
-  "GOLD",
-] as const satisfies readonly SelectorEligiblePegCurrency[];
-export type SelectorYieldPegCurrency = (typeof SELECTOR_YIELD_PEG_CURRENCIES)[number];
-
 const SELECTOR_ELIGIBLE_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
-const SELECTOR_YIELD_PEG_SET = new Set<string>(SELECTOR_YIELD_PEG_CURRENCIES);
 
 export function isSelectorEligiblePegCurrency(
   value: string | null | undefined,
 ): value is SelectorEligiblePegCurrency {
   return value != null && SELECTOR_ELIGIBLE_PEG_SET.has(value);
-}
-
-export function isSelectorYieldPegCurrency(
-  value: string | null | undefined,
-): value is SelectorYieldPegCurrency {
-  return value != null && SELECTOR_YIELD_PEG_SET.has(value);
 }
 
 export const HORIZON_VALUES = ["lt24h", "1to7d", "1to4w", "1to6m", "6mplus"] as const;
