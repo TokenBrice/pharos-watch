@@ -8,7 +8,7 @@ import {
   MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   MIN_SAFETY_SCORE_FOR_YIELD,
 } from "../../lib/constants";
-import { findBestLendingPool, isBlockedYieldOpportunitySource } from "../yield-helpers";
+import { findBestLendingPool, isBlockedYieldOpportunitySource, meetsLendingPoolCoreEligibility } from "../yield-helpers";
 import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
@@ -351,6 +351,184 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
   return additions.length;
 }
 
+function isAlreadyResolved(resolved: ResolvedYieldEntry[], id: string, sourceKey: string): boolean {
+  return resolved.some((entry) => entry.id === id && entry.yield?.sourceKey === sourceKey);
+}
+
+function appendExplicitPoolSources(
+  resolved: ResolvedYieldEntry[],
+  dlPools: DlPool[],
+  stablecoinSupplyById: Map<string, number>,
+): void {
+  for (const [stablecoinId, configs] of Object.entries(EXPLICIT_YIELD_SOURCE_POOL_MAP)) {
+    const meta = getActiveStablecoinMeta(stablecoinId);
+    if (!meta) continue;
+
+    for (const config of configs) {
+      if (isAlreadyResolved(resolved, stablecoinId, config.poolId)) {
+        continue;
+      }
+
+      const pool = dlPools.find((entry) => entry.pool === config.poolId);
+      if (!pool || !matchesExplicitYieldPool(pool, config)) {
+        continue;
+      }
+      if (
+        config.yieldType === "lending-opportunity" &&
+        !passesLendingOpportunitySizeGate({
+          stablecoinId,
+          poolChain: config.expectedChain ?? pool.chain,
+          sourceTvlUsd: pool.tvlUsd,
+          baseMinTvlUsd: config.minTvlUsd ?? getLendingOpportunityAbsoluteTvlFloor(config.expectedChain ?? pool.chain),
+          stablecoinSupplyById,
+        })
+      ) {
+        continue;
+      }
+
+      resolved.push({
+        id: meta.id,
+        symbol: meta.symbol,
+        yield: {
+          currentApy: pool.apy,
+          apyBase: pool.apyBase,
+          apyReward: pool.apyReward,
+          sourcePool: pool.pool,
+          sourceTvlUsd: pool.tvlUsd,
+          dataSource: config.dataSource ?? "defillama",
+          exchangeRate: null,
+          sourceKey: pool.pool,
+          yieldSource: config.yieldSource,
+          yieldType: config.yieldType,
+          project: pool.project,
+          chain: pool.chain,
+        },
+      });
+    }
+  }
+}
+
+function appendDeterministicAutoLending(params: {
+  resolved: ResolvedYieldEntry[];
+  dlPools: DlPool[];
+  safetyScores: Map<string, SafetyScoreSnapshot>;
+  stablecoinSupplyById: Map<string, number>;
+  autoDiscoveredIds: Set<string>;
+}): number {
+  let deterministicCount = 0;
+
+  for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
+    if (params.autoDiscoveredIds.has(stablecoinId)) continue;
+
+    const pool = params.dlPools.find((entry) => entry.pool === poolId);
+    if (!pool) continue;
+    if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) continue;
+
+    const safetyScore = params.safetyScores.get(stablecoinId)?.score ?? 0;
+    const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
+    if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
+
+    const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+      stablecoinId,
+      poolChain: pool.chain,
+      stablecoinSupplyById: params.stablecoinSupplyById,
+    });
+
+    if (!meetsLendingPoolCoreEligibility(pool, {
+      allowlist: LENDING_PROTOCOL_ALLOWLIST,
+      minApy: MIN_LENDING_POOL_APY,
+      minTvlUsd: requiredMinTvlUsd,
+    })) continue;
+    if (isBlockedYieldOpportunitySource({ poolMeta: pool.poolMeta, symbol: pool.symbol })) continue;
+
+    if (isAlreadyResolved(params.resolved, stablecoinId, poolId)) {
+      continue;
+    }
+
+    const meta = getActiveStablecoinMeta(stablecoinId);
+    if (!meta) continue;
+
+    appendResolvedAutoDiscoveredYield(params.resolved, params.autoDiscoveredIds, meta, pool);
+    deterministicCount++;
+  }
+
+  return deterministicCount;
+}
+
+function appendDynamicAutoLending(params: {
+  resolved: ResolvedYieldEntry[];
+  dlPools: DlPool[];
+  safetyScores: Map<string, SafetyScoreSnapshot>;
+  stablecoinSupplyById: Map<string, number>;
+  autoDiscoveredIds: Set<string>;
+  reservedPoolIds: Set<string>;
+}): number {
+  let dynamicCount = 0;
+
+  const lendingCandidates = ACTIVE_STABLECOINS.filter(
+    (meta) =>
+      !params.autoDiscoveredIds.has(meta.id)
+      && meta.flags.pegCurrency !== "GOLD"
+      && meta.flags.pegCurrency !== "SILVER"
+      && (params.safetyScores.get(meta.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
+  );
+
+  for (const meta of lendingCandidates) {
+    const primaryChain = meta.contracts?.[0]?.chain;
+    const minTvlUsd = getRequiredLendingOpportunityTvlUsd({
+      stablecoinId: meta.id,
+      poolChain: primaryChain,
+      stablecoinSupplyById: params.stablecoinSupplyById,
+    });
+
+    const identityLookups = buildYieldIdentityLookups();
+    const chainFilter = buildDlChainFilter(meta);
+    const contractAddresses = getTrackedContractAddresses(meta);
+    const allowSymbolMatch = chainFilter
+      ? Array.from(chainFilter).every((chain) => canUseSymbolOnlyYieldMatch(meta, identityLookups, chain))
+      : canUseSymbolOnlyYieldMatch(meta, identityLookups, null);
+
+    const pool = findBestLendingPool(
+      meta.symbol,
+      params.dlPools,
+      LENDING_PROTOCOL_ALLOWLIST,
+      {
+        minApy: MIN_LENDING_POOL_APY,
+        minTvlUsd,
+        contractAddresses,
+        chainFilter,
+        allowSymbolMatch,
+        reservedPoolIds: params.reservedPoolIds,
+        isBlockedPool: (candidate) => isAutoLendingCollisionBlockedForStablecoin(meta.id, candidate),
+      },
+    );
+    if (!pool) continue;
+
+    if (isAlreadyResolved(params.resolved, meta.id, pool.pool)) {
+      continue;
+    }
+
+    appendResolvedAutoDiscoveredYield(params.resolved, params.autoDiscoveredIds, meta, pool);
+    dynamicCount++;
+  }
+
+  return dynamicCount;
+}
+
+function logNewVariantScan(dlPools: DlPool[]): void {
+  const trackedSymbols = new Set(ACTIVE_STABLECOINS.map((meta) => meta.symbol.toUpperCase()));
+  const knownVariantSymbols = new Set(
+    Object.values(YIELD_VARIANT_MAP).map((variant) => variant.variantSymbol.toUpperCase()),
+  );
+  const newVariants = scanForNewVariants(dlPools, trackedSymbols, knownVariantSymbols);
+  if (newVariants.length > 0) {
+    console.log(
+      `[sync-yield-data] Variant scanner found ${newVariants.length} new wrapper tokens:`,
+      newVariants.map((variant) => `${variant.variantSymbol} (${variant.baseSymbol}, ${variant.chain}, $${(variant.tvlUsd / 1e6).toFixed(1)}M)`).join(", "),
+    );
+  }
+}
+
 export function appendPoolFamilyYieldSources(params: {
   resolved: ResolvedYieldEntry[];
   dlPools: DlPool[];
@@ -360,160 +538,33 @@ export function appendPoolFamilyYieldSources(params: {
 }): void {
   appendResolvedYieldCandidates(params.resolved, params.supplementalCandidates, params.stablecoinSupplyById);
 
-  if (params.dlPools.length > 0) {
-    for (const [stablecoinId, configs] of Object.entries(EXPLICIT_YIELD_SOURCE_POOL_MAP)) {
-      const meta = getActiveStablecoinMeta(stablecoinId);
-      if (!meta) continue;
+  if (params.dlPools.length === 0) return;
 
-      for (const config of configs) {
-        if (params.resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === config.poolId)) {
-          continue;
-        }
+  appendExplicitPoolSources(params.resolved, params.dlPools, params.stablecoinSupplyById);
 
-        const pool = params.dlPools.find((entry) => entry.pool === config.poolId);
-        if (!pool || !matchesExplicitYieldPool(pool, config)) {
-          continue;
-        }
-        if (
-          config.yieldType === "lending-opportunity" &&
-          !passesLendingOpportunitySizeGate({
-            stablecoinId,
-            poolChain: config.expectedChain ?? pool.chain,
-            sourceTvlUsd: pool.tvlUsd,
-            baseMinTvlUsd: config.minTvlUsd ?? getLendingOpportunityAbsoluteTvlFloor(config.expectedChain ?? pool.chain),
-            stablecoinSupplyById: params.stablecoinSupplyById,
-          })
-        ) {
-          continue;
-        }
+  const reservedExplicitPoolIds = buildReservedYieldPoolIds();
+  const autoDiscoveredIds = new Set<string>();
 
-        params.resolved.push({
-          id: meta.id,
-          symbol: meta.symbol,
-          yield: {
-            currentApy: pool.apy,
-            apyBase: pool.apyBase,
-            apyReward: pool.apyReward,
-            sourcePool: pool.pool,
-            sourceTvlUsd: pool.tvlUsd,
-            dataSource: config.dataSource ?? "defillama",
-            exchangeRate: null,
-            sourceKey: pool.pool,
-            yieldSource: config.yieldSource,
-            yieldType: config.yieldType,
-            project: pool.project,
-            chain: pool.chain,
-          },
-        });
-      }
-    }
-  }
+  const deterministicCount = appendDeterministicAutoLending({
+    resolved: params.resolved,
+    dlPools: params.dlPools,
+    safetyScores: params.safetyScores,
+    stablecoinSupplyById: params.stablecoinSupplyById,
+    autoDiscoveredIds,
+  });
 
-  if (params.dlPools.length > 0) {
-    const reservedExplicitPoolIds = buildReservedYieldPoolIds();
-    const autoDiscoveredIds = new Set<string>();
-    let autoCount = 0;
-    let deterministicCount = 0;
+  const dynamicCount = appendDynamicAutoLending({
+    resolved: params.resolved,
+    dlPools: params.dlPools,
+    safetyScores: params.safetyScores,
+    stablecoinSupplyById: params.stablecoinSupplyById,
+    autoDiscoveredIds,
+    reservedPoolIds: reservedExplicitPoolIds,
+  });
 
-    for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
-      if (autoDiscoveredIds.has(stablecoinId)) continue;
+  console.log(
+    `[sync-yield-data] Auto-discovery: ${deterministicCount + dynamicCount} lending pools (${deterministicCount} deterministic, ${dynamicCount} dynamic)`,
+  );
 
-      const pool = params.dlPools.find((entry) => entry.pool === poolId);
-      if (!pool) continue;
-      if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) continue;
-
-      const safetyScore = params.safetyScores.get(stablecoinId)?.score ?? 0;
-      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
-      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
-
-      const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
-        stablecoinId,
-        poolChain: pool.chain,
-        stablecoinSupplyById: params.stablecoinSupplyById,
-      });
-
-      const eligible =
-        pool.exposure === "single"
-        && pool.stablecoin
-        && LENDING_PROTOCOL_ALLOWLIST.has(pool.project)
-        && pool.apy >= MIN_LENDING_POOL_APY
-        && pool.tvlUsd >= requiredMinTvlUsd;
-      if (!eligible) continue;
-      if (isBlockedYieldOpportunitySource({ poolMeta: pool.poolMeta, symbol: pool.symbol })) continue;
-
-      if (params.resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === poolId)) {
-        continue;
-      }
-
-      const meta = getActiveStablecoinMeta(stablecoinId);
-      if (!meta) continue;
-
-      appendResolvedAutoDiscoveredYield(params.resolved, autoDiscoveredIds, meta, pool);
-      autoCount++;
-      deterministicCount++;
-    }
-
-    const lendingCandidates = ACTIVE_STABLECOINS.filter(
-      (meta) =>
-        !autoDiscoveredIds.has(meta.id)
-        && meta.flags.pegCurrency !== "GOLD"
-        && meta.flags.pegCurrency !== "SILVER"
-        && (params.safetyScores.get(meta.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
-    );
-
-    for (const meta of lendingCandidates) {
-      const primaryChain = meta.contracts?.[0]?.chain;
-      const minTvlUsd = getRequiredLendingOpportunityTvlUsd({
-        stablecoinId: meta.id,
-        poolChain: primaryChain,
-        stablecoinSupplyById: params.stablecoinSupplyById,
-      });
-
-      const identityLookups = buildYieldIdentityLookups();
-      const chainFilter = buildDlChainFilter(meta);
-      const contractAddresses = getTrackedContractAddresses(meta);
-      const allowSymbolMatch = chainFilter
-        ? Array.from(chainFilter).every((chain) => canUseSymbolOnlyYieldMatch(meta, identityLookups, chain))
-        : canUseSymbolOnlyYieldMatch(meta, identityLookups, null);
-
-      const pool = findBestLendingPool(
-        meta.symbol,
-        params.dlPools,
-        LENDING_PROTOCOL_ALLOWLIST,
-        {
-          minApy: MIN_LENDING_POOL_APY,
-          minTvlUsd,
-          contractAddresses,
-          chainFilter,
-          allowSymbolMatch,
-          reservedPoolIds: reservedExplicitPoolIds,
-          isBlockedPool: (candidate) => isAutoLendingCollisionBlockedForStablecoin(meta.id, candidate),
-        },
-      );
-      if (!pool) continue;
-
-      if (params.resolved.some((entry) => entry.id === meta.id && entry.yield?.sourceKey === pool.pool)) {
-        continue;
-      }
-
-      appendResolvedAutoDiscoveredYield(params.resolved, autoDiscoveredIds, meta, pool);
-      autoCount++;
-    }
-
-    console.log(
-      `[sync-yield-data] Auto-discovery: ${autoCount} lending pools (${deterministicCount} deterministic, ${autoCount - deterministicCount} dynamic)`,
-    );
-
-    const trackedSymbols = new Set(ACTIVE_STABLECOINS.map((meta) => meta.symbol.toUpperCase()));
-    const knownVariantSymbols = new Set(
-      Object.values(YIELD_VARIANT_MAP).map((variant) => variant.variantSymbol.toUpperCase()),
-    );
-    const newVariants = scanForNewVariants(params.dlPools, trackedSymbols, knownVariantSymbols);
-    if (newVariants.length > 0) {
-      console.log(
-        `[sync-yield-data] Variant scanner found ${newVariants.length} new wrapper tokens:`,
-        newVariants.map((variant) => `${variant.variantSymbol} (${variant.baseSymbol}, ${variant.chain}, $${(variant.tvlUsd / 1e6).toFixed(1)}M)`).join(", "),
-      );
-    }
-  }
+  logNewVariantScan(params.dlPools);
 }
