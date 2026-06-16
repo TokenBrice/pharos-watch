@@ -11,6 +11,9 @@ export interface DigestNameplateProps {
   className?: string;
 }
 
+// NOT a clone of @shared/lib/format `formatYearMonth`: this renders a FULL date
+// (weekday + month + day + year) from a YYYY-MM-DD string, not a "Month YYYY"
+// label. Do not fold into formatYearMonth — it would drop the weekday and day.
 function formatNameplateDate(dateStr?: string): string | null {
   if (!dateStr) return null;
   const parts = dateStr.replace(/-weekly$/, "").split("-").map(Number);
