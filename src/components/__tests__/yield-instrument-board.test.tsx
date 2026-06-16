@@ -62,9 +62,7 @@ const baseRow = {
   sourceRisk: { sourceRiskScore: 70, sourceRiskPenalty: 1.02, sourceAgeSeconds: 60 },
   peg: "USD",
   viewRank: 1,
-  rankWithinSet: 1,
   rankLabel: "#1",
-  comparableSetLabel: "USD lending",
   opportunity: "holder-yield",
   sourceDepthLens: "moderate",
 } as unknown as YieldViewModelRow;

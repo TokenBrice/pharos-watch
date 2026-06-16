@@ -136,9 +136,7 @@ export interface YieldCohortPercentile {
 export type YieldViewModelRow = YieldRanking & {
   peg: PegCurrency | null;
   viewRank: number;
-  rankWithinSet: number;
   rankLabel: string;
-  comparableSetLabel: string;
   opportunity: Exclude<YieldOpportunityFilter, "all">;
   sourceDepthLens: YieldSourceDepthLens;
   cohortPercentile: YieldCohortPercentile | null;
@@ -745,9 +743,7 @@ function rankRows(
       ...row,
       peg: facet.peg,
       viewRank: rank,
-      rankWithinSet: rank,
       rankLabel: `#${rank} in ${comparisonLabel}`,
-      comparableSetLabel: comparisonLabel,
       opportunity: facet.opportunity,
       sourceDepthLens: facet.sourceDepthLens,
       cohortPercentile: computeRowCohortPercentile(row, cohortIndex),

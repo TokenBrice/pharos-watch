@@ -213,7 +213,6 @@ describe("buildYieldViewModel", () => {
     expect(model.visibleRows[0]).toMatchObject({
       id: "eurc-circle",
       viewRank: 1,
-      rankWithinSet: 1,
       rankLabel: "#1 in Non-USD set",
     });
   });

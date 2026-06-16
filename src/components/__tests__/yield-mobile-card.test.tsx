@@ -51,9 +51,7 @@ const row = {
   sourceRisk: null,
   peg: "peggedUSD",
   viewRank: 1,
-  rankWithinSet: 1,
   rankLabel: "#1",
-  comparableSetLabel: "USD lending",
   opportunity: "holder-yield",
   sourceDepthLens: "moderate",
 } as YieldViewModelRow;
