@@ -321,7 +321,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
     },
     {
       ts: Date.UTC(2025, 0, 16), // 2025-01-16 — USDD 2.0 announced: overcollateralized CDP model, 20% staking yield
-      kind: "methodology-change",
+      kind: "governance",
       label: "USDD 2.0 — pivots from algorithmic to CDP backing",
       severity: "high",
     },
@@ -402,7 +402,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
     },
     {
       ts: Date.UTC(2025, 0, 10), // 2025-01-10 — Usual unilaterally introduces $0.87 floor exit for USD0++
-      kind: "methodology-change",
+      kind: "governance",
       label: "Usual sets $0.87 floor exit for USD0++",
       severity: "high",
       href: "https://blockworks.co/news/usual-depeg-spurs-defi-instability",
@@ -919,7 +919,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       // 2026-01-14 — USD0++ rebrand as bUSD0 under Usual Zero Rate (UZR)
       // framework, repositioned as zero-coupon bond primitive.
       ts: Date.UTC(2026, 0, 14),
-      kind: "methodology-change",
+      kind: "governance",
       label: "USD0++ rebrands to bUSD0 under Usual Zero Rate (UZR)",
       severity: "med",
       href: "https://usual.money/blog/usual-zero-rate-a-native-credit-primitive-for-usd0",
@@ -1545,7 +1545,7 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       // 2025-04-18 — SIP-420 lowered C-ratio to 200%, causing sUSD
       // oversupply and the first stage of the 2025 depeg saga.
       ts: Date.UTC(2025, 3, 18),
-      kind: "methodology-change",
+      kind: "governance",
       label: "SIP-420 lowers C-ratio to 200% — sUSD oversupply, depeg ~$0.68",
       severity: "high",
       href: "https://sips.synthetix.io/sips/sip-420/",
