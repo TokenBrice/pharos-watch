@@ -193,8 +193,9 @@ async function fetchBootstrapQuery(
 async function generatePayload(apiBase: string): Promise<HomepageBootstrapPayload> {
   const entries = await Promise.all(
     HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS.map(({ id, descriptor }) => {
+      const fallbackIntervalMs = (descriptor as { producerIntervalMs?: number }).producerIntervalMs;
       const maxAgeSec = descriptor.metaMaxAgeSec ?? (
-        "producerIntervalMs" in descriptor ? descriptor.producerIntervalMs / 1000 : 0
+        fallbackIntervalMs != null ? fallbackIntervalMs / 1000 : 0
       );
       return fetchBootstrapQuery(
         apiBase,

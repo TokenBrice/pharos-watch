@@ -10,7 +10,7 @@ const DAY_SECONDS = 86_400;
 const BAND_STRIP_WINDOW_DAYS = 30;
 type StabilityIndexLightData = {
   current?: Parameters<typeof getDisplayedPsi>[0];
-  history?: Array<{ date: number; band: string }>;
+  history?: Array<{ date: number; band: string; score: number }>;
 };
 
 function buildBandStripCells(
@@ -46,6 +46,7 @@ export function RegimeBar() {
   const score = displayedPsi.score;
   const color = PSI_HEX_COLORS[band];
   const isElevated = band === "FRACTURE" || band === "CRISIS" || band === "MELTDOWN";
+  const components = current.components;
 
   // Dark text for BEDROCK/STEADY (green/teal bg + white fails WCAG contrast)
   const useDarkText = band === "BEDROCK" || band === "STEADY";
@@ -87,12 +88,12 @@ export function RegimeBar() {
             <span>PSI {Math.round(score)} · {displayBasis}</span>
             <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
             <span>
-              sev {current.components.severity.toFixed(1)} · breadth{" "}
-              {current.components.breadth.toFixed(1)}
-              {current.components.stressBreadth != null &&
-                ` · stress ${current.components.stressBreadth.toFixed(1)}`}
-              {" "}· trend {current.components.trend > 0 ? "+" : ""}
-              {current.components.trend.toFixed(1)}
+              sev {components?.severity.toFixed(1) ?? "n/a"} · breadth{" "}
+              {components?.breadth.toFixed(1) ?? "n/a"}
+              {components?.stressBreadth != null &&
+                ` · stress ${components.stressBreadth.toFixed(1)}`}
+              {" "}· trend {(components?.trend ?? 0) > 0 ? "+" : ""}
+              {components?.trend.toFixed(1) ?? "n/a"}
             </span>
           </div>
           <div className="mx-auto mb-1 flex max-w-3xl items-center gap-2 px-4">
