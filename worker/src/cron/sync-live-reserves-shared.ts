@@ -186,10 +186,6 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
   return "unknown";
 }
 
-function toAttemptMessage(error: unknown): string {
-  return toErrorMessage(error);
-}
-
 function describeReserveInput(
   input: LiveReserveConfig["inputs"]["primary"],
   source: ReserveAttemptFailureSummary["source"],
@@ -214,12 +210,12 @@ export function buildReserveAdapterAttemptChainError(
     {
       source: "primary",
       label: describeReserveInput(config.inputs.primary, "primary"),
-      message: toAttemptMessage(primaryError),
+      message: toErrorMessage(primaryError),
     },
     ...fallbackAttempts.map((attempt) => ({
       source: "fallback" as const,
       label: describeReserveInput(attempt.input, "fallback", attempt.index),
-      message: toAttemptMessage(attempt.error),
+      message: toErrorMessage(attempt.error),
     })),
   ];
 
