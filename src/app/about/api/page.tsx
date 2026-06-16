@@ -190,7 +190,7 @@ function MarkdownBlockRenderer({
         </TableHeader>
         <TableBody>
           {block.rows.map((row, rowIndex) => (
-            <TableRow key={`${rowIndex}-${row.join("|")}`} className="align-top hover:bg-transparent">
+            <TableRow key={`row-${rowIndex}`} className="align-top hover:bg-transparent">
               {row.map((cell, cellIndex) => (
                 <TableCell
                   key={`${rowIndex}-${cellIndex}`}
