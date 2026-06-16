@@ -20,12 +20,11 @@ const MINT_BURN_VERSION = MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL.replace(/^v/,
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import {
-  getProjectorWatermark,
   insertTapeEvents,
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { DEFAULT_BATCH_LIMIT, type ProjectorOptions, type ProjectorResult } from "./types";
+import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
 
 const CURSOR_KEY = "mint_burn.large_flow";
 
@@ -139,11 +138,7 @@ async function projectLargeFlows(
   db: D1Database,
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
-  const watermark = await getProjectorWatermark(db, CURSOR_KEY);
-  const since = options?.since ?? watermark;
-  const until = options?.until ?? null;
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, CURSOR_KEY, options);
 
   const rows = await fetchLargeFlows(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };

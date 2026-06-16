@@ -12,12 +12,11 @@ import {
   severityForFreezeDestroyed,
 } from "../tape-event-helpers";
 import {
-  getProjectorWatermark,
   insertTapeEvents,
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { DEFAULT_BATCH_LIMIT, type ProjectorOptions, type ProjectorResult } from "./types";
+import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
 
 interface BlacklistSourceRow {
   id: string;
@@ -45,11 +44,7 @@ async function projectFreezeVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = spec.slug;
-  const watermark = await getProjectorWatermark(db, cursorKey);
-  const since = options?.since ?? watermark;
-  const until = options?.until ?? null;
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
   const untilClause = until != null ? " AND timestamp <= ?" : "";
   const sql = `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,

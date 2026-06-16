@@ -10,12 +10,11 @@ import {
   severityForScoreDowngrade,
 } from "../tape-event-helpers";
 import {
-  getProjectorWatermark,
   insertTapeEvents,
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { DEFAULT_BATCH_LIMIT, type ProjectorOptions, type ProjectorResult } from "./types";
+import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
 
 interface SafetyGradeSourceRow {
   stablecoin_id: string;
@@ -38,11 +37,7 @@ async function projectScoreByVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = variant === "upgraded" ? "score.upgraded" : "score.downgraded";
-  const watermark = await getProjectorWatermark(db, cursorKey);
-  const since = options?.since ?? watermark;
-  const until = options?.until ?? null;
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
   const untilClause = until != null ? " AND recorded_at <= ?" : "";
   const sql = `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score,

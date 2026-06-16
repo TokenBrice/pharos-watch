@@ -27,12 +27,11 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import { buildInClause, chunkArray } from "../db";
 import {
-  getProjectorWatermark,
   insertTapeEvents,
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { DEFAULT_BATCH_LIMIT, type ProjectorOptions, type ProjectorResult } from "./types";
+import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
 
 // Signals that materially impair confidence in the published yield. Anything
 // else (yield-spike, yield-divergence, reward-heavy) is a notice-level signal.
@@ -152,11 +151,7 @@ export async function projectYieldWarningEmitted(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   const cursorKey = "yield.warning_emitted";
-  const watermark = await getProjectorWatermark(db, cursorKey);
-  const since = options?.since ?? watermark;
-  const until = options?.until ?? null;
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchYieldHistorySince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -308,11 +303,7 @@ export async function projectYieldPysDropped(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   const cursorKey = "yield.pys_dropped";
-  const watermark = await getProjectorWatermark(db, cursorKey);
-  const since = options?.since ?? watermark;
-  const until = options?.until ?? null;
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchYieldDecisionsSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };

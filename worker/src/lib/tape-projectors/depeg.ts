@@ -18,12 +18,11 @@ import {
 import { getCache, setCache } from "../db-cache";
 import { isMissingColumnError } from "../db";
 import {
-  getProjectorWatermark,
   insertTapeEvents,
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { DEFAULT_BATCH_LIMIT, type ProjectorOptions, type ProjectorResult } from "./types";
+import { DEFAULT_BATCH_LIMIT, resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
 import { formatDuration, formatPrice } from "@shared/lib/format";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
@@ -91,11 +90,7 @@ async function projectDepegByVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = classCursorKey(variant);
-  const watermark = await getProjectorWatermark(db, cursorKey);
-  const since = options?.since ?? watermark;
-  const until = options?.until ?? null;
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchDepegRows(db, variant, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
