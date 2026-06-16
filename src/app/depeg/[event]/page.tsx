@@ -9,7 +9,7 @@ import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
-import { formatIsoDate } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -75,11 +75,6 @@ function formatLongDate(seconds: number): string {
   });
 }
 
-function formatDeviation(bps: number): string {
-  const pct = Math.abs(bps) / 100;
-  return `${pct.toFixed(2)}%`;
-}
-
 function formatPrice(value: number | null): string | null {
   if (value == null || !Number.isFinite(value)) return null;
   if (value < 0.01) return `$${value.toFixed(6)}`;
@@ -98,7 +93,7 @@ function buildHeroTitle(event: DepegEventEntry, coinName: string | null): string
 
 function buildHeroDescription(event: DepegEventEntry): string {
   const status = event.endedAt ? "Recovered" : "Ongoing";
-  const dev = formatDeviation(event.peakDeviationBps);
+  const dev = formatDeviationBps(event.peakDeviationBps);
   return `${event.symbol} traded ${directionLabel(event.direction)} with a peak deviation of ${dev} starting ${formatIsoDate(event.startedAt)}. Confirmed ${status.toLowerCase()} depeg event with timeline, severity, recovery, and Pharos methodology context.`;
 }
 
@@ -148,7 +143,7 @@ function RecoveryPanel({ event }: { event: DepegEventEntry }) {
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peak deviation</dt>
-        <dd className="font-medium text-foreground">{formatDeviation(event.peakDeviationBps)}</dd>
+        <dd className="font-medium text-foreground">{formatDeviationBps(event.peakDeviationBps)}</dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Started</dt>

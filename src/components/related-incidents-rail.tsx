@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatIsoDate } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
 import type { DepegEventSearchEntry } from "@shared/types/market";
@@ -47,10 +47,6 @@ function toRelatedItem(event: DepegEventSearchEntry): RelatedItem {
     peakDeviationBps: event.peakDeviationBps,
     direction: event.direction,
   };
-}
-
-function formatDeviation(bps: number): string {
-  return `${(Math.abs(bps) / 100).toFixed(2)}%`;
 }
 
 function sortNewest<T extends { startedAt: number; slug: string }>(events: readonly T[]): T[] {
@@ -171,7 +167,7 @@ export function RelatedIncidentsRail({
                       {item.symbol}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      peak {formatDeviation(item.peakDeviationBps)} {item.direction === "below" ? "below" : "above"} peg
+                      peak {formatDeviationBps(item.peakDeviationBps)} {item.direction === "below" ? "below" : "above"} peg
                     </span>
                   </Link>
                 </li>

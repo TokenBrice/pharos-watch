@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatIsoDate } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import {
   INDEXABLE_DEPEG_EVENT_ENTRIES,
   type DepegEventEntry,
@@ -10,12 +10,6 @@ import {
 } from "@/app/depeg/[event]/config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
-
-function formatDeviationBps(bps: number): string {
-  if (!Number.isFinite(bps) || bps <= 0) return "—";
-  if (bps >= 1000) return `${(bps / 100).toFixed(1)}%`;
-  return `${(bps / 100).toFixed(2)}%`;
-}
 
 function severityClass(bps: number): string {
   if (bps >= 1000) return "text-amber-500 dark:text-amber-400";
