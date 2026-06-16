@@ -423,7 +423,7 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 0 });
   });
 
-  it("releases stale orphan pending claims before acquiring a new claim", async () => {
+  it("releases stale orphan pending claims via the deferred waitUntil sweep", async () => {
     sqlite.prepare(
       `INSERT INTO api_key_self_serve_email_claims (
         email_hash,
@@ -437,7 +437,10 @@ describe("api key self-serve request handlers", () => {
       ) VALUES (?, ?, NULL, ?, 'pending_verification', ?, NULL, ?)`,
     ).run("orphan-hash", "orphan@example.com", "akr_orphan", 2_000_000_000 - 601, 2_000_000_000 - 601);
 
-    const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const deferred: Promise<unknown>[] = [];
+    const execCtx = { waitUntil: (promise: Promise<unknown>) => deferred.push(promise) } as unknown as ExecutionContext;
+    const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env(), execCtx);
+    await Promise.all(deferred);
 
     expect(response.status).toBe(202);
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims WHERE request_id = 'akr_orphan'").get()).toEqual({

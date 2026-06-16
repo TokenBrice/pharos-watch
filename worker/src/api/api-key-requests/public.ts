@@ -100,9 +100,11 @@ export async function handleApiKeyRequest(
     }
 
     execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - (2 * 24 * 60 * 60)));
-    await releaseOrphanPendingClaims(db, nowSec).catch((error) => {
-      console.error("[api-key-requests] orphan claim cleanup failed:", error);
-    });
+    execCtx?.waitUntil(
+      releaseOrphanPendingClaims(db, nowSec).catch((error) => {
+        console.error("[api-key-requests] orphan claim cleanup failed:", error);
+      }),
+    );
 
     await releaseExpiredPendingClaim(db, emailHash, nowSec);
     await releaseInactiveIssuedClaim(db, emailHash, nowSec);
