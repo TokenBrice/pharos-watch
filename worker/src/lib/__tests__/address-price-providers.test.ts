@@ -3,6 +3,7 @@ import {
   buildAddressPriceTargetsByProvider,
   collectAddressPriceProviderQuotes,
   resolveEnabledAddressPriceProviders,
+  resolveFallbackChain,
 } from "../address-price-providers";
 import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
@@ -40,6 +41,11 @@ describe("address price providers", () => {
       "moralis-address",
       "birdeye-address",
     ]);
+  });
+
+  it("guesses ethereum for 0x-prefixed fallback addresses and solana otherwise", () => {
+    expect(resolveFallbackChain("0x0000000000000000000000000000000000000001")).toBe("ethereum");
+    expect(resolveFallbackChain("So11111111111111111111111111111111111111112")).toBe("solana");
   });
 
   it("honors explicit allowlists, including DexScreener opt-in, and skips providers with missing credentials", () => {
