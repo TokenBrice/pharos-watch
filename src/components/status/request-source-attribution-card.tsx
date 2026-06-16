@@ -17,14 +17,14 @@ function formatLaneLabel(lane: "public-api" | "site-api"): string {
 function ShareBar({
   siteSharePct,
   externalSharePct,
-  topMargin = true,
+  className,
 }: {
   siteSharePct: number;
   externalSharePct: number;
-  topMargin?: boolean;
+  className?: string;
 }) {
   return (
-    <div className={topMargin ? "mt-2 h-2 overflow-hidden rounded-full bg-muted/70" : "h-2 overflow-hidden rounded-full bg-muted/70"}>
+    <div className={["h-2 overflow-hidden rounded-full bg-muted/70", className].filter(Boolean).join(" ")}>
       <div className="flex h-full">
         <div
           className="bg-sky-500/70"
@@ -148,7 +148,7 @@ export function RequestSourceAttributionCard({
                       </div>
                       <div className="pharos-numeric text-sm text-foreground">{formatCompactCount(lane.totalRequests)}</div>
                     </div>
-                    <ShareBar siteSharePct={lane.siteSharePct} externalSharePct={lane.externalSharePct} />
+                    <ShareBar siteSharePct={lane.siteSharePct} externalSharePct={lane.externalSharePct} className="mt-2" />
                   </div>
                 )) : (
                   <div className="text-sm text-muted-foreground">No worker-lane data recorded in this window.</div>
@@ -176,7 +176,7 @@ export function RequestSourceAttributionCard({
                         <div className="text-[11px] text-muted-foreground">ext {formatPercent(route.externalSharePct, 1)}</div>
                       </div>
                     </div>
-                    <ShareBar siteSharePct={route.siteSharePct} externalSharePct={route.externalSharePct} />
+                    <ShareBar siteSharePct={route.siteSharePct} externalSharePct={route.externalSharePct} className="mt-2" />
                   </div>
                 )) : (
                   <div className="text-sm text-muted-foreground">No route groups recorded in this window.</div>
@@ -199,7 +199,6 @@ export function RequestSourceAttributionCard({
                     <ShareBar
                       siteSharePct={bucket.siteSharePct}
                       externalSharePct={bucket.externalSharePct}
-                      topMargin={false}
                     />
                   </div>
                 )) : (
