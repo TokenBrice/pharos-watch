@@ -16,7 +16,7 @@ import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/co
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
-import { DAY_HOURS, HOUR_MS, HOUR_SECONDS } from "@/lib/constants";
+import { DAY_HOURS, HOUR_SECONDS } from "@/lib/constants";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
@@ -128,16 +128,20 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   /**
    * Range probe: needs a separate pass on raw hourly so the threshold check is
    * cheap and predictable. Used to pick the aggregation cadence (hourly vs
-   * daily) before we shape the chart data.
+   * daily) before we shape the chart data, and as the X-axis tick range.
    */
-  const rawRangeHours = useMemo(() => {
+  const rangeHours = useMemo(() => {
     if (hourly.length < 2) return 0;
-    const min = Math.min(...hourly.map((b) => b.hourTs));
-    const max = Math.max(...hourly.map((b) => b.hourTs));
+    let min = hourly[0].hourTs;
+    let max = hourly[0].hourTs;
+    for (const b of hourly) {
+      if (b.hourTs < min) min = b.hourTs;
+      if (b.hourTs > max) max = b.hourTs;
+    }
     return (max - min) / 3600;
   }, [hourly]);
 
-  const useDailyBuckets = rawRangeHours > WATERFALL_BUCKET_THRESHOLD_HOURS;
+  const useDailyBuckets = rangeHours > WATERFALL_BUCKET_THRESHOLD_HOURS;
   const bucketSeconds = useDailyBuckets ? DAY_SECONDS : HOUR_SECONDS;
 
   const chartData = useMemo<ChartDatum[]>(() => {
@@ -171,11 +175,6 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     }
     return result;
   }, [hourly, bucketSeconds]);
-
-  const rangeHours = useMemo(() => {
-    if (chartData.length < 2) return 0;
-    return (chartData[chartData.length - 1].ts - chartData[0].ts) / HOUR_MS;
-  }, [chartData]);
 
   const hasInterpolated = useMemo(() => chartData.some((d) => d.isInterpolated), [chartData]);
 
