@@ -143,10 +143,7 @@ describe("getCoinsByLifecycleStatus", () => {
     expect(coins.length).toBeGreaterThan(0);
   });
 
-  it("returns empty array for dead status", () => {
-    const coins = getCoinsByLifecycleStatus("fiat-cash", "dead");
-    expect(coins).toEqual([]);
-  });
+
 });
 
 describe("nestVariants", () => {

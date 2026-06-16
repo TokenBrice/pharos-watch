@@ -76,7 +76,7 @@ export function getActiveByArchetype(
  */
 export function getCoinsByLifecycleStatus(
   archetype: MechanismArchetype,
-  status: "active" | "pre-launch" | "frozen" | "dead",
+  status: "active" | "pre-launch" | "frozen",
 ): StablecoinMeta[] {
   let pool: readonly StablecoinMeta[];
   let registryForPool: ReadonlyMap<string, StablecoinMeta>;
@@ -86,11 +86,9 @@ export function getCoinsByLifecycleStatus(
   } else if (status === "pre-launch") {
     pool = PRE_LAUNCH_STABLECOINS;
     registryForPool = PRE_LAUNCH_META_MAP;
-  } else if (status === "frozen") {
+  } else {
     pool = FROZEN_STABLECOINS;
     registryForPool = FROZEN_META_MAP;
-  } else {
-    return [];
   }
 
   return pool.filter(
