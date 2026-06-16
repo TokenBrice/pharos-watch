@@ -96,8 +96,12 @@ export function applyConfirmationTimes(
   for (const [eventId, confirmedAt] of confirmedAtByEventId) {
     const incident = incidentsByEventId.get(eventId);
     if (!incident) continue;
-    incidentsByEventId.set(eventId, { ...incident, confirmedAt });
-    incidentsByEventId.set(incident.currentEventId, { ...incident, confirmedAt });
+    // The incident is aliased under both eventId and currentEventId (see
+    // ensureCanonicalIncidentsForEvents). Reseat both keys to a single shared
+    // updated reference so the resolved confirmedAt is order-independent.
+    const updated = { ...incident, confirmedAt };
+    incidentsByEventId.set(eventId, updated);
+    incidentsByEventId.set(incident.currentEventId, updated);
   }
 }
 

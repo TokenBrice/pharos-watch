@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { ensureCanonicalIncidentsForEvents, recordSystemHealthDeferrals } from "../incident-state";
+import {
+  applyConfirmationTimes,
+  ensureCanonicalIncidentsForEvents,
+  recordSystemHealthDeferrals,
+} from "../incident-state";
 import type { DdrEventDbRow } from "../types";
 import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
 
@@ -87,6 +91,49 @@ describe("ensureCanonicalIncidentsForEvents", () => {
 
     expect(quarantined).toEqual([]);
     expect(byEventId.has(7)).toBe(true);
+  });
+});
+
+describe("applyConfirmationTimes", () => {
+  function makeIncident(overrides: Partial<DdrCanonicalIncident> = {}): DdrCanonicalIncident {
+    return {
+      incidentKey: "ddr2:test-incident-1",
+      eventId: 1,
+      currentEventId: 1,
+      stablecoinId: "usdt-tether",
+      pegCurrency: "USD",
+      direction: "below",
+      startedAt: 1_750_000_000,
+      eligibleAt: 1_750_000_000,
+      policyUniverseIncluded: true,
+      confirmedAt: null,
+      lockState: null,
+      ...overrides,
+    };
+  }
+
+  it("reseats both alias keys to a single shared updated reference", () => {
+    // The incident is aliased under eventId=1 and currentEventId=2.
+    const incident = makeIncident({ eventId: 1, currentEventId: 2 });
+    const incidentsByEventId = new Map<number, DdrCanonicalIncident>([
+      [1, incident],
+      [2, incident],
+    ]);
+
+    applyConfirmationTimes(incidentsByEventId, new Map([[1, 1_750_500_000]]));
+
+    const underEventId = incidentsByEventId.get(1)!;
+    const underCurrentEventId = incidentsByEventId.get(2)!;
+    expect(underEventId.confirmedAt).toBe(1_750_500_000);
+    // Order-independence: both keys must hold the SAME object reference, not
+    // two separately-cloned objects that could drift.
+    expect(underCurrentEventId).toBe(underEventId);
+  });
+
+  it("ignores confirmations for events with no loaded incident", () => {
+    const incidentsByEventId = new Map<number, DdrCanonicalIncident>();
+    applyConfirmationTimes(incidentsByEventId, new Map([[99, 1_750_500_000]]));
+    expect(incidentsByEventId.size).toBe(0);
   });
 });
 
