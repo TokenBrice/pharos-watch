@@ -41,3 +41,8 @@ export function roundToStep(value: number, step: number, direction: "up" | "down
   const scaled = value / step;
   return (direction === "up" ? Math.ceil(scaled) : Math.floor(scaled)) * step;
 }
+
+export function getMetaString(meta: Record<string, unknown> | null, key: string): string | null {
+  const value = meta?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}

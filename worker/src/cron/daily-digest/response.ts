@@ -2,6 +2,7 @@ import { DigestResponseSchema } from "../../lib/schemas";
 import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./lead-requirements";
 import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
 import { toErrorMessage } from "../../lib/error-utils";
+import { getMetaString } from "./digest-intelligence-utils";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -255,11 +256,6 @@ function splitParagraphs(value: string): string[] {
 
 function normalizeTitleFingerprint(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
-}
-
-function getMetaString(meta: Record<string, unknown> | null, key: string): string | null {
-  const value = meta?.[key];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function getMetaCoins(meta: Record<string, unknown> | null): string[] {

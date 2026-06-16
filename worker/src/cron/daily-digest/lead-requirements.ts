@@ -1,3 +1,5 @@
+import { getMetaString } from "./digest-intelligence-utils";
+
 export interface DigestLeadRequirement {
   candidateIds: string[];
   severity: "hard" | "soft";
@@ -7,11 +9,6 @@ export interface DigestLeadRequirement {
 
 function normalizeCandidateIds(ids: readonly string[]): string[] {
   return ids.map((id) => id.trim()).filter(Boolean);
-}
-
-function getMetaString(meta: Record<string, unknown> | null, key: string): string | null {
-  const value = meta?.[key];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function mentionsAnyToken(haystack: string, tokens: readonly string[]): boolean {
