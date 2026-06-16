@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { getVariantDisplay } from "@/lib/variant-display";
+import { getVariantDisplay } from "@shared/lib/variant-display";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 

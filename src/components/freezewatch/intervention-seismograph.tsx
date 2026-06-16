@@ -21,6 +21,16 @@ interface QuarterPoint {
   total: number;
 }
 
+// Quarter-keyed annotations for market-wide intervention milestones that map
+// onto this seismograph's timeline. Unlike per-coin chart pins (which live in
+// shared/data/annotations/curated-annotations.ts, keyed by stablecoin id),
+// these are macro/regulatory events with no single coin owner, so they stay
+// co-located with the only component that renders them.
+//
+// Maintenance: append a new entry only for an event that materially shifted
+// blacklist/destroy activity in its quarter (the same bar this chart plots).
+// Expect roughly one addition per year; keep the list short so labels stay
+// legible. `quarter` must match the buildQuarterPoints() "YYYY-Qn" key format.
 const NOTABLE_QUAKES: ReadonlyArray<{ quarter: string; label: string }> = [
   { quarter: "2022-Q3", label: "Tornado Cash" },
   { quarter: "2023-Q1", label: "Silvergate" },

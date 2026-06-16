@@ -53,7 +53,7 @@ import {
   type MintAuthorityDetailViewModel,
   type StablecoinDetailCoinMeta,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
-import { getVariantDisplay } from "@/lib/variant-display";
+import { getVariantDisplay } from "@shared/lib/variant-display";
 import { getClientVariantParent, getClientVariantRelationship, getClientVariants } from "@/lib/client-variant-registry";
 import {
   HERO_MUTED_CLASS,

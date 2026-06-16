@@ -20,7 +20,7 @@ import {
 } from "@/lib/stablecoin-taxonomy-urls";
 import { stripTermMarkup } from "@/lib/term-markup";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
+import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 
 interface StablecoinDetailSeoContentProps {
   coin: StablecoinMeta;

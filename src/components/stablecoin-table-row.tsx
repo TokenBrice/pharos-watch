@@ -26,7 +26,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { getStablecoinTableRowRiskLevel } from "@/components/stablecoin-table-logic";
 import { DeviationIcon } from "@/components/severity-icon";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
+import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import type { TableDensity } from "@/hooks/use-table-density";
 import type { UseRowCursorResult } from "@/hooks/use-row-cursor";
 

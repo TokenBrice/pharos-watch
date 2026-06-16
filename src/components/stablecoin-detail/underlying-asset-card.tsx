@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
+import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { VariantKind } from "@shared/types";
