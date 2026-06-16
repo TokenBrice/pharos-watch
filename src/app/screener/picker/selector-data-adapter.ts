@@ -194,7 +194,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         overallScore: row.safetyScore,
         pegScore: row.pegScore,
         dewsScore: row.dewsScore,
-        safetyScore: row.safetyScore,
         liquidityScore: row.liquidityScore,
         protocolSlug: row.protocolSlug,
         variantOf: row.variantOf,
