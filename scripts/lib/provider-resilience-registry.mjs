@@ -19,11 +19,11 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     directFetchJustification: "Central wrapper that owns raw fetch timeout, retry, and response-body cleanup.",
     resilience: {
       transport: "direct-fetch-wrapper",
-      timeout: "Composes caller signals with AbortSignal.timeout().",
+      timeout: "Composes caller signals with the shared createTimeoutSignal() helper.",
       body: "Cancels retryable failed response bodies before sleeping or retrying.",
       circuitSources: [],
     },
-    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly", "sleepWithSignal", "passthroughStatuses"],
+    requiredMarkers: ["createTimeoutSignal", "cancelResponseBodyQuietly", "sleepWithSignal", "passthroughStatuses"],
   },
   {
     id: "supplemental-defillama-coins",

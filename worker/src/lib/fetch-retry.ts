@@ -1,3 +1,4 @@
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
 interface FetchWithRetryOptions {
@@ -23,7 +24,8 @@ function getRetryDelayMs(response: Response, attempt: number): number | null {
  * Returns null if all attempts fail.
  *
  * If opts.signal is provided (e.g. from a cron AbortController), it is composed
- * with the per-request timeout via AbortSignal.any() so both fire correctly.
+ * with the per-request timeout via the shared createTimeoutSignal() helper so
+ * both fire correctly and the per-attempt timer is always cleared.
  */
 export async function fetchWithRetry(
   url: string,
@@ -39,14 +41,20 @@ export async function fetchWithRetry(
   for (let i = 0; i <= maxRetries; i++) {
     throwIfAborted(signal);
     try {
-      const perRequestTimeout = AbortSignal.timeout(timeoutMs);
-      const combinedSignal = signal
-        ? AbortSignal.any([signal, perRequestTimeout])
-        : perRequestTimeout;
-      const res = await fetch(url, {
-        ...opts,
-        signal: combinedSignal,
+      const perRequestTimeout = createTimeoutSignal({
+        timeoutMs,
+        timeoutReason: new DOMException(`fetch timed out after ${timeoutMs}ms`, "TimeoutError"),
+        parentSignal: signal,
       });
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          ...opts,
+          signal: perRequestTimeout.signal,
+        });
+      } finally {
+        perRequestTimeout.dispose();
+      }
       if (res.ok) return res;
       if (passthroughStatuses.has(res.status)) {
         const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i) : null;
