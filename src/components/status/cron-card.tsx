@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
+import { countConsecutiveStatus, getLastSuccessfulRun } from "@/lib/status/cron-run-utils";
 import { summarizeCronMetadata } from "./cron-metadata-summary";
 import { CronInFlightProgress } from "./cron-in-flight-progress";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -36,23 +37,6 @@ interface CronCardProps {
   nowSeconds: number;
 }
 
-function countConsecutiveStatus(
-  runs: CronCardProps["cron"]["recentRuns"],
-  status: string,
-): number {
-  let count = 0;
-  for (const run of runs) {
-    if (run.status !== status) break;
-    count += 1;
-  }
-  return count;
-}
-
-function getLastSuccessfulRun(
-  runs: CronCardProps["cron"]["recentRuns"],
-): CronCardProps["cron"]["recentRuns"][number] | null {
-  return runs.find((run) => run.status === "ok" || run.status === "degraded") ?? null;
-}
 
 type InFlightData = NonNullable<CronCardProps["cron"]["inFlight"]>;
 

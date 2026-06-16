@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CronInFlightProgress } from "@/components/status/cron-in-flight-progress";
 import { formatInterval, formatLatency } from "@/components/status/format";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
+import { countConsecutiveStatus, getLastSuccessfulRun } from "@/lib/status/cron-run-utils";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { classifyCronState } from "../cron-severity";
 import type { CronGroup } from "./cron-lane-types";
@@ -34,18 +35,6 @@ interface CronLaneRow {
   skippedStreak: number;
 }
 
-export function countConsecutiveStatus(runs: RecentRun[], status: string): number {
-  let count = 0;
-  for (const run of runs) {
-    if (run.status !== status) break;
-    count += 1;
-  }
-  return count;
-}
-
-export function getLastSuccessfulRun(runs: RecentRun[]): RecentRun | null {
-  return runs.find((run) => run.status === "ok" || run.status === "degraded") ?? null;
-}
 
 function getCronStatusColor(status: string | undefined): string {
   const statusColors: Readonly<Record<string, string>> = CRON_STATUS_COLORS;
