@@ -23,7 +23,7 @@ import {
   computeExcludedBalanceAdjustedSupplyRaw,
   getOnChainSupplyExclusionConfig,
 } from "../lib/onchain-supply-exclusions";
-import { getArchiveFallbackRpcUrls } from "../lib/public-rpc-registry";
+import { getPublicFallbackRpcUrls } from "../lib/public-rpc-registry";
 import { extractDefiLlamaCoinChartPrices } from "./stablecoin-detail/shared";
 import { fetchMarketBackfillPriceSeries } from "./backfill-price-sources";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
@@ -318,7 +318,7 @@ async function fetchHistoricalAdjustedSupplyRaw(input: {
 }): Promise<bigint | null> {
   const rpcOptions = {
     chainRpcs: input.chainRpcs,
-    extraRpcUrls: getArchiveFallbackRpcUrls(input.contract.chain),
+    extraRpcUrls: getPublicFallbackRpcUrls(input.contract.chain),
     timeoutMs: 15_000,
     signal: input.signal,
   };
@@ -389,7 +389,7 @@ async function backfillHistoricalOnChainSupply(
       blockSearchCache,
       {
         chainRpcs: options.chainRpcs,
-        extraRpcUrls: getArchiveFallbackRpcUrls(contract.chain),
+        extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
         timeoutMs: 15_000,
         signal: options.signal,
       },
@@ -509,7 +509,7 @@ async function backfillHistoricalTotalSupply(
       blockSearchCache,
       {
         chainRpcs: options.chainRpcs,
-        extraRpcUrls: getArchiveFallbackRpcUrls(contract.chain),
+        extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
         timeoutMs: 15_000,
         signal: options.signal,
       },
@@ -526,7 +526,7 @@ async function backfillHistoricalTotalSupply(
       blockNumber,
       {
         chainRpcs: options.chainRpcs,
-        extraRpcUrls: getArchiveFallbackRpcUrls(contract.chain),
+        extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
         timeoutMs: 15_000,
         signal: options.signal,
       },

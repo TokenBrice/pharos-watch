@@ -1,7 +1,7 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
-import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
+import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   buildParentDerivedLiveOverride,
   decodeUint256WordBigInt,
@@ -56,7 +56,7 @@ async function fetchIdleCdoTrancheAssetsPerShare(
   const calldata = `${IDLE_CDO_VIRTUAL_PRICE_SELECTOR}${encodeAddress(config.tranche)}`;
   const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.cdo, calldata, blockNumberOrTag, {
     signal,
-    extraRpcUrls: getArchiveFallbackRpcUrls(config.chain),
+    extraRpcUrls: getPublicFallbackRpcUrls(config.chain),
   });
   if (!quoteHex) {
     const message = `[authoritative-price-sources] ${config.id}: virtualPrice() returned null`;

@@ -2,7 +2,7 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
-import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
+import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { CIRCUIT_SOURCE } from "../constants";
 import {
   collectHistoricalBlockPrices,
@@ -50,7 +50,7 @@ async function fetchCapRedeemQuote(
   const calldata = `${CAP_GET_BURN_AMOUNT_SELECTOR}${encodeAddress(config.quoteContract)}${encodeUint256(sampleInputAmount)}`;
   const quoteHex = await fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, config.contract, calldata, blockNumberOrTag, {
     signal,
-    extraRpcUrls: getArchiveFallbackRpcUrls(ETHEREUM_CHAIN),
+    extraRpcUrls: getPublicFallbackRpcUrls(ETHEREUM_CHAIN),
   });
   if (!quoteHex) {
     console.warn(`[authoritative-price-sources] cusd-cap: RPC returned null`);

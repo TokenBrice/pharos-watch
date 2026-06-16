@@ -1,7 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
-import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
+import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { CIRCUIT_SOURCE } from "../constants";
 import {
   collectHistoricalBlockPrices,
@@ -37,7 +37,7 @@ async function fetchInfiniFiRedeemQuote(
     blockNumberOrTag,
     {
       signal,
-      extraRpcUrls: getArchiveFallbackRpcUrls(ETHEREUM_CHAIN),
+      extraRpcUrls: getPublicFallbackRpcUrls(ETHEREUM_CHAIN),
     },
   );
   if (!quoteHex) {

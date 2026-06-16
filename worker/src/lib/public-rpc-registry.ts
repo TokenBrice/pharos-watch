@@ -24,7 +24,7 @@ export function getPublicRpcUrl(chainId: string): string | undefined {
   return PUBLIC_RPC_URLS[chainId];
 }
 
-export function getArchiveFallbackRpcUrls(chainId: string): string[] {
+export function getPublicFallbackRpcUrls(chainId: string): string[] {
   const primary = getPublicRpcUrl(chainId);
   return primary ? [primary] : [];
 }

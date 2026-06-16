@@ -12,7 +12,7 @@ import {
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { throwIfAborted } from "../abort";
-import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
+import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import type { PriceValidationReferences } from "../price-validation";
 
@@ -48,7 +48,7 @@ export async function fetchVaultAssetsPerShareViaSelector(
   const calldata = `${selector}${encodeUint256(oneShareRaw)}`;
   const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.vault, calldata, blockNumberOrTag, {
     signal,
-    extraRpcUrls: [...(config.rpcUrls ?? getArchiveFallbackRpcUrls(config.chain))],
+    extraRpcUrls: [...(config.rpcUrls ?? getPublicFallbackRpcUrls(config.chain))],
   });
   if (!quoteHex) {
     const message = `[authoritative-price-sources] ${config.id}: ${label}() returned null`;
@@ -387,7 +387,7 @@ export async function collectHistoricalBlockPrices(
     throwIfAborted(context.signal);
     const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(ETHEREUM_CHAIN, timestamp, blockSearchCache, {
       signal: context.signal,
-      extraRpcUrls: getArchiveFallbackRpcUrls(ETHEREUM_CHAIN),
+      extraRpcUrls: getPublicFallbackRpcUrls(ETHEREUM_CHAIN),
       timeoutMs: 15_000,
     });
     if (blockNumber == null) continue;
