@@ -1,4 +1,12 @@
 {
+  "shared/lib/yield-source-risk-registry.ts": {
+    "disposition": "queued-p4",
+    "notes": "Reviewed venue-risk registry was moved from the worker source-risk module into shared runtime-neutral metadata so maintenance scripts and worker code can use the same registry without a boundary waiver. The file is intentionally data-heavy; keep it waived until venue-risk entries are split into generated data or family-specific registry shards.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-15",
+    "reviewAfter": "2026-09-15",
+    "nextAction": "Split reviewed venue-risk entries from registry helpers, preferably into generated/static data plus a narrow shared resolver API."
+  },
   "src/app/about/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Homepage About route was consolidated and now includes the legacy editorial/style/principles content paths and copy updates in a single shell. Keep this explicitly waived until the next About-route decomposition wave.",
@@ -15,6 +23,14 @@
     "reviewAfter": "2026-08-26",
     "nextAction": "Split query-state orchestration, row projection, and comparison sections into focused helpers in the next compare-page cleanup pass."
   },
+  "src/app/pharoswatchbot/app/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Telegram Mini App client combines boot/auth state, preset writes, coin selection, and dashboard rendering. This release is only clearing the gate; split state orchestration from presentation in a dedicated Mini App cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-16",
+    "reviewAfter": "2026-09-16",
+    "nextAction": "Separate Mini App state/auth orchestration and preset mutation handling from the route presentation shell."
+  },
   "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass.",
@@ -30,14 +46,6 @@
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
     "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
-  },
-  "src/app/sitemap.ts": {
-    "disposition": "deferred",
-    "notes": "Next.js static-export sitemap concatenates fixed-route, dynamic-route, taxonomy, methodology-changelog, feed, depeg-event, and dataset segments inside a single function so the regex-typed `MetadataRoute.Sitemap` return value is inferable end-to-end. Council-13 (W2-E/W3-D/W3-G) added the feed, depeg-event, and dataset segments. Splitting into helpers is queued for a future sitemap-builder refactor; the current shape is the most idiomatic Next 16 pattern.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Reassess after the owning surface stabilizes."
   },
   "src/app/stablecoin/[id]/client.tsx": {
     "disposition": "queued-p4",
@@ -143,6 +151,14 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split provider adapters, fallback decisioning, and persistence into focused helpers."
   },
+  "worker/src/cron/sync-yield-data.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield sync now exceeds the hotspot candidate threshold after progress/reporting and source-resolution changes in the current infrastructure branch. Keep it explicitly waived for this release gate; a focused follow-up should split orchestration, progress telemetry, and source-family handling.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-12",
+    "reviewAfter": "2026-09-12",
+    "nextAction": "Extract progress telemetry and source-family orchestration from the main sync-yield-data runner."
+  },
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules.",
@@ -151,13 +167,13 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "worker/src/cron/sync-yield-data.ts": {
+  "worker/src/cron/yield-coverage-audit.ts": {
     "disposition": "queued-p4",
-    "notes": "Yield sync now exceeds the hotspot candidate threshold after progress/reporting and source-resolution changes in the current infrastructure branch. Keep it explicitly waived for this release gate; a focused follow-up should split orchestration, progress telemetry, and source-family handling.",
+    "notes": "Coverage-audit module crossed the file-lines hotspot floor when the v8.291 stale-auto-lending-override queue lane landed. The growth is additive queue/recommendation assembly, not deeper branching; keep it queued for a dedicated split of queue-item builders from audit orchestration.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-06-12",
-    "reviewAfter": "2026-09-12",
-    "nextAction": "Extract progress telemetry and source-family orchestration from the main sync-yield-data runner."
+    "createdAt": "2026-06-11",
+    "reviewAfter": "2026-09-11",
+    "nextAction": "Extract operator-queue item builders (gap/protocol/quarantine/stale-override) into a yield-coverage-audit-queue module behind the existing buildCoverageAuditOperatorQueue API."
   },
   "worker/src/lib/depeg-resolver-incident-store.ts": {
     "disposition": "queued-p4",
@@ -175,20 +191,12 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
   },
-  "worker/src/cron/yield-coverage-audit.ts": {
+  "worker/src/lib/redemption-backstop-live-metadata.ts": {
     "disposition": "queued-p4",
-    "notes": "Coverage-audit module crossed the file-lines hotspot floor when the v8.291 stale-auto-lending-override queue lane landed. The growth is additive queue/recommendation assembly, not deeper branching; keep it queued for a dedicated split of queue-item builders from audit orchestration.",
+    "notes": "Live redemption-backstop metadata builder surfaced as a branch-count hotspot after the latest candidate scan. Keep queued rather than widening this release gate; split provider metadata normalization from live projection in a focused redemption-backstop cleanup pass.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-06-11",
-    "reviewAfter": "2026-09-11",
-    "nextAction": "Extract operator-queue item builders (gap/protocol/quarantine/stale-override) into a yield-coverage-audit-queue module behind the existing buildCoverageAuditOperatorQueue API."
-  },
-  "shared/lib/yield-source-risk-registry.ts": {
-    "disposition": "queued-p4",
-    "notes": "Reviewed venue-risk registry was moved from the worker source-risk module into shared runtime-neutral metadata so maintenance scripts and worker code can use the same registry without a boundary waiver. The file is intentionally data-heavy; keep it waived until venue-risk entries are split into generated data or family-specific registry shards.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-15",
-    "reviewAfter": "2026-09-15",
-    "nextAction": "Split reviewed venue-risk entries from registry helpers, preferably into generated/static data plus a narrow shared resolver API."
+    "createdAt": "2026-06-16",
+    "reviewAfter": "2026-09-16",
+    "nextAction": "Extract provider metadata normalization and projection helpers from the live redemption-backstop metadata module."
   }
 }
