@@ -252,3 +252,55 @@ export function projectDewsDeescalated(
 ): Promise<ProjectorResult> {
   return projectDewsByVariant(db, "deescalated", options);
 }
+
+/**
+ * Single-pass projector that detects both escalations and deescalations from
+ * one scan of `stress_signals`, emitting `dews.escalated` and `dews.deescalated`
+ * events together. The cron lane runs this instead of the two single-variant
+ * projectors so a caught-up run does not double the DB reads (each variant would
+ * otherwise re-fetch the same snapshot window and prior-band lookups).
+ *
+ * Both per-variant cursors (`dews.escalated` / `dews.deescalated`) are advanced
+ * together so persisted watermarks stay valid and the single-variant exports
+ * (used by the backfill admin endpoint and tests) remain interchangeable.
+ */
+export async function projectDewsBandTransitions(
+  db: D1Database,
+  options?: ProjectorOptions,
+): Promise<ProjectorResult> {
+  // Seed from the older of the two cursors so neither variant skips a window.
+  const escWatermark = await getProjectorWatermark(db, "dews.escalated");
+  const deescWatermark = await getProjectorWatermark(db, "dews.deescalated");
+  const since = options?.since ?? Math.min(escWatermark, deescWatermark);
+  const until = options?.until ?? null;
+  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
+  const dryRun = options?.dryRun === true;
+
+  const rows = await fetchSamplesSince(db, since, until, limit);
+  if (rows.length === 0) return { projected: 0, advanced: null };
+  rows.sort((a, b) => (
+    a.stablecoin_id === b.stablecoin_id
+      ? a.computed_at - b.computed_at
+      : a.stablecoin_id.localeCompare(b.stablecoin_id)
+  ));
+
+  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
+  const priorByCoin = await fetchPriorBands(db, distinctCoinIds, since);
+
+  const transitions = classifyTransitions(rows, priorByCoin);
+  const events = transitions.map(buildEvent);
+
+  let maxCursor = since;
+  for (const row of rows) {
+    if (row.computed_at > maxCursor) maxCursor = row.computed_at;
+  }
+
+  if (!dryRun) {
+    if (events.length > 0) await insertTapeEvents(db, events);
+    if (options?.since == null && options?.until == null) {
+      await setProjectorWatermark(db, "dews.escalated", maxCursor);
+      await setProjectorWatermark(db, "dews.deescalated", maxCursor);
+    }
+  }
+  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+}

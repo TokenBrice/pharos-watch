@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
-import { projectDewsEscalated, projectDewsDeescalated } from "../dews";
+import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransitions } from "../dews";
 
 const SEC = 1_700_000_000;
 
@@ -203,5 +203,40 @@ describe("dews projector", () => {
     expect(escalated[0]![2]).toBe("severe"); // WARNING → severe
     expect(deescalated).toHaveLength(1);
     expect(deescalated[0]![2]).toBe("info");
+  });
+
+  it("single-pass band-transition projector emits both directions from one scan", async () => {
+    // Same batch as the independent test: one escalation (coin A), one
+    // deescalation (coin B). A single fetchSamplesSince call covers both.
+    const db = mockD1(
+      baseTables([
+        { stablecoin_id: "a-issuer", computed_at: SEC,        score: 10, band: "CALM"    },
+        { stablecoin_id: "a-issuer", computed_at: SEC + 900,  score: 60, band: "WARNING" },
+        { stablecoin_id: "b-issuer", computed_at: SEC,        score: 90, band: "DANGER"  },
+        { stablecoin_id: "b-issuer", computed_at: SEC + 900,  score: 20, band: "WATCH"   },
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectDewsBandTransitions(db);
+
+    expect(result.projected).toBe(2);
+    const sampleScans = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes(MATCH_FETCH_SAMPLES));
+    expect(sampleScans).toHaveLength(1); // single scan, not one per variant
+    const escalated = extractInsertBindsForType(db, "dews.escalated");
+    const deescalated = extractInsertBindsForType(db, "dews.deescalated");
+    expect(escalated).toHaveLength(1);
+    expect(escalated[0]![2]).toBe("severe"); // WARNING → severe
+    expect(deescalated).toHaveLength(1);
+    expect(deescalated[0]![2]).toBe("info");
+  });
+
+  it("single-pass projector emits nothing for an empty batch", async () => {
+    const db = mockD1(baseTables([])) as MockD1Database;
+    const result = await projectDewsBandTransitions(db);
+    expect(result.projected).toBe(0);
+    expect(extractInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
   });
 });

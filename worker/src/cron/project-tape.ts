@@ -37,7 +37,7 @@ import { projectCemeteryEntries } from "../lib/tape-projectors/cemetery";
 import { projectLifecycleFrozen } from "../lib/tape-projectors/lifecycle";
 import { projectPsiBandShifts } from "../lib/tape-projectors/psi";
 import { projectMintBurnLargeFlows } from "../lib/tape-projectors/mint-burn";
-import { projectDewsEscalated, projectDewsDeescalated } from "../lib/tape-projectors/dews";
+import { projectDewsBandTransitions } from "../lib/tape-projectors/dews";
 import { projectYieldWarningEmitted, projectYieldPysDropped } from "../lib/tape-projectors/yield";
 import type { Projector } from "../lib/tape-projectors/types";
 
@@ -60,8 +60,7 @@ export const TAPE_PROJECTOR_JOBS: readonly ProjectTapeJob[] = [
   { name: "score.upgraded",          run: projectScoreUpgraded },
   { name: "score.downgraded",        run: projectScoreDowngraded },
   { name: "psi.band_changed",        run: projectPsiBandShifts },
-  { name: "dews.escalated",          run: projectDewsEscalated },
-  { name: "dews.deescalated",        run: projectDewsDeescalated },
+  { name: "dews.band_transitions",   run: projectDewsBandTransitions },
   { name: "mint_burn.large_flow",    run: projectMintBurnLargeFlows },
   { name: "yield.warning_emitted",   run: projectYieldWarningEmitted },
   { name: "yield.pys_dropped",       run: projectYieldPysDropped },
