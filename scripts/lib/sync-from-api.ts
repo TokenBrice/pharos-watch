@@ -54,6 +54,16 @@ interface FetchWithRetryOptions {
   backoffMs?: readonly number[];
 }
 
+/**
+ * Build-time retry helper for the `sync-*.ts` maintenance scripts.
+ *
+ * Deliberately simpler than the worker's `worker/src/lib/fetch-retry.ts`: these
+ * scripts run in Node (local/CI), not inside a Cloudflare cron, so they do not
+ * need AbortSignal composition, the 6-connection-pool response-body draining, or
+ * Retry-After/529 exponential backoff. A fixed backoff array with a `status < 500`
+ * short-circuit is enough for transient upstream 5xx during a snapshot pull, so
+ * the two retry policies are intentionally not unified.
+ */
 export async function fetchWithRetry(
   url: string,
   options: RequestInit,
