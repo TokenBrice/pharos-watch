@@ -164,42 +164,6 @@ async function shouldSkipFreshMatchingCache(
   return cached.value === expectedValue;
 }
 
-async function shouldSkipFreshMatchingWebhookCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  return shouldSkipFreshMatchingCache(
-    db,
-    TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY,
-    TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC,
-    expectedValue,
-  );
-}
-
-async function shouldSkipFreshMatchingCommandCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  return shouldSkipFreshMatchingCache(
-    db,
-    TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY,
-    TELEGRAM_COMMANDS_RECONCILE_TTL_SEC,
-    expectedValue,
-  );
-}
-
-async function shouldSkipFreshMatchingProfileCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  return shouldSkipFreshMatchingCache(
-    db,
-    TELEGRAM_PROFILE_RECONCILED_CACHE_KEY,
-    TELEGRAM_PROFILE_RECONCILE_TTL_SEC,
-    expectedValue,
-  );
-}
-
-async function shouldSkipFreshMatchingMenuCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  return shouldSkipFreshMatchingCache(
-    db,
-    TELEGRAM_MENU_RECONCILED_CACHE_KEY,
-    TELEGRAM_MENU_RECONCILE_TTL_SEC,
-    expectedValue,
-  );
-}
-
 function rateLimitCacheKey(endpoint: string): string {
   return `${TELEGRAM_RATE_LIMIT_CACHE_KEY_PREFIX}${endpoint}`;
 }
@@ -320,7 +284,7 @@ export async function reconcileTelegramWebhookRegistration(
     return { attempted: false, skipped: true, reason: "missing-webhook-secret", expectedUrl };
   }
   const expectedCacheValue = await buildExpectedWebhookCacheValue(expectedUrl, webhookSecret);
-  if (await shouldSkipFreshMatchingWebhookCache(db, expectedCacheValue)) {
+  if (await shouldSkipFreshMatchingCache(db, TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY, TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC, expectedCacheValue)) {
     return { attempted: false, skipped: true, reason: "fresh-cache", expectedUrl };
   }
 
@@ -413,7 +377,7 @@ export async function reconcileTelegramCommandRegistration(
   }
 
   const expectedCacheValue = buildExpectedCommandsCacheValue();
-  if (await shouldSkipFreshMatchingCommandCache(db, expectedCacheValue)) {
+  if (await shouldSkipFreshMatchingCache(db, TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY, TELEGRAM_COMMANDS_RECONCILE_TTL_SEC, expectedCacheValue)) {
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
 
@@ -450,7 +414,7 @@ export async function reconcileTelegramProfileRegistration(
   }
 
   const expectedCacheValue = buildExpectedProfileCacheValue();
-  if (await shouldSkipFreshMatchingProfileCache(db, expectedCacheValue)) {
+  if (await shouldSkipFreshMatchingCache(db, TELEGRAM_PROFILE_RECONCILED_CACHE_KEY, TELEGRAM_PROFILE_RECONCILE_TTL_SEC, expectedCacheValue)) {
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
 
@@ -484,7 +448,7 @@ export async function reconcileTelegramMenuButton(
   if (!botToken) {
     return { attempted: false, skipped: true, reason: "missing-bot-token", miniAppUrl };
   }
-  if (await shouldSkipFreshMatchingMenuCache(db, expectedCacheValue)) {
+  if (await shouldSkipFreshMatchingCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY, TELEGRAM_MENU_RECONCILE_TTL_SEC, expectedCacheValue)) {
     return { attempted: false, skipped: true, reason: "fresh-cache", miniAppUrl };
   }
 

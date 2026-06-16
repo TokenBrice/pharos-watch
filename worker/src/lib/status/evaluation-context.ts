@@ -6,8 +6,8 @@ import type { PublicHealthAssessment } from "../public-health-assessment";
 import {
   emptyReserveComposition,
   getDatasetFreshness,
-  getTelegramBotStats,
 } from "./derived-data";
+import { getTelegramBotStats } from "./telegram-bot-stats";
 import { deriveReserveCompositionStatus } from "./evaluation-state";
 import {
   assessOnchainDataQuality,

@@ -123,25 +123,39 @@ function writeFixture(spec: HtmlFixtureSpec, body: string): void {
 async function main(): Promise<void> {
   let ok = 0;
   let failed = 0;
+
+  // Group fixtures by URL so identical sources are fetched only once.
+  const byUrl = new Map<string, HtmlFixtureSpec[]>();
   for (const spec of FIXTURES) {
-    const body = await fetchFixture(spec);
+    const group = byUrl.get(spec.url) ?? [];
+    group.push(spec);
+    byUrl.set(spec.url, group);
+  }
+
+  for (const [, specs] of byUrl) {
+    // Fetch once for all fixtures that share the same URL.
+    const representative = specs[0]!;
+    const body = await fetchFixture(representative);
     if (body == null) {
-      failed++;
+      failed += specs.length;
       continue;
     }
     // Keep the previous fixture untouched when the upstream body is suspiciously
     // empty, to avoid a silent breakage committed via a dry refresh.
     if (body.trim().length < 200) {
       console.warn(
-        `[refresh] ${spec.name}: upstream returned <200 bytes of content; skipping write`,
+        `[refresh] ${representative.name}: upstream returned <200 bytes of content; skipping write`,
       );
-      failed++;
+      failed += specs.length;
       continue;
     }
-    writeFixture(spec, body);
-    console.log(`[refresh] ${spec.name}: wrote ${spec.fixture}`);
-    ok++;
+    for (const spec of specs) {
+      writeFixture(spec, body);
+      console.log(`[refresh] ${spec.name}: wrote ${spec.fixture}`);
+      ok++;
+    }
   }
+
   console.log(`[refresh] done: ${ok} succeeded, ${failed} failed`);
   if (ok === 0) {
     console.error("[refresh] no fixtures refreshed; exit non-zero so CI notices");

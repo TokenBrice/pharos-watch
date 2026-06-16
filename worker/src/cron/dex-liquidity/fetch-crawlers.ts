@@ -15,7 +15,7 @@ import {
   getGtDexQuality,
 } from "./pool-helpers";
 import { buildChainAddresses, type ProviderChainAddress } from "./fetch-primary";
-import { crawlTokenPools, type CrawlStats, type CrawlToken } from "./crawl-helpers";
+import { crawlTokenPools, createCrawlStats, type CrawlStats, type CrawlToken } from "./crawl-helpers";
 import { addSecondaryPoolContribution } from "./pool-contribution";
 
 type DexCrawlerEvent = Omit<CronEventInput, "job">;
@@ -72,7 +72,7 @@ export async function fetchCgPools(
 ): Promise<{ newPools: Map<string, CgNewPool[]>; priceObs: Map<string, DexPriceObs[]>; stats: GtCrawlResult["stats"] }> {
   const newPools = new Map<string, CgNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
-  const stats: CrawlStats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 };
+  const stats: CrawlStats = createCrawlStats();
   const allTokens = buildCrawlTokens(chainAddresses);
 
   await crawlTokenPools({
@@ -204,7 +204,7 @@ export async function fetchGtPools(
 ): Promise<GtCrawlResult> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
-  const stats: CrawlStats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 };
+  const stats: CrawlStats = createCrawlStats();
   const allTokens = buildCrawlTokens(chainAddresses);
 
   // Fisher-Yates shuffle

@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../dex-liquidity/crawl-helpers", () => ({
-  crawlTokenPools: vi.fn().mockResolvedValue({ stoppedEarly: false }),
-}));
+vi.mock("../../dex-liquidity/crawl-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../dex-liquidity/crawl-helpers")>();
+  return {
+    ...actual,
+    crawlTokenPools: vi.fn().mockResolvedValue({ stoppedEarly: false }),
+  };
+});
 
 vi.mock("../../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../../lib/abort")>("../../../lib/abort");

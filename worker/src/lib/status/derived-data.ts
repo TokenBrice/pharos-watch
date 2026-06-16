@@ -11,7 +11,6 @@ import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
 import { emptyReserveCompositionOverview } from "../live-reserves-store";
 import { logWorkerEvent } from "../structured-log";
-export { getTelegramBotStats } from "./telegram-bot-stats";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {

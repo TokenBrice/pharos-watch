@@ -18,6 +18,10 @@ export type CrawlStats = {
   poolsSkippedRatio: number;
 };
 
+export function createCrawlStats(): CrawlStats {
+  return { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 };
+}
+
 export type CrawlToken = {
   sourceChain: string;
   ourChain: string;
