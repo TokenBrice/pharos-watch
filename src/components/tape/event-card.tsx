@@ -30,6 +30,7 @@ import {
 } from "@/lib/severity-colors";
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
 import { deriveTicker, formatAbsoluteDate } from "@/lib/tape-derive";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { formatCompactUsd } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import {
@@ -342,19 +343,8 @@ function MethodologyEnrichment({ event }: { event: TapeEvent }) {
   );
 }
 
-// Cause-of-death labels mirror `shared/types/cause-of-death.ts` enum values.
-// Kept locally rather than importing the enum to avoid a runtime dep on
-// stablecoin schema modules from the EventCard render path.
-const CAUSE_OF_DEATH_LABELS: Record<string, string> = {
-  "algorithmic-failure": "Algorithmic failure",
-  "counterparty-failure": "Counterparty failure",
-  "liquidity-drain": "Liquidity drain",
-  "regulatory": "Regulatory",
-  "abandoned": "Abandoned",
-};
-
 function CauseOfDeathPill({ cause }: { cause: string }) {
-  const label = CAUSE_OF_DEATH_LABELS[cause] ?? cause;
+  const label = CAUSE_META[cause as keyof typeof CAUSE_META]?.label.toLowerCase() ?? cause;
   return (
     <span className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
       {label}
