@@ -79,6 +79,19 @@ function normalizeUnixTimestampSeconds(value: number): number | null {
   return Math.floor(value >= 1_000_000_000_000 ? value / 1000 : value);
 }
 
+/**
+ * Parse a timestamp-like value (epoch number, epoch string, `DD/MM/YY`, or a
+ * long date like `Jan 5, 2024`) into Unix seconds, or `null` when it can't be
+ * parsed unambiguously.
+ *
+ * Short `DD/MM/YY` dates are deliberately rejected (return `null`) whenever both
+ * the day and month are <= 12 (e.g. `05/11/24`), because the field order is then
+ * ambiguous between DD/MM and MM/DD and silently guessing would risk an off-by-
+ * months timestamp. This is a conservative, intentional choice: callers that
+ * know the field order in advance (e.g. `ripple-transparency.ts`) should parse
+ * with their own format-specific parser rather than relying on this helper, and
+ * an adapter that hits this path falls back to `unverified` freshness.
+ */
 export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
   if (typeof value === "number") {
     return normalizeUnixTimestampSeconds(value);
