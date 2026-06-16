@@ -6,6 +6,7 @@ import type {
 } from "./types";
 import { throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   chunk,
@@ -15,6 +16,7 @@ import {
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
+  narrowMetadata,
   parseNonNegativeNumber,
   parsePositiveNumber,
 } from "./shared";
@@ -102,11 +104,13 @@ export async function runMoralisAddressProvider(
             ...(liquidityUsd != null ? { liquidityUsd } : {}),
             metadata: {
               providerChainId,
-              exchangeName: row.exchangeName,
-              exchangeAddress: row.exchangeAddress,
-              pairAddress: row.pairAddress,
-              verifiedContract: row.verifiedContract,
-              securityScore: row.securityScore,
+              ...narrowMetadata({
+                exchangeName: stringValue(row.exchangeName),
+                exchangeAddress: stringValue(row.exchangeAddress),
+                pairAddress: stringValue(row.pairAddress),
+                verifiedContract: typeof row.verifiedContract === "boolean" ? row.verifiedContract : null,
+                securityScore: numberValue(row.securityScore),
+              }),
             },
           });
         }

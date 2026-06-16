@@ -55,6 +55,18 @@ export function parseNonNegativeNumber(value: unknown): number | null {
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
 }
 
+/**
+ * Drops null-valued provenance fields so only well-typed values (callers must
+ * pre-narrow each field to its concrete type or null) land in quote.metadata.
+ */
+export function narrowMetadata<T>(fields: Record<string, T | null>): Record<string, T> {
+  const result: Record<string, T> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (value != null) result[key] = value;
+  }
+  return result;
+}
+
 export function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {

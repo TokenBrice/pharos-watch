@@ -1,5 +1,6 @@
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { numberValue } from "@shared/lib/type-guards";
 import type {
   AddressPriceProviderRuntimeConfig,
   AddressPriceProviderRunResult,
@@ -12,6 +13,7 @@ import {
   fetchProviderJson,
   incrementReason,
   isRecord,
+  narrowMetadata,
   parseNonNegativeNumber,
   parseObservedAt,
   parsePositiveNumber,
@@ -76,8 +78,10 @@ export async function runBirdeyeAddressProvider(
           ...(liquidityUsd != null ? { liquidityUsd } : {}),
           metadata: {
             providerChainId: target.providerChainId,
-            priceChange24h: data.priceChange24h,
-            priceInNative: data.priceInNative,
+            ...narrowMetadata({
+              priceChange24h: numberValue(data.priceChange24h),
+              priceInNative: numberValue(data.priceInNative),
+            }),
           },
         });
       }
