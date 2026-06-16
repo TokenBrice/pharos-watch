@@ -244,6 +244,11 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         stablecoinsCacheAgeSec: stablecoinsCacheResult.updatedAt
           ? Math.max(0, nowSec - stablecoinsCacheResult.updatedAt)
           : null,
+        // Intentional dual-write of degradedReasons (mirrored at top level below):
+        // this nested copy feeds the LLM prompt data-quality block (prompt/data-fmt.ts
+        // reads quality.degradedSources), while the top-level copy feeds editorial
+        // confidence scoring (editorial-candidates.ts reads data.degradedSources).
+        // Both are snapshotted from the same array at the same time and must stay in sync.
         ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
         windows: {
           blacklistActivity: {
@@ -267,6 +272,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
           },
         },
       },
+      // Top-level mirror of dataQuality.degradedSources (see comment above): consumed
+      // by editorial-candidates.ts for confidence scoring; kept separate so the LLM
+      // prompt block and editorial scoring read from their own stable field.
       ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
       activeDepegCount,
       topDepegs,
