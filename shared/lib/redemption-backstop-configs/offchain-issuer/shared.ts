@@ -1,5 +1,5 @@
 import { documentedBoundSupplyFull } from "../shared";
-import { REVIEWED_FIRST_WAVE_AT } from "../review-dates";
+import { REVIEWED_FIRST_WAVE_AT, REVIEWED_MAY_BATCH_AT, REVIEWED_YIELD_COVERAGE_WAVE_AT } from "../review-dates";
 
 export {
   REVIEWED_REMEDIATION_AT,
@@ -10,8 +10,8 @@ export {
 export const REVIEWED_DIRECT_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_ISSUER_API_EXPANSION_AT = "2026-04-03";
 export const REVIEWED_MAJOR_ISSUER_REDEMPTION_AT = "2026-04-16";
-export const REVIEWED_NON_USD_BATCH_AT = "2026-05-05";
-export const REVIEWED_COVERAGE_EXPANSION_AT = "2026-05-11";
+export const REVIEWED_NON_USD_BATCH_AT = REVIEWED_MAY_BATCH_AT;
+export const REVIEWED_COVERAGE_EXPANSION_AT = REVIEWED_YIELD_COVERAGE_WAVE_AT;
 
 export const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_DIRECT_REDEMPTION_AT);
 export const reviewedIssuerApiExpansionSupplyFull = documentedBoundSupplyFull(REVIEWED_ISSUER_API_EXPANSION_AT);

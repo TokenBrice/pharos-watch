@@ -13,13 +13,16 @@ import {
 import {
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
+  REVIEWED_MAY_BATCH_AT,
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
+  REVIEWED_WRAPPER_WAVE_AT,
+  REVIEWED_YIELD_COVERAGE_WAVE_AT,
 } from "./review-dates";
 
 const REVIEWED_DIRECT_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
-const REVIEWED_HIVE_HBD_AT = "2026-05-05";
-const REVIEWED_MENTO_CDP_AT = "2026-05-11";
+const REVIEWED_HIVE_HBD_AT = REVIEWED_MAY_BATCH_AT;
+const REVIEWED_MENTO_CDP_AT = REVIEWED_YIELD_COVERAGE_WAVE_AT;
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_DIRECT_REDEMPTION_AT);
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
 const BASE_COLLATERAL_REDEEM_IDS = [
@@ -453,7 +456,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "doc-money-on-chain": {
       ...collateralRedeemBase,
-      ...documentedBoundSupplyFull("2026-04-21"),
+      ...documentedBoundSupplyFull(REVIEWED_WRAPPER_WAVE_AT),
       costModel: undisclosedReviewedFee(
         "Money On Chain docs describe permissionless DOC redemption into RBTC, but the reviewed public materials do not publish a single fixed numeric redemption fee schedule",
       ),

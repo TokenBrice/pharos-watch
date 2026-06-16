@@ -9,6 +9,7 @@ import {
   sourceRef,
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { REVIEWED_WRAPPER_WAVE_AT } from "../review-dates";
 
 /** usdq-quantoz and eurq-quantoz are byte-identical (same base, cost, docs). */
 const quantozBase: RedemptionBackstopConfig = {
@@ -160,7 +161,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "audf-forte": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-04-21"),
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_WAVE_AT),
     settlementModel: "days",
     routeStatus: "open",
     costModel: undisclosedReviewedFee(

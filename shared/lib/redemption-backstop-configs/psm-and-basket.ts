@@ -12,13 +12,15 @@ import {
 import {
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
+  REVIEWED_MAY_BATCH_AT,
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
+  REVIEWED_YIELD_COVERAGE_WAVE_AT,
 } from "./review-dates";
 
 const REVIEWED_BASKET_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
-const REVIEWED_RESERVE_PROTOCOL_DTF_AT = "2026-05-05";
+const REVIEWED_RESERVE_PROTOCOL_DTF_AT = REVIEWED_MAY_BATCH_AT;
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
 
 export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -76,9 +78,9 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dllr-sovryn": {
     ...basketRedeemBase,
-    ...documentedBoundSupplyFull("2026-05-11"),
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
     costModel: fixedFee(0, "Mynt materials state redemption fees are currently disabled"),
-    reviewedAt: "2026-05-11",
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     docs: [
       sourceRef("Sovryn Dollar", "https://sovryn.com/sovryn-dollar", ["route", "capacity", "access"]),
       sourceRef("Mynt app", "https://app.mynt.xyz/", ["route", "capacity", "fees", "settlement"]),
@@ -89,11 +91,11 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "xusd-babelfish": {
     ...basketRedeemBase,
-    ...documentedBoundSupplyFull("2026-05-11"),
+    ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
     costModel: documentedVariableFee(
       "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
     ),
-    reviewedAt: "2026-05-11",
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     docs: [sourceRef("BabelFish", "https://babelfish.money/", ["route", "capacity", "fees", "access", "settlement"])],
     notes: [
       "Fresh reserve sync reads the BabelFish holder's accepted bAsset balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
