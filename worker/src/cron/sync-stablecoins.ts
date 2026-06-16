@@ -19,17 +19,30 @@ import {
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
 
+export interface SyncStablecoinsOptions {
+  cmcApiKey?: string;
+  alertWebhookUrl?: string | null;
+  coingeckoApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  reportProgress?: CronProgressReporter;
+  jupiterApiKey?: string | null;
+  addressPriceProvider?: Parameters<typeof runStablecoinsPricingStage>[0]["addressPriceProvider"];
+}
+
 export async function syncStablecoins(
   db: D1Database,
-  cmcApiKey?: string,
   signal?: AbortSignal,
-  alertWebhookUrl?: string | null,
-  coingeckoApiKey?: string | null,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  reportProgress?: CronProgressReporter,
-  jupiterApiKey?: string | null,
-  addressPriceProvider?: Parameters<typeof runStablecoinsPricingStage>[0]["addressPriceProvider"],
+  options: SyncStablecoinsOptions = {},
 ): Promise<CronResult> {
+  const {
+    cmcApiKey,
+    alertWebhookUrl,
+    coingeckoApiKey,
+    chainRpcs,
+    reportProgress,
+    jupiterApiKey,
+    addressPriceProvider,
+  } = options;
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);

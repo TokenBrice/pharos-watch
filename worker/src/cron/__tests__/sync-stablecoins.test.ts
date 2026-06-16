@@ -1414,7 +1414,7 @@ describe("syncStablecoins", () => {
       { match: "coins.llama.fi/prices", body: { coins: {} } },
     ]);
 
-    await syncStablecoins(db, undefined, undefined, null, null, undefined, reportProgress);
+    await syncStablecoins(db, undefined, { reportProgress });
 
     const stages = reportProgress.mock.calls.map((call) => {
       const [update] = call as unknown as Array<{ stage?: string } | undefined>;
