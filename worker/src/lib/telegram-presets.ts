@@ -149,6 +149,10 @@ const PRESET_BY_ID = new Map(
   TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition] as const),
 );
 
+export const TELEGRAM_PRESET_LABEL_BY_ID: ReadonlyMap<TelegramPresetId, string> = new Map(
+  TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition.label] as const),
+);
+
 const PRESET_ALIAS_TO_ID = (() => {
   const map = new Map<string, TelegramPresetId>();
   for (const definition of TELEGRAM_PRESET_DEFINITIONS) {

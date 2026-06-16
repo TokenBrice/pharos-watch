@@ -10,7 +10,7 @@ import {
   type TickerResolutionScope,
 } from "../../lib/telegram-alerts";
 import {
-  listTelegramPresets,
+  TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
   type TelegramPresetId,
 } from "../../lib/telegram-presets";
@@ -58,10 +58,6 @@ export type ActionPayloadMap = {
   unsubscribe: UnsubscribeActionPayload;
   set: ParsedSetCommand;
 };
-
-const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
-  listTelegramPresets().map((definition) => [definition.id, definition.label] as const),
-);
 
 const SUBSCRIBABLE_COIN_COUNT = TRACKED_STABLECOINS.filter((coin) => !FROZEN_IDS.has(coin.id)).length;
 

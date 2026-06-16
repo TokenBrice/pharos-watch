@@ -13,7 +13,7 @@ import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import {
-  listTelegramPresets,
+  TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
   type TelegramPresetId,
 } from "../lib/telegram-presets";
@@ -75,13 +75,6 @@ const PRESET_PICKER_ORDER: TelegramPresetId[] = [
   "mcap-ge-1b",
 ];
 
-function presetLabelById(presetId: string): string {
-  for (const definition of listTelegramPresets()) {
-    if (definition.id === presetId) return definition.label;
-  }
-  return presetId;
-}
-
 function buildBranchKeyboard(options: { includeMiniAppButton?: boolean } = {}): InlineKeyboardMarkup {
   const rows: InlineKeyboardButton[][] = [
     [{ text: "Use recommended (DEWS + Depeg, usd-top25)", callback_data: "setup:branch:recommended" }],
@@ -118,7 +111,7 @@ function buildTypeToggleKeyboard(selected: Set<string>): InlineKeyboardMarkup {
 
 function buildTargetKeyboard(): InlineKeyboardMarkup {
   const rows: InlineKeyboardButton[][] = PRESET_PICKER_ORDER.map((presetId) => [
-    { text: presetLabelById(presetId), callback_data: `setup:target:${presetId}` },
+    { text: (TELEGRAM_PRESET_LABEL_BY_ID.get(presetId as TelegramPresetId) ?? presetId), callback_data: `setup:target:${presetId}` },
   ]);
   rows.push([{ text: "All tracked coins", callback_data: "setup:target:all" }]);
   rows.push([{ text: "Type a ticker", callback_data: "setup:target:type" }]);
@@ -584,7 +577,7 @@ export async function handleSetupConfirm(
       outcome: "success",
     });
     const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, coinIds);
-    const intro = `Subscribed via ${presetLabelById(state.target.presetId)} (${coins.length} coins). Use /list anytime.`;
+    const intro = `Subscribed via ${TELEGRAM_PRESET_LABEL_BY_ID.get(state.target.presetId as TelegramPresetId) ?? state.target.presetId} (${coins.length} coins). Use /list anytime.`;
     await sendSetupReply(
       context,
       buildSubscriptionSummaryMessage(intro, subscriptions),
