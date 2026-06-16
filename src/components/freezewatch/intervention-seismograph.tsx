@@ -30,11 +30,12 @@ interface QuarterPoint {
 // Maintenance: append a new entry only for an event that materially shifted
 // blacklist/destroy activity in its quarter (the same bar this chart plots).
 // Expect roughly one addition per year; keep the list short so labels stay
-// legible. `quarter` must match the buildQuarterPoints() "YYYY-Qn" key format.
+// legible. `quarter` must match the point key format emitted by sortKeyToLabel()
+// (shared/lib/blacklist-aggregates.ts): "Qn 'YY", e.g. "Q3 '22" — NOT "YYYY-Qn".
 const NOTABLE_QUAKES: ReadonlyArray<{ quarter: string; label: string }> = [
-  { quarter: "2022-Q3", label: "Tornado Cash" },
-  { quarter: "2023-Q1", label: "Silvergate" },
-  { quarter: "2023-Q4", label: "OFAC Hamas" },
+  { quarter: "Q3 '22", label: "Tornado Cash" },
+  { quarter: "Q1 '23", label: "Silvergate" },
+  { quarter: "Q4 '23", label: "OFAC Hamas" },
 ];
 
 const EVENT_COLORS = {
