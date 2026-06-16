@@ -3,6 +3,7 @@ export const CRITICAL_TEST_FILES = [
   "src/lib/__tests__/critical-invariants.test.ts",
   "worker/src/__tests__/index.scheduled.test.ts",
   "worker/src/lib/__tests__/api-utils.test.ts",
+  "worker/src/lib/__tests__/api-pagination.test.ts",
   "worker/src/lib/__tests__/api-keys.test.ts",
   "worker/src/handlers/http/__tests__/gates.test.ts",
   "worker/src/lib/__tests__/alerts.test.ts",

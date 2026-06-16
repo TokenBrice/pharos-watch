@@ -222,6 +222,59 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
     expect(shortResult.events).toHaveLength(1);
     expect(shortResult.nextCursor).toBeNull();
   });
+
+  it("rejects invalid order clauses and unsafe query comments", async () => {
+    await expect(
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
+        tableName: "depeg_events",
+        orderBy: "started_at DESC NULLS LAST",
+        conditions: [],
+        filterBindings: [],
+        limit: 10,
+        offset: 0,
+        mapRow: (r) => r,
+      }),
+    ).rejects.toThrow(/Invalid orderBy/);
+
+    await expect(
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
+        tableName: "depeg_events",
+        orderBy: "started_at DESC",
+        queryComment: "unsafe comment",
+        conditions: [],
+        filterBindings: [],
+        limit: 10,
+        offset: 0,
+        mapRow: (r) => r,
+      }),
+    ).rejects.toThrow(/Invalid query comment/);
+  });
+
+  it("reports an inexact lower-bound total for cursor pages without totals", async () => {
+    const rows = [
+      { id: 3, started_at: 300, stablecoin: "usdc" },
+      { id: 2, started_at: 200, stablecoin: "usdc" },
+      { id: 1, started_at: 100, stablecoin: "usdc" },
+    ];
+    const db = mockD1([{ match: "FROM depeg_events", rows }]);
+    const result = await fetchPaginatedEvents<Row, Row>(db, {
+      tableName: "depeg_events",
+      orderBy: "started_at DESC, id DESC",
+      conditions: ["stablecoin = ?"],
+      filterBindings: ["usdc"],
+      limit: 2,
+      offset: 25,
+      includeTotal: false,
+      mapRow: (r) => r,
+      cursor: TWO_COLUMN_CURSOR,
+      cursorValues: [400, 4],
+    });
+
+    expect(result.totalExact).toBe(false);
+    expect(result.total).toBe(3);
+    expect(db.getHistory()[0]!.binds).toEqual(["usdc", 400, 400, 4, 3]);
+  });
+
 });
 
 describe("buildPaginatedEventResponse", () => {
@@ -256,6 +309,27 @@ describe("buildPaginatedEventResponse", () => {
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
     expect(body).toHaveProperty("nextCursor");
+  });
+
+
+  it("uses custom cursor parameter names and merges async extra response fields", async () => {
+    const db = mockD1([
+      { match: "COUNT(*) as total FROM depeg_events", rows: [{ total: 2 }] },
+      { match: "FROM depeg_events", rows: [{ id: 2, started_at: 200, stablecoin: "usdc" }] },
+      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [] },
+    ]);
+    const cursor = encodeJsonCursor({ v: 1, values: [300, 3] });
+    const response = await buildPaginatedEventResponse<Row, Row, { symbols: string[] }>(db, {
+      ...baseConfig,
+      cursor: { ...TWO_COLUMN_CURSOR, parameterName: "after" },
+      searchParams: params(`after=${cursor}&includeTotal=true`),
+      buildExtraBody: async (events) => ({ symbols: events.map((event) => event.stablecoin) }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { symbols: string[]; total: number };
+    expect(body.symbols).toEqual(["usdc"]);
+    expect(body.total).toBe(2);
   });
 
   it("short-circuits with the parse error response on an invalid cursor", async () => {
