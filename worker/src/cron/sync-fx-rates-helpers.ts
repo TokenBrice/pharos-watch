@@ -22,6 +22,9 @@ const REALTIME_OVERLAY_MAX_DIVERGENCE = 0.05;
 const CHAINLINK_METAL_PEG_KEYS = new Set<string>(["peggedGOLD", "peggedSILVER"]);
 const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
 const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
+// TODO(cleanup): Remove this constant and the fallback read at ~L735 after 2026-09-15.
+// Once every live isolate has written OXR_LAST_ATTEMPT_KEY at least once, this legacy key
+// is permanently dead. Also delete the 'fx-oxr-last-fetch' row from the cache table via migration.
 const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
 // Open Exchange Rates free-tier hourly quota: skip fetches within this window of the last attempt.
 const OXR_RATE_LIMIT_MINUTES = 55;
