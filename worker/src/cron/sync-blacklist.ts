@@ -31,6 +31,7 @@ import {
   loadBlacklistConfigStates,
   recordApiErrorConfig,
   recordProcessedRows,
+  type SyncBlacklistApiErrorConfig,
 } from "./blacklist/sync-support";
 import { toErrorMessage } from "../lib/error-utils";
 
@@ -252,14 +253,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     currentBalanceCacheCounters: { updated: 0, deleted: 0, failed: 0 },
   };
   const apiErrorClasses: Record<string, number> = {};
-  const apiErrorConfigs: Array<{
-    configKey: string;
-    stablecoin: string;
-    chainId: string;
-    reason: string;
-    errorMessage?: string;
-    stackHead?: string;
-  }> = [];
+  const apiErrorConfigs: SyncBlacklistApiErrorConfig[] = [];
   const chainTimestampCaches = new Map<string, Map<number, number>>();
   const getChainTimestampCache = (chainId: string): Map<number, number> => {
     let cache = chainTimestampCaches.get(chainId);
