@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { buildShredderMachineModel, type FlowMachineSceneSize } from "./flow-machine-scene-model";
 import styles from "./flow-machine-scene-shredder.module.css";
 
@@ -13,9 +14,7 @@ export function FlowMachineShredder({
   size: FlowMachineSceneSize;
   intensity: number;
 }) {
-  const [reducedMotion] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false,
-  );
+  const reducedMotion = usePrefersReducedMotion();
 
   const model = useMemo(() => {
     return buildShredderMachineModel(size, reducedMotion ? 0 : intensity);
