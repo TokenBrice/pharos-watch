@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CHART_AMBER, CHART_BLUE } from "@/lib/chart-colors";
+import { toTimestampMs } from "@/lib/time";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import {
@@ -21,7 +22,6 @@ import {
   formatTickPercent,
   formatTooltipDate,
   getYieldHistorySourceDisplayLabel,
-  toTimestampMs,
   type YieldHistorySourceOption,
   type YieldHistoryChartPoint,
   type YieldSourceSegment,

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { DAY_MS } from "@/lib/constants";
+import { toTimestampMs } from "@/lib/time";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatChartDate } from "@shared/lib/format";
 import type { YieldHistoryPoint } from "@shared/types";
@@ -198,26 +199,6 @@ export function deriveYieldSourceSegments(
 
 function normalizeDefaultDays(value?: number) {
   return PRESET_DAYS.includes(value as (typeof PRESET_DAYS)[number]) ? value! : DEFAULT_DAYS;
-}
-
-export function toTimestampMs(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value < 10_000_000_000 ? value * 1000 : value;
-  }
-
-  if (typeof value === "string" && value.trim().length > 0) {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric)) {
-      return numeric < 10_000_000_000 ? numeric * 1000 : numeric;
-    }
-
-    const parsed = new Date(value).getTime();
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
-  return Number.NaN;
 }
 
 export function formatAxisDate(timestamp: number, days: number) {

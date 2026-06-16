@@ -14,12 +14,12 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { PysHistorySparkline, type PysHistorySparklinePoint } from "@/components/pys-history-sparkline";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
+import { toTimestampMs } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import {
   BRAND_ACCENT,
   DEFAULT_DAYS,
   formatChartNumber,
-  toTimestampMs,
   type YieldHistoryChartProps,
   useYieldHistoryChartModel,
 } from "./yield-history-chart-model";

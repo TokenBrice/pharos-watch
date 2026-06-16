@@ -18,7 +18,7 @@ import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import { toTimestampMs } from "@/components/yield-history-chart-model";
+import { toTimestampMs } from "@/lib/time";
 import { classifyApyChange } from "@/lib/yield-change-attribution";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { formatChartDate, formatPercent } from "@shared/lib/format";
