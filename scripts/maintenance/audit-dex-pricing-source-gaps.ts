@@ -376,22 +376,31 @@ export function buildDexPricingSourceGapAudit(input: BuildAuditInput): DexPricin
   };
 }
 
+function buildStablecoinRow(
+  id: string,
+  row: Record<string, unknown>,
+  extras?: Pick<DexGapStablecoinRow, "circulating" | "contracts" | "tradedContracts">,
+): DexGapStablecoinRow {
+  return {
+    id,
+    symbol: stringValue(row.symbol) ?? id.toUpperCase(),
+    name: stringValue(row.name) ?? undefined,
+    price: numberValue(row.price),
+    priceSource: stringValue(row.priceSource),
+    priceConfidence: stringValue(row.priceConfidence),
+    consensusSources: Array.isArray(row.consensusSources) ? uniqueStrings(row.consensusSources.filter((s): s is string => typeof s === "string")) : [],
+    agreeSources: Array.isArray(row.agreeSources) ? uniqueStrings(row.agreeSources.filter((s): s is string => typeof s === "string")) : [],
+    marketCapUsd: numberValue(row.marketCapUsd) ?? undefined,
+    ...extras,
+  };
+}
+
 function normalizeStablecoinRows(payload: unknown): DexGapStablecoinRow[] {
   if (isRecord(payload) && Array.isArray(payload.rows)) {
     return payload.rows.filter(isRecord).flatMap((row) => {
       const id = stringValue(row.coinId ?? row.id);
       if (!id) return [];
-      return [{
-        id,
-        symbol: stringValue(row.symbol) ?? id.toUpperCase(),
-        name: stringValue(row.name) ?? undefined,
-        price: numberValue(row.price),
-        priceSource: stringValue(row.priceSource),
-        priceConfidence: stringValue(row.priceConfidence),
-        consensusSources: Array.isArray(row.consensusSources) ? uniqueStrings(row.consensusSources.filter((s): s is string => typeof s === "string")) : [],
-        agreeSources: Array.isArray(row.agreeSources) ? uniqueStrings(row.agreeSources.filter((s): s is string => typeof s === "string")) : [],
-        marketCapUsd: numberValue(row.marketCapUsd) ?? undefined,
-      }];
+      return [buildStablecoinRow(id, row)];
     });
   }
 
@@ -399,19 +408,11 @@ function normalizeStablecoinRows(payload: unknown): DexGapStablecoinRow[] {
   return unwrapRows(rows).flatMap((row) => {
     const id = stringValue(row.id);
     if (!id) return [];
-    return [{
-      id,
-      symbol: stringValue(row.symbol) ?? id.toUpperCase(),
-      name: stringValue(row.name) ?? undefined,
-      price: numberValue(row.price),
-      priceSource: stringValue(row.priceSource),
-      priceConfidence: stringValue(row.priceConfidence),
-      consensusSources: Array.isArray(row.consensusSources) ? uniqueStrings(row.consensusSources.filter((s): s is string => typeof s === "string")) : [],
-      agreeSources: Array.isArray(row.agreeSources) ? uniqueStrings(row.agreeSources.filter((s): s is string => typeof s === "string")) : [],
+    return [buildStablecoinRow(id, row, {
       circulating: isRecord(row.circulating) ? row.circulating as Record<string, number> : undefined,
       contracts: Array.isArray(row.contracts) ? row.contracts as DexGapStablecoinRow["contracts"] : undefined,
       tradedContracts: Array.isArray(row.tradedContracts) ? row.tradedContracts as DexGapStablecoinRow["tradedContracts"] : undefined,
-    }];
+    })];
   });
 }
 
