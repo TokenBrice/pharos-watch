@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 53,
+    "fileLines": 54,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "queued-p4",
@@ -12,9 +12,9 @@
     "notes": "Report-card scoring and projection logic are still concentrated here. The next pass should separate scoring families, blacklist/live-slice enrichment, and presentation-oriented shaping."
   },
   "shared/lib/format.ts": {
-    "fileLines": 344,
+    "fileLines": 391,
     "maxFunctionLines": 32,
-    "branchCount": 84,
+    "branchCount": 91,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 306,
@@ -24,7 +24,7 @@
     "notes": "Shared formatting intentionally centralizes many small branchy display helpers. Keep new formatting families covered by focused helper tests or split them into narrower modules if this file grows."
   },
   "worker/src/api/stablecoin-detail.ts": {
-    "fileLines": 118,
+    "fileLines": 122,
     "maxFunctionLines": 42,
     "branchCount": 5,
     "disposition": "stabilized",
@@ -48,9 +48,9 @@
     "notes": "Already within budget. Prefer keeping validation and persistence in helper modules rather than growing the handler."
   },
   "worker/src/handlers/http/request-dispatch.ts": {
-    "fileLines": 11,
-    "maxFunctionLines": 7,
-    "branchCount": 0,
+    "fileLines": 139,
+    "maxFunctionLines": 105,
+    "branchCount": 10,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 54,
@@ -84,8 +84,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 178,
-    "maxFunctionLines": 156,
+    "fileLines": 191,
+    "maxFunctionLines": 159,
     "branchCount": 8,
     "disposition": "stabilized",
     "targetBudget": {
@@ -96,8 +96,8 @@
     "notes": "The staging split landed. Keep the cron shell focused on phase order and progress coordination; pricing and intake detail should stay in `sync-stablecoins/*` helpers."
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
-    "fileLines": 218,
-    "maxFunctionLines": 140,
+    "fileLines": 205,
+    "maxFunctionLines": 128,
     "branchCount": 0,
     "disposition": "stabilized",
     "targetBudget": {
@@ -108,8 +108,8 @@
     "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 26,
-    "maxFunctionLines": 16,
+    "fileLines": 25,
+    "maxFunctionLines": 15,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -120,8 +120,8 @@
     "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 155,
-    "maxFunctionLines": 147,
+    "fileLines": 154,
+    "maxFunctionLines": 146,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -132,8 +132,8 @@
     "notes": "Liquidity copy is isolated now. A follow-up split should extract long table-heavy detail blocks if the section grows again."
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
-    "fileLines": 287,
-    "maxFunctionLines": 257,
+    "fileLines": 286,
+    "maxFunctionLines": 256,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -144,8 +144,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 303,
-    "maxFunctionLines": 287,
+    "fileLines": 289,
+    "maxFunctionLines": 269,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -156,8 +156,8 @@
     "notes": "Yield methodology is now its own module. If more source-policy copy lands, extract the arbitration and PYS formula blocks into smaller subcomponents."
   },
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
-    "fileLines": 26,
-    "maxFunctionLines": 16,
+    "fileLines": 25,
+    "maxFunctionLines": 15,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -240,9 +240,9 @@
     "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
   "src/components/api-key-request-form.tsx": {
-    "fileLines": 447,
-    "maxFunctionLines": 413,
-    "branchCount": 27,
+    "fileLines": 450,
+    "maxFunctionLines": 416,
+    "branchCount": 28,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 420,
@@ -264,9 +264,9 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 859,
-    "maxFunctionLines": 206,
-    "branchCount": 33,
+    "fileLines": 885,
+    "maxFunctionLines": 122,
+    "branchCount": 34,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,
@@ -288,7 +288,7 @@
     "notes": "The self-serve API key route is now a stable export facade over public, admin, state, notification, and response modules. Keep route behavior in the adjacent modules instead of regrowing this barrel."
   },
   "worker/src/api/api-key-requests/admin.ts": {
-    "fileLines": 230,
+    "fileLines": 222,
     "maxFunctionLines": 54,
     "branchCount": 6,
     "disposition": "queued-p4",
@@ -324,9 +324,9 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 347,
-    "maxFunctionLines": 322,
-    "branchCount": 17,
+    "fileLines": 358,
+    "maxFunctionLines": 332,
+    "branchCount": 18,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 191,
@@ -336,8 +336,8 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 759,
-    "maxFunctionLines": 592,
+    "fileLines": 919,
+    "maxFunctionLines": 358,
     "branchCount": 21,
     "disposition": "deferred",
     "targetBudget": {
@@ -360,8 +360,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 815,
-    "maxFunctionLines": 165,
+    "fileLines": 813,
+    "maxFunctionLines": 164,
     "branchCount": 20,
     "disposition": "stabilized",
     "targetBudget": {
@@ -384,9 +384,9 @@
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 359,
-    "maxFunctionLines": 290,
-    "branchCount": 20,
+    "fileLines": 352,
+    "maxFunctionLines": 283,
+    "branchCount": 18,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 345,
@@ -420,9 +420,9 @@
     "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 440,
-    "maxFunctionLines": 137,
-    "branchCount": 22,
+    "fileLines": 450,
+    "maxFunctionLines": 145,
+    "branchCount": 23,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
@@ -456,8 +456,8 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 577,
-    "maxFunctionLines": 350,
+    "fileLines": 571,
+    "maxFunctionLines": 343,
     "branchCount": 44,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -468,8 +468,8 @@
     "notes": "Post-fetch balance hydration now lives in `blacklist/post-fetch.ts`. The next pass should still separate source crawling/orchestration from per-family normalization."
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 230,
-    "maxFunctionLines": 189,
+    "fileLines": 216,
+    "maxFunctionLines": 175,
     "branchCount": 20,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -516,8 +516,8 @@
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 250,
-    "maxFunctionLines": 126,
+    "fileLines": 253,
+    "maxFunctionLines": 129,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
