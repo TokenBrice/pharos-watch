@@ -67,16 +67,26 @@ function resolvePublishedCollateralizationRatio(
     return normalizePublishedCollateralizationRatio(value);
   }
 
+  // The USDGO transparency API has not published field semantics for
+  // `collateralizationRatio`, so its format (total backing %, excess backing %,
+  // or a raw ratio) is inferred by picking whichever interpretation lands
+  // closest to the ratio we independently derive from reserves/supply. This
+  // heuristic stays until the issuer documents the field (see sourceProvenance
+  // below). The caller (adaptUsdgoTransparency) enforces the hard guard: if the
+  // chosen interpretation — i.e. the closest of all candidates — still deviates
+  // by more than 2% from derivedRatio, it throws rather than trusting the
+  // "least wrong" guess. Relative distance guards against a zero ratio so the
+  // comparator can never emit -Infinity/NaN and corrupt the ordering.
+  const relativeDistance = (ratio: number): number =>
+    ratio > 0 ? Math.abs(ratio - derivedRatio) / ratio : Number.POSITIVE_INFINITY;
+
   return [
     { ratio: value / 100, format: "total-percent" as const },
     { ratio: 1 + value / 100, format: "excess-percent" as const },
     { ratio: value, format: "raw-ratio" as const },
   ]
     .filter((candidate) => candidate.ratio > 0)
-    .sort(
-      (left, right) =>
-        Math.abs(left.ratio - derivedRatio) / left.ratio - Math.abs(right.ratio - derivedRatio) / right.ratio,
-    )[0];
+    .sort((left, right) => relativeDistance(left.ratio) - relativeDistance(right.ratio))[0];
 }
 
 export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): AdapterResult {
