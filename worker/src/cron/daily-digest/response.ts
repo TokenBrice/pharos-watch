@@ -2,7 +2,7 @@ import { DigestResponseSchema } from "../../lib/schemas";
 import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./lead-requirements";
 import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
 import { toErrorMessage } from "../../lib/error-utils";
-import { getMetaString } from "./digest-intelligence-utils";
+import { getMetaString, normalizeStringArray } from "./digest-intelligence-utils";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -126,14 +126,6 @@ function normalizeToken(value: unknown, allowed: Set<string>): string | undefine
   return allowed.has(normalized) ? normalized : "other";
 }
 
-function normalizeStringArray(value: unknown, maxItems: number): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const cleaned = value
-    .map((item) => typeof item === "string" ? item.trim() : "")
-    .filter(Boolean)
-    .slice(0, maxItems);
-  return cleaned.length > 0 ? cleaned : undefined;
-}
 
 function normalizeCoins(value: unknown): string[] | undefined {
   const cleaned = normalizeStringArray(value, 4)

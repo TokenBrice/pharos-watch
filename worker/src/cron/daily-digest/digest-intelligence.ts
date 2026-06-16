@@ -8,7 +8,7 @@ import { buildCalmNarrativeFrame } from "./digest-calm-frame";
 import { buildChangeSummary } from "./digest-change-summary";
 import { buildForwardLookOutcomes, buildNextTriggers } from "./digest-next-triggers";
 import { buildRiskTape } from "./digest-risk-tape";
-import { unique } from "./digest-intelligence-utils";
+import { normalizeStringArray, unique } from "./digest-intelligence-utils";
 
 interface DigestMetaLike {
   leadSignalId?: unknown;
@@ -74,8 +74,8 @@ function buildEditorialAudit(params: {
     ? candidates.find((candidate) => candidate.id === leadCandidateId)
     : null;
   const qualityIssueCodes = unique(params.qualityIssues.map((issue) => issue.code).filter(Boolean));
-  const usedCandidateIds = normalizeStringArray(meta?.usedCandidateIds);
-  const modelSuppressedCandidateIds = normalizeStringArray(meta?.suppressedCandidateIds);
+  const usedCandidateIds = normalizeStringArray(meta?.usedCandidateIds) ?? [];
+  const modelSuppressedCandidateIds = normalizeStringArray(meta?.suppressedCandidateIds) ?? [];
   const requiredLeadCandidateIds = unique((params.leadRequirements ?? []).flatMap((requirement) => requirement.candidateIds));
 
   return {
@@ -102,7 +102,3 @@ function parseDigestMeta(value: string | null): DigestMetaLike | null {
   }
 }
 
-function normalizeStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return unique(value.map((entry) => typeof entry === "string" ? entry.trim() : "").filter(Boolean));
-}

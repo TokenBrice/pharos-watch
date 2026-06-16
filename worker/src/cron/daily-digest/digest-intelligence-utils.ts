@@ -46,3 +46,12 @@ export function getMetaString(meta: Record<string, unknown> | null, key: string)
   const value = meta?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
+
+export function normalizeStringArray(value: unknown, maxItems = Infinity): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const cleaned = value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean)
+    .slice(0, maxItems);
+  return cleaned.length > 0 ? cleaned : undefined;
+}
