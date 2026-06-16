@@ -544,11 +544,12 @@ function weakestSuggestedBridgeTier(protocols: readonly L2BeatInteropProtocolSna
 function bridgeRouteReviewReasons(input: {
   coin: StablecoinMeta;
   protocols: readonly L2BeatInteropProtocolSnapshot[];
+  searchText: string;
 }): L2BeatBridgeRouteReviewReason[] {
   const reasons = new Set<L2BeatBridgeRouteReviewReason>();
   const currentTier = input.coin.bridgeRouteRisk?.tier ?? null;
   const hasProtocolReference = input.protocols.length > 0;
-  const hasLegacyBridgeSource = stablecoinRouteSearchText(input.coin).includes("l2beat.com/bridges/");
+  const hasLegacyBridgeSource = input.searchText.includes("l2beat.com/bridges/");
   const externalProtocol = input.protocols.some((protocol) => protocol.type !== "canonical");
 
   if (hasProtocolReference) reasons.add("l2beat-protocol-reference");
@@ -586,11 +587,12 @@ export function buildL2BeatBridgeRouteReviewAudit(options: {
 
   for (const coin of options.stablecoins) {
     if (coin.bridgeRouteRisk) stablecoinsWithBridgeRouteRisk.add(coin.id);
-    const protocols = findL2BeatInteropProtocolReferences(stablecoinRouteSearchText(coin));
+    const searchText = stablecoinRouteSearchText(coin);
+    const protocols = findL2BeatInteropProtocolReferences(searchText);
     protocolReferenceCount += protocols.length;
     if (protocols.length > 0) stablecoinsWithProtocolReferences.add(coin.id);
     const suggestedTier = weakestSuggestedBridgeTier(protocols);
-    const reasons = bridgeRouteReviewReasons({ coin, protocols });
+    const reasons = bridgeRouteReviewReasons({ coin, protocols, searchText });
     if (reasons.length === 0) continue;
 
     reviewRows.push({
