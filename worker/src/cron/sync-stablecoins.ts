@@ -151,6 +151,7 @@ export async function syncStablecoins(
     reportProgress,
   });
   if (isAbortResult(publication)) return publication;
+  if (!("cacheResult" in publication)) return publication;
   const { cacheResult, depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics = [] } = publication;
   const result = buildStablecoinsSyncResult({
     assets,

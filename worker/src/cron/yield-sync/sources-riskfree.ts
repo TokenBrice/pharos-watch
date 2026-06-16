@@ -2,7 +2,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldBenchmarkMeta } from "@shared/types/yield";
 import { getCache } from "../../lib/db-cache";
 import { computeApyFromPrice, isDeterministicApyWithinSanityBounds } from "../yield-helpers";
-import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { parseRiskFreeRateCache, parseRiskFreeRatesCache } from "./cache/normalization";
 
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";

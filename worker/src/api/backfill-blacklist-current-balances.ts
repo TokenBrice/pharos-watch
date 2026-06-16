@@ -201,7 +201,7 @@ export async function handleBackfillBlacklistCurrentBalances(
           chainId: config.chain.chainId,
           candidateCount: candidateRows.length,
           updated: result.updated,
-          deleted: result.deleted,
+          deleted: "deleted" in result ? result.deleted : 0,
           failed: result.failed,
           truncated: configTruncated,
           budgetExhausted: result.budgetExhausted,

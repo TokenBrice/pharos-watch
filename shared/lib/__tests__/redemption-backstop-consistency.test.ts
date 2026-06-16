@@ -119,7 +119,7 @@ describe("redemption backstop config consistency", () => {
     const mismatches: string[] = [];
 
     for (const moduleEntry of familyModules) {
-      if (!moduleEntry.sourceFilePaths) continue;
+      if (!("sourceFilePaths" in moduleEntry)) continue;
       const dir = path.posix.dirname(moduleEntry.filePath);
       const barrel = path.posix.basename(moduleEntry.filePath);
       const onDisk = readdirSync(path.join(repoRoot, dir))

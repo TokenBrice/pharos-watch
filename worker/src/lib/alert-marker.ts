@@ -3,7 +3,7 @@
  * Each watchdog defines its own marker shape; this handles the shared
  * parse-and-validate boilerplate.
  */
-export function readAlertMarker<T extends Record<string, unknown>>(
+export function readAlertMarker<T extends object>(
   value: string | null | undefined,
   validate: (parsed: Partial<T>) => parsed is T,
 ): T | null {

@@ -11,8 +11,8 @@ import {
 import {
   loadSupplementalSourceFamilies,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-  type SupplementalSourceFamilyKey,
 } from "./yield-sync/supplemental-source-families";
+import type { SupplementalSourceFamilyKey } from "./yield-sync/supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
 
 function buildSupplementalCandidateDedupKey(candidate: ResolvedYieldCandidate): string | null {

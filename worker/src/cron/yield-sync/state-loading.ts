@@ -21,8 +21,8 @@ import { buildStablecoinSupplyMapFromCacheValue } from "./supply-map";
 import {
   getSupplementalCandidateFamily,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-  type SupplementalSourceFamilyKey,
 } from "./supplemental-source-families";
+import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "./types";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
