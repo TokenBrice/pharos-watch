@@ -204,7 +204,7 @@ function buildGeniusRow(
   };
 }
 
-function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: ComplianceRow[] } {
+function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: ComplianceRow[]; geniusEffective: boolean } {
   const rows: ComplianceRow[] = [];
   const watchRows: ComplianceRow[] = [];
   const geniusEffective = isGeniusRegimeEffective(GENIUS_REGIME_STATE);
@@ -223,7 +223,7 @@ function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: Complianc
     }
   }
 
-  return { rows, watchRows };
+  return { rows, watchRows, geniusEffective };
 }
 
 function matchesFilters(row: ComplianceRow, filters: ComplianceFilters, q: string): boolean {
@@ -275,6 +275,6 @@ export function buildComplianceViewModel(filters: ComplianceFilters): Compliance
     rows,
     watchRows,
     totalTracked: all.rows.length + all.watchRows.length,
-    isGeniusEffective: isGeniusRegimeEffective(GENIUS_REGIME_STATE),
+    isGeniusEffective: all.geniusEffective,
   };
 }
