@@ -31,6 +31,19 @@ describe("parsePaletteInput", () => {
     expect(params.get("supplyMin")).toBe("1000000");
   });
 
+  it("collapses both > and >= operators to the same gte filter", () => {
+    const gt = parsePaletteInput("screen safety>80 supply>1000000");
+    const gte = parsePaletteInput("screen safety>=80 supply>=1000000");
+
+    expect(gt.kind).toBe("screen");
+    expect(gte.kind).toBe("screen");
+    if (gt.kind !== "screen" || gte.kind !== "screen") return;
+
+    expect(gt.filters).toEqual({ safetyPegStabilityMin: "80", supplyMin: "1000000" });
+    expect(gt.filters).toEqual(gte.filters);
+    expect(gt.href).toBe(gte.href);
+  });
+
   it("resolves compare tokens while preserving unresolved entries", () => {
     const parsed = parsePaletteInput("compare usdt usdt nope usdc");
 
