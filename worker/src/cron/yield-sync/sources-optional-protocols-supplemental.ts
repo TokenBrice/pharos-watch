@@ -62,6 +62,8 @@ const MORPHO_MIN_TVL_USD = 100_000;
 const PENDLE_MIN_EXPIRY_DAYS = 3;
 const PENDLE_MAX_EXPIRY_YEARS = 5;
 const PENDLE_MAX_IMPLIED_APY = 1;
+const PENDLE_MIN_TVL_USD = 100_000;
+const KONG_MIN_TVL_USD = 100_000;
 const BEEFY_MAX_APY = 0.5;
 const BEEFY_MIN_TVL_USD = 100_000;
 
@@ -132,8 +134,8 @@ export async function fetchMorphoVaultSources(
           method: "POST",
           headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
           body: JSON.stringify({
-            query: `query($symbols: [String!]!, $first: Int!, $skip: Int!) {
-  vaults(first: $first, skip: $skip, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: 100000 }) {
+            query: `query($symbols: [String!]!, $first: Int!, $skip: Int!, $minTvl: Float!) {
+  vaults(first: $first, skip: $skip, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: $minTvl }) {
     items {
       address name
       asset { symbol address }
@@ -142,7 +144,7 @@ export async function fetchMorphoVaultSources(
     }
   }
 }`,
-            variables: { symbols: filters.symbols, first: MORPHO_PAGE_SIZE, skip },
+            variables: { symbols: filters.symbols, first: MORPHO_PAGE_SIZE, skip, minTvl: MORPHO_MIN_TVL_USD },
           }),
           signal: budget.signal,
         },
@@ -240,7 +242,7 @@ export async function fetchPendleMarketSources(
             }
 
             const tvl = market.liquidity?.usd;
-            if (typeof tvl !== "number" || tvl < 100_000) continue;
+            if (typeof tvl !== "number" || tvl < PENDLE_MIN_TVL_USD) continue;
             if (
               !isNonEmptyString(market.address) ||
               !isNonEmptyString(market.underlyingAsset?.symbol) ||
@@ -347,7 +349,7 @@ export async function fetchYearnKongSources(
           if (typeof netApy !== "number" || !Number.isFinite(netApy) || netApy <= 0) continue;
 
           const tvl = vault.tvl?.close;
-          if (typeof tvl !== "number" || tvl < 100_000) continue;
+          if (typeof tvl !== "number" || tvl < KONG_MIN_TVL_USD) continue;
 
           seenAddresses.add(vault.address.toLowerCase());
           const chain = resolveCanonicalChain(chainId);

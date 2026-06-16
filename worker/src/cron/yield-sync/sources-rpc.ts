@@ -432,8 +432,8 @@ const AAVE_RESERVE_DATA_ATOKEN_ADDRESS_WORD = 8;
 function rayToApy(currentLiquidityRate: bigint): number {
   const liquidityRate = finiteDecimalNumberFromBigInt(currentLiquidityRate, 27);
   if (liquidityRate == null) return Number.NaN;
-  const ratePerSecond = liquidityRate / 31536000;
-  return (Math.pow(1 + ratePerSecond, 31536000) - 1) * 100;
+  const ratePerSecond = liquidityRate / SECONDS_PER_YEAR;
+  return (Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1) * 100;
 }
 
 function readAbiWord(strippedHex: string, wordIndex: number): string | null {
