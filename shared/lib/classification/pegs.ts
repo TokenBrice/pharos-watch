@@ -413,6 +413,9 @@ export const PEG_FILTER_TAG_LABELS = Object.fromEntries(
   Object.values(PEG_METADATA).map((metadata) => [metadata.filterTag, metadata.filterLabel]),
 ) as Record<PegCurrencyFilterTag, string>;
 
+// Curated to high-volume pegs only; add a peg here when its stablecoin market cap
+// is large enough to warrant a dedicated UI filter (e.g. multi-billion USD) or
+// when the UX team approves expansion. Other pegs remain accessible via the "all" option.
 export const PEG_FILTER_OPTIONS: { value: PegCurrency | "all"; label: string }[] = [
   { value: "all", label: "All pegs" },
   { value: "USD", label: PEG_METADATA.USD.filterLabel },
