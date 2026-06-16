@@ -15,7 +15,7 @@ Each tracked stablecoin carries a `mechanismArchetype` field. The six values (`f
 
 - **Hub shell:** `src/app/learn/mechanisms/page.tsx`
 - **Archetype shell:** `src/app/learn/mechanisms/[archetype]/page.tsx`
-- **Page-level shell (editorial display + breadcrumb):** `src/app/learn/mechanisms/explainer-page-shell.tsx` (`ExplainerPageShell`)
+- **Page-level shell (editorial display + breadcrumb):** `src/app/learn/mechanisms/explainer-shell.tsx` (`ExplainerPageShell`)
 - **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/app/learn/mechanisms/content/index.ts` (`ARCHETYPE_CONTENT`)
 - **Per-archetype content modules:** `src/app/learn/mechanisms/content/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund}.ts`

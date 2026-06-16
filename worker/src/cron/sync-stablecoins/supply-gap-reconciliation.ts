@@ -8,6 +8,7 @@ import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { logWorkerEvent } from "../../lib/structured-log";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
 import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
@@ -168,9 +169,14 @@ async function fetchCurrentCoinGeckoMarketCaps(
   );
 
   if (!response?.ok) {
-    console.warn(
-      `[sync-stablecoins] CoinGecko current market-cap fetch failed for supply gap reconciliation: ${response?.status ?? "no response"}`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-stablecoins.coingecko-current-market-cap-failed",
+      job: "sync-stablecoins",
+      message: "CoinGecko current market-cap fetch failed for supply gap reconciliation",
+      metadata: { status: response?.status ?? "no response" },
+    });
     await cancelResponseBodyQuietly(response);
     return {};
   }
@@ -179,7 +185,14 @@ async function fetchCurrentCoinGeckoMarketCaps(
     return (await response.json()) as Record<string, CoinGeckoCurrentMcapRow>;
   } catch (error) {
     await cancelResponseBodyQuietly(response);
-    console.warn("[sync-stablecoins] CoinGecko current market-cap payload parse failed:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-stablecoins.coingecko-current-market-cap-parse-failed",
+      job: "sync-stablecoins",
+      message: "CoinGecko current market-cap payload parse failed",
+      error,
+    });
     return {};
   }
 }
@@ -201,9 +214,14 @@ async function fetchRecentCoinGeckoMarketCaps(
   );
 
   if (!response?.ok) {
-    console.warn(
-      `[sync-stablecoins] CoinGecko market chart fetch failed for ${geckoId}: ${response?.status ?? "no response"}`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-stablecoins.coingecko-market-chart-failed",
+      job: "sync-stablecoins",
+      message: "CoinGecko market-chart fetch failed for candidate",
+      metadata: { geckoId, status: response?.status ?? "no response" },
+    });
     await cancelResponseBodyQuietly(response);
     return [];
   }
@@ -213,7 +231,15 @@ async function fetchRecentCoinGeckoMarketCaps(
     return Array.isArray(payload.market_caps) ? payload.market_caps : [];
   } catch (error) {
     await cancelResponseBodyQuietly(response);
-    console.warn(`[sync-stablecoins] CoinGecko market chart payload parse failed for ${geckoId}:`, error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-stablecoins.coingecko-market-chart-parse-failed",
+      job: "sync-stablecoins",
+      message: "CoinGecko market-chart payload parse failed",
+      metadata: { geckoId },
+      error,
+    });
     return [];
   }
 }
@@ -232,9 +258,14 @@ async function fetchRecentDefiLlamaMarketCaps(
   );
 
   if (!response?.ok) {
-    console.warn(
-      `[sync-stablecoins] DefiLlama chart fetch failed for ${llamaId}: ${response?.status ?? "no response"}`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-stablecoins.defillama-chart-failed",
+      job: "sync-stablecoins",
+      message: "DefiLlama chart fetch failed for candidate",
+      metadata: { llamaId, status: response?.status ?? "no response" },
+    });
     await cancelResponseBodyQuietly(response);
     return [];
   }
@@ -251,7 +282,15 @@ async function fetchRecentDefiLlamaMarketCaps(
     });
   } catch (error) {
     await cancelResponseBodyQuietly(response);
-    console.warn(`[sync-stablecoins] DefiLlama chart payload parse failed for ${llamaId}:`, error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-stablecoins.defillama-chart-parse-failed",
+      job: "sync-stablecoins",
+      message: "DefiLlama chart payload parse failed for candidate",
+      metadata: { llamaId },
+      error,
+    });
     return [];
   }
 }
@@ -434,9 +473,17 @@ export async function reconcileTrackedSupplyGaps(
   const currentMarketCaps = await fetchCurrentCoinGeckoMarketCaps(candidateGeckoIds, signal, coingeckoApiKey);
   const allCandidates = buildSupplyGapCandidates(assets, currentMarketCaps);
   if (allCandidates.length > MAX_SUPPLY_GAP_CANDIDATES) {
-    console.warn(
-      `[sync-stablecoins] Supply gap reconciliation capped at ${MAX_SUPPLY_GAP_CANDIDATES} of ${allCandidates.length} candidates to bound per-cron API calls`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-stablecoins.supply-gap-candidates-truncated",
+      job: "sync-stablecoins",
+      message: "Supply-gap candidates capped to bound per-cron API calls",
+      metadata: {
+        maxCandidates: MAX_SUPPLY_GAP_CANDIDATES,
+        candidateCount: allCandidates.length,
+      },
+    });
   }
   const candidates = allCandidates.slice(0, MAX_SUPPLY_GAP_CANDIDATES);
   if (candidates.length === 0) {

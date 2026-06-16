@@ -874,7 +874,7 @@ Supported inputs:
 
 Frozen stablecoins are excluded. Use narrow `stablecoin` + `chainId` filters and `dryRun=true` before a write-enabled backfill.
 
-All blacklist admin endpoints are aggregated and dispatched by `worker/src/routes/registry.ts` and executed via `worker/src/handlers/http.ts`, but their route definitions live in `worker/src/routes/ops-routes.ts` (`reset-blacklist-sync`, `debug-sync-state`) and `worker/src/routes/admin-routes.ts` (`remediate-blacklist-amount-gaps`, `backfill-blacklist-current-balances`).
+All blacklist admin endpoints are aggregated and dispatched by `worker/src/routes/registry.ts` and executed via `worker/src/handlers/http/request-dispatch.ts`, but their route definitions live in `worker/src/routes/ops-routes.ts` (`reset-blacklist-sync`, `debug-sync-state`) and `worker/src/routes/admin-routes.ts` (`remediate-blacklist-amount-gaps`, `backfill-blacklist-current-balances`).
 
 ---
 

@@ -283,7 +283,7 @@ When `StablecoinMeta` includes one or more supported `infrastructures` entries, 
 | `src/components/stablecoin-detail/reserve-presentation.ts`          | Pure reserve notice, footnote, and sync-copy helpers       |
 | `src/components/stablecoin-detail/price-transparency-card.tsx`      | Price source transparency and confidence card              |
 | `src/components/stablecoin-detail/depeg-resolver-card.tsx`          | Per-coin DDR snapshot wrapper for active depeg pages       |
-| `src/components/depeg-resolver-row-card.tsx`                        | Shared DDR row-card wrapper used by `/depeg/` and details  |
+| `src/components/depeg-resolver-row-card-parts.tsx`                        | Shared DDR row-card wrapper used by `/depeg/` and details  |
 | `src/components/depeg-resolver-row-card-model.ts`                   | Shared DDR row view-model helpers                          |
 | `src/components/depeg-resolver-row-card-parts.tsx`                  | Shared DDR row-card presentational parts                   |
 | `src/components/depeg-resolver-row-card-shared.tsx`                 | Shared DDR row-card UI primitives                          |

@@ -133,7 +133,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 
 ## Module Initialization
 
-Three modules derive runtime configuration from `Env` bindings via pure functions. These are called in the scheduled context factory (`worker/src/handlers/scheduled/context.ts`) and in `worker/src/handlers/http.ts`, with results passed as parameters rather than stored in module-level state:
+Three modules derive runtime configuration from `Env` bindings via pure functions. These are called in the scheduled context factory (`worker/src/handlers/scheduled/context.ts`) and in `worker/src/handlers/http/request-dispatch.ts`, with results passed as parameters rather than stored in module-level state:
 
 | Function                                                | Called in             | Purpose                                              |
 | ------------------------------------------------------- | --------------------- | ---------------------------------------------------- |
@@ -1284,7 +1284,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | File                                               | Role                                                                                                                                                                  |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `worker/src/index.ts`                              | Thin worker entry: delegates `fetch`/`scheduled` to handler modules                                                                                                   |
-| `worker/src/handlers/http.ts`                      | HTTP request orchestration: preflight, gates, edge cache lookup/write, route-context build, router dispatch                                                           |
+| `worker/src/handlers/http/request-dispatch.ts`                      | HTTP request orchestration: preflight, gates, edge cache lookup/write, route-context build, router dispatch                                                           |
 | `worker/src/handlers/http/cors.ts`                 | CORS origin resolution, preflight response, and response-header decoration                                                                                            |
 | `worker/src/handlers/http/gates.ts`                | Maintenance-mode gate, public API rate limiting, and one-time env-contract warnings                                                                                   |
 | `worker/src/handlers/http/context.ts`              | Route dependency hydration from `Env` into `FullRouteContext`                                                                                                         |

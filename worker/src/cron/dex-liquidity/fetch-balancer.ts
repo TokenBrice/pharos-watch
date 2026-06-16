@@ -7,6 +7,7 @@ import {
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
 import { toErrorMessage } from "../../lib/error-utils";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 
@@ -189,7 +190,14 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
 
       const chain = BALANCER_CHAIN_MAP[pool.chain];
       if (!chain) {
-        console.warn(`[fetch-balancer] Unknown Balancer chain enum value "${pool.chain}" — pool ${pool.id} skipped; add to BALANCER_CHAIN_MAP to support it`);
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "sync-dex-liquidity.unknown-balancer-chain",
+          job: "sync-dex-liquidity",
+          message: "Unknown Balancer chain enum value; pool skipped",
+          metadata: { poolId: pool.id, chain: pool.chain },
+        });
         continue;
       }
 
@@ -249,10 +257,28 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
   }
 
   if (results.length > 0) {
-    console.log(`[fetch-balancer] Fetched ${results.length} pools`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "info",
+      event: "fetch-balancer.fetched",
+      job: "sync-dex-liquidity",
+      message: "Fetched pools from Balancer",
+      metadata: { count: results.length },
+    });
   }
-  for (const error of errors) {
-    console.warn("[fetch-balancer]", error);
+  if (errors.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "fetch-balancer.degraded",
+      job: "sync-dex-liquidity",
+      message: "Fetcher reported one or more issues",
+      metadata: {
+        errorCount: errors.length,
+        source: "balancer",
+        errors,
+      },
+    });
   }
   return makeDexApiFetchResult(results, {
     ok: successfulPages > 0,

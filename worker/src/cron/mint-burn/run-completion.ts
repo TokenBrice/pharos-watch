@@ -7,6 +7,7 @@ import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { withBudgetMetadata } from "../../lib/cron-progress";
 import { setMintBurnRunState, type MintBurnRunStateRow } from "./run-state";
 import type { MintBurnConfigSummary } from "./sync-config";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 // healNullPrices only heals events inside its 48h LOOKBACK_SEC window; events older
 // than that are intentionally left unhealed (their cached prices are no longer
@@ -108,9 +109,17 @@ export async function completeMintBurnRun(input: {
   let nullPricesHealed = 0;
   const nullPriceBacklog = await getNullPriceBacklog(input.db, nowSec);
   if (nullPriceBacklog.historical > NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD) {
-    console.warn(
-      `[sync-mint-burn] Historical NULL amount_usd backlog ${nullPriceBacklog.historical} exceeds threshold ${NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD}; these events fall outside the 48h heal window and permanently skew burn_volume_usd / DEWS flow signals`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync-mint-burn.historical-null-price-backlog",
+      job: "sync-mint-burn",
+      message: "Historical NULL amount_usd backlog exceeds threshold",
+      metadata: {
+        historical: nullPriceBacklog.historical,
+        threshold: NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD,
+      },
+    });
   }
   if (status !== "error") {
     try {
@@ -120,7 +129,14 @@ export async function completeMintBurnRun(input: {
         await recalcAffectedHours(input.db, healResult.affectedHours as Map<string, MintBurnAffectedHour>);
       }
     } catch (error) {
-      console.warn("[sync-mint-burn] Price heal failed (non-fatal):", error);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-mint-burn.price-heal-failed",
+        job: "sync-mint-burn",
+        message: "Price heal failed",
+        error,
+      });
     }
   }
 
@@ -132,10 +148,24 @@ export async function completeMintBurnRun(input: {
       roundtripSweepCount = sweepResult.reclassified;
       roundtripsBacklogSaturated = sweepResult.saturated;
       if (roundtripSweepCount > 0) {
-        console.log(`[sync-mint-burn] Roundtrip sweep reclassified ${roundtripSweepCount} rows`);
+        logWorkerEvent({
+          scope: "lib",
+          level: "info",
+          event: "sync-mint-burn.roundtrip-sweep-reclassified",
+          job: "sync-mint-burn",
+          message: "Roundtrip sweep reclassified rows",
+          metadata: { reclassified: roundtripSweepCount },
+        });
       }
     } catch (error) {
-      console.warn("[sync-mint-burn] Roundtrip sweep failed (non-fatal):", error);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-mint-burn.roundtrip-sweep-failed",
+        job: "sync-mint-burn",
+        message: "Roundtrip sweep failed",
+        error,
+      });
     }
   }
 

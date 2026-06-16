@@ -31,6 +31,7 @@ function getCriticalThresholds(env = process.env) {
     "worker/src/api/health.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_HEALTH ?? "60"),
     "worker/src/api/status.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_STATUS ?? "40"),
     "worker/src/cron/dex-liquidity/orchestrator.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR ?? "55"),
+    "worker/src/lib/api-pagination.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION ?? "70"),
   };
 }
 

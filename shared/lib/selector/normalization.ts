@@ -66,8 +66,8 @@ export function yieldVariance(v: number | null): number | null {
  * contract visible — widening the return to `number | null` here would force
  * the overloads to change too, surfacing the break in review.
  */
-export function sourceRiskInverted(score: number): number;
-export function sourceRiskInverted(score: number | null): number;
+function sourceRiskInverted(score: number): number;
+function sourceRiskInverted(score: number | null): number;
 export function sourceRiskInverted(score: number | null): number {
   if (score == null) return 50;
   return clamp(100 - score, 0, 100);

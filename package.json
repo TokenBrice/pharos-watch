@@ -175,6 +175,7 @@
     "rehype-slug": "6.0.0",
     "remark-gfm": "4.0.1",
     "tailwind-merge": "^3.6.0",
+    "ws": "8.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -204,5 +205,13 @@
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.57.2",
     "vitest": "^4.1.7"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.15"
+    },
+    "viem": {
+      "ws": "8.21.0"
+    }
   }
 }

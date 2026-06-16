@@ -173,7 +173,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, drain, retry-with-backoff, dead-letter, expire. Hold per-chat and global backoff (`not_before_at`, `telegram:global-send-backoff-until`). Enforce the 2-strike rule for blocked subscribers. Provide a dedupe key so duplicate chunks never queue.
 
 **Owned files.**
-- `worker/src/cron/telegram-pending-queue.ts` (compatibility barrel for existing imports)
+- `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
 - `worker/src/cron/telegram-pending/*` (enqueue, claim/drain, backoff, capacity, cleanup, dead-letter, dedupe, lifecycle helpers)
 - The pending-queue-related constants in `worker/src/lib/telegram-constants.ts` (`PENDING_TTL_SEC`, `PENDING_BACKOFF_SCHEDULE_SEC`, `PENDING_MAX_ATTEMPTS`, `SEND_BATCH_SIZE`, `TELEGRAM_PENDING_DRAIN_BUDGET`, `TELEGRAM_PENDING_PRIORITY`, `TELEGRAM_ALERT_TTL_SEC`, `TELEGRAM_DISPATCH_INTERVAL_SEC`, `BLOCK_STRIKE_WINDOW_SEC`, `PENDING_NEAR_TTL_WINDOW_SEC`)
 
@@ -291,9 +291,9 @@ Three commits decomposed Telegram code in 30 days. Knowing which seam each touch
 
 - **2026-05-11 — `P1-M1: decompose telegram-webhook.ts dispatch into per-command modules` (58695ef1e)** — created the **Action handlers** seam. Cut `telegram-webhook.ts` from ~1,221 to ~428 code lines (1,363 to 499 total), moved each `/command` into `worker/src/api/webhook-commands/<command>.ts`, replaced two parallel switch statements (the pending-active branch and the fresh-command branch) with one `COMMAND_HANDLERS` table plus explicit pending passthrough/clear sets. Extracted the shared subscribe/unsubscribe/set machinery into `webhook-commands/action-runner.ts`. Behavior and exports unchanged.
 
-- **2026-05-14 — `refactor(telegram): extract callback and queue helpers` (d6f4fec8e)** — split **Dispatch / fan-out** further (`dispatch-telegram-alerts-fanout.ts`), restructured `telegram-webhook-callbacks.ts` for explicit per-action handlers, and grew `telegram-pending-queue.ts` to absorb claim-based draining. This commit was the immediate motivation for this doc.
+- **2026-05-14 — `refactor(telegram): extract callback and queue helpers` (d6f4fec8e)** — split **Dispatch / fan-out** further (`dispatch-telegram-alerts-fanout.ts`), restructured `telegram-webhook-callbacks.ts` for explicit per-action handlers, and grew `worker/src/cron/telegram-pending/index.ts` to absorb claim-based draining. This commit was the immediate motivation for this doc.
 
-- **2026-05-14 — PharosWatchBot audit closeout** — the P0/P1/P2 remediation pass and implemented P3 closeout became the current frozen baseline: callback write paths were aligned with store/settings helpers, `loadPendingDisambiguation()` replaced duplicate SELECTs, `telegram-alerts.ts` became a parser/formatter compatibility barrel, registration/chat-member Bot API calls were centralized through outbound transport, `why_`/`coverage_` Mini App payloads gained in-app views, read-only command handler tests were added, and `telegram-pending-queue.ts` became a compatibility barrel over `worker/src/cron/telegram-pending/*`.
+- **2026-05-14 — PharosWatchBot audit closeout** — the P0/P1/P2 remediation pass and implemented P3 closeout became the current frozen baseline: callback write paths were aligned with store/settings helpers, `loadPendingDisambiguation()` replaced duplicate SELECTs, `telegram-alerts.ts` became a parser/formatter compatibility barrel, registration/chat-member Bot API calls were centralized through outbound transport, `why_`/`coverage_` Mini App payloads gained in-app views, read-only command handler tests were added, and `telegram-pending/index.ts` became a compatibility barrel over `worker/src/cron/telegram-pending/*`.
 
 Several `harden` and `fix` commits between those reshaped behavior inside the seams (group-admin hard gate, per-coin snooze, dedupe-key stability, two-strike block rule, claim-based pending drain). Behavioral changes inside an existing seam are not seam changes — they should not move files.
 
