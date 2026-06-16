@@ -249,10 +249,6 @@ function countWords(value: string): number {
   return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function countTitleWords(value: string): number {
-  return value.trim().split(/\s+/).filter(Boolean).length;
-}
-
 function splitParagraphs(value: string): string[] {
   return value.split(/\r?\n\s*\r?\n/g).map((paragraph) => paragraph.trim()).filter(Boolean);
 }
@@ -277,7 +273,7 @@ export function validateDigestModelOutput(
   profile: DigestValidationProfile,
 ): DigestValidationIssue[] {
   const issues: DigestValidationIssue[] = [];
-  const titleWords = countTitleWords(parsed.digestTitle);
+  const titleWords = countWords(parsed.digestTitle);
   const paragraphs = splitParagraphs(parsed.digestExtended);
   const wordCount = countWords(parsed.digestExtended);
   const combinedLength = `${parsed.digestTitle}\n\n${parsed.digestText}`.length;
