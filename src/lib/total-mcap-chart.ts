@@ -11,6 +11,18 @@ export interface TotalMcapChartRow {
 
 export const TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS = 5000;
 
+/**
+ * Stablecoin IDs whose individual supply history drives the hero cohort chart.
+ * Single source of truth shared with the per-coin `useSupplyHistory` fetches in
+ * home-alt-hero-live-chart.tsx; keep in sync with the cohort math below.
+ */
+export const TOTAL_MCAP_COHORT_IDS = {
+  usdt: "usdt-tether",
+  usdc: "usdc-circle",
+  usds: "usds-sky",
+  dai: "dai-makerdao",
+} as const;
+
 function alignHistoryAtOrBeforeDate(
   chartPoints: StablecoinChartPoint[],
   history: SupplyHistoryPoint[],
