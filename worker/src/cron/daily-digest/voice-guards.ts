@@ -1,5 +1,5 @@
 /** Tics banned anywhere in the output. */
-const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
+export const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
   { pattern: /\bplumbing\b/i, label: "plumbing" },
   { pattern: /\bbeneath the (?:calm|bedrock|surface|placid)\b/i, label: "beneath the calm" },
   { pattern: /\brestless (?:depths|plumbing|surface|currents?)\b/i, label: "restless depths" },
@@ -23,9 +23,21 @@ const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
  *  scopes the haystack to the last sentence of the last paragraph and the
  *  text-hook's last sentence, so re-anchoring here would miss phrases
  *  followed by a short tail like "into next week." */
-const FORBIDDEN_TICS_CLOSER: { pattern: RegExp; label: string }[] = [
+export const FORBIDDEN_TICS_CLOSER: { pattern: RegExp; label: string }[] = [
   { pattern: /\b(?:worth watching|worth monitoring|bears? watching)\b/i, label: "worth watching/monitoring (closer)" },
 ];
+
+/**
+ * Single source of truth for the prose "FORBIDDEN TICS" line in the system
+ * prompts. Derived from the machine-readable patterns above so the prompt copy
+ * can never drift from the enforced `findForbiddenTics` list.
+ */
+export function forbiddenTicsPromptLine(): string {
+  const quote = (label: string) => `'${label.replace(/\s*\(closer\)$/, "").replace(/,$/, "")}'`;
+  const anywhere = FORBIDDEN_TICS_ANYWHERE.map((t) => quote(t.label));
+  const closer = FORBIDDEN_TICS_CLOSER.map((t) => `${quote(t.label)} as a closer`);
+  return `Do NOT reuse: ${[...anywhere, ...closer].join(", ")}.`;
+}
 
 function getLastSentence(text: string): string {
   const trimmed = text.trim();

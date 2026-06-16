@@ -24,6 +24,7 @@ import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import type { DigestValidationProfile } from "./daily-digest/response";
 import { rollupDigestInputs, type RollupSummary } from "./daily-digest/collectors-shared";
 import { DEWS_BAND_RANK } from "./daily-digest/digest-intelligence-utils";
+import { forbiddenTicsPromptLine } from "./daily-digest/voice-guards";
 
 const WEEKLY_SYSTEM_PROMPT = [
   "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard.",
@@ -49,7 +50,7 @@ const WEEKLY_SYSTEM_PROMPT = [
   "One per recap. Do not force it.",
   "",
   "FORBIDDEN TICS.",
-  "Do NOT reuse: 'plumbing' (as metaphor), 'beneath the calm', 'restless depths', 'calm surfaces,', 'surface calm', 'something moving underneath', 'serene', 'worth watching/monitoring' or 'bears watching' as a closer, 'time will tell', 'the question is whether', 'it is worth asking whether'.",
+  forbiddenTicsPromptLine(),
   "",
   "FORMATTING.",
   "No emojis, no clickbait, no hedging, no exclamation marks.",
