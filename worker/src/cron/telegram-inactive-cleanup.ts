@@ -73,8 +73,8 @@ async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: numb
 
 async function loadWarningCandidates(
   db: D1Database,
-  warnStartSec: number,
-  warnEndSec: number,
+  warnWindowOlderBound: number,
+  warnWindowNewerBound: number,
   limit: number,
 ): Promise<WarningCandidateRow[]> {
   const result = await db
@@ -89,7 +89,7 @@ async function loadWarningCandidates(
         ORDER BY s.last_active_at ASC
         LIMIT ?`,
     )
-    .bind(warnEndSec, warnStartSec, limit)
+    .bind(warnWindowOlderBound, warnWindowNewerBound, limit)
     .all<WarningCandidateRow>();
   return result.results ?? [];
 }
@@ -131,9 +131,9 @@ async function runWarningPass(
   now: number,
   signal: AbortSignal | undefined,
 ): Promise<WarningPassResult> {
-  const warnStartSec = now - WARN_WINDOW_START_SEC;
-  const warnEndSec = now - INACTIVE_RETENTION_SEC;
-  const candidates = await loadWarningCandidates(db, warnStartSec, warnEndSec, MAX_WARNINGS_PER_RUN);
+  const warnWindowNewerBound = now - WARN_WINDOW_START_SEC;
+  const warnWindowOlderBound = now - INACTIVE_RETENTION_SEC;
+  const candidates = await loadWarningCandidates(db, warnWindowOlderBound, warnWindowNewerBound, MAX_WARNINGS_PER_RUN);
   throwIfAborted(signal);
 
   let warned = 0;

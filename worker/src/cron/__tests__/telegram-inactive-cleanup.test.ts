@@ -191,15 +191,15 @@ function createStubDb(state: StubState): D1Database {
           sql.includes("SELECT DISTINCT s.chat_id")
           && sql.includes("FROM telegram_subscribers s")
         ) {
-          const [warnEndSec, warnStartSec, limit] = bound as [number, number, number];
+          const [warnWindowOlderBound, warnWindowNewerBound, limit] = bound as [number, number, number];
           const hasActive = (chatId: string) =>
             state.subscriptions.some((r) => r.chat_id === chatId)
             || state.presets.some((r) => r.chat_id === chatId);
           const eligible = state.subscribers
             .filter(
               (sub) =>
-                sub.last_active_at >= warnEndSec
-                && sub.last_active_at < warnStartSec
+                sub.last_active_at >= warnWindowOlderBound
+                && sub.last_active_at < warnWindowNewerBound
                 && hasActive(sub.chat_id),
             )
             .sort((a, b) => a.last_active_at - b.last_active_at)
