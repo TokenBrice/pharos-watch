@@ -49,14 +49,14 @@ export function CoinNotices({ notices }: CoinNoticesProps) {
 
   return (
     <div className="space-y-3">
-      {notices.map((notice, i) => {
+      {notices.map((notice) => {
         const s = STYLES[notice.type];
         return (
           /* Severity-keyed left stripe: a data-driven indicator (allowed
              carve-out per design-language.md), at the documented 3px weight —
              not the retired decorative card chrome. */
           <div
-            key={i}
+            key={`${notice.type}-${notice.title}`}
             className={`flex items-start gap-3 rounded-lg border-l-[3px] ${s.border} ${s.bg} px-4 py-3`}
           >
             <span className={s.icon}>{ICONS[notice.type]}</span>
