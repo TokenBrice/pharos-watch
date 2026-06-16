@@ -12,6 +12,8 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   tron: "https://api.trongrid.io",
   blast: "https://rpc.blast.io",
   manta: "https://pacific-rpc.manta.network/http",
+  // Plasma Finance L2 — only public RPC; required for syzusd-yuzu ERC-4626 NAV fetch
+  plasma: "https://rpc.plasma.to",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {

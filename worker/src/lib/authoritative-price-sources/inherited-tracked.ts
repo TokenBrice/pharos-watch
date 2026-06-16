@@ -38,6 +38,10 @@ const INHERITED_TRACKED_PRICE_CONFIGS = {
   [USDK_KAST_ID]: { parentId: WM_M0_ID, allowFreshNonReplaySafeParent: true },
   [XO_EXODUS_ID]: { parentId: WM_M0_ID, allowFreshNonReplaySafeParent: true },
   [USDNR_NERONA_ID]: { parentId: WM_M0_ID },
+  // 0.99 multiplier: WEUSD redeems at 1% below USDC parity per PicWe's documented redemption fee
+  // (Phase 1 mint/redeem at 1:1 USDC minus 1% fee). Note: secondary-market price is ~$0.91 —
+  // this override only models the redemption-floor, not the live market price.
+  // TODO: revisit if PicWe clarifies the fee schedule or switches to market-price sourcing.
   [WEUSD_PICWE_ID]: { parentId: USDC_CIRCLE_ID, multiplier: 0.99 },
 } as const satisfies Record<string, InheritedTrackedPriceConfig>;
 

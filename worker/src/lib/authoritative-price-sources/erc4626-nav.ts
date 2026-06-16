@@ -112,7 +112,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     vault: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
     vaultDecimals: 18,
     assetDecimals: 18,
-    rpcUrls: ["https://rpc.plasma.to"],
+    // RPC resolved via public-rpc-registry ("plasma" entry) — no inline override needed
   },
   {
     id: "stkgho-umbrella-aave",
