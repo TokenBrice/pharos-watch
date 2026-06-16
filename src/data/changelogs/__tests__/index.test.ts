@@ -30,6 +30,15 @@ describe("changelogs barrel", () => {
     }
   });
 
+  it("fieldNotes entries do not exceed 80 words", () => {
+    for (const entry of changelogs) {
+      if (entry.fieldNotes != null) {
+        const wordCount = entry.fieldNotes.trim().split(/\s+/).length;
+        expect(wordCount).toBeLessThanOrEqual(80);
+      }
+    }
+  });
+
   it("registers every dated changelog file", () => {
     const datedFileCount = readdirSync(CHANGELOG_DIR)
       .filter((fileName) => CHANGELOG_ENTRY_FILE_RE.test(fileName))
