@@ -12,6 +12,7 @@ import type {
 } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
+import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import {
   HeroDesktopIdentity,
   HeroMobileIdentityDetails,
@@ -75,28 +76,14 @@ export interface HeroSectionBaseProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   logoSrc?: string;
+  reportCard: ReportCard | null;
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
-  pegRef: number;
-  gaugeDeviationBps: number;
-  deviationBps: number;
-  pegReferenceUnavailable: boolean;
-  isNavToken: boolean;
-  limitedDepegCoverageNote: string | null;
-  mcap: number;
-  supply: number | null;
-  safePrevDay: number | null;
-  prevDayTrendClass: string;
-  safePrevWeek: number | null;
-  prevWeekTrendClass: string;
-  hasPrevMonth: boolean;
-  safePrevMonth: number | null;
-  prevMonthTrendClass: string;
-  earlyPegScore: boolean;
-  trackingSpanDays: number;
-  activeDepeg: boolean;
+  price: HeroCardViewModel["price"];
+  market: HeroCardViewModel["market"];
+  peg: HeroCardViewModel["peg"];
 }
 
 export function HeroCardMobileSection({
@@ -108,27 +95,11 @@ export function HeroCardMobileSection({
   variantParent,
   variantChipClass,
   infrastructures,
-  pegRef,
-  gaugeDeviationBps,
-  deviationBps,
-  pegReferenceUnavailable,
-  isNavToken,
-  limitedDepegCoverageNote,
-  mcap,
-  supply,
-  safePrevDay,
-  prevDayTrendClass,
-  safePrevWeek,
-  prevWeekTrendClass,
-  hasPrevMonth,
-  safePrevMonth,
-  prevMonthTrendClass,
+  price,
+  market,
+  peg,
   tertiaryMetrics,
-  earlyPegScore,
-  trackingSpanDays,
-  activeDepeg,
 }: HeroSectionBaseProps & {
-  reportCard: ReportCard | null;
   tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
   return (
@@ -159,41 +130,41 @@ export function HeroCardMobileSection({
         <HeroPriceCard
           coin={coin}
           coinData={coinData}
-          pegRef={pegRef}
-          gaugeDeviationBps={gaugeDeviationBps}
-          deviationBps={deviationBps}
-          pegReferenceUnavailable={pegReferenceUnavailable}
-          isNavToken={isNavToken}
-          limitedDepegCoverageNote={limitedDepegCoverageNote}
+          pegRef={price.pegRef}
+          gaugeDeviationBps={price.gaugeDeviationBps}
+          deviationBps={price.deviationBps}
+          pegReferenceUnavailable={price.pegReferenceUnavailable}
+          isNavToken={price.isNavToken}
+          limitedDepegCoverageNote={price.limitedDepegCoverageNote}
           mobile
         />
         <HeroMarketCapCard
           coin={coin}
           coinData={coinData}
-          mcap={mcap}
-          safePrevDay={safePrevDay}
-          prevDayTrendClass={prevDayTrendClass}
+          mcap={market.mcap}
+          safePrevDay={market.safePrevDay}
+          prevDayTrendClass={market.prevDayTrendClass}
           mobile
         />
       </div>
 
       <HeroSupplyCard
-        supply={supply}
+        supply={market.supply}
         coinSymbol={coin.symbol}
-        mcap={mcap}
-        safePrevWeek={safePrevWeek}
-        prevWeekTrendClass={prevWeekTrendClass}
-        hasPrevMonth={hasPrevMonth}
-        safePrevMonth={safePrevMonth}
-        prevMonthTrendClass={prevMonthTrendClass}
+        mcap={market.mcap}
+        safePrevWeek={market.safePrevWeek}
+        prevWeekTrendClass={market.prevWeekTrendClass}
+        hasPrevMonth={market.hasPrevMonth}
+        safePrevMonth={market.safePrevMonth}
+        prevMonthTrendClass={market.prevMonthTrendClass}
         mobile
       />
 
       <HeroTertiaryMetrics
         metrics={tertiaryMetrics}
-        earlyPegScore={earlyPegScore}
-        trackingSpanDays={trackingSpanDays}
-        activeDepeg={activeDepeg}
+        earlyPegScore={peg.earlyPegScore}
+        trackingSpanDays={peg.trackingSpanDays}
+        activeDepeg={peg.activeDepeg}
         mobile
         trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
       />
@@ -209,26 +180,11 @@ export function HeroCardDesktopSection({
   variantParent,
   variantChipClass,
   infrastructures,
-  pegRef,
-  gaugeDeviationBps,
-  deviationBps,
-  pegReferenceUnavailable,
-  isNavToken,
-  limitedDepegCoverageNote,
-  mcap,
-  supply,
-  safePrevDay,
-  prevDayTrendClass,
-  safePrevWeek,
-  prevWeekTrendClass,
-  hasPrevMonth,
-  safePrevMonth,
-  prevMonthTrendClass,
+  price,
+  market,
+  peg,
   signalRailItems,
   tertiaryMetrics,
-  earlyPegScore,
-  trackingSpanDays,
-  activeDepeg,
 }: HeroSectionBaseProps & {
   signalRailItems: HeroSignalRailItem[];
   tertiaryMetrics: HeroTertiaryMetricConfig[];
@@ -250,38 +206,38 @@ export function HeroCardDesktopSection({
             <HeroPriceCard
               coin={coin}
               coinData={coinData}
-              pegRef={pegRef}
-              gaugeDeviationBps={gaugeDeviationBps}
-              deviationBps={deviationBps}
-              pegReferenceUnavailable={pegReferenceUnavailable}
-              isNavToken={isNavToken}
-              limitedDepegCoverageNote={limitedDepegCoverageNote}
+              pegRef={price.pegRef}
+              gaugeDeviationBps={price.gaugeDeviationBps}
+              deviationBps={price.deviationBps}
+              pegReferenceUnavailable={price.pegReferenceUnavailable}
+              isNavToken={price.isNavToken}
+              limitedDepegCoverageNote={price.limitedDepegCoverageNote}
             />
             <HeroMarketCapCard
               coin={coin}
               coinData={coinData}
-              mcap={mcap}
-              safePrevDay={safePrevDay}
-              prevDayTrendClass={prevDayTrendClass}
+              mcap={market.mcap}
+              safePrevDay={market.safePrevDay}
+              prevDayTrendClass={market.prevDayTrendClass}
             />
             <HeroSupplyCard
-              supply={supply}
+              supply={market.supply}
               coinSymbol={coin.symbol}
-              mcap={mcap}
-              safePrevWeek={safePrevWeek}
-              prevWeekTrendClass={prevWeekTrendClass}
-              hasPrevMonth={hasPrevMonth}
-              safePrevMonth={safePrevMonth}
-              prevMonthTrendClass={prevMonthTrendClass}
+              mcap={market.mcap}
+              safePrevWeek={market.safePrevWeek}
+              prevWeekTrendClass={market.prevWeekTrendClass}
+              hasPrevMonth={market.hasPrevMonth}
+              safePrevMonth={market.safePrevMonth}
+              prevMonthTrendClass={market.prevMonthTrendClass}
             />
           </div>
 
           <div className="mt-3">
             <HeroTertiaryMetrics
               metrics={tertiaryMetrics}
-              earlyPegScore={earlyPegScore}
-              trackingSpanDays={trackingSpanDays}
-              activeDepeg={activeDepeg}
+              earlyPegScore={peg.earlyPegScore}
+              trackingSpanDays={peg.trackingSpanDays}
+              activeDepeg={peg.activeDepeg}
               trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
             />
           </div>

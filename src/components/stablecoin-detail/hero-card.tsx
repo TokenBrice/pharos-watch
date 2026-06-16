@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
-import type { ReportCard } from "@shared/types";
 import type {
   HeroCardViewModel,
   HeroTertiaryMetricViewModel,
@@ -16,12 +15,10 @@ import {
   HeroCardDesktopSection,
   HeroCardHeader,
   HeroCardMobileSection,
-  type HeroSectionBaseProps as HeroSectionBaseSharedProps,
+  type HeroSectionBaseProps,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
 import { HeroPassportStrip } from "./hero-passport-strip";
-
-type HeroSectionBaseProps = HeroSectionBaseSharedProps & { reportCard: ReportCard | null };
 
 interface HeroCardProps {
   model: HeroCardViewModel;
@@ -98,24 +95,9 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
     variantParent,
     variantChipClass,
     infrastructures,
-    pegRef: price.pegRef,
-    gaugeDeviationBps: price.gaugeDeviationBps,
-    deviationBps: price.deviationBps,
-    pegReferenceUnavailable: price.pegReferenceUnavailable,
-    isNavToken: price.isNavToken,
-    limitedDepegCoverageNote: price.limitedDepegCoverageNote,
-    mcap: market.mcap,
-    supply: market.supply,
-    safePrevDay: market.safePrevDay,
-    prevDayTrendClass: market.prevDayTrendClass,
-    safePrevWeek: market.safePrevWeek,
-    prevWeekTrendClass: market.prevWeekTrendClass,
-    hasPrevMonth: market.hasPrevMonth,
-    safePrevMonth: market.safePrevMonth,
-    prevMonthTrendClass: market.prevMonthTrendClass,
-    earlyPegScore: peg.earlyPegScore,
-    trackingSpanDays: peg.trackingSpanDays,
-    activeDepeg: peg.activeDepeg,
+    price,
+    market,
+    peg,
   };
 
   return (
