@@ -64,9 +64,6 @@ export function getBackingLabelShort(value: string): string {
   if (value in BACKING_LABELS_SHORT) {
     return BACKING_LABELS_SHORT[value as BackingType];
   }
-  if (value === "fiat" || value === "fiat-backed") return "Fiat";
-  if (value === "crypto") return "Crypto";
-  if (value === "rwa") return "RWA";
   return value;
 }
 
