@@ -1,9 +1,6 @@
 {
   "worker/src/api/api-key-audit-log.ts": 1,
-  "worker/src/api/api-key-requests/notifications.ts": 1,
-  "worker/src/api/api-key-requests/public.ts": 21,
   "worker/src/api/api-key-requests/request.ts": 2,
-  "worker/src/api/api-key-requests/state.ts": 3,
   "worker/src/api/audit-depeg-history.ts": 4,
   "worker/src/api/backfill-depegs-replay.ts": 3,
   "worker/src/api/backfill-depegs.ts": 1,

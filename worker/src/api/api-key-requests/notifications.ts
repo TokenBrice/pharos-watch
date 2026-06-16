@@ -1,5 +1,6 @@
 import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { createGitHubIssue } from "../feedback/github";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export function notifySelfServeIssued(
   pat: string | undefined,
@@ -23,6 +24,15 @@ export function notifySelfServeIssued(
     body,
     ["api-key-request", "self-serve-issued"],
   ).catch((error) => {
-    console.warn("[api-key-requests] best-effort notification failed:", error);
+    logWorkerEvent({
+      scope: "api",
+      level: "warn",
+      event: "api_key_request_notification_failed",
+      route: "api-key-requests",
+      source: "github_issue",
+      message: "Best-effort self-serve issuance notification failed",
+      error,
+      metadata: { requestId: input.requestId },
+    });
   });
 }

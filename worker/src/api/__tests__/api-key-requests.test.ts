@@ -390,8 +390,7 @@ describe("api key self-serve request handlers", () => {
     });
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
     expect(errorSpy).toHaveBeenCalledWith(
-      "[api-key-requests] issuance consistency write failed:",
-      expect.any(Error),
+      expect.stringContaining("\"event\":\"api_key_request_issuance_consistency_failed\""),
     );
     errorSpy.mockRestore();
   });

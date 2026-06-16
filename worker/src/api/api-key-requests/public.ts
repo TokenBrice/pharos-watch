@@ -13,6 +13,7 @@ import {
   recordApiKeyAudit,
 } from "../../lib/api-key-core";
 import { jsonResponse } from "../../lib/api-utils";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { sendVerificationEmail } from "./email";
 import { notifySelfServeIssued } from "./notifications";
 import { checkApiKeyRequestRateLimit, pruneOldApiKeyRequestRateLimits } from "./rate-limit";
@@ -102,7 +103,15 @@ export async function handleApiKeyRequest(
     execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - (2 * 24 * 60 * 60)));
     execCtx?.waitUntil(
       releaseOrphanPendingClaims(db, nowSec).catch((error) => {
-        console.error("[api-key-requests] orphan claim cleanup failed:", error);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_orphan_claim_cleanup_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_email_claims",
+          message: "Orphan claim cleanup failed",
+          error,
+        });
       }),
     );
 
@@ -135,7 +144,16 @@ export async function handleApiKeyRequest(
     );
     if (!allowedByEmail.allowed) {
       await releaseEmailClaim(db, emailHash, requestId, nowSec).catch((releaseError) => {
-        console.error("[api-key-requests] failed to release claim after email rate limit:", releaseError);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_claim_release_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_email_claims",
+          message: "Failed to release claim after email rate limit",
+          error: releaseError,
+          metadata: { requestId, stage: "email_rate_limit" },
+        });
       });
       return selfServeError(429, "Too many API key requests. Please wait before trying again.", allowedByEmail.retryAfterSec);
     }
@@ -155,9 +173,27 @@ export async function handleApiKeyRequest(
         nowSec,
       });
     } catch (error) {
-      console.error("[api-key-requests] failed to insert pending request:", error);
+      logWorkerEvent({
+        scope: "api",
+        level: "error",
+        event: "api_key_request_pending_insert_failed",
+        route: "api-key-requests",
+        source: "api_key_requests",
+        message: "Failed to insert pending request",
+        error,
+        metadata: { requestId },
+      });
       await releaseEmailClaim(db, emailHash, requestId, nowSec).catch((releaseError) => {
-        console.error("[api-key-requests] failed to release claim after pending insert failure:", releaseError);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_claim_release_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_email_claims",
+          message: "Failed to release claim after pending insert failure",
+          error: releaseError,
+          metadata: { requestId, stage: "pending_insert_failure" },
+        });
       });
       return selfServeUnavailable();
     }
@@ -177,30 +213,83 @@ export async function handleApiKeyRequest(
           .bind(sent.providerMessageId, nowSec, nowSec, requestId)
           .run()
           .catch((error) => {
-            console.error("[api-key-requests] failed to persist email provider metadata:", error);
+            logWorkerEvent({
+              scope: "api",
+              level: "error",
+              event: "api_key_request_email_metadata_persist_failed",
+              route: "api-key-requests",
+              source: "api_key_requests",
+              message: "Failed to persist email provider metadata",
+              error,
+              metadata: { requestId },
+            });
           });
       } else {
         await db.prepare("UPDATE api_key_requests SET verification_sent_at = ?, updated_at = ? WHERE request_id = ?")
           .bind(nowSec, nowSec, requestId)
           .run()
           .catch((error) => {
-            console.error("[api-key-requests] failed to persist verification sent timestamp:", error);
+            logWorkerEvent({
+              scope: "api",
+              level: "error",
+              event: "api_key_request_verification_timestamp_persist_failed",
+              route: "api-key-requests",
+              source: "api_key_requests",
+              message: "Failed to persist verification sent timestamp",
+              error,
+              metadata: { requestId },
+            });
           });
       }
     } catch (error) {
-      console.error("[api-key-requests] verification email send failed:", error);
+      logWorkerEvent({
+        scope: "api",
+        level: "error",
+        event: "api_key_request_verification_email_send_failed",
+        route: "api-key-requests",
+        source: "email",
+        message: "Verification email send failed",
+        error,
+        metadata: { requestId },
+      });
       await markRequestExpired(db, requestId, nowSec).catch((markError) => {
-        console.error("[api-key-requests] failed to mark request expired after email failure:", markError);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_mark_expired_failed",
+          route: "api-key-requests",
+          source: "api_key_requests",
+          message: "Failed to mark request expired after email failure",
+          error: markError,
+          metadata: { requestId, stage: "email_failure" },
+        });
       });
       await releaseEmailClaim(db, emailHash, requestId, nowSec).catch((releaseError) => {
-        console.error("[api-key-requests] failed to release claim after email failure:", releaseError);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_claim_release_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_email_claims",
+          message: "Failed to release claim after email failure",
+          error: releaseError,
+          metadata: { requestId, stage: "email_failure" },
+        });
       });
       return selfServeUnavailable();
     }
 
     return pendingPublicResponse();
   } catch (error) {
-    console.error("[api-key-requests] request handler failed:", error);
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "api_key_request_handler_failed",
+      route: "api-key-requests",
+      source: "handler",
+      message: "API key request handler failed",
+      error,
+    });
     return selfServeUnavailable();
   }
 }
@@ -214,7 +303,14 @@ export async function handleApiKeyRequestVerify(
 ): Promise<Response> {
   const effectiveApiKeyPepper = apiKeyHashPepper?.trim();
   if (!effectiveApiKeyPepper) {
-    console.error("[api-key-requests] API_KEY_HASH_PEPPER missing for self-serve issuance");
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "api_key_request_pepper_missing",
+      route: "api-key-requests",
+      source: "config",
+      message: "API_KEY_HASH_PEPPER missing for self-serve issuance",
+    });
     return selfServeUnavailable();
   }
 
@@ -260,10 +356,28 @@ export async function handleApiKeyRequestVerify(
     }
     if (row.verification_expires_at == null || row.verification_expires_at < nowSec) {
       await markRequestExpired(db, row.request_id, nowSec).catch((error) => {
-        console.error("[api-key-requests] failed to expire stale verification:", error);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_mark_expired_failed",
+          route: "api-key-requests",
+          source: "api_key_requests",
+          message: "Failed to expire stale verification",
+          error,
+          metadata: { requestId: row.request_id, stage: "stale_verification" },
+        });
       });
       await releaseEmailClaim(db, row.email_hash, row.request_id, nowSec).catch((error) => {
-        console.error("[api-key-requests] failed to release stale verification claim:", error);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_claim_release_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_email_claims",
+          message: "Failed to release stale verification claim",
+          error,
+          metadata: { requestId: row.request_id, stage: "stale_verification" },
+        });
       });
       return selfServeError(400, "Invalid or expired verification token.");
     }
@@ -271,7 +385,16 @@ export async function handleApiKeyRequestVerify(
     const activeClaim = await selectCurrentPendingClaim(db, row.email_hash, row.request_id);
     if (!activeClaim) {
       await markRequestBlockedAndReleaseClaim(db, row, nowSec).catch((error) => {
-        console.error("[api-key-requests] failed to block request with missing pending claim:", error);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_block_failed",
+          route: "api-key-requests",
+          source: "api_key_requests",
+          message: "Failed to block request with missing pending claim",
+          error,
+          metadata: { requestId: row.request_id, stage: "missing_pending_claim" },
+        });
       });
       return selfServeError(400, "Invalid or expired verification token.");
     }
@@ -288,7 +411,16 @@ export async function handleApiKeyRequestVerify(
     const locked = await lockVerificationForIssuance(db, row.request_id, tokenHash, nowSec);
     if (!locked) {
       await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((error) => {
-        console.error("[api-key-requests] failed to release issuance IP cap after lock denial:", error);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_ip_cap_release_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_issuance_ip_cap",
+          message: "Failed to release issuance IP cap after lock denial",
+          error,
+          metadata: { requestId: row.request_id, stage: "lock_denial" },
+        });
       });
       return selfServeError(400, "Invalid or expired verification token.");
     }
@@ -304,10 +436,28 @@ export async function handleApiKeyRequestVerify(
     }, nowSec, null);
     if (created instanceof Response) {
       await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((error) => {
-        console.error("[api-key-requests] failed to release issuance IP cap after key-create failure:", error);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_ip_cap_release_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_issuance_ip_cap",
+          message: "Failed to release issuance IP cap after key-create failure",
+          error,
+          metadata: { requestId: row.request_id, stage: "key_create_failure" },
+        });
       });
       await releaseVerificationLock(db, row.request_id, nowSec).catch((error) => {
-        console.error("[api-key-requests] failed to release issuance lock after key-create failure:", error);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_verification_lock_release_failed",
+          route: "api-key-requests",
+          source: "api_key_requests",
+          message: "Failed to release issuance lock after key-create failure",
+          error,
+          metadata: { requestId: row.request_id, stage: "key_create_failure" },
+        });
       });
       return selfServeUnavailable();
     }
@@ -349,18 +499,44 @@ export async function handleApiKeyRequestVerify(
       }
       issuedKey = activated.key;
     } catch (error) {
-      console.error("[api-key-requests] issuance consistency write failed:", error);
+      logWorkerEvent({
+        scope: "api",
+        level: "error",
+        event: "api_key_request_issuance_consistency_failed",
+        route: "api-key-requests",
+        source: "issuance",
+        message: "Issuance consistency write failed",
+        error,
+        metadata: { requestId: row.request_id, apiKeyId: created.key.id },
+      });
       await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((releaseError) => {
-        console.error("[api-key-requests] failed to release issuance IP cap after consistency failure:", releaseError);
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_ip_cap_release_failed",
+          route: "api-key-requests",
+          source: "api_key_self_serve_issuance_ip_cap",
+          message: "Failed to release issuance IP cap after consistency failure",
+          error: releaseError,
+          metadata: { requestId: row.request_id, stage: "consistency_failure" },
+        });
       });
       const compensation = await compensateIssuedKeyFailure(db, created.key.id, created.key.keyPrefix, row, nowSec);
       if (!compensation.keyDeactivated || !compensation.requestBlocked) {
-        console.error("[api-key-requests] issuance compensation incomplete:", {
-          failureClass: "self_serve_issuance_compensation_incomplete",
-          requestId: row.request_id,
-          apiKeyId: created.key.id,
-          keyDeactivated: compensation.keyDeactivated,
-          requestBlocked: compensation.requestBlocked,
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "api_key_request_compensation_incomplete",
+          route: "api-key-requests",
+          source: "issuance",
+          message: "Issuance compensation incomplete",
+          metadata: {
+            failureClass: "self_serve_issuance_compensation_incomplete",
+            requestId: row.request_id,
+            apiKeyId: created.key.id,
+            keyDeactivated: compensation.keyDeactivated,
+            requestBlocked: compensation.requestBlocked,
+          },
         });
       }
       return selfServeUnavailable();
@@ -381,7 +557,15 @@ export async function handleApiKeyRequestVerify(
 
     return issuedPublicResponse(issuedKey, created.token);
   } catch (error) {
-    console.error("[api-key-requests] verify handler failed:", error);
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "api_key_request_verify_handler_failed",
+      route: "api-key-requests",
+      source: "handler",
+      message: "API key request verify handler failed",
+      error,
+    });
     return selfServeUnavailable();
   }
 }

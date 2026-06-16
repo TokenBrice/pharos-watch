@@ -1,5 +1,6 @@
 import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE, SELF_SERVE_MAX_CREATIONS_PER_IP_24H } from "@shared/lib/ops-limits";
 import { clearApiKeyCache } from "../../lib/api-key-core";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeOptionalText } from "./request";
 import type {
   ApiKeyRequestDb,
@@ -148,7 +149,15 @@ export async function releaseOrphanPendingClaims(db: ApiKeyRequestDb, nowSec: nu
     .run();
   const released = result.meta?.changes ?? 0;
   if (released > 0) {
-    console.warn(`[api-key-requests] released ${released} orphan pending self-serve email claim(s)`);
+    logWorkerEvent({
+      scope: "api",
+      level: "info",
+      event: "api_key_request_orphan_claims_released",
+      route: "api-key-requests",
+      source: "api_key_self_serve_email_claims",
+      message: `Released ${released} orphan pending self-serve email claim(s)`,
+      metadata: { released },
+    });
   }
 }
 
@@ -437,12 +446,30 @@ export async function compensateIssuedKeyFailure(
     keyDeactivated = (result.meta?.changes ?? 0) > 0;
     clearApiKeyCache(keyPrefix);
   } catch (error) {
-    console.error("[api-key-requests] failed to deactivate key during compensation:", error);
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "api_key_request_compensation_deactivate_failed",
+      route: "api-key-requests",
+      source: "api_keys",
+      message: "Failed to deactivate key during issuance compensation",
+      error,
+      metadata: { requestId: row.request_id, apiKeyId },
+    });
   }
   try {
     requestBlocked = await markIssuanceFailureBlockedAndReleaseClaim(db, row, nowSec);
   } catch (error) {
-    console.error("[api-key-requests] failed to mark request blocked during compensation:", error);
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "api_key_request_compensation_block_failed",
+      route: "api-key-requests",
+      source: "api_key_requests",
+      message: "Failed to mark request blocked during issuance compensation",
+      error,
+      metadata: { requestId: row.request_id, apiKeyId },
+    });
   }
   return { keyDeactivated, requestBlocked };
 }
