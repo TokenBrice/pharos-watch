@@ -502,7 +502,12 @@ async function handlePendingActionBeforeDispatch(args: {
     parsedCommand,
     reply,
   } = args;
-  const pendingAction = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
+  const parsedPending = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
+  // This path only runs when the row is not a setup step (see isSetupPending in
+  // the caller), so a setup sentinel here means the row was mis-routed; treat it
+  // as unrecoverable rather than a live disambiguation action.
+  const pendingAction =
+    parsedPending && parsedPending.actionType !== SETUP_PENDING_ACTION_TYPE ? parsedPending : null;
   const pendingActive = Boolean(pendingRow && pendingAction && pendingNotExpired);
 
   if (pendingRow && !pendingAction && pendingNotExpired) {

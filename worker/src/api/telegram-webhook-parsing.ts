@@ -11,8 +11,9 @@ import type {
   PendingAction,
   PendingActionType,
   PendingDisambiguationRow,
+  PendingSetupSentinel,
 } from "./telegram-webhook-shared";
-import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
+import { SETUP_PENDING_ACTION_TYPE, STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 
 function logPendingParseWarning(pending: PendingDisambiguationRow, field: string, error: unknown): void {
   const actionType = pending.action_type ?? "unknown";
@@ -172,7 +173,16 @@ export function dedupeCoins(coins: ResolvedCoin[]): ResolvedCoin[] {
   return deduped;
 }
 
-export function parsePendingDisambiguation(pending: PendingDisambiguationRow): PendingAction | null {
+export function parsePendingDisambiguation(
+  pending: PendingDisambiguationRow,
+): PendingAction | PendingSetupSentinel | null {
+  // Setup-wizard rows share this table but are not disambiguation actions.
+  // Return a typed sentinel so callers must branch on it explicitly rather than
+  // mistaking a live setup session for "no pending action".
+  if (pending.action_type === SETUP_PENDING_ACTION_TYPE) {
+    return { actionType: SETUP_PENDING_ACTION_TYPE };
+  }
+
   const actionType = parsePendingActionType(pending.action_type ?? "subscribe");
   if (!actionType) {
     console.warn(

@@ -26,7 +26,12 @@ export const handleSelectCallback: CallbackHandler = async ({ db, botToken, cb, 
     return;
   }
   const pendingAction = parsePendingDisambiguation(pendingRow);
-  if (!pendingAction || pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
+  if (
+    !pendingAction
+    || pendingAction.actionType === "setup-step"
+    || pendingAction.actionType === "confirm-bulk"
+    || pendingAction.actionType === "forget-confirm"
+  ) {
     await answerCallbackQuery(cb.id, botToken, { text: "No ticker selection is pending." });
     return;
   }

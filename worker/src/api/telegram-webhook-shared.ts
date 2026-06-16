@@ -337,6 +337,18 @@ export type PendingAction =
       initiatorUserId: string | null;
     };
 
+/**
+ * Typed sentinel returned by `parsePendingDisambiguation` when the loaded row is
+ * a setup-wizard step (`action_type = "setup-step"`). Setup rows live in the
+ * same `telegram_pending_disambiguation` table but are not disambiguation
+ * actions; returning this discriminated sentinel (instead of `null`) forces
+ * callers to handle setup rows explicitly rather than silently treating a live
+ * setup session as "no pending action".
+ */
+export interface PendingSetupSentinel {
+  actionType: typeof SETUP_PENDING_ACTION_TYPE;
+}
+
 export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
   TRACKED_STABLECOINS.map((coin) => [
     coin.id,

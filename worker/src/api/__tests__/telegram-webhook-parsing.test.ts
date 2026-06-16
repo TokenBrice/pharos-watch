@@ -203,7 +203,12 @@ describe("parsePendingDisambiguation", () => {
       remainingTickers: ["USDC"],
       resolvedCoins: [],
     });
-    if (parsed && parsed.actionType !== "confirm-bulk" && parsed.actionType !== "forget-confirm") {
+    if (
+      parsed
+      && parsed.actionType !== "setup-step"
+      && parsed.actionType !== "confirm-bulk"
+      && parsed.actionType !== "forget-confirm"
+    ) {
       expect(parsed.candidates).toHaveLength(2);
     }
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=resolved_ids"));
@@ -278,5 +283,18 @@ describe("parsePendingDisambiguation", () => {
     );
 
     expect(parsed).toBeNull();
+  });
+
+  it("returns the setup-step sentinel instead of null for setup-wizard rows", () => {
+    const parsed = parsePendingDisambiguation(
+      makePendingRow({
+        action_type: "setup-step",
+        action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
+        candidates: JSON.stringify([]),
+        ambiguous_ticker: "",
+      }),
+    );
+
+    expect(parsed).toEqual({ actionType: "setup-step" });
   });
 });
