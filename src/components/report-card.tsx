@@ -9,7 +9,7 @@ import type {
   OracleRiskConfidence,
   ReportCard as ReportCardType,
 } from "@shared/types";
-import { DIMENSION_LABELS, DIMENSION_ORDER } from "@shared/lib/report-cards";
+import { BREAKDOWN_DIMENSIONS, DIMENSION_LABELS, DIMENSION_ORDER, DRILLDOWN_DIMENSIONS } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { ReportCardRadar } from "@/components/radar-chart";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -190,12 +190,7 @@ interface DimensionRowProps {
 
 function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const hasDetails =
-    (dimKey === "resilience" ||
-      dimKey === "decentralization" ||
-      dimKey === "dependencyRisk" ||
-      dimKey === "liquidity") &&
-    dim.score !== null;
+  const hasDetails = DRILLDOWN_DIMENSIONS.has(dimKey) && dim.score !== null;
   const detailsId = `report-card-${card.id}-${dimKey}-details`;
   const hintTopic = dimensionHintTopic(dimKey);
 
@@ -258,7 +253,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
       {expanded && hasDetails && (
         <div id={detailsId} className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-1 duration-200">
           {/* Factor breakdown for resilience/decentralization/dependencyRisk */}
-          {(dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk") && (
+          {BREAKDOWN_DIMENSIONS.has(dimKey) && (
             <div className="space-y-1">
               {dim.detail.split(". ").map((part) => {
                 const detail = parseDimensionDetail(part);

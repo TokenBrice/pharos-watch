@@ -94,6 +94,28 @@ export const DIMENSION_ORDER: DimensionKey[] = [
   "dependencyRisk",
 ];
 
+/**
+ * Dimensions whose report-card row expands into a details panel. Single source
+ * of truth for the UI's drill-down affordance so new dimensions don't have to
+ * be wired into multiple inline union checks. [audit S-106]
+ */
+export const DRILLDOWN_DIMENSIONS: ReadonlySet<DimensionKey> = new Set([
+  "resilience",
+  "decentralization",
+  "dependencyRisk",
+  "liquidity",
+]);
+
+/**
+ * Dimensions whose details panel renders a parsed factor breakdown
+ * (label/desc/score rows) from `dim.detail`.
+ */
+export const BREAKDOWN_DIMENSIONS: ReadonlySet<DimensionKey> = new Set([
+  "resilience",
+  "decentralization",
+  "dependencyRisk",
+]);
+
 export const GRADE_RADAR_COLORS: Record<string, string> = {
   A: "#10b981",
   B: "#3b82f6",
