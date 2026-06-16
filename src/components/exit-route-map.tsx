@@ -13,6 +13,7 @@ import {
   chainRouteGeometry,
   compactRouteLabel,
   defaultExitRouteSelection,
+  EXIT_ROUTE_INSTRUMENT_GEOMETRY,
   EXIT_ROUTE_SCENE,
   protocolRouteGeometry,
   routeMagnitudeScale,
@@ -200,10 +201,11 @@ function ExitRouteInstrumentScene({
 
           <rect x="0" y="0" width={EXIT_ROUTE_SCENE.width} height={EXIT_ROUTE_SCENE.height} fill="url(#exit-route-instrument-stage)" aria-hidden="true" />
           <g stroke="var(--route-grid)" strokeWidth="1" aria-hidden="true">
-            <line x1="372" y1="42" x2="372" y2="388" />
-            <line x1="660" y1="42" x2="660" y2="388" />
-            <line x1="40" y1="42" x2="960" y2="42" />
-            <line x1="40" y1="388" x2="960" y2="388" />
+            {EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridVerticalX.map((x) => (
+              <line key={`grid-v-${x}`} x1={x} y1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridTop} x2={x} y2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridBottom} />
+            ))}
+            <line x1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridLeft} y1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridTop} x2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridRight} y2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridTop} />
+            <line x1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridLeft} y1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridBottom} x2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridRight} y2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridBottom} />
           </g>
 
           <text x="54" y="30" fill="var(--route-caption)" fontSize="10" fontWeight="700" letterSpacing="1.8" aria-hidden="true">
@@ -342,10 +344,9 @@ function ExitRouteInstrumentScene({
           </g>
 
           <g className="exit-route-instrument__flow" data-testid="exit-route-flow-markers" stroke="var(--route-flow-marker)" strokeWidth="2" strokeLinecap="round" strokeDasharray={throat.flowDashArray} aria-hidden="true">
-            <path d="M424 158 H 596" />
-            <path d="M420 192 H 600" />
-            <path d="M420 238 H 600" />
-            <path d="M424 272 H 596" />
+            {EXIT_ROUTE_INSTRUMENT_GEOMETRY.flowMarkers.map((marker) => (
+              <path key={`flow-${marker.y}`} d={`M${marker.x1} ${marker.y} H ${marker.x2}`} />
+            ))}
           </g>
         </svg>
       </div>

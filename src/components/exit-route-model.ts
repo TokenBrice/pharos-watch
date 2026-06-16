@@ -36,6 +36,22 @@ export const EXIT_ROUTE_SCENE = {
   laneLogoX: 936,
 } as const;
 
+/** Static landmark coordinates for the instrument backdrop (grid lines + flow markers).
+ *  Kept here, alongside EXIT_ROUTE_SCENE, so viewport geometry lives in one place. */
+export const EXIT_ROUTE_INSTRUMENT_GEOMETRY = {
+  gridTop: 42,
+  gridBottom: 388,
+  gridLeft: 40,
+  gridRight: 960,
+  gridVerticalX: [372, 660],
+  flowMarkers: [
+    { x1: 424, x2: 596, y: 158 },
+    { x1: 420, x2: 600, y: 192 },
+    { x1: 420, x2: 600, y: 238 },
+    { x1: 424, x2: 596, y: 272 },
+  ],
+} as const;
+
 export interface LiquidityExitRouteItem {
   key: string;
   label: string;
