@@ -1,4 +1,5 @@
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
+import { parseCsvEnv } from "./env";
 
 const DEFAULT_MINT_BURN_MAJOR_SYMBOLS = [
   "USDT",
@@ -37,14 +38,6 @@ interface MintBurnFreshnessEnv {
   MINT_BURN_ALERT_COOLDOWN_SEC?: string;
 }
 
-function parseCsvSymbols(value: string | undefined): string[] {
-  if (!value) return [];
-  return value
-    .split(",")
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-}
-
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
   const parsed = Number.parseInt(value, 10);
@@ -52,7 +45,7 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
 }
 
 export function resolveMintBurnFreshnessConfig(env?: MintBurnFreshnessEnv): MintBurnFreshnessConfig {
-  const envMajorSymbols = parseCsvSymbols(env?.MINT_BURN_MAJOR_SYMBOLS);
+  const envMajorSymbols = parseCsvEnv(env?.MINT_BURN_MAJOR_SYMBOLS);
   return {
     majorSymbols: envMajorSymbols.length > 0 ? envMajorSymbols : [...DEFAULT_MINT_BURN_MAJOR_SYMBOLS],
     staleWarnSec: parsePositiveInt(env?.MINT_BURN_STALE_WARN_SEC, DEFAULT_MINT_BURN_STALE_WARN_SEC),
