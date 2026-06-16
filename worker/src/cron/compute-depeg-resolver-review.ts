@@ -318,7 +318,7 @@ async function loadTapeTerminalEvidenceByStablecoinId(
   return evidenceByStablecoinId;
 }
 
-function materializeTerminalEvidenceForEvent(row: ActualEventDbRow, evidence: TerminalEvidence | null): TerminalEvidence {
+function materializeTerminalEvidenceForEvent(evidence: TerminalEvidence | null): TerminalEvidence {
   if (!evidence) {
     return {
       terminalEvidenceAt: null,
@@ -328,15 +328,13 @@ function materializeTerminalEvidenceForEvent(row: ActualEventDbRow, evidence: Te
     };
   }
 
-  if (row.ended_at != null && row.recovery_price != null && evidence.terminalEvidenceInterval != null) {
-    return {
-      ...evidence,
-      terminalEvidenceAt: evidence.terminalEvidenceInterval.end <= row.ended_at
-        ? evidence.terminalEvidenceInterval.start
-        : null,
-    };
-  }
-
+  // Keep terminalEvidenceAt anchored to the interval start unconditionally; the
+  // eligibility comparison in terminalEvidenceAtForEligibility() is the single
+  // place that decides whether the evidence is relevant to a given prediction
+  // lock. Previously a post-recovery interval (interval.end > ended_at) zeroed
+  // terminalEvidenceAt while still propagating the interval, which made
+  // sourceEventState() and coverageStateForIncident() disagree for
+  // month-precision death dates. (audit Q-169)
   return evidence;
 }
 
@@ -445,7 +443,7 @@ async function loadActualEventsByEventIds(
     const rawEvidence = registryEvidenceByStablecoinId.get(row.stablecoin_id)
       ?? tapeEvidenceByStablecoinId.get(row.stablecoin_id)
       ?? null;
-    const terminalEvidence = materializeTerminalEvidenceForEvent(row, rawEvidence);
+    const terminalEvidence = materializeTerminalEvidenceForEvent(rawEvidence);
     const terminalObserved = isTerminalStablecoinStatus(meta?.status) || rawEvidence != null;
     actualEventsById.set(row.id, {
       eventId: row.id,

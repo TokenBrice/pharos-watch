@@ -899,6 +899,73 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.missedLockTerminalCount).toBe(1);
   });
 
+  it("keeps interval-anchored terminal evidence when a recovery closes before the interval end", async () => {
+    // Recovered event (ended_at + recovery_price) whose terminal-evidence
+    // interval extends past ended_at. The publication-failed row reads
+    // actual.terminalEvidenceAt directly, so the materialized at-timestamp must
+    // stay anchored to the interval start instead of being zeroed out — that
+    // zeroing previously made the failed-publication path disagree with the
+    // propagated interval. (audit Q-169)
+    const startedAt = USR_FROZEN_AT - 12 * 3600;
+    const eligibleAt = USR_FROZEN_AT;
+    const endedAt = USR_FROZEN_AT + 6 * 3600; // inside the interval, < interval.end
+    const incident = {
+      incidentKey: "ddr2:usr-frozen-recovered-before-interval-end",
+      eventId: 95,
+      currentEventId: 95,
+      stablecoinId: "usr-resolv",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt,
+      eligibleAt,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [{ id: 95, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: endedAt, recovery_price: 1 }],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 11,
+          publicPredictionId: 11,
+          incidentKey: incident.incidentKey,
+          eventId: 95,
+          assessmentId: 95,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          policyDelaySec: 86_400,
+          eligibleAt,
+          lockedAt: eligibleAt,
+          eventAgeAtLockSec: 86_400,
+          lockTiming: "on_time" as const,
+          rowHash: "d".repeat(64),
+          sealedPayload: { kind: "prediction", symbol: "USR" },
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, endedAt + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      predictionState: "publication_failed",
+      sourceEventState: "terminal",
+      // Regression guard: pre-fix this was zeroed to null because
+      // interval.end > ended_at.
+      terminalEvidenceAt: USR_FROZEN_AT,
+      terminalEvidenceInterval: { start: USR_FROZEN_AT, end: USR_FROZEN_AT + 86_400 },
+      terminalEvidencePrecision: "day",
+    });
+  });
+
   it("marks sealed unpublished rows as publication failed once the source closes", async () => {
     const incident = {
       incidentKey: "ddr2:sealed-unpublished",
