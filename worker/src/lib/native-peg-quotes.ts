@@ -12,6 +12,19 @@ import {
 const COINGECKO_NATIVE_PEG_BATCH_SIZE = 50;
 const COINGECKO_NATIVE_PEG_TIMEOUT_MS = 10_000;
 const COINGECKO_NATIVE_PEG_FUTURE_SKEW_SEC = 5 * 60;
+
+/**
+ * Maps each supported non-USD pegCurrency (uppercase ISO code matching
+ * stablecoin registry `pegCurrency` values) to the CoinGecko `vs_currencies`
+ * query strings to try in order.  CNY and CNH share both codes because
+ * CoinGecko merges the two into a single `cny` feed while some providers
+ * use `cnh`; trying both ensures a hit for either registry label.
+ *
+ * When adding a new FX stablecoin to the registry with a non-USD pegCurrency,
+ * add a corresponding entry here so the native-peg quote pipeline covers it.
+ * This map intentionally mirrors the set of non-USD pegCurrency values in
+ * shared/data/stablecoins/coins/*.json — keep them in sync.
+ */
 const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["AUD", ["aud"]],
   ["ARS", ["ars"]],
