@@ -30,14 +30,6 @@ export interface PriceStalenessSummary {
   stale: boolean;
 }
 
-function sumPegBucketValues(bucket: unknown): number {
-  if (bucket == null || typeof bucket !== "object") return 0;
-  return Object.values(bucket as Record<string, unknown>).reduce<number>(
-    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
-    0,
-  );
-}
-
 function countFiniteBuckets(buckets: Record<string, number> | undefined): number {
   if (!buckets) return 0;
   return Object.values(buckets).filter((value) => typeof value === "number" && Number.isFinite(value)).length;
@@ -98,7 +90,7 @@ export function normalizeChainCirculating(assets: PeggedAsset[]): void {
       for (const key of CHAIN_CIRCULATING_KEYS) {
         const value = entry[key];
         if (!value || typeof value !== "object") continue;
-        entry[key] = sumPegBucketValues(value);
+        entry[key] = sumPegBuckets(value as Record<string, number>);
       }
     }
   }
