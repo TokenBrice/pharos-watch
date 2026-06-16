@@ -1,4 +1,14 @@
+"use client";
+
+import type { CSSProperties } from "react";
+import { useNearViewport } from "@/hooks/use-near-viewport";
 import type { CaseStudySeverity, CaseStudyTimelineEntry } from "./content/types";
+
+// Desktop track geometry — keep in sync with `auto-cols-[15.375rem]` (the dot
+// pitch) and `w-[23rem]` (the card width) on the grid below. The scrollable
+// extent is the last dot's column start plus a full card width.
+const TIMELINE_PITCH_REM = 15.375;
+const TIMELINE_CARD_REM = 23;
 
 const SEVERITY_DOT: Record<CaseStudySeverity, string> = {
   high: "bg-rose-500",
@@ -43,15 +53,114 @@ function formatTimelineDate(dateISO: string): string {
   });
 }
 
-export function CaseStudyTimeline({
-  entries,
-}: {
-  entries: readonly CaseStudyTimelineEntry[];
-}) {
+function TimelineDate({ dateISO }: { dateISO: string }) {
   return (
-    <div className="space-y-5">
-      <TimelineSeverityLegend />
-      <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8">
+    <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+      {formatTimelineDate(dateISO)}
+    </p>
+  );
+}
+
+function TimelineHeadline({ children }: { children: string }) {
+  return (
+    <h3 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+      {children}
+    </h3>
+  );
+}
+
+function TimelineBody({ children }: { children: string }) {
+  return <p className="text-[15px] leading-relaxed text-muted-foreground">{children}</p>;
+}
+
+function TimelineSourceLink({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="pharos-focus-ring inline-flex text-xs font-medium text-frost-blue underline-offset-4 hover:underline"
+    >
+      Source
+    </a>
+  );
+}
+
+/** Desktop (lg+): events alternate above/below a drawn axis as a snap-scroll track. */
+function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
+  const { ref, near } = useNearViewport<HTMLDivElement>("-40px");
+  const trackRem = (entries.length - 1) * TIMELINE_PITCH_REM + TIMELINE_CARD_REM;
+  return (
+    <div
+      ref={ref}
+      data-revealed={near}
+      className="pharos-timeline-wide hidden lg:block"
+      style={{ "--tl-track": `${trackRem}rem` } as CSSProperties}
+    >
+      <div
+        tabIndex={0}
+        aria-label="Timeline — scroll horizontally to follow the events"
+        className="scroll-shadow pharos-focus-ring snap-x snap-mandatory overflow-x-auto py-2"
+      >
+        {/* No column gap: each cell's row-2 line segment is flush with its
+            neighbours, so the drawn axis reads as one continuous arrow that
+            begins at the first event's dot. */}
+        {/* auto-cols is the dot pitch; cards are wider than the pitch and
+            overflow into the neighbouring (opposite-lane) column, so the dots
+            sit close together while titles/bodies keep their full width. */}
+        <ol className="grid w-max auto-cols-[15.375rem] grid-flow-col grid-rows-[1fr_auto_1fr]">
+          {entries.map((entry, i) => {
+            const above = i % 2 === 0;
+            const isLast = i === entries.length - 1;
+            return (
+              <li
+                key={`${entry.dateISO}-${entry.headline}`}
+                className="row-span-3 grid grid-rows-subgrid snap-start"
+              >
+                <div
+                  style={{ transitionDelay: `${i * 70}ms` }}
+                  className={`pharos-timeline-card w-[23rem] space-y-1.5 pr-6 ${
+                    above ? "row-start-1 self-end pb-5" : "row-start-3 self-start pt-5"
+                  }`}
+                >
+                  <TimelineDate dateISO={entry.dateISO} />
+                  <TimelineHeadline>{entry.headline}</TimelineHeadline>
+                  <TimelineBody>{entry.body}</TimelineBody>
+                  {entry.href ? <TimelineSourceLink href={entry.href} /> : null}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none relative row-start-2 flex items-center self-center"
+                >
+                  <span className="pharos-timeline-line h-0.5 w-full bg-foreground/30" />
+                  {/* Stem binding the event card to its point on the axis. */}
+                  <span
+                    className={`absolute left-1.5 h-5 w-px -translate-x-1/2 bg-foreground/20 ${
+                      above ? "bottom-1/2" : "top-1/2"
+                    }`}
+                  />
+                  <span
+                    className={`absolute left-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ring-4 ring-background ${
+                      SEVERITY_DOT[entry.severity ?? "low"]
+                    }`}
+                  />
+                  {isLast ? (
+                    <span className="absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[5px] border-l-[9px] border-y-transparent border-l-foreground/30" />
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+/** Mobile (< lg): the established vertical spine layout. */
+function VerticalTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
+  return (
+    <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8 lg:hidden">
       {entries.map((entry) => (
         <li key={`${entry.dateISO}-${entry.headline}`} className="relative">
           <span
@@ -61,29 +170,27 @@ export function CaseStudyTimeline({
             }`}
           />
           <div className="space-y-1.5">
-            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
-              {formatTimelineDate(entry.dateISO)}
-            </p>
-            <h3 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-              {entry.headline}
-            </h3>
-            <p className="text-[15px] leading-relaxed text-muted-foreground">
-              {entry.body}
-            </p>
-            {entry.href ? (
-              <a
-                href={entry.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex text-xs font-medium text-frost-blue underline-offset-4 hover:underline"
-              >
-                Source
-              </a>
-            ) : null}
+            <TimelineDate dateISO={entry.dateISO} />
+            <TimelineHeadline>{entry.headline}</TimelineHeadline>
+            <TimelineBody>{entry.body}</TimelineBody>
+            {entry.href ? <TimelineSourceLink href={entry.href} /> : null}
           </div>
-          </li>
-        ))}
-      </ol>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+export function CaseStudyTimeline({
+  entries,
+}: {
+  entries: readonly CaseStudyTimelineEntry[];
+}) {
+  return (
+    <div className="space-y-5">
+      <TimelineSeverityLegend />
+      <HorizontalTimeline entries={entries} />
+      <VerticalTimeline entries={entries} />
     </div>
   );
 }

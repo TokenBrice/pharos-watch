@@ -70,20 +70,6 @@ export const content: CaseStudy = {
       severity: "low",
       href: "https://www.liquity.org/blog/liquity-q1-report",
     },
-    {
-      dateISO: "2025-02-13",
-      headline: "V2 Stability Pool issue exposes the immutability tradeoff",
-      body: "Liquity confirmed a vulnerability isolated to the V2 (BOLD) Stability Pool and advised users to withdraw, since an immutable protocol cannot be patched in place. No users were impacted and BOLD remained fully backed; the only remedy was a full redeploy.",
-      severity: "med",
-      href: "https://www.liquity.org/blog/liquity-v2-redeployment",
-    },
-    {
-      dateISO: "2025-05-19",
-      headline: "V2 redeployed after audits",
-      body: "Following a five-week audit competition with 800+ researchers and additional reviews, a patched Liquity V2 relaunched on Ethereum mainnet. The episode caused no losses but underscored that immutability trades the ability to hotfix for the guarantee that no one can tamper with the rules.",
-      severity: "low",
-      href: "https://www.liquity.org/blog/liquity-v2-redeployment",
-    },
   ],
   sections: [
     {
