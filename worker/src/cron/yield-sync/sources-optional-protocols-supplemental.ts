@@ -1,6 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
+import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
@@ -74,8 +75,9 @@ function buildMorphoFilters(): TrackedMorphoFilters {
 
     for (const contract of [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]) {
       const chain = resolveCanonicalChain(contract.chain);
-      if (!chain || !contract.address) continue;
-      assetsByChainAddress.set(`${chain}:${contract.address.toLowerCase()}`, {
+      const address = normalizeTokenAddress(contract.address ?? "");
+      if (!chain || !address) continue;
+      assetsByChainAddress.set(buildChainAddressKey(chain, address), {
         stablecoinId: meta.id,
         symbol: meta.symbol,
       });
@@ -93,9 +95,9 @@ function resolveMorphoTrackedAsset(
   chain: string,
   asset: MorphoVaultItem["asset"],
 ): TrackedMorphoAsset | null {
-  const normalizedAddress = asset.address?.toLowerCase() ?? null;
+  const normalizedAddress = normalizeTokenAddress(asset.address ?? "");
   if (normalizedAddress) {
-    const byAddress = filters.assetsByChainAddress.get(`${chain}:${normalizedAddress}`);
+    const byAddress = filters.assetsByChainAddress.get(buildChainAddressKey(chain, normalizedAddress));
     if (byAddress) return byAddress;
   }
 
