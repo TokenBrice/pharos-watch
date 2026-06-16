@@ -7,11 +7,15 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   GLOSSARY_ENTRIES,
-  GLOSSARY_JUMP_RAIL_LETTERS,
   GLOSSARY_LEAD,
   groupGlossaryByLetter,
   type GlossaryEntry,
 } from "./content";
+
+// Full A-Z jump rail; letters without entries render as disabled placeholders.
+const JUMP_RAIL_ALPHABET = Array.from({ length: 26 }, (_, i) =>
+  String.fromCharCode(65 + i),
+);
 
 const GLOSSARY_METADATA_DESCRIPTION =
   "Stablecoin risk glossary for Pharos terms including PSI, DEWS, PegScore, LiquidityScore, FreezeWatch, Bluechip, PressureShift, bands, gates, and methodology anchors.";
@@ -64,7 +68,7 @@ function GlossaryJumpRail({
       className="sticky top-16 z-10 -mx-1 rounded-2xl border border-border/60 bg-background/80 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60"
     >
       <ol className="flex flex-wrap gap-1 font-mono text-xs uppercase tracking-[0.06em]">
-        {GLOSSARY_JUMP_RAIL_LETTERS.map((letter) => {
+        {JUMP_RAIL_ALPHABET.map((letter) => {
           const isPresent = presentLetters.has(letter);
           return (
             <li key={letter}>

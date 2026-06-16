@@ -25,35 +25,6 @@ export interface GlossaryEntry {
 export const GLOSSARY_LEAD =
   "The Pharos vocabulary, alphabetized. Each entry is authored, version-pinned to the methodology section that defines it, and linked to one historical incident wherever the record has one. The glossary is the page Pharos can be cited against.";
 
-export const GLOSSARY_JUMP_RAIL_LETTERS = [
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-  "G",
-  "H",
-  "I",
-  "J",
-  "K",
-  "L",
-  "M",
-  "N",
-  "O",
-  "P",
-  "Q",
-  "R",
-  "S",
-  "T",
-  "U",
-  "V",
-  "W",
-  "X",
-  "Y",
-  "Z",
-] as const;
-
 export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   {
     id: "bluechip",
