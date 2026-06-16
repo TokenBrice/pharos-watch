@@ -1,6 +1,6 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { UsdsStatusResponse } from "@shared/types";
-import { UsdsStatusResponseSchema } from "@shared/types/digest";
+import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import { BluechipRatingsMapSchema, StablecoinListResponseSchema } from "@shared/types/market";
 import {
   createCacheHandler,

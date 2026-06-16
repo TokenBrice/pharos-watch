@@ -36,8 +36,6 @@ import {
   DailyDigestResponseSchema,
   DigestArchiveResponseSchema,
   DigestSnapshotResponseSchema,
-  StablecoinChartResponseSchema,
-  UsdsStatusResponseSchema,
 } from "@shared/types/digest";
 import {
   BluechipRatingsMapSchema,
@@ -46,6 +44,7 @@ import {
   DexLiquidityHistoryResponseSchema,
   DexLiquidityMapSchema,
   PegSummaryResponseSchema,
+  StablecoinChartResponseSchema,
   StablecoinListResponseSchema,
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
@@ -58,7 +57,7 @@ import {
 } from "@shared/types/mint-burn";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsResponseSchema, SafetyScoreHistoryResponseSchema } from "@shared/types/report-cards";
-import { StabilityIndexResponseSchema } from "@shared/types/stability";
+import { StabilityIndexResponseSchema, UsdsStatusResponseSchema } from "@shared/types/stability";
 import { HealthResponseSchema } from "@shared/types/status";
 import { YieldHistoryResponseSchema, YieldRankingsResponseSchema } from "@shared/types/yield";
 import {
@@ -123,77 +122,69 @@ export interface MintBurnEventsDescriptorOptions {
 
 const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
 
-function pollingDescriptor<T>(descriptor: FrontendApiQueryDescriptor<T>): FrontendApiQueryDescriptor<T> {
-  return descriptor;
-}
-
-function staticDescriptor<T>(descriptor: FrontendStaticApiQueryDescriptor<T>): FrontendStaticApiQueryDescriptor<T> {
-  return descriptor;
-}
-
 export const FRONTEND_API_QUERY_REGISTRY = {
-  stablecoins: pollingDescriptor<StablecoinListResponse>({
+  stablecoins: {
     queryKey: ["stablecoins"],
     path: API_PATHS.stablecoins(),
     producerIntervalMs: CRON_15MIN,
     schema: StablecoinListResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
-  }),
-  bluechipRatings: pollingDescriptor<BluechipRatingsMap | null>({
+  },
+  bluechipRatings: {
     queryKey: ["bluechip-ratings"],
     path: API_PATHS.bluechipRatings(),
     producerIntervalMs: CRON_24H,
     schema: BluechipRatingsMapSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip,
-  }),
-  dailyDigest: pollingDescriptor<DailyDigestResponse>({
+  },
+  dailyDigest: {
     queryKey: ["daily-digest"],
     path: API_PATHS.dailyDigest(),
     producerIntervalMs: CRON_24H,
     schema: DailyDigestResponseSchema,
-  }),
-  dexLiquidity: pollingDescriptor<DexLiquidityMap>({
+  },
+  dexLiquidity: {
     queryKey: ["dex-liquidity"],
     path: API_PATHS.dexLiquidity(),
     producerIntervalMs: CRON_30MIN,
     schema: DexLiquidityMapSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
-  }),
+  },
   dexLiquidityHistory: (stablecoinId: string, days = 90) =>
-    pollingDescriptor<DexLiquidityHistoryPoint[]>({
+    ({
       queryKey: ["dex-liquidity-history", stablecoinId, days],
       path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
       producerIntervalMs: CRON_24H,
       schema: DexLiquidityHistoryResponseSchema,
     }),
-  digestArchive: pollingDescriptor<DigestArchiveResponse>({
+  digestArchive: {
     queryKey: ["digest-archive"],
     path: API_PATHS.digestArchive(),
     producerIntervalMs: CRON_24H,
     schema: DigestArchiveResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive,
-  }),
+  },
   digestSnapshot: (date: string) =>
-    staticDescriptor<DigestSnapshotResponse>({
+    ({
       queryKey: ["digest-snapshot", date],
       path: API_PATHS.digestSnapshot(date),
       schema: DigestSnapshotResponseSchema,
     }),
-  health: pollingDescriptor<HealthResponse>({
+  health: {
     queryKey: ["health"],
     path: API_PATHS.health(),
     producerIntervalMs: CRON_1MIN,
     schema: HealthResponseSchema,
-  }),
-  blacklistSummary: pollingDescriptor<BlacklistSummaryResponse>({
+  },
+  blacklistSummary: {
     queryKey: ["blacklist-summary"],
     path: API_PATHS.blacklistSummary(),
     producerIntervalMs: CRON_BLACKLIST,
     schema: BlacklistSummaryResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
-  }),
+  },
   blacklistEvents: ({ queryKey, path }: BlacklistEventsDescriptorInput) =>
-    pollingDescriptor<BlacklistResponse>({
+    ({
       queryKey,
       path,
       producerIntervalMs: CRON_BLACKLIST,
@@ -201,7 +192,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
     }),
   mintBurnFlows: (hours = 24) =>
-    pollingDescriptor<MintBurnFlowsResponse>({
+    ({
       queryKey: ["mint-burn-flows", "all", hours],
       path: API_PATHS.mintBurnFlows(hours !== 24 ? { hours } : undefined),
       producerIntervalMs: CRON_MINT_BURN,
@@ -209,7 +200,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows,
     }),
   mintBurnFlowsCoin: (stablecoinId: string, hours = 24) =>
-    pollingDescriptor<MintBurnPerCoinResponse>({
+    ({
       queryKey: ["mint-burn-flows", stablecoinId, hours],
       path: API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
       producerIntervalMs: CRON_MINT_BURN,
@@ -224,7 +215,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     if (opts?.limit) params.set("limit", opts.limit.toString());
     if (opts?.offset) params.set("offset", opts.offset.toString());
 
-    return pollingDescriptor<MintBurnEventsResponse>({
+    return {
       queryKey: [
         "mint-burn-events",
         stablecoinId,
@@ -240,111 +231,111 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
     });
   },
-  pegSummary: pollingDescriptor<PegSummaryResponse>({
+  pegSummary: {
     queryKey: ["peg-summary"],
     path: API_PATHS.pegSummary(),
     producerIntervalMs: CRON_15MIN,
     schema: PegSummaryResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
-  }),
-  reportCards: pollingDescriptor<ReportCardsResponse>({
+  },
+  reportCards: {
     queryKey: ["report-cards"],
     path: API_PATHS.reportCards(),
     producerIntervalMs: CRON_15MIN,
     schema: ReportCardsResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
-  }),
-  depegResolver: pollingDescriptor<DdrResponse>({
+  },
+  depegResolver: {
     queryKey: ["depeg-resolver"],
     path: API_PATHS.depegResolver(),
     producerIntervalMs: CRON_15MIN,
     schema: DdrResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-  }),
-  depegResolverReview: pollingDescriptor<DdrrResponse>({
+  },
+  depegResolverReview: {
     queryKey: ["depeg-resolver-review"],
     path: API_PATHS.depegResolverReview(),
     producerIntervalMs: CRON_15MIN,
     schema: DdrrResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
-  }),
-  redemptionBackstops: pollingDescriptor<RedemptionBackstopsResponse>({
+  },
+  redemptionBackstops: {
     queryKey: ["redemption-backstops"],
     path: API_PATHS.redemptionBackstops(),
     producerIntervalMs: CRON_RESERVE_SYNC,
     schema: RedemptionBackstopsResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
-  }),
+  },
   safetyScoreHistory: (stablecoinId: string, days = 3650) =>
-    pollingDescriptor<SafetyScoreHistoryResponse>({
+    ({
       queryKey: ["safety-score-history", stablecoinId, days],
       path: API_PATHS.safetyScoreHistory(stablecoinId, days),
       producerIntervalMs: CRON_24H,
       schema: SafetyScoreHistoryResponseSchema,
       metaMaxAgeSec: CRON_24H / 1000,
     }),
-  stablecoinCharts: pollingDescriptor<StablecoinChartPoint[]>({
+  stablecoinCharts: {
     queryKey: ["stablecoin-charts"],
     path: API_PATHS.stablecoinCharts(),
     producerIntervalMs: CRON_1H,
     schema: StablecoinChartResponseSchema,
-  }),
-  nonUsdShare: pollingDescriptor<NonUsdSharePoint[]>({
+  },
+  nonUsdShare: {
     queryKey: ["non-usd-share"],
     path: API_PATHS.nonUsdShare(),
     producerIntervalMs: CRON_24H,
     schema: z.array(NonUsdSharePointSchema),
-  }),
-  stabilityIndex: pollingDescriptor<StabilityIndexResponse>({
+  },
+  stabilityIndex: {
     queryKey: ["stability-index"],
     path: API_PATHS.stabilityIndex(),
     producerIntervalMs: CRON_30MIN,
     schema: StabilityIndexResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
-  }),
-  stabilityIndexDetail: pollingDescriptor<StabilityIndexResponse>({
+  },
+  stabilityIndexDetail: {
     queryKey: ["stability-index-detail"],
     path: API_PATHS.stabilityIndex(true),
     producerIntervalMs: CRON_30MIN,
     schema: StabilityIndexResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
-  }),
-  usdsStatus: pollingDescriptor<UsdsStatusResponse | null>({
+  },
+  usdsStatus: {
     queryKey: ["usds-status"],
     path: API_PATHS.usdsStatus(),
     producerIntervalMs: CRON_15MIN,
     schema: UsdsStatusResponseSchema,
-  }),
-  telegramPulse: pollingDescriptor<TelegramPulse>({
+  },
+  telegramPulse: {
     queryKey: ["telegram-pulse"],
     path: API_PATHS.telegramPulse(),
     producerIntervalMs: CRON_TELEGRAM_PULSE,
     schema: TelegramPulseSchema,
-  }),
+  },
   yieldHistory: (stablecoinId: string, days: number, mode: YieldHistoryMode, sourceKey?: string | null) =>
-    pollingDescriptor<YieldHistoryResponse>({
+    ({
       queryKey: ["yield-history", stablecoinId, days, mode, sourceKey ?? null],
       path: API_PATHS.yieldHistory(stablecoinId, days, mode, sourceKey ?? undefined),
       producerIntervalMs: CRON_YIELD,
       schema: YieldHistoryResponseSchema,
       metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
     }),
-  yieldRankings: pollingDescriptor<YieldRankingsResponse>({
+  yieldRankings: {
     queryKey: ["yield-rankings"],
     path: API_PATHS.yieldRankings(),
     producerIntervalMs: CRON_YIELD,
     schema: YieldRankingsResponseSchema,
     metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
-  }),
-  stressSignals: pollingDescriptor<StressSignalsAllResponse>({
+  },
+  stressSignals: {
     queryKey: ["stress-signals"],
     path: API_PATHS.stressSignals(),
     producerIntervalMs: CRON_30MIN,
     schema: StressSignalsAllResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-  }),
+  },
   stressSignalDetail: (stablecoinId: string, days = 30) =>
-    pollingDescriptor<StressSignalDetailResponse>({
+    ({
       queryKey: ["stress-signals", stablecoinId, days],
       path: API_PATHS.stressSignals(stablecoinId, days),
       producerIntervalMs: CRON_30MIN,
@@ -352,7 +343,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
     }),
   supplyHistory: (stablecoinId: string, days = 1825) =>
-    pollingDescriptor<SupplyHistoryPoint[]>({
+    ({
       queryKey: ["supply-history", stablecoinId, days],
       path: API_PATHS.supplyHistory(stablecoinId, days),
       producerIntervalMs: CRON_24H,

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { StablecoinChartResponseSchema } from "@shared/types/digest";
+import { StablecoinChartResponseSchema } from "@shared/types/market";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";

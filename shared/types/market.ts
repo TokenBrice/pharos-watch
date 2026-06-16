@@ -805,3 +805,9 @@ export const StressSignalDetailResponseSchema = z.object({
 });
 
 export type StressSignalDetailResponse = z.infer<typeof StressSignalDetailResponseSchema>;
+
+export const StablecoinChartResponseSchema = z.array(z.object({
+  date: z.number(),
+  totalCirculatingUSD: z.record(z.string(), z.number()),
+}));
+export type StablecoinChartPoint = z.infer<typeof StablecoinChartResponseSchema>[number];

@@ -1,5 +1,5 @@
 import type { UsdsStatusResponse } from "@shared/types";
-import { UsdsStatusResponseSchema } from "@shared/types/digest";
+import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import { shouldSkipFreshCache, setCacheIfNewer, type CacheWriteResult } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";

@@ -390,47 +390,6 @@ export const DigestArchiveResponseSchema = z.object({
 });
 export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
 
-export const StablecoinChartResponseSchema = z.array(z.object({
-  date: z.number(),
-  totalCirculatingUSD: z.record(z.string(), z.number()),
-}));
-export type StablecoinChartPoint = z.infer<typeof StablecoinChartResponseSchema>[number];
-
-const UsdsImplementationAddressSchema = z
-  .string()
-  .trim()
-  .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid implementation address")
-  .transform((value) => value.toLowerCase());
-
-export const UsdsStatusResponseSchema = z.object({
-  implementationAddress: UsdsImplementationAddressSchema,
-  freezeCapabilityPresent: z.unknown().optional(),
-  freezeActive: z.unknown().optional(),
-  lastChecked: z.unknown().optional(),
-}).transform((value) => {
-  const freezeCapabilityPresent = typeof value.freezeCapabilityPresent === "boolean"
-    ? value.freezeCapabilityPresent
-    : typeof value.freezeActive === "boolean"
-      ? value.freezeActive
-      : false;
-  return {
-    freezeCapabilityPresent,
-    // `freezeActive` is intentionally a mirror of `freezeCapabilityPresent`:
-    // the only observable on-chain signal is whether the freeze feature exists
-    // (isBlocked(address(0)) is true iff the capability is present), not whether
-    // any account is currently frozen. Kept as a deprecated alias for backward
-    // compatibility; the frontend reads only `freezeCapabilityPresent`. Drop
-    // this field if/when real freeze-event detection is added. See audit Q-238.
-    freezeActive: freezeCapabilityPresent,
-    implementationAddress: value.implementationAddress,
-    lastChecked:
-      typeof value.lastChecked === "number" && Number.isFinite(value.lastChecked) && value.lastChecked >= 0
-        ? Math.floor(value.lastChecked)
-        : 0,
-  };
-});
-export type UsdsStatusResponse = z.infer<typeof UsdsStatusResponseSchema>;
-
 // Validate the impactful fields actually rendered by digest-snapshot.tsx so
 // snapshot drift/corruption is caught at the contract boundary, while keeping
 // .passthrough() to preserve the many other DigestInputData fields untouched.
