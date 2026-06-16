@@ -409,6 +409,7 @@ export function runSelector(
   const recommendations = buildRecommendationPhase(ranked, universe, input, excluded);
   excluded = recommendations.excluded;
   const usedRelaxedFallback = recommendations.relaxedReasons.size > 0;
+  const rowsById = new Map(universe.map((row) => [row.id, row]));
   const lowerRanked = selectLowerRanked(
     ranked,
     excluded,
@@ -416,6 +417,7 @@ export function runSelector(
     universe,
     new Set(recommendations.recommended.map((r) => r.id)),
     scoreIgnoringExclusion,
+    rowsById,
   );
 
   const newListingCount = scored.filter((s) => s.row.isRecentListing).length;
@@ -448,7 +450,7 @@ export function runSelector(
     usedRelaxedFallback,
     relaxedReasons: Array.from(recommendations.relaxedReasons).sort(),
     exclusionSummary: buildExclusionSummary(excluded),
-    closestSurvivors: buildClosestSurvivors(excluded, universe, input, scoreIgnoringExclusion),
+    closestSurvivors: buildClosestSurvivors(excluded, universe, input, scoreIgnoringExclusion, rowsById),
     relaxableConstraints: buildRelaxableConstraints(input, excluded),
     timestamp: dataset.timestamp,
     engineVersion: ENGINE_VERSION,

@@ -89,6 +89,7 @@ export function selectLowerRanked(
   allMerged: readonly MergedRow[],
   shortlistedIds: ReadonlySet<string>,
   scoreIgnoringExclusion: (row: MergedRow, input: SelectorInput) => number | null,
+  rowsById?: Map<string, MergedRow>,
 ): SelectorLowerRanked[] {
   const out: SelectorLowerRanked[] = [];
   const profile = input.profile;
@@ -106,14 +107,13 @@ export function selectLowerRanked(
         ]
       : profileDefining;
 
-  const rowsById = new Map<string, MergedRow>();
-  for (const row of allMerged) rowsById.set(row.id, row);
+  const resolvedRowsById: Map<string, MergedRow> = rowsById ?? new Map(allMerged.map((row) => [row.id, row]));
 
   const slotACandidates: SlotACandidate[] = [];
   for (const record of excluded) {
     if (!profileDefining.includes(record.reason as never)) continue;
     if (record.reason === "coverage-too-thin") continue;
-    const row = rowsById.get(record.id);
+    const row = resolvedRowsById.get(record.id);
     if (row == null) continue;
     if (shortlistedIds.has(row.id)) continue;
     const hypothetical = scoreIgnoringExclusion(row, input);

@@ -82,12 +82,13 @@ export function buildClosestSurvivors(
   universe: readonly MergedRow[],
   input: SelectorInput,
   scoreIgnoringExclusion: (row: MergedRow, input: SelectorInput) => number | null,
+  rowsById?: Map<string, MergedRow>,
 ): SelectorClosestSurvivor[] {
-  const rowsById = new Map(universe.map((row) => [row.id, row] as const));
+  const resolvedRowsById: Map<string, MergedRow> = rowsById ?? new Map(universe.map((row) => [row.id, row]));
   const candidates: Array<SelectorClosestSurvivor & { sortScore: number }> = [];
   for (const record of excluded) {
     if (record.reason === "howey-uncertain" || record.reason === "lifecycle-non-active") continue;
-    const row = rowsById.get(record.id);
+    const row = resolvedRowsById.get(record.id);
     if (!row) continue;
     const hypotheticalScore = scoreIgnoringExclusion(row, input);
     candidates.push({
