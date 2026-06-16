@@ -18,6 +18,8 @@ export const API_KEY_REQUEST_STATUS_LABELS: Record<"all" | ApiKeySelfServeStatus
   expired: "Expired",
 };
 
+export const REQUEST_RISK_FLAG_SCORE = 50;
+
 export const API_KEY_REQUEST_ACTION_LABELS = {
   reject: "reject",
   "release-claim": "release claim",
@@ -174,7 +176,7 @@ export function buildApiKeyRequestSummary(
 
   for (const request of requests) {
     if (request.status === "pending_verification") needsReview += 1;
-    if (request.riskScore >= 50 || request.riskReasons.length > 0) risky += 1;
+    if (request.riskScore >= REQUEST_RISK_FLAG_SCORE || request.riskReasons.length > 0) risky += 1;
     if (canReleaseRequestClaim(request, generatedAt)) claimCleanup += 1;
     if (hasActiveUnexpiredLinkedKey(request, generatedAt)) activeKeys += 1;
   }
@@ -186,7 +188,7 @@ export function buildApiKeyRequestSummary(
       detail: `up to ${limit} ${API_KEY_REQUEST_STATUS_LABELS[statusFilter].toLowerCase()}`,
     },
     { label: "Needs review", value: String(needsReview), detail: "pending verification" },
-    { label: "Risk flags", value: String(risky), detail: "score >= 50 or reasons" },
+    { label: "Risk flags", value: String(risky), detail: `score >= ${REQUEST_RISK_FLAG_SCORE} or reasons` },
     { label: "Claim cleanup", value: String(claimCleanup), detail: "safe to release" },
     { label: "Live linked keys", value: String(activeKeys), detail: "active and unexpired" },
   ];
