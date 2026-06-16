@@ -26,8 +26,7 @@ import {
   getMintBurnRunState,
   normalizeDisabledConfigIdSet,
   normalizeDisabledSymbolSet,
-  resolveStartIndex,
-  rotateArray,
+  resolveRotatedConfigs,
 } from "./mint-burn/run-state";
 import { excludeFrozenIds } from "./shared/exclude-frozen";
 import { toErrorMessage } from "../lib/error-utils";
@@ -170,12 +169,11 @@ export async function syncMintBurn(
 
   const runStateSnapshot = await getMintBurnRunState(db, jobName);
   const runState = runStateSnapshot.state;
-  const startIndex = resolveStartIndex(
+  const rotatedConfigs = resolveRotatedConfigs(
     runState.lastConfigKey,
     enabledConfigs,
     (c) => mintBurnConfigKey(c),
   );
-  const rotatedConfigs = rotateArray(enabledConfigs, startIndex);
   // Always process critical contracts first so extended backlogs cannot starve
   // core coverage when budget pressure is high.
   const configs = [

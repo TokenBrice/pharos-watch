@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { resolveStartIndex } from "../mint-burn/run-state";
+import { resolveRotatedConfigs } from "../mint-burn/run-state";
 
-describe("resolveStartIndex", () => {
+describe("resolveRotatedConfigs", () => {
   const configs = [
     { key: "ethereum-0xaaa" },
     { key: "ethereum-0xbbb" },
@@ -9,24 +9,30 @@ describe("resolveStartIndex", () => {
   ];
   const keyFn = (c: { key: string }) => c.key;
 
-  it("returns index after the last-processed config", () => {
-    expect(resolveStartIndex("ethereum-0xaaa", configs, keyFn)).toBe(1);
-    expect(resolveStartIndex("ethereum-0xbbb", configs, keyFn)).toBe(2);
+  it("starts after the last-processed config", () => {
+    expect(resolveRotatedConfigs("ethereum-0xaaa", configs, keyFn)).toEqual([
+      configs[1], configs[2], configs[0],
+    ]);
+    expect(resolveRotatedConfigs("ethereum-0xbbb", configs, keyFn)).toEqual([
+      configs[2], configs[0], configs[1],
+    ]);
   });
 
   it("wraps around at end of list", () => {
-    expect(resolveStartIndex("ethereum-0xccc", configs, keyFn)).toBe(0);
+    expect(resolveRotatedConfigs("ethereum-0xccc", configs, keyFn)).toEqual([
+      configs[0], configs[1], configs[2],
+    ]);
   });
 
-  it("returns 0 when key not found (config was removed)", () => {
-    expect(resolveStartIndex("ethereum-0xzzz", configs, keyFn)).toBe(0);
+  it("returns original order when key not found (config was removed)", () => {
+    expect(resolveRotatedConfigs("ethereum-0xzzz", configs, keyFn)).toEqual(configs);
   });
 
-  it("returns 0 when key is null (first run)", () => {
-    expect(resolveStartIndex(null, configs, keyFn)).toBe(0);
+  it("returns original order when key is null (first run)", () => {
+    expect(resolveRotatedConfigs(null, configs, keyFn)).toEqual(configs);
   });
 
-  it("returns 0 for empty config list", () => {
-    expect(resolveStartIndex("ethereum-0xaaa", [], keyFn)).toBe(0);
+  it("returns empty array for empty config list", () => {
+    expect(resolveRotatedConfigs("ethereum-0xaaa", [], keyFn)).toEqual([]);
   });
 });

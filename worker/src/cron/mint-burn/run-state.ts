@@ -7,13 +7,13 @@ export interface MintBurnRunStateRow {
   lastConfigKey: string | null;
 }
 
-/** Find the rotation start index based on last-processed config key. */
-export function resolveStartIndex<T>(
+/** Rotate configs so that the item after lastConfigKey comes first. */
+export function resolveRotatedConfigs<T>(
   lastConfigKey: string | null,
   configs: T[],
   keyFn: (config: T) => string,
-): number {
-  return rotateFromCursor(configs, lastConfigKey, keyFn, { startAfterCursor: true }).startIndex;
+): T[] {
+  return rotateFromCursor(configs, lastConfigKey, keyFn, { startAfterCursor: true }).items;
 }
 
 export function normalizeDisabledConfigIdSet(values?: Iterable<string>): Set<string> {
@@ -22,12 +22,6 @@ export function normalizeDisabledConfigIdSet(values?: Iterable<string>): Set<str
 
 export function normalizeDisabledSymbolSet(values?: Iterable<string>): Set<string> {
   return normalizeStringSet(values, (value) => value.toUpperCase());
-}
-
-export function rotateArray<T>(values: T[], start: number): T[] {
-  if (values.length === 0) return [];
-  const idx = ((start % values.length) + values.length) % values.length;
-  return [...values.slice(idx), ...values.slice(0, idx)];
 }
 
 export async function getMintBurnRunState(
