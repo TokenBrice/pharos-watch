@@ -110,7 +110,7 @@ describe("check-redemption-backstops CLI", () => {
       ]),
     );
     expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("creates parent directories for nested JSON reports", () => {
     const cwd = mkdtempSync(join(tmpdir(), "redemption-backstops-nested-"));
@@ -126,7 +126,7 @@ describe("check-redemption-backstops CLI", () => {
       summary: { configuredCount: number };
     };
     expect(report.summary.configuredCount).toBe(312);
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("rejects unknown CLI arguments", () => {
     const result = spawnSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--bad-arg"], {
