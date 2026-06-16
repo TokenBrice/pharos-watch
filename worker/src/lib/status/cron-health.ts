@@ -142,45 +142,64 @@ function chunkCronJobs(jobs: string[]): string[][] {
   return chunks;
 }
 
-export async function loadCronHealth(
-  db: D1Database,
-  now: number,
-): Promise<CronHealthSnapshot> {
-  const cronJobs = Object.keys(CRON_INTERVALS);
-  const cronJobInClause = buildInClause(cronJobs);
-  let cronRows: { results?: Array<{
-    job: string;
-    started_at: number;
-    duration_ms: number;
-    status: string;
-    error: string | null;
-    item_count: number | null;
-    metadata: string | null;
-  }> } = { results: [] };
-  let cronHistoryQueryFailed = false;
+interface CronHistoryRow {
+  job: string;
+  started_at: number;
+  duration_ms: number;
+  status: string;
+  error: string | null;
+  item_count: number | null;
+  metadata: string | null;
+}
 
+interface CronLeaseRow {
+  job: string;
+  lease_owner: string;
+  lease_until: number;
+}
+
+interface CronProgressRow {
+  job: string;
+  started_at: number;
+  updated_at: number;
+  stage: string | null;
+  items_done: number | null;
+  items_total: number | null;
+  message: string | null;
+  lease_owner: string | null;
+  metadata: string | null;
+  slot_started_at: number | null;
+}
+
+interface CronSlotEventRow {
+  key: string;
+  value: string | null;
+  updated_at: number;
+}
+
+async function fetchCronHistoryRows(
+  db: D1Database,
+  cronJobs: string[],
+): Promise<{ rows: CronHistoryRow[]; failed: boolean }> {
   try {
-    const results: NonNullable<typeof cronRows.results> = [];
-    for (const jobBatch of chunkCronJobs(cronJobs)) {
-      const batchJobSet = new Set(jobBatch);
-      const batchRows = await db
-        .prepare(buildCronHistoryQuery(jobBatch.length))
-        .bind(...jobBatch)
-        .all<{
-          job: string;
-          started_at: number;
-          duration_ms: number;
-          status: string;
-          error: string | null;
-          item_count: number | null;
-          metadata: string | null;
-        }>();
-      results.push(...(batchRows.results ?? []).filter((row) => batchJobSet.has(row.job)));
-    }
-    results.sort((a, b) => b.started_at - a.started_at);
-    cronRows = { results };
+    // Each batch is an independent SELECT, so fire all batches concurrently
+    // rather than awaiting them in sequence; D1's HTTP/2 connection is
+    // multiplexed and this avoids serialising N batch round-trips.
+    const batches = chunkCronJobs(cronJobs);
+    const batchResults = await Promise.all(
+      batches.map(async (jobBatch) => {
+        const batchJobSet = new Set(jobBatch);
+        const batchRows = await db
+          .prepare(buildCronHistoryQuery(jobBatch.length))
+          .bind(...jobBatch)
+          .all<CronHistoryRow>();
+        return (batchRows.results ?? []).filter((row) => batchJobSet.has(row.job));
+      }),
+    );
+    const rows = batchResults.flat();
+    rows.sort((a, b) => b.started_at - a.started_at);
+    return { rows, failed: false };
   } catch (err) {
-    cronHistoryQueryFailed = true;
     logWorkerEvent({
       scope: "status",
       level: "error",
@@ -190,16 +209,14 @@ export async function loadCronHealth(
       message: "Failed to query cron history",
       error: err,
     });
+    return { rows: [], failed: true };
   }
+}
 
-  let cronProgressByJob = new Map<string, CronInFlight>();
-  let cronProgressQueryFailed = false;
-  let cronLeaseByJob: Map<string, { leaseOwner: string; leaseUntil: number }> | null = null;
-  let cronLeaseRows: Array<{ job: string; lease_owner: string; lease_until: number }> = [];
-  let cronLeaseQueryFailed = false;
-  const staleArtifactsByJob = new Map<string, CronStaleArtifact[]>();
-  const latestEventByJob = new Map<string, CronEvent>();
-
+async function fetchCronLeaseRows(
+  db: D1Database,
+  cronJobInClause: { sql: string; binds: unknown[] },
+): Promise<{ rows: CronLeaseRow[]; failed: boolean }> {
   try {
     const leaseRows = await db
       .prepare(
@@ -208,21 +225,9 @@ export async function loadCronHealth(
            WHERE job IN (${cronJobInClause.sql})`,
       )
       .bind(...cronJobInClause.binds)
-      .all<{
-        job: string;
-        lease_owner: string;
-        lease_until: number;
-      }>();
-
-    cronLeaseRows = leaseRows.results ?? [];
-    cronLeaseByJob = new Map(
-      cronLeaseRows.map((row) => [row.job, {
-        leaseOwner: row.lease_owner,
-        leaseUntil: row.lease_until,
-      }]),
-    );
+      .all<CronLeaseRow>();
+    return { rows: leaseRows.results ?? [], failed: false };
   } catch (err) {
-    cronLeaseQueryFailed = true;
     logWorkerEvent({
       scope: "status",
       level: "warn",
@@ -232,8 +237,14 @@ export async function loadCronHealth(
       message: "Cron leases unavailable",
       error: err,
     });
+    return { rows: [], failed: true };
   }
+}
 
+async function fetchCronProgressRows(
+  db: D1Database,
+  cronJobInClause: { sql: string; binds: unknown[] },
+): Promise<{ rows: CronProgressRow[]; failed: boolean }> {
   try {
     const progressRows = await db
       .prepare(
@@ -242,21 +253,95 @@ export async function loadCronHealth(
            WHERE job IN (${cronJobInClause.sql})`,
       )
       .bind(...cronJobInClause.binds)
-      .all<{
-        job: string;
-        started_at: number;
-        updated_at: number;
-        stage: string | null;
-        items_done: number | null;
-        items_total: number | null;
-        message: string | null;
-        lease_owner: string | null;
-        metadata: string | null;
-        slot_started_at: number | null;
-      }>();
+      .all<CronProgressRow>();
+    return { rows: progressRows.results ?? [], failed: false };
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "cron_run_progress_unavailable",
+      route: "status",
+      source: "cron_run_progress",
+      message: "Cron run progress unavailable",
+      error: err,
+    });
+    return { rows: [], failed: true };
+  }
+}
 
+async function fetchCronSlotEventRows(
+  db: D1Database,
+  eventKeyInClause: { sql: string; binds: unknown[] },
+): Promise<{ rows: CronSlotEventRow[]; failed: boolean }> {
+  try {
+    const eventRows = await db
+      .prepare(
+        `SELECT key, value, updated_at
+           FROM cache
+           WHERE key IN (${eventKeyInClause.sql})`,
+      )
+      .bind(...eventKeyInClause.binds)
+      .all<CronSlotEventRow>();
+    return { rows: eventRows.results ?? [], failed: false };
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "cron_slot_events_unavailable",
+      route: "status",
+      source: "cache",
+      message: "Cron slot event markers unavailable",
+      error: err,
+    });
+    return { rows: [], failed: true };
+  }
+}
+
+export async function loadCronHealth(
+  db: D1Database,
+  now: number,
+): Promise<CronHealthSnapshot> {
+  const cronJobs = Object.keys(CRON_INTERVALS);
+  const cronJobInClause = buildInClause(cronJobs);
+  const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
+  const eventKeys = scheduleKeys.map(staleSlotEventCacheKey);
+  const eventKeyInClause = buildInClause(eventKeys);
+  const scheduleKeyByEventKey = new Map(eventKeys.map((key, index) => [key, scheduleKeys[index]]));
+
+  // Fire the four independent query groups concurrently. The lease→progress
+  // dependency is purely an in-memory post-fetch step, so only the raw fetches
+  // run in parallel; the dependent processing below preserves the original
+  // ordering. This collapses ~13 sequential D1 awaits into one parallel wave.
+  const [historyResult, leaseResult, progressResult, slotEventResult] = await Promise.all([
+    fetchCronHistoryRows(db, cronJobs),
+    fetchCronLeaseRows(db, cronJobInClause),
+    fetchCronProgressRows(db, cronJobInClause),
+    fetchCronSlotEventRows(db, eventKeyInClause),
+  ]);
+
+  const cronRows: { results?: CronHistoryRow[] } = { results: historyResult.rows };
+  const cronHistoryQueryFailed = historyResult.failed;
+
+  const cronLeaseQueryFailed = leaseResult.failed;
+  const cronLeaseRows = leaseResult.rows;
+  const cronLeaseByJob: Map<string, { leaseOwner: string; leaseUntil: number }> | null =
+    cronLeaseQueryFailed
+      ? null
+      : new Map(
+          cronLeaseRows.map((row) => [row.job, {
+            leaseOwner: row.lease_owner,
+            leaseUntil: row.lease_until,
+          }]),
+        );
+
+  let cronProgressByJob = new Map<string, CronInFlight>();
+  const cronProgressQueryFailed = progressResult.failed;
+  const staleArtifactsByJob = new Map<string, CronStaleArtifact[]>();
+  const latestEventByJob = new Map<string, CronEvent>();
+
+  if (!cronProgressQueryFailed) {
     const progressArtifacts: CronStaleArtifact[] = [];
-    const filteredProgressRows = (progressRows.results ?? []).filter((row) => {
+    const filteredProgressRows = progressResult.rows.filter((row) => {
       if (cronLeaseQueryFailed || cronLeaseByJob == null || !row.lease_owner) {
         return true;
       }
@@ -302,17 +387,6 @@ export async function loadCronHealth(
         } satisfies CronInFlight];
       }),
     );
-  } catch (err) {
-    cronProgressQueryFailed = true;
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "cron_run_progress_unavailable",
-      route: "status",
-      source: "cron_run_progress",
-      message: "Cron run progress unavailable",
-      error: err,
-    });
   }
 
   if (!cronLeaseQueryFailed) {
@@ -329,46 +403,17 @@ export async function loadCronHealth(
     }
   }
 
-  try {
-    const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
-    const eventKeys = scheduleKeys.map(staleSlotEventCacheKey);
-    const eventKeyInClause = buildInClause(eventKeys);
-    const scheduleKeyByEventKey = new Map(eventKeys.map((key, index) => [key, scheduleKeys[index]]));
-    const eventRows = await db
-      .prepare(
-        `SELECT key, value, updated_at
-           FROM cache
-           WHERE key IN (${eventKeyInClause.sql})`,
-      )
-      .bind(...eventKeyInClause.binds)
-      .all<{
-        key: string;
-        value: string | null;
-        updated_at: number;
-      }>();
-
-    for (const row of eventRows.results ?? []) {
-      const scheduleKey = scheduleKeyByEventKey.get(row.key);
-      if (!scheduleKey) continue;
-      const event = parseCronEvent(row.value);
-      if (!event) continue;
-      for (const job of flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS[scheduleKey])) {
-        const previous = latestEventByJob.get(job);
-        if (!previous || previous.recordedAt < event.recordedAt) {
-          latestEventByJob.set(job, event);
-        }
+  for (const row of slotEventResult.rows) {
+    const scheduleKey = scheduleKeyByEventKey.get(row.key);
+    if (!scheduleKey) continue;
+    const event = parseCronEvent(row.value);
+    if (!event) continue;
+    for (const job of flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS[scheduleKey])) {
+      const previous = latestEventByJob.get(job);
+      if (!previous || previous.recordedAt < event.recordedAt) {
+        latestEventByJob.set(job, event);
       }
     }
-  } catch (err) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "cron_slot_events_unavailable",
-      route: "status",
-      source: "cache",
-      message: "Cron slot event markers unavailable",
-      error: err,
-    });
   }
 
   const cronByJob = new Map<string, CronRun[]>();
