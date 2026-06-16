@@ -14,6 +14,17 @@ export const PRESET_DAYS = [7, 30, 90, 365] as const;
 const MAX_OVERLAY_SOURCES = 4;
 const SOURCE_KEY_SUFFIX_LENGTH = 12;
 
+/* Spike-detection parameters (mirrors the `yield-spike` warning signal in docs/yield-intelligence.md):
+ *   SPIKE_WINDOW_MS     — 30-day trailing window chosen to smooth seasonal variation while
+ *                         staying sensitive to multi-week anomalies.
+ *   SPIKE_MIN_APY       — absolute floor of 2 % APY; below this the ratio is noisy and a
+ *                         "2×" jump carries no actionable information.
+ *   SPIKE_RATIO_THRESHOLD — a point is flagged when its APY is ≥2× the trailing mean,
+ *                           matching the same 2× threshold used by the server-side
+ *                           `detectWarningSignals` function.
+ * When fewer than 3 trailing data-points fall inside the window (e.g. at the start of the
+ * series), the algorithm falls back to the series-wide positive-APY mean so that early
+ * outliers are still catchable. */
 const SPIKE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const SPIKE_MIN_APY = 2;
 const SPIKE_RATIO_THRESHOLD = 2.0;
