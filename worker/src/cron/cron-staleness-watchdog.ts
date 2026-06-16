@@ -169,17 +169,13 @@ function readMarker(value: string | null | undefined): AlertMarker | null {
   );
 }
 
-function buildObservation(
+function buildFullObservation(
   laneKey: CacheFreshnessLaneKey,
   lane: CacheFreshnessLaneConfig,
   cache: Pick<CacheStatus, "ageSeconds"> | undefined,
-): CronStalenessObservation | null {
+): CronStalenessObservation {
   const thresholdSec = lane.producerIntervalSec * 2;
   const ageSeconds = cache?.ageSeconds ?? null;
-  if (ageSeconds != null && ageSeconds <= thresholdSec) {
-    return null;
-  }
-
   return {
     laneKey,
     cacheKey: lane.cacheKey,
@@ -191,6 +187,19 @@ function buildObservation(
     availabilityThresholdSec: lane.availabilityMaxAgeSec,
     availabilityImpacting: ageSeconds == null || ageSeconds > lane.availabilityMaxAgeSec,
   };
+}
+
+function isStale(observation: CronStalenessObservation): boolean {
+  return observation.ageSeconds == null || observation.ageSeconds > observation.thresholdSec;
+}
+
+function buildObservation(
+  laneKey: CacheFreshnessLaneKey,
+  lane: CacheFreshnessLaneConfig,
+  cache: Pick<CacheStatus, "ageSeconds"> | undefined,
+): CronStalenessObservation | null {
+  const observation = buildFullObservation(laneKey, lane, cache);
+  return isStale(observation) ? observation : null;
 }
 
 export function evaluateCronStaleness(
@@ -284,23 +293,10 @@ export async function runCronStalenessWatchdog(
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const status = await buildCacheStatuses(db, nowSec);
-  const stale = evaluateCronStaleness(status.caches);
-  const watchedObservations = WATCHED_LANE_KEYS.map((laneKey) => {
-    const lane = CACHE_FRESHNESS_LANES[laneKey];
-    return {
-      laneKey,
-      cacheKey: lane.cacheKey,
-      producerJob: lane.producerJob,
-      ageSeconds: status.caches[lane.cacheKey]?.ageSeconds ?? null,
-      thresholdSec: lane.producerIntervalSec * 2,
-      producerThresholdSec: lane.producerIntervalSec * 2,
-      endpointThresholdSec: lane.endpointMaxAgeSec,
-      availabilityThresholdSec: lane.availabilityMaxAgeSec,
-      availabilityImpacting:
-        (status.caches[lane.cacheKey]?.ageSeconds ?? null) == null ||
-        (status.caches[lane.cacheKey]?.ageSeconds ?? Infinity) > lane.availabilityMaxAgeSec,
-    } satisfies CronStalenessObservation;
-  });
+  const watchedObservations = WATCHED_LANE_KEYS.map((laneKey) =>
+    buildFullObservation(laneKey, CACHE_FRESHNESS_LANES[laneKey], status.caches[CACHE_FRESHNESS_LANES[laneKey].cacheKey]),
+  );
+  const stale = watchedObservations.filter(isStale);
   const markers = await loadAlertMarkers(db, watchedObservations);
   const staleCacheKeys = new Set(stale.map((observation) => observation.cacheKey));
   const dueForAlert = stale.filter((observation) => {
