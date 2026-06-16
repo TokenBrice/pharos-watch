@@ -23,6 +23,19 @@ export interface AggregatedProtocolPrice {
   representativeSide: "base" | "quote" | null;
 }
 
+/**
+ * Weight-aware median of a discrete price distribution. Points are sorted
+ * ascending by price and the first point whose cumulative weight reaches or
+ * exceeds half the total weight is returned.
+ *
+ * Discrete lower-median semantics: the boundary uses `>= halfWeight`, so at an
+ * exact 50% crossing the *lower* of the two straddling prices is returned, not
+ * an interpolated midpoint. With exactly two equal-weight observations this
+ * always yields the lower price (a slight, systematic downward bias on that
+ * case). This is intentional — no interpolation across discrete protocol/TVL
+ * observations — so callers (e.g. the GeckoTerminal price probe) should treat
+ * the result as a representative observed price, not a synthesised average.
+ */
 export function computeWeightedMedianPrice(points: WeightedPricePoint[]): number | null {
   const validPoints = points
     .filter((point) => (
