@@ -24,12 +24,7 @@ export async function parseAdminMutationBody(request: Request): Promise<{ reason
   return { reason: reason ? reason.slice(0, 500) : null };
 }
 
-export async function selectRequestWithKeyStateByRequestId(
-  db: ApiKeyRequestDb,
-  requestId: string,
-): Promise<ApiKeyRequestAdminRow | null> {
-  return db.prepare(
-    `SELECT
+const ADMIN_REQUEST_WITH_KEY_STATE_SELECT = `SELECT
        r.*,
        c.status AS claim_status,
        k.owner_email AS linked_key_owner_email,
@@ -39,7 +34,14 @@ export async function selectRequestWithKeyStateByRequestId(
        k.expires_at AS linked_key_expires_at
      FROM api_key_requests r
      LEFT JOIN api_key_self_serve_email_claims c ON c.request_id = r.request_id
-     LEFT JOIN api_keys k ON k.id = r.api_key_id
+     LEFT JOIN api_keys k ON k.id = r.api_key_id`;
+
+export async function selectRequestWithKeyStateByRequestId(
+  db: ApiKeyRequestDb,
+  requestId: string,
+): Promise<ApiKeyRequestAdminRow | null> {
+  return db.prepare(
+    `${ADMIN_REQUEST_WITH_KEY_STATE_SELECT}
      WHERE r.request_id = ?`,
   )
     .bind(requestId)
@@ -53,17 +55,7 @@ export async function listAdminRequests(
 ): Promise<ApiKeyRequestAdminRow[]> {
   const where = status ? "WHERE r.status = ?" : "";
   const statement = db.prepare(
-    `SELECT
-       r.*,
-       c.status AS claim_status,
-       k.owner_email AS linked_key_owner_email,
-       k.key_prefix AS linked_key_prefix,
-       k.tier AS linked_key_tier,
-       k.is_active AS linked_key_active,
-       k.expires_at AS linked_key_expires_at
-     FROM api_key_requests r
-     LEFT JOIN api_key_self_serve_email_claims c ON c.request_id = r.request_id
-     LEFT JOIN api_keys k ON k.id = r.api_key_id
+    `${ADMIN_REQUEST_WITH_KEY_STATE_SELECT}
      ${where}
      ORDER BY r.created_at DESC, r.id DESC
      LIMIT ?`,
