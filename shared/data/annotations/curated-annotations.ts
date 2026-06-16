@@ -46,6 +46,14 @@ import type { ChartAnnotation } from "@shared/types/chart-annotation";
  *   9. **`href` should resolve to a primary source** (issuer post-mortem,
  *      regulator filing, methodology changelog) — not secondary press.
  */
+// Shared macro-regulatory event referenced by multiple BRL stablecoins.
+const BCB_RES_519: ChartAnnotation = {
+  ts: Date.UTC(2025, 10, 1),
+  kind: "regulatory",
+  label: "BCB Res. 519/520/521 — BRL stablecoins enter FX/VASP regime",
+  severity: "med",
+};
+
 export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
   "usdc-circle": [
     {
@@ -886,20 +894,10 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
     {
       // 2025-11 — Brazilian central bank publishes Resolutions 519/520/521
       // bringing BRL stablecoins under FX/VASP regime.
-      ts: Date.UTC(2025, 10, 1),
-      kind: "regulatory",
-      label: "BCB Res. 519/520/521 — BRL stablecoins enter FX/VASP regime",
-      severity: "med",
+      ...BCB_RES_519,
     },
   ],
-  "brla-brla-digital": [
-    {
-      ts: Date.UTC(2025, 10, 1),
-      kind: "regulatory",
-      label: "BCB Res. 519/520/521 — BRL stablecoins enter FX/VASP regime",
-      severity: "med",
-    },
-  ],
+  "brla-brla-digital": [BCB_RES_519],
   "btcusd-btcfi": [
     {
       ts: Date.UTC(2024, 3, 17),
