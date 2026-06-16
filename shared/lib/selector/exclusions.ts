@@ -98,8 +98,11 @@ export function tradingPegScoreFloor(tol: SelectorDepegTolerance): number {
   }
 }
 
-const TREASURY_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D", "C-", "C"]);
-const YIELD_TRADING_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D"]);
+// Grade "F" is rejected universally by applyUniversalExclusions (terminal
+// grade), which always runs before the profile checks via evaluateExclusions,
+// so it is omitted from these per-profile sets to avoid an unreachable guard. [audit Q-218]
+const TREASURY_GRADE_REJECT: ReadonlySet<string> = new Set(["D", "C-", "C"]);
+const YIELD_TRADING_GRADE_REJECT: ReadonlySet<string> = new Set(["D"]);
 
 // ---------------------------------------------------------------------------
 // Rule evaluation
