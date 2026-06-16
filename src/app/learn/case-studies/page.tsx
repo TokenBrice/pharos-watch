@@ -5,30 +5,32 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { CASE_STUDY_LIST } from "./content";
+import { content as terraUst2022 } from "./content/terra-ust-2022";
+import { content as ironTitan2021 } from "./content/iron-titan-2021";
+import { content as feiProtocol } from "./content/fei-protocol";
 import { CaseStudyListJsonLd } from "./case-study-json-ld";
 import { CaseStudyList, type CaseStudyListItem } from "./case-study-list";
 import { CaseStudyPageShell } from "./case-study-page-shell";
 
-const PRIORITY_CASE_STUDY_SLUGS = [
-  "terra-ust-2022",
-  "iron-titan-2021",
-  "fei-protocol",
-] as const;
-
-const PRIORITY_CASE_STUDY_SUMMARIES: Record<(typeof PRIORITY_CASE_STUDY_SLUGS)[number], string> = {
-  "terra-ust-2022":
-    "Terra UST and LUNA show how reflexive redemption loops, subsidized demand, and exit liquidity can collapse together.",
-  "iron-titan-2021":
-    "IRON and TITAN are the compact death-spiral case for fractional collateral, confidence breaks, and reflexive governance-token supply.",
-  "fei-protocol":
-    "Fei Protocol is the incentive-design case study: direct incentives, protocol-controlled value, and what breaks when peg defense fights users.",
-};
-
-const priorityCaseStudies = PRIORITY_CASE_STUDY_SLUGS.map((slug) => {
-  const study = CASE_STUDY_LIST.find((candidate) => candidate.slug === slug);
-  if (!study) throw new Error(`Missing priority case study: ${slug}`);
-  return study;
-});
+// Reference the priority content modules directly so a renamed/removed module is
+// a compile-time import error rather than a runtime throw via slug lookup.
+const priorityCaseStudies = [
+  {
+    study: terraUst2022,
+    summary:
+      "Terra UST and LUNA show how reflexive redemption loops, subsidized demand, and exit liquidity can collapse together.",
+  },
+  {
+    study: ironTitan2021,
+    summary:
+      "IRON and TITAN are the compact death-spiral case for fractional collateral, confidence breaks, and reflexive governance-token supply.",
+  },
+  {
+    study: feiProtocol,
+    summary:
+      "Fei Protocol is the incentive-design case study: direct incentives, protocol-controlled value, and what breaks when peg defense fights users.",
+  },
+];
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Depeg Case Studies",
@@ -73,7 +75,7 @@ export default function CaseStudiesHub() {
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {priorityCaseStudies.map((study) => (
+          {priorityCaseStudies.map(({ study, summary }) => (
             <Link
               key={study.slug}
               href={`/learn/case-studies/${study.slug}/`}
@@ -83,7 +85,7 @@ export default function CaseStudiesHub() {
                 {study.title}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {PRIORITY_CASE_STUDY_SUMMARIES[study.slug as (typeof PRIORITY_CASE_STUDY_SLUGS)[number]]}
+                {summary}
               </p>
               <span className="mt-auto inline-flex items-center gap-1 pt-3 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">
                 Read the case study
