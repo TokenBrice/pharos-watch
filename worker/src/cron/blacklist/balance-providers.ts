@@ -1,5 +1,5 @@
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
-import { bigIntToDecimal } from "../../lib/bigint";
+import { decimalNumberFromBigInt } from "../../lib/bigint";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import {
   type SubrequestBudget,
@@ -65,7 +65,7 @@ async function fetchEvmBalanceAtTag(
       return null;
     }
 
-    return bigIntToDecimal(BigInt(result), decimals);
+    return decimalNumberFromBigInt(BigInt(result), decimals);
   } catch (e) {
     rethrowIfAborted(e, signal);
     console.warn("[sync-blacklist] fetchEvmBalanceAtTag failed:", e);
@@ -105,7 +105,7 @@ async function fetchBalanceViaDrpc(
       },
     );
     if (!result) return null;
-    return bigIntToDecimal(BigInt(result), decimals);
+    return decimalNumberFromBigInt(BigInt(result), decimals);
   } catch (e) {
     rethrowIfAborted(e, signal);
     console.warn("[sync-blacklist] fetchBalanceViaDrpc failed:", e);
@@ -147,7 +147,7 @@ async function fetchBalanceViaChainRpc(
         },
       );
       if (!result) continue;
-      return bigIntToDecimal(BigInt(result), decimals);
+      return decimalNumberFromBigInt(BigInt(result), decimals);
     } catch (e) {
       rethrowIfAborted(e, signal);
       console.warn("[sync-blacklist] fetchBalanceViaChainRpc failed:", e);
@@ -315,7 +315,7 @@ async function fetchTronTokenCurrentBalanceViaJsonRpc(
     });
 
     if (!json?.result || !json.result.startsWith("0x")) return null;
-    return bigIntToDecimal(BigInt(json.result), config.decimals);
+    return decimalNumberFromBigInt(BigInt(json.result), config.decimals);
   } catch (error) {
     rethrowIfAborted(error, signal);
     console.warn("[sync-blacklist] fetchTronTokenCurrentBalanceViaJsonRpc failed:", error);
@@ -368,7 +368,7 @@ export async function fetchTronTokenCurrentBalance(
       .find((value): value is string => typeof value === "string" && value.length > 0);
     if (!rawAmount) return null;
 
-    return bigIntToDecimal(BigInt(rawAmount), config.decimals);
+    return decimalNumberFromBigInt(BigInt(rawAmount), config.decimals);
   } catch (error) {
     rethrowIfAborted(error, signal);
     console.warn("[sync-blacklist] fetchTronTokenCurrentBalance failed:", error);

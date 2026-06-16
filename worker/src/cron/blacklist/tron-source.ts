@@ -6,7 +6,7 @@ import {
   type RateLimitedFetch,
 } from "../../lib/evm-logs";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { bigIntToDecimal } from "../../lib/bigint";
+import { decimalNumberFromBigInt } from "../../lib/bigint";
 import { throwIfAborted } from "../../lib/abort";
 import { buildBlacklistRow, type BlacklistRow } from "./shared";
 import {
@@ -44,7 +44,7 @@ export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult
   const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
   const amount =
     eventDef.hasAmount && rawAmountStr
-      ? bigIntToDecimal(BigInt(rawAmountStr), config.decimals)
+      ? decimalNumberFromBigInt(BigInt(rawAmountStr), config.decimals)
       : null;
   const timestamp = Math.floor(evt.block_timestamp / 1000);
 

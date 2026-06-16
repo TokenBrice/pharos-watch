@@ -1,5 +1,5 @@
 import { ETHERSCAN_V2_BASE } from "./constants";
-import { bigIntToDecimal } from "./bigint";
+import { decimalNumberFromBigInt } from "./bigint";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 
@@ -59,14 +59,14 @@ export function decodeAddressWord(topicOrData: string | null | undefined): strin
 
 export function decodeUint256(hexData: string, decimals: number): number {
   const cleaned = hexData.startsWith("0x") ? hexData.slice(2) : hexData;
-  return bigIntToDecimal(BigInt("0x" + cleaned), decimals);
+  return decimalNumberFromBigInt(BigInt("0x" + cleaned), decimals);
 }
 
 export function decodeUint256Word(hexData: string | null | undefined, decimals: number): number | null {
   if (typeof hexData !== "string") return null;
   const cleaned = hexData.startsWith("0x") ? hexData.slice(2) : hexData;
   if (!/^[0-9a-fA-F]{64}$/.test(cleaned)) return null;
-  return bigIntToDecimal(BigInt("0x" + cleaned), decimals);
+  return decimalNumberFromBigInt(BigInt("0x" + cleaned), decimals);
 }
 
 /**
@@ -79,7 +79,7 @@ export function decodeUint256AtSlot(hexData: string, slotIndex: number, decimals
   const start = slotIndex * 64;
   const slot = cleaned.slice(start, start + 64);
   if (slot.length < 64) return 0;
-  return bigIntToDecimal(BigInt("0x" + slot), decimals);
+  return decimalNumberFromBigInt(BigInt("0x" + slot), decimals);
 }
 
 export function decodeUint256AtSlotOrNull(hexData: string, slotIndex: number, decimals: number): number | null {

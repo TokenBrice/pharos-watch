@@ -135,7 +135,7 @@ vi.mock("../../lib/chain-registry", () => ({
 
 // Stub bigint helper
 vi.mock("../../lib/bigint", () => ({
-  bigIntToDecimal: vi.fn((value: bigint, decimals: number) => Number(value) / Math.pow(10, decimals)),
+  decimalNumberFromBigInt: vi.fn((value: bigint, decimals: number) => Number(value) / Math.pow(10, decimals)),
 }));
 
 // Stub db helpers
