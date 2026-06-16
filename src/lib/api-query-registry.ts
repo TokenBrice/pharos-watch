@@ -1,37 +1,9 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import type {
-  BluechipRatingsMap,
-  DailyDigestResponse,
-  DdrResponse,
-  DexLiquidityHistoryPoint,
-  DexLiquidityMap,
-  DigestArchiveResponse,
-  DigestSnapshotResponse,
-  HealthResponse,
-  BlacklistResponse,
-  BlacklistSummaryResponse,
-  MintBurnEventsResponse,
-  MintBurnFlowsResponse,
-  MintBurnPerCoinResponse,
-  PegSummaryResponse,
-  DdrrResponse,
-  ReportCardsResponse,
-  RedemptionBackstopsResponse,
-  SafetyScoreHistoryResponse,
-  StabilityIndexResponse,
-  StablecoinListResponse,
-  StablecoinChartPoint,
-  StressSignalsAllResponse,
-  StressSignalDetailResponse,
-  SupplyHistoryPoint,
-  UsdsStatusResponse,
-  YieldHistoryResponse,
-  YieldRankingsResponse,
-} from "@shared/types";
+import type { BlacklistResponse } from "@shared/types";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
-import { TelegramPulseSchema, type TelegramPulse } from "@shared/types/status";
+import { TelegramPulseSchema } from "@shared/types/status";
 import {
   DailyDigestResponseSchema,
   DigestArchiveResponseSchema,
@@ -229,7 +201,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       producerIntervalMs: CRON_MINT_BURN,
       schema: MintBurnEventsResponseSchema,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
-    });
+    };
   },
   pegSummary: {
     queryKey: ["peg-summary"],
