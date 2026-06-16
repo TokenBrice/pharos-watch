@@ -60,6 +60,7 @@ interface GhoParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   gsmModules: GhoTrackedModuleConfig[];
+  ghoTokenAddress?: string;
 }
 
 type OnchainGhoInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
@@ -172,16 +173,18 @@ function readParams(config: LiveReservesConfig): GhoParams {
       depType: trackedModule.depType,
       risk: trackedModule.risk,
     })),
+    ghoTokenAddress: params.ghoTokenAddress,
   };
 }
 
 async function loadFacilitators(
   callBase: GhoCallBase,
+  ghoToken: string,
 ): Promise<{ facilitators: GhoFacilitatorSnapshot[]; warnings: LiveReserveWarning[] }> {
   const warnings: LiveReserveWarning[] = [];
   const facilitatorListRaw = await fetchOnchainRawCall({
     ...callBase,
-    contract: GHO_TOKEN,
+    contract: ghoToken,
     data: GET_FACILITATORS_LIST_SELECTOR,
   });
   if (!facilitatorListRaw) {
@@ -216,7 +219,7 @@ async function loadFacilitators(
     async (address) => {
       const facilitatorRaw = await fetchOnchainRawCall({
         ...callBase,
-        contract: GHO_TOKEN,
+        contract: ghoToken,
         data: GET_FACILITATOR_SELECTOR + encodeAddress(address),
       });
       if (!facilitatorRaw) {
@@ -575,6 +578,7 @@ export async function fetchGhoReserves(
   }
 
   const params = readParams(config);
+  const ghoToken = params.ghoTokenAddress ?? GHO_TOKEN;
   const callBase = {
     signal,
     ctx,
@@ -586,7 +590,7 @@ export async function fetchGhoReserves(
 
   const totalSupply = await fetchOnchainUint256({
     ...callBase,
-    contract: GHO_TOKEN,
+    contract: ghoToken,
     data: TOTAL_SUPPLY_SELECTOR,
   });
   if (totalSupply == null) {
@@ -594,7 +598,7 @@ export async function fetchGhoReserves(
   }
 
   const [{ facilitators, warnings: facilitatorWarnings }, trackedResults] = await Promise.all([
-    loadFacilitators(callBase),
+    loadFacilitators(callBase, ghoToken),
     Promise.all(params.gsmModules.map((trackedModule) => loadTrackedModule(trackedModule, callBase))),
   ]);
 

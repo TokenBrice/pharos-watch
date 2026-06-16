@@ -483,6 +483,7 @@ const ghoParamsSchema = z
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
     gsmModules: z.array(ghoGsmModuleSchema).min(1),
+    ghoTokenAddress: z.string().optional(),
   })
   .strict();
 
