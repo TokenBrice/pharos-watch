@@ -48,6 +48,35 @@ const USD_COMPACT = new Intl.NumberFormat("en-US", {
 
 /* ------------------------------------------------------------------ KPI row */
 
+interface KpiLabel {
+  primary: string;
+  secondary: string;
+}
+
+function buildThisMonthLabel(
+  summary: DonationSummary,
+  coveragePctLabel: string,
+  monthlyTargetUsd: number,
+): KpiLabel {
+  if (summary.lifetimeCommunityUsd === 0) {
+    return { primary: "Tracking begins", secondary: "first community donations will appear here" };
+  }
+  return {
+    primary: coveragePctLabel,
+    secondary: `${USD_COMPACT.format(summary.currentMonthCommunityUsd)} of ${USD_COMPACT.format(monthlyTargetUsd)} covered`,
+  };
+}
+
+function buildCommunityLabel(summary: DonationSummary): KpiLabel {
+  if (summary.lifetimeCommunityDonorCount === 0) {
+    return { primary: "Be the first", secondary: "community support starts here" };
+  }
+  return {
+    primary: USD_COMPACT.format(summary.lifetimeCommunityUsd),
+    secondary: `from ${summary.lifetimeCommunityDonorCount} supporters since launch`,
+  };
+}
+
 export interface FundingKpiRowProps {
   summary: DonationSummary;
   monthlyTargetUsd: number;
@@ -65,21 +94,8 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
       : `${coveragePctLabel} covered this month`;
   const remainingUsd = Math.max(0, monthlyTargetUsd - summary.currentMonthCommunityUsd);
 
-  const thisMonth =
-    summary.lifetimeCommunityUsd === 0
-      ? { primary: "Tracking begins", secondary: "first community donations will appear here" }
-      : {
-          primary: coveragePctLabel,
-          secondary: `${USD_COMPACT.format(summary.currentMonthCommunityUsd)} of ${USD_COMPACT.format(monthlyTargetUsd)} covered`,
-        };
-
-  const community =
-    summary.lifetimeCommunityDonorCount === 0
-      ? { primary: "Be the first", secondary: "community support starts here" }
-      : {
-          primary: USD_COMPACT.format(summary.lifetimeCommunityUsd),
-          secondary: `from ${summary.lifetimeCommunityDonorCount} supporters since launch`,
-        };
+  const thisMonth = buildThisMonthLabel(summary, coveragePctLabel, monthlyTargetUsd);
+  const community = buildCommunityLabel(summary);
 
   return (
     <Card className="rounded-lg">
