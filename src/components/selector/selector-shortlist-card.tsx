@@ -454,8 +454,7 @@ function ScoreBreakdown({ components }: { components: readonly SelectorComponent
               </span>
               {component.rawValue == null || component.redistributed ? (
                 <span className="rounded-full border border-border/50 bg-muted/15 px-1.5 text-muted-foreground">
-                  {component.rawValue == null ? "Missing signal" : "Redistributed"}
-                  {component.redistributed && component.rawValue == null ? "; redistributed" : ""}
+                  {component.redistributed ? "Redistributed" : "Missing signal"}
                 </span>
               ) : null}
             </dd>
