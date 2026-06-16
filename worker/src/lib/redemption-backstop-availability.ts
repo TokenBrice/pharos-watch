@@ -23,12 +23,9 @@ export interface RedemptionRouteAvailability {
   outputImpairedDependencyId?: string;
 }
 
-function formatUtcDate(seconds: number): string {
+/** Returns the UTC date string (YYYY-MM-DD) for the given Unix timestamp in seconds. */
+export function formatUtcDate(seconds: number): string {
   return new Date(seconds * 1000).toISOString().slice(0, 10);
-}
-
-export function formatRouteAvailabilityReviewedAt(nowSec = Math.floor(Date.now() / 1000)): string {
-  return formatUtcDate(nowSec);
 }
 
 function isSevereDownsideDepeg(row: ActiveDepegAvailabilityRow): boolean {
