@@ -141,10 +141,6 @@ export function computeChainEnvironmentAssessment(
   };
 }
 
-/** Numeric convenience wrapper for the chain-environment assessment. */
-export function computeChainEnvironmentScore(tier: ChainResilienceTier, chainId?: string): number {
-  return computeChainEnvironmentAssessment(tier, chainId).score;
-}
 
 // --- Composite ---
 

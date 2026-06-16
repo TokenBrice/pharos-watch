@@ -4,7 +4,7 @@ import {
   computeBackingDiversityScore,
   computePegStabilityScore,
   computeQualityScore,
-  computeChainEnvironmentScore,
+  computeChainEnvironmentAssessment,
   computeHealthScore,
   getHealthBand,
   HEALTH_METHODOLOGY_VERSION,
@@ -143,17 +143,17 @@ describe("computeQualityScore", () => {
   });
 });
 
-describe("computeChainEnvironmentScore", () => {
+describe("computeChainEnvironmentAssessment", () => {
   it("returns 100 for tier 1", () => {
-    expect(computeChainEnvironmentScore(1)).toBe(100);
+    expect(computeChainEnvironmentAssessment(1).score).toBe(100);
   });
 
   it("returns 60 for tier 2", () => {
-    expect(computeChainEnvironmentScore(2)).toBe(60);
+    expect(computeChainEnvironmentAssessment(2).score).toBe(60);
   });
 
   it("returns 20 for tier 3", () => {
-    expect(computeChainEnvironmentScore(3)).toBe(20);
+    expect(computeChainEnvironmentAssessment(3).score).toBe(20);
   });
 
   it("uses L2BEAT chain-risk scoring for matched chains", () => {
@@ -165,12 +165,12 @@ describe("computeChainEnvironmentScore", () => {
       riskScore: 84,
       score: 82,
     });
-    expect(computeChainEnvironmentScore(2, "base")).toBe(82);
+    expect(computeChainEnvironmentAssessment(2, "base").score).toBe(82);
   });
 
   it("falls back to resilience tier scoring for unmatched chains", () => {
     expect(getL2BeatChainEnvironmentAssessment("stable")).toBeNull();
-    expect(computeChainEnvironmentScore(3, "stable")).toBe(20);
+    expect(computeChainEnvironmentAssessment(3, "stable").score).toBe(20);
   });
 
   it("resolves explicit Pharos to L2BEAT aliases", () => {
