@@ -2,6 +2,7 @@ import { getChainRpc, type ChainRpcConfig } from "../lib/chain-registry";
 import { fetchEvmUint256AtBlock } from "../lib/evm-rpc";
 import { encodeUint256 } from "../lib/evm-selectors";
 import { buildOnChainSourceKey } from "../lib/yield-utils";
+import { resolveRpcUrls } from "./yield-sync/sources-helpers";
 import { QUARANTINED_DETERMINISTIC_PROBE_CONFIGS } from "./yield-config-rate-sources";
 
 const QUARANTINE_PROBE_RATE_ENVELOPE_MAX = 3;
@@ -36,11 +37,7 @@ function incrementCount(counts: Record<string, number>, key: string): void {
 }
 
 function buildProbeRpcUrls(rpc?: ChainRpcConfig): string[] {
-  if (!rpc) return [];
-  const urls = [rpc.fallbackRpcUrl, rpc.rpcUrl].filter(
-    (url): url is string => typeof url === "string" && url.length > 0,
-  );
-  return [...new Set(urls)];
+  return resolveRpcUrls(rpc, { order: "fallback-first" });
 }
 
 function isUsableQuarantineProbeRate(rate: number): boolean {

@@ -1,5 +1,6 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   addFreshnessHeaders,
   jsonResponse,
@@ -64,7 +65,7 @@ export const handleNonUsdShare = withErrorHandler(
     const days = parseClampedIntegerParam(url.searchParams.get("days"), DEFAULT_DAYS, MIN_DAYS, MAX_DAYS, {
       zeroAsDefault: true,
     });
-    const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
+    const cutoff = Math.floor(Date.now() / 1000) - days * DAY_SECONDS;
 
     const completedSnapshot = await getCompletedSupplySnapshot(db);
     const latestSnapshotFilter = completedSnapshot == null ? "" : " AND snapshot_date <= ?";
@@ -74,8 +75,8 @@ export const handleNonUsdShare = withErrorHandler(
 
     // Downsample: daily for last 90d, weekly for last 2y, monthly beyond
     const nowSec = Math.floor(Date.now() / 1000);
-    const ninetyDaysAgo = nowSec - 90 * 86400;
-    const twoYearsAgo = nowSec - 2 * 365 * 86400;
+    const ninetyDaysAgo = nowSec - 90 * DAY_SECONDS;
+    const twoYearsAgo = nowSec - 2 * 365 * DAY_SECONDS;
 
     const points: Array<{
       date: number;
@@ -92,11 +93,11 @@ export const handleNonUsdShare = withErrorHandler(
 
       let interval: number;
       if (row.snapshot_date >= ninetyDaysAgo) {
-        interval = 86400; // daily
+        interval = DAY_SECONDS; // daily
       } else if (row.snapshot_date >= twoYearsAgo) {
-        interval = 7 * 86400; // weekly
+        interval = 7 * DAY_SECONDS; // weekly
       } else {
-        interval = 30 * 86400; // monthly
+        interval = 30 * DAY_SECONDS; // monthly
       }
 
       if (row.snapshot_date - lastKeptDate >= interval) {

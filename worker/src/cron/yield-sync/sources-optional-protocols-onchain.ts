@@ -1,5 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { type ChainRpcConfig, getChainRpc } from "../../lib/chain-registry";
+import { resolveRpcUrls } from "./sources-helpers";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
@@ -101,9 +102,7 @@ export async function fetchBprotocolLqtyOnlySource(
 
     let totalLusdDepositsRaw: bigint | null = null;
     let totalLqtyIssuedRaw: bigint | null = null;
-    const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-      (url): url is string => typeof url === "string" && url.length > 0,
-    );
+    const rpcUrls = resolveRpcUrls(rpc, { order: "primary-first" });
 
     for (const rpcUrl of rpcUrls) {
       throwIfAborted(signal);
@@ -183,9 +182,7 @@ export async function fetchCurveScrvusdCurrentRateSource(
   }
 
   try {
-    const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-      (url): url is string => typeof url === "string" && url.length > 0,
-    );
+    const rpcUrls = resolveRpcUrls(rpc, { order: "primary-first" });
 
     for (const rpcUrl of rpcUrls) {
       throwIfAborted(signal);

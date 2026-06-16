@@ -7,7 +7,7 @@ import {
   fetchEvmUint256AtBlock,
 } from "../../lib/evm-rpc";
 import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
-import { createOptionalSourceBudget } from "./sources-helpers";
+import { createOptionalSourceBudget, resolveRpcUrls } from "./sources-helpers";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import type { ResolvedYield } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
@@ -62,12 +62,7 @@ function recordOptionalRpcMiss(
 }
 
 function buildOptionalRpcUrls(rpc: ChainRpcConfig | undefined, rotationSeed = 0): string[] {
-  if (!rpc) return [];
-  const primary = typeof rpc.rpcUrl === "string" && rpc.rpcUrl.length > 0 ? rpc.rpcUrl : null;
-  const fallback =
-    typeof rpc.fallbackRpcUrl === "string" && rpc.fallbackRpcUrl.length > 0 ? rpc.fallbackRpcUrl : null;
-  const ordered = rotationSeed % 2 === 0 ? [fallback, primary] : [primary, fallback];
-  return Array.from(new Set(ordered.filter((url): url is string => typeof url === "string" && url.length > 0)));
+  return resolveRpcUrls(rpc, { order: "rotate", seed: rotationSeed });
 }
 
 function logOptionalRpcTelemetry(family: string, telemetry: OptionalRpcFamilyTelemetry): void {
@@ -143,11 +138,7 @@ function buildOnChainFailureStatus(
 }
 
 function buildOnChainRateRpcUrls(rpc?: ChainRpcConfig): string[] {
-  if (!rpc) return [];
-  const urls = [rpc.fallbackRpcUrl, rpc.rpcUrl].filter(
-    (url): url is string => typeof url === "string" && url.length > 0,
-  );
-  return Array.from(new Set(urls));
+  return resolveRpcUrls(rpc, { order: "fallback-first" });
 }
 
 async function fetchSingleOnChainRate(

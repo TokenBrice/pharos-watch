@@ -55,7 +55,6 @@ export function computeVisibleGraph(params: {
   visibleLinkIndices: Set<number>;
   visibleNodeIds: Set<string>;
 } {
-  const scopeNodeIds = new Set<string>();
   const visible: ResolvedLink[] = [];
   const visibleIndices = new Set<number>();
 
@@ -72,8 +71,6 @@ export function computeVisibleGraph(params: {
             : false;
     if (!inScope) continue;
 
-    scopeNodeIds.add(link.srcId);
-    scopeNodeIds.add(link.tgtId);
     visible.push(link);
     visibleIndices.add(link.index);
   }
@@ -87,10 +84,8 @@ export function computeVisibleGraph(params: {
   if (params.focusMode === "all") {
     for (const node of params.nodes) nodeIds.add(node.id);
   } else if (params.focusMode === "hub") {
-    for (const id of scopeNodeIds) nodeIds.add(id);
     for (const id of params.hubIdsByScore) nodeIds.add(id);
   } else {
-    for (const id of scopeNodeIds) nodeIds.add(id);
     if (params.neighborhoodFocusId) nodeIds.add(params.neighborhoodFocusId);
   }
 
