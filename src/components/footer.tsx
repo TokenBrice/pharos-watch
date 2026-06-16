@@ -28,24 +28,9 @@ const FOOTER_PRIMARY_LINKS: ReadonlyArray<{ href: string; label: string; externa
   { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },
 ];
 
-const LIGHTHOUSE_BEAM_STYLE = `
-@media (prefers-reduced-motion: no-preference) {
-  .group\\/wordmark:hover .pharos-lighthouse-beam {
-    animation: pharos-lighthouse-sweep 4500ms cubic-bezier(0.45, 0.05, 0.55, 0.95) both;
-  }
-}
-@keyframes pharos-lighthouse-sweep {
-  0% { opacity: 0; stroke-dashoffset: 0.91; }
-  20% { opacity: 0.18; }
-  80% { opacity: 0.18; }
-  100% { opacity: 0; stroke-dashoffset: -0.18; }
-}
-`;
-
 export function Footer() {
   return (
     <footer className="border-t border-border/70 py-6 sm:py-8">
-      <style dangerouslySetInnerHTML={{ __html: LIGHTHOUSE_BEAM_STYLE }} />
       <div className="container mx-auto space-y-6 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0 space-y-2 lg:pr-6">
