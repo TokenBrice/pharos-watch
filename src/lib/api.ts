@@ -137,7 +137,7 @@ function getBodyWarning(data: unknown): string | null {
   return typeof warning === "string" && warning.trim().length > 0 ? warning : null;
 }
 
-function normalizeApiDependencyMeta(value: unknown): ApiDependencyMeta | null {
+export function normalizeApiDependencyMeta(value: unknown): ApiDependencyMeta | null {
   if (!isRecord(value)) return null;
   const status = value.status;
   if (status !== "fresh" && status !== "degraded" && status !== "stale" && status !== "unavailable") {
@@ -151,7 +151,7 @@ function normalizeApiDependencyMeta(value: unknown): ApiDependencyMeta | null {
   };
 }
 
-function normalizeApiMeta(value: unknown): ApiMetaWithAge | null {
+export function normalizeApiMeta(value: unknown): ApiMetaWithAge | null {
   if (!isRecord(value)) return null;
   const status = value.status;
   if (status !== "fresh" && status !== "degraded" && status !== "stale") {

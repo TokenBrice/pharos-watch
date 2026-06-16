@@ -1,14 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { isRecord } from "@shared/lib/type-guards";
-import type { ApiDependencyMeta } from "@shared/types/api-meta";
-import type { ApiMeta } from "@/lib/api";
+import { normalizeApiMeta, type ApiMeta } from "@/lib/api";
 import {
   FRONTEND_API_QUERY_RUNTIME_REGISTRY,
   type FrontendApiQueryDescriptor,
 } from "@/lib/api-query-runtime-registry";
 // Shared version/helpers also consumed by homepage-bootstrap.ts. This runtime
-// module deliberately stays Zod-free (hand-rolled normalizeApiMeta below, no
-// descriptor.schema validation) to keep Zod out of the inline-hydration bundle.
+// module deliberately stays Zod-free (no descriptor.schema validation) to keep
+// Zod out of the inline-hydration bundle.
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
   isSeedableQuery,
@@ -48,45 +47,6 @@ export interface HomepageBootstrapPayload {
   generatedAt: number;
   source: string | null;
   queries: Partial<Record<HomepageBootstrapQueryId, HomepageBootstrapQuery>>;
-}
-
-function normalizeDependencyMeta(value: unknown): Record<string, ApiDependencyMeta> | undefined {
-  if (!isRecord(value)) return undefined;
-  const normalized: Record<string, ApiDependencyMeta> = {};
-
-  for (const [key, raw] of Object.entries(value)) {
-    if (!isRecord(raw)) continue;
-    const status = raw.status;
-    if (status !== "fresh" && status !== "degraded" && status !== "stale" && status !== "unavailable") {
-      continue;
-    }
-    normalized[key] = {
-      status,
-      updatedAt: typeof raw.updatedAt === "number" || raw.updatedAt === null ? raw.updatedAt : undefined,
-      ageSeconds: typeof raw.ageSeconds === "number" || raw.ageSeconds === null ? raw.ageSeconds : undefined,
-      reason: typeof raw.reason === "string" || raw.reason === null ? raw.reason : undefined,
-    };
-  }
-
-  return normalized;
-}
-
-function normalizeApiMeta(value: unknown): ApiMeta | null {
-  if (!isRecord(value)) return null;
-  const status = value.status;
-  if (status !== "fresh" && status !== "degraded" && status !== "stale") {
-    return null;
-  }
-  if (typeof value.updatedAt !== "number" || typeof value.ageSeconds !== "number") {
-    return null;
-  }
-  return {
-    updatedAt: value.updatedAt,
-    ageSeconds: value.ageSeconds,
-    status,
-    warning: typeof value.warning === "string" || value.warning === null ? value.warning : undefined,
-    dependencies: normalizeDependencyMeta(value.dependencies),
-  };
 }
 
 function normalizeQuery(
