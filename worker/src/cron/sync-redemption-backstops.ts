@@ -19,12 +19,13 @@ import {
   resolveRedemptionBackstopEntry,
 } from "../lib/redemption-backstop-sources";
 import {
-  formatRouteAvailabilityReviewedAt,
+  formatUtcDate,
   loadSevereActiveDepegAvailabilityMap,
 } from "../lib/redemption-backstop-availability";
 import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop-route-status";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { throwIfAborted } from "../lib/abort";
+import { fnv1aHash } from "../lib/hash";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
 
@@ -47,13 +48,7 @@ function stableStringify(value: unknown): string {
 }
 
 function stableHash(value: unknown): string {
-  const input = stableStringify(value);
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
+  return fnv1aHash(stableStringify(value));
 }
 
 function capStringList(values: readonly string[], limit = 25): string[] {
@@ -146,7 +141,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     preloadWarnings.push(`reserve-metadata:${message}`);
   }
 
-  const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(db, formatRouteAvailabilityReviewedAt(now));
+  const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(db, formatUtcDate(now));
   const registryMetadata = buildRegistryMetadata(configuredIds, configById);
 
   // Staleness is tracked for operational visibility (degraded-run signal +

@@ -1,5 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
+import { fnv1aHash } from "../../lib/hash";
 
 export type BackfillConfidenceTier = "high" | "medium" | "low";
 
@@ -29,15 +30,6 @@ export interface BackfillRunInput {
   replayWindow: BackfillReplayWindow | null;
 }
 
-function stableHash(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
-}
-
 export function buildBackfillEventsFingerprint(events: Array<{
   direction: string;
   peakDeviationBps: number;
@@ -48,7 +40,7 @@ export function buildBackfillEventsFingerprint(events: Array<{
   recoveryPrice: number | null;
   pegRef: number;
 }>): string {
-  return stableHash(JSON.stringify(events.map((event) => ({
+  return fnv1aHash(JSON.stringify(events.map((event) => ({
     direction: event.direction,
     peakDeviationBps: event.peakDeviationBps,
     startedAt: event.startedAt,
