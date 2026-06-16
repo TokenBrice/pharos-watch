@@ -1,4 +1,5 @@
 import { sendAlert } from "../lib/alerts";
+import { readAlertMarker } from "../lib/alert-marker";
 import type { CronResult } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
@@ -23,16 +24,11 @@ interface AlertMarker {
 }
 
 function readMarker(value: string | null | undefined): AlertMarker | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as Partial<AlertMarker>;
-    if (typeof parsed.lastAlertedAt === "number" && typeof parsed.rowCount === "number") {
-      return { lastAlertedAt: parsed.lastAlertedAt, rowCount: parsed.rowCount };
-    }
-  } catch {
-    return null;
-  }
-  return null;
+  return readAlertMarker<AlertMarker>(
+    value,
+    (p): p is AlertMarker =>
+      typeof p.lastAlertedAt === "number" && typeof p.rowCount === "number",
+  );
 }
 
 export async function runMintBurnGrowthWatchdog(

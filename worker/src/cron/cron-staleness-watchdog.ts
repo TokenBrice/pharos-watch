@@ -6,6 +6,7 @@ import {
 import { formatStalenessDurationSeconds } from "@shared/lib/relative-time";
 import type { CacheStatus } from "@shared/types/status";
 import { sendAlert } from "../lib/alerts";
+import { readAlertMarker } from "../lib/alert-marker";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
@@ -120,24 +121,13 @@ function alertCacheKey(cacheKey: string): string {
 }
 
 function readMarker(value: string | null | undefined): AlertMarker | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as Partial<AlertMarker>;
-    if (
-      typeof parsed.firstStaleAt === "number" &&
-      typeof parsed.lastObservedAt === "number" &&
-      typeof parsed.lastAlertedAt === "number"
-    ) {
-      return {
-        firstStaleAt: parsed.firstStaleAt,
-        lastObservedAt: parsed.lastObservedAt,
-        lastAlertedAt: parsed.lastAlertedAt,
-      };
-    }
-  } catch {
-    return null;
-  }
-  return null;
+  return readAlertMarker<AlertMarker>(
+    value,
+    (p): p is AlertMarker =>
+      typeof p.firstStaleAt === "number" &&
+      typeof p.lastObservedAt === "number" &&
+      typeof p.lastAlertedAt === "number",
+  );
 }
 
 function buildObservation(
