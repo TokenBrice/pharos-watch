@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/api-hooks";
@@ -145,6 +146,59 @@ export function DigestFullDisplay({
   );
 }
 
+interface PreviewLayoutProps {
+  title: string;
+  riskSignal?: DigestRiskSignal | null;
+  compactIntelligence: ReactNode;
+  bodyBlock: ReactNode;
+}
+
+function ArchivePreviewLayout({ title, riskSignal, compactIntelligence, bodyBlock }: PreviewLayoutProps) {
+  return (
+    /* Archive: stacked layout — title above text */
+    <div className="py-6 space-y-5">
+      <h2
+        className={cn(
+          digestDisplay.className,
+          "text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]",
+        )}
+      >
+        {title}
+      </h2>
+      <DigestRiskSignalPill signal={riskSignal} />
+      {compactIntelligence}
+      {bodyBlock}
+    </div>
+  );
+}
+
+function HomepagePreviewLayout({ title, riskSignal, compactIntelligence, bodyBlock }: PreviewLayoutProps) {
+  return (
+    /* Homepage: two-column layout */
+    <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
+      <div className="min-w-0 space-y-5">
+        <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
+          <span className="h-px w-12 bg-border/70" />
+          <span className="pharos-kicker">Executive Summary</span>
+        </div>
+        <h2
+          className={cn(
+            digestDisplay.className,
+            "max-w-[10ch] text-[clamp(2.8rem,6vw,5rem)] font-semibold leading-[0.88] tracking-[-0.045em] text-foreground/98 [text-wrap:balance]",
+          )}
+        >
+          {title}
+        </h2>
+        <DigestRiskSignalPill signal={riskSignal} />
+      </div>
+      <div className="min-w-0 space-y-4">
+        {compactIntelligence}
+        {bodyBlock}
+      </div>
+    </div>
+  );
+}
+
 interface DailyDigestProps {
   variant?: "preview" | "full";
   /** Override the CTA link target (e.g. point to the detail page instead of the archive). */
@@ -219,6 +273,47 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
     );
   }
 
+  const title = data?.digestTitle || "Signal & Noise";
+  const bodyBlock = (
+    <div className="flex min-w-0 flex-col gap-4">
+      <DigestParagraphList
+        paragraphs={visibleParagraphs}
+        getParagraphClassName={(index) =>
+          cn(
+            "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
+            index === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
+          )
+        }
+      />
+      {shouldShowCta && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
+          <Link
+            href={detailHref ?? "/digest/"}
+            className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {ctaLabel} &rarr;
+          </Link>
+          {!detailHref && (
+            <>
+              <span className="text-border/70">|</span>
+              <a
+                href="https://t.me/pharoswatch"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Telegram &rarr;
+              </a>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  const compactIntelligence = (
+    <DigestIntelligencePanel compact nextTriggers={data?.nextTriggers} riskTape={data?.riskTape} />
+  );
+
   return (
     <div className="animate-in fade-in duration-300 space-y-5">
       {/* Masthead (preview) */}
@@ -233,89 +328,21 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
         </div>
       )}
 
-      {(() => {
-        const bodyBlock = (
-          <div className="flex min-w-0 flex-col gap-4">
-            <DigestParagraphList
-              paragraphs={visibleParagraphs}
-              getParagraphClassName={(index) =>
-                cn(
-                  "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
-                  index === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
-                )
-              }
-            />
-            {shouldShowCta && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
-                <Link
-                  href={detailHref ?? "/digest/"}
-                  className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {ctaLabel} &rarr;
-                </Link>
-                {!detailHref && (
-                  <>
-                    <span className="text-border/70">|</span>
-                    <a
-                      href="https://t.me/pharoswatch"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      Telegram &rarr;
-                    </a>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        );
-
-        const title = data?.digestTitle || "Signal & Noise";
-        const compactIntelligence = (
-          <DigestIntelligencePanel compact nextTriggers={data?.nextTriggers} riskTape={data?.riskTape} />
-        );
-
-        return detailHref ? (
-          /* Archive: stacked layout — title above text */
-          <div className="py-6 space-y-5">
-            <h2
-              className={cn(
-                digestDisplay.className,
-                "text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]",
-              )}
-            >
-              {title}
-            </h2>
-            <DigestRiskSignalPill signal={data?.riskSignal} />
-            {compactIntelligence}
-            {bodyBlock}
-          </div>
-        ) : (
-          /* Homepage: two-column layout */
-          <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
-            <div className="min-w-0 space-y-5">
-              <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
-                <span className="h-px w-12 bg-border/70" />
-                <span className="pharos-kicker">Executive Summary</span>
-              </div>
-              <h2
-                className={cn(
-                  digestDisplay.className,
-                  "max-w-[10ch] text-[clamp(2.8rem,6vw,5rem)] font-semibold leading-[0.88] tracking-[-0.045em] text-foreground/98 [text-wrap:balance]",
-                )}
-              >
-                {title}
-              </h2>
-              <DigestRiskSignalPill signal={data?.riskSignal} />
-            </div>
-            <div className="min-w-0 space-y-4">
-              {compactIntelligence}
-              {bodyBlock}
-            </div>
-          </div>
-        );
-      })()}
+      {detailHref ? (
+        <ArchivePreviewLayout
+          title={title}
+          riskSignal={data?.riskSignal}
+          compactIntelligence={compactIntelligence}
+          bodyBlock={bodyBlock}
+        />
+      ) : (
+        <HomepagePreviewLayout
+          title={title}
+          riskSignal={data?.riskSignal}
+          compactIntelligence={compactIntelligence}
+          bodyBlock={bodyBlock}
+        />
+      )}
     </div>
   );
 }
