@@ -99,7 +99,22 @@ export function getChainTrackedDeploymentCount(chainId: string): number {
   );
 }
 
+/**
+ * Count tracked contracts per chain in a single O(stablecoins × contracts) pass
+ * so callers iterating every chain don't re-scan ACTIVE_STABLECOINS per chain. [audit S-020]
+ */
+function buildChainContractCounts(): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const stablecoin of ACTIVE_STABLECOINS) {
+    for (const contract of stablecoin.contracts ?? []) {
+      counts.set(contract.chain, (counts.get(contract.chain) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 export function getChainDirectoryEntries(): ChainDirectoryEntry[] {
+  const contractCounts = buildChainContractCounts();
   return getActiveChainIds()
     .map((id) => {
       const meta = CHAIN_META[id];
@@ -110,7 +125,7 @@ export function getChainDirectoryEntries(): ChainDirectoryEntry[] {
         type: meta?.type ?? "other",
         evmChainId: meta?.evmChainId ?? null,
         explorerUrl: meta?.explorerUrl ?? "",
-        deploymentCount: getChainTrackedDeploymentCount(id),
+        deploymentCount: contractCounts.get(id) ?? 0,
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name));
