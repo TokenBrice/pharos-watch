@@ -622,7 +622,7 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
     }
   } catch (error) {
     ctx.registerSourceFailure("yield-rankings", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("yield-data", error, ctx.bootstrapPending),
+      bootstrapAllowed: resolveBootstrapAllowed("yield-rankings", error, ctx.bootstrapPending),
     });
   }
   return { yieldSourceRisk, yieldRankChangeAttribution };
