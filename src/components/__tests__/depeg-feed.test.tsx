@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { DepegFeed } from "@/components/depeg-feed";
 import type { DepegEvent } from "@shared/types";
 import type { ReactNode } from "react";
@@ -67,5 +67,19 @@ describe("DepegFeed", () => {
     render(<DepegFeed events={[]} emptyMessage="No confirmed active depeg incidents." />);
 
     expect(screen.getByText("No confirmed active depeg incidents.")).toBeTruthy();
+  });
+
+  it("reflects the current events set after the feed updates (seen-id scope follows events)", () => {
+    const { rerender } = render(
+      <DepegFeed events={[makeEvent({ id: 1, symbol: "ALPHA" })]} />,
+    );
+    expect(screen.getByText("ALPHA")).toBeTruthy();
+
+    act(() => {
+      rerender(<DepegFeed events={[makeEvent({ id: 2, symbol: "BETA" })]} />);
+    });
+
+    expect(screen.getByText("BETA")).toBeTruthy();
+    expect(screen.queryByText("ALPHA")).toBeNull();
   });
 });

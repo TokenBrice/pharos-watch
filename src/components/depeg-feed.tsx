@@ -85,11 +85,15 @@ export function DepegFeed({
   useEffect(() => {
     if (events.length > 0) {
       // These IDs must be committed after paint so only newly arrived rows animate once.
+      // Scope the set to the current event ids so it can't grow without bound across
+      // a long polled session; ids that age out of the feed can't animate anyway.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSeenIds((prev) => {
-        const next = new Set(prev);
-        for (const event of events) next.add(event.id);
-        return next.size === prev.size ? prev : next;
+        const next = new Set(events.map((event) => event.id));
+        if (next.size === prev.size && [...next].every((id) => prev.has(id))) {
+          return prev;
+        }
+        return next;
       });
     }
   }, [events]);
