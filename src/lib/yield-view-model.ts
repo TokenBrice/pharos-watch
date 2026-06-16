@@ -195,6 +195,10 @@ export interface BuildYieldViewModelOptions {
   watchlistIds?: ReadonlySet<string> | null;
 }
 
+// Priority order for the "other" peg bucket sort. USD is excluded because it is
+// surfaced first/separately via buildPegOptions. SGD and MXN are excluded because
+// they are hidden individual pegs (HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS). Any peg
+// absent from this list falls back to alphabetical label order in compareYieldPegs.
 const YIELD_PEG_PRIORITY: readonly PegCurrency[] = [
   "EUR",
   "CHF",
