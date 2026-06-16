@@ -90,6 +90,13 @@ describe("stagedPoolConfidence", () => {
     expect(stagedPoolConfidence(25)).toBe(0);
   });
 
+  it("returns 0 just past the 24h horizon (60s read-window grace makes the skip guard reachable)", () => {
+    // The DB read window extends to nowSec - DAY_SECONDS - 60, so a row aged
+    // just over 24h can be fetched; it must score 0 so the stale_confidence_zero
+    // skip guard in mergeStagedPools actually fires.
+    expect(stagedPoolConfidence(24 + 30 / 3600)).toBe(0);
+  });
+
   it("clamps negative age to 0 (clock skew protection)", () => {
     expect(stagedPoolConfidence(-5)).toBe(1);
   });

@@ -247,7 +247,12 @@ export async function mergeStagedPools(
                        raw_json, discovered_at, refreshed_at
                 FROM dex_pool_staging WHERE refreshed_at >= ?`,
       )
-      .bind(nowSec - DAY_SECONDS)
+      // Fetch a 60s grace beyond the 24h confidence horizon so rows that have
+      // just crossed it surface as stagedPoolConfidence === 0 and are recorded
+      // under the stale_confidence_zero skip reason instead of silently never
+      // appearing. Without the grace the read window and the zero gate align
+      // exactly and the guard below is unreachable.
+      .bind(nowSec - DAY_SECONDS - 60)
       .all<StagedPoolRow>();
     rows = result.results ?? [];
   } catch (err) {
