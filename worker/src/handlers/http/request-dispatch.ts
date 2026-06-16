@@ -55,6 +55,15 @@ export async function handleHttpRequestImpl(
     attributionDisabled: isRequestSourceAttributionDisabled(env),
     apiKeyAttributionDisabled: isApiKeyRequestAttributionDisabled(env),
   };
+  function buildRecorder(gate: {
+    isAdmin: boolean;
+    isSiteProxy: boolean;
+    apiKeyId: number | null;
+    apiKeyTrafficClass: Parameters<typeof createRequestSourceRecorder>[0]["apiKeyTrafficClass"];
+    requestLane: Parameters<typeof createRequestSourceRecorder>[0]["requestLane"];
+  }) {
+    return createRequestSourceRecorder({ ...commonSourceConfig, ...gate });
+  }
   const fastGate = await evaluateCachedPublicApiReadFastGate(request, url, env);
   if (fastGate) {
     cached = await readEdgeCache(edgeCache);
@@ -62,15 +71,13 @@ export async function handleHttpRequestImpl(
       const fastRateLimitResponse = fastGate.apiKey
         ? checkCachedPublicApiReadFastRateLimit(fastGate.apiKey)
         : null;
-      const recordRequestSource = createRequestSourceRecorder({
-        ...commonSourceConfig,
+      buildRecorder({
         isAdmin: fastGate.isAdmin,
         isSiteProxy: fastGate.isSiteProxy,
         apiKeyId: fastGate.apiKey?.id ?? null,
         apiKeyTrafficClass: fastGate.apiKey?.trafficClass ?? null,
         requestLane: fastGate.requestLane,
-      });
-      recordRequestSource();
+      })();
       return finalizeResponse(fastRateLimitResponse ?? cached, origin, ctx);
     }
   }
@@ -82,8 +89,7 @@ export async function handleHttpRequestImpl(
     requestLane,
     response: gateResponse,
   } = await evaluateAccessGate(request, url, env);
-  const recordRequestSource = createRequestSourceRecorder({
-    ...commonSourceConfig,
+  const recordRequestSource = buildRecorder({
     isAdmin,
     isSiteProxy,
     apiKeyId: apiKey?.id ?? null,
