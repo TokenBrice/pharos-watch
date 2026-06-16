@@ -98,6 +98,28 @@ describe("scoreDependencyRisk", () => {
     expect(result.score).toBe(87);
   });
 
+  it("labels the ceiling by the dependency that set it, not by mere wrapper presence", () => {
+    // Wrapper dep (90 - 3 = 87) and a lower mechanism dep (50). The mechanism
+    // sets the binding ceiling, so the detail must read 'mechanism-critical',
+    // not 'wrapper' (audit Q-265).
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [
+          { id: "wrap", weight: 0.5, type: "wrapper" },
+          { id: "mech", weight: 0.5, type: "mechanism" },
+        ],
+      },
+      new Map([
+        ["wrap", 90],
+        ["mech", 50],
+      ]),
+    );
+
+    expect(result.detail).toContain("mechanism-critical dependency ceiling (50)");
+    expect(result.detail).not.toContain("wrapper dependency ceiling");
+  });
+
   it("applies live-derived mechanism dependency ceilings", () => {
     const dependencies = deriveEffectiveDependencies(
       {

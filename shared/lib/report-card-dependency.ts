@@ -107,14 +107,24 @@ export function scoreDependencyRisk(
   }
 
   let ceiling = Infinity;
+  let ceilingDepType: "wrapper" | "mechanism" | null = null;
   for (const dependency of resolved) {
     if (dependency.type === "wrapper") {
       const wrapperPenalty =
         args.variantParentId != null && args.variantKind != null && dependency.id === args.variantParentId
           ? wrapperPenaltyForVariant(args.variantKind)
           : wrapperPenaltyForVariant();
-      ceiling = Math.min(ceiling, dependency.score - wrapperPenalty);
-    } else if (dependency.type === "mechanism") ceiling = Math.min(ceiling, dependency.score);
+      const candidate = dependency.score - wrapperPenalty;
+      if (candidate < ceiling) {
+        ceiling = candidate;
+        ceilingDepType = "wrapper";
+      }
+    } else if (dependency.type === "mechanism") {
+      if (dependency.score < ceiling) {
+        ceiling = dependency.score;
+        ceilingDepType = "mechanism";
+      }
+    }
   }
   if (ceiling < Infinity) {
     score = Math.min(score, ceiling);
@@ -142,7 +152,7 @@ export function scoreDependencyRisk(
     );
   }
   if (ceiling < Infinity) {
-    const ceilingType = resolved.some((dependency) => dependency.type === "wrapper") ? "wrapper" : "mechanism-critical";
+    const ceilingType = ceilingDepType === "wrapper" ? "wrapper" : "mechanism-critical";
     parts.push(`Ceiling: ${ceilingType} dependency ceiling (${Math.round(ceiling)})`);
   }
 
