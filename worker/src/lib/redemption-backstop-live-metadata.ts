@@ -320,6 +320,117 @@ function resolveFeeReason(args: {
   return null;
 }
 
+interface TelemetryBundle {
+  nestedCapacityUsd: ParsedTelemetryNumber;
+  nestedCapacityRatio: ParsedTelemetryNumber;
+  legacyCapacityUsd: ParsedTelemetryNumber;
+  legacyCapacityRatio: ParsedTelemetryNumber;
+  nestedFeeBps: ParsedTelemetryNumber;
+  legacyFeeBps: ParsedTelemetryNumber;
+  buyFeeBpsMin: ParsedTelemetryNumber;
+  buyFeeBpsMax: ParsedTelemetryNumber;
+  sourceTimestamp: ParsedTelemetryNumber;
+  settlementDelaySec: ParsedTelemetryNumber;
+  queueDepthUsd: ParsedTelemetryNumber;
+  dailyLimitUsd: ParsedTelemetryNumber;
+  minRedeemUsd: ParsedTelemetryNumber;
+  capacityKind: RedemptionLiveCapacityKind | null;
+  freshnessKind: RedemptionLiveFreshnessKind | null;
+}
+
+function parseTelemetryFields(
+  redemptionTelemetry: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): TelemetryBundle {
+  return {
+    nestedCapacityUsd: parseTelemetryNumber(redemptionTelemetry, "capacityUsd", "Live redemption capacity USD", {
+      min: 0,
+    }),
+    nestedCapacityRatio: parseTelemetryNumber(
+      redemptionTelemetry,
+      "capacityRatioOfSupply",
+      "Live redemption capacity ratio",
+      { min: 0, max: 1 },
+    ),
+    legacyCapacityUsd: parseTelemetryNumber(metadata, "immediateRedeemableUsd", "Legacy redemption capacity USD", {
+      min: 0,
+    }),
+    legacyCapacityRatio: parseTelemetryNumber(
+      metadata,
+      "immediateRedeemableRatio",
+      "Legacy redemption capacity ratio",
+      { min: 0, max: 1 },
+    ),
+    nestedFeeBps: parseTelemetryNumber(redemptionTelemetry, "feeBps", "Live redemption fee bps", {
+      min: 0,
+      max: 10_000,
+    }),
+    legacyFeeBps: parseTelemetryNumber(metadata, "redemptionFeeBps", "Legacy redemption fee bps", {
+      min: 0,
+      max: 10_000,
+    }),
+    buyFeeBpsMin: parseTelemetryNumber(metadata, "buyFeeBpsMin", "Live buy-fee minimum bps", {
+      min: 0,
+      max: 10_000,
+    }),
+    buyFeeBpsMax: parseTelemetryNumber(metadata, "buyFeeBpsMax", "Live buy-fee maximum bps", {
+      min: 0,
+      max: 10_000,
+    }),
+    sourceTimestamp: parseTelemetryNumber(redemptionTelemetry, "sourceTimestamp", "Live redemption source timestamp", {
+      min: 0,
+    }),
+    settlementDelaySec: parseTelemetryNumber(
+      redemptionTelemetry,
+      "settlementDelaySec",
+      "Live redemption settlement delay",
+      { min: 0 },
+    ),
+    queueDepthUsd: parseTelemetryNumber(redemptionTelemetry, "queueDepthUsd", "Live redemption queue depth", {
+      min: 0,
+    }),
+    dailyLimitUsd: parseTelemetryNumber(redemptionTelemetry, "dailyLimitUsd", "Live redemption daily limit", {
+      min: 0,
+    }),
+    minRedeemUsd: parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
+      min: 0,
+    }),
+    capacityKind: coerceSchemaValue(RedemptionLiveCapacityKindSchema, redemptionTelemetry.capacityKind),
+    freshnessKind: coerceSchemaValue(RedemptionLiveFreshnessKindSchema, redemptionTelemetry.freshnessKind),
+  };
+}
+
+interface ResolvedRouteStatus {
+  routeStatus: RedemptionRouteStatus | null;
+  routeStatusSource: RedemptionRouteStatusSource | null;
+  routeStatusReason: string | null;
+  routeStatusReviewedAt: string | null;
+  /** Warning to surface in capacityNotes when route status was ignored, else null. */
+  warning: string | null;
+}
+
+function resolveRouteStatus(redemptionTelemetry: Record<string, unknown>): ResolvedRouteStatus {
+  const routeStatus = coerceRouteStatus(redemptionTelemetry.routeStatus);
+  const routeStatusSource = coerceRouteStatusSource(redemptionTelemetry.routeStatusSource);
+  const routeStatusMissingSource = routeStatus != null && routeStatusSource == null;
+  const shouldUseSourcedRouteStatus = routeStatus != null && !routeStatusMissingSource;
+  const shouldPreserveUnsourcedUnknownRouteStatus = routeStatus === "unknown" && routeStatusMissingSource;
+  const warning = routeStatusMissingSource
+    ? routeStatus === "unknown"
+      ? "Live redemption route status is unknown without source attribution"
+      : "Live redemption route status omitted source attribution and was ignored"
+    : null;
+  return {
+    routeStatus: shouldUseSourcedRouteStatus || shouldPreserveUnsourcedUnknownRouteStatus ? routeStatus : null,
+    routeStatusSource: shouldUseSourcedRouteStatus ? routeStatusSource : null,
+    routeStatusReason: shouldUseSourcedRouteStatus ? coerceString(redemptionTelemetry.routeStatusReason) : null,
+    routeStatusReviewedAt: shouldUseSourcedRouteStatus
+      ? coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt)
+      : null,
+    warning,
+  };
+}
+
 export function readRedemptionBackstopLiveMetadata(
   stablecoinId: string,
   snapshotMetadata: ReserveSnapshotMetadataRecord | null | undefined,
@@ -344,60 +455,23 @@ export function readRedemptionBackstopLiveMetadata(
   const capacityNotes = resolveCapacityNotes(stablecoinId, snapshotMetadata);
   const telemetryCapacity = adapterDefinition?.redemptionTelemetry.capacity ?? "none";
   const telemetryFee = adapterDefinition?.redemptionTelemetry.fee ?? "none";
-  const nestedCapacityUsd = parseTelemetryNumber(redemptionTelemetry, "capacityUsd", "Live redemption capacity USD", {
-    min: 0,
-  });
-  const nestedCapacityRatio = parseTelemetryNumber(
-    redemptionTelemetry,
-    "capacityRatioOfSupply",
-    "Live redemption capacity ratio",
-    { min: 0, max: 1 },
-  );
-  const capacityKind = coerceSchemaValue(RedemptionLiveCapacityKindSchema, redemptionTelemetry.capacityKind);
-  const freshnessKind = coerceSchemaValue(RedemptionLiveFreshnessKindSchema, redemptionTelemetry.freshnessKind);
-  const legacyCapacityUsd = parseTelemetryNumber(metadata, "immediateRedeemableUsd", "Legacy redemption capacity USD", {
-    min: 0,
-  });
-  const legacyCapacityRatio = parseTelemetryNumber(
-    metadata,
-    "immediateRedeemableRatio",
-    "Legacy redemption capacity ratio",
-    { min: 0, max: 1 },
-  );
-  const nestedFeeBps = parseTelemetryNumber(redemptionTelemetry, "feeBps", "Live redemption fee bps", {
-    min: 0,
-    max: 10_000,
-  });
-  const legacyFeeBps = parseTelemetryNumber(metadata, "redemptionFeeBps", "Legacy redemption fee bps", {
-    min: 0,
-    max: 10_000,
-  });
-  const buyFeeBpsMin = parseTelemetryNumber(metadata, "buyFeeBpsMin", "Live buy-fee minimum bps", {
-    min: 0,
-    max: 10_000,
-  });
-  const buyFeeBpsMax = parseTelemetryNumber(metadata, "buyFeeBpsMax", "Live buy-fee maximum bps", {
-    min: 0,
-    max: 10_000,
-  });
-  const sourceTimestamp = parseTelemetryNumber(redemptionTelemetry, "sourceTimestamp", "Live redemption source timestamp", {
-    min: 0,
-  });
-  const settlementDelaySec = parseTelemetryNumber(
-    redemptionTelemetry,
-    "settlementDelaySec",
-    "Live redemption settlement delay",
-    { min: 0 },
-  );
-  const queueDepthUsd = parseTelemetryNumber(redemptionTelemetry, "queueDepthUsd", "Live redemption queue depth", {
-    min: 0,
-  });
-  const dailyLimitUsd = parseTelemetryNumber(redemptionTelemetry, "dailyLimitUsd", "Live redemption daily limit", {
-    min: 0,
-  });
-  const minRedeemUsd = parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
-    min: 0,
-  });
+  const {
+    nestedCapacityUsd,
+    nestedCapacityRatio,
+    legacyCapacityUsd,
+    legacyCapacityRatio,
+    nestedFeeBps,
+    legacyFeeBps,
+    buyFeeBpsMin,
+    buyFeeBpsMax,
+    sourceTimestamp,
+    settlementDelaySec,
+    queueDepthUsd,
+    dailyLimitUsd,
+    minRedeemUsd,
+    capacityKind,
+    freshnessKind,
+  } = parseTelemetryFields(redemptionTelemetry, metadata);
   const sourceTimestampFuture =
     sourceTimestamp.value != null &&
     sourceTimestamp.value > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
@@ -440,11 +514,7 @@ export function readRedemptionBackstopLiveMetadata(
     dailyLimitUsd,
     minRedeemUsd,
   ]);
-  const routeStatus = coerceRouteStatus(redemptionTelemetry.routeStatus);
-  const routeStatusSource = coerceRouteStatusSource(redemptionTelemetry.routeStatusSource);
-  const routeStatusMissingSource = routeStatus != null && routeStatusSource == null;
-  const shouldUseSourcedRouteStatus = routeStatus != null && !routeStatusMissingSource;
-  const shouldPreserveUnsourcedUnknownRouteStatus = routeStatus === "unknown" && routeStatusMissingSource;
+  const resolvedRouteStatus = resolveRouteStatus(redemptionTelemetry);
   if (sourceTimestampFuture) {
     telemetryWarnings.push(
       `Live redemption source timestamp is ${sourceTimestamp.value! - now}s in the future and was ignored`,
@@ -453,10 +523,8 @@ export function readRedemptionBackstopLiveMetadata(
   if (verifiedSourceTimestampIssue === "missing" && !sourceTimestamp.invalid) {
     telemetryWarnings.push("Live redemption freshness is verified-source-timestamp without sourceTimestamp");
   }
-  if (routeStatusMissingSource && routeStatus === "unknown") {
-    telemetryWarnings.push("Live redemption route status is unknown without source attribution");
-  } else if (routeStatusMissingSource) {
-    telemetryWarnings.push("Live redemption route status omitted source attribution and was ignored");
+  if (resolvedRouteStatus.warning) {
+    telemetryWarnings.push(resolvedRouteStatus.warning);
   }
   const fallbackCapacityTelemetryAvailable =
     !capacityTelemetryInvalid &&
@@ -532,11 +600,9 @@ export function readRedemptionBackstopLiveMetadata(
     redemptionFeeBps: feeTelemetryInvalid ? null : hasNestedFeeTelemetry ? nestedFeeBps.value : legacyFeeBps.value,
     buyFeeBpsMin: buyFeeBpsMin.value,
     buyFeeBpsMax: buyFeeBpsMax.value,
-    routeStatus: shouldUseSourcedRouteStatus || shouldPreserveUnsourcedUnknownRouteStatus ? routeStatus : null,
-    routeStatusSource: shouldUseSourcedRouteStatus ? routeStatusSource : null,
-    routeStatusReason: shouldUseSourcedRouteStatus ? coerceString(redemptionTelemetry.routeStatusReason) : null,
-    routeStatusReviewedAt: shouldUseSourcedRouteStatus
-      ? coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt)
-      : null,
+    routeStatus: resolvedRouteStatus.routeStatus,
+    routeStatusSource: resolvedRouteStatus.routeStatusSource,
+    routeStatusReason: resolvedRouteStatus.routeStatusReason,
+    routeStatusReviewedAt: resolvedRouteStatus.routeStatusReviewedAt,
   };
 }
