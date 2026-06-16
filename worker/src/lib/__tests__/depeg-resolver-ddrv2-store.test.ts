@@ -315,6 +315,38 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("detects exact-key collisions for unlinked events via the batched pre-loop check", async () => {
+    // A second, differently-IDed event with an identical canonical signature
+    // maps to the existing incident's key. The batched key-collision check must
+    // surface it as repair-required before any insert. [audit S-142]
+    const db = makeSqliteD1();
+    try {
+      const incident = await ensureIncident(db);
+      insertOpenEvent(db, 2);
+      await expect(
+        ensureCanonicalIncidents(
+          db,
+          [
+            {
+              eventId: 2,
+              stablecoinId: "lusd-liquity",
+              pegCurrency: "USD",
+              direction: "below",
+              startedAt: 100000,
+              peakDeviationBps: -300,
+              source: "live",
+              publicTrackedAtFirstSeen: true,
+              registrySnapshot: { id: "lusd-liquity", symbol: "LUSD" },
+            },
+          ],
+          { nowSec: 200100, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000 },
+        ),
+      ).rejects.toThrow(`Unlinked depeg event 2 maps to existing incident ${incident.incidentKey}`);
+    } finally {
+      db.close();
+    }
+  });
+
   it("rejects malformed canonical incident source fingerprints", async () => {
     const db = makeSqliteD1();
     try {

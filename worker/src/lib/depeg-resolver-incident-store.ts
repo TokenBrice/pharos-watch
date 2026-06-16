@@ -764,6 +764,24 @@ export async function ensureCanonicalIncidents(
   const linkedByEventId = await loadIncidentsByEventIds(db, eventIds, policyDelaySec);
   const ensured = new Map<number, DdrCanonicalIncident>();
 
+  // Compute canonical keys for every unlinked event up front (pure crypto, no
+  // I/O) so the key-collision check can be a single batched IN (...) query
+  // instead of one sequential D1 round-trip per event. [audit S-142]
+  const unlinkedEvents = events.filter((event) => !linkedByEventId.has(event.eventId));
+  const identityByEventId = new Map<number, { sourceFingerprint: string; incidentKey: string }>();
+  await Promise.all(
+    unlinkedEvents.map(async (event) => {
+      const sourceFingerprint = await sourceFingerprintForEvent(event);
+      const incidentKey = await incidentKeyForEvent(event, sourceFingerprint);
+      identityByEventId.set(event.eventId, { sourceFingerprint, incidentKey });
+    }),
+  );
+  const collidingKeys = new Set(
+    (await loadCanonicalIncidents(db, {
+      incidentKeys: [...identityByEventId.values()].map((identity) => identity.incidentKey),
+    })).map((incident) => incident.incidentKey),
+  );
+
   for (const event of events) {
     const existing = linkedByEventId.get(event.eventId);
     if (existing) {
@@ -771,10 +789,8 @@ export async function ensureCanonicalIncidents(
       continue;
     }
 
-    const sourceFingerprint = await sourceFingerprintForEvent(event);
-    const incidentKey = await incidentKeyForEvent(event, sourceFingerprint);
-    const existingKeyRows = await loadCanonicalIncidents(db, { incidentKeys: [incidentKey] });
-    if (existingKeyRows.length > 0) {
+    const { sourceFingerprint, incidentKey } = identityByEventId.get(event.eventId)!;
+    if (collidingKeys.has(incidentKey)) {
       const keyConflict = new DdrIncidentRepairRequiredError(
         event.eventId,
         `Unlinked depeg event ${event.eventId} maps to existing incident ${incidentKey}`,
@@ -801,6 +817,10 @@ export async function ensureCanonicalIncidents(
 
     const policyMembership = policyMembershipForEvent(event, incidentKey, options);
     await insertNewIncident(db, event, incidentKey, sourceFingerprint, policyMembership, options);
+    // Record the freshly inserted key so a within-batch duplicate is still
+    // reported as a repair conflict (matching the prior per-event check that
+    // re-queried after each insert). [audit S-142]
+    collidingKeys.add(incidentKey);
     ensured.set(
       event.eventId,
       buildFreshIncident({ incidentKey, event, sourceFingerprint, policyMembership, nowSec, policyDelaySec }),
