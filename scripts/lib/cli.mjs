@@ -6,7 +6,7 @@
  * Existing smoke-runtime consumers continue to work unchanged.
  */
 
-export { parseCliOptions, readCliValue } from "./smoke-runtime.mjs";
+export { parseCliOptions, readCliValue, sleep } from "./smoke-runtime.mjs";
 
 /**
  * Returns true if `--check` appears in `argv`. Standard convention across

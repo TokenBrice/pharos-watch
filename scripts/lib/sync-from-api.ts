@@ -9,7 +9,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { getArgValue } from "./cli.mjs";
+import { getArgValue, sleep } from "./cli.mjs";
 
 interface ResolveApiUrlOptions {
   /** CLI flag that overrides everything else, e.g. `--api-url`. */
@@ -59,10 +59,6 @@ interface FetchWithRetryOptions {
   logLabel: string;
   attempts?: number;
   backoffMs?: readonly number[];
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function fetchWithRetry(
