@@ -35,6 +35,7 @@ import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { safeJsonParse } from "../lib/api-cache-read";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -96,14 +97,6 @@ function isoDateUtc(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
 
-function safeParse<T>(value: string | null | undefined, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
 
 async function gzipBytes(input: Uint8Array): Promise<Uint8Array> {
   const stream = new Response(input).body!.pipeThrough(new CompressionStream("gzip"));
@@ -356,7 +349,7 @@ export async function snapshotPublicDataset(
       computedAt: psiRow.computed_at,
       score: psiRow.score,
       band: psiRow.band,
-      components: safeParse<Record<string, unknown> | null>(psiRow.components, null),
+      components: safeJsonParse<Record<string, unknown> | null>(psiRow.components, null),
       methodologyVersion: psiRow.methodology_version ?? methodologyVersions.psi,
     },
     dews: stressRows.map((row) => ({
@@ -364,7 +357,7 @@ export async function snapshotPublicDataset(
       computedAt: row.computed_at,
       score: row.score,
       band: row.band,
-      signals: safeParse<Record<string, unknown> | null>(row.signals_json, null),
+      signals: safeJsonParse<Record<string, unknown> | null>(row.signals_json, null),
     })),
     liquidity: dexRows.map((row) => ({
       stablecoinId: row.stablecoin_id,

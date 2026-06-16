@@ -1,6 +1,7 @@
 import { makeAdminRoute } from "../lib/route-wrappers";
 import { jsonResponse, parseClampedIntegerParam } from "../lib/api-utils";
 import { getProbePaths } from "@shared/lib/api-endpoints";
+import { safeJsonParse } from "../lib/api-cache-read";
 
 interface AdminRouteContext {
   db: D1Database;
@@ -28,13 +29,6 @@ interface FailedProbe {
   latencyMs?: number;
 }
 
-function safeJsonParse(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
 
 export const handleStatusProbeHistory = makeAdminRoute<AdminRouteContext>(
   "route-status-probe-history",
@@ -55,7 +49,7 @@ export const handleStatusProbeHistory = makeAdminRoute<AdminRouteContext>(
       .all<ProbeRunRow>();
 
     const runs = (rows.results ?? []).map((row) => {
-      const details = row.details_json ? safeJsonParse(row.details_json) : null;
+      const details = safeJsonParse<unknown>(row.details_json, null);
       const failedList: FailedProbe[] = details && typeof details === "object" && "failed" in details
         ? Array.isArray((details as { failed?: unknown }).failed)
           ? ((details as { failed: FailedProbe[] }).failed)

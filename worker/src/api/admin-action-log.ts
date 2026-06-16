@@ -1,5 +1,6 @@
 import { jsonResponse, parseClampedIntegerParam } from "../lib/api-utils";
 import { makeAdminRoute } from "../lib/route-wrappers";
+import { safeJsonParse } from "../lib/api-cache-read";
 
 interface AdminActionAuditRow {
   id: number;
@@ -16,13 +17,6 @@ const DEFAULT_LIMIT = 50;
 const MIN_LIMIT = 1;
 const MAX_LIMIT = 200;
 
-function safeJsonParse(json: string): unknown {
-  try {
-    return JSON.parse(json) as unknown;
-  } catch {
-    return null;
-  }
-}
 
 interface AdminActionLogContext {
   db: D1Database;
@@ -49,7 +43,7 @@ export const handleAdminActionLog = makeAdminRoute(
       target: r.target,
       result: r.result,
       httpStatus: r.http_status,
-      details: r.details_json ? safeJsonParse(r.details_json) : null,
+      details: safeJsonParse<unknown>(r.details_json, null),
     }));
     return jsonResponse({ entries });
   },
