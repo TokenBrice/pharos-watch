@@ -207,6 +207,93 @@ describe("resolveOutlook — acceptance cases", () => {
   });
 });
 
+describe("resolveOutlook — factor-code emission (guards against silent code renames)", () => {
+  it("emits K2 severe for a frozen/dead collateral dependency", () => {
+    const r = resolveOutlook(
+      event(),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", dependencyImpaired: true }),
+      baseSupply(),
+      baseLive(),
+    );
+    expect(r.factors.some((f) => f.code === "K2_backing_impairment" && f.severity === "severe")).toBe(true);
+  });
+
+  it("emits K2 elevated for an exotic collateral base", () => {
+    const r = resolveOutlook(
+      event(),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", collateralQuality: "exotic", dependencyImpaired: false }),
+      baseSupply(),
+      baseLive(),
+    );
+    expect(r.factors.some((f) => f.code === "K2_backing_impairment" && f.severity === "elevated")).toBe(true);
+  });
+
+  it("emits R1 strong for immutable user-collateralized supply", () => {
+    const r = resolveOutlook(
+      event(),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", mintPath: "immutable-user-collateralized" }),
+      baseSupply(),
+      baseLive(),
+    );
+    expect(r.factors.some((f) => f.code === "R1_noninflatable_supply" && f.severity === "strong")).toBe(true);
+  });
+
+  it("emits R1 weak for governance-bounded user-collateralized supply", () => {
+    const r = resolveOutlook(
+      event(),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "concentrated-admin", mintPath: "user-collateralized-governed" }),
+      baseSupply(),
+      baseLive(),
+    );
+    expect(r.factors.some((f) => f.code === "R1_noninflatable_supply" && f.severity === "weak")).toBe(true);
+  });
+
+  it("emits R2 strong for hard collateral with a live redemption route", () => {
+    const r = resolveOutlook(
+      event(),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", collateralQuality: "native" }),
+      baseSupply(),
+      baseLive({ redemptionCapacityRatio: 0.2, redemptionRouteFamily: "collateral-redeem" }),
+    );
+    expect(r.factors.some((f) => f.code === "R2_hard_collateral_redemption" && f.severity === "strong")).toBe(true);
+  });
+
+  it("emits R2 weak for an overcollateralized CDP without a live redemption route", () => {
+    const r = resolveOutlook(
+      event(),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved" }),
+      baseSupply(),
+      baseLive(),
+    );
+    expect(r.factors.some((f) => f.code === "R2_hard_collateral_redemption" && f.severity === "weak")).toBe(true);
+  });
+
+  it("emits K4 severe when an algorithmic mechanism expands supply into a deep below-peg break", () => {
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -2500 }),
+      coin({ mechanismArchetype: "algorithmic", authorityPosture: "none-resolved" }),
+      baseSupply({ mintSurge: true, change7dPct: 40 }),
+      baseLive(),
+    );
+    expect(r.factors.some((f) => f.code === "K4_reflexive_spiral" && f.severity === "severe")).toBe(true);
+  });
+
+  it("lets a strong structural anchor block recovery_unlikely at two elevated kills", () => {
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -300 }),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", collateralQuality: "native", custodyModel: "cex" }),
+      baseSupply(),
+      baseLive({ liquidityScore: 25, redemptionCapacityRatio: 0.2, redemptionRouteFamily: "collateral-redeem" }),
+    );
+    const elevatedKills = r.factors.filter((f) => f.kind === "kill" && f.severity === "elevated");
+    expect(elevatedKills.length).toBe(2);
+    expect(r.factors.some((f) => f.kind === "kill" && f.severity === "severe")).toBe(false);
+    expect(r.factors.some((f) => f.code === "R2_hard_collateral_redemption" && f.severity === "strong")).toBe(true);
+    expect(r.tier).not.toBe("recovery_unlikely");
+    expect(r.tier).toBe("at_risk");
+  });
+});
+
 describe("incident grouping + quarantine", () => {
   const usd = () => "USD";
   const incidentForQuarantine = (stablecoinId: string, durationSec: number, i: number): DdrIncident => ({
