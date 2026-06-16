@@ -391,7 +391,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/aid-gaib.json` - 26 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 22 keys
 - `shared/data/stablecoins/coins/apxusd-apyx.json` - 26 keys
-- `shared/data/stablecoins/coins/apyusd-apyx.json` - 28 keys
+- `shared/data/stablecoins/coins/apyusd-apyx.json` - 29 keys
 - `shared/data/stablecoins/coins/arc-anq.json` - 20 keys
 - `shared/data/stablecoins/coins/asusdf-astherus.json` - 25 keys
 - `shared/data/stablecoins/coins/audd-novatti.json` - 25 keys

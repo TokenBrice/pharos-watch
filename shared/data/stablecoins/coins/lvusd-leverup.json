@@ -14,6 +14,7 @@
   },
   "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
   "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "geckoId": "leverup-usd",
   "links": [
     {

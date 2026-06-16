@@ -13,6 +13,7 @@
   },
   "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
   "pegMechanism": "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
+  "mechanismArchetype": "fiat-cash",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "kinesis-silver",

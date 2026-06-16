@@ -13,6 +13,7 @@
   },
   "collateral": "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
   "pegMechanism": "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
+  "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.03215072258749015,
   "detailProvider": "commodity",
   "geckoId": "kinesis-gold",

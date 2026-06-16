@@ -23,6 +23,7 @@
   "pegReferenceId": "yzusd-yuzu",
   "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
   "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "staked-yuzu-usd",
   "jurisdiction": {

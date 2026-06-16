@@ -20,6 +20,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cngn.co/transparency",
+    "provider": "Bala Isah Garba & Company",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Nigeria"

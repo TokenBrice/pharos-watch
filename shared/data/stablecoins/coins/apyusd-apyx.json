@@ -23,6 +23,7 @@
   "pegReferenceId": "apxusd-apyx",
   "collateral": "apxUSD deposited into the Apyx ERC-4626 yield vault; apxUSD itself is backed by preferred equity shares from Digital Asset Treasury companies and liquidity buffers",
   "pegMechanism": "Users deposit apxUSD to mint apyUSD; cash dividends and preferred-equity yield accrue inside the vault, increasing apyUSD's exchange rate against apxUSD over time",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "apyusd",
   "links": [

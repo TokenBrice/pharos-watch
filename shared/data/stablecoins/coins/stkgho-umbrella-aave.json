@@ -89,6 +89,7 @@
   "pegReferenceId": "gho-aave",
   "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
   "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "links": [
     {

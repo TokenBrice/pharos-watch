@@ -24,6 +24,7 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
   "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",

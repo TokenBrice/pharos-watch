@@ -23,6 +23,7 @@
   "pegReferenceId": "usdd-tron-dao-reserve",
   "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
   "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-usdd",
   "proofOfReserves": {

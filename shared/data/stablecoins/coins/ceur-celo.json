@@ -215,7 +215,7 @@
     ]
   },
   "launchDate": "2021-03-15",
-  "mechanismArchetype": "algorithmic",
+  "mechanismArchetype": "cdp",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "EURm is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",

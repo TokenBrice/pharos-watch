@@ -15,7 +15,6 @@
   "pegMechanism": "Custodian-managed mint/redemption against KRW deposits at Woori Bank; KRW1 is a brand trademarked by BDACS (December 2023) and operated by BDACS as the regulated digital asset custodian",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
-  "launchDate": "2026-01-05",
   "contracts": [
     {
       "chain": "bsc",

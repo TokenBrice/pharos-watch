@@ -13,6 +13,7 @@
   },
   "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
   "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
+  "mechanismArchetype": "fiat-cash",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "streamex-gldy",

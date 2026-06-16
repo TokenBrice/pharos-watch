@@ -2070,6 +2070,7 @@
     "pegReferenceId": "apxusd-apyx",
     "collateral": "apxUSD deposited into the Apyx ERC-4626 yield vault; apxUSD itself is backed by preferred equity shares from Digital Asset Treasury companies and liquidity buffers",
     "pegMechanism": "Users deposit apxUSD to mint apyUSD; cash dividends and preferred-equity yield accrue inside the vault, increasing apyUSD's exchange rate against apxUSD over time",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "apyusd",
     "proofOfReserves": {
       "type": "real-time",
@@ -10654,7 +10655,7 @@
     },
     "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
     "pegMechanism": "Mento V3 reserve-backed FX model: EURm is minted and redeemed against the shared Mento Reserve through Fixed-Price Market Maker (FPMM) pools that quote a Chainlink EUR oracle rate rather than deriving price from pool reserves, with on-chain trading limits and circuit breakers halting trade when the oracle is stale or off-peg.",
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "celo-euro",
     "proofOfReserves": {
       "type": "real-time",
@@ -10886,6 +10887,7 @@
     },
     "collateral": "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
     "pegMechanism": "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.03215072258749015,
     "geckoId": "comtech-gold",
     "cmcSlug": "comtech-gold",
@@ -11880,6 +11882,7 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://cngn.co/transparency",
+      "provider": "Bala Isah Garba & Company",
       "attestorTier": "niche",
       "cadence": "monthly",
       "attestorJurisdiction": "Nigeria"
@@ -15278,6 +15281,13 @@
         }
       }
     },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Historical oracle-manipulation incident",
+        "message": "Inverse Finance suffered an April 2022 oracle-manipulation exploit that let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route."
+      }
+    ],
     "launchDate": "2021-02-23"
   },
   {
@@ -26038,6 +26048,7 @@
     },
     "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
     "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.000321507467,
     "geckoId": "gold-token",
     "proofOfReserves": {
@@ -26182,6 +26193,7 @@
     },
     "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
     "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "streamex-gldy",
     "proofOfReserves": {
@@ -33863,6 +33875,7 @@
     },
     "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
     "pegMechanism": "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "kinesis-silver",
     "proofOfReserves": {
@@ -33990,6 +34003,7 @@
     },
     "collateral": "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
     "pegMechanism": "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.03215072258749015,
     "geckoId": "kinesis-gold",
     "proofOfReserves": {
@@ -34642,7 +34656,6 @@
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "status": "pre-launch",
-    "launchDate": "2026-01-05",
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
@@ -35967,6 +35980,7 @@
     },
     "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
     "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "leverup-usd",
     "links": [
       {
@@ -40205,6 +40219,7 @@
     "pegReferenceId": "msusd-main-street",
     "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
     "pegMechanism": "ERC-4626-style staking token over msUSD; users stake msUSD for msY, whose exchange rate appreciates with strategy returns, while final USDC redemption inherits Main Street's primary-market caps and cooldowns",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "main-street-yield",
     "links": [
       {
@@ -44457,6 +44472,7 @@
     },
     "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
     "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "pax-gold",
     "pythFeedId": "0x273717b49430906f4b0c230e99aa1007f83758e3199edbc887c0d06c3e332494",
@@ -45153,6 +45169,7 @@
     },
     "collateral": "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support",
     "pegMechanism": "Issuer-managed gold-backed token with off-chain custody and redemption workflow; documentation describes physical redemption and delivery through the Pleasing platform subject to KYC and size requirements",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "pleasing-gold",
     "protocolSlug": "pleasing-gold",
@@ -53572,6 +53589,7 @@
     "pegReferenceId": "cusd-cap",
     "collateral": "ERC-4626 staked cUSD shares backed by Cap's reserve basket and operator-lending framework; yield comes from reserve yield and overcollateralized operator borrowing",
     "pegMechanism": "Users stake cUSD for stcUSD; the stcUSD exchange rate appreciates versus cUSD as yield accrues, and final USD exit inherits cUSD proportional basket redemption and Cap's slashing protections",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "staked-cap-usd",
     "links": [
       {
@@ -53727,6 +53745,7 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
     "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "steakhouse-usdc",
     "links": [
       {
@@ -53889,6 +53908,7 @@
     "pegReferenceId": "usdt-tether",
     "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
     "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDT as borrower interest accrues; withdrawals redeem vault shares for available USDT liquidity or wait for Morpho market liquidity to return",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "steakhouse-usdt",
     "links": [
       {
@@ -54048,6 +54068,7 @@
     "pegReferenceId": "gho-aave",
     "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
     "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
+    "mechanismArchetype": "cdp",
     "links": [
       {
         "label": "Website",
@@ -54353,6 +54374,7 @@
     "pegReferenceId": "usds-sky",
     "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where deposits fund SKY-backed borrowing and earn the stUSDS Rate; holders absorb staked-SKY loan shortfall and governance slashing risk",
     "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",
+    "mechanismArchetype": "cdp",
     "links": [
       {
         "label": "Website",
@@ -55645,6 +55667,7 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
     "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
+    "mechanismArchetype": "fiat-cash",
     "links": [
       {
         "label": "Website",
@@ -55845,6 +55868,7 @@
     "pegReferenceId": "usdd-tron-dao-reserve",
     "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
     "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
+    "mechanismArchetype": "cdp",
     "geckoId": "savings-usdd",
     "proofOfReserves": {
       "type": "self-reported",
@@ -57623,6 +57647,7 @@
     "pegReferenceId": "yzusd-yuzu",
     "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
     "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
+    "mechanismArchetype": "cdp",
     "geckoId": "staked-yuzu-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -67140,6 +67165,7 @@
     },
     "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
     "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "usdkg",
     "cmcSlug": "usdkg",
     "proofOfReserves": {

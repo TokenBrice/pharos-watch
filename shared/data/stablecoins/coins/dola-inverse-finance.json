@@ -153,6 +153,13 @@
   },
   "deploymentModel": "third-party-bridge",
   "governanceQuality": "dao-governance",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Historical oracle-manipulation incident",
+      "message": "Inverse Finance suffered an April 2022 oracle-manipulation exploit that let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route."
+    }
+  ],
   "reserves": [
     {
       "name": "sUSDe collateral",

@@ -610,6 +610,7 @@
       "rwa": true,
       "navToken": true
     },
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "apyusd",
     "variantOf": "apxusd-apyx",
     "variantKind": "strategy-vault",
@@ -3048,7 +3049,7 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "celo-euro",
     "launchDate": "2021-03-15",
     "mica": {
@@ -3149,6 +3150,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "comtech-gold",
     "commodityOunces": 0.03215072258749015,
     "reserves": [
@@ -7750,6 +7752,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "gold-token",
     "launchDate": "2025-07-09",
     "commodityOunces": 0.000321507467,
@@ -7793,6 +7796,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "streamex-gldy",
     "launchDate": "2026-02-25",
     "commodityOunces": 1,
@@ -10260,6 +10264,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "kinesis-silver",
     "launchDate": "2025-09-11",
     "commodityOunces": 1,
@@ -10298,6 +10303,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "kinesis-gold",
     "launchDate": "2025-09-11",
     "commodityOunces": 0.03215072258749015,
@@ -10524,7 +10530,6 @@
     },
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
-    "launchDate": "2026-01-05",
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
@@ -10943,6 +10948,7 @@
       "rwa": false,
       "navToken": false
     },
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "leverup-usd",
     "canBeBlacklisted": "possible",
     "reserves": [
@@ -12062,6 +12068,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "main-street-yield",
     "variantOf": "msusd-main-street",
     "variantKind": "strategy-vault",
@@ -13296,6 +13303,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "pax-gold",
     "protocolSlug": "paxos-gold",
     "launchDate": "2019-08-26",
@@ -13497,6 +13505,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "pleasing-gold",
     "protocolSlug": "pleasing-gold",
     "launchDate": "2025-10-22",
@@ -16090,6 +16099,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "staked-cap-usd",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault",
@@ -16139,6 +16149,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "steakhouse-usdc",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
@@ -16188,6 +16199,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "steakhouse-usdt",
     "variantOf": "usdt-tether",
     "variantKind": "strategy-vault",
@@ -16238,6 +16250,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "cdp",
     "variantOf": "gho-aave",
     "variantKind": "risk-absorption",
     "launchDate": "2025-06-05",
@@ -16344,6 +16357,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "cdp",
     "variantOf": "usds-sky",
     "variantKind": "risk-absorption",
     "launchDate": "2025-08-25",
@@ -16761,6 +16775,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "fiat-cash",
     "variantOf": "usdc-circle",
     "variantKind": "savings-passthrough",
     "launchDate": "2025-10-01",
@@ -16813,6 +16828,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "cdp",
     "geckoId": "savings-usdd",
     "variantOf": "usdd-tron-dao-reserve",
     "variantKind": "savings-passthrough",
@@ -17256,6 +17272,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "cdp",
     "geckoId": "staked-yuzu-usd",
     "variantOf": "yzusd-yuzu",
     "variantKind": "strategy-vault",
@@ -20151,6 +20168,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "usdkg",
     "launchDate": "2025-03-12",
     "canBeBlacklisted": true,
