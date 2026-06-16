@@ -3,7 +3,7 @@ import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
 import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-records";
 import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
 import { buildChainRpcs } from "../src/lib/chain-registry";
-import { decimalStringFromBigInt } from "../src/lib/bigint";
+import { decimalNumberFromBigInt } from "../src/lib/bigint";
 import { encodeBalanceOfCallData } from "../src/lib/evm-selectors";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import { fetchEvmTokenCurrentBalance } from "../src/cron/blacklist/balance-providers";
@@ -176,7 +176,7 @@ async function fetchTronCurrentBalanceRowsInBatches(
         const record = batch[index]!;
         const item = byId.get(index + 1);
         const amount =
-          item?.result && item.result.startsWith("0x") ? decimalStringFromBigInt(BigInt(item.result), decimals) : null;
+          item?.result && item.result.startsWith("0x") ? decimalNumberFromBigInt(BigInt(item.result), decimals) : null;
         rowsToWrite.push(
           buildCurrentBalanceWriteRow(
             record.stablecoin,

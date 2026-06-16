@@ -169,6 +169,7 @@ export async function syncMintBurn(
     enabledConfigs,
     (c) => mintBurnConfigKey(c),
   );
+  const startIndex = enabledConfigs.findIndex((config) => mintBurnConfigKey(config) === mintBurnConfigKey(rotatedConfigs[0] ?? enabledConfigs[0]));
   // Always process critical contracts first so extended backlogs cannot starve
   // core coverage when budget pressure is high.
   const configs = [

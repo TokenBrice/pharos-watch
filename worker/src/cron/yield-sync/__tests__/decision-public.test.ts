@@ -34,7 +34,7 @@ function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYie
     sourceTvlUsd: 1_000_000,
     sourceRisk: makeSourceRisk(),
     sourceRiskPenalty: 1,
-    sourceRiskPenaltyReason: "none",
+    sourceRiskPenaltyReason: "provided",
     sourceRiskPenaltyProvided: false,
     sourceRiskAdjustedUtility: 0,
     dataSource: "defillama",

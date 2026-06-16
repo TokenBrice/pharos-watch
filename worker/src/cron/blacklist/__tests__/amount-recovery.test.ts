@@ -164,7 +164,7 @@ describe("enrichRowBalances", () => {
       contract_address: "TRONCONTRACT",
     }));
     const scopedKey = (c: (typeof candidates)[number]) =>
-      buildBlacklistContractBalanceKey(c.stablecoin, c.chain_id, c.address, c.config_key, c.contract_address);
+      buildBlacklistContractBalanceKey(c.stablecoin as Parameters<typeof buildBlacklistContractBalanceKey>[0], c.chain_id, c.address, c.config_key, c.contract_address);
     const balanceRows = candidates.map((c) => ({ id: scopedKey(c), amount_native: 7, amount_usd: 7 }));
 
     const db = mockD1([

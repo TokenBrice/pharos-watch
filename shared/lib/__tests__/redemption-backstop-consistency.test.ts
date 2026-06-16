@@ -126,7 +126,7 @@ describe("redemption backstop config consistency", () => {
         .filter((file) => file.endsWith(".ts") && file !== barrel)
         .map((file) => `${dir}/${file}`)
         .sort();
-      const declared = [...moduleEntry.sourceFilePaths].sort();
+      const declared: string[] = [...moduleEntry.sourceFilePaths].sort();
 
       const missingFromManifest = onDisk.filter((p) => !declared.includes(p));
       const missingFromDisk = declared.filter((p) => !onDisk.includes(p));
