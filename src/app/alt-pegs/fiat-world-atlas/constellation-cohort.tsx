@@ -12,7 +12,7 @@ export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
     .map((coin) => coin.symbol)
     .join(" · ");
   return (
-    <div className="constellation-cohort" aria-label="CPI-linked stablecoins">
+    <div className="constellation-cohort" aria-label={`${cohort.label}-linked stablecoins`}>
       <svg className="constellation-cohort__traces" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         {cohort.coins.slice(1).map((c, idx) => {
           const prev = cohort.coins[idx];
