@@ -42,13 +42,15 @@ export function getMintBurnSummaryTimeframe(stablecoinId: string): ResolvedMintB
   };
 }
 
+interface MintBurnNetFlows {
+  netFlow24hUsd: number;
+  netFlow7dUsd: number;
+  netFlow30dUsd: number;
+  netFlow90dUsd: number;
+}
+
 export function getNetFlowForHours(
-  coin: {
-    netFlow24hUsd: number;
-    netFlow7dUsd: number;
-    netFlow30dUsd: number;
-    netFlow90dUsd: number;
-  },
+  coin: MintBurnNetFlows,
   hours: number,
 ): number | null {
   if (hours === DAY_HOURS) return coin.netFlow24hUsd;
@@ -56,4 +58,47 @@ export function getNetFlowForHours(
   if (hours === THIRTY_DAYS_HOURS) return coin.netFlow30dUsd;
   if (hours === NINETY_DAYS_HOURS) return coin.netFlow90dUsd;
   return null;
+}
+
+/**
+ * Resolves the short/long net-flow values shown on the flow summary card.
+ * Custom-window net flows (from the per-coin hook) win when present and finite;
+ * otherwise the matching coin field is used, falling back to the 24h/7d fields.
+ * Pure so it can be tested independently of the component render path.
+ */
+export function resolveFlowWindow(
+  coin: MintBurnNetFlows,
+  timeframe: Pick<MintBurnSummaryTimeframePreset, "shortHours" | "longHours">,
+  shortWindowNetFlowUsd: number | undefined,
+  longWindowNetFlowUsd: number | undefined,
+): { shortNetFlow: number; longNetFlow: number } {
+  const needsCustomShortWindow = timeframe.shortHours !== DAY_HOURS;
+  const needsCustomLongWindow = timeframe.longHours !== WEEK_HOURS;
+  const shouldFetchLongWindow =
+    needsCustomLongWindow && timeframe.longHours !== timeframe.shortHours;
+
+  const fallbackShortNetFlow =
+    getNetFlowForHours(coin, timeframe.shortHours) ?? coin.netFlow24hUsd;
+  const fallbackLongNetFlow =
+    getNetFlowForHours(coin, timeframe.longHours) ?? coin.netFlow7dUsd;
+
+  const shortNetFlowCandidate = needsCustomShortWindow
+    ? (shortWindowNetFlowUsd ?? fallbackShortNetFlow)
+    : coin.netFlow24hUsd;
+  const longNetFlowCandidate = needsCustomLongWindow
+    ? (
+      shouldFetchLongWindow
+        ? (longWindowNetFlowUsd ?? fallbackLongNetFlow)
+        : shortNetFlowCandidate
+    )
+    : coin.netFlow7dUsd;
+
+  return {
+    shortNetFlow: Number.isFinite(shortNetFlowCandidate)
+      ? shortNetFlowCandidate
+      : coin.netFlow24hUsd,
+    longNetFlow: Number.isFinite(longNetFlowCandidate)
+      ? longNetFlowCandidate
+      : coin.netFlow7dUsd,
+  };
 }

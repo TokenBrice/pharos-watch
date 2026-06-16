@@ -24,7 +24,7 @@ import {
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import {
   getMintBurnSummaryTimeframe,
-  getNetFlowForHours,
+  resolveFlowWindow,
 } from "@/lib/mint-burn-timeframes";
 import { THIRTY_DAYS_HOURS, NINETY_DAYS_HOURS } from "@/lib/constants";
 import {
@@ -125,27 +125,12 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const coin = data.coins.find((entry) => entry.stablecoinId === stablecoinId);
   if (!coin) return null;
 
-  const fallbackShortNetFlow =
-    getNetFlowForHours(coin, timeframe.shortHours) ?? coin.netFlow24hUsd;
-  const fallbackLongNetFlow =
-    getNetFlowForHours(coin, timeframe.longHours) ?? coin.netFlow7dUsd;
-  const shortNetFlowCandidate = needsCustomShortWindow
-    ? (shortWindowData?.netFlowUsd ?? fallbackShortNetFlow)
-    : coin.netFlow24hUsd;
-  const longNetFlowCandidate = needsCustomLongWindow
-    ? (
-      shouldFetchLongWindow
-        ? (longWindowData?.netFlowUsd ?? fallbackLongNetFlow)
-        : shortNetFlowCandidate
-    )
-    : coin.netFlow7dUsd;
-
-  const shortNetFlow = Number.isFinite(shortNetFlowCandidate)
-    ? shortNetFlowCandidate
-    : coin.netFlow24hUsd;
-  const longNetFlow = Number.isFinite(longNetFlowCandidate)
-    ? longNetFlowCandidate
-    : coin.netFlow7dUsd;
+  const { shortNetFlow, longNetFlow } = resolveFlowWindow(
+    coin,
+    timeframe,
+    shortWindowData?.netFlowUsd,
+    longWindowData?.netFlowUsd,
+  );
 
   const has24hActivity = inferHas24hActivity(coin);
   const netDirection = resolveNetDirection(coin);
