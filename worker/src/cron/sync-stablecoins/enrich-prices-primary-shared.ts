@@ -8,10 +8,12 @@ export interface PriceValidationStats {
   low: number;
 }
 
+// DefiLlama returns the literal string "wrong" as the geckoId for assets whose
+// CoinGecko id could not be resolved; treat that exact sentinel as unusable.
 const INVALID_GECKO_ID_SENTINEL = "wrong";
 
 export function isUsableGeckoId(geckoId: unknown): geckoId is string {
-  return typeof geckoId === "string" && geckoId.length > 0 && !geckoId.includes(INVALID_GECKO_ID_SENTINEL);
+  return typeof geckoId === "string" && geckoId.length > 0 && geckoId !== INVALID_GECKO_ID_SENTINEL;
 }
 
 export function getSourceDefaultWeight(source: string): number {
