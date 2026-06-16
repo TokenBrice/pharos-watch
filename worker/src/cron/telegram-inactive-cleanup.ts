@@ -34,6 +34,10 @@ const INACTIVE_RETENTION_SEC = 180 * 24 * 60 * 60;
 const WARN_WINDOW_START_SEC = 170 * 24 * 60 * 60;
 const WARN_MARKER_TTL_SEC = 30 * 24 * 60 * 60;
 const RUN_INTERVAL_SEC = 7 * 24 * 60 * 60;
+// Per-run caps keep a single weekly invocation inside D1's per-statement
+// budget; a larger backlog drains over successive weekly runs. When a pass
+// hits its cap the result metadata flags `cappedAtLimit` so the overflow is
+// observable rather than silent.
 const MAX_DELETIONS_PER_RUN = 100;
 const MAX_WARNINGS_PER_RUN = 100;
 const CACHE_LAST_RUN_KEY = "cron:telegram-inactive-cleanup:last-run";
@@ -273,6 +277,7 @@ export async function runTelegramInactiveCleanup(
               blocked: warningPass.blocked,
               failed: warningPass.failed,
               skippedAlreadyWarned: warningPass.skippedAlreadyWarned,
+              cappedAtLimit: warningPass.attempted >= MAX_WARNINGS_PER_RUN,
             },
           }
         : {}),

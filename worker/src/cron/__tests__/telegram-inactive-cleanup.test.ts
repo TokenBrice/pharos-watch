@@ -432,12 +432,13 @@ describe("runTelegramInactiveCleanup", () => {
     expect(warningEvents).toHaveLength(1);
     expect(warningEvents[0]?.outcome).toBe("sent");
 
-    // Metadata exposes the warning-pass summary.
+    // Metadata exposes the warning-pass summary, including the cap flag.
     const metadata = JSON.parse(result.metadata!) as {
-      warningPass?: { attempted: number; warned: number };
+      warningPass?: { attempted: number; warned: number; cappedAtLimit: boolean };
     };
     expect(metadata.warningPass?.attempted).toBe(1);
     expect(metadata.warningPass?.warned).toBe(1);
+    expect(metadata.warningPass?.cappedAtLimit).toBe(false);
   });
 
   it("skips the warning pass entirely when botToken is not provided", async () => {
