@@ -46,4 +46,16 @@ describe("changelogs barrel", () => {
 
     expect(changelogs).toHaveLength(datedFileCount);
   });
+
+  it("each file's dateRange.to matches its filename date", () => {
+    const datedFiles = readdirSync(CHANGELOG_DIR).filter((fileName) =>
+      CHANGELOG_ENTRY_FILE_RE.test(fileName),
+    );
+    const datesWithEntry = new Set(changelogs.map((entry) => entry.dateRange.to));
+
+    for (const fileName of datedFiles) {
+      const fileDate = fileName.replace(/\.ts$/, "");
+      expect(datesWithEntry.has(fileDate)).toBe(true);
+    }
+  });
 });
