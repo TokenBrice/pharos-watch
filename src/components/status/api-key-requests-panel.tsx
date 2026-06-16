@@ -10,6 +10,15 @@ import type {
 import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { postAdminJson } from "@/lib/admin-access";
 import { cn } from "@/lib/utils";
 import { useApiKeyRequests } from "@/hooks/use-api-key-requests";
@@ -36,6 +45,12 @@ export function ApiKeyRequestsPanel() {
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutationNotice, setMutationNotice] = useState<string | null>(null);
+  const [pendingMutation, setPendingMutation] = useState<{
+    request: ApiKeySelfServeRequestAdminSummary;
+    action: ApiKeyRequestAction;
+  } | null>(null);
+  const [reasonDraft, setReasonDraft] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
 
   const requests = data?.requests ?? EMPTY_REQUESTS;
   const generatedAt = data?.generatedAt ?? Math.floor(Date.now() / 1000);
@@ -43,27 +58,6 @@ export function ApiKeyRequestsPanel() {
     () => buildApiKeyRequestSummary(requests, generatedAt, statusFilter, REQUEST_LIST_LIMIT),
     [generatedAt, requests, statusFilter],
   );
-
-  function collectMutationReason(
-    request: ApiKeySelfServeRequestAdminSummary,
-    action: ApiKeyRequestAction,
-  ): string | null {
-    const label = API_KEY_REQUEST_ACTION_LABELS[action];
-    const confirmed = window.confirm(
-      `Confirm ${label} for ${describeRequester(request)}. This changes self-serve API access state.`,
-    );
-    if (!confirmed) return null;
-
-    const reason = window.prompt(`Reason for ${label}:`);
-    if (reason == null) return null;
-
-    const trimmed = reason.trim();
-    if (trimmed.length < 4) {
-      setMutationError("Action cancelled. Enter a reason with at least 4 characters.");
-      return null;
-    }
-    return trimmed.slice(0, 300);
-  }
 
   async function runMutation(
     request: ApiKeySelfServeRequestAdminSummary,
@@ -93,9 +87,21 @@ export function ApiKeyRequestsPanel() {
 
   function requestMutation(request: ApiKeySelfServeRequestAdminSummary, action: ApiKeyRequestAction) {
     setMutationError(null);
-    const reason = collectMutationReason(request, action);
-    if (!reason) return;
-    void runMutation(request, action, reason);
+    setReasonDraft("");
+    setReasonError(null);
+    setPendingMutation({ request, action });
+  }
+
+  function confirmPendingMutation() {
+    if (!pendingMutation) return;
+    const trimmed = reasonDraft.trim();
+    if (trimmed.length < 4) {
+      setReasonError("Enter a reason with at least 4 characters.");
+      return;
+    }
+    const { request, action } = pendingMutation;
+    setPendingMutation(null);
+    void runMutation(request, action, trimmed.slice(0, 300));
   }
 
   return (
@@ -179,6 +185,53 @@ export function ApiKeyRequestsPanel() {
             ))}
           </div>
         ) : null}
+
+        <Dialog
+          open={pendingMutation != null}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setPendingMutation(null);
+              setReasonError(null);
+            }
+          }}
+        >
+          <DialogContent>
+            {pendingMutation ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{API_KEY_REQUEST_ACTION_LABELS[pendingMutation.action]}</DialogTitle>
+                  <DialogDescription>
+                    Confirm {API_KEY_REQUEST_ACTION_LABELS[pendingMutation.action]} for {describeRequester(pendingMutation.request)}. This changes self-serve API access state.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-1">
+                  <label htmlFor="api-key-request-reason" className="text-xs font-medium text-muted-foreground">
+                    Reason <span className="font-normal">(at least 4 characters)</span>
+                  </label>
+                  <Textarea
+                    id="api-key-request-reason"
+                    value={reasonDraft}
+                    onChange={(e) => setReasonDraft(e.target.value)}
+                    maxLength={300}
+                    placeholder={`Reason for ${API_KEY_REQUEST_ACTION_LABELS[pendingMutation.action].toLowerCase()}`}
+                    aria-invalid={reasonError != null}
+                  />
+                  {reasonError ? (
+                    <p role="alert" className="text-xs text-red-600 dark:text-red-400">{reasonError}</p>
+                  ) : null}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPendingMutation(null)}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={confirmPendingMutation}>
+                    Confirm
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

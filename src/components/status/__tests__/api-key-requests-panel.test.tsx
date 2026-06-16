@@ -115,8 +115,7 @@ describe("ApiKeyRequestsPanel", () => {
 
   it("does not render durable request ids in the admin cards or notices", async () => {
     const request = makeRequest({ requestId: "akr_do_not_show" });
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    vi.stubGlobal("prompt", vi.fn(() => "abuse review"));
+    vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
       ok: true,
       requestId: request.requestId,
@@ -131,6 +130,8 @@ describe("ApiKeyRequestsPanel", () => {
     expect(screen.queryByText(request.requestId)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "abuse review" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => {
       expect(screen.getByText("Request marked rejected; claim released.")).toBeTruthy();
@@ -149,13 +150,13 @@ describe("ApiKeyRequestsPanel", () => {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }));
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    vi.stubGlobal("prompt", vi.fn(() => "manual abuse review"));
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
 
     renderPanel([request]);
     fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "manual abuse review" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [, init] = fetchMock.mock.calls[0] ?? [];
@@ -182,8 +183,6 @@ describe("ApiKeyRequestsPanel", () => {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }));
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    vi.stubGlobal("prompt", vi.fn(() => "inactive key cleanup"));
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-release-test" });
 
@@ -211,6 +210,8 @@ describe("ApiKeyRequestsPanel", () => {
     cleanup();
     render(<ApiKeyRequestsPanel />);
     fireEvent.click(screen.getByRole("button", { name: "Release stale claim" }));
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "inactive key cleanup" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [url, init] = fetchMock.mock.calls[0] ?? [];
