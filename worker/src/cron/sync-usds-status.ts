@@ -13,8 +13,15 @@ const STALE_HOURS = 20;
 const USDS_PROXY = "0xdC035D45d973E3EC169d2276DDab16f1e407384F";
 // ERC-1967 implementation storage slot
 const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-// Known implementation without freeze functionality
-const NO_FREEZE_IMPL = "0x1923dfee706a8e78157416c29cbccfde7cdf4102";
+// Known implementations without freeze functionality.
+// Each address was verified by calling isBlocked(address(0)) on the proxy and
+// confirming the call reverts (no freeze capability). Add future safe
+// implementations here to avoid an unnecessary probe call per cron cycle.
+// Verified at block 22642000 (2025-06-10) via Etherscan:
+//   https://etherscan.io/address/0x1923dfee706a8e78157416c29cbccfde7cdf4102
+const NO_FREEZE_IMPLS = new Set<string>([
+  "0x1923dfee706a8e78157416c29cbccfde7cdf4102",
+]);
 // Ethereum mainnet
 const ETH_CHAIN_ID = 1;
 // isBlocked(address) selector = keccak256("isBlocked(address)")[:4]
@@ -96,8 +103,8 @@ export async function syncUsdsStatus(
   }
 
   let freezeCapabilityPresent = false;
-  if (implementationAddress !== NO_FREEZE_IMPL) {
-    // Implementation changed — probe for freeze function
+  if (!NO_FREEZE_IMPLS.has(implementationAddress)) {
+    // Implementation is not in the known-safe set — probe for freeze function
     const probeResult = await probeFreezeCapability(etherscanApiKey, signal);
     if (probeResult === null) {
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);

@@ -1,6 +1,5 @@
 "use client";
 
-import { STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT } from "@shared/lib/status-thresholds";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { CoinGeckoPriceDiff, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,7 +99,7 @@ export function CoinGeckoPriceDiffCard({
           </div>
         ) : (
           <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-            No tracked CoinGecko-covered tokens are beyond {summary.thresholdPct || STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT}% right now.
+            No tracked CoinGecko-covered tokens are beyond {summary.thresholdPct}% right now.
           </div>
         )}
       </CardContent>

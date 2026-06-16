@@ -29,6 +29,7 @@ import {
   resolveRotatedConfigs,
 } from "./mint-burn/run-state";
 import { excludeFrozenIds } from "./shared/exclude-frozen";
+import { throwIfAborted } from "../lib/abort";
 import { toErrorMessage } from "../lib/error-utils";
 
 const MAX_SCAN_RANGE = 50_000;
@@ -75,13 +76,7 @@ export async function syncMintBurn(
   const jobName = resolveMintBurnJobName(lane, options.jobName);
   const reportProgress = options.onProgress;
 
-  const throwIfAborted = () => {
-    if (signal?.aborted) {
-      throw signal.reason instanceof Error ? signal.reason : new Error("sync-mint-burn aborted");
-    }
-  };
-
-  throwIfAborted();
+  throwIfAborted(signal);
   const budget = createBudget(GLOBAL_BUDGET_LIMIT);
   const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
