@@ -38,7 +38,7 @@ export const ENV_BINDINGS = [
     description: "Primary D1 binding for worker reads/writes; the Pages site-data lane also uses it for attribution telemetry.",
     docs: { includeInOperatorOriginAccess: true },
     runtimes: {
-      worker: { order: 1, status: "required" },
+      worker: { order: 50, status: "required" },
       pagesSiteData: { order: 1, status: "optional" },
     },
   },
@@ -48,7 +48,7 @@ export const ENV_BINDINGS = [
     description: "Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`.",
     example: { section: "workerRequired", value: "https://pharos.watch,https://ops.pharos.watch" },
     runtimes: {
-      worker: { order: 2, status: "required" },
+      worker: { order: 51, status: "required" },
     },
   },
   {
@@ -242,7 +242,7 @@ export const ENV_BINDINGS = [
     description: "GitHub personal access token used by the feedback -> issue bridge; required to keep `POST /api/feedback` available.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 18, status: "required" },
+      worker: { order: 52, status: "required" },
     },
   },
   {
@@ -251,7 +251,7 @@ export const ENV_BINDINGS = [
     description: "Dedicated salt for hashed-IP feedback submission throttling; required to keep `POST /api/feedback` available.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 19, status: "required" },
+      worker: { order: 53, status: "required" },
     },
   },
   {
@@ -260,7 +260,7 @@ export const ENV_BINDINGS = [
     description: "Dedicated salt for hashed-IP self-serve API key request throttling.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 20, status: "required" },
+      worker: { order: 54, status: "required" },
     },
   },
   {
@@ -269,7 +269,7 @@ export const ENV_BINDINGS = [
     description: "HMAC pepper used for private self-serve API request email lookup and duplicate-claim keys.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 21, status: "required" },
+      worker: { order: 55, status: "required" },
     },
   },
   {
@@ -278,7 +278,7 @@ export const ENV_BINDINGS = [
     description: "HMAC pepper used to hash one-time self-serve API email verification tokens.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 22, status: "required" },
+      worker: { order: 56, status: "required" },
     },
   },
   {
@@ -287,7 +287,7 @@ export const ENV_BINDINGS = [
     description: "Resend API key used to send self-serve API verification emails.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 23, status: "required" },
+      worker: { order: 57, status: "required" },
     },
   },
   {
@@ -296,7 +296,7 @@ export const ENV_BINDINGS = [
     description: "Configured sender for self-serve API verification emails, e.g. `Pharos API <api@mail.pharos.watch>`.",
     example: { section: "workerRequired", value: "Pharos API <api@mail.pharos.watch>" },
     runtimes: {
-      worker: { order: 24, status: "required" },
+      worker: { order: 58, status: "required" },
     },
   },
   {
@@ -305,7 +305,7 @@ export const ENV_BINDINGS = [
     description: "Reply-to address for self-serve API verification emails.",
     example: { section: "workerRequired", value: "api@mail.pharos.watch" },
     runtimes: {
-      worker: { order: 25, status: "required" },
+      worker: { order: 59, status: "required" },
     },
   },
   {
@@ -314,7 +314,7 @@ export const ENV_BINDINGS = [
     description: "Public website URL used to build self-serve API verification links; production value is `https://pharos.watch/api`.",
     example: { section: "workerRequired", value: "https://pharos.watch/api" },
     runtimes: {
-      worker: { order: 26, status: "required" },
+      worker: { order: 60, status: "required" },
     },
   },
   {

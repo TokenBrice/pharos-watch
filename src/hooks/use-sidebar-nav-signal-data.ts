@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getPollingWindow } from "@/hooks/use-api-query";
-import { fetchLightApiJson } from "@/lib/light-api-client";
+import { apiFetch } from "@/lib/api";
 import {
   FRONTEND_API_QUERY_RUNTIME_REGISTRY,
   type FrontendApiQueryDescriptor,
@@ -31,7 +31,7 @@ export function useLightApiQuery<T>(
 
   return useQuery({
     queryKey: ["api", ...descriptor.queryKey],
-    queryFn: () => fetchLightApiJson(descriptor),
+    queryFn: () => apiFetch<T>(descriptor.path),
     enabled: options.enabled ?? true,
     staleTime,
     refetchInterval,
