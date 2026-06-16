@@ -47,7 +47,7 @@
     },
     "notes": "Already within budget. Prefer keeping validation and persistence in helper modules rather than growing the handler."
   },
-  "worker/src/handlers/http.ts": {
+  "worker/src/handlers/http/request-dispatch.ts": {
     "fileLines": 11,
     "maxFunctionLines": 7,
     "branchCount": 0,

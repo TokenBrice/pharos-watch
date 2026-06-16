@@ -10,7 +10,7 @@ export const TARGET_FILES = [
   "shared/lib/format.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/api/feedback.ts",
-  "worker/src/handlers/http.ts",
+  "worker/src/handlers/http/request-dispatch.ts",
   "src/components/contagion-graph.tsx",
   "src/app/chains/[chain]/client.tsx",
   "worker/src/cron/sync-stablecoins.ts",
