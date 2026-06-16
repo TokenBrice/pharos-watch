@@ -51,7 +51,8 @@ export interface ApiKeySelfServeIssueResponse {
     maskedToken: string;
     tier: "self-serve";
     trafficClass: "external";
-    rateLimitPerMinute: 30;
+    /** Per-minute rate limit applied to the issued key (default 30). */
+    rateLimitPerMinute: number;
     expiresAt: number | null;
   };
   token: string;
