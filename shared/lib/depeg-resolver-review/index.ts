@@ -15,17 +15,7 @@ export interface DdrrReviewBatchResult {
 }
 
 export function reviewDepegResolverAssessments(input: DdrrReviewBatchInput): DdrrReviewBatchResult {
-  const rows = input.assessments.map((assessment) =>
-    reviewDepegResolverAssessment(
-      assessment,
-      lookupActualEvent(input.actualEventsById, assessment.eventId),
-      input.nowSec,
-    ),
-  );
-  return {
-    rows,
-    summary: summarizeDdrrRows(rows),
-  };
+  return reviewDdrrV2Rows({ assessments: input.assessments, actualEventsById: input.actualEventsById, nowSec: input.nowSec });
 }
 
 export function reviewDdrrV2Rows(input: DdrrV2ReviewBatchInput): DdrrReviewBatchResult {
