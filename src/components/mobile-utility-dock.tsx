@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { ChevronUp, MessageSquarePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-
-const FeedbackModal = dynamic(
-  () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
-  { ssr: false },
-);
+import { FeedbackModal } from "@/components/feedback-modal-lazy";
 
 export function MobileUtilityDock() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);

@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import { MessageSquarePlus } from "lucide-react";
-
-const FeedbackModal = dynamic(
-  () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
-  { ssr: false },
-);
+import { FeedbackModal } from "@/components/feedback-modal-lazy";
 
 export function FeedbackButton() {
   const [open, setOpen] = useState(false);
