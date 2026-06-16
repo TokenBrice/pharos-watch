@@ -17,8 +17,8 @@ describe("changelogs barrel", () => {
 
   it("each entry has required fields", () => {
     for (const entry of changelogs) {
-      expect(entry.dateRange.from).toBeTruthy();
-      expect(entry.dateRange.to).toBeTruthy();
+      expect(entry.dateRange.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(entry.dateRange.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(entry.summary.length).toBeGreaterThan(0);
       for (const item of entry.summary) {
         if (item.href != null) {

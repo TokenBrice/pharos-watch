@@ -16,6 +16,11 @@ export interface SummaryItem {
 }
 
 export interface ChangelogEntry {
+  /**
+   * Both `from` and `to` MUST be `YYYY-MM-DD` ISO date strings. The barrel sort
+   * in `index.ts` and the year-grouping in the changelog page rely on
+   * lexicographic comparison, which is only correct for this exact format.
+   */
   dateRange: { from: string; to: string };
   /** One-sentence thesis summarising the release's biggest moves. */
   headline?: string;
