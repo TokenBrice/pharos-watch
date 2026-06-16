@@ -91,5 +91,6 @@ export async function handleScheduledEvent(
   }
   if (slotResult.status === "skipped_running") {
     console.info(`[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
+    return;
   }
 }
