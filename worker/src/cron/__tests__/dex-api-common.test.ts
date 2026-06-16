@@ -53,7 +53,6 @@ function convertToGtNewPools(
     pools,
     buildChainAddressToId(addressToId, chains),
     buildSymbolToChainScopedIds(symbolToIds, chains),
-    symbolToIds,
     undefined,
     effectiveTrackedPrices,
   );

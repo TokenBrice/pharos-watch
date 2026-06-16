@@ -281,12 +281,10 @@ export function convertToGtNewPools(
   pools: DexApiPool[],
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
-  symbolToIds: Map<string, string[]>,
   validationReferences?: PriceValidationReferences,
   trackedStablecoinPrices?: Map<string, number>,
 ): Map<string, GtNewPool[]> {
   const result = new Map<string, GtNewPool[]>();
-  void symbolToIds;
 
   for (const pool of pools) {
     if (!isEligibleDirectApiPool(pool)) continue;

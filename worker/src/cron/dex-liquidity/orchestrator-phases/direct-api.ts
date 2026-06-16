@@ -467,7 +467,6 @@ export async function integrateDirectApiLiquidityPhase(params: {
       retainedDirectApiPools,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
-      params.symbolToIds,
       params.validationReferences,
       params.stablecoinPriceById,
     );

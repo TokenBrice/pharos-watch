@@ -484,7 +484,7 @@ describe("syncDexLiquidity", () => {
 
     const convertCall = vi.mocked(convertToGtNewPools).mock.calls[0];
     expect(convertCall).toBeDefined();
-    const convertStablecoinPrices = convertCall?.[5];
+    const convertStablecoinPrices = convertCall?.[4];
     expect(convertStablecoinPrices).toBeInstanceOf(Map);
     expect(Array.from(convertStablecoinPrices?.entries() ?? [])).toEqual([
       ["usdc-circle", 0.97],
