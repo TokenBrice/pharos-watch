@@ -19,7 +19,6 @@ import {
 } from "./strata";
 
 const MERGE_GAP_SEC = 6 * 3600;
-const REOPEN_FLAG_GAP_SEC = 24 * 3600;
 const QUARANTINE_MIN_INCIDENTS = 50;
 const QUARANTINE_MEDIAN_DURATION_SEC = 30 * 60;
 
@@ -42,8 +41,6 @@ export interface DdrIncident {
   durationSec: number | null;
   /** true when the final fragment closed in-band (recovery_price present) */
   recovered: boolean;
-  /** true when a same-coin/direction event reopened 6-24h after this incident closed */
-  reopenWithin24h?: boolean;
   /** Fragment peak severities relative to incident start; used to avoid depth leakage at landmark age. */
   fragments?: DdrIncidentFragment[];
 }
@@ -74,7 +71,6 @@ export function groupIncidents(
       endedAt: number | null;
       worstBps: number;
       lastRecovery: number | null;
-      reopenWithin24h: boolean;
       fragments: DdrIncidentFragment[];
     } | null = null;
 
@@ -92,7 +88,6 @@ export function groupIncidents(
         endedAt: cur.endedAt,
         durationSec,
         recovered: cur.endedAt != null && cur.lastRecovery != null,
-        reopenWithin24h: cur.reopenWithin24h,
         fragments: cur.fragments,
       });
       cur = null;
@@ -105,7 +100,6 @@ export function groupIncidents(
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
           lastRecovery: ev.recoveryPrice,
-          reopenWithin24h: false,
           fragments: [{ offsetSec: 0, peakDeviationBps: ev.peakDeviationBps }],
         };
         continue;
@@ -122,16 +116,12 @@ export function groupIncidents(
           peakDeviationBps: ev.peakDeviationBps,
         });
       } else {
-        if (prevEnd != null && ev.startedAt - prevEnd < REOPEN_FLAG_GAP_SEC) {
-          cur.reopenWithin24h = true;
-        }
         flush();
         cur = {
           startedAt: ev.startedAt,
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
           lastRecovery: ev.recoveryPrice,
-          reopenWithin24h: false,
           fragments: [{ offsetSec: 0, peakDeviationBps: ev.peakDeviationBps }],
         };
       }
