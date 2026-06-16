@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
@@ -126,5 +126,23 @@ describe("writeDepegResolverAssessments", () => {
     expect(await writeDepegResolverAssessments(db, snapshot([], { degraded: false }))).toBe(0);
     expect(await writeDepegResolverAssessments(db, snapshot([baseRow], { degraded: true }))).toBe(0);
     expect(db.getHistory()).toHaveLength(0);
+  });
+
+  describe("non-conforming rows", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("warns about dropped rows but still persists conforming ones", async () => {
+      const db = mockD1([{ match: "depeg_resolver_assessments", rows: [] }]);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const malformedRow = { stablecoinId: "bad", symbol: "BAD" } as unknown as DdrDiagnosticAssessmentRow;
+
+      const changes = await writeDepegResolverAssessments(db, snapshot([baseRow, malformedRow]));
+
+      expect(changes).toBe(5);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0][0]).toContain("Dropped 1/2 non-conforming assessment rows");
+    });
   });
 });

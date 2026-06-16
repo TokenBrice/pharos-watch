@@ -287,6 +287,13 @@ export async function writeDepegResolverAssessments(
 
   const statements: D1PreparedStatement[] = [];
   const diagnosticRows = snapshot.rows.filter(isDiagnosticAssessmentRow);
+  if (diagnosticRows.length < snapshot.rows.length) {
+    const droppedCount = snapshot.rows.length - diagnosticRows.length;
+    const sampleRow = snapshot.rows.find((row) => !isDiagnosticAssessmentRow(row));
+    console.warn(
+      `[ddr-assessment-store] Dropped ${droppedCount}/${snapshot.rows.length} non-conforming assessment rows (failed isDiagnosticAssessmentRow); sample shape: ${JSON.stringify(sampleRow)}`,
+    );
+  }
   if (diagnosticRows.length === 0) return 0;
   for (const row of diagnosticRows) {
     for (const checkpoint of checkpointsForAge(row.ageSec)) {
