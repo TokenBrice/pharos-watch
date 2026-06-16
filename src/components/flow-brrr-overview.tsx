@@ -109,194 +109,6 @@ function LoadingState() {
   );
 }
 
-function IterationOne({
-  snapshot,
-  gauge,
-  variant = "default",
-  scopeLabel = "Configured issuance chains",
-  syncWarning = null,
-  coins,
-  weeklyHourly,
-}: {
-  snapshot: FlowSnapshot;
-  gauge: MintBurnGauge | null;
-  variant?: "default" | "compact";
-  scopeLabel?: string;
-  syncWarning?: string | null;
-  coins: MintBurnCoinFlow[];
-  weeklyHourly?: MintBurnHourlyBucket[];
-}) {
-  const isCompact = variant === "compact";
-  const totalFlow24h = snapshot.mint24h + snapshot.burn24h;
-  const netDominance = snapshot.has24hActivity
-    ? Math.abs(snapshot.net24h) / Math.max(totalFlow24h, 1)
-    : 0.08;
-  const pressurePower = snapshot.score === null
-    ? 0.18
-    : Math.abs(snapshot.score) / 100;
-  const sceneIntensity = snapshot.netDirection === "flat"
-    ? 0.12
-    : clamp(Math.max(netDominance, pressurePower * 0.6), 0.12, 1);
-  const sceneStress = snapshot.score === null || snapshot.score >= -10
-    ? 0
-    : clamp((-10 - snapshot.score) / 90, 0, 1);
-  const gaugeDisplay = snapshot.score == null
-    ? null
-    : getPressureShiftDisplay(snapshot.score);
-
-  return (
-    <article
-      className={cn(
-        "relative overflow-hidden rounded-2xl border bg-card",
-        isCompact ? "p-4 sm:p-5" : "p-4 sm:p-6",
-      )}
-    >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-55"
-        style={{
-          background:
-            "radial-gradient(1200px 260px at 5% 0%, rgba(34,211,238,0.13), transparent 60%), radial-gradient(780px 240px at 100% 100%, rgba(16,185,129,0.18), transparent 65%)",
-        }}
-      />
-
-      <div className="relative space-y-5">
-        <header className="flex flex-wrap items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-              snapshot.directionUi.badgeClass,
-            )}
-          >
-            {snapshot.directionUi.label}
-          </span>
-          <span
-            className={cn(
-              "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-              snapshot.pressureUi.badgeClass,
-            )}
-          >
-            {snapshot.pressureUi.label}
-          </span>
-          {gauge?.flightToQuality && (
-            <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
-              FTQ {Math.round(gauge.flightIntensity)}%
-            </span>
-          )}
-        </header>
-
-        <div
-          className={cn(
-            "grid",
-            isCompact
-              ? "gap-4 2xl:grid-cols-[minmax(0,1.12fr)_minmax(15rem,0.88fr)]"
-              : "gap-5 lg:grid-cols-[1.2fr_1fr]",
-          )}
-        >
-          <div className="flex h-full flex-col gap-4">
-            <h3
-              className={cn(
-                isCompact
-                  ? "text-3xl font-black leading-[0.94] tracking-tight md:text-4xl 2xl:text-5xl"
-                  : "text-3xl font-black tracking-tight sm:text-5xl",
-                snapshot.pressureUi.headlineClass,
-              )}
-            >
-              {snapshot.headline}
-            </h3>
-            <p
-              className={cn(
-                "text-sm text-muted-foreground",
-                isCompact ? "max-w-[34rem]" : undefined,
-              )}
-            >
-              {snapshot.description}
-            </p>
-
-            <div
-              className={cn(
-                "mt-auto space-y-2 rounded-xl border p-3",
-                snapshot.pressureUi.panelClass,
-              )}
-            >
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <MethodologyLabel topic="bankRunGauge">
-                  Bank Run Gauge (pressure vs 30D)
-                </MethodologyLabel>
-                <span className="font-mono">
-                  {gaugeDisplay == null
-                    ? "NR"
-                    : `${getNetPrefix(gaugeDisplay)}${gaugeDisplay} / 100`}
-                </span>
-              </div>
-              <div className="relative h-3 rounded-full border border-border/60 bg-muted/25">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #84cc16 65%, #10b981 100%)",
-                  }}
-                />
-                {snapshot.leverPct !== null && (
-                  <div
-                    className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-[0_0_0_3px_rgba(15,23,42,0.45)] transition-all"
-                    style={{ left: `calc(${snapshot.leverPct}% - 10px)` }}
-                    role="img"
-                    aria-label={`Bank Run Gauge at ${Math.round(snapshot.leverPct)}%`}
-                  />
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                The gauge is a market-cap-weighted pressure-shift signal, not a literal mint-vs-burn direction meter.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex h-full flex-col gap-3">
-            <FlowMachineScene
-              size={isCompact ? "mini" : "full"}
-              mode={snapshot.directionUi.sceneMode}
-              intensity={sceneIntensity}
-              statusText={snapshot.directionUi.label}
-              title={isCompact ? undefined : snapshot.directionUi.sceneTitle}
-              subText={isCompact ? undefined : `Tracking ${snapshot.trackedCoins} stablecoins`}
-              accentHex={snapshot.directionUi.accentHex}
-              stress={sceneStress}
-            />
-            <MintingPressureGauge
-              mintVolume24hUsd={snapshot.mint24h}
-              burnVolume24hUsd={snapshot.burn24h}
-              className={isCompact ? undefined : "mt-auto"}
-            />
-          </div>
-        </div>
-
-        {isCompact ? (
-          <FlowReceiptBand
-            gauge={gauge}
-            coins={coins}
-            weeklyHourly={weeklyHourly}
-            scopeLabel={scopeLabel}
-            syncWarning={syncWarning}
-            variant="compact"
-            className="border-t border-dashed border-border/70 pt-4"
-          />
-        ) : (
-          <div className="border-t border-dashed border-border/70 pt-5">
-            <FlowReceiptBand
-              gauge={gauge}
-              coins={coins}
-              weeklyHourly={weeklyHourly}
-              scopeLabel={scopeLabel}
-              syncWarning={syncWarning}
-            />
-          </div>
-        )}
-      </div>
-    </article>
-  );
-}
-
 export function FlowBrrrOverview({
   gauge,
   coins,
@@ -316,17 +128,175 @@ export function FlowBrrrOverview({
     return <LoadingState />;
   }
 
+  const isCompact = variant === "compact";
+  const totalFlow24h = snapshot.mint24h + snapshot.burn24h;
+  const netDominance = snapshot.has24hActivity
+    ? Math.abs(snapshot.net24h) / Math.max(totalFlow24h, 1)
+    : 0.08;
+  const pressurePower = snapshot.score === null
+    ? 0.18
+    : Math.abs(snapshot.score) / 100;
+  const sceneIntensity = snapshot.netDirection === "flat"
+    ? 0.12
+    : clamp(Math.max(netDominance, pressurePower * 0.6), 0.12, 1);
+  const sceneStress = snapshot.score === null || snapshot.score >= -10
+    ? 0
+    : clamp((-10 - snapshot.score) / 90, 0, 1);
+  const gaugeDisplay = snapshot.score == null
+    ? null
+    : getPressureShiftDisplay(snapshot.score);
+
   return (
     <div className={cn("h-full space-y-4", className)}>
-      <IterationOne
-        snapshot={snapshot}
-        gauge={gauge}
-        variant={variant}
-        scopeLabel={scopeLabel}
-        syncWarning={syncWarning}
-        coins={coins}
-        weeklyHourly={weeklyHourly}
-      />
+      <article
+        className={cn(
+          "relative overflow-hidden rounded-2xl border bg-card",
+          isCompact ? "p-4 sm:p-5" : "p-4 sm:p-6",
+        )}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-55"
+          style={{
+            background:
+              "radial-gradient(1200px 260px at 5% 0%, rgba(34,211,238,0.13), transparent 60%), radial-gradient(780px 240px at 100% 100%, rgba(16,185,129,0.18), transparent 65%)",
+          }}
+        />
+
+        <div className="relative space-y-5">
+          <header className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                snapshot.directionUi.badgeClass,
+              )}
+            >
+              {snapshot.directionUi.label}
+            </span>
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                snapshot.pressureUi.badgeClass,
+              )}
+            >
+              {snapshot.pressureUi.label}
+            </span>
+            {gauge?.flightToQuality && (
+              <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                FTQ {Math.round(gauge.flightIntensity)}%
+              </span>
+            )}
+          </header>
+
+          <div
+            className={cn(
+              "grid",
+              isCompact
+                ? "gap-4 2xl:grid-cols-[minmax(0,1.12fr)_minmax(15rem,0.88fr)]"
+                : "gap-5 lg:grid-cols-[1.2fr_1fr]",
+            )}
+          >
+            <div className="flex h-full flex-col gap-4">
+              <h3
+                className={cn(
+                  isCompact
+                    ? "text-3xl font-black leading-[0.94] tracking-tight md:text-4xl 2xl:text-5xl"
+                    : "text-3xl font-black tracking-tight sm:text-5xl",
+                  snapshot.pressureUi.headlineClass,
+                )}
+              >
+                {snapshot.headline}
+              </h3>
+              <p
+                className={cn(
+                  "text-sm text-muted-foreground",
+                  isCompact ? "max-w-[34rem]" : undefined,
+                )}
+              >
+                {snapshot.description}
+              </p>
+
+              <div
+                className={cn(
+                  "mt-auto space-y-2 rounded-xl border p-3",
+                  snapshot.pressureUi.panelClass,
+                )}
+              >
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <MethodologyLabel topic="bankRunGauge">
+                    Bank Run Gauge (pressure vs 30D)
+                  </MethodologyLabel>
+                  <span className="font-mono">
+                    {gaugeDisplay == null
+                      ? "NR"
+                      : `${getNetPrefix(gaugeDisplay)}${gaugeDisplay} / 100`}
+                  </span>
+                </div>
+                <div className="relative h-3 rounded-full border border-border/60 bg-muted/25">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #84cc16 65%, #10b981 100%)",
+                    }}
+                  />
+                  {snapshot.leverPct !== null && (
+                    <div
+                      className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-[0_0_0_3px_rgba(15,23,42,0.45)] transition-all"
+                      style={{ left: `calc(${snapshot.leverPct}% - 10px)` }}
+                      role="img"
+                      aria-label={`Bank Run Gauge at ${Math.round(snapshot.leverPct)}%`}
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The gauge is a market-cap-weighted pressure-shift signal, not a literal mint-vs-burn direction meter.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex h-full flex-col gap-3">
+              <FlowMachineScene
+                size={isCompact ? "mini" : "full"}
+                mode={snapshot.directionUi.sceneMode}
+                intensity={sceneIntensity}
+                statusText={snapshot.directionUi.label}
+                title={isCompact ? undefined : snapshot.directionUi.sceneTitle}
+                subText={isCompact ? undefined : `Tracking ${snapshot.trackedCoins} stablecoins`}
+                accentHex={snapshot.directionUi.accentHex}
+                stress={sceneStress}
+              />
+              <MintingPressureGauge
+                mintVolume24hUsd={snapshot.mint24h}
+                burnVolume24hUsd={snapshot.burn24h}
+                className={isCompact ? undefined : "mt-auto"}
+              />
+            </div>
+          </div>
+
+          {isCompact ? (
+            <FlowReceiptBand
+              gauge={gauge}
+              coins={coins}
+              weeklyHourly={weeklyHourly}
+              scopeLabel={scopeLabel}
+              syncWarning={syncWarning}
+              variant="compact"
+              className="border-t border-dashed border-border/70 pt-4"
+            />
+          ) : (
+            <div className="border-t border-dashed border-border/70 pt-5">
+              <FlowReceiptBand
+                gauge={gauge}
+                coins={coins}
+                weeklyHourly={weeklyHourly}
+                scopeLabel={scopeLabel}
+                syncWarning={syncWarning}
+              />
+            </div>
+          )}
+        </div>
+      </article>
     </div>
   );
 }
