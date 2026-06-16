@@ -20,6 +20,7 @@ export interface CronHealthSnapshot {
   orphanedCronProgressRows: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
+  cronLeaseQueryFailed: boolean;
 }
 
 const CRON_HISTORY_ROWS_PER_JOB = 10;
@@ -506,5 +507,6 @@ export async function loadCronHealth(
     orphanedCronProgressRows,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
+    cronLeaseQueryFailed,
   };
 }

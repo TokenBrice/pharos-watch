@@ -126,12 +126,14 @@ export function countDiagnosticIssues(input: {
   reserveCompositionQueryFailed: boolean;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
+  cronLeaseQueryFailed: boolean;
 }): number {
   let count = input.publicHealth.cacheFailures.length;
   if (input.publicHealth.mintBurnQueryError) count += 1;
   if (input.publicHealth.circuitQueryError) count += 1;
   if (input.cronHistoryQueryFailed) count += 1;
   if (input.cronProgressQueryFailed) count += 1;
+  if (input.cronLeaseQueryFailed) count += 1;
   if (input.reserveCompositionQueryFailed) count += 1;
   count += input.dataQuality.sourceFailures.filter((failure) => failure.source !== "stablecoins-cache").length;
   return count;

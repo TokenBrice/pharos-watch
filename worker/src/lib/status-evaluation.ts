@@ -149,6 +149,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     availabilityImpactingConsecutiveCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
+    cronLeaseQueryFailed,
   } = cronHealth;
   const {
     sectionErrors,
@@ -171,6 +172,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     reserveCompositionQueryFailed,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
+    cronLeaseQueryFailed,
   });
 
   const availabilityStatus = deriveAvailabilityStatus({
@@ -199,6 +201,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     availabilityImpactingConsecutiveCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
+    cronLeaseQueryFailed,
   });
   const dataQualityCauses = buildDataQualityCauses({
     dataQuality,

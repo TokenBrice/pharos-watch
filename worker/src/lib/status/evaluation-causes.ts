@@ -82,6 +82,7 @@ export function buildAvailabilityCauses(input: {
   availabilityImpactingConsecutiveCronErrors: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
+  cronLeaseQueryFailed: boolean;
 }): StatusCause[] {
   const availabilityCauses: StatusCause[] = [];
   const worstCacheRatio = input.publicHealth.worstCacheRatio;
@@ -242,6 +243,15 @@ export function buildAvailabilityCauses(input: {
       layer: "availability",
       severity: "info",
       message: "Cron progress query failed; in-flight cron telemetry is temporarily unavailable.",
+    });
+  }
+
+  if (input.cronLeaseQueryFailed) {
+    pushCause(availabilityCauses, {
+      code: "cron_lease_query_failed",
+      layer: "availability",
+      severity: "info",
+      message: "Cron lease query failed; orphan-progress and expired-lease detection are temporarily unavailable.",
     });
   }
 
