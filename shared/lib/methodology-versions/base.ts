@@ -13,6 +13,13 @@ export interface MethodologyChangelogEntry {
   version: string;
   title: string;
   date: string;
+  /**
+   * Unix seconds when this version became active, also used as the ordering key
+   * for same-version/same-day entries (see sort in createMethodologyVersion).
+   * Convention: when multiple entries share a calendar day, bump effectiveAt by
+   * a synthetic 1-second offset (e.g. ...600, ...601, ...602) so earlier entries
+   * get the lower value and resolve first.
+   */
   effectiveAt: number;
   summary: string;
   impact: readonly string[];
