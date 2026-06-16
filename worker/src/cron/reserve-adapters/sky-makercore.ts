@@ -3,6 +3,7 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import { parsePositiveNumber } from "../../lib/number-utils";
 import { rethrowIfAborted } from "../../lib/abort";
+import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
@@ -55,8 +56,8 @@ const SKY_PSM_COMPOSITION_NOTE = "Sky PSM pool aggregates USDC, USDT, USDP witho
 const SKY_LITE_PSM_ADDRESS = "0xf6e72db5454dd049d0788e411b06cfaf16853042";
 const SKY_LITE_PSM_USDC_POCKET = "0x37305b1cd40574e4c5ce33f8e8306be057fd7341";
 const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-const SKY_LITE_PSM_RPC_URL = "https://ethereum-rpc.publicnode.com";
-const SKY_LITE_PSM_FALLBACK_RPC_URL = "https://eth.llamarpc.com";
+const SKY_LITE_PSM_RPC_URL = getPublicRpcUrl("ethereum");
+const SKY_LITE_PSM_FALLBACK_RPC_URL = getSecondaryFallbackRpcUrl("ethereum");
 const SKY_LITE_PSM_USDC_DECIMALS = 6;
 const SKY_LITE_PSM_DOC_URL = "https://developers.sky.money/quick-start/guides/lite-psm/";
 const SKY_LITE_PSM_SOURCE_URL = "https://github.com/makerdao/dss-lite-psm";
