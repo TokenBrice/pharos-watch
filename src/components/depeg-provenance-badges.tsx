@@ -1,4 +1,5 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface DepegProvenanceBadgesProps {
   pendingReason: string | null;
@@ -68,7 +69,7 @@ export function DepegProvenanceBadges({
           <TooltipTrigger asChild>
             <span
               data-testid="event-source"
-              className={`${reasonLeadingClass} ${BADGE_CLASS} cursor-help`.trim()}
+              className={cn(reasonLeadingClass, BADGE_CLASS, "cursor-help")}
               aria-label={sourceTooltip}
             >
               {source}
@@ -82,7 +83,7 @@ export function DepegProvenanceBadges({
           <TooltipTrigger asChild>
             <span
               data-testid="event-pending-reason"
-              className={`${source ? "ml-1 " : reasonLeadingClass + " "}${BADGE_CLASS} cursor-help`.trim()}
+              className={cn(source ? "ml-1" : reasonLeadingClass, BADGE_CLASS, "cursor-help")}
               aria-label="Reason this incident used the pending-confirmation path."
             >
               {labelReason(pendingReason)}
@@ -98,7 +99,7 @@ export function DepegProvenanceBadges({
           <TooltipTrigger asChild>
             <span
               data-testid="event-confirmed-by"
-              className={`${pendingReason || source ? "ml-1 " : reasonLeadingClass + " "}${BADGE_CLASS} cursor-help`.trim()}
+              className={cn(pendingReason || source ? "ml-1" : reasonLeadingClass, BADGE_CLASS, "cursor-help")}
               aria-label="Sources that corroborated the pending incident."
             >
               confirmed: {labelConfirmationSources(confirmationSources)}
