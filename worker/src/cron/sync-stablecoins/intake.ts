@@ -228,7 +228,14 @@ export async function loadStablecoinsIntake(
     };
   }
 
-  const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(llamaData.peggedAssets);
+  // Run the transformation pipeline on a local variable instead of mutating the
+  // parsed payload struct's array field. `llamaData.peggedAssets` is guaranteed
+  // defined and valid by the guards above; the steps below reassign `assets`
+  // rather than the upstream payload, so the original parsed response is left
+  // intact and the transformation sequence is self-documenting.
+  let assets = llamaData.peggedAssets;
+
+  const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(assets);
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
@@ -238,15 +245,15 @@ export async function loadStablecoinsIntake(
       errorMessage: `DefiLlama payload had too many malformed assets (valid=${validAssets.length}) and fallback failed`,
     };
   }
-  if (validAssets.length < llamaData.peggedAssets.length) {
-    console.warn(`[sync-stablecoins] Dropped ${llamaData.peggedAssets.length - validAssets.length} malformed assets`);
-    llamaData.peggedAssets = validAssets;
+  if (validAssets.length < assets.length) {
+    console.warn(`[sync-stablecoins] Dropped ${assets.length - validAssets.length} malformed assets`);
+    assets = validAssets;
   }
 
-  hydrateGeckoIdAliases(llamaData.peggedAssets);
-  normalizeChainCirculating(llamaData.peggedAssets);
+  hydrateGeckoIdAliases(assets);
+  normalizeChainCirculating(assets);
 
-  const dlResiduals = llamaData.peggedAssets
+  const dlResiduals = assets
     .filter((a) => !REGISTRY_BY_LLAMA_ID.has(String(a.id)))
     .filter((a) => {
       const circ = a.circulating;
@@ -271,42 +278,42 @@ export async function loadStablecoinsIntake(
     }
   }
 
-  for (const asset of llamaData.peggedAssets) {
+  for (const asset of assets) {
     const mapped = REGISTRY_BY_LLAMA_ID.get(String(asset.id));
     if (mapped) {
       asset.id = mapped.id;
     }
   }
 
-  const canonicalDeduplication = dedupeCanonicalAssets(llamaData.peggedAssets);
+  const canonicalDeduplication = dedupeCanonicalAssets(assets);
   if (canonicalDeduplication.duplicateRows > 0) {
     console.warn(
       `[sync-stablecoins] Deduped ${canonicalDeduplication.duplicateRows} canonical duplicate row(s): ` +
       canonicalDeduplication.affectedIds.join(", "),
     );
-    llamaData.peggedAssets = canonicalDeduplication.dedupedAssets;
+    assets = canonicalDeduplication.dedupedAssets;
   }
-  if (llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
+  if (assets.length < MIN_VALID_ASSET_COUNT) {
     console.error(
-      `[sync-stablecoins] Canonical dedupe reduced asset count to ${llamaData.peggedAssets.length} ` +
+      `[sync-stablecoins] Canonical dedupe reduced asset count to ${assets.length} ` +
       `(need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
     );
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
       result: await input.fallbackToCoingecko(cgData),
-      errorMessage: `DefiLlama payload collapsed to ${llamaData.peggedAssets.length} unique canonical IDs and fallback failed`,
+      errorMessage: `DefiLlama payload collapsed to ${assets.length} unique canonical IDs and fallback failed`,
     };
   }
 
   const supplementalResolution = mergeSupplementalLastKnownGood(
     [...goldTokens, ...silverTokens, ...fiatCgTokens],
     previousAssetsById,
-    new Set(llamaData.peggedAssets.map((asset) => String(asset.id))),
+    new Set(assets.map((asset) => String(asset.id))),
     input.syncStartSec,
   );
   if (supplementalResolution.assets.length > 0) {
-    llamaData.peggedAssets = [...llamaData.peggedAssets, ...supplementalResolution.assets];
+    assets = [...assets, ...supplementalResolution.assets];
   }
   if (supplementalResolution.restoredCount > 0 || supplementalResolution.skippedDuplicates > 0) {
     console.log(
@@ -322,9 +329,9 @@ export async function loadStablecoinsIntake(
     );
   }
 
-  const beforeFrozenInjection = llamaData.peggedAssets.length;
-  llamaData.peggedAssets = mergeFrozenSnapshots(llamaData.peggedAssets, FROZEN_SNAPSHOTS);
-  const injected = llamaData.peggedAssets.length - beforeFrozenInjection;
+  const beforeFrozenInjection = assets.length;
+  assets = mergeFrozenSnapshots(assets, FROZEN_SNAPSHOTS);
+  const injected = assets.length - beforeFrozenInjection;
   if (injected > 0) {
     console.log(`[sync-stablecoins] Injected ${injected} frozen-snapshot row(s)`);
   }
@@ -332,12 +339,12 @@ export async function loadStablecoinsIntake(
   // Restore-or-degrade on tracked-id coverage: a DefiLlama list omission must
   // not silently drop a tracked coin from the published payload for a cycle.
   const trackedCoverage = restoreMissingTrackedAssets(
-    llamaData.peggedAssets,
+    assets,
     previousAssetsById,
     input.syncStartSec,
   );
   if (trackedCoverage.assets.length > 0) {
-    llamaData.peggedAssets = [...llamaData.peggedAssets, ...trackedCoverage.assets];
+    assets = [...assets, ...trackedCoverage.assets];
     console.warn(
       "[sync-stablecoins] Intake omitted tracked coin(s); restored last-known-good row(s): " +
       trackedCoverage.restoredIds.join(", "),
@@ -350,10 +357,10 @@ export async function loadStablecoinsIntake(
     );
   }
 
-  applyTrackedAssetOverrides(llamaData.peggedAssets);
+  applyTrackedAssetOverrides(assets);
 
   const supplyGapReconciliation = await reconcileTrackedSupplyGaps(
-    llamaData.peggedAssets,
+    assets,
     input.signal,
     input.coingeckoApiKey,
     input.chainRpcs,
@@ -368,7 +375,7 @@ export async function loadStablecoinsIntake(
 
   return {
     kind: "main",
-    assets: llamaData.peggedAssets,
+    assets,
     rawAssetCount,
     droppedMalformedAssets,
     canonicalDeduplication,
