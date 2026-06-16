@@ -97,7 +97,7 @@ describe("contagion graph helpers", () => {
     expect(result.visibleNodeIds).toEqual(new Set(["usdc", "usdt", "usde", "susde"]));
   });
 
-  it("builds multi-hop downstream ripple state from the hovered node", () => {
+  it("builds multi-hop upstream provider chain from the hovered node", () => {
     const result = computeRippleState("usdc", makeResolvedLinks());
 
     expect(result.nodeDistance).toEqual(

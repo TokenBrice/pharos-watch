@@ -114,13 +114,14 @@ export function computeRippleState(
   };
   if (!hoveredId) return emptyResult;
 
-  const downstreamByTarget = new Map<string, ResolvedLink[]>();
+  // Links whose tgtId is the key; BFS walks these to find upstream providers that depend on hoveredId.
+  const inboundByTarget = new Map<string, ResolvedLink[]>();
   const directByNode = new Map<string, ResolvedLink[]>();
 
   for (const link of visibleLinks) {
-    const downstream = downstreamByTarget.get(link.tgtId) ?? [];
+    const downstream = inboundByTarget.get(link.tgtId) ?? [];
     downstream.push(link);
-    downstreamByTarget.set(link.tgtId, downstream);
+    inboundByTarget.set(link.tgtId, downstream);
 
     const srcLinks = directByNode.get(link.srcId) ?? [];
     srcLinks.push(link);
@@ -143,7 +144,7 @@ export function computeRippleState(
 
   const queue: string[] = [];
   const queued = new Set<string>();
-  for (const link of downstreamByTarget.get(hoveredId) ?? []) {
+  for (const link of inboundByTarget.get(hoveredId) ?? []) {
     if (queued.has(link.srcId)) continue;
     queued.add(link.srcId);
     queue.push(link.srcId);
@@ -156,7 +157,7 @@ export function computeRippleState(
     if (currentDist >= maxRippleHops) continue;
 
     const nextDist = currentDist + 1;
-    for (const link of downstreamByTarget.get(nodeId) ?? []) {
+    for (const link of inboundByTarget.get(nodeId) ?? []) {
       if (!edgeDistance.has(link.index)) edgeDistance.set(link.index, nextDist);
       if (!nodeDistance.has(link.srcId)) {
         nodeDistance.set(link.srcId, nextDist);
