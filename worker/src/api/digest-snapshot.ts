@@ -1,5 +1,6 @@
 import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import type { DigestInputData } from "@shared/types/digest";
+import { isRecord } from "@shared/lib/type-guards";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
 import { CACHE_PROFILES } from "../lib/constants";
 
@@ -29,6 +30,15 @@ interface BlacklistRow {
 }
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+// Lightweight runtime shape guard so a malformed/old-schema daily_digest row is
+// dropped (→ null) instead of being asserted into the response with a bare `as`
+// cast. Mirrors the isRecord/isDailyDigestLike pattern in digest-risk-summary.ts;
+// checks the always-present required numeric anchor field rather than the full
+// shape (the response/consumer tolerate optional fields being absent).
+function isDigestInputDataLike(value: unknown): value is DigestInputData {
+  return isRecord(value) && typeof value.totalMcapUsd === "number";
+}
 
 export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   db: D1Database,
@@ -91,19 +101,25 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   let inputData: DigestInputData | null = null;
   let prevInputData: DigestInputData | null = null;
 
+  const pickInputData = (entry: unknown): DigestInputData | null => {
+    const candidate = isRecord(entry) ? entry.inputData : undefined;
+    return isDigestInputDataLike(candidate) ? candidate : null;
+  };
+
   if (rawInputData && Array.isArray(rawInputData.dailyDigests)) {
-    const dailyDigests = rawInputData.dailyDigests as { inputData?: DigestInputData }[];
+    const dailyDigests = rawInputData.dailyDigests;
     if (dailyDigests.length > 0) {
-      inputData = dailyDigests[dailyDigests.length - 1]?.inputData ?? null;
+      inputData = pickInputData(dailyDigests[dailyDigests.length - 1]);
       prevInputData = dailyDigests.length > 1
-        ? (dailyDigests[0]?.inputData ?? null)
+        ? pickInputData(dailyDigests[0])
         : null;
     }
   } else {
-    inputData = rawInputData as DigestInputData | null;
-    prevInputData = prevRow
-      ? safeJsonParse<DigestInputData | null>(prevRow.input_data, null)
+    inputData = isDigestInputDataLike(rawInputData) ? rawInputData : null;
+    const rawPrev = prevRow
+      ? safeJsonParse<unknown>(prevRow.input_data, null)
       : null;
+    prevInputData = isDigestInputDataLike(rawPrev) ? rawPrev : null;
   }
 
   // Depeg episodes active on that date

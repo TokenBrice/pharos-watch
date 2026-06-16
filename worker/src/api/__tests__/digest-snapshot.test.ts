@@ -117,6 +117,26 @@ describe("handleDigestSnapshot", () => {
     expect(weeklyBody.inputData?.totalMcapUsd).toBe(110e9);
   });
 
+  it("returns null inputData when the stored blob fails the shape guard", async () => {
+    const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
+    const db = mockD1([
+      {
+        match: "daily_digest",
+        rows: [{
+          generated_at: dayStart + 3600,
+          // Malformed / old-schema row: no numeric totalMcapUsd anchor.
+          input_data: JSON.stringify({ legacyShape: true, mcap7dDelta: 5 }),
+        }],
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+    const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { inputData: unknown };
+    expect(body.inputData).toBeNull();
+  });
+
   it("orders snapshot depeg events by absolute deviation", async () => {
     const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
     const db = mockD1([
