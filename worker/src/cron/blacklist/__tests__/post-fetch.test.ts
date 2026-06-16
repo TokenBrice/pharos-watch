@@ -80,7 +80,6 @@ describe("processFetchedBlacklistRows", () => {
     ], { requireMatch: true });
     vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -101,7 +100,7 @@ describe("processFetchedBlacklistRows", () => {
 
     expect(result.insertedRows).toBe(0);
     expect(result.enrichCounters).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
-    expect(result.currentBalanceCacheCounters).toMatchObject({ updated: 1, deleted: 0, failed: 0 });
+    expect(result.currentBalanceCacheCounters).toMatchObject({ updated: 1, failed: 0 });
     expect(enrichRowBalances).not.toHaveBeenCalled();
     expect(insertBlacklistRows).not.toHaveBeenCalled();
     expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(
@@ -152,7 +151,6 @@ describe("processFetchedBlacklistRows", () => {
     vi.mocked(insertBlacklistRows).mockResolvedValue(2);
     vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,

@@ -118,7 +118,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 0,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -164,7 +163,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -225,7 +223,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -293,7 +290,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -350,7 +346,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 0,
-      deleted: 0,
       failed: 1,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -447,7 +442,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -501,7 +495,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
@@ -558,7 +551,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
 
     expect(result).toEqual({
       updated: 1,
-      deleted: 0,
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,

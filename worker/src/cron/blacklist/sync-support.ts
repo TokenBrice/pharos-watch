@@ -19,14 +19,13 @@ type ProcessedRows = {
   };
   currentBalanceCacheCounters: {
     updated: number;
-    deleted: number;
     failed: number;
   };
 };
 
 type SyncBlacklistStatus = "ok" | "degraded" | "error";
 
-type SyncBlacklistApiErrorConfig = {
+export type SyncBlacklistApiErrorConfig = {
   configKey: string;
   stablecoin: string;
   chainId: string;
@@ -44,7 +43,6 @@ type SyncBlacklistCounters = {
   };
   currentBalanceCacheCounters: {
     updated: number;
-    deleted: number;
     failed: number;
   };
 };
@@ -87,7 +85,6 @@ export function recordProcessedRows(counters: SyncBlacklistCounters, processed: 
   counters.enrichCounters.succeeded += processed.enrichCounters.succeeded;
   counters.enrichCounters.failed += processed.enrichCounters.failed;
   counters.currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
-  counters.currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
   counters.currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
   counters.totalInsertedRows += processed.insertedRows;
 }

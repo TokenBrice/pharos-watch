@@ -25,7 +25,6 @@ import {
 
 export interface SyncCurrentBalanceCacheResult {
   updated: number;
-  deleted: number;
   failed: number;
   skippedDueBudget: number;
   budgetExhausted: boolean;
@@ -128,13 +127,12 @@ export async function syncCurrentBalanceCacheForRows(
   context: CurrentBalanceFetchContext,
 ): Promise<SyncCurrentBalanceCacheResult> {
   if (rows.length === 0) {
-    return { updated: 0, deleted: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false };
+    return { updated: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false };
   }
 
   const latestRows = context.latestRows ?? buildCurrentBalanceSnapshotRows(rows);
   const counters: SyncCurrentBalanceCacheResult = {
     updated: 0,
-    deleted: 0,
     failed: 0,
     skippedDueBudget: 0,
     budgetExhausted: false,

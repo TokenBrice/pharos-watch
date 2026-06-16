@@ -25,7 +25,6 @@ export interface BlacklistPostFetchCounters {
 
 export interface CurrentBalanceCacheCounters {
   updated: number;
-  deleted: number;
   failed: number;
 }
 
@@ -124,7 +123,7 @@ export async function processFetchedBlacklistRows(
     return {
       insertedRows: 0,
       enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
-      currentBalanceCacheCounters: { updated: 0, deleted: 0, failed: 0 },
+      currentBalanceCacheCounters: { updated: 0, failed: 0 },
     };
   }
 
