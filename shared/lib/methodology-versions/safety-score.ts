@@ -6,7 +6,7 @@ import { SAFETY_SCORE_V5 } from "../../data/methodology-changelogs/safety-score/
 import { SAFETY_SCORE_V6 } from "../../data/methodology-changelogs/safety-score/v6";
 import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/v7";
 import { SAFETY_SCORE_V8 } from "../../data/methodology-changelogs/safety-score/v8";
-import { createMethodologyVersion, toMethodologyVersionLabel } from "./base";
+import { createMethodologyVersion } from "./base";
 import currentVersion from "./current-version.json";
 
 const safetyScore = createMethodologyVersion({
@@ -29,6 +29,4 @@ export const SAFETY_SCORE_METHODOLOGY_VERSION_LABEL = safetyScore.versionLabel;
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH = safetyScore.changelogPath;
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG = safetyScore.changelog;
 export const getSafetyScoreVersionAt = safetyScore.getVersionAt;
-export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS = SAFETY_SCORE_METHODOLOGY_CHANGELOG.map(
-  (entry) => toMethodologyVersionLabel(entry.version),
-);
+export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS = safetyScore.versionLabels;

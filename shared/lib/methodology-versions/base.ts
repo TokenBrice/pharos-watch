@@ -42,6 +42,8 @@ export interface MethodologyVersionConfig {
 export interface MethodologyVersion {
   currentVersion: string;
   versionLabel: string;
+  /** All changelog versions as display labels (e.g. ["v8.0", "v7.9", …]), newest first. */
+  versionLabels: string[];
   changelogPath: string;
   changelog: readonly MethodologyChangelogEntry[];
   getVersionAt: (unixSeconds: number) => string;
@@ -97,7 +99,8 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
     return resolved;
   }
 
-  return { currentVersion, versionLabel, changelogPath, changelog: sortedChangelog, getVersionAt };
+  const versionLabels = sortedChangelog.map((entry) => toMethodologyVersionLabel(entry.version));
+  return { currentVersion, versionLabel, versionLabels, changelogPath, changelog: sortedChangelog, getVersionAt };
 }
 
 export function toMethodologyVersionLabel(version: string): string {
