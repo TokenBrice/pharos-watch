@@ -2,7 +2,6 @@
 
 import { Printer, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clamp } from "@shared/lib/math";
 import { FlowMachinePrinter } from "./flow-machine-scene-printer";
 import { FlowMachineShredder } from "./flow-machine-scene-shredder";
 import {
@@ -46,11 +45,11 @@ export function FlowMachineScene({
       ) : null}
 
       {isShredder ? (
-        <FlowMachineShredder size={size} intensity={clamp(intensity, 0.08, 1)} />
+        <FlowMachineShredder size={size} intensity={intensity} />
       ) : (
         <FlowMachinePrinter
           size={size}
-          intensity={clamp(intensity, 0.08, 1)}
+          intensity={intensity}
           stress={stress}
           accentHex={accentHex ?? "rgba(16,185,129,0.6)"}
         />
