@@ -1,4 +1,5 @@
 import type { ResolvedCoin } from "../lib/telegram-alerts";
+import { dedupeCoins } from "../lib/telegram-coin-dedupe";
 import { isDepegStepValue } from "../lib/telegram-constants";
 import { toErrorMessage } from "../lib/error-utils";
 import {
@@ -160,18 +161,9 @@ export function parseResolvedCoins(value: unknown): ResolvedCoin[] {
   return coins;
 }
 
-export function dedupeCoins(coins: ResolvedCoin[]): ResolvedCoin[] {
-  const deduped: ResolvedCoin[] = [];
-  const seenIds = new Set<string>();
-
-  for (const coin of coins) {
-    if (seenIds.has(coin.id)) continue;
-    seenIds.add(coin.id);
-    deduped.push(coin);
-  }
-
-  return deduped;
-}
+// Re-exported from worker/src/lib/telegram-coin-dedupe.ts so existing API-layer
+// importers keep their import path; the store layer imports it from lib directly.
+export { dedupeCoins };
 
 export function parsePendingDisambiguation(
   pending: PendingDisambiguationRow,

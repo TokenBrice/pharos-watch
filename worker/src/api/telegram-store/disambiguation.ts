@@ -5,7 +5,7 @@ import type {
   PendingDisambiguationRow,
 } from "../telegram-webhook-shared";
 import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
-import { dedupeCoins } from "../telegram-webhook-parsing";
+import { dedupeCoins } from "../../lib/telegram-coin-dedupe";
 import { d1ChangeCount } from "./_internals";
 import { unixNow } from "./subscribers";
 
