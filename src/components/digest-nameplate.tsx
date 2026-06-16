@@ -6,6 +6,8 @@ export interface DigestNameplateProps {
   issueNumber?: number;
   /** Latest daily digest date string ("YYYY-MM-DD"). */
   date?: string;
+  /** Author/model credit from the digest record; falls back to a generic AI credit. */
+  author?: string;
   className?: string;
 }
 
@@ -31,12 +33,12 @@ function formatNameplateDate(dateStr?: string): string | null {
  * The visible wordmark carries the page <h1>; the descriptive continuation is
  * screen-reader-only so the accessible name stays specific.
  */
-export function DigestNameplate({ issueNumber, date, className }: DigestNameplateProps) {
+export function DigestNameplate({ issueNumber, date, author, className }: DigestNameplateProps) {
   const dateLabel = formatNameplateDate(date);
   const dateline = [
     issueNumber ? `Issue #${issueNumber}` : null,
     dateLabel,
-    "Written by Claude Opus 4.8",
+    `Written by ${author ?? "AI"}`,
   ].filter(Boolean) as string[];
 
   return (

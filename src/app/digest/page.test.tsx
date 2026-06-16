@@ -28,7 +28,8 @@ describe("DigestArchivePage", () => {
     expect(heading.textContent).toContain("Pharos Digest");
 
     expect(container.textContent).toContain(`Issue #${latestDaily.editionNumber}`);
-    expect(container.textContent).toContain("Written by Claude Opus 4.8");
+    const authorCredit = "author" in latestDaily ? (latestDaily as { author?: string }).author ?? "AI" : "AI";
+    expect(container.textContent).toContain(`Written by ${authorCredit}`);
   });
 
   it("drops the duplicated weekly recap module", () => {

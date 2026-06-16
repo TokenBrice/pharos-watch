@@ -25,6 +25,7 @@ const digestEntries = digests as {
   generatedAt?: number;
   digestType?: "daily" | "weekly";
   editionNumber?: number;
+  author?: string;
 }[];
 
 const latestDaily = digestEntries.find((entry) => entry.digestType !== "weekly") ?? digestEntries[0];
@@ -74,7 +75,7 @@ export default function DigestArchivePage() {
         }}
       />
 
-      <DigestNameplate issueNumber={latestDaily?.editionNumber} date={latestDaily?.date} />
+      <DigestNameplate issueNumber={latestDaily?.editionNumber} date={latestDaily?.date} author={latestDaily?.author} />
 
       <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-muted-foreground">
         <Send className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
