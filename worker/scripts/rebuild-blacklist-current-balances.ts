@@ -238,8 +238,8 @@ async function main() {
            amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address,
            config_key, event_signature, event_topic0, suppression_reason, explorer_tx_url, explorer_address_url
     FROM blacklist_events
-    WHERE stablecoin = '${options.stablecoin}'
-      AND chain_id = '${options.chainId}'
+    WHERE stablecoin = ${sqlString(options.stablecoin)}
+      AND chain_id = ${sqlString(options.chainId)}
     ORDER BY timestamp DESC
   `;
   const raw = d1.queryRaw(sql);
@@ -357,8 +357,7 @@ async function main() {
 
   d1.executeStatements(
     [
-      // SAFETY: stablecoin/chainId are constrained by the selected blacklist config scope before SQL generation.
-      `DELETE FROM blacklist_current_balances WHERE stablecoin = '${options.stablecoin}' AND chain_id = '${options.chainId}';`,
+      `DELETE FROM blacklist_current_balances WHERE stablecoin = ${sqlString(options.stablecoin)} AND chain_id = ${sqlString(options.chainId)};`,
       ...rowsToWrite.map(
         (row) =>
           `INSERT INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
