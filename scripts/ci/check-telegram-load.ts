@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -749,6 +749,38 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
       requiredDetails: ["idx_tpa_ready", "idx_tpa_not_before", "sqlite_autoindex_telegram_subscribers_1"],
     },
     {
+      id: "pending-claim-ready",
+      category: "pending-drain",
+      sql: `SELECT p.id, p.chat_id, p.message_html
+         FROM telegram_pending_alerts p
+        WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
+          AND (p.not_before_at IS NULL OR p.not_before_at <= ?)
+          AND (? IS NULL OR COALESCE(p.priority, ?) <= ?)
+          AND (
+            p.processing_owner IS NULL
+            OR p.processing_expires_at IS NULL
+            OR p.processing_expires_at <= ?
+          )
+        ORDER BY COALESCE(p.priority, ?) ASC,
+                 COALESCE(p.not_before_at, p.created_at) ASC,
+                 p.created_at ASC,
+                 p.chunk_index ASC
+        LIMIT ?`,
+      binds: [
+        PENDING_TTL_SECONDS,
+        1_800_000_000,
+        1_800_000_000,
+        RISK_ALERT_PRIORITY,
+        LEGACY_PENDING_PRIORITY,
+        RISK_ALERT_PRIORITY,
+        1_800_000_000,
+        LEGACY_PENDING_PRIORITY,
+        PENDING_DRAIN_ATTEMPTS_PER_RUN,
+      ],
+      requiredDetails: ["idx_tpa_ready", "idx_tpa_not_before"],
+      note: "Mirrors selectPendingClaimCandidateIds() in telegram-pending/drain.ts (migration 0124 claim columns). SQLite serves this via a multi-index OR on idx_tpa_ready/idx_tpa_not_before rather than idx_tpa_claim_ready; this guards the claim drain against a regression to a full table scan once the 0124 schema is loaded.",
+    },
+    {
       id: "pending-backoff-aggregate",
       category: "pending-drain",
       sql: `SELECT chat_id, MAX(not_before_at) AS not_before_at
@@ -818,24 +850,33 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   ];
 }
 
+// Minimum number of migrations expected to seed the in-memory plan database
+// (baseline + all telegram_* migrations). Bump this when a new Telegram
+// migration is added so a future directory-read regression fails loudly
+// instead of silently shrinking the validated schema.
+const MIN_TELEGRAM_PLAN_MIGRATIONS = 15;
+
+function selectTelegramPlanMigrations(migrationsDir: string): string[] {
+  // Seed from the baseline plus every Telegram migration discovered on disk so
+  // new telegram_* migrations are picked up automatically (previously this list
+  // was hardcoded and silently went stale; see audit S-001). Mirrors
+  // getMigrationFiles() in check-worker-migrations.mjs, inlined to avoid pulling
+  // that module's top-level await into this tsx-transformed CLI.
+  return readdirSync(migrationsDir)
+    .filter((file) => file.endsWith(".sql"))
+    .filter((file) => file.startsWith("0000_baseline") || /telegram/.test(file))
+    .sort();
+}
+
 function createTelegramPlanDatabase(migrationsDir = resolve("worker/migrations")): DatabaseSync {
   const db = new DatabaseSync(":memory:");
-  const migrationFiles = [
-    "0000_baseline.sql",
-    "0072_telegram_launch_alerts.sql",
-    "0098_telegram_alert_snooze.sql",
-    "0107_telegram_pending_initiator.sql",
-    "0109_telegram_global_depeg_step.sql",
-    "0111_telegram_pending_alert_retry_metadata.sql",
-    "0114_telegram_dynamic_presets.sql",
-    "0116_telegram_subscriber_block_count.sql",
-    "0117_telegram_global_alert_indexes.sql",
-    "0118_telegram_subscriber_timezone.sql",
-    "0119_telegram_subscription_snooze.sql",
-    "0121_telegram_alert_jobs.sql",
-    "0122_telegram_processed_updates.sql",
-    "0123_telegram_usage_analytics.sql",
-  ];
+  const migrationFiles = selectTelegramPlanMigrations(migrationsDir);
+  if (migrationFiles.length < MIN_TELEGRAM_PLAN_MIGRATIONS) {
+    throw new Error(
+      `Expected at least ${MIN_TELEGRAM_PLAN_MIGRATIONS} Telegram plan migrations, found ${migrationFiles.length}. ` +
+        `Update MIN_TELEGRAM_PLAN_MIGRATIONS in check-telegram-load.ts if this is intentional.`,
+    );
+  }
   for (const file of migrationFiles) {
     db.exec(readFileSync(join(migrationsDir, file), "utf8"));
   }
