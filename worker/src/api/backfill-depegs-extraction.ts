@@ -11,7 +11,7 @@ import {
 import { getDepegThresholdBps } from "../lib/constants";
 import type { PricePoint } from "./backfill-price-sources";
 
-const BACKFILL_MIN_CONFIRM_POINTS = 2;
+export const BACKFILL_MIN_CONFIRM_POINTS = 2;
 const BACKFILL_PENDING_MAX_GAP_SEC = 6 * 3600;
 
 export interface SupplyPoint {

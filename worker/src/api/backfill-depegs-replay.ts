@@ -8,6 +8,7 @@ import {
   type HistoricalMarketSourceDiagnostics,
 } from "./backfill-price-sources";
 import {
+  BACKFILL_MIN_CONFIRM_POINTS,
   extractDepegEvents,
   type BackfillEvent,
   type SupplySnapshot,
@@ -18,7 +19,6 @@ import {
   type BackfillReplayWindow,
 } from "./backfill-depegs-window";
 
-const BACKFILL_MIN_CONFIRM_POINTS = 2;
 const BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC = 36 * 3600;
 const BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS = 5000;
 
