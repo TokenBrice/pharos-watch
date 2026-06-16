@@ -11,6 +11,10 @@ import {
 import { applyCuratedDetailAddress } from "./stablecoin-detail/defillama";
 import { routeStablecoinDetail } from "./stablecoin-detail/router";
 
+// Per-isolate, best-effort de-dupe of concurrent detail refreshes for the same coin.
+// This Map is scoped to a single Worker isolate and does NOT serialize across isolates,
+// so under load multiple isolates can each run one refresh for the same coin. Cross-isolate
+// herd protection relies on the circuit breaker + D1 cache (stale-serve), not this Map.
 const detailRefreshesInFlight = new Map<string, Promise<Response>>();
 
 function startStablecoinDetailRefresh(config: {
