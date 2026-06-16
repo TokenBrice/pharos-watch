@@ -36,19 +36,14 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "liquidity",
-          "intent"
-        ]
+        "bridgeTypes": ["liquidity", "intent"]
       },
       {
         "source": "l2beat",
         "name": "Avalanche Bridge",
         "slug": "avalanche",
         "url": "https://l2beat.com/bridges/projects/avalanche",
-        "bridgeTypes": [
-          "canonicalBridge"
-        ]
+        "bridgeTypes": ["canonicalBridge"]
       }
     ],
     "sources": [
@@ -162,7 +157,7 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "deploymentModel": "native-multichain",
+  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "reserves": [

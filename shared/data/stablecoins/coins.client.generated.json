@@ -14990,7 +14990,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false

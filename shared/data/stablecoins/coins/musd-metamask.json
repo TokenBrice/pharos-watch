@@ -127,9 +127,7 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "infrastructures": [
-    "m0"
-  ],
+  "infrastructures": ["m0"],
   "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
   "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves continuously validated on-chain by independent validators; arbitrage corrects price drift; monthly public attestations",
   "mechanismArchetype": "tbill",
@@ -236,7 +234,7 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "MetaMask describes mUSD as issued by Bridge and powered by M0, initially available on Ethereum and Linea. I did not resolve a separate user bridge or lockbox route for durable supply, so Pharos treats current route risk as native issuance on its supported deployments.",

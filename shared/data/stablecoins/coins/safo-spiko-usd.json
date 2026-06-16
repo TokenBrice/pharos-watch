@@ -106,7 +106,7 @@
     "reviewedAt": "2026-05-14"
   },
   "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
@@ -193,9 +193,7 @@
       {
         "source": "issuer",
         "name": "SAFO issuer-operated multichain issuance",
-        "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
+        "bridgeTypes": ["issuer-native-mint-redeem"]
       }
     ],
     "sources": [

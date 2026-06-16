@@ -159,7 +159,7 @@
     }
   },
   "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Spiko describes its own infrastructure for issuing, operating, and monitoring regulated fund tokens across EVM networks, Starknet, and Stellar with minimal external dependencies. For GBPSAFO, no separate bridge protocol was verified, so the reviewed route is issuer-operated multichain issuance rather than a third-party bridge rail.",

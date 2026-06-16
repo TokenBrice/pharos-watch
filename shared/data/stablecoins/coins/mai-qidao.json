@@ -143,7 +143,7 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
+  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "MAI historically expanded across many chains through third-party bridge allocations, with public governance and post-incident reporting tying MAI's cross-chain supply to Multichain-era bridge exposure. Because supply integrity depended on external lock/mint infrastructure rather than issuer-native settlement, MAI is scored as external-lock-mint.",

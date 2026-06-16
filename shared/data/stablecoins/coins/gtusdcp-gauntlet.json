@@ -118,7 +118,7 @@
     }
   ],
   "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
+  "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
@@ -174,10 +174,7 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
+        "bridgeTypes": ["intent", "liquidity"]
       }
     ],
     "sources": [

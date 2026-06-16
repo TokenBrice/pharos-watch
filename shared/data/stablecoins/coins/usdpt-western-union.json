@@ -15,6 +15,7 @@
   "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
+  "llamaId": "386",
   "links": [
     {
       "label": "Website",

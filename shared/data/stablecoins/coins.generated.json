@@ -1162,7 +1162,7 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "single-asset",
       "breakerScope": "aeur-anchored-coins",
       "display": {
         "url": "https://www.anchoredcoins.com/en/landing/aeur",
@@ -1249,7 +1249,7 @@
       "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://aid.gaib.ai/transparency",
       "redemptionPolicyPresent": true,
-      "monthlyAttestationPresent": false,
+      "monthlyAttestationPresent": true,
       "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-07 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published.",
       "references": [
         {
@@ -4032,7 +4032,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-top",
     "bridgeRouteRisk": {
       "tier": "issuer-native-burn-mint",
@@ -5329,7 +5329,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
@@ -11013,7 +11013,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "United States"
+      "country": "Hong Kong"
     },
     "genius": {
       "applicability": "unclear",
@@ -25192,7 +25192,7 @@
       "reviewedAt": "2026-05-14"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
@@ -26472,7 +26472,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "native-multichain",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "bridgeRouteRisk": {
@@ -27018,7 +27018,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "native-multichain",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
@@ -36736,7 +36736,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "native-multichain",
+    "deploymentModel": "third-party-bridge",
     "governanceQuality": "multisig",
     "oracleRisk": {
       "tier": "standard-external",
@@ -40946,7 +40946,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
       "tier": "single-chain-or-native",
@@ -49451,7 +49451,7 @@
       "reviewedAt": "2026-05-14"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
@@ -49667,7 +49667,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -50050,8 +50050,8 @@
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
-      "tier": "canonical-rollup-bridge",
-      "summary": "savUSD is an avUSD variant with deployments spanning Avalanche and EVM chains; the available candidate evidence points to Avalanche/canonical bridge routing rather than issuer burn/mint controls.",
+      "tier": "external-lock-mint",
+      "summary": "savUSD is an avUSD variant with deployments spanning Avalanche and EVM chains; the available candidate evidence points to Avalanche Bridge lock/mint routing rather than issuer burn/mint controls.",
       "reviewedAt": "2026-06-13",
       "reviewer": "Codex bridge route review",
       "confidence": "probable",
@@ -59782,7 +59782,7 @@
       "reviewedAt": "2026-05-14"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
@@ -69759,6 +69759,7 @@
   },
   {
     "id": "usdpt-western-union",
+    "llamaId": "386",
     "detailProvider": "defillama",
     "name": "US Dollar Payment Token",
     "symbol": "USDPT",
@@ -77638,7 +77639,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
@@ -80881,7 +80882,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "wrapper",

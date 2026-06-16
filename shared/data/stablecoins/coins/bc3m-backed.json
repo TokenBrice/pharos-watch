@@ -94,7 +94,7 @@
     "reviewedAt": "2026-05-12"
   },
   "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
+  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "Backed bC3M has multichain deployments and candidate evidence includes Across plus canonical Arbitrum/Avalanche routes. Because the external liquidity/intent route is material, the reviewed tier is the weaker liquidity-route tier.",
@@ -107,28 +107,21 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
+        "bridgeTypes": ["intent", "liquidity"]
       },
       {
         "source": "l2beat",
         "name": "Arbitrum Canonical",
         "slug": "arbitrum",
         "url": "https://l2beat.com/interop/protocols/arbitrum",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       },
       {
         "source": "l2beat",
         "name": "Avalanche Bridge",
         "slug": "avalanche",
         "url": "https://l2beat.com/interop/protocols/avalanche",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       }
     ],
     "sources": [

@@ -61,7 +61,7 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://aid.gaib.ai/transparency",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
+    "monthlyAttestationPresent": true,
     "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-07 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published.",
     "references": [
       {
@@ -293,9 +293,7 @@
         "name": "Arbitrum One",
         "slug": "arbitrum",
         "url": "https://l2beat.com/scaling/projects/arbitrum",
-        "bridgeTypes": [
-          "canonical-rollup-bridge"
-        ]
+        "bridgeTypes": ["canonical-rollup-bridge"]
       }
     ],
     "sources": [

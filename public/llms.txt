@@ -221,7 +221,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Astherus (USDF)](https://pharos.watch/stablecoin/usdf-astherus/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Aster Staked USDF (asUSDF)](https://pharos.watch/stablecoin/asusdf-astherus/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [StandX DUSD (DUSD)](https://pharos.watch/stablecoin/dusd-standx/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [River Stablecoin (satUSD)](https://pharos.watch/stablecoin/satusd-river/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [River Stablecoin (satUSD)](https://pharos.watch/stablecoin/satusd-river/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Brazilian Digital (BRZ)](https://pharos.watch/stablecoin/brz-transfero/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [Gate USD (GUSD)](https://pharos.watch/stablecoin/gusd-gate/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Frax USD (FRXUSD)](https://pharos.watch/stablecoin/frxusd-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.

@@ -171,7 +171,7 @@
     }
   },
   "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Spiko documents internal infrastructure for issuing, operating, and monitoring its regulated fund tokens across EVM networks, Starknet, and Stellar. For UKTBL, no independent bridge route was verified, so the route is reviewed as issuer-native multichain issuance.",

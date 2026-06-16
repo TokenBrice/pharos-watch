@@ -208,7 +208,7 @@
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
-    "semantics": "collateral-mix",
+    "semantics": "single-asset",
     "breakerScope": "aeur-anchored-coins",
     "display": {
       "url": "https://www.anchoredcoins.com/en/landing/aeur",

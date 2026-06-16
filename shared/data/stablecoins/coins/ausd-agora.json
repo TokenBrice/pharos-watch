@@ -279,7 +279,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "AUSD is natively issued by Agora across supported chains, with public interoperability material pointing to Wormhole NTT/AUSD0 burn-mint routing and existing on-chain review identifying an Agora-controlled bridge-minter path. Pharos treats this as issuer-native burn/mint rather than a third-party liquidity route.",
