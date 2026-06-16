@@ -5,6 +5,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 import { TimelineClient } from "./client";
+import sitemapDates from "@/generated/sitemap-dates.json";
 
 const TIMELINE_DESCRIPTION =
   "Browse confirmed stablecoin events in one timeline: depegs, freezes, score changes, methodology updates, severity filters, classes, and linked Pharos context.";
@@ -19,10 +20,10 @@ export const metadata: Metadata = buildPageMetadata({
 const TIMELINE_URL = `${SITE_URL}/timeline/`;
 
 // First-publish date for the /timeline/ route. The day-to-day "edited"
-// timestamp is the build time captured at module load (mirrors the
-// `BUILD_DATE_MODIFIED` pattern in `src/lib/page-metadata.ts`).
+// timestamp is git-derived (via sitemap-dates.json) so crawlers see a stable
+// date rather than the build timestamp, which would inflate crawl budget.
 const TIMELINE_DATE_PUBLISHED = "2026-05-15T00:00:00Z";
-const TIMELINE_DATE_MODIFIED = new Date().toISOString();
+const TIMELINE_DATE_MODIFIED = (sitemapDates as Record<string, string>)["/timeline/"] ?? TIMELINE_DATE_PUBLISHED;
 
 const collectionJsonLd = {
   "@context": "https://schema.org",
