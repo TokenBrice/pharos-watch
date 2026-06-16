@@ -12,6 +12,7 @@ export function getStatusPageActions(): StatusPageAction[] {
         destructive: endpoint.statusPageAction.destructive ?? false,
         method: endpoint.statusPageAction.method,
         acceptsStablecoinFilter: endpoint.statusPageAction.acceptsStablecoinFilter ?? false,
+        group: endpoint.statusPageAction.group ?? "recovery",
       },
     ];
   });

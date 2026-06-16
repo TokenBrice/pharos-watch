@@ -24,6 +24,7 @@ export {
   type EndpointPublicApiAccess,
   type EndpointSiteDataAccess,
   type StatusPageAction,
+  type StatusPageActionGroup,
 } from "./definitions";
 export {
   getPublicApiAccess,

@@ -16,6 +16,8 @@ export type EndpointDependency =
   | "apiKeySelfServeEnv"
   | "telegram";
 
+export type StatusPageActionGroup = "recovery" | "audit" | "communications";
+
 interface EndpointStatusPageActionConfig {
   label: string;
   confirm: string;
@@ -24,6 +26,8 @@ interface EndpointStatusPageActionConfig {
   path?: string;
   /** When true the action dialog offers an optional stablecoin ID input to target a single coin. */
   acceptsStablecoinFilter?: boolean;
+  /** UI grouping in the admin actions panel. Defaults to "recovery" when omitted. */
+  group?: StatusPageActionGroup;
 }
 
 export interface EndpointDefinition {
@@ -173,6 +177,7 @@ export interface StatusPageAction {
   destructive: boolean;
   method: EndpointMethod;
   acceptsStablecoinFilter: boolean;
+  group: StatusPageActionGroup;
 }
 
 export interface EndpointMethodValidationError {
@@ -513,6 +518,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Trigger Digest",
       confirm: "Trigger daily digest? Bypasses 1h dedup window.",
       method: "POST",
+      group: "communications",
     },
   }),
   adminMutation({
@@ -535,6 +541,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Debug Sync State",
       confirm: "Fetch sync state debug dump?",
       method: "GET",
+      group: "audit",
     },
   }),
   adminMutation({
@@ -655,6 +662,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Reclassify Roundtrips",
       confirm: "Reclassify atomic roundtrips in mint/burn data?",
       method: "POST",
+      group: "audit",
     },
   }),
   adminDualModeMutation({
@@ -667,6 +675,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Run depeg history audit (dry-run)?",
       method: "GET",
       path: API_PATHS.auditDepegHistoryDryRun(),
+      group: "audit",
     },
   }),
   adminDualModeMutation({

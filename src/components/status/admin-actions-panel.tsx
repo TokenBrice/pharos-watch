@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getStatusPageActions } from "@shared/lib/api-endpoints";
+import type { StatusPageActionGroup } from "@shared/lib/api-endpoints";
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
@@ -12,17 +13,9 @@ import { SeverityPill } from "./severity-pill";
 const ADMIN_ACTIONS = getStatusPageActions();
 type AdminAction = (typeof ADMIN_ACTIONS)[number];
 
-const ACTION_GROUP_ORDER = ["recovery", "audit", "communications"] as const;
+const ACTION_GROUP_ORDER: readonly StatusPageActionGroup[] = ["recovery", "audit", "communications"];
 
-function getActionGroup(action: AdminAction): typeof ACTION_GROUP_ORDER[number] {
-  if (action.path === "/api/trigger-digest") return "communications";
-  if (action.path === "/api/debug-sync-state" || action.path.includes("audit") || action.path.includes("reclassify")) {
-    return "audit";
-  }
-  return "recovery";
-}
-
-const ACTION_GROUP_COPY: Record<typeof ACTION_GROUP_ORDER[number], { title: string; description: string }> = {
+const ACTION_GROUP_COPY: Record<StatusPageActionGroup, { title: string; description: string }> = {
   recovery: {
     title: "Recovery and backfills",
     description: "Use when a data lane or cron needs intervention to restore freshness.",
@@ -57,9 +50,9 @@ export function AdminActionsPanel({
     [status],
   );
   const groupedActions = useMemo(() => {
-    const groups = new Map<typeof ACTION_GROUP_ORDER[number], AdminAction[]>();
+    const groups = new Map<StatusPageActionGroup, AdminAction[]>();
     for (const action of ADMIN_ACTIONS) {
-      const group = getActionGroup(action);
+      const group = action.group;
       groups.set(group, [...(groups.get(group) ?? []), action]);
     }
     return ACTION_GROUP_ORDER

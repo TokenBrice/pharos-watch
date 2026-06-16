@@ -467,6 +467,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "communications",
       },
       {
         label: "Reset Blacklist Sync",
@@ -475,6 +476,7 @@ describe("api endpoint registry", () => {
         destructive: true,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
       {
         label: "Debug Sync State",
@@ -483,6 +485,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "GET",
         acceptsStablecoinFilter: false,
+        group: "audit",
       },
       {
         label: "Remediate Blacklist Gaps",
@@ -491,6 +494,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
       {
         label: "Backfill Blacklist Balances",
@@ -499,6 +503,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
       {
         label: "Backfill Depegs",
@@ -507,6 +512,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: true,
+        group: "recovery",
       },
       {
         label: "Backfill Supply",
@@ -515,6 +521,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: true,
+        group: "recovery",
       },
       {
         label: "Backfill CG Prices",
@@ -523,6 +530,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: true,
+        group: "recovery",
       },
       {
         label: "Backfill Yield History",
@@ -531,6 +539,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: true,
+        group: "recovery",
       },
       {
         label: "Backfill PSI",
@@ -539,6 +548,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
       {
         label: "Backfill Mint/Burn Prices",
@@ -547,6 +557,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
       {
         label: "Backfill Mint/Burn",
@@ -555,6 +566,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
       {
         label: "Backfill Tape",
@@ -563,6 +575,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
       {
         label: "Reclassify Roundtrips",
@@ -571,6 +584,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
+        group: "audit",
       },
       {
         label: "Audit Depegs",
@@ -579,6 +593,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "GET",
         acceptsStablecoinFilter: false,
+        group: "audit",
       },
       {
         label: "Backfill DEWS",
@@ -587,6 +602,7 @@ describe("api endpoint registry", () => {
         destructive: false,
         method: "GET",
         acceptsStablecoinFilter: false,
+        group: "recovery",
       },
     ]);
   });
