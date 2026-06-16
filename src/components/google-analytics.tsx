@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { clearAllTrackingTimers } from "@/lib/analytics";
+import { scheduleIdle } from "@/lib/browser-utils";
 
 declare global {
   interface Window {
@@ -13,21 +14,6 @@ declare global {
 
 interface GoogleAnalyticsProps {
   measurementId: string;
-}
-
-function scheduleIdle(callback: () => void): () => void {
-  const win = window as Window & {
-    requestIdleCallback?: (cb: () => void, options?: { timeout?: number }) => number;
-    cancelIdleCallback?: (handle: number) => void;
-  };
-
-  if (typeof win.requestIdleCallback === "function") {
-    const handle = win.requestIdleCallback(callback, { timeout: 2_000 });
-    return () => win.cancelIdleCallback?.(handle);
-  }
-
-  const timeout = window.setTimeout(callback, 1_500);
-  return () => window.clearTimeout(timeout);
 }
 
 export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
@@ -65,7 +51,7 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
       document.head.appendChild(script);
-    });
+    }, 2_000);
   }, [measurementId]);
 
   useEffect(() => {

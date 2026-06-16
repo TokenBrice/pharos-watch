@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useNearViewport } from "@/hooks/use-near-viewport";
+import { scheduleIdle } from "@/lib/browser-utils";
 
 function HomeAltHeroChartFallback() {
   return (
@@ -26,21 +27,6 @@ const HomeAltHeroLiveChart = dynamic(
   },
 );
 
-function scheduleIdle(callback: () => void): () => void {
-  const win = window as Window & {
-    requestIdleCallback?: (cb: () => void, options?: { timeout?: number }) => number;
-    cancelIdleCallback?: (handle: number) => void;
-  };
-
-  if (typeof win.requestIdleCallback === "function") {
-    const handle = win.requestIdleCallback(callback, { timeout: 2_500 });
-    return () => win.cancelIdleCallback?.(handle);
-  }
-
-  const timeout = window.setTimeout(callback, 1_800);
-  return () => window.clearTimeout(timeout);
-}
-
 export function HomeAltHeroChartGate(): React.JSX.Element {
   const hydrated = useHydrated();
   const { ref, near } = useNearViewport<HTMLDivElement>("0px 0px -20% 0px");
@@ -50,7 +36,7 @@ export function HomeAltHeroChartGate(): React.JSX.Element {
     // Wait for hydration to settle before scheduling the chart mount so its
     // ~208KB of data fetches stay off the initial-load critical path.
     if (!hydrated || !near || active) return;
-    return scheduleIdle(() => setActive(true));
+    return scheduleIdle(() => setActive(true), 2_500);
   }, [active, hydrated, near]);
 
   return (
