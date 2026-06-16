@@ -205,10 +205,15 @@ export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolea
   }
   if (!matchingKey) return false;
 
+  // Pin the verification algorithm to the JWKS key, never to the attacker-
+  // controlled token header. Reject any token whose header.alg disagrees with
+  // the key's published alg (JWT "algorithm confusion" defense).
+  if (header.alg !== matchingKey.alg) return false;
+
   const cryptoKey = await importPublicKey(matchingKey);
   if (!cryptoKey) return false;
 
-  const algorithm = importAlgorithm(header.alg);
+  const algorithm = importAlgorithm(matchingKey.alg);
   if (!algorithm) return false;
 
   try {

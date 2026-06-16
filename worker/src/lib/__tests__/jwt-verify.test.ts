@@ -444,5 +444,23 @@ describe("verifyAccessJwt", () => {
       const { token } = makeJwtParts(validHeader({ alg: "ES256" }), validClaims());
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
+
+    it("rejects a token whose header.alg disagrees with the JWKS key alg", async () => {
+      // Algorithm-confusion defense: the verifier must pin the algorithm to the
+      // JWKS key, not trust the attacker-controlled header. A token presenting
+      // RS512 against an RS256 key must be rejected even before crypto verify.
+      const { token, jwk } = await makeSignedJwt(validHeader({ alg: "RS256" }), validClaims());
+      const confusedHeaderB64 = base64urlEncode(
+        JSON.stringify(validHeader({ alg: "RS512" })),
+      );
+      const [, payloadB64, sigB64] = token.split(".");
+      const confusedToken = `${confusedHeaderB64}.${payloadB64}.${sigB64}`;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
+      );
+
+      expect(await verifyAccessJwt({ token: confusedToken, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+    });
   });
 });
