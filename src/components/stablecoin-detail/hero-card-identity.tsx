@@ -73,6 +73,12 @@ function InfrastructureBadge({ value }: { value: Infrastructure }) {
   );
 }
 
+// Sentence-segment form of the backing labels, used inline in the hero
+// classification line. Intentionally distinct from the shared BACKING_LABELS
+// (full names) and BACKING_LABELS_SHORT (acronyms) in
+// shared/lib/classification/domain.ts, which remains the canonical BackingType
+// list. The Record<…> annotation enforces exhaustiveness, so a new backing type
+// in domain.ts will fail to compile here until a sentence form is added.
 const BACKING_SENTENCE_LABELS: Record<StablecoinMeta["flags"]["backing"], string> = {
   "rwa-backed": "RWA-backed",
   "crypto-backed": "Crypto-backed",
