@@ -16,22 +16,7 @@ import {
   OracleRiskTierSchema,
   VARIANT_KIND_VALUES,
 } from "./core";
-import type {
-  BluechipGrade,
-  BridgeRouteRiskConfidence,
-  BridgeRouteRiskTier,
-  ChainTier,
-  CollateralQuality,
-  CustodyModel,
-  DependencyWeight,
-  DeploymentModel,
-  GovernanceQuality,
-  GovernanceType,
-  OracleRiskConfidence,
-  OracleRiskTier,
-  StablecoinLink,
-  VariantKind,
-} from "./core";
+import type { BluechipGrade, CustodyModel } from "./core";
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
 import { DependencyWeightSchema, StablecoinLinkSchema } from "./stablecoin-meta-schemas";
 
@@ -130,22 +115,7 @@ const RawDimensionInputsSchema = z.object({
   dependencyFromLive: z.boolean().optional().default(false),
 });
 
-export interface RawDimensionInputs extends z.infer<typeof RawDimensionInputsSchema> {
-  bluechipGrade: BluechipGrade | null;
-  chainTier: ChainTier;
-  deploymentModel: DeploymentModel;
-  collateralQuality: CollateralQuality;
-  custodyModel: CustodyModel;
-  governanceTier: GovernanceType;
-  governanceQuality: GovernanceQuality;
-  oracleRiskTier?: OracleRiskTier | null;
-  oracleRiskScore?: number | null;
-  bridgeRouteRiskTier?: BridgeRouteRiskTier | null;
-  bridgeRouteRiskScore?: number | null;
-  dependencies: DependencyWeight[];
-  variantParentId?: string | null;
-  variantKind?: VariantKind | null;
-}
+export type RawDimensionInputs = z.infer<typeof RawDimensionInputsSchema>;
 
 const ReportCardOracleRiskBranchSchema = z.object({
   id: z.string(),
@@ -200,24 +170,11 @@ const ReportCardBridgeRouteRiskSchema = z.object({
   sources: z.array(StablecoinLinkSchema).optional(),
 });
 
-export interface ReportCardOracleRiskBranch extends z.infer<typeof ReportCardOracleRiskBranchSchema> {
-  tier: OracleRiskTier;
-  sources?: StablecoinLink[];
-}
+export type ReportCardOracleRiskBranch = z.infer<typeof ReportCardOracleRiskBranchSchema>;
 
-export interface ReportCardOracleRisk extends z.infer<typeof ReportCardOracleRiskSchema> {
-  tier: OracleRiskTier;
-  confidence?: OracleRiskConfidence;
-  sources?: StablecoinLink[];
-  selectedBranch?: ReportCardOracleRiskBranch | null;
-  branches?: ReportCardOracleRiskBranch[];
-}
+export type ReportCardOracleRisk = z.infer<typeof ReportCardOracleRiskSchema>;
 
-export interface ReportCardBridgeRouteRisk extends z.infer<typeof ReportCardBridgeRouteRiskSchema> {
-  tier: BridgeRouteRiskTier;
-  confidence: BridgeRouteRiskConfidence;
-  sources?: StablecoinLink[];
-}
+export type ReportCardBridgeRouteRisk = z.infer<typeof ReportCardBridgeRouteRiskSchema>;
 
 export const ReportCardSchema = z.object({
   id: z.string(),
@@ -242,15 +199,7 @@ export const ReportCardSchema = z.object({
   isDefunct: z.boolean(),
 });
 
-export interface ReportCard extends z.infer<typeof ReportCardSchema> {
-  overallGrade: ReportCardGrade;
-  overallCapped?: boolean;
-  uncappedOverallScore?: number | null;
-  dimensions: Record<DimensionKey, ReportCardDimension>;
-  rawInputs: RawDimensionInputs;
-  oracleRisk?: ReportCardOracleRisk | null;
-  bridgeRouteRisk?: ReportCardBridgeRouteRisk | null;
-}
+export type ReportCard = z.infer<typeof ReportCardSchema>;
 
 const ReportCardsMethodologySchema = z.object({
   version: z.string(),
@@ -313,17 +262,4 @@ export const ReportCardsResponseSchema = z.object({
   liveToFallbackCoins: z.array(z.string()).optional(),
 });
 
-export interface ReportCardsResponse extends z.infer<typeof ReportCardsResponseSchema> {
-  cards: ReportCard[];
-  methodology: {
-    version: string;
-    weights: Record<DimensionKey, number>;
-    pegMultiplierExponent: number;
-    activeDepegSeveritySource?: string;
-    activeDepegCaps?: {
-      d: { thresholdBps: number; score: number };
-      f: { thresholdBps: number; score: number };
-    };
-    thresholds: { grade: ReportCardGrade; min: number }[];
-  };
-}
+export type ReportCardsResponse = z.infer<typeof ReportCardsResponseSchema>;
