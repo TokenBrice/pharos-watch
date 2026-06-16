@@ -105,11 +105,14 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
     await setCache(db, cacheKey(source), JSON.stringify(record));
     if (wasOpen) {
       console.log(`[circuit-breaker] ${source}: CLOSED (recovered)`);
-      sendAlert(
+      // Awaited (not fire-and-forget) so the webhook fetch is tied to the
+      // caller's awaited recordOutcome promise and completes before isolate
+      // teardown. sendAlert never throws — it returns false on any failure.
+      await sendAlert(
         webhookUrl ?? null,
         `Circuit closed: ${source}`,
         `Source "${source}" has recovered after being open.`,
-      ).catch((err) => { console.warn("[circuit-breaker] alert delivery failed:", err); });
+      );
     }
     return;
   }
@@ -127,11 +130,16 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
     record.state = "open";
     record.openedAt = now;
     console.log(`[circuit-breaker] ${source}: closed -> OPEN (${record.consecutiveFailures} consecutive failures)`);
-    sendAlert(
+    await setCache(db, cacheKey(source), JSON.stringify(record));
+    // Awaited (not fire-and-forget) so the webhook fetch is tied to the caller's
+    // awaited recordOutcome promise and completes before isolate teardown.
+    // sendAlert never throws — it returns false on any failure.
+    await sendAlert(
       webhookUrl ?? null,
       `Circuit OPEN: ${source}`,
       `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
-    ).catch((err) => { console.warn("[circuit-breaker] alert delivery failed:", err); });
+    );
+    return;
   }
 
   await setCache(db, cacheKey(source), JSON.stringify(record));
