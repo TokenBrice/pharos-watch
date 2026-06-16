@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
-import { formatElapsedSeconds } from "@shared/lib/format";
+import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
 import {
   DDRR_PUBLIC_WARNING,
   type DdrrActualOutcome,
@@ -137,8 +137,7 @@ function isTrackRecordRow(row: DdrrRow): boolean {
 
 function formatPercent(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return "N/A";
-  const pct = value * 100;
-  return `${Number.isInteger(pct) ? pct.toFixed(0) : pct.toFixed(1)}%`;
+  return formatPercentFromRatio(value, Number.isInteger(value * 100) ? 0 : 1);
 }
 
 function formatSignedDuration(seconds: number | null): string {
