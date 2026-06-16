@@ -1,4 +1,4 @@
-import type { DdrCellState, DdrHorizon } from "../../types/depeg-resolver";
+import type { DdrCellState } from "../../types/depeg-resolver";
 import type {
   DdrrActualOutcome,
   DdrrCoverageCause,
@@ -21,8 +21,6 @@ import type {
 } from "./inputs";
 import { deriveActualOutcome, getAssessmentReviewAnchorSec, type DdrrDerivedOutcome } from "./outcomes";
 import { HORIZON_SECONDS } from "../depeg-resolver/duration";
-
-export const DDRR_HORIZON_SECONDS: Record<DdrHorizon, number> = HORIZON_SECONDS;
 
 interface DdrrDurationReviewResult {
   durationReview: DdrrDurationReview;
@@ -157,7 +155,7 @@ export function reviewHorizons(
   const evaluationNow = Number.isFinite(nowSec) ? nowSec : assessment.assessedAt;
   const anchorSec = getAssessmentReviewAnchorSec(assessment);
   return assessment.horizonCells.map((cell) => {
-    const horizonSec = DDRR_HORIZON_SECONDS[cell.horizon];
+    const horizonSec = HORIZON_SECONDS[cell.horizon];
     const horizonEndAt = anchorSec + horizonSec;
     const horizonElapsed = evaluationNow >= horizonEndAt || outcome.actualEndedAt != null;
     const resolvedWithinHorizon =
