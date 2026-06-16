@@ -1,4 +1,5 @@
 import { jsonResponse, parseOptionalRequestJsonObject } from "./api-utils";
+import { parseBooleanInput, readBodyOrQueryStringParam } from "./api-params";
 import { runAdminRoute } from "./route-wrappers";
 
 export interface AdminJobContext<TBody extends Record<string, unknown> = Record<string, unknown>> {
@@ -15,12 +16,6 @@ interface RunAdminJobOptions {
   request?: Request;
   trustedAdmin?: boolean;
   parseBody?: boolean;
-}
-
-function isTruthyFlag(value: unknown): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value !== "string") return false;
-  return value.trim().toLowerCase() === "true";
 }
 
 export async function runAdminJob<TBody extends Record<string, unknown> = Record<string, unknown>>(
@@ -45,7 +40,7 @@ export async function runAdminJob<TBody extends Record<string, unknown> = Record
         request: options.request,
         trustedAdmin: options.trustedAdmin,
         body,
-        dryRun: isTruthyFlag(body.dryRun) || options.url.searchParams.get("dry-run") === "true",
+        dryRun: parseBooleanInput(body.dryRun, false) || options.url.searchParams.get("dry-run") === "true",
       });
     },
   );
@@ -56,10 +51,7 @@ export function readAdminStringParam(
   searchParams: URLSearchParams,
   key: string,
 ): string | null {
-  const bodyValue = typeof body[key] === "string" ? body[key] as string : null;
-  const value = bodyValue ?? searchParams.get(key);
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+  return readBodyOrQueryStringParam(body, searchParams, key);
 }
 
 export function readAdminIntegerParam(
