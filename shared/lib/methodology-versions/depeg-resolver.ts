@@ -38,6 +38,21 @@ export const DDR_SUPPORT_RULES_VERSION = "support-rules-v1";
 /** DDRv2 public prediction policy version. */
 export const DDR_PREDICTION_POLICY_VERSION = "sticky-24h-v1";
 
+/**
+ * Canonical version-stamp object covering all six DDR methodology version
+ * constants. Spread into seal inputs and payloads so a version bump in this
+ * file propagates to every site atomically.
+ */
+export const DDR_VERSION_STAMP = {
+  methodologyVersion: DDR_METHODOLOGY_VERSION,
+  methodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+  predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+  resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
+  durationModelVersion: DDR_DURATION_MODEL_VERSION,
+  incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
+  supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
+} as const;
+
 /** DDRv3 forecast-readiness contract version. */
 export const DDR_FORECAST_READINESS_VERSION = "readiness-72h-v1";
 

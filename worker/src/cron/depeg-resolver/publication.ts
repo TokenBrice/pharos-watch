@@ -2,6 +2,7 @@ import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION,
+  DDR_VERSION_STAMP,
 } from "@shared/lib/depeg-resolver-version";
 import {
   buildForecastReadinessBackstop,
@@ -33,14 +34,6 @@ import {
   sealedByIncident,
 } from "./storage-adapters";
 import { fallbackIncidentForEvent, formatDdrrFailure, publicationSnapshotToken } from "./utils";
-import {
-  DDR_DURATION_MODEL_VERSION,
-  DDR_INCIDENT_GROUPING_VERSION,
-  DDR_METHODOLOGY_VERSION,
-  DDR_METHODOLOGY_VERSION_LABEL,
-  DDR_RESOLUTION_RUBRIC_VERSION,
-  DDR_SUPPORT_RULES_VERSION,
-} from "@shared/lib/depeg-resolver-version";
 
 export async function loadSealedAndPublicationState(input: {
   stores: DdrV2StoreContracts | null | undefined;
@@ -180,7 +173,6 @@ export async function sealEligibleLocks(input: {
       eligibleAt: lock.eligibleAt,
       eventAgeAtLockSec: input.nowSec - row.startedAt,
       lockTiming,
-      predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
       policyDelaySec: lock.policyDelaySec,
       lockTrigger: lock.lockTrigger,
       forecastReadinessScore: lock.readiness.score,
@@ -188,12 +180,7 @@ export async function sealEligibleLocks(input: {
       readinessThreshold: lock.readiness.threshold,
       backstopAt: lock.backstop.backstopAt ?? null,
       backstopDelaySec: lock.backstop.delaySec,
-      methodologyVersion: DDR_METHODOLOGY_VERSION,
-      methodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
-      durationModelVersion: DDR_DURATION_MODEL_VERSION,
-      incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
-      supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
+      ...DDR_VERSION_STAMP,
       row,
       sealedPayload,
     };

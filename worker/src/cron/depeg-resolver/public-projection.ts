@@ -16,15 +16,12 @@ import {
 } from "@shared/lib/depeg-resolver/forecast-readiness";
 import { buildDdrManifestBasePayload } from "@shared/lib/depeg-resolver/public-contract";
 import {
-  DDR_DURATION_MODEL_VERSION,
-  DDR_INCIDENT_GROUPING_VERSION,
   DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
   DDR_PREDICTION_POLICY_VERSION,
-  DDR_RESOLUTION_RUBRIC_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION,
-  DDR_SUPPORT_RULES_VERSION,
+  DDR_VERSION_STAMP,
 } from "@shared/lib/depeg-resolver-version";
 import { buildMethodologyEnvelope } from "../../lib/api-utils";
 import type {
@@ -90,13 +87,13 @@ export function buildSealPayload(
       readiness: lock.readiness,
       backstop: lock.backstop,
       policyDelaySec: lock.policyDelaySec,
-      predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
-      predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-      predictionMethodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
-      durationModelVersion: DDR_DURATION_MODEL_VERSION,
-      incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
-      supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
+      predictionPolicyVersion: DDR_VERSION_STAMP.predictionPolicyVersion,
+      predictionMethodologyVersion: DDR_VERSION_STAMP.methodologyVersion,
+      predictionMethodologyVersionLabel: DDR_VERSION_STAMP.methodologyVersionLabel,
+      resolutionRubricVersion: DDR_VERSION_STAMP.resolutionRubricVersion,
+      durationModelVersion: DDR_VERSION_STAMP.durationModelVersion,
+      incidentGroupingVersion: DDR_VERSION_STAMP.incidentGroupingVersion,
+      supportRulesVersion: DDR_VERSION_STAMP.supportRulesVersion,
     },
   };
 
@@ -230,10 +227,10 @@ function buildDdrMeta(input: {
     degraded: false,
     degradedReason: null,
     publicWarning: DDR_PUBLIC_WARNING,
-    resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
-    durationModelVersion: DDR_DURATION_MODEL_VERSION,
-    incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
-    supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
+    resolutionRubricVersion: DDR_VERSION_STAMP.resolutionRubricVersion,
+    durationModelVersion: DDR_VERSION_STAMP.durationModelVersion,
+    incidentGroupingVersion: DDR_VERSION_STAMP.incidentGroupingVersion,
+    supportRulesVersion: DDR_VERSION_STAMP.supportRulesVersion,
     lineage: input.lineage,
   };
 }
@@ -398,23 +395,23 @@ function buildPredictionMeta(input: {
     ),
     predictionMethodologyVersionLabel: nullableStringValue(
       sealedPrediction?.predictionMethodologyVersionLabel,
-      input.sealed ? DDR_METHODOLOGY_VERSION_LABEL : null,
+      input.sealed ? DDR_VERSION_STAMP.methodologyVersionLabel : null,
     ),
     resolutionRubricVersion: nullableStringValue(
       sealedPrediction?.resolutionRubricVersion,
-      input.sealed ? DDR_RESOLUTION_RUBRIC_VERSION : null,
+      input.sealed ? DDR_VERSION_STAMP.resolutionRubricVersion : null,
     ),
     durationModelVersion: nullableStringValue(
       sealedPrediction?.durationModelVersion,
-      input.sealed ? DDR_DURATION_MODEL_VERSION : null,
+      input.sealed ? DDR_VERSION_STAMP.durationModelVersion : null,
     ),
     incidentGroupingVersion: nullableStringValue(
       sealedPrediction?.incidentGroupingVersion,
-      input.sealed ? DDR_INCIDENT_GROUPING_VERSION : null,
+      input.sealed ? DDR_VERSION_STAMP.incidentGroupingVersion : null,
     ),
     supportRulesVersion: nullableStringValue(
       sealedPrediction?.supportRulesVersion,
-      input.sealed ? DDR_SUPPORT_RULES_VERSION : null,
+      input.sealed ? DDR_VERSION_STAMP.supportRulesVersion : null,
     ),
     eligibleAt,
     policyDelaySec,
