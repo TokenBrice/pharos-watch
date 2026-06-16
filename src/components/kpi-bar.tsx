@@ -10,8 +10,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, formatSignedPercent, getNetColor, timeAgo } from "@shared/lib/format";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { abbreviateNumberParts, timeAgo } from "@shared/lib/format";
 import {
   buildDewsBandCounts,
   buildDexSnapshot,
@@ -22,6 +21,15 @@ import {
   buildStablecoinSnapshot,
 } from "@/components/kpi-bar-view-model";
 import {
+  buildDewsDisplay,
+  buildDexDisplay,
+  buildFlowDisplay,
+  buildMcapDisplay,
+  buildPegStatusDisplay,
+  formatPsiDeltaValue,
+  resolvePsiColorClass,
+} from "@/components/kpi-bar-display-model";
+import {
   InfoChip,
   KpiCell,
   KpiMiniTile,
@@ -30,7 +38,6 @@ import {
   PrimarySnapshotCard,
   TrendChip,
   trendDirection,
-  trendTextClass,
   type KpiMetricDefinition,
 } from "@/components/kpi-bar-parts";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -61,34 +68,31 @@ export function KpiBar() {
   const { netFlow24h, netFlow7d } = useMemo(() => buildFlowSnapshot(flowData), [flowData]);
   const { psiCurrent, psiScoreNum, psiBand, psiDaysInBand, psiDelta24h, psiDelta7d, psiDelta30d } =
     useMemo(() => buildPsiSnapshot(psiData), [psiData]);
-  const psiColorClass = psiBand && psiBand in PSI_BAND_CLASSES ? PSI_BAND_CLASSES[psiBand as ConditionBand] : "";
+  const psiColorClass = resolvePsiColorClass(psiBand);
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
   const hasPsiData = !!psiCurrent;
   const hasDexData = !!dexData;
   const summary = pegData?.summary;
-  const hasSummary = !!summary;
   const psiBandDisplay = hasPsiData ? psiBand : "";
-  const mcapChange24Display = hasStablecoinsData ? formatSignedPercent(mcapChange24hPct, 2) : "—";
-  const mcapChange7Display = hasStablecoinsData ? formatSignedPercent(mcapChange7dPct, 2) : "—";
-  const mcapColorClass = hasStablecoinsData ? trendTextClass(mcapChange24hPct) : "text-muted-foreground";
-  const mcap7ColorClass = hasStablecoinsData ? trendTextClass(mcapChange7dPct) : "text-muted-foreground";
-  const pegStatusDisplay = hasSummary ? `${summary.coinsAtPeg}/${summary.totalTracked}` : "—";
-  const usdtShareDisplay = hasStablecoinsData ? `${usdtUsdcSharePct.toFixed(1)}%` : "—";
-  const dexVolDisplay = hasDexData ? formatCurrency(totalVol24h, 1) : "—";
-  const dexDeltaDisplay = hasDexData ? formatSignedPercent(volVs7dAvgPct, 1) : "—";
-  const turnoverDisplay = hasStablecoinsData && hasDexData && totalMcap > 0 ? `${turnoverPct.toFixed(2)}%` : "—";
+  const {
+    change24Display: mcapChange24Display,
+    change7Display: mcapChange7Display,
+    colorClass: mcapColorClass,
+    color7Class: mcap7ColorClass,
+    usdtShareDisplay,
+  } = buildMcapDisplay({ mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct }, hasStablecoinsData);
+  const pegStatusDisplay = buildPegStatusDisplay(summary);
+  const {
+    volDisplay: dexVolDisplay,
+    deltaDisplay: dexDeltaDisplay,
+    deltaColorClass: dexDeltaColorClass,
+    turnoverDisplay,
+  } = buildDexDisplay({ totalVol24h, volVs7dAvgPct, turnoverPct }, hasDexData, hasStablecoinsData, totalMcap);
   const hasFlowData = !!flowData?.coins?.length;
-  const netFlow24Display = hasFlowData ? formatSignedCurrency(netFlow24h, 1) : "—";
-  const netFlow7Display = hasFlowData ? formatSignedCurrency(netFlow7d, 1) : "—";
-  const netFlow24Class = hasFlowData ? getNetColor(netFlow24h) : "text-muted-foreground";
-  const netFlow7Class = hasFlowData ? getNetColor(netFlow7d) : "text-muted-foreground";
-  const netFlow7Tone: "neutral" | "positive" | "negative" = !hasFlowData
-    ? "neutral"
-    : netFlow7d > 0
-      ? "positive"
-      : netFlow7d < 0
-        ? "negative"
-        : "neutral";
+  const { netFlow24Display, netFlow7Display, netFlow24Class, netFlow7Class, netFlow7Tone } = buildFlowDisplay(
+    { netFlow24h, netFlow7d },
+    hasFlowData,
+  );
 
   const dewsBandCounts = useMemo(() => buildDewsBandCounts(stressData), [stressData]);
   const psiHistorySeries = useMemo(() => buildPsiHistorySeries(psiData, 30), [psiData]);
@@ -159,25 +163,15 @@ export function KpiBar() {
     );
   }
 
-  const psiDelta24hValue = psiDelta24h !== null ? `${psiDelta24h >= 0 ? "+" : ""}${psiDelta24h.toFixed(1)}` : null;
-  const psiDelta7dValue = psiDelta7d !== null ? `${psiDelta7d >= 0 ? "+" : ""}${psiDelta7d.toFixed(1)}` : null;
-  const psiDelta30dValue = psiDelta30d !== null ? `${psiDelta30d >= 0 ? "+" : ""}${psiDelta30d.toFixed(1)}` : null;
+  const psiDelta24hValue = formatPsiDeltaValue(psiDelta24h);
+  const psiDelta7dValue = formatPsiDeltaValue(psiDelta7d);
+  const psiDelta30dValue = formatPsiDeltaValue(psiDelta30d);
 
-  const dewsElevatedCount = dewsBandCounts
-    ? dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert
-    : 0;
-  const allDewsCalm = !!dewsBandCounts && dewsElevatedCount === 0;
-  // Uses the project's mandated text-*-700 dark:text-*-400 pairing per
-  // docs/design-tokens.md so the pill passes AA contrast in both themes.
-  const dewsSeverityClass = !dewsBandCounts
-    ? "text-muted-foreground"
-    : dewsBandCounts.danger > 0
-      ? "text-red-700 dark:text-red-400"
-      : dewsBandCounts.warning > 0
-        ? "text-orange-700 dark:text-orange-400"
-        : dewsBandCounts.alert > 0
-          ? "text-yellow-700 dark:text-yellow-400"
-          : "text-muted-foreground";
+  const {
+    elevatedCount: dewsElevatedCount,
+    allCalm: allDewsCalm,
+    severityClass: dewsSeverityClass,
+  } = buildDewsDisplay(dewsBandCounts);
   const mobileDewsMeta = dewsBandCounts ? (
     allDewsCalm ? (
       <span className="text-muted-foreground">DEWS all calm</span>
@@ -237,7 +231,7 @@ export function KpiBar() {
       desktopLabel: <MethodologyLabel topic="trackedDexVol">Tracked 24H DEX Vol</MethodologyLabel>,
       value: dexVolDisplay,
       mobileMetaPrimary: (
-        <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>
+        <span className={dexDeltaColorClass}>
           vs 7d average {dexDeltaDisplay}
         </span>
       ),
