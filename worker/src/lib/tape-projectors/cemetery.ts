@@ -13,20 +13,9 @@
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 
 import { buildTapeEventId, formatUsdShort, parseDateStringToEpochSec, truncateSummary } from "../tape-event-helpers";
-import { insertTapeEvents } from "../tape-event-store";
+import { insertTapeEvents, loadObservedSourceRowIds } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { ProjectorOptions, ProjectorResult } from "./types";
-
-
-async function loadObservedIds(db: D1Database): Promise<Set<string>> {
-  const result = await db
-    .prepare(`SELECT source_row_id FROM tape_events WHERE type = ?`)
-    .bind("cemetery.entry.added")
-    .all<{ source_row_id: string }>();
-  const seen = new Set<string>();
-  for (const row of result.results ?? []) seen.add(row.source_row_id);
-  return seen;
-}
 
 function buildEvent(entry: CemeteryEntry): TapeEventInsert {
   const tsSec = parseDateStringToEpochSec(entry.deathDate);
@@ -83,7 +72,7 @@ export async function projectCemeteryEntries(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   const dryRun = options?.dryRun === true;
-  const observed = await loadObservedIds(db);
+  const observed = await loadObservedSourceRowIds(db, "cemetery.entry.added");
   const events: TapeEventInsert[] = [];
   for (const entry of CEMETERY_ENTRIES) {
     if (observed.has(entry.id)) continue;

@@ -69,6 +69,20 @@ export async function insertTapeEvents(db: D1Database, events: TapeEventInsert[]
   return events.length;
 }
 
+/**
+ * Load the set of source_row_ids already projected for a given event type.
+ * Used by first-observation projectors to skip already-emitted entries.
+ */
+export async function loadObservedSourceRowIds(db: D1Database, type: string): Promise<Set<string>> {
+  const result = await db
+    .prepare(`SELECT source_row_id FROM tape_events WHERE type = ?`)
+    .bind(type)
+    .all<{ source_row_id: string }>();
+  const seen = new Set<string>();
+  for (const row of result.results ?? []) seen.add(row.source_row_id);
+  return seen;
+}
+
 // --- Read path (cursor pagination) ------------------------------------------
 
 export interface TapeEventQueryFilters {
