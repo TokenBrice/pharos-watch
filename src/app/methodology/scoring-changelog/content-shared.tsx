@@ -100,7 +100,7 @@ export function WeightRow({ values }: { values: [string, string, string, string,
       <TableBody>
         <TableRow>
           {values.map((v, i) => (
-            <TableCell key={i} className={changelogTableClassNames.cell}>
+            <TableCell key={headers[i]} className={changelogTableClassNames.cell}>
               {v}
             </TableCell>
           ))}
