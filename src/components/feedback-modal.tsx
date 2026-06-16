@@ -54,6 +54,7 @@ export function FeedbackModal({
   const [description, setDescription] = useState("");
   const [expectedValue, setExpectedValue] = useState("");
   const [contactHandle, setContactHandle] = useState("");
+  const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -63,6 +64,7 @@ export function FeedbackModal({
     setDescription("");
     setExpectedValue("");
     setContactHandle("");
+    setWebsite("");
     setStatus("idle");
     setErrorMsg("");
   }, [defaultType]);
@@ -97,7 +99,7 @@ export function FeedbackModal({
       ...(pegValue ? { pegValue } : {}),
       ...(contactHandle.trim() ? { contactHandle: contactHandle.trim() } : {}),
       pageUrl,
-      website: "",
+      website,
     };
 
     try {
@@ -120,7 +122,7 @@ export function FeedbackModal({
       setErrorMsg("Network error. Please try again.");
       setStatus("error");
     }
-  }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle, pageUrl]);
+  }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle, website, pageUrl]);
 
   const needsTitle = type === "bug" || type === "feature-request";
   const contactValid =
@@ -256,9 +258,10 @@ export function FeedbackModal({
               name="website"
               tabIndex={-1}
               aria-hidden="true"
+              autoComplete="off"
               style={{ position: "absolute", left: "-9999px", opacity: 0, pointerEvents: "none" }}
-              readOnly
-              value=""
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
             />
 
             {/* Error */}
