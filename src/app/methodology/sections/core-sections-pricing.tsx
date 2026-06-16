@@ -12,8 +12,7 @@ import {
 } from "@/components/table";
 import {
   MethodologyDetails,
-  MethodologyDiagramArrow,
-  MethodologyDiagramCard,
+  MethodologyDiagramFlow,
   MethodologyFacts,
   MethodologySectionShell,
   WorkedExample,
@@ -177,43 +176,71 @@ export function PricingPipelineMethodologySection() {
           primary
           summary="Technical details: source weights, consensus algorithm, overrides, enrichment, and validation"
         >
-          <div className="hidden md:flex flex-col items-center gap-3">
-            <div className="grid grid-cols-4 gap-3 w-full">
-              <MethodologyDiagramCard title="Aggregators" subtitle={<><span>CoinGecko (w2)</span><br /><span>DL list (w1)</span></>} />
-              <MethodologyDiagramCard title="Exchanges" subtitle={<><span>Binance (w2), Kraken (w2)</span><br /><span>Coinbase (w2), Bitstamp (w1)</span></>} />
-              <MethodologyDiagramCard title="Oracles" subtitle={<><span>Pyth (w2)</span><br /><span>RedStone (w1)</span></>} />
-              <MethodologyDiagramCard title="On-chain" subtitle={<><span>Curve (w3)</span><br /><span>DEX agg/address (w1), protocol DEX (w2-w3), GT (w1)</span></>} />
-            </div>
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-80" title="N-Source Consensus" subtitle="Pairwise clusters; publish cluster median, keep best member for provenance" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-80 border-orange-500/40" title="Pool Challenge" subtitle="Soft-only consensus challenged; replacement uses protocol-aware weighted medians" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-80 border-blue-500/40" title="Authoritative Overrides" subtitle="Protocol redemption (cUSD, iUSD) after market probes" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-80" title="Enrichment Pipeline" subtitle="5-pass fallback with Solana-native Jupiter recovery" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-80" title="Price Validation + Confidence" subtitle="high / single-source / low / fallback" />
-          </div>
-
-          <div className="flex flex-col items-center gap-3 md:hidden">
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <MethodologyDiagramCard title="Aggregators" titleClassName="text-xs text-foreground font-medium" subtitle="CG (w2), DL-list (w1)" subtitleClassName="text-xs text-muted-foreground" />
-              <MethodologyDiagramCard title="Exchanges" titleClassName="text-xs text-foreground font-medium" subtitle="BN (w2), KR (w2), CB (w2), BS (w1)" subtitleClassName="text-xs text-muted-foreground" />
-              <MethodologyDiagramCard title="Oracles" titleClassName="text-xs text-foreground font-medium" subtitle="Pyth (w2), RS (w1)" subtitleClassName="text-xs text-muted-foreground" />
-              <MethodologyDiagramCard title="On-chain" titleClassName="text-xs text-foreground font-medium" subtitle="Curve (w3), DEX/address (w1), protocol DEX (w2-w3), GT (w1)" subtitleClassName="text-xs text-muted-foreground" />
-            </div>
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-full" title="N-Source Consensus" subtitle="Pairwise clusters; publish cluster median, keep best member for provenance" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-full border-orange-500/40" title="Pool Challenge" subtitle="Soft-only → replace with protocol-aware weighted medians" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-full border-blue-500/40" title="Authoritative Overrides" subtitle="Protocol redemption (cUSD, iUSD) after market probes" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-full" title="Enrichment Pipeline" subtitle="5-pass fallback with Jupiter before DexScreener" />
-            <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-full" title="Price Validation + Confidence" subtitle="high / single-source / low / fallback" />
-          </div>
+          <MethodologyDiagramFlow
+            inputCols={4}
+            inputs={[
+              {
+                title: "Aggregators",
+                subtitle: (
+                  <>
+                    <span className="md:hidden">CG (w2), DL-list (w1)</span>
+                    <span className="hidden md:inline"><span>CoinGecko (w2)</span><br /><span>DL list (w1)</span></span>
+                  </>
+                ),
+              },
+              {
+                title: "Exchanges",
+                subtitle: (
+                  <>
+                    <span className="md:hidden">BN (w2), KR (w2), CB (w2), BS (w1)</span>
+                    <span className="hidden md:inline"><span>Binance (w2), Kraken (w2)</span><br /><span>Coinbase (w2), Bitstamp (w1)</span></span>
+                  </>
+                ),
+              },
+              {
+                title: "Oracles",
+                subtitle: (
+                  <>
+                    <span className="md:hidden">Pyth (w2), RS (w1)</span>
+                    <span className="hidden md:inline"><span>Pyth (w2)</span><br /><span>RedStone (w1)</span></span>
+                  </>
+                ),
+              },
+              {
+                title: "On-chain",
+                subtitle: (
+                  <>
+                    <span className="md:hidden">Curve (w3), DEX/address (w1), protocol DEX (w2-w3), GT (w1)</span>
+                    <span className="hidden md:inline"><span>Curve (w3)</span><br /><span>DEX agg/address (w1), protocol DEX (w2-w3), GT (w1)</span></span>
+                  </>
+                ),
+              },
+            ]}
+            steps={[
+              { title: "N-Source Consensus", subtitle: "Pairwise clusters; publish cluster median, keep best member for provenance" },
+              {
+                title: "Pool Challenge",
+                className: "border-orange-500/40",
+                subtitle: (
+                  <>
+                    <span className="md:hidden">Soft-only → replace with protocol-aware weighted medians</span>
+                    <span className="hidden md:inline">Soft-only consensus challenged; replacement uses protocol-aware weighted medians</span>
+                  </>
+                ),
+              },
+              { title: "Authoritative Overrides", className: "border-blue-500/40", subtitle: "Protocol redemption (cUSD, iUSD) after market probes" },
+              {
+                title: "Enrichment Pipeline",
+                subtitle: (
+                  <>
+                    <span className="md:hidden">5-pass fallback with Jupiter before DexScreener</span>
+                    <span className="hidden md:inline">5-pass fallback with Solana-native Jupiter recovery</span>
+                  </>
+                ),
+              },
+              { title: "Price Validation + Confidence", subtitle: "high / single-source / low / fallback" },
+            ]}
+          />
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Source Weights</h3>

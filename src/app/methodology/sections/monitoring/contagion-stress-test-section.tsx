@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
@@ -6,6 +7,14 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { CONTAGION_SECTION_CONTENT } from "../methodology-content";
+
+const STRESS_TEST_STEPS = [
+  { title: "Select Target", subtitle: "pick a coin" },
+  { title: "Override to D", subtitle: "force downgrade" },
+  { title: "Recompute Dep. Risk", subtitle: "cascade upstream" },
+  { title: "Impact Report", subtitle: "coins & $ at risk" },
+];
+
 export function ContagionStressTestMethodologySection() {
   return (
           <MethodologySectionShell
@@ -57,50 +66,22 @@ export function ContagionStressTestMethodologySection() {
               </WorkedExample>
 
               <MethodologyDetails summary="Technical details: simulation pipeline, scoreboard logic, and limitations">
-                {/* Stress test pipeline diagram — desktop: horizontal */}
-                <div className="hidden md:grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] gap-4 items-start">
-                  <div className="rounded-lg border p-3 text-center self-center">
-                    <p className="text-foreground font-medium">Select Target</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">pick a coin</p>
-                  </div>
-                  <div className="flex items-center self-center text-muted-foreground text-xl font-bold">&rarr;</div>
-                  <div className="rounded-lg border p-3 text-center self-center">
-                    <p className="text-foreground font-medium">Override to D</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">force downgrade</p>
-                  </div>
-                  <div className="flex items-center self-center text-muted-foreground text-xl font-bold">&rarr;</div>
-                  <div className="rounded-lg border p-3 text-center self-center">
-                    <p className="text-foreground font-medium">Recompute Dep. Risk</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">cascade upstream</p>
-                  </div>
-                  <div className="flex items-center self-center text-muted-foreground text-xl font-bold">&rarr;</div>
-                  <div className="rounded-lg border p-3 text-center self-center">
-                    <p className="text-foreground font-medium">Impact Report</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">coins &amp; $ at risk</p>
-                  </div>
-                </div>
-
-                {/* Stress test pipeline diagram — mobile: vertical */}
-                <div className="flex flex-col items-center gap-3 md:hidden">
-                  <div className="w-full rounded-lg border p-3 text-center">
-                    <p className="text-foreground font-medium">Select Target</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">pick a coin</p>
-                  </div>
-                  <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-                  <div className="w-full rounded-lg border p-3 text-center">
-                    <p className="text-foreground font-medium">Override to D</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">force downgrade</p>
-                  </div>
-                  <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-                  <div className="w-full rounded-lg border p-3 text-center">
-                    <p className="text-foreground font-medium">Recompute Dep. Risk</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">cascade upstream</p>
-                  </div>
-                  <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-                  <div className="w-full rounded-lg border p-3 text-center">
-                    <p className="text-foreground font-medium">Impact Report</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">coins &amp; $ at risk</p>
-                  </div>
+                {/* Stress test pipeline diagram — mobile: vertical, desktop: horizontal */}
+                <div className="flex flex-col items-center gap-3 md:flex-row md:items-center md:gap-4">
+                  {STRESS_TEST_STEPS.map((step, index) => (
+                    <Fragment key={step.title}>
+                      {index > 0 && (
+                        <div aria-hidden="true" className="text-muted-foreground text-xl font-bold">
+                          <span className="md:hidden">&darr;</span>
+                          <span className="hidden md:inline">&rarr;</span>
+                        </div>
+                      )}
+                      <div className="w-full rounded-lg border p-3 text-center md:flex-1">
+                        <p className="text-foreground font-medium">{step.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{step.subtitle}</p>
+                      </div>
+                    </Fragment>
+                  ))}
                 </div>
 
                 {/* Systemic Risk Scoreboard */}
