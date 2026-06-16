@@ -271,6 +271,7 @@ export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>
       nowSec: Math.floor(Date.now() / 1000),
     }]);
 
+    const httpStatus = result.ok ? 200 : 502;
     const responseBody = {
       ok: result.ok,
       mode: "synthetic_current_state",
@@ -287,7 +288,7 @@ export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>
         action: "admin-telegram-resend",
         target: chatId,
         result: result.ok ? "ok" : "error",
-        httpStatus: 200,
+        httpStatus,
         details: {
           chatId,
           alertType,
@@ -303,6 +304,6 @@ export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>
       request,
     );
 
-    return adminJsonResponse(responseBody, { status: 200 });
+    return adminJsonResponse(responseBody, { status: httpStatus });
   },
 );

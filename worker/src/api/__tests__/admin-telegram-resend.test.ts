@@ -279,7 +279,7 @@ describe("handleAdminTelegramResend", () => {
     expect(sentBody.text).toContain("Stablecoin Launched");
   });
 
-  it("reports Telegram failures in the response body without retrying", async () => {
+  it("returns 502 and audits http_status 502 when Telegram delivery fails", async () => {
     fetchSpy.mockReset();
     fetchSpy.mockResolvedValue(
       new Response(JSON.stringify({ ok: false, error_code: 429 }), {
@@ -294,7 +294,7 @@ describe("handleAdminTelegramResend", () => {
       trustedAdmin: true,
       telegramBotToken: BOT_TOKEN,
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(502);
     const body = (await res.json()) as {
       ok: boolean;
       statusCode: number | null;
@@ -308,5 +308,7 @@ describe("handleAdminTelegramResend", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const diagnostics = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
     expect(diagnostics?.binds).toEqual(["12345", null, expect.any(Number), "rate_limit", expect.any(Number)]);
+    const audit = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit?.binds).toContain(502);
   });
 });
