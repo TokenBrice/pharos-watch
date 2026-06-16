@@ -5,12 +5,8 @@ import { parseChainlinkLatestRoundData } from "./chainlink-round-data";
 import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } from "./evm-rpc";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "./evm-selectors";
 export { parseChainlinkLatestRoundData, parseSignedInt256Word } from "./chainlink-round-data";
+import { DRPC_NETWORK } from "./drpc";
 
-const DRPC_NETWORK: Partial<Record<string, string>> = {
-  arbitrum: "arbitrum",
-  base: "base",
-  ethereum: "ethereum",
-};
 const DRPC_PUBLIC_RPC_URL: Partial<Record<string, string>> = {
   arbitrum: "https://arbitrum.drpc.org",
   base: "https://base.drpc.org",

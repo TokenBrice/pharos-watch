@@ -15,18 +15,7 @@ import {
   tronBase58ToHex,
   tronHexAddressToBase58,
 } from "../../lib/tron-address";
-
-// dRPC network names for EVM chains (used to build RPC URL)
-const DRPC_NETWORK: Record<string, string> = {
-  ethereum: "ethereum",
-  arbitrum: "arbitrum",
-  base: "base",
-  optimism: "optimism",
-  polygon: "polygon",
-  avalanche: "avalanche",
-  bsc: "bsc",
-  gnosis: "gnosis",
-};
+import { DRPC_NETWORK } from "../../lib/drpc";
 
 async function fetchEvmBalanceAtTag(
   evmChainId: number,
