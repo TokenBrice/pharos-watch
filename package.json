@@ -38,6 +38,7 @@
     "coverage:critical": "node scripts/maintenance/run-critical-coverage.mjs",
     "coverage:critical:update-baseline": "node scripts/maintenance/update-critical-coverage-baseline.mjs",
     "test:merge-gate": "node scripts/maintenance/test-merge-gate.mjs",
+    "test:merge-gate:discover": "node scripts/maintenance/run-merge-gate-discovery.mjs",
     "validate:pages-smoke": "node scripts/maintenance/run-pages-smoke.mjs",
     "validate:worker-scheduled-smoke": "vitest run worker/src/__tests__/index.scheduled.test.ts",
     "validate:worker-smoke": "node scripts/maintenance/run-worker-smoke.mjs",

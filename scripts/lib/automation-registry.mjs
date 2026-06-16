@@ -324,6 +324,7 @@ const FULL_DEPLOY_GUARDRAIL_EXTRA_PATHS = [
   "scripts/maintenance/generate-public-datasets.ts",
   "scripts/maintenance/rollback-pages-deployment.mjs",
   "scripts/maintenance/run-generated-artifacts.mjs",
+  "scripts/maintenance/run-merge-gate-discovery.mjs",
   "scripts/maintenance/smoke-api.mjs",
   "scripts/maintenance/smoke-ops.mjs",
   "scripts/maintenance/smoke-transport.mjs",

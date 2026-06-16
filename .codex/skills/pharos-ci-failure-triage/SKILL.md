@@ -9,6 +9,7 @@ user_invocable: true
 Use this skill in `/home/ahirice/Documents/git/pharos-watch` for:
 
 - failed `npm run test:merge-gate`
+- large local `npm run test:merge-gate` cleanup loops after post-swarm or post-merge batches
 - failed GitHub Actions runs
 - failed `Deploy to Cloudflare`
 - failed `Rebuild Pages`
@@ -20,6 +21,7 @@ Use this skill in `/home/ahirice/Documents/git/pharos-watch` for:
 - Start from logs and the exact failing command. Do not guess from the workflow name alone.
 - Classify the failing lane before editing: generated artifact, docs, tests, Pages build/smoke, Worker typecheck/smoke, migration, deploy infra, or external transient.
 - Reproduce locally with the narrowest equivalent command before broad gates when possible.
+- For large local batches, use discovery mode to collect failures before the final authoritative gate.
 - Preserve unrelated dirty work. If other agents are editing, patch only the failing lane and do not push unless explicitly requested.
 - If production deploy is requested, keep iterating until the workflow clears or a real external blocker is proven.
 
@@ -57,6 +59,7 @@ Record:
 Common local repro commands:
 
 ```bash
+npm run test:merge-gate:discover
 npm run check:generated-artifacts
 npm run check:doc-source-paths
 npm run check:doc-sync
@@ -71,6 +74,8 @@ npm run test:a11y
 npm run validate:pages-smoke
 npm run validate:worker-smoke
 ```
+
+Use `npm run test:merge-gate:discover` when a large local batch is failing one lane at a time. It mirrors the merge-gate plan, runs `validate:prebuild` with continue-on-error, keeps independent postbuild lanes running after failures, and skips smoke by default. Tune it with `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>`; set `MERGE_GATE_DISCOVERY_SMOKE=1` only when smoke is the current target. Discovery success is not a release proof.
 
 Use `scripts/ci/classify-deploy-changes.mjs` and `scripts/ci/pharos-change-contract.mjs` when deploy-surface classification is unclear.
 
@@ -92,6 +97,7 @@ Avoid broad rewrites while fixing CI. Make the smallest root-cause patch.
 Rerun the failing local command first. If the user asked for release/push:
 
 ```bash
+npm run test:merge-gate:discover # for large batches only; diagnostic
 npm run test:merge-gate
 git push origin main
 gh run watch <run-id> --repo TokenBrice/pharos-watch --exit-status

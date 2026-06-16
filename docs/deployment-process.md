@@ -85,6 +85,14 @@ Default policy:
 
 After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/non-critical-test/critical-coverage/worker-validation groups, **auto-enabling the parallel matrix on machines with ≥12 available cores** and staying serial below that to avoid CPU contention on developer machines; `MERGE_GATE_PARALLEL=1`/`=0` forces either mode. The non-critical Vitest lane is emitted as two `npm run test:noncritical -- --shard=N/2` shards to match the CI fan-out (each shard runs on its own CI runner). This keeps the validation surface aligned with deploy CI while keeping the local default reliable. Before executing a non-dry-run validation plan, the gate runs `scripts/ci/check-node-modules-fresh.mjs --strict`; it fails when `node_modules/` is missing, when the install snapshot is missing, or when `package-lock.json` is newer than `node_modules/`. `MERGE_GATE_DRY_RUN=1` still prints the command plan without requiring `node_modules/`. The fast static-check audit also pulled `check:hook-polling-window`, `check:shared-types-imports`, `check:reserve-fixture-freshness`, `check:site-csp-sync`, and `check:dependency-coverage` into the shared prebuild registry; intentionally skipped: `check:safe-browsing` and `check:telegram-load` (own scheduled workflows). Pages validate lanes cover feature-flag inlining, phishing/classifier scans, build-size, and build-attribution after the static export exists.
 
+For post-swarm or very large local batches, use discovery mode before the final gate:
+
+```bash
+npm run test:merge-gate:discover
+```
+
+`scripts/maintenance/run-merge-gate-discovery.mjs` uses the same diff, deploy-surface classifier, command env, node_modules freshness check, and command plan as `test:merge-gate`, but it is optimized for failure discovery rather than release proof. It runs `validate:prebuild` with `VALIDATE_PREBUILD_CONTINUE_ON_ERROR=1`, then keeps independent postbuild groups running after failures so one pass can expose static-check, build/test, coverage, and Worker-validation failures together. Discovery mode skips smoke by default; set `MERGE_GATE_DISCOVERY_SMOKE=1` when smoke failures are the current target, and use `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap local fan-out. Discovery failures block pushing, but discovery success is not sufficient for release: always finish with `npm run test:merge-gate`.
+
 Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure, but `shared/` is classified by subpath so known Pages-only shared helpers do not request Worker validation or promotion. `test:merge-gate` runs Pages smoke by default for Pages-impacting diffs so the normal local merge gate and pushed ranges rehearse the same pre-publish artifact smoke path as production deploys; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`. When Pages smoke runs, desktop overflow smoke uses the deploy-lane canary routes with 6 workers, and local mobile smoke follows the same UI-impact matcher and canary profile as production deploys.
 
 Useful merge-gate controls:
@@ -95,6 +103,9 @@ Useful merge-gate controls:
 - `MERGE_GATE_FULL_DEPLOY=1` to force the full local deploy validate path when there is no usable base ref
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
 - `MERGE_GATE_PARALLEL=1`/`=0` to force parallel or serial post-validate execution. The default auto-enables parallel on machines with ≥12 available cores and stays serial below that to avoid local CPU contention; CI always runs the parallel matrix via separate runners
+- `npm run test:merge-gate:discover` to run the same local plan in failure-discovery mode before the final authoritative gate
+- `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap discovery-mode postbuild fan-out
+- `MERGE_GATE_DISCOVERY_SMOKE=1` to include smoke commands in discovery mode; smoke stays on by default only in the final merge gate
 - Production Pages environment rehearsal is opt-in: set `MERGE_GATE_PRODUCTION_ENV=1` and export the production `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `STATIC_EXPORT_API_BASE`, `STATIC_EXPORT_SITE_API_BASE`, `PHAROS_API_KEY` or `STATIC_EXPORT_API_KEY`, and `SITE_API_SHARED_SECRET` values before `npm run test:merge-gate`. With `NEXT_PUBLIC_GA_ID` present, the local Pages smoke expects the same GA measurement ID as the production Pages release smoke. Without that opt-in, the gate clears public production feature-flag env locally while applying the same static-export build contract as CI.
 - `MERGE_GATE_PAGES_SMOKE=0` to skip default `npm run validate:pages-smoke` after build for Pages-impacting diffs. By default this serves the static export, runs desktop/local `smoke-ui` on the deploy-lane canary routes with 6 workers, and runs strict mobile smoke only when the changed files hit the same `pages_ui_changed` UI-surface matcher used in deploy (mobile canary defaults mirror deploy — same canary routes, two mobile viewports, desktop pass disabled, 3 workers — except the local settle is 5000 ms because gate runs share the machine with the parallel validate matrix; the deploy lane keeps 1500 ms on idle CI runners)
 - `MERGE_GATE_WORKER_SMOKE=1` to opt in to `npm run validate:worker-smoke` after worker validation for worker-impacting diffs (slow, ~1-2 min). Local worker smoke defaults to `SMOKE_API_SCOPE=canary` unless `SMOKE_API_SCOPE` is explicitly set
@@ -423,6 +434,7 @@ Production smoke for this surface should request a smoke key, receive the email,
 If `test:merge-gate` fails:
 
 1. Do not push `main`.
-2. Fix the failing change (or revert local merge commit).
-3. Re-run `npm run test:merge-gate`.
-4. Push only after passing.
+2. For a small change, fix the failing command directly. For a large merged batch or repeated fail-fast loop, run `npm run test:merge-gate:discover` to collect more failing lanes in one pass.
+3. Re-run the narrow failing command(s) until clean.
+4. Re-run `npm run test:merge-gate`.
+5. Push only after passing.

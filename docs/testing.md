@@ -16,6 +16,7 @@ npm run lint:typed
 npm run typecheck
 npm run typecheck:worker
 npm run test:merge-gate
+npm run test:merge-gate:discover
 ```
 
 Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. Do not duplicate those inventories here.
@@ -23,6 +24,7 @@ Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-
 Common targeted runners:
 
 ```bash
+npm run test:merge-gate:discover
 npm run test:profile -- --output /tmp/pharos-vitest-profile.json
 npm run test:critical-contracts
 npm run test:invariants
@@ -55,6 +57,7 @@ CI shape:
 2. `validate` runs the source-owned prebuild guardrail registry from `scripts/lib/validate-contract.mjs`, non-critical Vitest shards, `coverage:critical`, optional Worker runtime typecheck, and optional Pages build/a11y/SEO/static-artifact checks.
 3. Push/manual production deploys reuse the same validate result before mutating D1, promoting Workers, or publishing Pages. Pages build/publish/live-smoke details live in [Deployment Process](./deployment-process.md).
 4. `npm run test:merge-gate` mirrors the deploy-impact validate contract locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install.
+5. `npm run test:merge-gate:discover` mirrors the same local command plan for large failure-discovery passes. It keeps prebuild and independent postbuild lanes running after failures, skips smoke by default, and is diagnostic only; the final release check remains `npm run test:merge-gate`.
 
 `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the `test:noncritical` complement.
 

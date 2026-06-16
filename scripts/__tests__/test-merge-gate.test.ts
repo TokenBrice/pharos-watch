@@ -27,10 +27,13 @@ import {
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
+import { buildValidatePrebuildExecutionUnits, runValidatePrebuild } from "../maintenance/run-validate-prebuild.mjs";
 import {
-  buildValidatePrebuildExecutionUnits,
-  runValidatePrebuild,
-} from "../maintenance/run-validate-prebuild.mjs";
+  buildDiscoveryExecutionGroups,
+  getDiscoveryCommandEnv,
+  resolveDiscoveryMaxParallel,
+  runMergeGateDiscovery,
+} from "../maintenance/run-merge-gate-discovery.mjs";
 
 describe("buildCommandPlan", () => {
   it("skips the merge gate when no deploy surfaces changed", () => {
@@ -98,9 +101,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("provides the changed-file set to the local critical coverage command", () => {
-    expect(
-      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"], {}),
-    ).toEqual({
+    expect(getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"], {})).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -217,11 +218,7 @@ describe("buildCommandPlan", () => {
 
   it("skips base env injection when MERGE_GATE_NATIVE_ENV=1 is set", () => {
     expect(
-      getCommandEnv(
-        "npm run coverage:critical",
-        ["worker/src/api/status.ts"],
-        { MERGE_GATE_NATIVE_ENV: "1" },
-      ),
+      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], { MERGE_GATE_NATIVE_ENV: "1" }),
     ).toEqual({
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts",
     });
@@ -232,29 +229,28 @@ describe("buildCommandPlan", () => {
   });
 
   it("skips local mobile smoke when pages smoke runs for non-UI diffs", () => {
-    expect(
-      getCommandEnv("npm run validate:pages-smoke", [".github/workflows/pages-release.yml"], {}),
-    ).toEqual({
+    expect(getCommandEnv("npm run validate:pages-smoke", [".github/workflows/pages-release.yml"], {})).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
-      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+      SMOKE_UI_OVERFLOW_ROUTES:
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "0",
     });
   });
 
   it("applies the local mobile canary profile for UI-impacting pages smoke", () => {
-    expect(
-      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {}),
-    ).toEqual({
+    expect(getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {})).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
-      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+      SMOKE_UI_OVERFLOW_ROUTES:
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
-      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+      SMOKE_MOBILE_UI_ROUTES:
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
@@ -273,10 +269,12 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       SMOKE_UI_EXPECT_GA_ID: "G-PROD",
-      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+      SMOKE_UI_OVERFLOW_ROUTES:
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
-      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+      SMOKE_MOBILE_UI_ROUTES:
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
@@ -296,19 +294,15 @@ describe("buildCommandPlan", () => {
 
   it("does not override explicit local mobile smoke env overrides", () => {
     expect(
-      getCommandEnv(
-        "npm run validate:pages-smoke",
-        ["src/app/page.tsx"],
-        {
-          SMOKE_UI_OVERFLOW_ROUTES: "/desktop/",
-          SMOKE_UI_OVERFLOW_WORKERS: "2",
-          SMOKE_MOBILE_UI_ROUTES: "/custom/",
-          SMOKE_MOBILE_UI_VIEWPORTS: "412x915",
-          SMOKE_MOBILE_UI_SKIP_DESKTOP: "0",
-          SMOKE_MOBILE_UI_WORKERS: "5",
-          SMOKE_MOBILE_UI_WAIT_MS: "2100",
-        },
-      ),
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {
+        SMOKE_UI_OVERFLOW_ROUTES: "/desktop/",
+        SMOKE_UI_OVERFLOW_WORKERS: "2",
+        SMOKE_MOBILE_UI_ROUTES: "/custom/",
+        SMOKE_MOBILE_UI_VIEWPORTS: "412x915",
+        SMOKE_MOBILE_UI_SKIP_DESKTOP: "0",
+        SMOKE_MOBILE_UI_WORKERS: "5",
+        SMOKE_MOBILE_UI_WAIT_MS: "2100",
+      }),
     ).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
@@ -421,6 +415,65 @@ describe("buildCommandPlan", () => {
       "npm run typecheck:worker",
       "npm run validate:worker-scheduled-smoke",
     ]);
+  });
+
+  it("groups merge-gate discovery lanes without enabling smoke by default", () => {
+    const plan = buildCommandPlan(["shared/lib/classification.ts"], { pagesSmoke: true, workerSmoke: true });
+    const groups = buildDiscoveryExecutionGroups(plan);
+
+    expect(groups.prebuildUnits.map((unit) => unit.commands.map((item) => item.cmd))).toEqual([
+      ["npm run validate:prebuild"],
+    ]);
+    expect(groups.postValidateUnits.map((unit) => unit.commands.map((item) => item.cmd))).toEqual([
+      [
+        "npm run build",
+        "npm run test:a11y",
+        "npm run check:feature-flag-inlining",
+        "npm run seo:check",
+        "npm run check:phishing-signatures",
+        "npm run check:classifier-sensitive-copy",
+        "npm run check:build-size",
+        "npm run check:build-attribution",
+      ],
+      ["npm run test:noncritical -- --shard=1/2"],
+      ["npm run test:noncritical -- --shard=2/2"],
+      ["npm run coverage:critical"],
+      ["npm run typecheck:worker"],
+      ["npm run validate:worker-scheduled-smoke"],
+    ]);
+    expect(groups.smokeUnits).toEqual([]);
+  });
+
+  it("keeps smoke in a separate discovery phase when explicitly included", () => {
+    const plan = buildCommandPlan(["shared/lib/classification.ts"], { pagesSmoke: true, workerSmoke: true });
+    const groups = buildDiscoveryExecutionGroups(plan, { includeSmoke: true });
+
+    expect(groups.postValidateUnits.map((unit) => unit.commands.map((item) => item.cmd))).not.toContainEqual([
+      "npm run validate:pages-smoke",
+    ]);
+    expect(groups.smokeUnits.map((unit) => unit.commands.map((item) => item.cmd))).toEqual([
+      ["npm run validate:pages-smoke"],
+      ["npm run validate:worker-smoke"],
+    ]);
+  });
+
+  it("forces validate:prebuild discovery to continue on errors", () => {
+    expect(getDiscoveryCommandEnv({ cmd: "npm run validate:prebuild" }, ["src/app/page.tsx"], {})).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+      VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
+    });
+    expect(getDiscoveryCommandEnv({ cmd: "npm run build" }, ["src/app/page.tsx"], {})).toEqual(
+      getCommandEnv("npm run build", ["src/app/page.tsx"], {}),
+    );
+  });
+
+  it("bounds discovery parallelism with an explicit override", () => {
+    expect(resolveDiscoveryMaxParallel({}, 16)).toBe(6);
+    expect(resolveDiscoveryMaxParallel({}, 4)).toBe(2);
+    expect(resolveDiscoveryMaxParallel({ MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" }, 16)).toBe(3);
   });
 
   it("passes changed-file env only to coverage during execution", async () => {
@@ -593,8 +646,12 @@ describe("pre-push hook", () => {
 
     expect(hook).toContain('pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"');
     expect(hook).toContain('remote_ref" != "refs/heads/main"');
-    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha"');
-    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain(
+      'MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha"',
+    );
+    expect(hook).toContain(
+      'MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha"',
+    );
     expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" npm run test:merge-gate');
   });
 });
@@ -623,9 +680,7 @@ describe("validate workflow command model", () => {
 
 describe("opt-in smoke wiring", () => {
   it("appends Pages smoke after Pages build when MERGE_GATE_PAGES_SMOKE is requested", () => {
-    expect(
-      buildCommandPlan(["src/app/page.tsx"], { pagesSmoke: true }).map((item) => item.cmd),
-    ).toEqual([
+    expect(buildCommandPlan(["src/app/page.tsx"], { pagesSmoke: true }).map((item) => item.cmd)).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -634,9 +689,7 @@ describe("opt-in smoke wiring", () => {
   });
 
   it("does not append Pages smoke for worker-only changes", () => {
-    expect(
-      buildCommandPlan(["worker/src/api/status.ts"], { pagesSmoke: true }).map((item) => item.cmd),
-    ).toEqual([
+    expect(buildCommandPlan(["worker/src/api/status.ts"], { pagesSmoke: true }).map((item) => item.cmd)).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
@@ -644,9 +697,7 @@ describe("opt-in smoke wiring", () => {
   });
 
   it("appends worker smoke after worker typechecks when MERGE_GATE_WORKER_SMOKE is requested", () => {
-    expect(
-      buildCommandPlan(["worker/src/api/status.ts"], { workerSmoke: true }).map((item) => item.cmd),
-    ).toEqual([
+    expect(buildCommandPlan(["worker/src/api/status.ts"], { workerSmoke: true }).map((item) => item.cmd)).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
@@ -655,9 +706,7 @@ describe("opt-in smoke wiring", () => {
   });
 
   it("appends both smokes in buildFullCommandPlan when requested", () => {
-    expect(
-      buildFullCommandPlan("forced", { pagesSmoke: true, workerSmoke: true }).map((item) => item.cmd),
-    ).toEqual([
+    expect(buildFullCommandPlan("forced", { pagesSmoke: true, workerSmoke: true }).map((item) => item.cmd)).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -819,6 +868,64 @@ describe("runMergeGate fetch and node_modules wiring", () => {
     });
 
     expect(runCommandCalls).toEqual([]);
+  });
+
+  it("runs merge-gate discovery after prebuild failures and reports the final nonzero status", async () => {
+    const execFile = (_cmd: string, args: string[], options?: { encoding?: string }) => {
+      if (args[0] === "diff" && options?.encoding === "utf8") {
+        return "shared/lib/classification.ts\n";
+      }
+      return "";
+    };
+    const runCommandCalls: string[] = [];
+    let exitStatus: number | undefined;
+    const runCommandImpl = (cmd: string) => {
+      runCommandCalls.push(cmd);
+      if (cmd === "npm run validate:prebuild") {
+        return Promise.resolve({ status: 7, aborted: false });
+      }
+      if (cmd === "npm run test:noncritical -- --shard=1/2") {
+        return Promise.resolve({ status: 9, aborted: false });
+      }
+      return Promise.resolve({ status: 0, aborted: false });
+    };
+
+    const result = await runMergeGateDiscovery({
+      argv: [],
+      env: { MERGE_GATE_NO_FETCH: "1", MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" },
+      runCommandImpl,
+      execFile,
+      exit: (status) => {
+        exitStatus = status;
+      },
+    });
+
+    expect(result).toEqual({ status: 7 });
+    expect(exitStatus).toBe(7);
+    expect(runCommandCalls.slice(0, 2)).toEqual([
+      "node scripts/ci/check-node-modules-fresh.mjs --strict",
+      "npm run validate:prebuild",
+    ]);
+    expect(new Set(runCommandCalls)).toEqual(
+      new Set([
+        "node scripts/ci/check-node-modules-fresh.mjs --strict",
+        "npm run validate:prebuild",
+        "npm run build",
+        "npm run test:noncritical -- --shard=1/2",
+        "npm run test:noncritical -- --shard=2/2",
+        "npm run coverage:critical",
+        "npm run typecheck:worker",
+        "npm run validate:worker-scheduled-smoke",
+        "npm run test:a11y",
+        "npm run check:feature-flag-inlining",
+        "npm run seo:check",
+        "npm run check:phishing-signatures",
+        "npm run check:classifier-sensitive-copy",
+        "npm run check:build-size",
+        "npm run check:build-attribution",
+      ]),
+    );
+    expect(runCommandCalls).not.toContain("npm run validate:pages-smoke");
   });
 
   it("defaults Pages smoke on for the normal local merge gate", async () => {
