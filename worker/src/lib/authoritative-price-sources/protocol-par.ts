@@ -19,12 +19,10 @@ const CADD_CAD_DIGITAL_ID = "cadd-cad-digital";
 const JPYM_MENTO_ID = "jpym-mento";
 const ZARM_MENTO_ID = "zarm-mento";
 const XOFM_MENTO_ID = "xofm-mento";
-const BASIS_POINTS_DENOMINATOR = 10_000;
 
 interface ProtocolParConfig {
   id: string;
   pegType: "peggedUSD" | "peggedCHF" | "peggedCAD" | "peggedJPY" | "peggedZAR" | "peggedXOF";
-  feeBps?: number;
 }
 
 const PROTOCOL_PAR_PRICE_CONFIGS: readonly ProtocolParConfig[] = [
@@ -53,12 +51,9 @@ function getProtocolParPrice(
   config: ProtocolParConfig,
   references: PriceValidationReferences | undefined,
 ): { price: number; observedAt: number | null; observedAtMode: PriceObservedAtMode } | null {
-  const multiplier = 1 - ((config.feeBps ?? 0) / BASIS_POINTS_DENOMINATOR);
-  if (!Number.isFinite(multiplier) || multiplier <= 0 || multiplier > 1) return null;
-
   if (config.pegType === "peggedUSD") {
     return {
-      price: multiplier,
+      price: 1,
       observedAt: null,
       observedAtMode: "local_fetch",
     };
@@ -71,7 +66,7 @@ function getProtocolParPrice(
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
 
   return {
-    price: rate * multiplier,
+    price: rate,
     observedAt: references?.updatedAtByPeg?.[config.pegType] ?? references?.updatedAt ?? null,
     observedAtMode: referenceType === "fresh" ? "upstream" : "local_fetch",
   };
@@ -110,8 +105,7 @@ export const protocolParProvider: PriceSourceProvider = {
     const config = PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(meta.id);
     if (!config || config.pegType !== "peggedUSD") return null;
 
-    const multiplier = 1 - ((config.feeBps ?? 0) / BASIS_POINTS_DENOMINATOR);
     const timestamps = normalizeHistoricalTimestamps(context.candidateTimestamps);
-    return timestamps.map((timestamp) => ({ timestamp, price: multiplier }));
+    return timestamps.map((timestamp) => ({ timestamp, price: 1 }));
   },
 };
