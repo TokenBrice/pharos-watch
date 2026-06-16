@@ -98,7 +98,7 @@ function extractBucketEntries(
   }
 }
 
-function adaptAccountableDashboard(
+export function adaptAccountableDashboard(
   payload: AccountableDashboardResponse,
   params: AccountableParams,
 ): AdapterResult {
@@ -183,13 +183,6 @@ function adaptAccountableDashboard(
       ),
     },
   };
-}
-
-export function adaptAccountableTypeBreakdown(
-  payload: AccountableDashboardResponse,
-  params: AccountableParams = {},
-): ReserveSlice[] {
-  return adaptAccountableDashboard(payload, params).slices;
 }
 
 export async function fetchAccountableReserves(

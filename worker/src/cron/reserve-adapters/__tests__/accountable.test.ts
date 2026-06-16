@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptAccountableTypeBreakdown } from "../accountable";
+import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
@@ -9,9 +9,9 @@ import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 
 const signal = AbortSignal.timeout(5_000);
 
-describe("adaptAccountableTypeBreakdown", () => {
+describe("adaptAccountableDashboard", () => {
   it("maps the type breakdown into reserve slices", () => {
-    const slices = adaptAccountableTypeBreakdown(
+    const slices = adaptAccountableDashboard(
       {
         res: "ok",
         data: {
@@ -34,14 +34,14 @@ describe("adaptAccountableTypeBreakdown", () => {
       },
     );
 
-    expect(slices).toEqual([
+    expect(slices.slices).toEqual([
       { name: "Liquid Bonds", pct: 67.1, risk: "high" },
       { name: "Short Term Cash", pct: 32.9, risk: "very-low" },
     ]);
   });
 
   it("maps the reserves_split breakdown into reserve slices", () => {
-    const slices = adaptAccountableTypeBreakdown(
+    const slices = adaptAccountableDashboard(
       {
         res: "ok",
         data: {
@@ -71,7 +71,7 @@ describe("adaptAccountableTypeBreakdown", () => {
       },
     );
 
-    expect(slices).toEqual([
+    expect(slices.slices).toEqual([
       { name: "Copper", pct: 72.5, risk: "medium" },
       { name: "Fireblocks", pct: 25.7, risk: "medium" },
       { name: "Insurance Fund", pct: 1.7, risk: "low" },
@@ -80,7 +80,7 @@ describe("adaptAccountableTypeBreakdown", () => {
   });
 
   it("maps deployment object buckets into reserve slices", () => {
-    const slices = adaptAccountableTypeBreakdown(
+    const slices = adaptAccountableDashboard(
       {
         res: "ok",
         data: {
@@ -107,7 +107,7 @@ describe("adaptAccountableTypeBreakdown", () => {
       },
     );
 
-    expect(slices).toEqual([
+    expect(slices.slices).toEqual([
       { name: "Private Credit (Fasanara FTAC)", pct: 60, risk: "high" },
       { name: "DeFi Lending", pct: 20, risk: "medium" },
       { name: "CLOs (JAAA)", pct: 15, risk: "high" },
@@ -116,7 +116,7 @@ describe("adaptAccountableTypeBreakdown", () => {
   });
 
   it("maps type_split buckets and applies renameMap", () => {
-    const slices = adaptAccountableTypeBreakdown(
+    const slices = adaptAccountableDashboard(
       {
         res: "ok",
         data: {
@@ -146,7 +146,7 @@ describe("adaptAccountableTypeBreakdown", () => {
       },
     );
 
-    expect(slices).toEqual([
+    expect(slices.slices).toEqual([
       { name: "Stablecoin reserves", pct: 88, risk: "low" },
       { name: "OTC Aggregate", pct: 6, risk: "high" },
       { name: "ETH", pct: 4, risk: "very-low" },
@@ -157,7 +157,7 @@ describe("adaptAccountableTypeBreakdown", () => {
   it("applies renameMap exactly once even when a renamed value is itself a rename key", () => {
     // "A" renames to "B", and "B" is also a renameMap key ("B" -> "C").
     // The rename must resolve "A" -> "B" once; it must NOT cascade to "C".
-    const slices = adaptAccountableTypeBreakdown(
+    const slices = adaptAccountableDashboard(
       {
         res: "ok",
         data: {
@@ -184,14 +184,14 @@ describe("adaptAccountableTypeBreakdown", () => {
       },
     );
 
-    expect(slices).toEqual([
+    expect(slices.slices).toEqual([
       { name: "B", pct: 60, risk: "low" },
       { name: "C", pct: 40, risk: "high" },
     ]);
   });
 
   it("maps nested exposure_split values into reserve slices", () => {
-    const slices = adaptAccountableTypeBreakdown(
+    const slices = adaptAccountableDashboard(
       {
         res: "ok",
         data: {
@@ -219,7 +219,7 @@ describe("adaptAccountableTypeBreakdown", () => {
       },
     );
 
-    expect(slices).toEqual([
+    expect(slices.slices).toEqual([
       { name: "[Ethena]_sUSDe_Loop", pct: 50, risk: "high" },
       { name: "[Maple]_syrupUSDT_Loop", pct: 30, risk: "high" },
       { name: "Fluid fUSDT0", pct: 20, risk: "low" },
@@ -227,7 +227,7 @@ describe("adaptAccountableTypeBreakdown", () => {
   });
 
   it("maps product-scoped protocol_split values into reserve slices", () => {
-    const slices = adaptAccountableTypeBreakdown(
+    const slices = adaptAccountableDashboard(
       {
         res: "ok",
         data: {
@@ -270,7 +270,7 @@ describe("adaptAccountableTypeBreakdown", () => {
       },
     );
 
-    expect(slices).toEqual([
+    expect(slices.slices).toEqual([
       { name: "hoUSDT strategy exposure", pct: 58.5, risk: "high", coinId: "usdt-tether", depType: "wrapper" },
       { name: "masterUSD strategy exposure", pct: 31.8, risk: "high" },
       { name: "Morpho USDC lending exposure", pct: 9.3, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
