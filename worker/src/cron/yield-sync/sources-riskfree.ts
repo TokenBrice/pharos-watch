@@ -55,6 +55,24 @@ export async function getPriceDerivedApy(
   };
 }
 
+function emptyBenchmarkRegistry(usd: ParsedYieldBenchmarkMeta): ParsedYieldBenchmarkRegistry {
+  return {
+    USD: usd,
+    USD_EFFR: null,
+    EUR: null,
+    CHF: null,
+    GBP: null,
+    JPY: null,
+    MXN: null,
+    BRL: null,
+    AUD: null,
+    CAD: null,
+    RUB: null,
+    TRY: null,
+    SGD: null,
+  };
+}
+
 export async function loadRiskFreeRateRegistry(
   db: D1Database,
   nowSec = Math.floor(Date.now() / 1000),
@@ -76,41 +94,15 @@ export async function loadRiskFreeRateRegistry(
       { key: "USD" },
     );
     if (parsedUsd) {
-      return {
-        USD: parsedUsd,
-        USD_EFFR: null,
-        EUR: null,
-        CHF: null,
-        GBP: null,
-        JPY: null,
-        MXN: null,
-        BRL: null,
-        AUD: null,
-        CAD: null,
-        RUB: null,
-        TRY: null,
-        SGD: null,
-      };
+      return emptyBenchmarkRegistry(parsedUsd);
     }
   }
 
-  return {
-    USD: buildHardcodedUsdBenchmark(
+  return emptyBenchmarkRegistry(
+    buildHardcodedUsdBenchmark(
       registryCache || legacyUsdCache ? "invalid-cache" : "missing-cache",
     ),
-    USD_EFFR: null,
-    EUR: null,
-    CHF: null,
-    GBP: null,
-    JPY: null,
-    MXN: null,
-    BRL: null,
-    AUD: null,
-    CAD: null,
-    RUB: null,
-    TRY: null,
-    SGD: null,
-  };
+  );
 }
 
 export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {
