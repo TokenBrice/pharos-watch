@@ -12,22 +12,11 @@
  */
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 
-import { buildTapeEventId, formatUsdShort, truncateSummary } from "../tape-event-helpers";
+import { buildTapeEventId, formatUsdShort, parseDateStringToEpochSec, truncateSummary } from "../tape-event-helpers";
 import { insertTapeEvents } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { ProjectorOptions, ProjectorResult } from "./types";
 
-function parseDeathDate(deathDate: string): number {
-  const segments = deathDate.split("-");
-  const year = Number(segments[0]);
-  const month = Number(segments[1] ?? "1");
-  const day = Number(segments[2] ?? "1");
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-    return Math.floor(Date.now() / 1000);
-  }
-  const utc = Date.UTC(year, Math.max(0, month - 1), Math.max(1, day));
-  return Math.floor(utc / 1000);
-}
 
 async function loadObservedIds(db: D1Database): Promise<Set<string>> {
   const result = await db
@@ -40,7 +29,7 @@ async function loadObservedIds(db: D1Database): Promise<Set<string>> {
 }
 
 function buildEvent(entry: CemeteryEntry): TapeEventInsert {
-  const tsSec = parseDeathDate(entry.deathDate);
+  const tsSec = parseDateStringToEpochSec(entry.deathDate);
   const tsMs = tsSec * 1000;
   const transition = "opened";
   const type = "cemetery.entry.added";

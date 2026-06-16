@@ -81,6 +81,23 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
 /** @deprecated tape-feed alias for the shared formatCompactUsdShortLowerK helper. */
 export const formatUsdShort = formatCompactUsdShortLowerK;
 
+/**
+ * Parse a "YYYY-MM-DD" or "YYYY-MM" date string to epoch-seconds (UTC).
+ * Missing day defaults to 1, missing month defaults to January.
+ * Returns Math.floor(Date.now() / 1000) on invalid input.
+ */
+export function parseDateStringToEpochSec(value: string | undefined | null): number {
+  if (!value) return Math.floor(Date.now() / 1000);
+  const segments = value.split("-");
+  const year = Number(segments[0]);
+  const month = Number(segments[1] ?? "1");
+  const day = Number(segments[2] ?? "1");
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return Math.floor(Date.now() / 1000);
+  }
+  return Math.floor(Date.UTC(year, Math.max(0, month - 1), Math.max(1, day)) / 1000);
+}
+
 export function truncateSummary(summary: string): string {
   return summary.length > 180 ? `${summary.slice(0, 177)}…` : summary;
 }
