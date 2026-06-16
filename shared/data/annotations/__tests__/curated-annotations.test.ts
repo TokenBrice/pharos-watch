@@ -1,9 +1,13 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CURATED_ANNOTATIONS,
   getCuratedAnnotations,
 } from "../curated-annotations";
 import { CHART_ANNOTATION_KINDS } from "@shared/types/chart-annotation";
+
+const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 
 describe("curated-annotations", () => {
   it("uses only the public ChartAnnotationKind enum", () => {
@@ -41,6 +45,18 @@ describe("curated-annotations", () => {
       0,
     );
     expect(total).toBeGreaterThanOrEqual(10);
+  });
+
+  it("only keys annotations to coins that exist in the stablecoin registry", () => {
+    const coinIds = new Set(
+      readdirSync(COIN_SOURCE_DIR)
+        .filter((fileName) => fileName.endsWith(".json"))
+        .map((fileName) => fileName.slice(0, -".json".length)),
+    );
+    const orphaned = Object.keys(CURATED_ANNOTATIONS).filter(
+      (coinId) => !coinIds.has(coinId),
+    );
+    expect(orphaned, `orphaned annotation keys: ${orphaned.join(", ")}`).toEqual([]);
   });
 
   it("returns an empty array for unknown coin ids (no throw)", () => {
