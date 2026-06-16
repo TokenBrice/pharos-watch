@@ -26,7 +26,6 @@ interface MethodologyChangelogRouteConfig {
 
 interface MethodologyChangelogRouteDefinition {
   metadata: Metadata;
-  entries: MethodologyChangelogEntry[];
   Page: () => ReactNode;
 }
 
@@ -58,7 +57,7 @@ export function createMethodologyChangelogRoute(
     </MethodologyChangelogPage>
   );
 
-  return { metadata, entries, Page };
+  return { metadata, Page };
 }
 
 interface StandardMethodologyChangelogRouteConfig extends Omit<MethodologyChangelogRouteConfig, "lead"> {
