@@ -31,23 +31,41 @@ import { fetchAuthoritativeHistoricalPriceSeries } from "../src/lib/authoritativ
 import { fetchWithRetry } from "../src/lib/fetch-retry";
 import { normalizeSupportedPegCurrency } from "../src/lib/native-peg-quotes";
 import { buildPriceReasonablenessOptions } from "../src/lib/price-validation";
-import { describeDestructiveOperationMode, parseDestructiveOperationMode } from "./lib/destructive-operation-guard";
+import {
+  describeDestructiveOperationMode,
+  parseDestructiveOperationMode,
+  type DestructiveOperationMode,
+} from "./lib/destructive-operation-guard";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
+import type { D1Client } from "../../scripts/lib/remote-d1";
 
 const DB_NAME = "stablecoin-db";
 const SQL_BATCH_SIZE = 200;
 const SCRIPT_NAME = "repair-non-usd-fiat-depeg-history";
-const OPERATION_MODE = parseDestructiveOperationMode({
-  argv: process.argv.slice(2),
-  scriptName: SCRIPT_NAME,
-});
-const DRY_RUN = OPERATION_MODE.dryRun;
-const USE_EXISTING_WINDOW = process.argv.includes("--existing-window");
-const TARGET_IDS = parseListArg("--stablecoin");
-const TARGET_PEGS = parseListArg("--peg");
 const REPO_ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
-const D1 = createWorkerD1Client(DB_NAME, OPERATION_MODE.remote ? "remote" : "local");
 const OPS_API_BASE = OPS_API_ORIGIN;
+
+// Runtime configuration is parsed from argv and the D1 client is spawned inside
+// main() (see initializeRuntime) so that importing this module for its pure
+// helpers does not parse process.argv or spawn a Wrangler subprocess.
+let OPERATION_MODE: DestructiveOperationMode;
+let DRY_RUN: boolean;
+let USE_EXISTING_WINDOW: boolean;
+let TARGET_IDS: Set<string> | null;
+let TARGET_PEGS: Set<string> | null;
+let D1: D1Client;
+
+function initializeRuntime(argv: string[]): void {
+  OPERATION_MODE = parseDestructiveOperationMode({
+    argv: argv.slice(2),
+    scriptName: SCRIPT_NAME,
+  });
+  DRY_RUN = OPERATION_MODE.dryRun;
+  USE_EXISTING_WINDOW = argv.includes("--existing-window");
+  TARGET_IDS = parseListArg("--stablecoin", argv);
+  TARGET_PEGS = parseListArg("--peg", argv);
+  D1 = createWorkerD1Client(DB_NAME, OPERATION_MODE.remote ? "remote" : "local");
+}
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
 const PURGE_ONLY_ORPHAN_IDS: Record<string, { symbol: string; pegCurrency: string; reason: string }> = {
   "eura-angle": {
@@ -105,8 +123,8 @@ function parseLaunchDateSec(raw: string | undefined): number | null {
   return Math.floor(parsedMs / 1000);
 }
 
-function parseListArg(flag: string): Set<string> | null {
-  const raw = process.argv.find((arg) => arg.startsWith(`${flag}=`));
+function parseListArg(flag: string, argv: string[]): Set<string> | null {
+  const raw = argv.find((arg) => arg.startsWith(`${flag}=`));
   if (!raw) return null;
   const values = raw
     .slice(flag.length + 1)
@@ -449,7 +467,8 @@ async function recomputePsiRanges(ranges: Array<{ startDay: number; endDay: numb
   return totalDaysBackfilled;
 }
 
-async function main(): Promise<void> {
+async function main(argv: string[]): Promise<void> {
+  initializeRuntime(argv);
   loadDotVarsIfNeeded();
 
   const coingeckoApiKey = process.env.COINGECKO_API_KEY?.trim() || null;
@@ -829,7 +848,10 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+const isDirectRun = process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+  main(process.argv).catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
