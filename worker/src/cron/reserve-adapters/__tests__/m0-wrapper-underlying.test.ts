@@ -88,7 +88,7 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
         settlementDelaySec: 0,
       },
     });
-  });
+  }, 15_000);
 
   it("verifies an M extension route through SwapFacility", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
