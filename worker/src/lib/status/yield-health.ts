@@ -450,6 +450,12 @@ function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
     };
   }
 
+  // LEGACY FALLBACK PATH — reached only when the payload lacks a populated
+  // `operatorQueue`. The seven legacyXxx builders below reconstruct queue items
+  // from the pre-operatorQueue per-list wire format. Remove this entire block
+  // (and the legacyXxx helpers) once the yield-coverage-audit payload adopts
+  // `operatorQueue` universally; new queue item kinds should be added to the
+  // operatorQueue path above, not duplicated here.
   const manifestMissingIds = getStringArray(payload?.manifestMissingIds) ?? [];
   const yieldBearingMissingFromRankings = getStringArray(payload?.yieldBearingMissingFromRankings) ?? [];
   const headlineGaps: YieldCoverageAuditQueueItem[] = [
