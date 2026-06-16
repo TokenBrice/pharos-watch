@@ -178,6 +178,31 @@ describe("usePortfolio", () => {
     ]);
   });
 
+  it("seeds URL-sourced holdings from a router-supplied param without reading the location bar", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([{ coinId: "usdt-tether", amount: 50 }]));
+    // location bar is bare ("/portfolio/"); the param arrives from the caller.
+    const { result } = renderHook(() => usePortfolio([], "usdc-circle:0"));
+
+    expect(result.current.isFromUrl).toBe(true);
+    expect(result.current.holdings).toEqual([{ coinId: "usdc-circle", amount: 0 }]);
+  });
+
+  it("falls back to the location bar when no router param is supplied", () => {
+    window.history.replaceState(null, "", "/portfolio/?p=usdc-circle:0");
+    const { result } = renderHook(() => usePortfolio([]));
+
+    expect(result.current.isFromUrl).toBe(true);
+    expect(result.current.holdings).toEqual([{ coinId: "usdc-circle", amount: 0 }]);
+  });
+
+  it("treats an empty router param as no shared portfolio", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([{ coinId: "usdt-tether", amount: 50 }]));
+    const { result } = renderHook(() => usePortfolio([], ""));
+
+    expect(result.current.isFromUrl).toBe(false);
+    expect(result.current.holdings).toEqual([{ coinId: "usdt-tether", amount: 50 }]);
+  });
+
   it("builds share URLs from normalized holdings and removes p when empty", () => {
     const { result } = renderHook(() => usePortfolio([]));
 

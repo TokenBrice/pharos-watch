@@ -75,7 +75,7 @@ function saveToStorage(holdings: PortfolioHolding[]): void {
   writeJsonStorageValue(getWindowStorage("local"), STORAGE_KEY, holdings);
 }
 
-function getInitialPortfolioState(): {
+function getInitialPortfolioState(initialUrlParam?: string): {
   holdings: PortfolioHolding[];
   isFromUrl: boolean;
   initialized: boolean;
@@ -83,7 +83,10 @@ function getInitialPortfolioState(): {
   if (typeof window === "undefined") {
     return { holdings: [], isFromUrl: false, initialized: false };
   }
-  const urlParam = parseStringSearchParam(window.location.search, "p");
+  // Prefer a router-sourced param from the caller; fall back to the location
+  // bar only when the caller does not supply one.
+  const urlParam =
+    initialUrlParam ?? parseStringSearchParam(window.location.search, "p");
   if (urlParam) {
     return {
       holdings: parsePortfolioUrlParam(urlParam),
@@ -98,8 +101,11 @@ function getInitialPortfolioState(): {
   };
 }
 
-export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
-  const [bootState] = useState(getInitialPortfolioState);
+export function usePortfolio(
+  cards: ReportCard[] | undefined,
+  initialUrlParam?: string,
+): PortfolioState {
+  const [bootState] = useState(() => getInitialPortfolioState(initialUrlParam));
   const [holdings, setHoldings] = useState<PortfolioHolding[]>(bootState.holdings);
   const [isFromUrl] = useState(bootState.isFromUrl);
   const initialized = bootState.initialized;

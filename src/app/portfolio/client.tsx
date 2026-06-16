@@ -37,15 +37,16 @@ export function PortfolioClient() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const [showUpstreamDetail, setShowUpstreamDetail] = useState(false);
 
-  const portfolio = usePortfolio(reportData?.cards);
+  // URL sync: keep query string in sync with portfolio holdings. The router-
+  // aware initial `p` param seeds the portfolio so a shared/soft-navigated URL
+  // restores state without reading window.location inside the hook.
+  const { getParam, setParam } = useUrlFilters();
+  const portfolio = usePortfolio(reportData?.cards, getParam("p"));
 
   const exposureToShow = showUpstreamDetail ? portfolio.upstreamExposure : portfolio.upstreamExposureGrouped;
 
   // Clean up toast timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
-
-  // URL sync: keep query string in sync with portfolio holdings
-  const { setParam } = useUrlFilters();
 
   useEffect(() => {
     if (!portfolio.initialized) return;
