@@ -5,6 +5,7 @@ import {
   getWindowStorage,
   readJsonStorageValue,
   safeStorageGetItem,
+  safeStorageRemoveItem,
   writeJsonStorageValue,
 } from "@/lib/browser-storage";
 
@@ -46,11 +47,13 @@ function loadFromStorage(): string[] {
     return readJsonStorageValue(storage, WATCHLIST_STORAGE_KEY, normalize, []);
   }
 
-  // One-time migration: merge legacy keys into the canonical key.
+  // One-time migration: merge legacy keys into the canonical key and remove them.
   const legacyPinned = readLegacy(storage, LEGACY_PINNED_KEY);
   const legacyYield = readLegacy(storage, LEGACY_YIELD_KEY);
   const merged = normalize([...legacyPinned, ...legacyYield]);
   writeJsonStorageValue(storage, WATCHLIST_STORAGE_KEY, merged);
+  safeStorageRemoveItem(storage, LEGACY_PINNED_KEY);
+  safeStorageRemoveItem(storage, LEGACY_YIELD_KEY);
   return merged;
 }
 
@@ -73,11 +76,6 @@ function broadcast(next: readonly string[]) {
 function persist(next: readonly string[]) {
   const storage = getWindowStorage("local");
   writeJsonStorageValue(storage, WATCHLIST_STORAGE_KEY, next);
-  // Dual-write to legacy keys so external consumers and tests that still read
-  // from the old keys continue to work. Single source of truth for reads is
-  // still the canonical key; legacy mirrors are write-only echoes.
-  writeJsonStorageValue(storage, LEGACY_PINNED_KEY, next);
-  writeJsonStorageValue(storage, LEGACY_YIELD_KEY, next);
 }
 
 function syncFromStorage() {

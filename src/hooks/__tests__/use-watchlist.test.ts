@@ -35,7 +35,7 @@ describe("useWatchlist", () => {
     expect(result.current.has("usdt-tether")).toBe(false);
   });
 
-  it("persists changes to localStorage and the legacy yield mirror", async () => {
+  it("persists changes to localStorage", async () => {
     const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
 
@@ -49,7 +49,6 @@ describe("useWatchlist", () => {
       expect(Array.isArray(stored)).toBe(true);
       expect(stored).toContain("usdc-circle");
       expect(stored).toContain("dai-mkr");
-      expect(JSON.parse(window.localStorage.getItem(LEGACY_YIELD_STORAGE_KEY) ?? "null")).toEqual(stored);
     });
   });
 
