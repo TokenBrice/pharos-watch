@@ -92,6 +92,10 @@ export function computeApyFromRate(rateNow: number, ratePrev: number, days: numb
   return (Math.pow(ratio, 365.25 / days) - 1) * 100;
 }
 
+/**
+ * Naming-only alias for {@link computeApyFromRate} used when inputs are token prices
+ * rather than exchange rates. No additional transformation is applied.
+ */
 export function computeApyFromPrice(priceNow: number, pricePrev: number, days: number): number {
   return computeApyFromRate(priceNow, pricePrev, days);
 }
@@ -333,6 +337,32 @@ export function matchAllDlPools(
 }
 
 /**
+ * Core lending-pool eligibility gate shared by the deterministic AUTO_LENDING
+ * loop and findBestLendingPool's dynamic discovery, so the two auto paths stay
+ * in sync: single exposure, stablecoin = true, project in allowlist, and the
+ * APY/TVL quality floors. Source-block, reserved-pool, collision, and chain
+ * filters are applied separately by each caller.
+ */
+export function meetsLendingPoolCoreEligibility(
+  pool: {
+    project: string;
+    apy: number;
+    tvlUsd: number;
+    stablecoin: boolean;
+    exposure: string;
+  },
+  options: { allowlist: Set<string>; minApy: number; minTvlUsd: number },
+): boolean {
+  return (
+    pool.exposure === "single" &&
+    pool.stablecoin &&
+    options.allowlist.has(pool.project) &&
+    pool.apy >= options.minApy &&
+    pool.tvlUsd >= options.minTvlUsd
+  );
+}
+
+/**
  * Auto-discovery: find the best lending pool for a coin from allowlisted protocols.
  * Used for non-yield-bearing stablecoins rated C+ or above (Wave 2).
  *
@@ -392,11 +422,7 @@ export function findBestLendingPool(
   const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
 
   const baseCandidates = dlPools.filter((p) =>
-    p.exposure === "single" &&
-    p.stablecoin &&
-    allowlist.has(p.project) &&
-    p.apy >= minApy &&
-    p.tvlUsd >= minTvlUsd &&
+    meetsLendingPoolCoreEligibility(p, { allowlist, minApy, minTvlUsd }) &&
     !isBlockedYieldOpportunitySource({ poolMeta: p.poolMeta, symbol: p.symbol }) &&
     !reservedPoolIds.has(p.pool) &&
     !options?.isBlockedPool?.(p) &&

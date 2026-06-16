@@ -188,7 +188,10 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       if (!SUPPORTED_POOL_TYPES.has(pool.type)) continue;
 
       const chain = BALANCER_CHAIN_MAP[pool.chain];
-      if (!chain) continue;
+      if (!chain) {
+        console.warn(`[fetch-balancer] Unknown Balancer chain enum value "${pool.chain}" — pool ${pool.id} skipped; add to BALANCER_CHAIN_MAP to support it`);
+        continue;
+      }
 
       const tvlUsd = parseFloat(pool.dynamicData.totalLiquidity);
       const volume24h = parseFloat(pool.dynamicData.volume24h);
