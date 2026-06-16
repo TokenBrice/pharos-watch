@@ -10,6 +10,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
+import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
 
 const COINGECKO_GAP_THRESHOLD_RATIO = 1.05;
 const COINGECKO_GAP_HISTORY_DAYS = 40;
@@ -73,10 +74,6 @@ function createEmptyReasonCounts(): Record<SupplyGapReconciliationReason, number
     "coingecko-gap-fill": 0,
     "onchain-total-supply": 0,
   };
-}
-
-function toPositiveFiniteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
 }
 
 function buildMetadataChainIds(assetId: string): string[] {

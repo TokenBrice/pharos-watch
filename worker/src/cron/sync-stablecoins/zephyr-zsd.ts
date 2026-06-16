@@ -1,9 +1,9 @@
-import { CHAIN_META } from "@shared/lib/chains";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
+import { pegTypeKey, getSupplementalChainLabels, toPositiveFiniteNumber } from "./supplemental-assets/shared";
 
 export const ZEPHYR_ZSD_ASSET_ID = "zsd-zephyr-protocol";
 export const ZEPHYR_ZYS_ASSET_ID = "zys-zephyr-protocol";
@@ -30,27 +30,6 @@ export interface ZephyrZsdPriceResolution {
   source: string;
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
-}
-
-function toPositiveFiniteNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }
-  return null;
-}
-
-function pegTypeKey(meta: StablecoinMeta): string {
-  return `pegged${meta.flags.pegCurrency}`;
-}
-
-function getChainLabels(meta: StablecoinMeta): string[] {
-  const labels = (meta.contracts ?? [])
-    .map((contract) => CHAIN_META[contract.chain]?.name ?? contract.chain)
-    .filter((label): label is string => typeof label === "string" && label.length > 0);
-
-  return Array.from(new Set(labels));
 }
 
 function parseZephyrAssetStats(
@@ -172,7 +151,7 @@ function buildZephyrPeggedAsset(
     circulatingPrevWeek: null,
     circulatingPrevMonth: null,
     chainCirculating: {},
-    chains: getChainLabels(meta),
+    chains: getSupplementalChainLabels(meta),
   } as PeggedAsset;
 }
 

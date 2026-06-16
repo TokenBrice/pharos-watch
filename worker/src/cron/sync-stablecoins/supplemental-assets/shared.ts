@@ -22,8 +22,13 @@ export function pegTypeKey(meta: StablecoinMeta): string {
   return `pegged${meta.flags.pegCurrency}`;
 }
 
-export function toPositiveFiniteNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+export function toPositiveFiniteNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+  return null;
 }
 
 function isFreshSupplementalPrice(source: SupplementalPriceResolution["source"], observedAt: number | null): boolean {
