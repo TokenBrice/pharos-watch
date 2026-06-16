@@ -118,7 +118,8 @@ export async function prepareFeedbackSubmission(
   };
 }
 
-function resolveFeedbackClientIp(request: Request): string {
+// Exported for unit tests; not part of the public handler surface.
+export function resolveFeedbackClientIp(request: Request): string {
   // CF-Connecting-IP is injected by the Cloudflare edge for every real inbound
   // request and cannot be spoofed by the client. We deliberately do NOT fall
   // back to the client-controlled X-Forwarded-For header — trusting it would let
