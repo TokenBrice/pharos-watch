@@ -147,5 +147,5 @@
     "yieldType": "lending-vault"
   },
   "launchDate": "2025-08-22",
-  "mechanismArchetype": "rwa-credit-fund"
+  "mechanismArchetype": "synthetic-delta-neutral"
 }

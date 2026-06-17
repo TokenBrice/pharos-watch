@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:d8c9124aba414dd877e657b659ff2d858dea2e82ea7bd989a79b6beb3a04c819",
+  "sourceChecksum": "sha256:07f824f3f41647ba45219ebf474b9c79739b48199f04292e78f5fccc1e5235c4",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,7 +16,7 @@
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "checksum": "sha256:20e193fb39ab17cab4e4af0c174564587b2fc66ea9c824a18e2587571e1a8e23",
+      "checksum": "sha256:31ba99753ed986a4cb41d083742d1b6093a25b826ad3cf1e375de8dcc7d1a60e",
       "role": "Generated tracked-stablecoin aggregate used for frozen cemetery rows."
     }
   ],

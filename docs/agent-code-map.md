@@ -744,4 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/seo-sitemap.test.ts`
 - `scripts/__tests__/serve-static-export.test.ts`
 - `scripts/__tests__/setup-workspace-cache.test.ts`
-- ... 196 more files omitted; use `rg --files scripts` for the full list.
+- ... 197 more files omitted; use `rg --files scripts` for the full list.

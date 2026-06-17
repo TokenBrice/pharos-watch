@@ -53,7 +53,7 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "stage1-l2",
+  "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",

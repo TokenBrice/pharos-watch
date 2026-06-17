@@ -14,6 +14,7 @@
   "variantOf": "dusd-dtrinity",
   "variantKind": "strategy-vault",
   "pegReferenceId": "dusd-dtrinity",
+  "mechanismArchetype": "cdp",
   "collateral": "dUSD deposited into dTRINITY dSTAKE vaults and supplied into dLEND; deployments are chain-isolated and non-fungible across networks.",
   "pegMechanism": "Stake dUSD to mint sdUSD vault receipts and unstake back into dUSD when dLEND liquidity is available; dSTAKE charges no staking fee, unstaking can incur up to 10 bps retained by the vault, and NAV appreciates as dLEND supply APY accrues.",
   "detailProvider": "coingecko",

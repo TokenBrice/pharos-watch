@@ -363,7 +363,7 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "gaib-aid",
     "launchDate": "2025-10-29",
     "genius": {
@@ -3049,7 +3049,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
     "geckoId": "celo-euro",
     "launchDate": "2021-03-15",
     "mica": {
@@ -3735,7 +3734,7 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "rwa-credit-fund",
+    "mechanismArchetype": "cdp",
     "geckoId": "cap-usd",
     "launchDate": "2025-07-08",
     "genius": {
@@ -4499,7 +4498,7 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "dtrinity-usd",
     "launchDate": "2024-07-04",
     "genius": {
@@ -6155,6 +6154,7 @@
       "rwa": false,
       "navToken": false
     },
+    "mechanismArchetype": "cdp",
     "geckoId": "electronic-usd",
     "launchDate": "2023-02-23",
     "genius": {
@@ -15443,6 +15443,7 @@
       "rwa": false,
       "navToken": true
     },
+    "mechanismArchetype": "cdp",
     "geckoId": "dtrinity-staked-dusd",
     "variantOf": "dusd-dtrinity",
     "variantKind": "strategy-vault",
@@ -16099,7 +16100,7 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "rwa-credit-fund",
+    "mechanismArchetype": "cdp",
     "geckoId": "staked-cap-usd",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault",
@@ -22808,7 +22809,7 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "rwa-credit-fund",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "usp-yield-optimized-stablecoin",
     "launchDate": "2025-08-22",
     "canBeBlacklisted": true,
