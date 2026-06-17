@@ -15699,6 +15699,23 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "dUSD's own price is hard-coded at $1 for mint, redeem, and dLEND lending/borrowing to resist manipulation, but the protocol values its yield-bearing reserve stablecoins (e.g. sfrxUSD, sUSDS) and dLEND collateral through external feeds — API3 and Redstone, with Chainlink and issuer feeds — and those feeds drive reserve NAV and mint/redeem ratios. No documented single-primary-with-failover oracle architecture per asset.",
+      "reviewedAt": "2026-06-17",
+      "reviewer": "Claude oracle-risk review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "dTRINITY dUSD stablecoin docs",
+          "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin"
+        },
+        {
+          "label": "dTRINITY dLEND money markets (oracle pricing)",
+          "url": "https://docs.dtrinity.org/core-components/dlend-money-markets"
+        }
+      ]
+    },
     "bridgeRouteRisk": {
       "tier": "single-chain-or-native",
       "summary": "dTRINITY documents dUSD as chain-isolated, with separate native deployments and reserves by network; it explicitly says same-name dUSD tokens are not fungible across chains. The route is therefore reviewed as native per-chain issuance rather than a bridge route.",
@@ -20777,6 +20794,23 @@
     },
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "EUSD is a Reserve Protocol RToken whose collateral plugins (Aave V3 USDC, Compound V3 USDC/USDT) use Chainlink price feeds for default detection: a defaultThreshold/delayUntilDefault state machine moves collateral SOUND -> IFFY -> DISABLED and triggers mechanistic RSR-staker seizure. Pricing uses standard single-source Chainlink feeds per asset with oracleError bounds and basket warmup; no redundant cross-provider failover is documented.",
+      "reviewedAt": "2026-06-17",
+      "reviewer": "Claude oracle-risk review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Reserve Protocol collateral plugin docs",
+          "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/collateral.md"
+        },
+        {
+          "label": "Reserve Protocol documentation",
+          "url": "https://docs.reserve.org/"
+        }
+      ]
+    },
     "bridgeRouteRisk": {
       "tier": "issuer-native-burn-mint",
       "summary": "eUSD is described as launched across Ethereum and MobileCoin, with later support on Base and Arbitrum. Public evidence supports native multichain issuance rather than a documented external bridge route, so the review uses issuer-native burn/mint at probable confidence.",

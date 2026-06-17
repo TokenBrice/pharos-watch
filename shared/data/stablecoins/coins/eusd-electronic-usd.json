@@ -17,6 +17,23 @@
   "llamaId": "106",
   "detailProvider": "defillama",
   "geckoId": "electronic-usd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "EUSD is a Reserve Protocol RToken whose collateral plugins (Aave V3 USDC, Compound V3 USDC/USDT) use Chainlink price feeds for default detection: a defaultThreshold/delayUntilDefault state machine moves collateral SOUND -> IFFY -> DISABLED and triggers mechanistic RSR-staker seizure. Pricing uses standard single-source Chainlink feeds per asset with oracleError bounds and basket warmup; no redundant cross-provider failover is documented.",
+    "reviewedAt": "2026-06-17",
+    "reviewer": "Claude oracle-risk review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Reserve Protocol collateral plugin docs",
+        "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/collateral.md"
+      },
+      {
+        "label": "Reserve Protocol documentation",
+        "url": "https://docs.reserve.org/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

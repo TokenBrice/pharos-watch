@@ -15,6 +15,23 @@
   "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
   "detailProvider": "coingecko",
   "geckoId": "dtrinity-usd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "dUSD's own price is hard-coded at $1 for mint, redeem, and dLEND lending/borrowing to resist manipulation, but the protocol values its yield-bearing reserve stablecoins (e.g. sfrxUSD, sUSDS) and dLEND collateral through external feeds — API3 and Redstone, with Chainlink and issuer feeds — and those feeds drive reserve NAV and mint/redeem ratios. No documented single-primary-with-failover oracle architecture per asset.",
+    "reviewedAt": "2026-06-17",
+    "reviewer": "Claude oracle-risk review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "dTRINITY dUSD stablecoin docs",
+        "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin"
+      },
+      {
+        "label": "dTRINITY dLEND money markets (oracle pricing)",
+        "url": "https://docs.dtrinity.org/core-components/dlend-money-markets"
+      }
+    ]
+  },
   "cmcSlug": "dtrinity-dusd",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
