@@ -5145,7 +5145,7 @@
       "inputs": {
         "primary": {
           "kind": "http-json",
-          "url": "https://mu.accountable.capital:10443/dashboard"
+          "url": "https://cache.accountable.capital/dashboard/mu"
         }
       },
       "params": {
