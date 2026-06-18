@@ -62,10 +62,11 @@ function QuietHourSelect({ id, label, value, disabled, onChange, optionKeyPrefix
   );
 }
 
-function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
+function QuietHoursPicker({ state, canMutate, isMutating, pendingOperation, onMutate }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
   const enabled = state.subscriber.quietHours.enabled;
@@ -106,11 +107,17 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <MiniButton
           disabled={!canMutate || isMutating || sameHours}
+          loading={pendingOperation?.kind === "set-quiet-hours" && pendingOperation.enabled === true}
           onClick={() => onMutate({ kind: "set-quiet-hours", enabled: true, startHourUtc: draftStart, endHourUtc: draftEnd })}
         >
           {enabled ? "Save quiet hours" : "Enable quiet hours"}
         </MiniButton>
-        <MiniButton variant="secondary" disabled={!canMutate || isMutating || !enabled} onClick={() => onMutate({ kind: "set-quiet-hours", enabled: false })}>
+        <MiniButton
+          variant="secondary"
+          disabled={!canMutate || isMutating || !enabled}
+          loading={pendingOperation?.kind === "set-quiet-hours" && pendingOperation.enabled === false}
+          onClick={() => onMutate({ kind: "set-quiet-hours", enabled: false })}
+        >
           Disable quiet hours
         </MiniButton>
       </div>
@@ -124,10 +131,11 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
   );
 }
 
-function TimezonePicker({ state, canMutate, isMutating, onMutate }: {
+function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMutate }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
   const current = state.subscriber.quietHours.timezone ?? "UTC";
@@ -158,6 +166,7 @@ function TimezonePicker({ state, canMutate, isMutating, onMutate }: {
         <MiniButton
           variant="secondary"
           disabled={!canMutate || isMutating || current === "UTC"}
+          loading={pendingOperation?.kind === "set-timezone" && pendingOperation.timezone == null}
           onClick={() => onMutate({ kind: "set-timezone", timezone: null })}
         >
           Use UTC (clear)
@@ -217,6 +226,7 @@ export interface SettingsPanelProps {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   optimisticGlobalAlerts: Record<TelegramAlertType, boolean> & { depegStepBps: TelegramDepegStepBps | null };
   onUnsubscribeAll: () => void;
@@ -224,7 +234,7 @@ export interface SettingsPanelProps {
   hasShowConfirm: boolean;
 }
 
-export function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGlobalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: SettingsPanelProps) {
+export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, onMutate, optimisticGlobalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: SettingsPanelProps) {
   const currentDepegStep = optimisticGlobalAlerts.depegStepBps;
 
   return (
@@ -241,6 +251,7 @@ export function SettingsPanel({ state, canMutate, isMutating, onMutate, optimist
               label={ALERT_LABELS[type]}
               enabled={optimisticGlobalAlerts[type]}
               disabled={!canMutate || isMutating}
+              loading={pendingOperation?.kind === "set-global" && pendingOperation.alertType === type}
               onToggle={() => onMutate({ kind: "set-global", alertType: type, enabled: !optimisticGlobalAlerts[type] })}
             />
           ))}
@@ -279,8 +290,8 @@ export function SettingsPanel({ state, canMutate, isMutating, onMutate, optimist
           </div>
         </div>
       </section>
-      <QuietHoursPicker state={state} canMutate={canMutate} isMutating={isMutating} onMutate={onMutate} />
-      <TimezonePicker state={state} canMutate={canMutate} isMutating={isMutating} onMutate={onMutate} />
+      <QuietHoursPicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
+      <TimezonePicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
       <DangerZoneSection
         canMutate={canMutate}
         isMutating={isMutating}

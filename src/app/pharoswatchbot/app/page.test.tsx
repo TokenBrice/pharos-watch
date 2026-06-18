@@ -456,6 +456,7 @@ describe("PharosWatchBotMiniAppPage", () => {
         {
           ...baseState.subscriptions[0],
           alertTypes: { dews: false, depeg: false, safety: false, launch: true },
+          depegStepBps: null,
         },
       ],
     };

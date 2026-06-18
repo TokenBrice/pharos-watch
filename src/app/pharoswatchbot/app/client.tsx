@@ -110,6 +110,7 @@ export function PharosWatchBotMiniAppClient() {
     optimisticState,
     optimisticGlobals,
     isMutating,
+    pendingOperation,
     message,
     announcement,
     forgottenView,
@@ -258,15 +259,15 @@ export function PharosWatchBotMiniAppClient() {
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
   const { text: mainButtonText, handler: mainButtonHandler } = useMemo<{ text: string | null; handler: (() => void) | null }>(() => {
     if (view === "home") {
-      if (state && !state.subscriber.exists) {
+      if (optimisticState && !optimisticState.subscriber.exists) {
         return { text: "Use recommended setup", handler: () => mutate(RECOMMENDED_OPERATION) };
       }
-      if (state?.subscriber.snoozeUntilTs != null) {
+      if (optimisticState?.subscriber.snoozeUntilTs != null) {
         return { text: "Clear snooze", handler: () => mutate({ kind: "clear-snooze" }) };
       }
     }
     return { text: null, handler: null };
-  }, [mutate, state, view]);
+  }, [mutate, optimisticState, view]);
   useTelegramMainButton({ webApp, text: mainButtonText, handler: mainButtonHandler });
 
   if (status === "preview") return <PreviewState previewName={previewName} />;
@@ -367,6 +368,7 @@ export function PharosWatchBotMiniAppClient() {
                   state={optimisticState}
                   canMutate={canMutate}
                   isMutating={isMutating}
+                  pendingOperation={pendingOperation}
                   onMutate={mutate}
                   optimisticHomeHeadline={headline}
                   homeScreenStatus={homeScreenStatus}
@@ -390,6 +392,7 @@ export function PharosWatchBotMiniAppClient() {
                   state={optimisticState}
                   canMutate={canMutate}
                   isMutating={isMutating}
+                  pendingOperation={pendingOperation}
                   onMutate={mutate}
                   onRemove={handleRemoveCoin}
                   onOpenInsight={setCoinInsightTarget}
@@ -408,6 +411,7 @@ export function PharosWatchBotMiniAppClient() {
                   state={optimisticState}
                   canMutate={canMutate}
                   isMutating={isMutating}
+                  pendingOperation={pendingOperation}
                   onMutate={mutate}
                   onUnfollowPreset={handleUnfollowPreset}
                 />
@@ -419,6 +423,7 @@ export function PharosWatchBotMiniAppClient() {
                   state={optimisticState}
                   canMutate={canMutate}
                   isMutating={isMutating}
+                  pendingOperation={pendingOperation}
                   onMutate={mutate}
                   optimisticGlobalAlerts={optimisticGlobals}
                   onUnsubscribeAll={handleUnsubscribeAll}

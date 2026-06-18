@@ -14,10 +14,11 @@ const PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
 type PresetAlertType = (typeof PRESET_ALERT_TYPES)[number];
 type RecommendedPreset = TelegramMiniAppState["catalog"]["recommendedPresets"][number];
 
-function FollowedPresetCard({ preset, canMutate, isMutating, onMutate, onUnfollow }: {
+function FollowedPresetCard({ preset, canMutate, isMutating, pendingOperation, onMutate, onUnfollow }: {
   preset: FollowedPreset;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   onUnfollow: (preset: FollowedPreset) => void;
 }) {
@@ -37,7 +38,13 @@ function FollowedPresetCard({ preset, canMutate, isMutating, onMutate, onUnfollo
           <h3 className="truncate text-base font-semibold text-foreground">{preset.label}</h3>
           {preset.description ? <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p> : null}
         </div>
-        <MiniButton ariaLabel={`Unfollow ${preset.label}`} variant="secondary" disabled={!canMutate || isMutating} onClick={() => onUnfollow(preset)}>
+        <MiniButton
+          ariaLabel={`Unfollow ${preset.label}`}
+          variant="secondary"
+          disabled={!canMutate || isMutating}
+          loading={pendingOperation?.kind === "unfollow-preset" && pendingOperation.presetId === preset.id}
+          onClick={() => onUnfollow(preset)}
+        >
           Unfollow
         </MiniButton>
       </div>
@@ -48,6 +55,7 @@ function FollowedPresetCard({ preset, canMutate, isMutating, onMutate, onUnfollo
             label={ALERT_LABELS[type]}
             enabled={Boolean(preset.alertTypes[type])}
             disabled={!canMutate || isMutating}
+            loading={pendingOperation?.kind === "follow-preset" && pendingOperation.presetId === preset.id}
             ariaLabel={`${preset.label} ${ALERT_LABELS[type]}`}
             onToggle={() => {
               const next: Partial<Record<PresetAlertType, boolean>> = {};
@@ -62,10 +70,11 @@ function FollowedPresetCard({ preset, canMutate, isMutating, onMutate, onUnfollo
   );
 }
 
-function AvailablePresetCard({ preset, canMutate, isMutating, onMutate }: {
+function AvailablePresetCard({ preset, canMutate, isMutating, pendingOperation, onMutate }: {
   preset: RecommendedPreset;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
   const [picking, setPicking] = useState(false);
@@ -103,6 +112,7 @@ function AvailablePresetCard({ preset, canMutate, isMutating, onMutate }: {
           <div className="grid gap-2 sm:grid-cols-2">
             <MiniButton
               disabled={!canMutate || isMutating || !someSelected}
+              loading={pendingOperation?.kind === "follow-preset" && pendingOperation.presetId === preset.id}
               onClick={() => {
                 setPicking(false);
                 onMutate({
@@ -128,11 +138,12 @@ export interface PresetsPanelProps {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   onUnfollowPreset: (preset: FollowedPreset) => void;
 }
 
-export function PresetsPanel({ state, canMutate, isMutating, onMutate, onUnfollowPreset }: PresetsPanelProps) {
+export function PresetsPanel({ state, canMutate, isMutating, pendingOperation, onMutate, onUnfollowPreset }: PresetsPanelProps) {
   const followedIds = useMemo(() => new Set(state.presets.map((preset) => preset.id)), [state.presets]);
   const available = useMemo(() => state.catalog.recommendedPresets.filter((preset) => !followedIds.has(preset.id)), [followedIds, state.catalog.recommendedPresets]);
 
@@ -146,6 +157,7 @@ export function PresetsPanel({ state, canMutate, isMutating, onMutate, onUnfollo
             preset={preset}
             canMutate={canMutate}
             isMutating={isMutating}
+            pendingOperation={pendingOperation}
             onMutate={onMutate}
             onUnfollow={onUnfollowPreset}
           />
@@ -162,6 +174,7 @@ export function PresetsPanel({ state, canMutate, isMutating, onMutate, onUnfollo
               preset={preset}
               canMutate={canMutate}
               isMutating={isMutating}
+              pendingOperation={pendingOperation}
               onMutate={onMutate}
             />
           ))}

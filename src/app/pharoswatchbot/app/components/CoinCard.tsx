@@ -59,6 +59,7 @@ export interface CoinCardProps {
   coin: SubscribedCoin;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   onRemove: (coin: SubscribedCoin) => void;
   onOpenInsight: (target: CoinInsightTarget) => void;
@@ -69,9 +70,9 @@ export interface CoinCardProps {
   highlighted: boolean;
 }
 
-export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOpenInsight, webApp, nowSec, highlighted }: CoinCardProps) {
+export function CoinCard({ coin, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, webApp, nowSec, highlighted }: CoinCardProps) {
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
-  const showTune = dewsEnabled || depegEnabled || safetyEnabled;
+  const showTune = dewsEnabled || depegEnabled || safetyEnabled || coin.depegStepBps != null;
   const launchOnly = coin.alertTypes.launch && !showTune;
   const coinSnoozeActive = coin.snoozeUntilTs != null && coin.snoozeUntilTs > nowSec;
   const handleOpenLink = (url: string) => {
@@ -110,6 +111,11 @@ export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOp
             label={ALERT_LABELS[type]}
             enabled={coin.alertTypes[type]}
             disabled={!canMutate || isMutating}
+            loading={
+              pendingOperation?.kind === "set-coin" &&
+              pendingOperation.stablecoinId === coin.stablecoinId &&
+              pendingOperation.patch.alertTypes?.[type] != null
+            }
             ariaLabel={`${coin.symbol} ${ALERT_LABELS[type]}`}
             onToggle={() => onMutate({
               kind: "set-coin",
@@ -161,6 +167,11 @@ export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOp
                   ariaLabel={`Snooze ${coin.symbol} for ${token}`}
                   variant="secondary"
                   disabled={!canMutate || isMutating}
+                  loading={
+                    pendingOperation?.kind === "set-coin-snooze" &&
+                    pendingOperation.stablecoinId === coin.stablecoinId &&
+                    pendingOperation.durationToken === token
+                  }
                   onClick={() => onMutate(snoozeOperation(token))}
                 >
                   {token}
@@ -190,16 +201,27 @@ export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOp
                 </div>
               </div>
             ) : null}
-            {depegEnabled ? (
+            {depegEnabled || coin.depegStepBps != null ? (
               <div>
                 <p className="pharos-kicker">Depeg step</p>
+                {!depegEnabled ? (
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Setting a step also enables depeg alerts.
+                  </p>
+                ) : null}
                 <div className="mt-2">
                   <SegmentedControl
                     ariaLabel={`${coin.symbol} depeg step`}
                     value={coin.depegStepBps}
                     options={DEPEG_STEP_OPTIONS}
                     disabled={!canMutate || isMutating}
-                    onChange={(next) => onMutate({ kind: "set-coin", stablecoinId: coin.stablecoinId, patch: { depegStepBps: next } })}
+                    onChange={(next) => onMutate({
+                      kind: "set-coin",
+                      stablecoinId: coin.stablecoinId,
+                      patch: next != null && !depegEnabled
+                        ? { depegStepBps: next, alertTypes: { depeg: true } }
+                        : { depegStepBps: next },
+                    })}
                   />
                 </div>
               </div>

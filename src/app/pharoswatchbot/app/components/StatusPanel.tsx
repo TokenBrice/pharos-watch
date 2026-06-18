@@ -16,6 +16,8 @@ export interface StatusPanelProps {
   canMutate: boolean;
   /** True while a mutation POST is in flight. Disables every action button. */
   isMutating: boolean;
+  /** Mutation currently in flight, used for scoped control feedback. */
+  pendingOperation: TelegramMiniAppOperation | null;
   /** Mutation dispatcher (optimistic). */
   onMutate: (operation: TelegramMiniAppOperation) => void;
   /** Pre-computed headline summary (active globals, coin count, preset count). */
@@ -31,10 +33,29 @@ export const STALE_AUTH_READ_ONLY_COPY = {
   body: "This session is still readable, but edits require a fresh launch from Telegram.",
 } as const;
 
-export function StatusPanel({ state, canMutate, isMutating, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen }: StatusPanelProps) {
+function failureCopy(failureClass: string | null): { title: string; body: string; urgent: boolean } | null {
+  if (!failureClass) return null;
+  if (failureClass === "blocked" || failureClass === "forbidden") {
+    return {
+      title: "Alerts paused by Telegram",
+      body: "Telegram rejected recent deliveries. Message PharosWatchBot again to reopen delivery, then re-enable the alert families you want.",
+      urgent: true,
+    };
+  }
+  return {
+    title: "Recent delivery issue",
+    body: `Last Telegram delivery failed with ${failureClass}. Replies can still work while the next alert retries through the queue.`,
+    urgent: false,
+  };
+}
+
+export function StatusPanel({ state, canMutate, isMutating, pendingOperation, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen }: StatusPanelProps) {
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozeActive = snoozeUntil != null;
   const showGroupReadOnlyCopy = !state.viewer.canMutate && state.viewer.mutationBlockReason !== "stale-auth";
+  const recentFailure = failureCopy(state.health.recentFailureClass);
+  const lastDelivery = formatTime(state.health.lastSuccessfulDeliveryAt);
+  const lastReply = formatTime(state.health.lastSuccessfulReplyAt);
 
   return (
     <div className="space-y-4">
@@ -55,6 +76,17 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
           </div>
         </section>
       ) : null}
+      {recentFailure ? (
+        <section className={`rounded-2xl border p-4 ${recentFailure.urgent ? "border-red-500/30 bg-red-500/10" : "border-amber-500/30 bg-amber-500/10"}`}>
+          <div className="flex gap-3">
+            <ShieldAlert className={`mt-0.5 h-5 w-5 shrink-0 ${recentFailure.urgent ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`} aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">{recentFailure.title}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{recentFailure.body}</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
         <p className="pharos-kicker">Watcher state</p>
@@ -63,7 +95,11 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
           {state.subscriber.exists ? optimisticHomeHeadline : "Start with the recommended setup for DEWS and depeg alerts on the top USD stablecoins."}
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          <MiniButton disabled={!canMutate || isMutating} onClick={() => onMutate(RECOMMENDED_OPERATION)}>
+          <MiniButton
+            disabled={!canMutate || isMutating}
+            loading={pendingOperation?.kind === "recommended-setup"}
+            onClick={() => onMutate(RECOMMENDED_OPERATION)}
+          >
             <Check className="h-4 w-4" aria-hidden="true" /> Use recommended setup
           </MiniButton>
           {homeScreenStatus === "missed" ? (
@@ -83,7 +119,12 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
           </div>
           {snoozeActive ? (
             <div className="mt-3">
-              <MiniButton variant="secondary" disabled={!canMutate || isMutating} onClick={() => onMutate({ kind: "clear-snooze" })}>
+              <MiniButton
+                variant="secondary"
+                disabled={!canMutate || isMutating}
+                loading={pendingOperation?.kind === "clear-snooze"}
+                onClick={() => onMutate({ kind: "clear-snooze" })}
+              >
                 <Clock3 className="h-4 w-4" aria-hidden="true" /> Clear snooze
               </MiniButton>
             </div>
@@ -95,6 +136,7 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
                   ariaLabel={`Snooze alerts for ${token}`}
                   variant="secondary"
                   disabled={!canMutate || isMutating}
+                  loading={pendingOperation?.kind === "set-snooze" && pendingOperation.durationToken === token}
                   onClick={() => onMutate({ kind: "set-snooze", durationToken: token })}
                 >
                   {token}
@@ -120,8 +162,10 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
         </section>
         <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
           <p className="pharos-kicker">Last delivery</p>
-          <p className="mt-2 text-lg font-semibold text-foreground pharos-numeric">{formatTime(state.health.lastSuccessfulDeliveryAt)}</p>
-          <p className="mt-1 text-xs text-muted-foreground"><span className="pharos-numeric">{state.health.queuedAlerts}</span> queued alerts</p>
+          <p className="mt-2 text-lg font-semibold text-foreground pharos-numeric">{lastDelivery}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Last reply <span className="pharos-numeric">{lastReply}</span> · <span className="pharos-numeric">{state.health.queuedAlerts}</span> queued alerts
+          </p>
         </section>
       </div>
     </div>

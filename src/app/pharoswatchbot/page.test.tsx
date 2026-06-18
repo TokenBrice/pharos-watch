@@ -24,6 +24,10 @@ vi.mock("next/image", () => ({
   ),
 }));
 
+vi.mock("./mini-app-screenshot-carousel", () => ({
+  MiniAppScreenshotCarousel: () => <section aria-label="Mini App screenshots">screenshots</section>,
+}));
+
 vi.mock("@/components/feature-page-shell", () => ({
   FeaturePageShell: ({
     title,
@@ -123,18 +127,7 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText("Bot sync")).toBeTruthy();
     expect(screen.getByText("Deep links")).toBeTruthy();
     expect(screen.getByText("Launch alerts")).toBeTruthy();
-    expect(screen.getByAltText(/home screen with watcher state/i).getAttribute("src")).toBe(
-      "/featured/telegram-mini-app/home.png",
-    );
-    expect(screen.getByAltText(/watchlist screen with per-coin alert toggles/i).getAttribute("src")).toBe(
-      "/featured/telegram-mini-app/watchlist.png",
-    );
-    expect(screen.getByAltText(/presets screen with followed and available preset watchlists/i).getAttribute("src")).toBe(
-      "/featured/telegram-mini-app/presets.png",
-    );
-    expect(screen.getByAltText(/settings screen with global alerts/i).getAttribute("src")).toBe(
-      "/featured/telegram-mini-app/settings.png",
-    );
+    expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
 
     const jsonLd = parseJsonLd(container);
     const faq = findJsonLdNode(jsonLd, "FAQPage");

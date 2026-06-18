@@ -1,11 +1,13 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function MiniButton({ ariaLabel, children, disabled, onClick, variant = "primary" }: {
+export function MiniButton({ ariaLabel, children, disabled, loading = false, onClick, variant = "primary" }: {
   ariaLabel?: string;
   children: React.ReactNode;
   disabled?: boolean;
+  loading?: boolean;
   onClick: () => void;
   variant?: "primary" | "secondary" | "danger";
 }) {
@@ -13,7 +15,8 @@ export function MiniButton({ ariaLabel, children, disabled, onClick, variant = "
     <button
       type="button"
       aria-label={ariaLabel}
-      disabled={disabled}
+      aria-busy={loading || undefined}
+      disabled={disabled || loading}
       onClick={onClick}
       className={cn(
         "pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
@@ -22,6 +25,7 @@ export function MiniButton({ ariaLabel, children, disabled, onClick, variant = "
         variant === "danger" ? "border border-red-500/35 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300" : "",
       )}
     >
+      {loading ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
       {children}
     </button>
   );

@@ -15,11 +15,12 @@ import type {
 import { MiniButton } from "./MiniButton";
 import { CoinCard } from "./CoinCard";
 
-function LaunchTargetCoinCard({ coinId, coin, canMutate, isMutating, onMutate, onOpenInsight, webApp, highlighted }: {
+function LaunchTargetCoinCard({ coinId, coin, canMutate, isMutating, pendingOperation, onMutate, onOpenInsight, webApp, highlighted }: {
   coinId: string;
   coin: CatalogCoin | null;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   onOpenInsight: (target: CoinInsightTarget) => void;
   webApp: TelegramWebAppSdk | null;
@@ -50,6 +51,7 @@ function LaunchTargetCoinCard({ coinId, coin, canMutate, isMutating, onMutate, o
             ariaLabel={`Follow ${coin.symbol}`}
             variant="secondary"
             disabled={!canMutate || isMutating}
+            loading={pendingOperation?.kind === "set-coin" && pendingOperation.stablecoinId === coin.stablecoinId}
             onClick={() => onMutate({ kind: "set-coin", stablecoinId: coin.stablecoinId, patch: { alertTypes: { dews: true, depeg: true } } })}
           >
             Follow
@@ -87,6 +89,7 @@ export interface WatchlistPanelProps {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   /** Confirm-then-remove flow (lives in `useMiniAppMutations`). */
   onRemove: (coin: SubscribedCoin) => void;
@@ -106,7 +109,7 @@ export interface WatchlistPanelProps {
   targetCoinId: string | null;
 }
 
-export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, onOpenInsight, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId, targetCoinId }: WatchlistPanelProps) {
+export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId, targetCoinId }: WatchlistPanelProps) {
   const [query, setQuery] = useState("");
   const subscribed = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
   const catalogById = useMemo(
@@ -239,6 +242,7 @@ export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemov
             coin={targetCatalogCoin}
             canMutate={canMutate}
             isMutating={isMutating}
+            pendingOperation={pendingOperation}
             onMutate={onMutate}
             onOpenInsight={onOpenInsight}
             webApp={webApp}
@@ -251,6 +255,7 @@ export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemov
             coin={coin}
             canMutate={canMutate}
             isMutating={isMutating}
+            pendingOperation={pendingOperation}
             onMutate={onMutate}
             onRemove={onRemove}
             onOpenInsight={onOpenInsight}

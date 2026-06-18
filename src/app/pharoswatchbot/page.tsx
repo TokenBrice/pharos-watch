@@ -50,6 +50,7 @@ import {
   type TelegramActionKey,
 } from "./telegram-content";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
+import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
 import { TelegramPulseBoard, TelegramPulseStrip } from "./telegram-pulse-strip";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
@@ -591,45 +592,7 @@ export default function PharosWatchBotPage() {
                 </div>
               </div>
               <div className="flex min-h-[560px] flex-col p-5 lg:min-h-0 lg:p-7">
-                <div className="telegram-mini-app-stage flex flex-1 flex-col gap-3">
-                  <div
-                    className="telegram-mini-app-carousel flex flex-1 overflow-hidden rounded-2xl border border-border/65 shadow-[0_18px_42px_oklch(0_0_0_/0.24)]"
-                    aria-label="Mini App screenshots"
-                  >
-                    <div className="telegram-mini-app-carousel-track flex h-full w-full">
-                      {MINI_APP_SCREENSHOTS.map((screenshot, idx) => (
-                        <figure
-                          key={screenshot.title}
-                          className="flex min-w-full flex-col bg-[oklch(0.16_0.02_248)]"
-                        >
-                          <div className="min-h-0 flex-1 p-3">
-                            <Image
-                              src={screenshot.src}
-                              alt={screenshot.alt}
-                              width={screenshot.width}
-                              height={screenshot.height}
-                              loading={screenshot.title === "Home" ? "eager" : "lazy"}
-                              sizes="(min-width: 1024px) 340px, (min-width: 640px) 70vw, 88vw"
-                              className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-xl object-contain lg:max-h-[560px]"
-                            />
-                          </div>
-                          <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/65">
-                            <span className="tabular-nums text-sky-300">{String(idx + 1).padStart(2, "0")}</span>
-                            <span aria-hidden="true" className="text-white/25">·</span>
-                            <span>{screenshot.title}</span>
-                          </figcaption>
-                        </figure>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2" aria-hidden="true">
-                    <span className="telegram-mini-app-dot telegram-mini-app-dot-1 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
-                    <span className="telegram-mini-app-dot telegram-mini-app-dot-2 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
-                    <span className="telegram-mini-app-dot telegram-mini-app-dot-3 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
-                    <span className="telegram-mini-app-dot telegram-mini-app-dot-4 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
-                  </div>
-                </div>
+                <MiniAppScreenshotCarousel screenshots={MINI_APP_SCREENSHOTS} />
               </div>
             </div>
           </div>

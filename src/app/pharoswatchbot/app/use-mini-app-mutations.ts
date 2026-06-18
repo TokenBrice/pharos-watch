@@ -117,6 +117,8 @@ export interface UseMiniAppMutationsResult {
   optimisticGlobals: TelegramMiniAppState["subscriber"]["globalAlerts"];
   /** True between dispatch and either resolve or reject of `performMutation`. */
   isMutating: boolean;
+  /** Mutation currently in flight, used for scoped control feedback. */
+  pendingOperation: TelegramMiniAppOperation | null;
   /** Banner copy. Auto-clears 6s after set when `messageAutoDismissActive` is true. */
   message: string | null;
   /** Aria-live announcement. */
@@ -177,6 +179,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const [pendingUndo, setPendingUndo] = useState<SubscribedCoin | null>(null);
   const [homeScreenStatus, setHomeScreenStatus] = useState<string | null>(null);
   const [forgottenView, setForgottenView] = useState(false);
+  const [pendingOperation, setPendingOperation] = useState<TelegramMiniAppOperation | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedWriteAccessRef = useRef(false);
@@ -247,6 +250,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     const preSubscriberExists = state?.subscriber.exists ?? false;
     const preChatType = state?.viewer.chatType ?? null;
     setIsMutating(true);
+    setPendingOperation(operation);
     webApp?.enableClosingConfirmation?.();
     try {
       const next = await postMiniAppJson(MUTATE_ENDPOINT, { initData, operation }, TelegramMiniAppStateSchema);
@@ -304,6 +308,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       return null;
     } finally {
       setIsMutating(false);
+      setPendingOperation(null);
       webApp?.disableClosingConfirmation?.();
     }
   }, [initData, onStateReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
@@ -367,10 +372,10 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     // re-add a coin to a now-empty subscriber row.
     const fire = () => {
       clearPendingUndo();
-      mutate({ kind: "unsubscribe-all" });
+      void performMutation({ kind: "unsubscribe-all" });
     };
     confirmThenFire(confirmFn, "Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", fire);
-  }, [clearPendingUndo, mutate, webApp?.showConfirm]);
+  }, [clearPendingUndo, performMutation, webApp?.showConfirm]);
 
   const forgetMe = useCallback(() => {
     const confirmFn = webApp?.showConfirm;
@@ -402,6 +407,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     optimisticState,
     optimisticGlobals,
     isMutating,
+    pendingOperation,
     message,
     announcement,
     forgottenView,
