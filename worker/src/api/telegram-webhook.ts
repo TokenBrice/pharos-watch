@@ -44,6 +44,7 @@ import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands
 import { executePendingDisambiguationSelection } from "./telegram-webhook-disambiguation-selection";
 import { isGroupAdminActor, isGroupChatType, validateTelegramWebhookSecret } from "./telegram-webhook-auth";
 import {
+  UNKNOWN_COMMAND_ACTION_DETAIL,
   recordTelegramUsageEvent,
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
@@ -747,10 +748,10 @@ async function dispatchParsedTelegramCommand(args: {
   });
   await recordTelegramUsageEvent(db, {
     eventType: "unknown_command",
-    actionDetail: parsedCommand.command,
+    actionDetail: UNKNOWN_COMMAND_ACTION_DETAIL,
     outcome: "unknown",
   });
-  await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "unknown_command");
+  await recordCommandUsage(db, UNKNOWN_COMMAND_ACTION_DETAIL, commandStartedAtMs, "unknown_command");
 }
 
 function resolveUpdateType(update: TelegramWebhookUpdateWithChatMember): string {

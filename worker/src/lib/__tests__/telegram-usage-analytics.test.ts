@@ -57,6 +57,20 @@ describe("telegram usage analytics", () => {
     expect(insert?.binds).toHaveLength(9);
   });
 
+  it("normalizes unknown command action details to a fixed bucket", async () => {
+    const db = mockD1([{ match: "INSERT INTO telegram_usage_daily", rows: [] }]);
+
+    await recordTelegramUsageEvent(db, {
+      nowSec: 1_771_833_600,
+      eventType: "unknown_command",
+      actionDetail: "/attacker-controlled-token",
+      outcome: "unknown",
+    });
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
+    expect(insert?.binds[3]).toBe("unknown");
+  });
+
   it("merges explicit top-coin follows with the preset-aware shape", async () => {
     const db = mockD1([
       {

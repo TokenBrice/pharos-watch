@@ -52,6 +52,8 @@ export interface TelegramUsageEventInput {
   failureClass?: string | null;
 }
 
+export const UNKNOWN_COMMAND_ACTION_DETAIL = "unknown";
+
 export interface TelegramCurrentLifecycleSnapshot {
   day: string;
   snapshotAt: number;
@@ -194,6 +196,11 @@ function clampDimension(value: string | null | undefined, fallback: string, maxL
   return safe.slice(0, maxLength) || fallback;
 }
 
+function usageActionDetail(input: TelegramUsageEventInput): string {
+  if (input.eventType === "unknown_command") return UNKNOWN_COMMAND_ACTION_DETAIL;
+  return clampDimension(input.actionDetail, "");
+}
+
 export function bucketTelegramCommandLatency(latencyMs: number | null | undefined): string {
   if (latencyMs == null || !Number.isFinite(latencyMs) || latencyMs < 0) return "unknown";
   if (latencyMs < 250) return "lt_250ms";
@@ -255,7 +262,7 @@ export async function recordTelegramUsageEvent(
         day,
         input.eventType,
         clampDimension(input.sourceCategory, "unknown"),
-        clampDimension(input.actionDetail, ""),
+        usageActionDetail(input),
         clampDimension(input.outcome, "unknown"),
         clampDimension(latencyBucket, "unknown"),
         clampDimension(input.failureClass, ""),

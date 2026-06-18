@@ -2330,11 +2330,17 @@ describe("handleTelegramWebhook", () => {
 
   it("replies unknown command", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/foo"), "test-secret", "bot-token");
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/attacker-controlled-token"), "test-secret", "bot-token");
 
     const body = sentMessageBody() as { text: string; reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> } };
     expect(body.text).toContain("Unknown command");
     expect((body.reply_markup?.inline_keyboard ?? []).flat()).toContainEqual({ text: "/help", callback_data: "help:commands" });
+
+    const usageRows = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
+    expect(usageRows.map((entry) => [entry.binds[1], entry.binds[3], entry.binds[4]])).toEqual([
+      ["unknown_command", "unknown", "unknown"],
+      ["command", "unknown", "unknown_command"],
+    ]);
   });
 
   it("handles /subscribe happy path with unique ticker", async () => {

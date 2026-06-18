@@ -280,7 +280,7 @@ describe("handleCallbackQuery", () => {
     const usageRow = history.find((h) => h.sql.includes("INSERT INTO telegram_usage_daily"));
     expect(usageRow).toBeDefined();
     expect(usageRow!.binds[1]).toBe("unknown_command");
-    expect(usageRow!.binds[3]).toBe("callback:garbage");
+    expect(usageRow!.binds[3]).toBe("unknown");
     expect(usageRow!.binds[4]).toBe("unknown");
 
     const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
@@ -302,7 +302,7 @@ describe("handleCallbackQuery", () => {
     expect(history).toHaveLength(1);
     expect(history[0].sql).toContain("INSERT INTO telegram_usage_daily");
     expect(history[0].binds[1]).toBe("unknown_command");
-    expect(history[0].binds[3]).toBe("callback:garbage");
+    expect(history[0].binds[3]).toBe("unknown");
     expect(history[0].binds[4]).toBe("unknown");
     expect(history[0].binds[6]).toBe("");
   });
