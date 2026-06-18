@@ -83,7 +83,7 @@ export default function CaseStudiesHub() {
             <Link
               key={study.slug}
               href={`/learn/case-studies/${study.slug}/`}
-              className="pharos-focus-ring group flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-4 transition-colors hover:border-frost-blue/60"
+              className="pharos-card-shell pharos-focus-ring group flex h-full flex-col p-4 transition-colors hover:border-frost-blue/60"
             >
               <p
                 className={cn(

@@ -17,6 +17,8 @@ export interface PollingQueryControlOptions {
   enabled?: boolean;
   retry?: number | boolean;
   retryDelay?: (attempt: number) => number;
+  staleTime?: number;
+  refetchInterval?: number | false;
   /**
    * Opt in to TanStack's stale-while-revalidate behavior (M1): keeps the prior
    * query result visible while a refetch is in flight instead of dropping to
@@ -80,8 +82,8 @@ export function createPollingQueryOptions<T>(
   return {
     queryKey: key,
     queryFn,
-    staleTime,
-    refetchInterval,
+    staleTime: opts?.staleTime ?? staleTime,
+    refetchInterval: opts?.refetchInterval ?? refetchInterval,
     retry: opts?.retry ?? 2,
     retryDelay: opts?.retryDelay ?? DEFAULT_RETRY_DELAY,
     enabled: opts?.enabled,
@@ -110,6 +112,8 @@ export function createApiPollingQueryOptions<T>(
       enabled: opts?.enabled,
       retry: opts?.retry,
       retryDelay: opts?.retryDelay,
+      staleTime: opts?.staleTime,
+      refetchInterval: opts?.refetchInterval,
       keepPreviousData: opts?.keepPreviousData,
     },
   );
@@ -130,6 +134,8 @@ export function createApiPollingQueryOptionsWithMeta<T>(
       enabled: opts?.enabled,
       retry: opts?.retry,
       retryDelay: opts?.retryDelay,
+      staleTime: opts?.staleTime,
+      refetchInterval: opts?.refetchInterval,
       keepPreviousData: opts?.keepPreviousData,
     },
   );

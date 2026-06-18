@@ -5,6 +5,9 @@ import { PegDeviationChart } from "@/components/peg-deviation-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import type { CaseStudyDataWidget } from "./content/types";
 
+const CASE_STUDY_CHART_DAYS = 1825;
+const CASE_STUDY_CHART_STALE_TIME_MS = 30 * 24 * 60 * 60 * 1000;
+
 /**
  * Live Pharos peg-deviation chart embedded in a case study. Hydrates
  * client-side via `useSupplyHistory` (fine under static export) and reuses the
@@ -12,7 +15,10 @@ import type { CaseStudyDataWidget } from "./content/types";
  * real series exists; historical pre-collection events omit `dataWidgets`.
  */
 export function CaseStudyChart({ widget }: { widget: CaseStudyDataWidget }) {
-  const { data, error } = useSupplyHistory(widget.coinId);
+  const { data, error } = useSupplyHistory(widget.coinId, CASE_STUDY_CHART_DAYS, {
+    staleTime: CASE_STUDY_CHART_STALE_TIME_MS,
+    refetchInterval: false,
+  });
 
   return (
     <figure className="overflow-hidden rounded-xl border border-border/50 bg-card/40">

@@ -36,13 +36,9 @@ function caseStudySectionId(index: number, heading: string): string {
 function ArticleMeta({ study }: { study: CaseStudy }) {
   const minutes = estimateCaseStudyReadingMinutes(study);
   return (
-    <div className="-mt-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-5">
       <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
         ~{minutes} min read
-        <span aria-hidden="true" className="px-1.5 text-muted-foreground/60">
-          ·
-        </span>
-        {study.eventDateLabel}
       </p>
       <CaseStudyShare />
     </div>
@@ -52,7 +48,7 @@ function ArticleMeta({ study }: { study: CaseStudy }) {
 function ArticleWayfinding({ study }: { study: CaseStudy }) {
   const items = [
     ...(study.takeaways?.length ? [{ href: "#key-takeaways", label: "Takeaways" }] : []),
-    ...(study.dataWidgets?.length ? [{ href: "#peg-on-the-tape", label: "Tape" }] : []),
+    { href: "#peg-on-the-tape", label: "Tape" },
     { href: "#timeline", label: "Timeline" },
     ...study.sections.map((section, index) => ({
       href: `#${caseStudySectionId(index, section.heading)}`,
@@ -297,6 +293,72 @@ function FactStrip({ study }: { study: CaseStudy }) {
   );
 }
 
+function formatEventWindowDate(dateISO: string): string {
+  const [year, month, day] = dateISO.split("T")[0].split("-").map(Number);
+  if (!year || !month || !day) return dateISO;
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function EvidenceSnapshot({ study }: { study: CaseStudy }) {
+  const windowLabel = study.eventWindow.endISO
+    ? `${formatEventWindowDate(study.eventWindow.startISO)} - ${formatEventWindowDate(study.eventWindow.endISO)}`
+    : formatEventWindowDate(study.eventWindow.startISO);
+  const recordLinks = [
+    ...(study.primaryCoinId
+      ? [{ href: `/stablecoin/${study.primaryCoinId}/`, label: "Stablecoin profile" }]
+      : []),
+    ...(study.cemeteryId ? [{ href: "/cemetery/", label: "Cemetery record" }] : []),
+    ...(study.depegEventSlug ? [{ href: "/depeg/", label: "Depeg tracker" }] : []),
+  ];
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/40 p-5 sm:p-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="space-y-1">
+          <p className="pharos-kicker text-muted-foreground">Event window</p>
+          <p className="font-mono text-sm text-foreground tabular-nums">{windowLabel}</p>
+        </div>
+        <div className="space-y-1">
+          <p className="pharos-kicker text-muted-foreground">Peak deviation</p>
+          <p className="font-mono text-sm text-foreground tabular-nums">
+            {study.eventWindow.peakDeviationBps != null
+              ? `${study.eventWindow.peakDeviationBps > 0 ? "+" : ""}${study.eventWindow.peakDeviationBps} bps`
+              : "n/a"}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="pharos-kicker text-muted-foreground">Lowest print</p>
+          <p className="font-mono text-sm text-foreground tabular-nums">
+            {study.eventWindow.lowPrice != null ? `$${study.eventWindow.lowPrice.toFixed(3)}` : "n/a"}
+          </p>
+        </div>
+      </div>
+      <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
+        This retrospective is anchored to the archived event window, source-backed timeline, and Pharos records rather than a live embedded series.
+      </p>
+      {recordLinks.length ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {recordLinks.map((link) => (
+            <Link
+              key={`${link.href}-${link.label}`}
+              href={link.href}
+              className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+            >
+              {link.label}
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function HowPharosSawIt({
   study,
   kickerClass,
@@ -304,18 +366,22 @@ function HowPharosSawIt({
   study: CaseStudy;
   kickerClass: string;
 }) {
-  if (!study.dataWidgets || study.dataWidgets.length === 0) return null;
+  const widgets = study.dataWidgets ?? [];
   return (
     <section id="peg-on-the-tape" className="space-y-6">
       <div className="space-y-2">
         <SectionKicker className={kickerClass}>How Pharos saw it</SectionKicker>
         <SectionHeading>The peg on the tape</SectionHeading>
       </div>
-      <div className="space-y-6">
-        {study.dataWidgets.map((widget, i) => (
-          <CaseStudyChart key={`${widget.coinId}-${i}`} widget={widget} />
-        ))}
-      </div>
+      {widgets.length ? (
+        <div className="space-y-6">
+          {widgets.map((widget, i) => (
+            <CaseStudyChart key={`${widget.coinId}-${i}`} widget={widget} />
+          ))}
+        </div>
+      ) : (
+        <EvidenceSnapshot study={study} />
+      )}
     </section>
   );
 }
@@ -350,7 +416,7 @@ function Narrative({
       {study.sections.map((section, i) => (
         <section key={i} id={caseStudySectionId(i, section.heading)} className="space-y-4">
           <SectionKicker className={kickerClass}>
-            {String(i + 1).padStart(2, "0")}
+            Section {String(i + 1).padStart(2, "0")}
           </SectionKicker>
           <SectionHeading>{section.heading}</SectionHeading>
           <div className="space-y-3 text-[15px] leading-relaxed text-muted-foreground">

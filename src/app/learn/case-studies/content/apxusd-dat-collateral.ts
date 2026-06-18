@@ -40,6 +40,7 @@ export const content: CaseStudy = {
   eventDateLabel: "June 2026 (ongoing)",
   eventWindow: {
     startISO: "2026-06-02",
+    endISO: "2026-06-18",
     peakDeviationBps: -1352,
     lowPrice: 0.8648,
   },

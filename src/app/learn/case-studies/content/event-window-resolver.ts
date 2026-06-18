@@ -9,12 +9,56 @@ export interface CaseStudyEventWindowResolverItem {
 }
 
 function eventWindowContains(study: CaseStudyEventWindowResolverItem, tsMs: number): boolean {
+  const bounds = eventWindowBounds(study);
+  if (!bounds) return false;
+  return tsMs >= bounds.matchStart && tsMs <= bounds.matchEnd;
+}
+
+function eventWindowBounds(study: CaseStudyEventWindowResolverItem) {
   const start = Date.parse(study.startISO);
   if (!Number.isFinite(start)) return false;
   const end = study.endISO
     ? Date.parse(study.endISO) + EVENT_MATCH_DAY_MS
     : start + 2 * EVENT_MATCH_DAY_MS;
-  return tsMs >= start - 2 * EVENT_MATCH_DAY_MS && tsMs <= end;
+  return {
+    start,
+    matchStart: start - 2 * EVENT_MATCH_DAY_MS,
+    matchEnd: end,
+    duration: end - start,
+  };
+}
+
+function findBestWindowMatch(
+  windows: readonly CaseStudyEventWindowResolverItem[],
+  coinId: string,
+  tsMs: number,
+  kind: "primary" | "related",
+): CaseStudyEventWindowResolverItem | undefined {
+  return windows
+    .filter((study) => {
+      const coinMatches =
+        kind === "primary"
+          ? study.primaryCoinId === coinId
+          : study.relatedCoinIds.includes(coinId);
+      return coinMatches && eventWindowContains(study, tsMs);
+    })
+    .map((study) => {
+      const bounds = eventWindowBounds(study);
+      return bounds
+        ? {
+            study,
+            distanceFromStart: Math.abs(tsMs - bounds.start),
+            duration: bounds.duration,
+          }
+        : null;
+    })
+    .filter((entry): entry is { study: CaseStudyEventWindowResolverItem; distanceFromStart: number; duration: number } => Boolean(entry))
+    .sort(
+      (a, b) =>
+        a.distanceFromStart - b.distanceFromStart ||
+        a.duration - b.duration ||
+        a.study.slug.localeCompare(b.study.slug),
+    )[0]?.study;
 }
 
 export function resolveCaseStudySlugForEvent(
@@ -22,13 +66,9 @@ export function resolveCaseStudySlugForEvent(
   coinId: string,
   tsMs: number,
 ): string | undefined {
-  const primary = windows.find(
-    (study) => study.primaryCoinId === coinId && eventWindowContains(study, tsMs),
-  );
+  const primary = findBestWindowMatch(windows, coinId, tsMs, "primary");
   if (primary) return primary.slug;
 
-  const related = windows.find(
-    (study) => study.relatedCoinIds.includes(coinId) && eventWindowContains(study, tsMs),
-  );
+  const related = findBestWindowMatch(windows, coinId, tsMs, "related");
   return related?.slug;
 }

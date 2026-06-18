@@ -271,7 +271,7 @@ export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem
     "primaryCoinId": null,
     "relatedCoinIds": [],
     "startISO": "2022-03-31",
-    "endISO": "2022-04-04"
+    "endISO": "2022-05-11"
   },
   {
     "slug": "fei-protocol",
@@ -285,7 +285,7 @@ export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem
     "primaryCoinId": "usr-resolv",
     "relatedCoinIds": [],
     "startISO": "2026-03-22",
-    "endISO": null
+    "endISO": "2026-04-27"
   },
   {
     "slug": "stream-elixir-contagion-2025",
@@ -397,7 +397,7 @@ export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem
       "apyusd-apyx"
     ],
     "startISO": "2026-06-02",
-    "endISO": null
+    "endISO": "2026-06-18"
   }
 ];
 

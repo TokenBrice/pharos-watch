@@ -19,7 +19,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   if (!CASE_STUDY_SLUGS.has(slug)) {
-    return { title: "Not Found", robots: { index: false } };
+    return { title: "Not Found", robots: { index: false, follow: false } };
   }
   const study = CASE_STUDIES[slug];
   return buildPageMetadata({

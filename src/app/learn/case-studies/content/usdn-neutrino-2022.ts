@@ -22,7 +22,7 @@ export const content: CaseStudy = {
   eventDateLabel: "April 2022",
   eventWindow: {
     startISO: "2022-03-31",
-    endISO: "2022-04-04",
+    endISO: "2022-05-11",
     lowPrice: 0.66,
   },
   cemeteryId: "usdn-neutrino-usd-2022-04",

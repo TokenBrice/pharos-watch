@@ -13,6 +13,7 @@ import {
   CASE_STUDY_EVENT_WINDOWS,
   caseStudySlugForEvent as clientCaseStudySlugForEvent,
 } from "../content/client-index";
+import { resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows } from "../content/event-window-resolver";
 import type { CaseStudy } from "../content/types";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
@@ -191,6 +192,12 @@ describe("case-study content", () => {
     });
 
     it("has timeline, sections, watchpoints, and sources", () => {
+      expect(study.eyebrow.trim()).not.toBe("");
+      expect(study.title.trim()).not.toBe("");
+      expect(study.subtitle.trim()).not.toBe("");
+      expect(study.eventDateLabel.trim()).not.toBe("");
+      expect(study.metaDescription.trim()).not.toBe("");
+      expect(study.lead.length).toBeGreaterThan(0);
       expect(study.timeline.length).toBeGreaterThan(0);
       expect(study.sections.length).toBeGreaterThan(0);
       expect(study.watchpoints.length).toBeGreaterThan(0);
@@ -211,6 +218,15 @@ describe("case-study content", () => {
         expect(next, `timeline out of order at ${entry.dateISO}`).toBeGreaterThanOrEqual(previous);
         previous = next;
       }
+
+      const highSeverityAfterWindow = study.timeline
+        .filter((entry) => (entry.severity ?? "low") === "high")
+        .filter((entry) => Date.parse(entry.dateISO) > windowEnd)
+        .map((entry) => `${entry.dateISO} ${entry.headline}`);
+      expect(
+        highSeverityAfterWindow,
+        `high-severity timeline entries after eventWindow.endISO in ${study.slug}`,
+      ).toEqual([]);
     });
 
     it("uses parseable publication dates that are not in the future", () => {
@@ -245,6 +261,19 @@ describe("case-study content", () => {
           Math.abs(study.eventWindow.peakDeviationBps),
           `implausible peakDeviationBps: ${study.eventWindow.peakDeviationBps}`,
         ).toBeLessThanOrEqual(10_000);
+      }
+    });
+
+    it("keeps data widgets attached to the subject or related coins", () => {
+      const allowedWidgetCoinIds = new Set([
+        study.primaryCoinId,
+        ...(study.relatedCoins ?? []).map((coin) => coin.coinId),
+      ].filter(Boolean));
+      for (const widget of study.dataWidgets ?? []) {
+        expect(
+          allowedWidgetCoinIds.has(widget.coinId),
+          `dataWidget coinId is not attached to ${study.slug}: ${widget.coinId}`,
+        ).toBe(true);
       }
     });
 
@@ -294,5 +323,28 @@ describe("caseStudySlugForEvent", () => {
         );
       }
     }
+  });
+
+  it("selects the closest overlapping related window independent of registry order", () => {
+    const ts = Date.UTC(2026, 0, 15);
+    const windows = [
+      {
+        slug: "wide-window",
+        primaryCoinId: null,
+        relatedCoinIds: ["test-coin"],
+        startISO: "2026-01-01",
+        endISO: "2026-01-31",
+      },
+      {
+        slug: "near-window",
+        primaryCoinId: null,
+        relatedCoinIds: ["test-coin"],
+        startISO: "2026-01-14",
+        endISO: "2026-01-16",
+      },
+    ];
+
+    expect(resolveCaseStudySlugForEventFromWindows(windows, "test-coin", ts)).toBe("near-window");
+    expect(resolveCaseStudySlugForEventFromWindows([...windows].reverse(), "test-coin", ts)).toBe("near-window");
   });
 });

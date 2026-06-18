@@ -148,10 +148,10 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
                   aria-hidden="true"
                   className="pointer-events-none relative row-start-2 flex items-center self-center"
                 >
-                  <span className="pharos-timeline-line h-0.5 w-full bg-foreground/30" />
+                  <span className="pharos-timeline-line h-0.5 w-full bg-foreground/40" />
                   {/* Stem binding the event card to its point on the axis. */}
                   <span
-                    className={`absolute left-1.5 h-5 w-px -translate-x-1/2 bg-foreground/20 ${
+                    className={`absolute left-1.5 h-5 w-px -translate-x-1/2 bg-foreground/40 ${
                       above ? "bottom-1/2" : "top-1/2"
                     }`}
                   />
@@ -160,7 +160,7 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
                     className={`absolute left-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ring-4 ring-background ${SEVERITY_DOT[severity]}`}
                   />
                   {isLast ? (
-                    <span className="absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[5px] border-l-[9px] border-y-transparent border-l-foreground/30" />
+                    <span className="absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[5px] border-l-[9px] border-y-transparent border-l-foreground/40" />
                   ) : null}
                 </div>
               </li>
