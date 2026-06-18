@@ -533,7 +533,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/digest-risk-summary.ts` - selectDigestRiskSignal
 - `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
-- ... 120 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 121 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 

@@ -6,7 +6,7 @@ For the broader Telegram subsystem behavior (commands, alert pipelines, schema),
 
 ## Overview
 
-The Mini App is the Telegram-native control panel for managing PharosWatchBot subscriptions, quiet hours, snooze state, and delivery health. It is served as a static Next.js route under `/pharoswatchbot/app/` and hosted at `https://pharos.watch/pharoswatchbot/app/`. The route is `noindex`-marked because it is an embedded tool, not SEO content.
+The Mini App is the Telegram-native control panel for managing PharosWatchBot subscriptions, quiet hours, snooze state, and delivery health. It is served as a static Next.js route under `/pharoswatchbot/app/` and hosted at `https://pharos.watch/pharoswatchbot/app/`. The route is marked `noindex,nofollow`, disallowed in `robots.ts`, and omitted from the sitemap because it is an embedded tool, not SEO content.
 
 Launch is private-chat scoped for the current phase: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies. Group, supergroup, and channel chats remain in command-only mode until a fresh admin verification path and group-scoped launch ownership model exist.
 
@@ -50,7 +50,7 @@ Recognized payloads:
 | `home` | Home panel | Default if no payload, or used by the `/start` skip branch. |
 | `settings` | Settings panel | Global alert toggles, depeg step, quiet hours, clear snooze; used by `/help` and `/settings`. |
 | `watchlist` | Watchlist panel | Per-coin subscriptions and tune controls; used by `/list` and all-stablecoin `/set` confirmations. |
-| `coin_<stablecoinId>` | Watchlist panel scrolled to coin row | Used by per-coin Web App buttons, `/status`, quick-subscribe confirmations, alert keyboards, and per-coin `/set` confirmations. |
+| `coin_<stablecoinId>` | Watchlist panel scrolled to coin row or launch-target card | Used by per-coin Web App buttons, `/status`, quick-subscribe confirmations, alert keyboards, and per-coin `/set` confirmations. If the coin is in the Mini App catalog but not already followed, the Watchlist tab renders a followable Launch target card. |
 | `why_<stablecoinId>` | Watchlist panel with an in-app why view | Used by `/why` launch contexts and Mini App coin cards. Shows available Mini App watch context and keeps the existing bot-DM `/why` deep link as the full explainer fallback. |
 | `coverage_<stablecoinId>` | Watchlist panel with an in-app coverage view | Used by `/coverage` launch contexts and Mini App coin cards. Shows available Mini App catalog/watch context and keeps the existing bot-DM `/coverage` deep link as the full coverage-card fallback. |
 | `presets` | Presets panel | Followed presets plus available ones; used by `/presets`. |
@@ -60,7 +60,7 @@ Recognized payloads:
 | `forget` | Settings panel | Used by the `/forget` command danger-zone entrypoint. |
 | `setup_recommended` | Watchlist panel | Legacy alias retained for older launch buttons. |
 
-Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. In practice every payload we emit stays well under 64. No spaces, lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is no longer in the Mini App catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`. Signed `initData.start_param` values outside the Mini App payload envelope are ignored as `null` rather than rejecting the whole session.
+Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. In practice every payload we emit stays well under 64. No spaces, lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is in the Mini App catalog but not already followed render a launch-target card with Follow / Why / Coverage / View actions; ids no longer in the catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`. Signed `initData.start_param` values outside the Mini App payload envelope are ignored as `null` rather than rejecting the whole session.
 
 The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. The schema literals in `worker/src/api/telegram-mini-app-schemas.ts` and `src/app/pharoswatchbot/app/types.ts` must be edited in lockstep if that default changes; broader preset follows use the separate `follow-preset` mutation.
 
@@ -84,13 +84,13 @@ The Mini App seam does not receive Telegram webhook updates and does not call th
 
 ## Effective Alert Source
 
-Each followed coin's `CoinCard` renders a compact source chip derived purely from already-projected session state (`computeEffectiveSource(coin, globalAlerts, presets)` in `src/app/pharoswatchbot/app/format.ts`), so it adds no extra reads. The chip mirrors the `/list` precedence model (**per-coin > preset > all-stablecoins**, see [`telegram-alerts.md`](./telegram-alerts.md)):
+Each followed coin's `CoinCard` renders a compact source chip derived purely from already-projected session state (`computeEffectiveSource(coin, globalAlerts, presets)` in `src/app/pharoswatchbot/app/format.ts`), so it adds no extra reads. The helper mirrors the `/list` precedence model (**per-coin > preset > all-stablecoins**, see [`telegram-alerts.md`](./telegram-alerts.md)), while the current chip copy collapses preset/global coverage into override-oriented labels because the session payload does not expand preset membership per coin:
 
 - **Per-coin** — the coin has at least one explicit per-coin alert flag enabled; that lane wins over preset/global.
 - **Muted override** — the coin row exists with every flag off, so it actively suppresses any preset/global default for the coin (the C02 per-coin `off` precedence).
-- **Preset** / **All-stablecoins** — no per-coin flag is set but a followed preset or a global default would otherwise cover the coin.
+- **All-stablecoins** — fallback chip for displayed snooze-only/off rows that have no enabled per-coin flag and no preset/global coverage.
 
-`computeEffectiveSource` returns the source per alert type; the chip shows the dominant lane. `PresetsPanel` labels preset coverage at the preset level only — it does not expand presets into member coins, because preset→coin membership is not in the session payload and client-side expansion would be cache-dependent. The chip is display-only and changes no fan-out behavior.
+`computeEffectiveSource` returns the source per alert type; the chip shows the dominant display lane. Followed preset coverage without an explicit per-coin flag resolves to `off-override` for display purposes, not a positive `Preset` chip. `PresetsPanel` labels preset coverage at the preset level only — it does not expand presets into member coins, because preset→coin membership is not in the session payload and client-side expansion would be cache-dependent. The chip is display-only and changes no fan-out behavior.
 
 ## Auth Model
 

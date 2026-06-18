@@ -1,6 +1,6 @@
 # Telegram Architecture Seams
 
-Status: frozen for internal reorganization until **2026-06-13** (see [Freeze period](#freeze-period)).
+Status: post-freeze structural baseline; the internal-reorganization freeze ended on **2026-06-13** (see [Historical freeze period](#historical-freeze-period)).
 
 This is the load-bearing structural doc for PharosWatchBot's worker-side code. It names each seam, declares ownership and allowed dependencies, and lists the symptoms that should trigger a re-evaluation. For *what the bot does* (commands, alert types, schema, runbooks) see [`telegram-alerts.md`](./telegram-alerts.md).
 
@@ -166,7 +166,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 - `worker/src/cron/dispatch-telegram-subscribers.ts` (subscriber/preset/global row loading, per-coin snooze map, subscriber-map merge)
 - `worker/src/cron/dispatch-telegram-alerts-observability.ts` (systemic fresh-failure observability)
 - `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly)
-- `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, quiet-hours filter, chunk expansion)
+- `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, cheap chunk estimation, newest-first pre-format selection, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
 - `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, alert context/reason builders, durable job manifests, per-target audit)
 - `worker/src/cron/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
@@ -195,7 +195,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
 - `worker/src/cron/telegram-pending/*` (enqueue, claim/drain, backoff, capacity, cleanup, dead-letter, dedupe, lifecycle helpers)
-- The pending-queue-related constants in `worker/src/lib/telegram-constants.ts` (`PENDING_TTL_SEC`, `PENDING_BACKOFF_SCHEDULE_SEC`, `PENDING_MAX_ATTEMPTS`, `SEND_BATCH_SIZE`, `TELEGRAM_PENDING_DRAIN_BUDGET`, `TELEGRAM_PENDING_PRIORITY`, `TELEGRAM_ALERT_TTL_SEC`, `TELEGRAM_DISPATCH_INTERVAL_SEC`, `BLOCK_STRIKE_WINDOW_SEC`, `PENDING_NEAR_TTL_WINDOW_SEC`)
+- The pending-queue-related constants in `worker/src/lib/telegram-constants.ts` (`PENDING_TTL_SEC`, `PENDING_BACKOFF_SCHEDULE_SEC`, `PENDING_MAX_ATTEMPTS`, `SEND_BATCH_SIZE`, `TELEGRAM_PENDING_DRAIN_BUDGET`, `TELEGRAM_PENDING_PRIORITY`, `TELEGRAM_ALERT_TTL_SEC`, `TELEGRAM_DISPATCH_INTERVAL_SEC`, `TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE`, `TELEGRAM_FORMAT_BUDGET_ALLOWANCE`, `BLOCK_STRIKE_WINDOW_SEC`, `PENDING_NEAR_TTL_WINDOW_SEC`)
 
 **Allowed inbound dependencies.** Dispatch (the only legitimate enqueuer for alerts), Admin Telegram routes (`admin-telegram-broadcast.ts`, `admin-telegram-resend.ts`, `admin-telegram-pending.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram-alerts.ts` keyboard).
 
@@ -270,8 +270,16 @@ Per-coin subscription writes have two deliberate modes: subscribe-style follows 
 **Owned files.**
 - `src/app/pharoswatchbot/app/page.tsx`
 - `src/app/pharoswatchbot/app/client.tsx`
+- `src/app/pharoswatchbot/app/components/*`
+- `src/app/pharoswatchbot/app/constants.ts`
+- `src/app/pharoswatchbot/app/error-messages.ts`
+- `src/app/pharoswatchbot/app/format.ts`
+- `src/app/pharoswatchbot/app/mini-app-api.ts`
 - `src/app/pharoswatchbot/app/telegram-sdk.ts`
 - `src/app/pharoswatchbot/app/types.ts`
+- `src/app/pharoswatchbot/app/use-mini-app-mutations.ts`
+- `src/app/pharoswatchbot/app/use-telegram-bridge.ts`
+- `src/app/pharoswatchbot/app/use-telegram-main-button.ts`
 - `worker/src/api/telegram-mini-app.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
@@ -323,20 +331,20 @@ Several `harden` and `fix` commits between those reshaped behavior inside the se
 
 ---
 
-## Freeze period
+## Historical freeze period
 
-**Until 2026-06-13** (30 days from 2026-05-14), the Telegram code is **frozen for internal reorganization**.
+The 30-day Telegram internal-reorganization freeze ran until **2026-06-13** (30 days from 2026-05-14). As of 2026-06-18, it is historical context, not an active blanket freeze.
 
-The implemented PharosWatchBot audit closeout on 2026-05-14 is treated as the frozen baseline. Do not use those already-landed refactors as precedent for more file moves, helper extraction, or seam changes during the freeze.
+The implemented PharosWatchBot audit closeout on 2026-05-14 remains the structural baseline. Do not use those already-landed refactors as precedent for casual file moves, helper extraction, or seam changes. Future structural Telegram changes should update this doc first, then move code in a separate, clearly motivated change.
 
-Allowed during the freeze:
+Still acceptable without reopening the seam model:
 - Bug fixes that change behavior.
 - New commands or callbacks (add a handler file in `webhook-commands/`, add to `CALLBACK_ACTIONS`, etc.).
 - New tests, new docs.
 - Adding fields to existing helpers or types.
 - Behavioral hardening (rate limits, retry rules, threshold tuning, idempotency improvements) inside an existing seam.
 
-Not allowed during the freeze, unless a real bug forces it and the fix narrative is in the commit message:
+Treat these as doc-first structural changes, unless a real bug forces them and the fix narrative is in the commit message:
 - "Extract helpers" / "split file" / "rename module" / "move type" refactors.
 - New seams, new top-level Telegram directories, new layered abstractions.
 - Reorganizing the `COMMAND_HANDLERS` table or the `CALLBACK_ACTIONS` allowlist for stylistic reasons.
@@ -361,7 +369,7 @@ If two or more of these happen, re-evaluate the seams (revise this doc, then ref
 
 ## Architectural tension flagged but not prescribed
 
-- **`worker/src/lib/telegram-alerts.ts` remains the stable import path for Common alert helpers, but implementation now lives in parser and formatter modules.** Keep the barrel so existing imports stay stable; do not create additional Common submodules during the freeze without a bug-driven reason.
+- **`worker/src/lib/telegram-alerts.ts` remains the stable import path for Common alert helpers, but implementation now lives in parser and formatter modules.** Keep the barrel so existing imports stay stable; do not create additional Common submodules without a doc-first seam update or a bug-driven reason.
 
 - **Callback routing now routes mutating callback writes through `telegram-webhook-store.ts` or `telegram-webhook-settings-mutations.ts`.** New mutating callbacks should continue using those persistence helpers rather than adding inline SQL back into `telegram-webhook-callbacks.ts`.
 

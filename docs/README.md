@@ -135,6 +135,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/feed/methodology.xml/`                        | [architecture.md](./architecture.md), [methodology-page.md](./methodology-page.md)                                                                    |
 | `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
 | `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
+| `/learn/`                                       | [learn-page.md](./learn-page.md), [learn-mechanisms-page.md](./learn-mechanisms-page.md)                                                              |
 | `/learn/case-studies/`                          | [learn-page.md](./learn-page.md)                                                                                                                      |
 | `/learn/case-studies/[slug]/`                   | [learn-page.md](./learn-page.md), [depeg-detection.md](./depeg-detection.md)                                                                          |
 | `/learn/glossary/`                              | [learn-page.md](./learn-page.md), [methodology-page.md](./methodology-page.md)                                                                        |
@@ -164,7 +165,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/infrastructure/`                  | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/pharoswatchbot/`                              | [telegram-alerts.md](./telegram-alerts.md) — canonical PharosWatchBot page; `/telegram` is a redirect alias                                           |
-| `/pharoswatchbot/app/`                          | [telegram-mini-app.md](./telegram-mini-app.md) — Telegram Mini App surface; metadata is noindex                                                       |
+| `/pharoswatchbot/app/`                          | [telegram-mini-app.md](./telegram-mini-app.md) — Telegram Mini App surface; metadata is noindex/nofollow, robots-disallowed, and omitted from sitemap |
 | `/upcoming/`                                    | [upcoming-page.md](./upcoming-page.md)                                                                                                                |
 | `/yield/`                                       | [yield-intelligence.md](./yield-intelligence.md)                                                                                                      |
 
@@ -176,6 +177,7 @@ These routes are not public product surfaces, but they are part of the maintaine
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/admin/`     | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
 | `/admin-api/` | [api-page.md](./api-page.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints)                 |
+| `/api/admin/*` | [api-page.md](./api-page.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints)                 |
 
 ## Route Contract Update Checklist
 

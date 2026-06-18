@@ -6,7 +6,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` / `HEAD /api/og/*` return `image/png` for known image routes, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
-> **Agent navigation** — this reference is ~4,000 lines; never read it wholesale. Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Admin Auth And Idempotency · Public Endpoints (the generated quick-reference table lists every route) · Pages Function endpoints · Admin Endpoints. For one route, grep its path (e.g. `/api/stablecoins`).
+> **Agent navigation** — this reference is ~5,200 lines; never read it wholesale. Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Admin Auth And Idempotency · Public Endpoints (the generated quick-reference table lists every route) · Pages Function endpoints · Admin Endpoints. For one route, grep its path (e.g. `/api/stablecoins`).
 
 ## Surface Split
 
@@ -287,6 +287,8 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/admin-telegram-broadcast`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
+
+`POST /api/telegram-pending` is conditional: mutating clears use idempotency, but dry-run previews (`dry_run`, `dryRun`, or `dry-run`) bypass idempotency bookkeeping and return the current match count directly.
 
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 
@@ -2684,8 +2686,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.29",
-    "currentVersion": "8.29",
+    "version": "8.292",
+    "currentVersion": "8.292",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -3413,7 +3415,7 @@ Key fields:
 - `catalog` — recommended presets and searchable tracked stablecoins for the UI.
 - `health` — last successful delivery/reply, recent failure class, and queued alert count.
 
-Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `429` cooldown, `503` missing bot-token configuration.
+Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `413` request body above the 16 KiB Mini App cap, `429` cooldown, `500` uncaught handler failure wrapper, `503` missing bot-token configuration.
 
 ### `POST /api/telegram-mini-app/mutate`
 
@@ -3457,7 +3459,7 @@ Supported `operation.kind` values:
 - `remove-coin` — remove one explicit coin subscription.
 - `follow-preset` / `unfollow-preset` — add or remove a dynamic preset watchlist.
 
-Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `429` cooldown; `503` preset cache unavailable or missing bot-token configuration.
+Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `413` request body above the 16 KiB Mini App cap; `429` cooldown; `500` uncaught handler failure wrapper; `503` preset cache unavailable or missing bot-token configuration.
 
 ### `POST /api/telegram-webhook`
 
@@ -3477,6 +3479,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 
 - `/start` — Welcome/setup wizard with onboarding examples plus `@pharoswatch` and `@pharoswatchers` links
 - `/presets` — List the preset watchlist catalog and example commands
+- `/sample` — Private preview of example alert copy and supported alert families
 - `/subscribe <types> <targets>` — Subscribe to alerts for explicit coins or preset watchlists (types: dews, depeg, safety, launch)
 - `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
 - `/unsubscribe <targets>` — Remove explicit coin subscriptions or the concrete coin rows covered by a preset watchlist
@@ -3486,7 +3489,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/settings` — Open the inline-keyboard settings menu
 - `/mute <start>-<end>` — Enable quiet hours (in the subscriber's configured timezone, defaulting to UTC)
 - `/unmutehours` — Disable quiet hours
-- `/timezone [<IANA zone>]` — Show or set the subscriber's timezone for quiet hours; without an argument it offers a quick-pick keyboard
+- `/timezone [<IANA zone>]` — Show or set the subscriber's timezone for quiet hours; private chats without an argument offer a quick-pick keyboard, while group reads omit the keyboard and ask an admin to set a zone explicitly
 - `/status <ticker>` — Read-only per-coin status summary
 - `/brief` (alias: `/market`) — Market brief built from current cached datasets
 - `/top <view>` — Top movers/leaders for `depeg`, `dews`, `yield`, `liquidity`, `chains`, or `safety`
@@ -3496,9 +3499,10 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/unsnooze` — Clear an active alert snooze without waiting for it to expire
 - `/cancel` — Cancel a pending disambiguation flow
 - `/list` — Show current subscriptions, per-coin settings, and quiet hours
+- `/forget` — Private two-step deletion flow for the subscriber row and mutable alert settings
 - `/help` — Command reference
 
-Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically at dispatch/list/status time. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
+Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically when follow/unfollow mutations need concrete rows and when dispatch fan-out builds target alerts. `/list` displays stored preset rows directly, and `/status` is a per-coin read. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
 
 ---
 
@@ -3507,6 +3511,16 @@ Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dyn
 These endpoints are served by Cloudflare Pages Functions from the website host (`pharos.watch`), not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required, they do not appear in the OpenAPI artifact, and they do not honor `Idempotency-Key`.
 
 Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are snapshot storage for the website UI, not a public integration API.
+
+Pages Function inventory:
+
+| Surface | Function | Contract |
+| --- | --- | --- |
+| `GET /_site-data/*` | `functions/_site-data/[[path]].ts` | Same-origin browser data proxy to the Worker site-data lane. |
+| `/api/admin/*` | `functions/api/admin/[[path]].ts` | Same-origin operator proxy from `ops.pharos.watch` to `ops-api.pharos.watch`. |
+| `GET /admin/*`, `GET /admin-api/*` | `functions/admin/[[path]].ts`, `functions/admin-api/[[path]].ts` | Operator-host asset gates for Access-protected admin surfaces. |
+| `GET /stablecoin/:legacy-id` | `functions/stablecoin/[[path]].ts` | Redirect shim for legacy numeric stablecoin URLs. |
+| `GET /selector-snapshot/:sid`, `POST /selector-snapshot` | `functions/selector-snapshot/[[path]].ts` | Stablecoin Picker frozen snapshot read/write surface. |
 
 ### `GET /selector-snapshot/:sid`
 
