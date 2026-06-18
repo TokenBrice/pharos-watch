@@ -174,6 +174,24 @@ function parseReceiptLogs(config: ContractEventConfig, logs: ParsedReceiptLog[])
   return rows;
 }
 
+function redactUrlSecrets(message: string): string {
+  return message.replace(/https?:\/\/[^\s)'",]+/g, (rawUrl) => {
+    try {
+      const url = new URL(rawUrl);
+      return `${url.origin}/[redacted]`;
+    } catch {
+      return "[redacted-url]";
+    }
+  });
+}
+
+function formatRpcErrorForLog(error: unknown): string {
+  if (error instanceof Error) {
+    return `${error.name}: ${redactUrlSecrets(error.message)}`;
+  }
+  return redactUrlSecrets(String(error));
+}
+
 function buildInsertStatement(row: BlacklistRow): string {
   return `INSERT OR IGNORE INTO blacklist_events
     (id, stablecoin, chain_id, chain_name, event_type, address, amount, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider, explorer_tx_url, explorer_address_url)
@@ -248,7 +266,7 @@ export async function runEventReconciliation(
       }
     } catch (error) {
       dependencies.log?.(
-        `Skipping ${candidate.asset} ${candidate.tx_hash}: receipt fetch failed (${error instanceof Error ? error.message : String(error)})`,
+        `Skipping ${candidate.asset} ${candidate.tx_hash}: receipt fetch failed (${formatRpcErrorForLog(error)})`,
       );
     }
   }

@@ -75,6 +75,34 @@ describe("event kyc.rip reconciliation", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("receipt fetch failed"));
   });
 
+  it("redacts secret-bearing RPC URLs from receipt fetch errors", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(okPayload(eventRows));
+    const d1 = createRemoteD1Mock([]);
+    const client = {
+      getTransactionReceipt: vi.fn().mockRejectedValue(
+        new Error(
+          "HTTP request failed. URL: https://eth-mainnet.g.alchemy.com/v2/LEAKED_ALCHEMY_KEY?token=LEAKED_QUERY_SECRET Status: 429",
+        ),
+      ),
+      getBlock: vi.fn(),
+    } as never;
+    const log = vi.fn();
+
+    await runEventReconciliation(
+      { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
+      { fetchImpl, d1, client, log },
+    );
+
+    const receiptFailureLog = log.mock.calls
+      .map(([message]) => String(message))
+      .find((message) => message.includes("receipt fetch failed"));
+
+    expect(receiptFailureLog).toContain("https://eth-mainnet.g.alchemy.com/[redacted]");
+    expect(receiptFailureLog).toContain("Status: 429");
+    expect(receiptFailureLog).not.toContain("LEAKED_ALCHEMY_KEY");
+    expect(receiptFailureLog).not.toContain("LEAKED_QUERY_SECRET");
+  });
+
   it("queries D1 in apply mode and skips inserts for already-known addresses", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload(eventRows));
     const d1 = createRemoteD1Mock([
