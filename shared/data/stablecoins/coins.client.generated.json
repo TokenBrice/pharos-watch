@@ -1589,7 +1589,16 @@
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "not-applicable"
+          "modulesOrGuardsStatus": "not-applicable",
+          "keyCustodyAttestation": {
+            "kind": "mpc",
+            "sources": [
+              {
+                "label": "Avant secure asset management",
+                "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+              }
+            ]
+          }
         },
         {
           "authorityType": "issuer-backend",
@@ -11802,7 +11811,20 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "canRaiseCap": true
+          "canRaiseCap": true,
+          "keyCustodyAttestation": {
+            "kind": "mpc",
+            "sources": [
+              {
+                "label": "KAG proxy on Etherscan (Fireblocks Proxy, ERC1967)",
+                "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+              },
+              {
+                "label": "ERC20F implementation (Fireblocks)",
+                "url": "https://etherscan.io/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+              }
+            ]
+          }
         }
       ]
     },
@@ -11841,7 +11863,20 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "canRaiseCap": true
+          "canRaiseCap": true,
+          "keyCustodyAttestation": {
+            "kind": "mpc",
+            "sources": [
+              {
+                "label": "KAU proxy on Etherscan (Fireblocks Proxy, ERC1967)",
+                "url": "https://etherscan.io/address/0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+              },
+              {
+                "label": "ERC20F implementation (Fireblocks)",
+                "url": "https://etherscan.io/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+              }
+            ]
+          }
         }
       ]
     },
@@ -13037,7 +13072,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "mintIncidents": [
         {
           "date": "2024-01-30",
@@ -16168,7 +16203,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "bounded-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "controls": [
         {
           "authorityType": "unknown",
@@ -21041,7 +21076,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "controls": [
         {
           "authorityType": "unknown",
@@ -22810,7 +22845,7 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "controls": [
         {
           "authorityType": "unknown",
@@ -23910,7 +23945,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "controls": [
         {
           "authorityType": "eoa",
@@ -25565,13 +25600,31 @@
           "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": false,
-          "modulesOrGuardsStatus": "not-applicable"
+          "modulesOrGuardsStatus": "not-applicable",
+          "keyCustodyAttestation": {
+            "kind": "hsm",
+            "sources": [
+              {
+                "label": "USDtb mint and redeem docs",
+                "url": "https://docs.usdtb.money/mint-and-redeem"
+              }
+            ]
+          }
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "not-applicable"
+          "modulesOrGuardsStatus": "not-applicable",
+          "keyCustodyAttestation": {
+            "kind": "hsm",
+            "sources": [
+              {
+                "label": "USDtb introduction",
+                "url": "https://docs.usdtb.money/introduction"
+              }
+            ]
+          }
         }
       ]
     },
@@ -25826,7 +25879,7 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "controls": [
         {
           "authorityType": "eoa",
@@ -26360,7 +26413,7 @@
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "controls": [
         {
           "authorityType": "contract",
@@ -30034,7 +30087,7 @@
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "controls": [
         {
           "authorityType": "contract",
@@ -30448,7 +30501,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "mintIncidents": [
         {
           "date": "2025-03-01",
