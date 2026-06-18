@@ -95,6 +95,7 @@ interface CurrentAggregateRow {
   active_depeg_opt_ins: number | string | null;
   active_safety_opt_ins: number | string | null;
   active_launch_opt_ins: number | string | null;
+  active_reserve_opt_ins: number | string | null;
   active_all_types_opt_ins: number | string | null;
   quiet_hours_enabled_chats: number | string | null;
 }
@@ -149,7 +150,8 @@ const ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL = `SELECT chat_id,
         MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
         MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
         MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled,
-        MAX(CASE WHEN alert_launch = 1 THEN 1 ELSE 0 END) AS launch_enabled
+        MAX(CASE WHEN alert_launch = 1 THEN 1 ELSE 0 END) AS launch_enabled,
+        MAX(CASE WHEN alert_reserve = 1 THEN 1 ELSE 0 END) AS reserve_enabled
    FROM telegram_subscriptions
   GROUP BY chat_id`;
 
@@ -417,6 +419,13 @@ export async function computeTelegramCurrentLifecycleSnapshot(
            ) AS active_launch_opt_ins,
            SUM(
              CASE
+               WHEN COALESCE(sub.reserve_enabled, 0) = 1
+                 OR s.global_alert_reserve = 1
+               THEN 1 ELSE 0
+             END
+           ) AS active_reserve_opt_ins,
+           SUM(
+             CASE
                WHEN (
                    COALESCE(sub.dews_enabled, 0) = 1
                    OR COALESCE(preset.dews_enabled, 0) = 1
@@ -482,6 +491,7 @@ export async function computeTelegramCurrentLifecycleSnapshot(
       depeg: coerceCount(aggregate?.active_depeg_opt_ins),
       safety: coerceCount(aggregate?.active_safety_opt_ins),
       launch: coerceCount(aggregate?.active_launch_opt_ins),
+      reserve: coerceCount(aggregate?.active_reserve_opt_ins),
       allTypes: coerceCount(aggregate?.active_all_types_opt_ins),
     },
     quietHoursEnabledChats: coerceCount(aggregate?.quiet_hours_enabled_chats),

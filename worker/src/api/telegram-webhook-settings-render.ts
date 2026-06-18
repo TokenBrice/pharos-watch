@@ -101,6 +101,7 @@ export function buildCoinMessage(coinId: string, row: SubscriptionRow | null): s
     `Safety mode: ${escapeHtml(describeSafety(row))}`,
     `Depeg step: ${escapeHtml(describeDepeg(row))}`,
     `Launch: ${row?.alert_launch ? "on" : "off"}`,
+    `Reserve: ${row?.alert_reserve ? "on" : "off"}`,
     "",
     "Tap a row to change.",
   ].join("\n");
@@ -115,6 +116,7 @@ export function buildCoinKeyboard(
   const safetyMode = row?.alert_safety ? row?.safety_mode ?? "all" : null;
   const depegStep: number | "off" = row?.alert_depeg ? row?.depeg_worsening_bps_step ?? -1 : "off";
   const launchOn = Boolean(row?.alert_launch);
+  const reserveOn = Boolean(row?.alert_reserve);
 
   const rows: SettingsButton[][] = [
     buildDewsRow(coinId, dewsBand),
@@ -123,6 +125,10 @@ export function buildCoinKeyboard(
     [
       { text: `${markIf(launchOn)}on`, callback_data: `settings:c:${coinId}:lc:1` },
       { text: `${markIf(!launchOn)}off`, callback_data: `settings:c:${coinId}:lc:0` },
+    ],
+    [
+      { text: `Reserve ${markIf(reserveOn)}on`, callback_data: `settings:c:${coinId}:rs:1` },
+      { text: `${markIf(!reserveOn)}off`, callback_data: `settings:c:${coinId}:rs:0` },
     ],
     [{ text: "← Back to chat settings", callback_data: "settings:home" }],
   ];
@@ -198,6 +204,7 @@ const TYPE_LABELS: Record<GlobalAlertType, string> = {
   depeg: "Depeg",
   safety: "Safety",
   launch: "Launch",
+  reserve: "Reserve",
 };
 
 function labelForType(type: GlobalAlertType): string {

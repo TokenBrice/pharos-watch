@@ -30,7 +30,7 @@ type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
  * followed by DEWS (stress), safety (grade movement), then launch (info).
  * Used purely for delivery-metric attribution.
  */
-const ALERT_TYPE_PRIORITY: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch"];
+const ALERT_TYPE_PRIORITY: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch", "reserve"];
 
 function emptyPerAlertTypeStats(): PerAlertTypeDeliveryStats {
   return { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null };
@@ -42,6 +42,7 @@ export function emptyPerAlertTypeDelivery(): PerAlertTypeDelivery {
     depeg: emptyPerAlertTypeStats(),
     safety: emptyPerAlertTypeStats(),
     launch: emptyPerAlertTypeStats(),
+    reserve: emptyPerAlertTypeStats(),
   };
 }
 
@@ -52,6 +53,7 @@ function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   if (alerts.dews.length > 0) return "dews";
   if (alerts.safety.length > 0) return "safety";
   if (alerts.launch.length > 0) return "launch";
+  if ((alerts.reserve ?? []).length > 0) return "reserve";
   // Fallback: an empty consolidated alert should not reach this path. Pick the
   // lowest-priority type so we never crash on metric attribution.
   return ALERT_TYPE_PRIORITY[ALERT_TYPE_PRIORITY.length - 1];
@@ -117,6 +119,7 @@ function emptyAlerts(): ConsolidatedAlerts {
     depegWorsening: [],
     safety: [],
     launch: [],
+    reserve: [],
   };
 }
 

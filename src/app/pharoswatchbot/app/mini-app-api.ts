@@ -12,6 +12,7 @@ const TelegramAlertTypesSchema = z.object({
   depeg: z.boolean(),
   safety: z.boolean(),
   launch: z.boolean(),
+  reserve: z.boolean(),
 }).passthrough();
 
 const PresetAlertTypesSchema = z.object({

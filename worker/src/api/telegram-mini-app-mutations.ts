@@ -108,7 +108,7 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
   let appliedCount = 0;
   const statements: D1PreparedStatement[] = [];
 
-  const apply = (setting: "db" | "ds" | "sm" | "lc", value: string): void => {
+  const apply = (setting: "db" | "ds" | "sm" | "lc" | "rs", value: string): void => {
     const prepared = prepareCoinSettingStatements(db, chatId, username, operation.stablecoinId, setting, value);
     if (prepared.description == null) throw new TelegramMiniAppMutationError("invalid-coin-patch");
     statements.push(...prepared.statements);
@@ -128,6 +128,8 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
         apply("sm", "0");
       } else if (alertType === "launch") {
         apply("lc", "0");
+      } else if (alertType === "reserve") {
+        apply("rs", "0");
       }
     }
     if (enabled.size > 0) {
@@ -137,7 +139,7 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
       appliedCount += 1;
     }
   }
-  const explicitlyDisabled = (alertType: "dews" | "depeg" | "safety" | "launch"): boolean =>
+  const explicitlyDisabled = (alertType: "dews" | "depeg" | "safety" | "launch" | "reserve"): boolean =>
     patch.alertTypes?.[alertType] === false;
   if (Object.prototype.hasOwnProperty.call(patch, "dewsMinBand") && !explicitlyDisabled("dews")) {
     apply("db", patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
@@ -150,6 +152,9 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
   }
   if (Object.prototype.hasOwnProperty.call(patch, "launch") && !explicitlyDisabled("launch")) {
     apply("lc", patch.launch ? "1" : "0");
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "reserve") && !explicitlyDisabled("reserve")) {
+    apply("rs", patch.reserve ? "1" : "0");
   }
   if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");
   await batchExecute(db, statements);

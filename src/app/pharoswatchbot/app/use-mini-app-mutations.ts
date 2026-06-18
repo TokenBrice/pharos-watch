@@ -80,7 +80,7 @@ function optimisticGlobalAlerts(state: TelegramMiniAppState, operation: Telegram
 }
 
 function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts"] {
-  return { dews: false, depeg: false, safety: false, launch: false, depegStepBps: null };
+  return { dews: false, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
 }
 
 function confirmThenFire(

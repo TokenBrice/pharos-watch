@@ -37,6 +37,7 @@ function emptyDelivery(): PerAlertTypeDelivery {
     dews: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
     safety: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
     launch: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
+    reserve: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
   };
 }
 

@@ -1,6 +1,6 @@
 import type { TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramSnoozeDurationToken } from "./types";
 
-export const ALERT_LABELS = { dews: "DEWS", depeg: "Depeg", safety: "Safety", launch: "Launch" } as const satisfies Record<TelegramAlertType, string>;
+export const ALERT_LABELS = { dews: "DEWS", depeg: "Depeg", safety: "Safety", launch: "Launch", reserve: "Reserve" } as const satisfies Record<TelegramAlertType, string>;
 
 export const DEPEG_STEP_OPTIONS = [
   { value: null, label: "Any depeg", caption: "No gate" },

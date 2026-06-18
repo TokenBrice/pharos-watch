@@ -22,6 +22,7 @@ import {
   buildDepegUpsert,
   buildDewsUpsert,
   buildLaunchUpsert,
+  buildReserveUpsert,
   buildSafetyUpsert,
   loadSubscriberByChat,
   prepareUpsertSubscriberRow,
@@ -92,6 +93,7 @@ export function prepareCoinSettingStatements(
   if (setting === "sm") return prepareSafetySetting(db, chatId, username, coinId, value);
   if (setting === "ds") return prepareDepegSetting(db, chatId, username, coinId, value);
   if (setting === "lc") return prepareLaunchSetting(db, chatId, username, coinId, value);
+  if (setting === "rs") return prepareReserveSetting(db, chatId, username, coinId, value);
   return { description: null, statements: [] };
 }
 
@@ -171,6 +173,40 @@ function prepareLaunchSetting(
     description: enabled ? "Launch on." : "Launch off.",
     statements: prepareLaunch(db, chatId, username, coinId, enabled),
   };
+}
+
+function prepareReserveSetting(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coinId: string,
+  value: string,
+): { description: string | null; statements: D1PreparedStatement[] } {
+  if (value !== "0" && value !== "1") return { description: null, statements: [] };
+  const enabled = value === "1";
+  return {
+    description: enabled ? "Reserve on." : "Reserve off.",
+    statements: prepareReserve(db, chatId, username, coinId, enabled),
+  };
+}
+
+function prepareReserve(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coinId: string,
+  enabled: boolean,
+): D1PreparedStatement[] {
+  const now = unixNow();
+  return [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps: enabled ? { reserve: 1 } : undefined,
+    }),
+    prepareSubscriptionUpsert(db, buildReserveUpsert(chatId, coinId, enabled)),
+  ];
 }
 
 function prepareDews(

@@ -145,6 +145,11 @@ function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
   }
 }
 
+/** Parse a LAUNCH-STYLE id-set snapshot (reserve-drift, C123). */
+export function parseReserveSnapshotIds(cached: CachedValue): string[] | null {
+  return parseLaunchSnapshotIds(cached);
+}
+
 export interface ActiveDepegRowWithEventId extends ActiveDepegRow {
   event_id: number;
 }
@@ -160,6 +165,10 @@ export interface DispatchSourceData {
   safetyCache: CachedValue;
   safetySourceCache: CachedValue;
   launchCache: CachedValue;
+  /** Producer-written current drift id-set (four-hourly reserve slot). */
+  reserveCache: CachedValue;
+  /** Dispatch-owned baseline: the drift id-set the dispatcher last acted on. */
+  reserveDispatchedCache: CachedValue;
 }
 
 export interface DispatchSnapshotState {
@@ -177,7 +186,13 @@ export interface DispatchSnapshotState {
     depeg: DepegSnapshot;
     safety: AlertSafetySnapshotEnvelope | null;
     launch: string[];
+    /** Dispatch baseline written back: the producer's current drift id-set. */
+    reserveDispatched: string[];
   };
+  /** Drift id-set the dispatcher last acted on (prior baseline). */
+  previousReserveDriftIds: string[];
+  /** Producer's current drift id-set (read-only in dispatch). */
+  currentReserveDriftIds: string[];
   mustSeedSnapshots: boolean;
   safeDewsSnapshot: DewsSnapshot;
   safeDewsAlertable: DewsSnapshot;
@@ -207,6 +222,8 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     safetyCache,
     safetySourceCache,
     launchCache,
+    reserveCache,
+    reserveDispatchedCache,
   ] = await Promise.all([
     loadDewsRows(db, snoozeNowSec),
     db
@@ -244,6 +261,8 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     getCache(db, SNAPSHOT_KEYS.safety),
     getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY),
     getCache(db, SNAPSHOT_KEYS.launch),
+    getCache(db, SNAPSHOT_KEYS.reserve),
+    getCache(db, SNAPSHOT_KEYS.reserveDispatched),
   ]);
 
   return {
@@ -257,6 +276,8 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     safetyCache,
     safetySourceCache,
     launchCache,
+    reserveCache,
+    reserveDispatchedCache,
   };
 }
 
@@ -307,6 +328,16 @@ export function buildDispatchSnapshotState(
   // we still seed with the current pre-launch set (no transition to lose).
   const previousLaunchIds = parseLaunchSnapshotIds(sourceData.launchCache);
 
+  // Reserve-drift (C123): the producer (four-hourly reserve slot) owns the
+  // current drift id-set; the dispatcher diffs it against its own last-acted-on
+  // baseline. When the run is a seed (stale dews/depeg) we preserve the prior
+  // baseline so a drift opening during the seed window is not absorbed and
+  // fires on the next healthy run (mirrors the launch P1.7 pattern). When there
+  // is no parseable baseline we seed with the current producer set (no
+  // transition to lose).
+  const currentReserveDriftIds = parseReserveSnapshotIds(sourceData.reserveCache) ?? [];
+  const previousReserveDispatchedIds = parseReserveSnapshotIds(sourceData.reserveDispatchedCache);
+
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
     (sourceData.dewsAlertableCache != null &&
@@ -333,6 +364,10 @@ export function buildDispatchSnapshotState(
       mustSeedSnapshots && previousLaunchIds != null
         ? previousLaunchIds
         : PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
+    reserveDispatched:
+      mustSeedSnapshots && previousReserveDispatchedIds != null
+        ? previousReserveDispatchedIds
+        : currentReserveDriftIds,
   };
 
   return {
@@ -345,6 +380,11 @@ export function buildDispatchSnapshotState(
     currentSafetySnapshot,
     safetySnapshotNeedsSeed,
     currentSnapshots,
+    // No prior baseline ⇒ this is a reserve seed: treat the current producer
+    // set as the baseline so already-drifting coins produce no alert (the
+    // transition gate). Once a baseline exists, diff against it normally.
+    previousReserveDriftIds: previousReserveDispatchedIds ?? currentReserveDriftIds,
+    currentReserveDriftIds,
     mustSeedSnapshots,
     safeDewsSnapshot: previousDewsSnapshot ?? {},
     safeDewsAlertable: previousDewsAlertableSnapshot ?? {},

@@ -99,6 +99,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0153     | `0153_status_reliability_idempotency.sql`                | Add nullable idempotency keys and partial unique indexes for retry-safe status transitions and probe runs                                        |
 | 0154     | `0154_apxusd_ddr_tail_90203_link.sql`                    | Link APXUSD tail event 90203 into the sealed June 2 DDR incident and supersede the accidental fresh incident                                    |
 | 0155     | `0155_telegram_retention_indexes.sql`                    | Add Telegram retention indexes for inactive subscriber scans and alert-job cleanup batches                                                       |
+| 0156     | `0156_telegram_reserve_alerts.sql`                       | Add reserve-drift alert flags to telegram subscribers and subscriptions                                                                          |
+| 0157     | `0157_telegram_global_alert_reserve_index.sql`           | Partial index on `telegram_subscribers.global_alert_reserve` for dispatcher reserve-drift fan-out                                                 |
 
 ## Retired Individual Migrations
 

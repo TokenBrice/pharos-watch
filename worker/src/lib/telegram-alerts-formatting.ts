@@ -191,6 +191,19 @@ export function formatLaunchLine(e: LaunchAlert): string {
   return `${LAUNCH_GLYPH} <b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} has launched and is now tracked by Pharos`;
 }
 
+export interface ReserveAlert {
+  stablecoinId: string;
+  symbol: string;
+  name: string;
+}
+
+// Reserve-drift alert (C123). Shipped glyph-less (bold header only) per the
+// sanctioned-glyph review rule in docs/telegram-alerts.md "Message Types";
+// adding a data-tied glyph requires a separate review.
+export function formatReserveLine(e: ReserveAlert): string {
+  return `<b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} live reserve mix has drifted from its curated profile`;
+}
+
 export interface ConsolidatedAlerts {
   dews: DewsChange[];
   depegTriggered: DepegAlertPayload[];
@@ -198,6 +211,7 @@ export interface ConsolidatedAlerts {
   depegWorsening: DepegWorsening[];
   safety: SafetyChange[];
   launch: LaunchAlert[];
+  reserve?: ReserveAlert[];
 }
 
 /** Build a consolidated HTML message for one subscriber. */
@@ -223,6 +237,10 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   if (alerts.launch.length > 0) {
     sections.push(`<b>Stablecoin Launched</b>\n${alerts.launch.map(formatLaunchLine).join("\n\n")}`);
   }
+  const reserveAlerts = alerts.reserve ?? [];
+  if (reserveAlerts.length > 0) {
+    sections.push(`<b>Reserve Drift</b>\n${reserveAlerts.map(formatReserveLine).join("\n\n")}`);
+  }
 
   const body = sections.join("\n\n");
   const allIds = [
@@ -232,6 +250,7 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
     ...depegWorsening.map((e) => e.stablecoinId),
     ...alerts.safety.map((e) => e.stablecoinId),
     ...alerts.launch.map((e) => e.stablecoinId),
+    ...(alerts.reserve ?? []).map((e) => e.stablecoinId),
   ];
   const uniqueIds = new Set(allIds);
   const url =
@@ -293,6 +312,7 @@ export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
     consider(e.stablecoinId, e.symbol, drop);
   }
   for (const e of alerts.launch) consider(e.stablecoinId, e.symbol, 0);
+  for (const e of alerts.reserve ?? []) consider(e.stablecoinId, e.symbol, 0);
 
   // Stable sort: severity desc, falling back to insertion order on ties.
   return [...byId.values()]
@@ -310,6 +330,7 @@ export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string |
     ...alerts.depegWorsening.map((e) => e.stablecoinId),
     ...alerts.safety.map((e) => e.stablecoinId),
     ...alerts.launch.map((e) => e.stablecoinId),
+    ...(alerts.reserve ?? []).map((e) => e.stablecoinId),
   ];
   const unique = new Set(ids);
   return unique.size === 1 ? ids[0] ?? null : null;
@@ -336,7 +357,7 @@ export function buildAlertReplyMarkup(
     // entry point pointed at the watchlist view so the user can tune alerts
     // across multiple coins without copy-pasting symbols. Telegram rejects
     // `web_app` buttons in groups/channels, so this is gated on `privateChat`.
-    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length > 0;
+    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + (alerts.reserve ?? []).length > 0;
 
     type AlertInlineButton =
       | { text: string; callback_data: string }
@@ -560,7 +581,7 @@ export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT)
 // ---------- List Output Formatting ----------
 
 export function formatListOutput(
-  alertFlags: { dews: boolean; depeg: boolean; safety: boolean; launch: boolean },
+  alertFlags: { dews: boolean; depeg: boolean; safety: boolean; launch: boolean; reserve?: boolean },
   coins: { symbol: string; id: string }[],
 ): string {
   const types: string[] = [];
@@ -568,6 +589,7 @@ export function formatListOutput(
   if (alertFlags.depeg) types.push("Depeg");
   if (alertFlags.safety) types.push("Safety");
   if (alertFlags.launch) types.push("Launch");
+  if (alertFlags.reserve) types.push("Reserve");
 
   const typesStr = types.length > 0 ? types.join(", ") : "None";
   const coinsStr = coins.length > 0 ? coins.map((c) => `- ${c.symbol} (${c.id})`).join("\n") : "None";

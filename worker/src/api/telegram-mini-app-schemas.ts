@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const AlertTypeSchema = z.enum(["dews", "depeg", "safety", "launch"]);
+const AlertTypeSchema = z.enum(["dews", "depeg", "safety", "launch", "reserve"]);
 const DewsBandSchema = z.enum(["ALERT", "WARNING", "DANGER"]);
 const DepegStepSchema = z.union([z.literal(100), z.literal(250), z.literal(500)]).nullable();
 const SafetyModeSchema = z.enum(["all", "downgrade-only", "upgrade-only"]).nullable();
@@ -23,11 +23,13 @@ const CoinPatchSchema = z.object({
     depeg: z.boolean().optional(),
     safety: z.boolean().optional(),
     launch: z.boolean().optional(),
+    reserve: z.boolean().optional(),
   }).strict().optional(),
   dewsMinBand: DewsBandSchema.nullable().optional(),
   depegStepBps: DepegStepSchema.optional(),
   safetyMode: SafetyModeSchema.optional(),
   launch: z.boolean().optional(),
+  reserve: z.boolean().optional(),
 }).strict().refine((patch) => Object.keys(patch).length > 0, {
   message: "set-coin patch must include at least one field",
 });

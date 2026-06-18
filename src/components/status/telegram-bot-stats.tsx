@@ -10,6 +10,7 @@ const PER_ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
   depeg: "Depeg",
   safety: "Safety",
   launch: "Launch",
+  reserve: "Reserve",
 };
 
 const TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS * 2;

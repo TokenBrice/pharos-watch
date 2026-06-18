@@ -16,6 +16,7 @@ const ALERT_COLUMN_BY_TYPE = {
   depeg: "alert_depeg",
   safety: "alert_safety",
   launch: "alert_launch",
+  reserve: "alert_reserve",
 } as const;
 
 const GLOBAL_ALERT_COLUMN_BY_TYPE = {
@@ -23,6 +24,7 @@ const GLOBAL_ALERT_COLUMN_BY_TYPE = {
   depeg: "global_alert_depeg",
   safety: "global_alert_safety",
   launch: "global_alert_launch",
+  reserve: "global_alert_reserve",
 } as const;
 const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
 const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE));
@@ -228,7 +230,7 @@ export function mergeSubscriberMaps(
 export async function loadPresetSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
-  type: Exclude<TelegramAlertType, "launch">,
+  type: Exclude<TelegramAlertType, "launch" | "reserve">,
   nowSec: number,
   options: TelegramPresetResolveOptions = {},
 ): Promise<PresetSubscriberLoadResult> {

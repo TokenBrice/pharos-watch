@@ -7,6 +7,7 @@ export interface AlertStablecoinIds {
   depegIds: string[];
   safetyIds: string[];
   launchIds: string[];
+  reserveIds: string[];
 }
 
 export type PresetSubscriberLoadResult =
@@ -19,6 +20,7 @@ export interface FanoutSubscriptionInputs {
   directDepegSubs: Map<string, SubscriberRow[]>;
   directSafetySubs: Map<string, SubscriberRow[]>;
   launchSubs: Map<string, SubscriberRow[]>;
+  reserveSubs: Map<string, SubscriberRow[]>;
   presetDewsResult: PresetSubscriberLoadResult;
   presetDepegResult: PresetSubscriberLoadResult;
   presetSafetyResult: PresetSubscriberLoadResult;
@@ -26,6 +28,7 @@ export interface FanoutSubscriptionInputs {
   globalDepegSubs: SubscriberRow[];
   globalSafetySubs: SubscriberRow[];
   globalLaunchSubs: SubscriberRow[];
+  globalReserveSubs: SubscriberRow[];
   perCoinSnoozeMap: Map<string, Set<string>>;
   perCoinExplicitlyOffMaps: Record<TelegramAlertType, Map<string, Set<string>>>;
 }
@@ -40,7 +43,7 @@ interface FanoutSubscriptionLoaders {
   loadPresetSubscriberRowsBatch: (
     db: D1Database,
     stablecoinIds: string[],
-    type: Exclude<TelegramAlertType, "launch">,
+    type: Exclude<TelegramAlertType, "launch" | "reserve">,
     nowSec: number,
   ) => Promise<PresetSubscriberLoadResult>;
   loadGlobalSubscriberRows: (db: D1Database, type: TelegramAlertType, nowSec: number) => Promise<SubscriberRow[]>;
@@ -93,12 +96,14 @@ export async function loadFanoutSubscriptionInputs(
     depegIds,
     safetyIds,
     launchIds,
+    reserveIds,
   } = ids;
   const [
     directDewsSubs,
     directDepegSubs,
     directSafetySubs,
     launchSubs,
+    reserveSubs,
     presetDewsResult,
     presetDepegResult,
     presetSafetyResult,
@@ -106,16 +111,19 @@ export async function loadFanoutSubscriptionInputs(
     globalDepegSubs,
     globalSafetySubs,
     globalLaunchSubs,
+    globalReserveSubs,
     perCoinSnoozeMap,
     perCoinDewsExplicitlyOffMap,
     perCoinDepegExplicitlyOffMap,
     perCoinSafetyExplicitlyOffMap,
     perCoinLaunchExplicitlyOffMap,
+    perCoinReserveExplicitlyOffMap,
   ] = await Promise.all([
     loaders.loadSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
     loaders.loadSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
     loaders.loadSubscriberRowsBatch(db, safetyIds, "safety", nowSec),
     loaders.loadSubscriberRowsBatch(db, launchIds, "launch", nowSec),
+    loaders.loadSubscriberRowsBatch(db, reserveIds, "reserve", nowSec),
     loaders.loadPresetSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
     loaders.loadPresetSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
     loaders.loadPresetSubscriberRowsBatch(db, safetyIds, "safety", nowSec),
@@ -123,11 +131,13 @@ export async function loadFanoutSubscriptionInputs(
     loaders.loadGlobalSubscriberRows(db, "depeg", nowSec),
     loaders.loadGlobalSubscriberRows(db, "safety", nowSec),
     loaders.loadGlobalSubscriberRows(db, "launch", nowSec),
-    loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds], nowSec),
+    loaders.loadGlobalSubscriberRows(db, "reserve", nowSec),
+    loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds, ...reserveIds], nowSec),
     loaders.loadPerCoinExplicitlyOffMap(db, dewsIds, "dews"),
     loaders.loadPerCoinExplicitlyOffMap(db, depegIds, "depeg"),
     loaders.loadPerCoinExplicitlyOffMap(db, safetyIds, "safety"),
     loaders.loadPerCoinExplicitlyOffMap(db, launchIds, "launch"),
+    loaders.loadPerCoinExplicitlyOffMap(db, reserveIds, "reserve"),
   ]);
 
   return {
@@ -135,6 +145,7 @@ export async function loadFanoutSubscriptionInputs(
     directDepegSubs,
     directSafetySubs,
     launchSubs,
+    reserveSubs,
     presetDewsResult,
     presetDepegResult,
     presetSafetyResult,
@@ -142,12 +153,14 @@ export async function loadFanoutSubscriptionInputs(
     globalDepegSubs,
     globalSafetySubs,
     globalLaunchSubs,
+    globalReserveSubs,
     perCoinSnoozeMap,
     perCoinExplicitlyOffMaps: {
       dews: perCoinDewsExplicitlyOffMap,
       depeg: perCoinDepegExplicitlyOffMap,
       safety: perCoinSafetyExplicitlyOffMap,
       launch: perCoinLaunchExplicitlyOffMap,
+      reserve: perCoinReserveExplicitlyOffMap,
     },
   };
 }

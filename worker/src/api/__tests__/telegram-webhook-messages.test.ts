@@ -21,6 +21,7 @@ function makeSubscriptionRow(stablecoinId: string): SubscriptionRow {
     alert_depeg: 0,
     alert_safety: 0,
     alert_launch: 0,
+    alert_reserve: 0,
     dews_min_band: null,
     safety_mode: null,
     depeg_worsening_bps_step: null,

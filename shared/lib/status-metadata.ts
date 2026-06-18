@@ -129,6 +129,7 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
           depegWorsening: readMetadataNumber(eventsRecord.depegWorsening),
           safety: readMetadataNumber(eventsRecord.safety),
           launch: readMetadataNumber(eventsRecord.launch),
+          reserve: readMetadataNumber(eventsRecord.reserve),
           suppressedMethodologyChanges: readMetadataNumber(eventsRecord.suppressedMethodologyChanges),
         }
       : null,

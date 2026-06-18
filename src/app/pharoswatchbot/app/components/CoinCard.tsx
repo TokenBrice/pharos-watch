@@ -104,7 +104,11 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
   const sourceChip = deriveSourceChip(coin, globalAlerts, presets);
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled || coin.depegStepBps != null;
-  const launchOnly = coin.alertTypes.launch && !showTune;
+  const untunableLabels = [
+    coin.alertTypes.launch ? "Launch" : null,
+    coin.alertTypes.reserve ? "Reserve" : null,
+  ].filter((label): label is string => label != null);
+  const untunableOnly = untunableLabels.length > 0 && !showTune;
   const coinSnoozeActive = coin.snoozeUntilTs != null && coin.snoozeUntilTs > nowSec;
   const handleOpenLink = (url: string) => {
     webApp?.openLink?.(url);
@@ -283,9 +287,9 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
             ) : null}
           </div>
         </details>
-      ) : launchOnly ? (
+      ) : untunableOnly ? (
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Launch: on/off only. No tuning.
+          {untunableLabels.join(" & ")}: on/off only. No tuning.
         </p>
       ) : null}
     </article>

@@ -14,6 +14,7 @@ import { buildAlertContextLines } from "./telegram-alert-context";
 import {
   buildDewsChanges,
   buildLaunchPromotions,
+  buildReserveTransitions,
   buildSafetyChanges,
 } from "./telegram-alert-changes";
 import {
@@ -35,11 +36,13 @@ export interface TelegramDispatchEvents {
   depegWorsening: DepegWorsening[];
   safetyChanges: SafetyChangeWithExplain[];
   launchPromoted: ReturnType<typeof buildLaunchPromotions>;
+  reservePromoted: ReturnType<typeof buildReserveTransitions>;
   suppressedMethodologyChanges: number;
   dewsIds: string[];
   depegIds: string[];
   safetyIds: string[];
   launchIds: string[];
+  reserveIds: string[];
 }
 
 export function countSuppressedSafetyChangesAtSeed(
@@ -235,6 +238,15 @@ export async function buildTelegramDispatchEvents(
 
   const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, ACTIVE_IDS, TRACKED_META_BY_ID);
 
+  // Reserve-drift (C123): diff the producer's current drift set against the
+  // dispatch baseline; both come from snapshotState (the dispatch cron never
+  // recomputes drift). Entering-drift only.
+  const reservePromoted = buildReserveTransitions(
+    new Set(snapshotState.previousReserveDriftIds),
+    new Set(snapshotState.currentReserveDriftIds),
+    TRACKED_META_BY_ID,
+  );
+
   const dewsIds = dewsChanges.map((c) => c.stablecoinId);
   const depegIds = [
     ...depegTriggered.map((e) => e.stablecoinId),
@@ -243,8 +255,9 @@ export async function buildTelegramDispatchEvents(
   ];
   const safetyIds = rawSafetyChanges.map((c) => c.stablecoinId);
   const launchIds = launchPromoted.map((e) => e.stablecoinId);
+  const reserveIds = reservePromoted.map((e) => e.stablecoinId);
 
-  const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]);
+  const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds, ...reserveIds]);
   const safetyChanges = addSafetyReasonLines(
     rawSafetyChanges,
     currentSafetySnapshot,
@@ -270,10 +283,12 @@ export async function buildTelegramDispatchEvents(
     depegWorsening,
     safetyChanges,
     launchPromoted,
+    reservePromoted,
     suppressedMethodologyChanges,
     dewsIds,
     depegIds,
     safetyIds,
     launchIds,
+    reserveIds,
   };
 }

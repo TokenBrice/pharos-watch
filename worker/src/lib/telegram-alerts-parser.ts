@@ -50,7 +50,7 @@ export type TickerResolutionScope = "subscribable" | "tracked";
 
 // ---------- Constants ----------
 
-const ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch"]);
+const ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch", "reserve"]);
 const GLOBAL_SUBSCRIBE_TOKEN = "all";
 const DEPEG_STEP_TOKEN = "depeg-step";
 
@@ -271,10 +271,10 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
     if (parsed.alertTypes.size === 0) {
       const suggestion =
         parsed.invalidTargets.length === 1
-          ? suggestClosestToken(parsed.invalidTargets[0], ["dews", "depeg", "safety", "launch"])
+          ? suggestClosestToken(parsed.invalidTargets[0], ["dews", "depeg", "safety", "launch", "reserve"])
           : null;
       const hint = suggestion ? ` Did you mean "${suggestion}"?` : "";
-      return `Unknown alert type: ${unknown}.${hint} Valid types: dews, depeg, safety, launch.`;
+      return `Unknown alert type: ${unknown}.${hint} Valid types: dews, depeg, safety, launch, reserve.`;
     }
     return `Unknown ticker or preset: ${unknown}. Check spelling, use the coin's symbol, or try /presets.`;
   }
@@ -283,6 +283,9 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
   }
   if (parsed.presetIds.length > 0 && parsed.alertTypes.has("launch")) {
     return "Preset watchlists support dews, depeg, and safety only. Use explicit tickers for launch alerts.";
+  }
+  if (parsed.presetIds.length > 0 && parsed.alertTypes.has("reserve")) {
+    return "Preset watchlists support dews, depeg, and safety only. Use explicit tickers for reserve alerts.";
   }
   if (
     parsed.alertTypes.size === 0
@@ -293,7 +296,7 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
     return "Specify alert types and tickers or presets. Example: /subscribe dews USDC BOLD";
   }
   if (parsed.alertTypes.size === 0) {
-    return "Specify at least one alert type: dews, depeg, safety, launch. Example: /subscribe dews USDC";
+    return "Specify at least one alert type: dews, depeg, safety, launch, reserve. Example: /subscribe dews USDC";
   }
   if (parsed.tickers.length === 0 && parsed.presetIds.length === 0 && !parsed.subscribeAll) {
     return "Specify at least one ticker or preset, or use all. Example: /subscribe dews all";

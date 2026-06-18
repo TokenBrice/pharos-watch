@@ -36,6 +36,7 @@ function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
     depeg: { chats: 0, chunks: 0 },
     safety: { chats: 0, chunks: 0 },
     launch: { chats: 0, chunks: 0 },
+    reserve: { chats: 0, chunks: 0 },
   };
 }
 
@@ -76,6 +77,7 @@ export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0):
       depegWorsening: 0,
       safety: 0,
       launch: 0,
+      reserve: 0,
       suppressedMethodologyChanges: 0,
     },
     subscribersNotified: 0,

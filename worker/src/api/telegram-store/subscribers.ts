@@ -12,15 +12,15 @@ export interface UpsertSubscriberInput {
   chatId: string;
   username: string | null;
   nowSec: number;
-  perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
-  globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
-  globalAlertOverrides?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+  perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
+  globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
+  globalAlertOverrides?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
   quietHours?:
     | { enabled: true; startHourUtc: number; endHourUtc: number }
     | { enabled: false };
 }
 
-const ALERT_KEYS: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
+const ALERT_KEYS: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch", "reserve"];
 
 /**
  * Discriminated normalization of every `telegram_subscribers` upsert. Each
@@ -34,8 +34,8 @@ type UpsertSubscriberKind =
       chatId: string;
       username: string | null;
       nowSec: number;
-      perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
-      globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+      perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
+      globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
       quietHours?:
         | { enabled: true; startHourUtc: number; endHourUtc: number }
         | { enabled: false };
@@ -45,7 +45,7 @@ type UpsertSubscriberKind =
       chatId: string;
       username: string | null;
       nowSec: number;
-      globalAlertOverrides: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+      globalAlertOverrides: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
       quietHours?:
         | { enabled: true; startHourUtc: number; endHourUtc: number }
         | { enabled: false };
@@ -87,7 +87,7 @@ export function buildSubscriberUpsert(
     "last_active_at = excluded.last_active_at",
   ];
 
-  const perCoinRow: Array<0 | 1> = [0, 0, 0, 0];
+  const perCoinRow: Array<0 | 1> = [0, 0, 0, 0, 0];
   if (kind.kind === "bump" && kind.perCoinAlertBumps) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
       const key = ALERT_KEYS[i];
@@ -101,7 +101,7 @@ export function buildSubscriberUpsert(
     }
   }
 
-  const globalRow: Array<0 | 1> = [0, 0, 0, 0];
+  const globalRow: Array<0 | 1> = [0, 0, 0, 0, 0];
   if (kind.kind === "bump" && kind.globalAlertBumps) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
       const key = ALERT_KEYS[i];
@@ -136,12 +136,12 @@ export function buildSubscriberUpsert(
   const sql = `
       INSERT INTO telegram_subscribers (
         chat_id, username,
-        alert_dews, alert_depeg, alert_safety, alert_launch,
-        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+        alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
         created_at, last_active_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET ${updates.join(", ")}
     `;
   const binds: unknown[] = [
@@ -151,10 +151,12 @@ export function buildSubscriberUpsert(
     perCoinRow[1],
     perCoinRow[2],
     perCoinRow[3],
+    perCoinRow[4],
     globalRow[0],
     globalRow[1],
     globalRow[2],
     globalRow[3],
+    globalRow[4],
     quietEnabled,
     quietStart,
     quietEnd,
@@ -306,10 +308,12 @@ export async function loadSubscriberByChat(
          alert_depeg,
          alert_safety,
          alert_launch,
+         alert_reserve,
          global_alert_dews,
          global_alert_depeg,
          global_alert_safety,
          global_alert_launch,
+         global_alert_reserve,
          global_depeg_worsening_bps_step,
          quiet_hours_enabled,
          quiet_hours_start_utc,

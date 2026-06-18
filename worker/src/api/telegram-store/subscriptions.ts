@@ -120,13 +120,31 @@ export function buildLaunchUpsert(
   };
 }
 
+export function buildReserveUpsert(
+  chatId: string,
+  stablecoinId: string,
+  enabled: boolean,
+): BuiltSubscriptionUpsert {
+  return {
+    sql: `
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_reserve
+      )
+      VALUES (?, ?, 0, 0, 0, ?)
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_reserve = excluded.alert_reserve
+    `,
+    binds: [chatId, stablecoinId, enabled ? 1 : 0],
+  };
+}
+
 export async function loadSubscriptionRowsByChat(
   db: D1Database,
   chatId: string,
 ): Promise<SubscriptionRow[]> {
   const result = await db
     .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, dews_min_band, safety_mode, depeg_worsening_bps_step
          FROM telegram_subscriptions
         WHERE chat_id = ?
         ORDER BY stablecoin_id`,
@@ -149,6 +167,7 @@ export function prepareSubscriberAndSubscriptionStatements(
   const alertDepeg = alertTypes.has("depeg") || options?.depegWorseningBpsStep !== undefined ? 1 : 0;
   const alertSafety = alertTypes.has("safety") ? 1 : 0;
   const alertLaunch = alertTypes.has("launch") ? 1 : 0;
+  const alertReserve = alertTypes.has("reserve") ? 1 : 0;
   const uniqueStablecoinIds = Array.from(new Set(stablecoinIds));
 
   const statements: D1PreparedStatement[] = [
@@ -161,6 +180,7 @@ export function prepareSubscriberAndSubscriptionStatements(
         depeg: alertDepeg,
         safety: alertSafety,
         launch: alertLaunch,
+        reserve: alertReserve,
       },
     }),
   ];
@@ -183,14 +203,16 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_depeg,
           alert_safety,
           alert_launch,
+          alert_reserve,
           depeg_worsening_bps_step
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
           alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
           alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
           alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
           alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
+          alert_reserve = MAX(telegram_subscriptions.alert_reserve, excluded.alert_reserve),
           ${depegStepUpdate}
       `).bind(
         chatId,
@@ -199,6 +221,7 @@ export function prepareSubscriberAndSubscriptionStatements(
         alertDepeg,
         alertSafety,
         alertLaunch,
+        alertReserve,
         options?.depegWorseningBpsStep ?? null,
       ),
     );
@@ -239,6 +262,7 @@ export async function applySettingToSubscriptions(
   if (command.setting === "depeg-step") perCoinAlertBumps.depeg = 1;
   if (command.setting === "safety" && command.enabled) perCoinAlertBumps.safety = 1;
   if (command.setting === "launch" && command.enabled) perCoinAlertBumps.launch = 1;
+  if (command.setting === "reserve" && command.enabled) perCoinAlertBumps.reserve = 1;
 
   await upsertSubscriberRow(db, {
     chatId,
@@ -267,6 +291,12 @@ export async function applySettingToSubscriptions(
         statements.push(bindSubscriptionUpsert(
           db,
           buildLaunchUpsert(chatId, coin.id, command.enabled),
+        ));
+        break;
+      case "reserve":
+        statements.push(bindSubscriptionUpsert(
+          db,
+          buildReserveUpsert(chatId, coin.id, command.enabled),
         ));
         break;
       case "depeg":
@@ -379,7 +409,7 @@ export async function loadSubscriptionsByIds(
   const placeholders = uniqueIds.map(() => "?").join(", ");
   const result = await db
     .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, dews_min_band, safety_mode, depeg_worsening_bps_step
          FROM telegram_subscriptions
         WHERE chat_id = ?
           AND stablecoin_id IN (${placeholders})

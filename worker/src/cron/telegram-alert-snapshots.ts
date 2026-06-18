@@ -20,6 +20,17 @@ export const SNAPSHOT_KEYS = {
   depeg: "alert:depeg-snapshot",
   safety: "alert:safety-snapshot",
   launch: "alert:launch-snapshot",
+  // Reserve-drift snapshot. Written by the four-hourly reserve slot
+  // (hourly-live-reserves.ts) as the LAUNCH-STYLE id-set of currently-drifting
+  // coins; the dispatch cron only diffs prior-vs-current from this cache and
+  // never recomputes drift (keeps reserve-adapter I/O out of the dispatch pool).
+  reserve: "alert:reserve-snapshot",
+  // Dispatch-owned baseline for the reserve-drift family: the drift id-set the
+  // dispatcher last acted on. Diffing the producer's `reserve` set against this
+  // baseline yields the not-drifting → drifting transitions. Distinct from the
+  // producer key so the producer (4-hourly) and dispatcher (frequent) never
+  // race on a single key.
+  reserveDispatched: "alert:reserve-dispatched-snapshot",
 } as const;
 
 export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
@@ -190,6 +201,7 @@ export async function writeSnapshots(
     depeg: DepegSnapshot;
     safety?: AlertSafetySnapshotEnvelope | null;
     launch: string[];
+    reserveDispatched: string[];
   },
 ): Promise<void> {
   const writes: Promise<unknown>[] = [
@@ -197,6 +209,7 @@ export async function writeSnapshots(
     setCache(db, SNAPSHOT_KEYS.dewsAlertable, JSON.stringify(snapshots.dewsAlertable)),
     setCache(db, SNAPSHOT_KEYS.depeg, JSON.stringify(snapshots.depeg)),
     setCache(db, SNAPSHOT_KEYS.launch, JSON.stringify(snapshots.launch)),
+    setCache(db, SNAPSHOT_KEYS.reserveDispatched, JSON.stringify(snapshots.reserveDispatched)),
   ];
 
   if (snapshots.safety) {

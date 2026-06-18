@@ -10,6 +10,8 @@ import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../lib/collateral-drift";
+import { setCache } from "../../lib/db-cache";
+import { SNAPSHOT_KEYS } from "../../cron/telegram-alert-snapshots";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live-reserves-store";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sendAlert } from "../../lib/alerts";
@@ -124,6 +126,15 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     if (drift.fallbackCoins.length > 5) {
       console.warn(`[live-reserves] ${drift.fallbackCoins.length} live-enabled coins using curated fallback`);
     }
+
+    // Persist the currently-drifting id-set for the Telegram reserve-drift alert
+    // family (C123). The four-hourly reserve slot is the producer; the dispatch
+    // cron only diffs prior-vs-current from this snapshot and never recomputes
+    // drift, keeping reserve-adapter network I/O out of the dispatch trigger's
+    // 6-connection pool. fallbackCoins (failed live fetch) are intentionally
+    // omitted so a transient fetch failure never reads as a drift change.
+    const driftIds = drift.driftCoins.map((d) => d.id).sort();
+    await setCache(runtime.db, SNAPSHOT_KEYS.reserve, JSON.stringify(driftIds));
 
     const maxAge = await getMaxSyncAge(runtime.db);
     // Alert after ~3 missed 4-hourly runs, matching the "several missed runs"

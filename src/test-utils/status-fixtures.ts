@@ -123,6 +123,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
         depeg: 4,
         safety: 2,
         launch: 1,
+        reserve: 1,
         allTypes: 2,
       },
       topStablecoins: [],

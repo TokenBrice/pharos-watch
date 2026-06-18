@@ -335,6 +335,7 @@ const TelegramAlertTypeChatsSchema = z.object({
   depeg: z.number(),
   safety: z.number(),
   launch: z.number(),
+  reserve: z.number(),
   allTypes: z.number(),
 });
 export type TelegramAlertTypeChats = z.infer<typeof TelegramAlertTypeChatsSchema>;
@@ -426,11 +427,12 @@ export interface TelegramDispatchEventsDetected {
   depegWorsening: number;
   safety: number;
   launch: number;
+  reserve: number;
   suppressedMethodologyChanges: number;
 }
 
-/** The four alert categories tracked by the Telegram dispatcher. */
-export type TelegramAlertType = "dews" | "depeg" | "safety" | "launch";
+/** The alert categories tracked by the Telegram dispatcher. */
+export type TelegramAlertType = "dews" | "depeg" | "safety" | "launch" | "reserve";
 
 export interface PerAlertTypeDeliveryStats {
   sent: number;

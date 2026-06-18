@@ -1,4 +1,4 @@
-import type { DewsChange, LaunchAlert, SafetyChange } from "../lib/telegram-alerts";
+import type { DewsChange, LaunchAlert, ReserveAlert, SafetyChange } from "../lib/telegram-alerts";
 import {
   extractTopSignals,
   type DewsRow,
@@ -73,6 +73,30 @@ export function buildSafetyChanges(
   }
 
   return { changes, suppressedMethodologyChanges };
+}
+
+/**
+ * Reserve-drift transitions (C123). Fires only on the not-drifting → drifting
+ * edge: a coin present in the current drift id-set but absent from the prior
+ * one. Entering-drift only (v1) — a coin leaving the drift set produces no
+ * event, so a transient live-fetch failure (which drops a coin from the
+ * producer's drift set) can never read as a false "drift cleared". Mirrors
+ * `buildLaunchPromotions`.
+ */
+export function buildReserveTransitions(
+  previousDriftIds: ReadonlySet<string>,
+  currentDriftIds: ReadonlySet<string>,
+  trackedMetaById: ReadonlyMap<string, { symbol: string; name: string }>,
+): ReserveAlert[] {
+  const transitions: ReserveAlert[] = [];
+  for (const id of currentDriftIds) {
+    if (previousDriftIds.has(id)) continue;
+    const coin = trackedMetaById.get(id);
+    if (coin) {
+      transitions.push({ stablecoinId: id, symbol: coin.symbol, name: coin.name });
+    }
+  }
+  return transitions;
 }
 
 export function buildLaunchPromotions(

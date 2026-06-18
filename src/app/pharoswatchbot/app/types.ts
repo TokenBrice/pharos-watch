@@ -65,7 +65,7 @@ export type TelegramMiniAppOperation =
   | { kind: "set-timezone"; timezone: string | null }
   | { kind: "unsubscribe-all" }
   | { kind: "forget-me" }
-  | { kind: "set-coin"; stablecoinId: string; patch: { alertTypes?: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: TelegramDewsBand | null; depegStepBps?: TelegramDepegStepBps | null; safetyMode?: TelegramSafetyMode | null; launch?: boolean } }
+  | { kind: "set-coin"; stablecoinId: string; patch: { alertTypes?: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: TelegramDewsBand | null; depegStepBps?: TelegramDepegStepBps | null; safetyMode?: TelegramSafetyMode | null; launch?: boolean; reserve?: boolean } }
   | { kind: "remove-coin"; stablecoinId: string }
   | { kind: "follow-preset"; presetId: string; alertTypes: Partial<Record<"dews" | "depeg" | "safety", boolean>>; depegStepBps?: TelegramDepegStepBps | null }
   | { kind: "unfollow-preset"; presetId: string };

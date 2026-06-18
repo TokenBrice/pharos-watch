@@ -383,11 +383,13 @@ async function executeFullFanoutPath({
     depegWorsening,
     safetyChanges,
     launchPromoted,
+    reservePromoted,
     suppressedMethodologyChanges,
     dewsIds,
     depegIds,
     safetyIds,
     launchIds,
+    reserveIds,
   } = events;
   const { currentSnapshots, safetySnapshotNeedsSeed, safetySourceAssessment } = snapshotState;
 
@@ -424,11 +426,13 @@ async function executeFullFanoutPath({
     globalDepegSubs,
     globalSafetySubs,
     globalLaunchSubs,
+    reserveSubs,
+    globalReserveSubs,
     perCoinSnoozeMap,
     perCoinExplicitlyOffMaps,
   } = await loadFanoutSubscriptionInputs(
     db,
-    { dewsIds, depegIds, safetyIds, launchIds },
+    { dewsIds, depegIds, safetyIds, launchIds, reserveIds },
     {
       loadSubscriberRowsBatch,
       loadPresetSubscriberRowsBatch: (fanoutDb, stablecoinIds, type, fanoutNowSec) =>
@@ -522,6 +526,16 @@ async function executeFullFanoutPath({
     undefined,
     perCoinSnoozeMap,
     perCoinExplicitlyOffMaps.launch,
+  );
+  routeAlertEvents(
+    reservePromoted,
+    reserveSubs,
+    globalReserveSubs,
+    alertsByChat,
+    (alerts) => (alerts.reserve ??= []),
+    undefined,
+    perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps.reserve,
   );
 
   // C102: cap and sort candidate chats by recency BEFORE the expensive
@@ -674,6 +688,7 @@ async function executeFullFanoutPath({
       depegWorsening: depegWorsening.length,
       safety: safetyChanges.length,
       launch: launchPromoted.length,
+      reserve: reservePromoted.length,
       suppressedMethodologyChanges,
     },
     subscribersNotified,
@@ -870,11 +885,13 @@ export async function dispatchTelegramAlerts(
       depegWorsening,
       safetyChanges,
       launchPromoted,
+      reservePromoted,
       suppressedMethodologyChanges,
       dewsIds,
       depegIds,
       safetyIds,
       launchIds,
+      reserveIds,
     } = await buildTelegramDispatchEvents(db, sourceData, snapshotState, getSymbol, signal);
     const eventCount =
       dewsChanges.length +
@@ -882,7 +899,8 @@ export async function dispatchTelegramAlerts(
       depegResolved.length +
       depegWorsening.length +
       safetyChanges.length +
-      launchPromoted.length;
+      launchPromoted.length +
+      reservePromoted.length;
     await reportDigestProgress(reportProgress, {
       stage: "event-detection-complete",
       message: "Completed Telegram alert event detection",
@@ -938,11 +956,13 @@ export async function dispatchTelegramAlerts(
         depegWorsening,
         safetyChanges,
         launchPromoted,
+        reservePromoted,
         suppressedMethodologyChanges,
         dewsIds,
         depegIds,
         safetyIds,
         launchIds,
+        reserveIds,
       },
       pendingCapacityBefore,
       suppressedSafetyChangesAtSeed,

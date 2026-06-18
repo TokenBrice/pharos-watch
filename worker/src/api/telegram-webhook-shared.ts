@@ -194,6 +194,7 @@ export type ParsedSetCommand =
   | { ticker: string; setting: "dews"; enabled: boolean; minBand: "WARNING" | "DANGER" | null }
   | { ticker: string; setting: "safety"; enabled: boolean; mode: "downgrade-only" | "upgrade-only" | null }
   | { ticker: string; setting: "launch"; enabled: boolean }
+  | { ticker: string; setting: "reserve"; enabled: boolean }
   | { ticker: string; setting: "depeg"; enabled: boolean }
   | { ticker: string; setting: "depeg-step"; enabled: true; step: 100 | 250 | 500 | null };
 
@@ -256,10 +257,12 @@ export interface SubscriberRow {
   alert_depeg: number;
   alert_safety: number;
   alert_launch: number;
+  alert_reserve?: number | null;
   global_alert_dews?: number | null;
   global_alert_depeg?: number | null;
   global_alert_safety?: number | null;
   global_alert_launch?: number | null;
+  global_alert_reserve?: number | null;
   global_depeg_worsening_bps_step?: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
@@ -276,6 +279,7 @@ export interface SubscriptionRow {
   alert_depeg: number;
   alert_safety: number;
   alert_launch: number;
+  alert_reserve?: number | null;
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
