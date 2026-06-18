@@ -344,7 +344,10 @@ function MethodologyEnrichment({ event }: { event: TapeEvent }) {
 }
 
 function CauseOfDeathPill({ cause }: { cause: string }) {
-  const label = CAUSE_META[cause as keyof typeof CAUSE_META]?.label.toLowerCase() ?? cause;
+  const meta = Object.prototype.hasOwnProperty.call(CAUSE_META, cause)
+    ? CAUSE_META[cause as keyof typeof CAUSE_META]
+    : null;
+  const label = meta?.label.toLowerCase() ?? cause;
   return (
     <span className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
       {label}
