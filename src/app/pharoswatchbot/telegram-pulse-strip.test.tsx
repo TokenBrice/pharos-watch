@@ -84,6 +84,9 @@ describe("TelegramPulseStrip", () => {
     render(<TelegramPulseStrip />);
 
     expect(screen.getByText("1,842")).toBeTruthy();
+    const strip = screen.getByText("1,842").closest("div");
+    expect(strip?.getAttribute("aria-live")).toBe("polite");
+    expect(strip?.getAttribute("aria-busy")).toBe("false");
     expect(screen.getByText(/estimated capacity/i)).toBeTruthy();
     expect(screen.getByText("5,621")).toBeTruthy();
     expect(screen.getByText(/alert links \(incl\. presets\)/i)).toBeTruthy();
@@ -111,6 +114,9 @@ describe("TelegramPulseBoard", () => {
     render(<TelegramPulseBoard />);
 
     const capacity = screen.getByText("Active / estimated capacity");
+    const board = screen.getByLabelText("Live Telegram adoption metrics");
+    expect(board.getAttribute("aria-live")).toBe("polite");
+    expect(board.getAttribute("aria-busy")).toBe("false");
     const alertFollows = screen.getByText("Alert follows");
     const topFollowed = screen.getByText("Most followed");
     expect(capacity).toBeTruthy();
@@ -240,6 +246,9 @@ describe("TelegramPulseBoard", () => {
 
     render(<TelegramPulseBoard />);
 
-    expect(screen.getByLabelText("Loading Telegram adoption metrics")).toBeTruthy();
+    const loading = screen.getByLabelText("Loading Telegram adoption metrics");
+    expect(loading).toBeTruthy();
+    expect(loading.getAttribute("aria-live")).toBe("polite");
+    expect(loading.getAttribute("aria-busy")).toBe("true");
   });
 });

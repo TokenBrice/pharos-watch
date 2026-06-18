@@ -201,7 +201,11 @@ export function TelegramPulseStrip() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <Skeleton className="h-3.5 w-20 sm:w-24" />
         <Skeleton className="h-3.5 w-24 sm:w-28" />
         <Skeleton className="hidden h-3.5 w-28 sm:block" />
@@ -210,11 +214,19 @@ export function TelegramPulseStrip() {
   }
 
   if (!data || isError) {
-    return <p className="text-xs text-muted-foreground">Telegram adoption metrics unavailable; commands still work.</p>;
+    return (
+      <p className="text-xs text-muted-foreground" aria-live="polite" aria-busy="false">
+        Telegram adoption metrics unavailable; commands still work.
+      </p>
+    );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs tabular-nums">
+    <div
+      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs tabular-nums"
+      aria-live="polite"
+      aria-busy="false"
+    >
       <span className="text-muted-foreground">
         <span className="font-semibold text-foreground font-mono">{formatCount(data.activeWatchers)}</span> active
         Telegram chats
@@ -256,6 +268,8 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       <section
         className={cn("space-y-6", className)}
         aria-label="Loading Telegram adoption metrics"
+        aria-live="polite"
+        aria-busy="true"
       >
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border/55 pb-4">
           <div className="flex items-center gap-3">
@@ -275,7 +289,12 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
 
   if (!data || isError) {
     return (
-      <section className={cn("space-y-3", className)} aria-label="Telegram adoption metrics unavailable">
+      <section
+        className={cn("space-y-3", className)}
+        aria-label="Telegram adoption metrics unavailable"
+        aria-live="polite"
+        aria-busy="false"
+      >
         <div className="flex items-center gap-3 border-b border-border/55 pb-4">
           <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted-foreground/40" />
           <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Telegram pulse</h2>
@@ -336,6 +355,8 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         className,
       )}
       aria-label="Live Telegram adoption metrics"
+      aria-live="polite"
+      aria-busy="false"
     >
       <div
         aria-hidden="true"
