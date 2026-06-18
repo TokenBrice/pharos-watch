@@ -4,6 +4,7 @@ import { getCache, setCache } from "../lib/db-cache";
 import { sendToChat } from "../lib/telegram";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+import { forgetSubscriber } from "../api/telegram-store/forget";
 import { runBoundedQueue } from "./shared/bounded-queue";
 
 /**
@@ -207,17 +208,6 @@ async function runWarningPass(
   };
 }
 
-async function deleteChatCascade(db: D1Database, chatId: string): Promise<void> {
-  await db.batch([
-    db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-    db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
-  ]);
-}
-
 export async function runTelegramInactiveCleanup(
   db: D1Database,
   signal?: AbortSignal,
@@ -258,7 +248,7 @@ export async function runTelegramInactiveCleanup(
     concurrency: 1,
     signal,
     worker: async (chatId) => {
-      await deleteChatCascade(db, chatId);
+      await forgetSubscriber(db, chatId);
       return 1;
     },
   });
