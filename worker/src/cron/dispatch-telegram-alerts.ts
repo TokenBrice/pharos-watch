@@ -200,6 +200,7 @@ interface FullFanoutPathContext {
   botToken: string;
   snapshotState: DispatchSnapshotState;
   events: DispatchEvents;
+  suppressedSafetyChangesAtSeed: number;
   pendingCapacityBefore: PendingCapacitySnapshot;
   nowSec: number;
   dispatchStartedAtMs: number;
@@ -360,6 +361,7 @@ async function executeFullFanoutPath({
   botToken,
   snapshotState,
   events,
+  suppressedSafetyChangesAtSeed,
   pendingCapacityBefore,
   nowSec,
   dispatchStartedAtMs,
@@ -382,7 +384,6 @@ async function executeFullFanoutPath({
     launchIds,
   } = events;
   const { currentSnapshots, safetySnapshotNeedsSeed, safetySourceAssessment } = snapshotState;
-  const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
 
   await reportDigestProgress(reportProgress, {
     stage: "fanout-load",
@@ -625,7 +626,14 @@ async function executeFullFanoutPath({
 
   await writeSnapshots(db, currentSnapshots);
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
-  const pendingCapacityAfter = await readPendingCapacitySnapshot(db, nowSec);
+  const pendingQueueChanged =
+    drainResult.sent > 0 ||
+    drainResult.dropped > 0 ||
+    expiredCount > 0 ||
+    pendingEnqueued > 0;
+  const pendingCapacityAfter = pendingQueueChanged
+    ? await readPendingCapacitySnapshot(db, nowSec)
+    : pendingCapacityBefore;
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
   if (presetQueryFailures === 0 && presetResolutionFailures === 0) {
     await writePresetFailureCount(db, 0);
@@ -911,6 +919,7 @@ export async function dispatchTelegramAlerts(
         launchIds,
       },
       pendingCapacityBefore,
+      suppressedSafetyChangesAtSeed,
       nowSec,
       dispatchStartedAtMs,
       chatsWithActiveSnooze,
