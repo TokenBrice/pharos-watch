@@ -25,8 +25,10 @@ import {
   TELEGRAM_PENDING_PRIORITY,
 } from "./telegram-pending";
 import {
-  buildSubscriberQueue,
+  formatPlannedSubscribers,
+  planSubscriberQueue,
   routeAlertEvents,
+  selectChatsToFormat,
   type AlertsByChatEntry,
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
@@ -42,7 +44,10 @@ import {
 import { loadTerminalTelegramAlertTargetKeys } from "./telegram-alert-target-status";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 import { logTelegramEvent } from "../lib/telegram-log";
-import { TELEGRAM_MAX_MESSAGES_PER_RUN } from "../lib/telegram-constants";
+import {
+  TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
+  TELEGRAM_MAX_MESSAGES_PER_RUN,
+} from "../lib/telegram-constants";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
 import { recordSystemicFreshFailure } from "./dispatch-telegram-alerts-observability";
 import {
@@ -73,7 +78,7 @@ import {
 
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 
-type SubscriberQueueEntry = ReturnType<typeof buildSubscriberQueue>[number];
+type SubscriberQueueEntry = ReturnType<typeof formatPlannedSubscribers>[number];
 
 export interface TelegramDispatchSharedState {
   pendingCapacitySnapshot?: PendingCapacitySnapshot;
@@ -519,22 +524,31 @@ async function executeFullFanoutPath({
     perCoinExplicitlyOffMaps.launch,
   );
 
-  const subscriberQueue = buildSubscriberQueue(
-    alertsByChat,
-    (entry) =>
-      !hasEscalation(entry.alerts) ||
-      isQuietHoursActive(
-        nowSec,
-        entry.quietHoursEnabled,
-        entry.quietHoursStartUtc,
-        entry.quietHoursEndUtc,
-        entry.timezone,
-      ),
-  );
+  // C102: cap and sort candidate chats by recency BEFORE the expensive
+  // `formatConsolidatedMessage` pass. The pending drain (below) can only shrink
+  // the real fresh budget, so the upper-bound format budget is the full per-run
+  // cap plus a small allowance. Only the selected slice is formatted; the
+  // overflow tail can never be sent fresh this run and is enqueued lazily.
+  const resolveDisableNotification = (entry: AlertsByChatEntry): boolean =>
+    !hasEscalation(entry.alerts) ||
+    isQuietHoursActive(
+      nowSec,
+      entry.quietHoursEnabled,
+      entry.quietHoursStartUtc,
+      entry.quietHoursEndUtc,
+      entry.timezone,
+    );
+  const plannedQueue = planSubscriberQueue(alertsByChat);
+  const formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE;
+  const { toFormat, overflow: overflowPlanned } = selectChatsToFormat(plannedQueue, formatBudget);
+  const subscriberQueue = formatPlannedSubscribers(toFormat, resolveDisableNotification);
   const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
+  // Candidate metrics cover ALL routed chats (cheap estimate); target metrics
+  // cover only the formatted-selected set actually dispatched this run.
   const perAlertTypeTargets = buildPerAlertTypeTargets(subscriberQueue);
-  const freshCandidateChats = subscriberQueue.length;
-  const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
+  const freshCandidateChats = plannedQueue.length;
+  const freshCandidateCount = plannedQueue.reduce((sum, plan) => sum + plan.estimatedChunks, 0);
+  const formattedChats = subscriberQueue.length;
   await reportDigestProgress(reportProgress, {
     stage: "fanout-built",
     message: "Built Telegram subscriber fanout queue",
@@ -545,6 +559,7 @@ async function executeFullFanoutPath({
       countTotals: {
         freshCandidateChats,
         freshCandidateCount,
+        formattedChats,
         presetQueryFailures,
         presetResolutionFailures,
       },
@@ -622,6 +637,8 @@ async function executeFullFanoutPath({
     db,
     botToken,
     subscriberQueue,
+    overflowPlanned,
+    resolveDisableNotification,
     drainResult,
     maxMessagesPerRun: TELEGRAM_MAX_MESSAGES_PER_RUN,
     nowSec,

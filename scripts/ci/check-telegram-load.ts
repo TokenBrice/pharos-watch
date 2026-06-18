@@ -87,6 +87,8 @@ export interface LoadScenarioResult {
   pendingEnqueued: number;
   pendingDrainRuns: number;
   estimatedDrainSeconds: number;
+  /** Modelled per-invocation CPU after the C102 budget-before-format reorder. */
+  estimatedCpuMs: number;
   d1Operations: D1OperationEstimate;
   sloStatus: SloStatus;
   exploratory: boolean;
@@ -132,6 +134,11 @@ export interface TelegramLoadCheckReport {
     pendingTtlSeconds: number;
     normalSloSeconds: number;
     spikeMaxSeconds: number;
+    dispatchCpuMs: number;
+    cpuBudgetSafetyFraction: number;
+    cpuBudgetCeilingMs: number;
+    formatCpuMsPerChat: number;
+    sendCpuMsPerMessage: number;
   };
   fixtureSummaries: SyntheticFixtureSummary[];
   scenarios: LoadScenarioResult[];
@@ -157,6 +164,66 @@ const NORMAL_SLO_SECONDS = 15 * 60;
 const SPIKE_MAX_SECONDS = 60 * 60;
 const ALERTS_PER_MESSAGE_CHUNK = 16;
 const TELEGRAM_429_STORM_SECONDS = 15 * 60;
+
+// ---------- C102: per-invocation CPU budget modelling ----------
+
+/** Documented Worker CPU cap (`worker/wrangler.toml` `cpu_ms`). */
+const DEFAULT_DISPATCH_CPU_MS = 30_000;
+/** Fail when the required-target burst exceeds this fraction of the CPU cap. */
+const CPU_BUDGET_SAFETY_FRACTION = 0.5;
+/**
+ * Modelled CPU cost of formatting one candidate chat's consolidated message
+ * (`formatConsolidatedMessage` + `splitMessage`). Conservative per-chat estimate.
+ */
+const FORMAT_CPU_MS_PER_CHAT = 1.5;
+/** Modelled CPU cost of marshalling/dispatching one delivered message chunk. */
+const SEND_CPU_MS_PER_MESSAGE = 2.0;
+
+/**
+ * Read the dispatcher CPU cap from `worker/wrangler.toml`, falling back to the
+ * documented constant. Keeps the harness in step with the deployed limit.
+ */
+function readDispatchCpuMs(wranglerPath = resolve("worker/wrangler.toml")): number {
+  try {
+    const toml = readFileSync(wranglerPath, "utf8");
+    const match = toml.match(/^\s*cpu_ms\s*=\s*(\d+)/m);
+    if (match) {
+      const parsed = Number(match[1]);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+  } catch {
+    // fall through to the documented default
+  }
+  return DEFAULT_DISPATCH_CPU_MS;
+}
+
+const DISPATCH_CPU_MS = readDispatchCpuMs();
+const CPU_BUDGET_CEILING_MS = DISPATCH_CPU_MS * CPU_BUDGET_SAFETY_FRACTION;
+
+/**
+ * Estimate per-invocation CPU for a scenario AFTER the C102 budget-before-format
+ * reorder: at most `FRESH_ATTEMPTS_PER_RUN` chats are formatted on the hot path,
+ * and only the fresh-sent chunks incur send cost in the same invocation.
+ */
+function estimateCpuMs(args: { messageChunks: number; initialFreshAttempts: number }): number {
+  const formattedChats = Math.min(args.messageChunks, FRESH_ATTEMPTS_PER_RUN);
+  const formatMs = formattedChats * FORMAT_CPU_MS_PER_CHAT;
+  const sendMs = args.initialFreshAttempts * SEND_CPU_MS_PER_MESSAGE;
+  return Math.round(formatMs + sendMs);
+}
+
+/**
+ * Required-target scenarios whose modeled per-invocation CPU exceeds the safety
+ * fraction of the cap. Exported so the C102 CPU gate is unit-testable without
+ * driving `main()`/`process.exit`.
+ */
+export function findCpuBudgetBreaches(report: TelegramLoadCheckReport): LoadScenarioResult[] {
+  return report.scenarios.filter(
+    (scenario) =>
+      scenario.targetActiveWatchers === REQUIRED_TARGET &&
+      scenario.estimatedCpuMs > report.assumptions.cpuBudgetCeilingMs,
+  );
+}
 const EFFECTIVE_SEND_MESSAGES_PER_SECOND = Math.min(
   TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
   SEND_BATCH_SIZE / ((TELEGRAM_P95_SEND_LATENCY_MS + D1_WRITE_MS_PER_MESSAGE) / 1000),
@@ -529,6 +596,7 @@ function buildScenarioResult(args: {
     pendingEnqueued,
     pendingDrainRuns,
     estimatedDrainSeconds,
+    estimatedCpuMs: estimateCpuMs({ messageChunks, initialFreshAttempts }),
     d1Operations,
     sloStatus: classifySlo(args.fixture.activeWatchers, args.scenarioId, estimatedDrainSeconds),
     exploratory: args.fixture.activeWatchers === EXPLORATORY_TARGET,
@@ -912,6 +980,11 @@ export function buildTelegramLoadCheckReport(options: {
       pendingTtlSeconds: PENDING_TTL_SECONDS,
       normalSloSeconds: NORMAL_SLO_SECONDS,
       spikeMaxSeconds: SPIKE_MAX_SECONDS,
+      dispatchCpuMs: DISPATCH_CPU_MS,
+      cpuBudgetSafetyFraction: CPU_BUDGET_SAFETY_FRACTION,
+      cpuBudgetCeilingMs: CPU_BUDGET_CEILING_MS,
+      formatCpuMsPerChat: FORMAT_CPU_MS_PER_CHAT,
+      sendCpuMsPerMessage: SEND_CPU_MS_PER_MESSAGE,
     },
     fixtureSummaries: fixtures.map(summarizeFixture),
     scenarios: fixtures.flatMap((fixture) => simulateLoadScenarios(fixture)),
@@ -945,6 +1018,9 @@ function printReport(report: TelegramLoadCheckReport): void {
   console.log(
     `Assumptions: ${report.assumptions.freshAttemptsPerRun} fresh attempts/run, ${report.assumptions.pendingDrainAttemptsPerRun} pending drain attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.dispatchTimeoutSeconds / 60}m dispatch timeout, ${report.assumptions.effectiveSendMessagesPerSecond} effective msg/s, ${report.assumptions.pendingTtlSeconds / 60}m risk pending TTL.`,
   );
+  console.log(
+    `CPU budget: ${report.assumptions.dispatchCpuMs.toLocaleString()}ms cap, ceiling ${report.assumptions.cpuBudgetCeilingMs.toLocaleString()}ms (${report.assumptions.cpuBudgetSafetyFraction}x), ${report.assumptions.formatCpuMsPerChat}ms/format-chat, ${report.assumptions.sendCpuMsPerMessage}ms/sent-chunk (format-count capped at fresh budget post-C102).`,
+  );
   console.log("");
 
   for (const summary of report.fixtureSummaries) {
@@ -961,7 +1037,7 @@ function printReport(report: TelegramLoadCheckReport): void {
   for (const result of report.scenarios) {
     const slo = result.sloStatus.toUpperCase();
     console.log(
-      `- ${result.targetActiveWatchers.toLocaleString()} / ${result.scenarioLabel}: ${result.targetChats.toLocaleString()} chats, ${result.messageChunks.toLocaleString()} chunks, ${result.pendingEnqueued.toLocaleString()} pending, drain ${formatDuration(result.estimatedDrainSeconds)}, D1 ~${result.d1Operations.reads.toLocaleString()} reads / ${result.d1Operations.writes.toLocaleString()} writes [${slo}]`,
+      `- ${result.targetActiveWatchers.toLocaleString()} / ${result.scenarioLabel}: ${result.targetChats.toLocaleString()} chats, ${result.messageChunks.toLocaleString()} chunks, ${result.pendingEnqueued.toLocaleString()} pending, drain ${formatDuration(result.estimatedDrainSeconds)}, CPU ~${result.estimatedCpuMs.toLocaleString()}ms, D1 ~${result.d1Operations.reads.toLocaleString()} reads / ${result.d1Operations.writes.toLocaleString()} writes [${slo}]`,
     );
   }
 
@@ -1004,8 +1080,16 @@ function main(): void {
       (scenario.scenarioId === "market-wide-burst" || scenario.scenarioId === "telegram-429-storm") &&
       scenario.sloStatus === "breach",
   );
+  // C102 gate: the required-target burst must stay under the CPU safety fraction
+  // of the per-invocation cap. Always enforced (not gated on --enforce-target-slo).
+  const cpuBudgetBreaches = findCpuBudgetBreaches(report);
 
-  if (failedPlans.length > 0 || normalTargetSloFailures.length > 0 || spikeTargetSloBreaches.length > 0) {
+  if (
+    failedPlans.length > 0 ||
+    normalTargetSloFailures.length > 0 ||
+    spikeTargetSloBreaches.length > 0 ||
+    cpuBudgetBreaches.length > 0
+  ) {
     if (failedPlans.length > 0) {
       console.error(`\n${failedPlans.length} query-plan check(s) failed.`);
     }
@@ -1017,6 +1101,13 @@ function main(): void {
     if (spikeTargetSloBreaches.length > 0) {
       console.error(
         `\n${spikeTargetSloBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher spike scenario(s) breached.`,
+      );
+    }
+    if (cpuBudgetBreaches.length > 0) {
+      console.error(
+        `\n${cpuBudgetBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher scenario(s) exceeded the ${report.assumptions.cpuBudgetCeilingMs.toLocaleString()}ms CPU budget ceiling: ${cpuBudgetBreaches
+          .map((scenario) => `${scenario.scenarioId} ~${scenario.estimatedCpuMs.toLocaleString()}ms`)
+          .join(", ")}.`,
       );
     }
     process.exit(1);

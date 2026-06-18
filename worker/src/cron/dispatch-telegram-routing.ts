@@ -15,6 +15,7 @@ import {
 } from "./telegram-pending";
 import { throwIfAborted } from "../lib/abort";
 import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
+import { TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE } from "../lib/telegram-constants";
 import type {
   PerAlertTypeDelivery,
   PerAlertTypeDeliveryStats,
@@ -185,24 +186,114 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
   }
 }
 
+/**
+ * A candidate chat ordered for the fresh-send plan but NOT yet formatted (C102).
+ * Carries a cheap chunk estimate derived from alert counts so the budget cut can
+ * happen before the expensive `formatConsolidatedMessage` pass.
+ */
+export interface PlannedSubscriberAlert {
+  chatId: string;
+  entry: AlertsByChatEntry;
+  alertType: TelegramAlertType;
+  /** Cheap chunk-count estimate (no formatting); see `estimateChatChunks`. */
+  estimatedChunks: number;
+}
+
+/** Total alert lines queued for one chat (cheap; no formatting). */
+function countChatAlerts(alerts: ConsolidatedAlerts): number {
+  return (
+    alerts.dews.length +
+    alerts.depegTriggered.length +
+    alerts.depegResolved.length +
+    alerts.depegWorsening.length +
+    alerts.safety.length +
+    alerts.launch.length
+  );
+}
+
+/**
+ * Cheap, format-free estimate of how many message chunks a chat will produce,
+ * mirroring the load-harness `ALERTS_PER_MESSAGE_CHUNK` model. Always >= 1.
+ */
+export function estimateChatChunks(alerts: ConsolidatedAlerts): number {
+  return Math.max(
+    1,
+    Math.ceil(countChatAlerts(alerts) / TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE),
+  );
+}
+
+/**
+ * Order candidate chats newest-first and attach a cheap chunk estimate WITHOUT
+ * formatting (C102 phase 1). The caller caps this ordered list against the
+ * per-run fresh budget before formatting only the selected slice.
+ */
+export function planSubscriberQueue(
+  alertsByChat: Map<string, AlertsByChatEntry>,
+): PlannedSubscriberAlert[] {
+  return [...alertsByChat.entries()]
+    .map(([chatId, entry]) => ({
+      chatId,
+      entry,
+      alertType: dominantAlertType(entry.alerts),
+      estimatedChunks: estimateChatChunks(entry.alerts),
+    }))
+    .sort((a, b) => b.entry.lastActiveAt - a.entry.lastActiveAt);
+}
+
+/**
+ * Split a newest-first plan into the chats whose cheap chunk estimates fit the
+ * upper-bound format budget (`toFormat`) and the remainder (`overflow`). The
+ * overflow tail can never be sent fresh this run, so it is enqueued lazily
+ * instead of being formatted on the hot dispatch path.
+ */
+export function selectChatsToFormat(
+  planned: readonly PlannedSubscriberAlert[],
+  formatBudget: number,
+): { toFormat: PlannedSubscriberAlert[]; overflow: PlannedSubscriberAlert[] } {
+  const toFormat: PlannedSubscriberAlert[] = [];
+  const overflow: PlannedSubscriberAlert[] = [];
+  let allocated = 0;
+  for (const plan of planned) {
+    if (toFormat.length === 0 || allocated + plan.estimatedChunks <= formatBudget) {
+      toFormat.push(plan);
+      allocated += plan.estimatedChunks;
+    } else {
+      overflow.push(plan);
+    }
+  }
+  return { toFormat, overflow };
+}
+
+/** Format a single planned chat into a deliverable, split message (C102 phase 2). */
+export function formatPlannedSubscriber(
+  plan: PlannedSubscriberAlert,
+  resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
+): RoutedSubscriberAlert {
+  const canonicalHtml = formatConsolidatedMessage(plan.entry.alerts);
+  return {
+    chatId: plan.chatId,
+    lastActiveAt: plan.entry.lastActiveAt,
+    alerts: plan.entry.alerts,
+    canonicalHtml,
+    chunks: splitMessage(canonicalHtml),
+    disableNotification: resolveDisableNotification(plan.entry),
+    alertType: plan.alertType,
+  };
+}
+
+/** Format an already-ordered slice of planned chats (C102 phase 2). */
+export function formatPlannedSubscribers(
+  planned: readonly PlannedSubscriberAlert[],
+  resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
+): RoutedSubscriberAlert[] {
+  return planned.map((plan) => formatPlannedSubscriber(plan, resolveDisableNotification));
+}
+
 export function buildSubscriberQueue(
   alertsByChat: Map<string, AlertsByChatEntry>,
   resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
 ): RoutedSubscriberAlert[] {
-  return [...alertsByChat.entries()]
-    .map(([chatId, entry]) => {
-      const canonicalHtml = formatConsolidatedMessage(entry.alerts);
-      return {
-        chatId,
-        lastActiveAt: entry.lastActiveAt,
-        alerts: entry.alerts,
-        canonicalHtml,
-        chunks: splitMessage(canonicalHtml),
-        disableNotification: resolveDisableNotification(entry),
-        alertType: dominantAlertType(entry.alerts),
-      };
-    })
-    .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+  return formatPlannedSubscribers(planSubscriberQueue(alertsByChat), resolveDisableNotification);
 }
 
 export function splitFreshQueue(

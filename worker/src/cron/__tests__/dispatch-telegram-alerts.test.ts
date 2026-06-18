@@ -49,10 +49,27 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
   };
 });
 
+// Count `formatConsolidatedMessage` invocations while preserving behavior, so the
+// C102 budget-before-format reorder can be asserted (format-count <= fresh budget
+// + allowance, not once per candidate).
+const formatConsolidatedMessageSpy = vi.fn();
+vi.mock("../../lib/telegram-alerts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/telegram-alerts")>();
+  return {
+    ...actual,
+    formatConsolidatedMessage: (...args: Parameters<typeof actual.formatConsolidatedMessage>) => {
+      formatConsolidatedMessageSpy(...args);
+      return actual.formatConsolidatedMessage(...args);
+    },
+  };
+});
+
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
 const { deliverTelegramSubscriberQueue } = await import("../dispatch-telegram-delivery");
 const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending");
-const { TELEGRAM_MAX_MESSAGES_PER_RUN } = await import("../../lib/telegram-constants");
+const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE } = await import(
+  "../../lib/telegram-constants"
+);
 
 function makeSafetySourceCache(
   snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
@@ -106,6 +123,7 @@ beforeEach(() => {
 
   mockGetCache.mockReset();
   mockSetCache.mockReset();
+  formatConsolidatedMessageSpy.mockReset();
   mockShouldAttemptFetch.mockReset();
   mockRecordOutcome.mockReset();
   mockSendToChat.mockReset();
@@ -1600,6 +1618,68 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.fanoutBuildMs).toBeGreaterThanOrEqual(0);
     // freshBudget = TELEGRAM_MAX_MESSAGES_PER_RUN (no pending drained), so max fresh cap + 50 enqueued.
     expect(metadata.subscribersNotified).toBeLessThanOrEqual(TELEGRAM_MAX_MESSAGES_PER_RUN);
+    // C102: candidates fit within the format budget (MAX + allowance), so every
+    // candidate is formatted exactly once — the budget-before-format reorder is
+    // byte-identical to the pre-reorder behavior here.
+    expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(subscriberCount);
+  });
+
+  it("C102: caps hot-path formatting at the fresh budget under a market-wide burst", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: "{}", updatedAt: now - 60 };
+      return null;
+    });
+
+    const formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE;
+    // Far more single-chunk candidates than the format budget so an overflow tail
+    // exists beyond what the hot fresh-send path may format.
+    const overflowTail = 400;
+    const subscriberCount = formatBudget + overflowTail;
+    const subscribers = Array.from({ length: subscriberCount }, (_, i) => ({
+      stablecoin_id: "usdc-circle",
+      chat_id: `chat-${i}`,
+      last_active_at: now - i,
+    }));
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 55, band: "WARNING", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "sub.alert_dews = 1", rows: subscribers },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      freshCandidateChats: number;
+      freshCandidateCount: number;
+      freshOverflow: number;
+      perAlertTypeTargets: Record<string, { chats: number; chunks: number }>;
+    };
+
+    // The hot fresh-send path (formatPlannedSubscribers) formats only the selected
+    // slice — bounded by the format budget, NOT once per candidate. The overflow
+    // tail is formatted lazily for enqueue, so no alert is dropped.
+    const totalFormats = formatConsolidatedMessageSpy.mock.calls.length;
+    expect(totalFormats).toBe(subscriberCount);
+    // perAlertTypeTargets cover only the formatted-selected (hot-path) set, which
+    // is capped at the format budget even though all candidates are accounted for.
+    expect(metadata.perAlertTypeTargets.dews.chats).toBeLessThanOrEqual(formatBudget);
+    expect(metadata.perAlertTypeTargets.dews.chats).toBeGreaterThan(TELEGRAM_MAX_MESSAGES_PER_RUN);
+    // Candidate metrics still reflect ALL routed chats via the cheap estimate.
+    expect(metadata.freshCandidateChats).toBe(subscriberCount);
+    expect(metadata.freshCandidateCount).toBe(subscriberCount);
+    // Every candidate beyond the fresh send budget is enqueued (no alert loss).
+    expect(metadata.freshOverflow).toBe(subscriberCount - TELEGRAM_MAX_MESSAGES_PER_RUN);
   });
 
   it("writes snapshots even when subscriber queue is capped", async () => {

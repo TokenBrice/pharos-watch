@@ -4,9 +4,11 @@ import {
   buildSyntheticTelegramFixture,
   buildTelegramLoadCheckReport,
   evaluateQueryPlan,
+  findCpuBudgetBreaches,
   simulateLoadScenarios,
   summarizeFixture,
   type QueryPlanCheckDefinition,
+  type TelegramLoadCheckReport,
 } from "../ci/check-telegram-load";
 
 describe("Telegram load simulation", () => {
@@ -63,6 +65,79 @@ describe("Telegram load simulation", () => {
     expect(report.assumptions.freshAttemptsPerRun).toBe(3_600);
     expect(report.assumptions.pendingDrainAttemptsPerRun).toBe(900);
     expect(requiredScenarios.every((scenario) => scenario.sloStatus !== "breach")).toBe(true);
+  });
+
+  it("computes a per-invocation CPU estimate and keeps the required burst under the safety fraction", () => {
+    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
+
+    expect(report.assumptions.dispatchCpuMs).toBeGreaterThan(0);
+    expect(report.assumptions.cpuBudgetSafetyFraction).toBe(0.5);
+    expect(report.assumptions.cpuBudgetCeilingMs).toBe(
+      report.assumptions.dispatchCpuMs * report.assumptions.cpuBudgetSafetyFraction,
+    );
+
+    const requiredScenarios = report.scenarios.filter(
+      (scenario) => scenario.targetActiveWatchers === 5_000,
+    );
+    expect(requiredScenarios.length).toBeGreaterThan(0);
+    for (const scenario of requiredScenarios) {
+      expect(scenario.estimatedCpuMs).toBeGreaterThan(0);
+      // C102 caps modeled format-count at the fresh budget, so every required
+      // scenario stays under the CPU safety fraction of the per-invocation cap.
+      expect(scenario.estimatedCpuMs).toBeLessThanOrEqual(report.assumptions.cpuBudgetCeilingMs);
+    }
+  });
+
+  it("caps the modeled format-count at the fresh budget post-C102 reorder", () => {
+    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
+    const burst = report.scenarios.find(
+      (scenario) =>
+        scenario.targetActiveWatchers === 5_000 && scenario.scenarioId === "market-wide-burst",
+    );
+
+    expect(burst).toBeDefined();
+    // The burst routes far more chunks than the fresh budget, but the CPU model
+    // formats at most `freshAttemptsPerRun` chats on the hot path — without the
+    // cap the estimate would scale with the full chunk count and exceed budget.
+    expect(burst!.messageChunks).toBeGreaterThan(report.assumptions.freshAttemptsPerRun);
+    const uncappedFormatMs = burst!.messageChunks * report.assumptions.formatCpuMsPerChat;
+    const cappedFormatMs = report.assumptions.freshAttemptsPerRun * report.assumptions.formatCpuMsPerChat;
+    expect(cappedFormatMs).toBeLessThan(uncappedFormatMs);
+    expect(burst!.estimatedCpuMs).toBeLessThanOrEqual(report.assumptions.cpuBudgetCeilingMs);
+  });
+
+  it("flags a synthetic over-budget scenario and passes the real fixtures", () => {
+    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
+
+    // Real fixtures stay under the CPU safety fraction.
+    expect(findCpuBudgetBreaches(report)).toEqual([]);
+
+    // A synthetic required-target scenario over the ceiling trips the gate.
+    const overBudget: TelegramLoadCheckReport = {
+      ...report,
+      scenarios: [
+        ...report.scenarios,
+        {
+          ...report.scenarios[0]!,
+          targetActiveWatchers: 5_000,
+          estimatedCpuMs: report.assumptions.cpuBudgetCeilingMs + 1,
+        },
+      ],
+    };
+    expect(findCpuBudgetBreaches(overBudget)).toHaveLength(1);
+
+    // A non-required-target over-budget scenario must NOT trip the gate.
+    const exploratoryOver: TelegramLoadCheckReport = {
+      ...report,
+      scenarios: [
+        {
+          ...report.scenarios[0]!,
+          targetActiveWatchers: 10_000,
+          estimatedCpuMs: report.assumptions.cpuBudgetCeilingMs + 5_000,
+        },
+      ],
+    };
+    expect(findCpuBudgetBreaches(exploratoryOver)).toEqual([]);
   });
 });
 

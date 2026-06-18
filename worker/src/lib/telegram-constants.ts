@@ -83,6 +83,23 @@ export const TELEGRAM_MAX_MESSAGES_PER_RUN = 3600;
 /** Pending drain share reserved from the per-run Telegram send budget. */
 export const TELEGRAM_PENDING_DRAIN_BUDGET = Math.floor(TELEGRAM_MAX_MESSAGES_PER_RUN / 4);
 
+/**
+ * Approximate alert lines that fit in one delivered message chunk. Used purely
+ * as a cheap (no-format) chunk estimate when selecting which candidate chats to
+ * format ahead of a fresh send (C102). Mirrors the load harness assumption.
+ */
+export const TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE = 16;
+
+/**
+ * Small headroom added to `TELEGRAM_MAX_MESSAGES_PER_RUN` when deciding how many
+ * candidate chats to format before a fresh send (C102). The pending drain can
+ * only shrink the real fresh budget below this run, so formatting up to the full
+ * per-run cap plus a manifest/overflow allowance never under-formats a chat that
+ * could plausibly be sent fresh, while bounding worst-case formatting CPU in a
+ * market-wide burst.
+ */
+export const TELEGRAM_FORMAT_BUDGET_ALLOWANCE = 64;
+
 /** Parallel sends per batch (leave Workers connection headroom). */
 export const SEND_BATCH_SIZE = 4;
 
