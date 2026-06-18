@@ -111,6 +111,41 @@ describe("scheduled slot groups", () => {
     ]);
   });
 
+  it("skips remaining serial tasks after a failure when stopOnFailure is enabled", async () => {
+    const runLeasedCron = vi.fn(async (job: string, fn) => {
+      if (job === "failed") {
+        throw new Error("boom");
+      }
+      return fn(new AbortController().signal, async () => {});
+    }) as ScheduledRuntimeContext["runLeasedCron"];
+
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
+      {
+        mode: "serial",
+        label: "dependent-serial",
+        stopOnFailure: true,
+        tasks: [
+          { job: "ok", run: async () => ({ status: "ok" }) },
+          { job: "failed", run: async () => ({ status: "ok" }) },
+          { job: "downstream", run: async () => ({ status: "ok" }) },
+        ],
+      },
+    ]);
+
+    expect(runLeasedCron).toHaveBeenCalledTimes(2);
+    expect(summary).toMatchObject({
+      jobsRun: 1,
+      jobsSkipped: 1,
+      jobsDegraded: 0,
+      jobsErrored: 1,
+    });
+    expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
+      ["ok", "ok", undefined],
+      ["failed", "error", undefined],
+      ["downstream", "skipped", "upstream-failure:failed"],
+    ]);
+  });
+
   it("flattens mixed group shapes for preflight accounting", () => {
     const tasks = flattenScheduledSlotGroupTasks([
       {

@@ -67,6 +67,7 @@ function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): Scheduled
     {
       mode: "serial",
       label: "reserve-adapters",
+      stopOnFailure: true,
       tasks: [
         {
           job: "sync-live-reserves",

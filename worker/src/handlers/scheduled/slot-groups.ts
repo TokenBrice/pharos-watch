@@ -5,6 +5,7 @@ import {
 } from "./run-best-effort-job";
 import {
   buildScheduledSlotSummary,
+  summarizeSkippedScheduledJob,
   type ScheduledSlotJobSummary,
   type ScheduledSlotSummary,
 } from "./slot-summary";
@@ -21,11 +22,13 @@ export interface ScheduledSlotGroup {
   mode: ScheduledSlotGroupMode;
   label: string;
   tasks: readonly ScheduledSlotTask[];
+  stopOnFailure?: boolean;
 }
 
 export interface ScheduledSlotTaskChain {
   label: string;
   tasks: readonly ScheduledSlotTask[];
+  stopOnFailure?: boolean;
 }
 
 export interface ScheduledSlotParallelSerialGroup {
@@ -59,10 +62,22 @@ async function runSerialScheduledJobs(
   runtime: ScheduledRuntimeContext,
   slotLabel: string,
   tasks: readonly ScheduledSlotTask[],
+  options: { stopOnFailure?: boolean } = {},
 ): Promise<ScheduledSlotJobSummary[]> {
   const outcomes: ScheduledSlotJobSummary[] = [];
-  for (const task of tasks) {
-    outcomes.push((await runSingleScheduledJobWithOutcome(runtime, slotLabel, task)).summary);
+  for (let index = 0; index < tasks.length; index++) {
+    const task = tasks[index];
+    const summary = (await runSingleScheduledJobWithOutcome(runtime, slotLabel, task)).summary;
+    outcomes.push(summary);
+    if (options.stopOnFailure && summary.outcome === "error") {
+      const skippedTasks = tasks.slice(index + 1);
+      outcomes.push(
+        ...skippedTasks.map((skippedTask) =>
+          summarizeSkippedScheduledJob(skippedTask.job, `upstream-failure:${task.job}`),
+        ),
+      );
+      break;
+    }
   }
   return outcomes;
 }
@@ -86,7 +101,11 @@ export async function runScheduledSlotGroups(
   for (const group of groups) {
     if (group.mode === "parallel-serial") {
       const chainOutcomes = await Promise.all(
-        group.chains.map((chain) => runSerialScheduledJobs(runtime, slotLabel, chain.tasks)),
+        group.chains.map((chain) =>
+          runSerialScheduledJobs(runtime, slotLabel, chain.tasks, {
+            stopOnFailure: chain.stopOnFailure,
+          }),
+        ),
       );
       outcomes.push(...chainOutcomes.flat());
       continue;
@@ -100,7 +119,9 @@ export async function runScheduledSlotGroups(
       continue;
     }
 
-    outcomes.push(...(await runSerialScheduledJobs(runtime, slotLabel, group.tasks)));
+    outcomes.push(...(await runSerialScheduledJobs(runtime, slotLabel, group.tasks, {
+      stopOnFailure: group.stopOnFailure,
+    })));
   }
   return buildScheduledSlotSummary(outcomes);
 }
