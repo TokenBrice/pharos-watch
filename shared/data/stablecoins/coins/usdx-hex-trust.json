@@ -117,7 +117,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "summary": "USDX is an issuer-operated UUPS/OFT token. Active MINTER_ROLE EOAs can mint directly, while the default admin/upgrade-admin EOA can grant roles and upgrade the token.",
     "controls": [
       {

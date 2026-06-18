@@ -122,7 +122,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/10 Safe with no modules or guard detected.",
     "mintIncidents": [
       {

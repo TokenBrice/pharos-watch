@@ -150,7 +150,7 @@
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "summary": "USN token minting is routed through a MinterHandlerV2 contract. The handler allows MINTER_ROLE minting and whitelisted directMint with onchain per-block/per-day limits; the same 3/6 Safe is token owner, handler default admin, and handler minter.",
     "controls": [
       {

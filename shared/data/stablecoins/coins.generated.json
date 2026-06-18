@@ -38466,7 +38466,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/10 Safe with no modules or guard detected.",
       "mintIncidents": [
         {
@@ -47938,7 +47938,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "bounded-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "reUSD's verified ShareToken source has MINTER_ROLE and UPGRADER_ROLE. No live MINTER_ROLE holder was found in the sampled event-derived scan, but admin/upgrader addresses can restore or alter mint authority.",
       "controls": [
         {
@@ -62358,7 +62358,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "USDa uses AccessControl roles on Ethereum. Two addresses held MINT_ROLE at the sampled block, and the default/admin role can grant or revoke mint capacity; signer setup is unknown.",
       "controls": [
         {
@@ -66737,7 +66737,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "USDGO is a Token-2022 issuer token whose live mint authority and permanent delegate are the same Solana address; operational custody for that address is not verified.",
       "controls": [
         {
@@ -69467,7 +69467,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "USDO has AccessControl MINTER_ROLE/BURNER_ROLE/UPGRADE_ROLE. Active mint roles include an EOA default admin, an Express mint/redeem contract, and a CCIP burn/mint token pool.",
       "controls": [
         {
@@ -74178,7 +74178,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "USDX is an issuer-operated UUPS/OFT token. Active MINTER_ROLE EOAs can mint directly, while the default admin/upgrade-admin EOA can grant roles and upgrade the token.",
       "controls": [
         {
@@ -75602,7 +75602,7 @@
     "mintAuthority": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "USN token minting is routed through a MinterHandlerV2 contract. The handler allows MINTER_ROLE minting and whitelisted directMint with onchain per-block/per-day limits; the same 3/6 Safe is token owner, handler default admin, and handler minter.",
       "controls": [
         {
@@ -87065,7 +87065,7 @@
     "mintAuthority": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "YUSD token minting is delegated to AegisMinting. Normal minting requires a whitelisted user/order plus trusted-signer signature; the same minter contract also has cross-chain mint functions. A 3/5 Safe controls the minter and default-admin role.",
       "controls": [
         {
@@ -88653,7 +88653,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
+      "confidence": "manual-review",
       "summary": "ZeUSD token minting is restricted to a router contract, but an EOA holds DEFAULT_ADMIN_ROLE/ADMIN_ROLE on the token and can set the router and authorize upgrades.",
       "mintIncidents": [
         {

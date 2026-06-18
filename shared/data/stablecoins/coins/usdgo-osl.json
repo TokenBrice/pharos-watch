@@ -131,7 +131,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "summary": "USDGO is a Token-2022 issuer token whose live mint authority and permanent delegate are the same Solana address; operational custody for that address is not verified.",
     "controls": [
       {

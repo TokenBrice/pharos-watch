@@ -68,7 +68,7 @@
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "summary": "YUSD token minting is delegated to AegisMinting. Normal minting requires a whitelisted user/order plus trusted-signer signature; the same minter contract also has cross-chain mint functions. A 3/5 Safe controls the minter and default-admin role.",
     "controls": [
       {

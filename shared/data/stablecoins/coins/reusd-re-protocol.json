@@ -139,7 +139,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "bounded-admin",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "summary": "reUSD's verified ShareToken source has MINTER_ROLE and UPGRADER_ROLE. No live MINTER_ROLE holder was found in the sampled event-derived scan, but admin/upgrader addresses can restore or alter mint authority.",
     "controls": [
       {
