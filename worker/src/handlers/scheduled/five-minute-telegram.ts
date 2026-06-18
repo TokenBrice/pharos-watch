@@ -11,7 +11,7 @@ import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
 import { publishTelegramPulseSnapshot } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
-import { cleanExpiredDisambiguations } from "../../cron/telegram-quiet-hours";
+import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import {
   reconcileTelegramCommandRegistration,

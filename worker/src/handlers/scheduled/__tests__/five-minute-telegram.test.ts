@@ -10,7 +10,7 @@ vi.mock("../../../api/telegram-pulse", () => ({
 vi.mock("../../../cron/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: vi.fn(),
 }));
-vi.mock("../../../cron/telegram-quiet-hours", () => ({
+vi.mock("../../../api/telegram-store/disambiguation", () => ({
   cleanExpiredDisambiguations: vi.fn(),
 }));
 vi.mock("../../../lib/telegram-webhook-registration", () => ({
@@ -28,7 +28,7 @@ import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
 import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
 import { publishTelegramPulseSnapshot } from "../../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram-degradation-watchdog";
-import { cleanExpiredDisambiguations } from "../../../cron/telegram-quiet-hours";
+import { cleanExpiredDisambiguations } from "../../../api/telegram-store/disambiguation";
 import {
   reconcileTelegramCommandRegistration,
   reconcileTelegramMenuButton,

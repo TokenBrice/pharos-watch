@@ -120,7 +120,7 @@ vi.mock("../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cro
 vi.mock("../cron/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
 }));
-vi.mock("../cron/telegram-quiet-hours", () => ({
+vi.mock("../api/telegram-store/disambiguation", () => ({
   cleanExpiredDisambiguations: cronMocks.cleanExpiredDisambiguations,
 }));
 vi.mock("../api/telegram-pulse", () => ({ publishTelegramPulseSnapshot: cronMocks.publishTelegramPulseSnapshot }));

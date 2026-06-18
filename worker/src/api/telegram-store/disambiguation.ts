@@ -5,7 +5,11 @@ import type {
   PendingDisambiguationRow,
 } from "../telegram-webhook-shared";
 import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
+import { throwIfAborted } from "../../lib/abort";
 import { dedupeCoins } from "../../lib/telegram-coin-dedupe";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
+import type { CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import { d1ChangeCount } from "./_internals";
 import { unixNow } from "./subscribers";
 
@@ -175,4 +179,39 @@ export async function clearPendingDisambiguation(
     .prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?")
     .bind(chatId)
     .run();
+}
+
+// Grace window past `expires_at` before a disambiguation row is eligible for
+// cleanup. Two TTLs gives a slow user mid-selection room to finish, with a
+// 10-minute floor so the guard remains meaningful if the TTL is ever shortened.
+const DISAMBIGUATION_CLEANUP_GRACE_SEC = Math.max(2 * DISAMBIGUATION_TTL_SEC, 600);
+
+/**
+ * Deletes expired rows from `telegram_pending_disambiguation`. Rows are only
+ * removed once `expires_at` is older than `2 * DISAMBIGUATION_TTL_SEC` (10 min
+ * minimum) to avoid racing a slow user mid-selection.
+ *
+ * Runs on the existing 5-minute Telegram cron slot. Returns a `CronResult`
+ * with `disambiguationRowsCleaned` in metadata for observability.
+ */
+export async function cleanExpiredDisambiguations(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<CronResult> {
+  throwIfAborted(signal);
+  const cutoffSec = Math.floor(Date.now() / 1000) - DISAMBIGUATION_CLEANUP_GRACE_SEC;
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare("DELETE FROM telegram_pending_disambiguation WHERE expires_at < ?")
+      .bind(cutoffSec)
+      .run(),
+    3,
+    signal,
+  );
+  const disambiguationRowsCleaned = result.meta?.changes ?? 0;
+  return createCronResult({
+    status: "ok",
+    itemCount: disambiguationRowsCleaned,
+    metadata: { disambiguationRowsCleaned, cutoffSec },
+  });
 }
