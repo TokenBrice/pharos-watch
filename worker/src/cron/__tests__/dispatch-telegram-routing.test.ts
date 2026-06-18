@@ -165,6 +165,36 @@ describe("dispatch telegram routing helpers", () => {
     expect(alertsByChat.size).toBe(0);
   });
 
+  it("applies per-coin off rows to preset/specific and global fan-out", () => {
+    const alertsByChat = new Map<string, AlertsByChatEntry>();
+    const specificRows = new Map([
+      [
+        "usdc-circle",
+        [
+          subscriber({ chat_id: "preset-chat" }),
+          subscriber({ chat_id: "specific-on" }),
+        ],
+      ],
+    ]);
+    const globalRows = [
+      subscriber({ chat_id: "global-chat", isGlobal: true }),
+      subscriber({ chat_id: "global-on", isGlobal: true }),
+    ];
+
+    routeAlertEvents(
+      [DEWS_WARNING],
+      specificRows,
+      globalRows,
+      alertsByChat,
+      (alerts) => alerts.dews,
+      undefined,
+      undefined,
+      new Map([["usdc-circle", new Set(["preset-chat", "global-chat"])]]),
+    );
+
+    expect([...alertsByChat.keys()]).toEqual(["specific-on", "global-on"]);
+  });
+
   it("builds a newest-first queue with dominant alert type and notification flags", () => {
     const queue = buildSubscriberQueue(
       new Map([

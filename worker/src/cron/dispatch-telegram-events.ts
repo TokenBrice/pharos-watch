@@ -103,20 +103,7 @@ export async function buildTelegramDispatchEvents(
     return previousEventId != null && previousEventId !== currentEventId;
   }
 
-  const depegTriggered: DepegAlertPayload[] = activeDepegRows
-    .filter(
-      (row) =>
-        !previousActiveIds.has(row.stablecoin_id) ||
-        isReopenedEvent(row.stablecoin_id, row.event_id),
-    )
-    .map((row) => ({
-      stablecoinId: row.stablecoin_id,
-      symbol: row.symbol,
-      direction: row.direction,
-      deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
-      price: Number(row.start_price ?? 0),
-      pegReference: Number(row.peg_reference ?? 1),
-    }));
+  const reopenedRecoveryMinutesByStablecoinId = new Map<string, number>();
 
   const depegWorsening: DepegWorsening[] = activeDepegRows
     .flatMap((row) => {
@@ -198,6 +185,14 @@ export async function buildTelegramDispatchEvents(
 
       const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
       const previous = safeDepegSnapshot[stablecoinId];
+      const currentRow = currentRowByStablecoinId.get(stablecoinId);
+      if (currentRow && isReopenedEvent(stablecoinId, currentRow.event_id)) {
+        reopenedRecoveryMinutesByStablecoinId.set(
+          stablecoinId,
+          Math.max(1, Math.round(durationSeconds / 60)),
+        );
+        continue;
+      }
       depegResolved.push({
         stablecoinId,
         symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
@@ -207,6 +202,22 @@ export async function buildTelegramDispatchEvents(
       });
     }
   }
+
+  const depegTriggered: DepegAlertPayload[] = activeDepegRows
+    .filter(
+      (row) =>
+        !previousActiveIds.has(row.stablecoin_id) ||
+        isReopenedEvent(row.stablecoin_id, row.event_id),
+    )
+    .map((row) => ({
+      stablecoinId: row.stablecoin_id,
+      symbol: row.symbol,
+      direction: row.direction,
+      deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
+      price: Number(row.start_price ?? 0),
+      pegReference: Number(row.peg_reference ?? 1),
+      reopenedAfterMinutes: reopenedRecoveryMinutesByStablecoinId.get(row.stablecoin_id),
+    }));
 
   const { changes: rawSafetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed
     ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol)

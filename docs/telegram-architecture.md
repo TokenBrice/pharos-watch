@@ -136,7 +136,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 5. Dispatch / fan-out
 
-**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch snapshots to detect events, load matching subscribers (direct + preset + global), filter for quiet hours, snooze, dews-min-band, safety-mode, depeg-step. Build per-chat consolidated messages and chunk them. Hand the chunk queue to Queue / rate-limit / retry plus Outbound transport. Persist alert-job manifests and per-target outcomes.
+**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch snapshots to detect events, load matching subscribers (direct + preset + global), filter for quiet hours, snooze, explicit per-coin off overrides, dews-min-band, safety-mode, depeg-step. Build per-chat consolidated messages and chunk them. Hand the chunk queue to Queue / rate-limit / retry plus Outbound transport. Persist alert-job manifests and per-target outcomes. When a depeg closes and a new active event for the same coin appears in the same window, dispatch emits only the new detected event and annotates it with the just-ended recovery duration instead of also sending a resolved line for that coin.
 
 **Owned files.**
 - `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration)

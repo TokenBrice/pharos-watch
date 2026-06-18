@@ -340,7 +340,7 @@ Additional alert controls:
 
 `launch` alerts have no additional per-coin tuning beyond on/off subscription state, and can now be toggled through `/set <ticker> launch on|off` and `/set all launch on|off`.
 
-Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair.
+Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair, and a per-coin `off` suppresses matching preset/global fan-out for that coin and alert type.
 
 Global all-stablecoin safety follows are intentionally narrower than per-coin safety follows. The current product tier is:
 
@@ -484,7 +484,9 @@ Filtering is subscription-aware:
 - Chats with `alert_snooze_until_ts > now` are fully skipped for the run. The count of currently-snoozed chats (whether or not they would have received an alert this run) surfaces as `chatsWithActiveSnooze` in dispatch metadata.
 - Per-coin snoozes live on `telegram_subscriptions.alert_snooze_until_ts` (added in `worker/migrations/0119_telegram_subscription_snooze.sql`). The dispatcher filters them out at the subscriber-row SELECT and also loads a `Map<stablecoinId, Set<chatId>>` of active per-coin snoozes so the global fan-out lane suppresses the same (chat, stablecoin) pair. Per-coin snooze and chat-level snooze stack — either active suppresses fan-out.
 
-When the same chat has both a global alert type and a per-coin subscription for the same alert type, the per-coin row wins. This lets coin-specific thresholds or modes override the global default.
+When the same chat has both a global alert type and a per-coin subscription for the same alert type, the per-coin row wins. This lets coin-specific thresholds or modes override the global default, and it lets `/set <ticker> <type> off` silence that coin even when the chat follows a preset or all-stablecoin alert family.
+
+If a depeg closes and reopens for the same coin between two dispatch snapshots, the alert is framed as the new detected event with the just-ended recovery duration. The dispatcher suppresses the separate resolved line for that same coin in the same message so users do not receive contradictory "resolved" and "detected" sections at once.
 
 ### Message Formatting and Limits
 

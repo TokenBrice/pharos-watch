@@ -1,0 +1,106 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { buildAlertContextLines } from "../telegram-alert-context";
+
+const mocks = vi.hoisted(() => ({
+  buildReportCardsSnapshot: vi.fn(),
+  loadStablecoinsCache: vi.fn(),
+  logTelegramEvent: vi.fn(),
+}));
+
+vi.mock("../../lib/report-cards-snapshot", () => ({
+  buildReportCardsSnapshot: mocks.buildReportCardsSnapshot,
+}));
+
+vi.mock("../../lib/stablecoins-cache", () => ({
+  loadStablecoinsCache: mocks.loadStablecoinsCache,
+}));
+
+vi.mock("../../lib/telegram-log", () => ({
+  logTelegramEvent: mocks.logTelegramEvent,
+}));
+
+describe("buildAlertContextLines", () => {
+  beforeEach(() => {
+    mocks.buildReportCardsSnapshot.mockResolvedValue({ cards: [] });
+    mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", payload: { peggedAssets: [] } });
+    mocks.logTelegramEvent.mockReset();
+  });
+
+  it("chunks liquidity context reads to stay under the D1 bind limit", async () => {
+    const bindCounts: number[] = [];
+    let nextRowOffset = 0;
+    const db = {
+      prepare: vi.fn(() => {
+        let currentBindCount = 0;
+        const statement = {
+          bind: (...binds: string[]) => {
+            currentBindCount = binds.length;
+            bindCounts.push(binds.length);
+            return statement;
+          },
+          all: async () => ({
+            results: currentBindCount > 90
+              ? []
+              : Array.from({ length: currentBindCount }, (_, index) => ({
+                  stablecoin_id: `coin-${nextRowOffset + index}`,
+                  liquidity_score: 72,
+                  total_tvl_usd: 1_000_000,
+                })),
+          }),
+        };
+        const originalAll = statement.all;
+        statement.all = async () => {
+          const result = await originalAll();
+          nextRowOffset += currentBindCount;
+          return result;
+        };
+        return statement;
+      }),
+    } as unknown as D1Database;
+
+    const ids = Array.from({ length: 91 }, (_, index) => `coin-${index}`);
+    const context = await buildAlertContextLines(db, ids);
+
+    expect(bindCounts).toEqual([90, 1]);
+    expect(context.get("coin-0")).toContain("Liquidity 72");
+    expect(context.get("coin-90")).toContain("Liquidity 72");
+  });
+
+  it("logs a warning and keeps successful liquidity chunks when one chunk fails", async () => {
+    let call = 0;
+    const db = {
+      prepare: vi.fn(() => {
+        const statement = {
+          bind: (..._binds: string[]) => statement,
+          all: async () => {
+            call += 1;
+            if (call === 2) throw new Error("D1 bind failure");
+            return {
+              results: [{
+                stablecoin_id: "coin-0",
+                liquidity_score: 81,
+                total_tvl_usd: 2_000_000,
+              }],
+            };
+          },
+        };
+        return statement;
+      }),
+    } as unknown as D1Database;
+
+    const ids = Array.from({ length: 91 }, (_, index) => `coin-${index}`);
+    const context = await buildAlertContextLines(db, ids);
+
+    expect(context.get("coin-0")).toContain("Liquidity 81");
+    expect(context.has("coin-90")).toBe(false);
+    expect(mocks.logTelegramEvent).toHaveBeenCalledWith(expect.objectContaining({
+      level: "warn",
+      action: "alert-context-liquidity",
+      module: "telegram-alert-context",
+      requestedStablecoinCount: 91,
+      chunkSize: 1,
+      err: "D1 bind failure",
+    }));
+  });
+});

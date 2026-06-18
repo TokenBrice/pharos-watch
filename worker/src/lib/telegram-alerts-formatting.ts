@@ -41,6 +41,7 @@ export interface DepegAlertPayload {
   deviationBps: number;
   price: number;
   pegReference: number;
+  reopenedAfterMinutes?: number;
   contextLine?: string;
 }
 
@@ -144,16 +145,24 @@ export function formatDewsLine(e: DewsChange): string {
   return `${prefix}<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}${formatContextLine(e.contextLine)}`;
 }
 
+function formatDurationMinutes(durationMinutes: number): string {
+  const safeMinutes = Math.max(1, Math.round(durationMinutes));
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+}
+
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const pct = (e.deviationBps / 100).toFixed(1);
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${formatContextLine(e.contextLine)}`;
+  const recovery = e.reopenedAfterMinutes != null
+    ? `\nRe-depegged after ${formatDurationMinutes(e.reopenedAfterMinutes)} recovery`
+    : "";
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${recovery}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
-  const hours = Math.floor(e.durationMinutes / 60);
-  const mins = e.durationMinutes % 60;
-  const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  const duration = formatDurationMinutes(e.durationMinutes);
   return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\nRecovery price: $${e.recoveryPrice.toFixed(4)}${formatContextLine(e.contextLine)}`;
 }
 

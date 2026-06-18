@@ -3150,7 +3150,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat.mock.calls[0]?.[0]).toBe("555");
   });
 
-  it("emits BOTH resolved (event #1) and new-trigger (event #2) when an active depeg closes and reopens within one window (P1.10)", async () => {
+  it("emits only the new trigger when an active depeg closes and reopens within one window", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     // Prior depeg snapshot: event #1 active for usdc-circle (eventId carried).
@@ -3234,11 +3234,16 @@ describe("dispatchTelegramAlerts", () => {
       };
     };
 
-    // BOTH events must fire: the new event #2 trigger AND the event #1 resolve.
+    // The new event #2 triggers, but the just-ended event #1 is represented as
+    // recovery context rather than a contradictory resolved section.
     expect(metadata.eventsDetected.depegTriggered).toBe(1);
-    expect(metadata.eventsDetected.depegResolved).toBe(1);
+    expect(metadata.eventsDetected.depegResolved).toBe(0);
     // Worsening must NOT fire — event #1 != event #2; the new event is a
     // fresh trigger, not a worsening of the prior event.
     expect(metadata.eventsDetected.depegWorsening).toBe(0);
+    const sentHtml = String(mockSendToChat.mock.calls[0]?.[1] ?? "");
+    expect(sentHtml).toContain("Depeg Detected");
+    expect(sentHtml).not.toContain("Depeg Resolved");
+    expect(sentHtml).toContain("Re-depegged after 29m recovery");
   });
 });

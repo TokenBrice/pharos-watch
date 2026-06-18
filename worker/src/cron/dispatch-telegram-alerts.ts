@@ -63,6 +63,7 @@ import {
 } from "./dispatch-telegram-result";
 import {
   loadGlobalSubscriberRows,
+  loadPerCoinExplicitlyOffMap,
   loadPerCoinSnoozeMap,
   loadPresetSubscriberRowsBatch,
   loadSubscriberRowsBatch,
@@ -412,6 +413,7 @@ async function executeFullFanoutPath({
     globalSafetySubs,
     globalLaunchSubs,
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps,
   } = await loadFanoutSubscriptionInputs(
     db,
     { dewsIds, depegIds, safetyIds, launchIds },
@@ -420,6 +422,7 @@ async function executeFullFanoutPath({
       loadPresetSubscriberRowsBatch,
       loadGlobalSubscriberRows,
       loadPerCoinSnoozeMap,
+      loadPerCoinExplicitlyOffMap,
     },
     nowSec,
   );
@@ -453,6 +456,7 @@ async function executeFullFanoutPath({
     (alerts) => alerts.dews,
     (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band),
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps.dews,
   );
   routeAlertEvents(
     depegTriggered,
@@ -462,6 +466,7 @@ async function executeFullFanoutPath({
     (alerts) => alerts.depegTriggered,
     (sub, event) => meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step),
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps.depeg,
   );
   routeAlertEvents(
     depegResolved,
@@ -471,6 +476,7 @@ async function executeFullFanoutPath({
     (alerts) => alerts.depegResolved,
     (sub, event) => meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step),
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps.depeg,
   );
   routeAlertEvents(
     depegWorsening,
@@ -480,6 +486,7 @@ async function executeFullFanoutPath({
     (alerts) => alerts.depegWorsening,
     shouldIncludeDepegWorsening,
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps.depeg,
   );
   routeAlertEvents(
     safetyChanges,
@@ -489,6 +496,7 @@ async function executeFullFanoutPath({
     (alerts) => alerts.safety,
     shouldIncludeSafetyForSubscriber,
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps.safety,
   );
   routeAlertEvents(
     launchPromoted,
@@ -498,6 +506,7 @@ async function executeFullFanoutPath({
     (alerts) => alerts.launch,
     undefined,
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps.launch,
   );
 
   const subscriberQueue = buildSubscriberQueue(

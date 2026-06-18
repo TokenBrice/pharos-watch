@@ -162,4 +162,65 @@ describe("buildTelegramDispatchEvents", () => {
     expect(events.safetyChanges[0].contextLine).toContain("Reason: Liquidity / Exit fell B -> C+");
     expect(events.safetyChanges[0].contextLine).not.toContain("Context:");
   });
+
+  it("suppresses resolved lines when a depeg closes and reopens in the same window", async () => {
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          all: vi.fn(async () => ({
+            results: [{
+              stablecoin_id: "coin-depeg",
+              symbol: "DPG",
+              peak_deviation_bps: 310,
+              started_at: 1_000,
+              ended_at: 1_600,
+              recovery_price: 1,
+            }],
+          })),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const events = await buildTelegramDispatchEvents(
+      db,
+      {
+        dewsRows: [],
+        activeDepegRows: [{
+          stablecoin_id: "coin-depeg",
+          symbol: "DPG",
+          direction: "below",
+          peak_deviation_bps: 280,
+          start_price: 0.972,
+          peg_reference: 1,
+          event_id: 2,
+        }],
+      } as never,
+      {
+        currentSafetySnapshot: {},
+        previousSafetySnapshot: null,
+        safeSafetySnapshot: {},
+        safeDewsAlertable: {},
+        safeDewsSnapshot: {},
+        safeDepegSnapshot: {
+          "coin-depeg": {
+            symbol: "DPG",
+            direction: "below",
+            deviationBps: 310,
+            price: 0.969,
+            pegReference: 1,
+            eventId: 1,
+          },
+        },
+        safetySnapshotNeedsSeed: false,
+        dewsSnapshotNeedsSeed: false,
+        depegSnapshotNeedsSeed: false,
+        launchSnapshotNeedsSeed: false,
+      } as never,
+      () => "DPG",
+    );
+
+    expect(events.depegResolved).toEqual([]);
+    expect(events.depegTriggered).toHaveLength(1);
+    expect(events.depegTriggered[0].reopenedAfterMinutes).toBe(10);
+  });
 });

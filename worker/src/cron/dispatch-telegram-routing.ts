@@ -159,13 +159,16 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
    * subscription does not bypass the snooze.
    */
   perCoinSnoozedByStablecoin?: ReadonlyMap<string, ReadonlySet<string>>,
+  perCoinDisabledByStablecoin?: ReadonlyMap<string, ReadonlySet<string>>,
 ): void {
   for (const event of events) {
     const specificSubscribers = specificSubsByStablecoin.get(event.stablecoinId) ?? [];
     const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
     const snoozedForEvent = perCoinSnoozedByStablecoin?.get(event.stablecoinId);
+    const disabledForEvent = perCoinDisabledByStablecoin?.get(event.stablecoinId);
 
     for (const sub of specificSubscribers) {
+      if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
       addAlertToChat(alertsByChat, sub, append, event);
@@ -173,6 +176,7 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
 
     for (const sub of globalSubscribers) {
       if (specificChatIds.has(sub.chat_id)) continue;
+      if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
       addAlertToChat(alertsByChat, sub, append, event);

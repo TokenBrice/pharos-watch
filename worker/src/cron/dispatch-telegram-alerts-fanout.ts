@@ -27,6 +27,7 @@ export interface FanoutSubscriptionInputs {
   globalSafetySubs: SubscriberRow[];
   globalLaunchSubs: SubscriberRow[];
   perCoinSnoozeMap: Map<string, Set<string>>;
+  perCoinExplicitlyOffMaps: Record<TelegramAlertType, Map<string, Set<string>>>;
 }
 
 interface FanoutSubscriptionLoaders {
@@ -47,6 +48,11 @@ interface FanoutSubscriptionLoaders {
     db: D1Database,
     stablecoinIds: readonly string[],
     nowSec: number,
+  ) => Promise<Map<string, Set<string>>>;
+  loadPerCoinExplicitlyOffMap: (
+    db: D1Database,
+    stablecoinIds: readonly string[],
+    type: TelegramAlertType,
   ) => Promise<Map<string, Set<string>>>;
 }
 
@@ -101,6 +107,10 @@ export async function loadFanoutSubscriptionInputs(
     globalSafetySubs,
     globalLaunchSubs,
     perCoinSnoozeMap,
+    perCoinDewsExplicitlyOffMap,
+    perCoinDepegExplicitlyOffMap,
+    perCoinSafetyExplicitlyOffMap,
+    perCoinLaunchExplicitlyOffMap,
   ] = await Promise.all([
     loaders.loadSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
     loaders.loadSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
@@ -114,6 +124,10 @@ export async function loadFanoutSubscriptionInputs(
     loaders.loadGlobalSubscriberRows(db, "safety", nowSec),
     loaders.loadGlobalSubscriberRows(db, "launch", nowSec),
     loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds], nowSec),
+    loaders.loadPerCoinExplicitlyOffMap(db, dewsIds, "dews"),
+    loaders.loadPerCoinExplicitlyOffMap(db, depegIds, "depeg"),
+    loaders.loadPerCoinExplicitlyOffMap(db, safetyIds, "safety"),
+    loaders.loadPerCoinExplicitlyOffMap(db, launchIds, "launch"),
   ]);
 
   return {
@@ -129,5 +143,11 @@ export async function loadFanoutSubscriptionInputs(
     globalSafetySubs,
     globalLaunchSubs,
     perCoinSnoozeMap,
+    perCoinExplicitlyOffMaps: {
+      dews: perCoinDewsExplicitlyOffMap,
+      depeg: perCoinDepegExplicitlyOffMap,
+      safety: perCoinSafetyExplicitlyOffMap,
+      launch: perCoinLaunchExplicitlyOffMap,
+    },
   };
 }

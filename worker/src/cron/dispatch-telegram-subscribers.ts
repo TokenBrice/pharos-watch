@@ -163,6 +163,46 @@ export async function loadPerCoinSnoozeMap(
   return map;
 }
 
+/**
+ * Load per-coin rows where a chat has explicitly disabled this alert type.
+ * The routing pass applies this map after direct/preset rows are merged, so a
+ * local off row suppresses both preset and global fan-out for the same
+ * (stablecoin, chat, alert type) tuple.
+ */
+export async function loadPerCoinExplicitlyOffMap(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+  type: TelegramAlertType,
+): Promise<Map<string, Set<string>>> {
+  const map = new Map<string, Set<string>>();
+  const unique = Array.from(new Set(stablecoinIds));
+  if (unique.length === 0) return map;
+  const alertColumn = ALERT_COLUMN_BY_TYPE[type];
+  if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
+    throw new Error(`Invalid alert subscription column for ${type}`);
+  }
+  for (const idChunk of chunkArray(unique)) {
+    const inClause = buildInClause(idChunk);
+    const result = await db
+      .prepare(
+        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
+        // against the hardcoded allowlist above before interpolation.
+        `SELECT stablecoin_id, chat_id
+           FROM telegram_subscriptions
+          WHERE stablecoin_id IN (${inClause.sql})
+            AND ${alertColumn} = 0`,
+      )
+      .bind(...inClause.binds)
+      .all<{ stablecoin_id: string; chat_id: string }>();
+    for (const row of result.results ?? []) {
+      const existing = map.get(row.stablecoin_id) ?? new Set<string>();
+      existing.add(row.chat_id);
+      map.set(row.stablecoin_id, existing);
+    }
+  }
+  return map;
+}
+
 export function mergeSubscriberMaps(
   base: Map<string, SubscriberRow[]>,
   additional: Map<string, SubscriberRow[]>,

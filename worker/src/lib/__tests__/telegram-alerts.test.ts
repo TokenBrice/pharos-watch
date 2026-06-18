@@ -603,6 +603,20 @@ describe("depeg direction glyphs", () => {
     expect(above.startsWith("▲ ")).toBe(true);
   });
 
+  it("adds recovery timing to close-then-reopen triggered lines", () => {
+    const line = formatDepegTriggeredLine({
+      stablecoinId: "bold-liquity",
+      symbol: "BOLD",
+      direction: "below",
+      deviationBps: 230,
+      price: 0.977,
+      pegReference: 1.0,
+      reopenedAfterMinutes: 65,
+    });
+
+    expect(line).toContain("Re-depegged after 1h 5m recovery");
+  });
+
   it("prefixes worsening lines with the same direction glyph", () => {
     const below = formatDepegWorseningLine({
       stablecoinId: "usdc-circle",
