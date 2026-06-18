@@ -215,11 +215,11 @@ export function PharosWatchBotMiniAppClient() {
       if (hiddenAt == null) return;
       if (Date.now() - hiddenAt < VISIBILITY_REFRESH_THRESHOLD_MS) return;
       if (!initData) return;
-      void loadSession(initData);
+      triggerRefresh();
     };
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
-  }, [initData, loadSession]);
+  }, [initData, triggerRefresh]);
 
   const handleClose = useCallback(() => {
     webApp?.close?.();
