@@ -31,7 +31,7 @@ function canRaiseCapValue(value: unknown): MintAuthorityClientControlSummary["ca
 
 function stringListValue(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.map(stringValue).filter((item): item is string => item != null && item.length > 0);
+  return value.map((item) => stringValue(item)).filter((item): item is string => item != null && item.length > 0);
 }
 
 function appendSources(target: MintAuthorityClientSourceSummary[], sources: unknown, seenUrls: Set<string>) {
