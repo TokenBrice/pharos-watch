@@ -158,6 +158,19 @@ describe("TelegramPulseBoard", () => {
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
   });
 
+  it("clamps estimated capacity usage copy at the same bound as the bar", () => {
+    mockUseTelegramPulse.mockReturnValue({
+      data: { ...pulse, activeWatchers: 6_000 },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useTelegramPulse>);
+
+    render(<TelegramPulseBoard />);
+
+    expect(screen.getByText(/100% used/i)).toBeTruthy();
+    expect(screen.queryByText(/120% used/i)).toBeNull();
+  });
+
   it("keeps the lifecycle placeholder only when no history points are available", () => {
     mockUseTelegramPulse.mockReturnValue({
       data: {

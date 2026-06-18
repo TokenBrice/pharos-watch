@@ -74,7 +74,7 @@ function formatSnapshotAt(value: number | null | undefined): string | null {
 }
 
 function formatCapacityUsage(activeWatchers: number): string {
-  return `${Math.round((activeWatchers / TELEGRAM_ESTIMATED_CAPACITY_WATCHERS) * 100)}% used`;
+  return `${capacityUsagePercent(activeWatchers)}% used`;
 }
 
 function capacityUsagePercent(activeWatchers: number): number {
