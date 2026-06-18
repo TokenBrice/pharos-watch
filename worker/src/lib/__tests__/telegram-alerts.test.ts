@@ -938,21 +938,31 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     }
   });
 
-  it("emits per-coin snooze callbacks alongside the chat-level snooze row (P1-U10)", () => {
+  it("keeps single-coin alert keyboards to two rows with compact snooze controls (P1-U10)", () => {
     const markup = buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 0);
     const callbacks = collectCallbackData(markup);
-    expect(callbacks).toContain("coinsnooze:usdc-circle:1h");
+    expect(markup.inline_keyboard.length).toBeLessThanOrEqual(2);
+    expect(callbacks).toContain("status:usdc-circle");
+    expect(callbacks).toContain("depegstep:usdc-circle:250");
+    expect(callbacks).toContain("safetydown:usdc-circle");
     expect(callbacks).toContain("coinsnooze:usdc-circle:4h");
-    expect(callbacks).toContain("coinsnooze:usdc-circle:24h");
-    // Chat-level snooze row must still be present.
-    expect(callbacks).toContain("snooze:1h");
     expect(callbacks).toContain("snooze:4h");
-    expect(callbacks).toContain("snooze:24h");
+    expect(callbacks.some((c) => c === "coinsnooze:usdc-circle:1h")).toBe(false);
+    expect(callbacks.some((c) => c === "coinsnooze:usdc-circle:24h")).toBe(false);
+    expect(callbacks.some((c) => c === "snooze:1h")).toBe(false);
+    expect(callbacks.some((c) => c === "snooze:24h")).toBe(false);
   });
 
-  it("uses the canonical depeg-step label for the one-tap tuning button", () => {
+  it("uses a compact depeg-step label for the one-tap tuning button", () => {
     const markup = buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 0);
-    expect(collectButtonText(markup)).toContain("Depeg step 250");
+    expect(collectButtonText(markup)).toContain("Depeg 250");
+  });
+
+  it("folds the private Mini App button into the compact single-coin action row", () => {
+    const markup = buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 0, { privateChat: true });
+    expect(markup.inline_keyboard.length).toBeLessThanOrEqual(2);
+    expect(collectButtonText(markup)).toContain("Open app");
+    expect(JSON.stringify(markup)).toContain("web_app");
   });
 
   it("adds a compact per-coin snooze row for the top coins on the first multi-coin chunk (C118)", () => {
@@ -967,8 +977,9 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
       safety: [],
       launch: [],
     };
-    const markup = buildAlertReplyMarkup(multiCoin, 0);
+    const markup = buildAlertReplyMarkup(multiCoin, 0, { privateChat: true });
     const callbacks = collectCallbackData(markup);
+    expect(markup.inline_keyboard.length).toBeLessThanOrEqual(2);
     // Top coin (USDC, WARNING) ranks above USDT (ALERT); both appear (top 2).
     expect(callbacks).toContain("coinsnooze:usdc-circle:4h");
     expect(callbacks).toContain("coinsnooze:usdt-tether:4h");
@@ -979,6 +990,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     expect(callbacks).toContain("snooze:1h");
     // The displayed symbol drives the button text; callback_data is id-only.
     expect(collectButtonText(markup)).toContain("Snooze USDC 4h");
+    expect(JSON.stringify(markup)).not.toContain("web_app");
   });
 
   it("omits the per-coin snooze row on overflow chunks of multi-coin alerts (C118)", () => {
@@ -995,6 +1007,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     };
     const markup = buildAlertReplyMarkup(multiCoin, 1);
     const callbacks = collectCallbackData(markup);
+    expect(markup.inline_keyboard.length).toBeLessThanOrEqual(2);
     expect(callbacks.some((c) => c.startsWith("coinsnooze:"))).toBe(false);
     expect(callbacks).toContain("snooze:1h");
   });

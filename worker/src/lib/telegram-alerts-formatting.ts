@@ -367,6 +367,10 @@ export interface AlertReplyMarkupOptions {
   privateChat?: boolean;
 }
 
+type AlertInlineButton =
+  | { text: string; callback_data: string }
+  | { text: string; web_app: { url: string } };
+
 export function buildAlertReplyMarkup(
   alerts: ConsolidatedAlerts,
   chunkIndex: number,
@@ -379,15 +383,11 @@ export function buildAlertReplyMarkup(
   const stablecoinId = chunkIndex === 0 ? getSingleAlertStablecoinId(alerts) : null;
   const privateChat = options.privateChat === true;
   if (!stablecoinId) {
-    // Multi-coin chunk on the first chunk of a private DM: surface a Mini App
-    // entry point pointed at the watchlist view so the user can tune alerts
-    // across multiple coins without copy-pasting symbols. Telegram rejects
-    // `web_app` buttons in groups/channels, so this is gated on `privateChat`.
+    // Multi-coin chunks keep a maximum of two keyboard rows. When the compact
+    // per-coin snooze row is absent, private first chunks can use the spare row
+    // for the watchlist Mini App entry point.
     const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + (alerts.reserve ?? []).length > 0;
 
-    type AlertInlineButton =
-      | { text: string; callback_data: string }
-      | { text: string; web_app: { url: string } };
     const rows: AlertInlineButton[][] = [];
 
     // Compact per-coin mute (C118): on the first chunk of a multi-coin alert,
@@ -411,7 +411,7 @@ export function buildAlertReplyMarkup(
 
     rows.push([...SNOOZE_REPLY_MARKUP.inline_keyboard[0]]);
 
-    if (privateChat && chunkIndex === 0 && hasAlerts) {
+    if (privateChat && chunkIndex === 0 && hasAlerts && rows.length === 1) {
       rows.push([
         {
           text: "Open Watchlist",
@@ -426,33 +426,24 @@ export function buildAlertReplyMarkup(
   // touching the chat-level snooze. callback_data stays within Telegram's
   // 64-byte limit even for the longest tracked stablecoin id; the property
   // test in `telegram-alerts.test.ts` enforces this invariant.
-  type AlertInlineButton =
-    | { text: string; callback_data: string }
-    | { text: string; web_app: { url: string } };
   const baseRows: AlertInlineButton[][] = [
     [
       { text: "Status", callback_data: `status:${stablecoinId}` },
-      { text: "Depeg step 250", callback_data: `depegstep:${stablecoinId}:250` },
+      { text: "Depeg 250", callback_data: `depegstep:${stablecoinId}:250` },
+      { text: "Safety", callback_data: `safetydown:${stablecoinId}` },
     ],
     [
-      { text: "Safety downgrades", callback_data: `safetydown:${stablecoinId}` },
+      { text: "Coin snooze 4h", callback_data: `coinsnooze:${stablecoinId}:4h` },
+      { text: "Chat snooze 4h", callback_data: "snooze:4h" },
     ],
-    [
-      { text: "Snooze coin 1h", callback_data: `coinsnooze:${stablecoinId}:1h` },
-      { text: "4h", callback_data: `coinsnooze:${stablecoinId}:4h` },
-      { text: "24h", callback_data: `coinsnooze:${stablecoinId}:24h` },
-    ],
-    [...SNOOZE_REPLY_MARKUP.inline_keyboard[0]],
   ];
   if (privateChat) {
-    // Mini App "Open in app" row — only valid in private DMs (Telegram
-    // rejects `web_app` inline buttons in groups/channels).
-    baseRows.push([
-      {
-        text: "Open in app",
-        web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(stablecoinId)) },
-      },
-    ]);
+    // Mini App buttons are valid only in private DMs. Keep subscriber alert
+    // keyboards capped at two rows by folding the app entry into the action row.
+    baseRows[1]?.push({
+      text: "Open app",
+      web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(stablecoinId)) },
+    });
   }
   return { inline_keyboard: baseRows };
 }

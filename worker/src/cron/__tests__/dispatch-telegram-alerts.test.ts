@@ -2451,11 +2451,10 @@ describe("dispatchTelegramAlerts", () => {
     const messages = lastCall?.[0] as Array<{ replyMarkup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> } }>;
     const callbackData = messages?.[0]?.replyMarkup?.inline_keyboard?.flat().map((button) => button.callback_data);
     expect(callbackData).toContain("status:usdc-circle");
-    expect(callbackData).toContain("snooze:1h");
-    // P1-U10: per-coin snooze row on single-coin alerts.
-    expect(callbackData).toContain("coinsnooze:usdc-circle:1h");
+    expect(callbackData).toContain("snooze:4h");
+    // P1-U10: compact per-coin snooze control on single-coin alerts.
     expect(callbackData).toContain("coinsnooze:usdc-circle:4h");
-    expect(callbackData).toContain("coinsnooze:usdc-circle:24h");
+    expect(messages?.[0]?.replyMarkup?.inline_keyboard?.length).toBeLessThanOrEqual(2);
   });
 
   it("attaches link_preview_options to the first chunk of single-coin alerts", async () => {
