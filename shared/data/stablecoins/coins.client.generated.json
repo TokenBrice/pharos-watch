@@ -13179,7 +13179,7 @@
     "id": "mmxn-moneta-digital",
     "name": "Moneta Digital",
     "symbol": "MMXN",
-    "oneLiner": "MMXN is Moneta Digital's Mexican peso stablecoin, self-reporting 1:1 MXN bank reserves; no independent attestation cadence is currently published.",
+    "oneLiner": "MMXN is Moneta Digital's MXN stablecoin; CoinGecko is preview-only with no API price or market cap, so Pharos keeps it out of active runtime surfaces.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "MXN",
@@ -13189,7 +13189,9 @@
       "navToken": false
     },
     "mechanismArchetype": "fiat-cash",
+    "status": "pre-launch",
     "launchDate": "2021-06-15",
+    "launchPhase": "beta",
     "canBeBlacklisted": "possible",
     "reserves": [
       {

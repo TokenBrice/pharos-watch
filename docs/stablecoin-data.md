@@ -74,7 +74,7 @@ If the change affects page counts, feature coverage, reserve coverage, source fa
 Common admission fields:
 
 - `llamaId` / DefiLlama-backed assets
-- `detailProvider: "coingecko"` plus either `geckoId` or a supported on-chain total-supply contract; commodity assets still require `geckoId`
+- `detailProvider: "coingecko"` plus either `geckoId`, Zephyr Scanner support, a curated aggregate supply path, or exactly one runtime-supported on-chain total-supply contract; commodity assets still require `geckoId`
 - verified `contracts` for chain-level coverage and explorer links
 - `status: "pre-launch"` for assets that should not enter active public surfaces yet
 

@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
+import { CHAIN_META } from "../../shared/lib/chains";
+import { hasRuntimeOnchainSupplyPath } from "../../shared/lib/onchain-supply-probe";
 import { CanonicalOrderAssetSchema } from "../../shared/lib/stablecoins/schema";
 import { validateVariantRelationships } from "../../shared/lib/stablecoins/validate-variants";
-import { CHAIN_META } from "../../shared/lib/chains";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "../../shared/lib/peg-price-bounds";
 import type { DeadStablecoin, StablecoinMeta } from "../../shared/types";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
@@ -32,10 +33,6 @@ const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // Hubble USDH remains readable for active/frozen surfaces while the cemetery
   // keeps the 2026 wind-down incident distinct from Native Markets/Hermetica USDH.
   "65::usdh-hubble::usdh-hubble-2026-05",
-]);
-const ZEPHYR_SCANNER_SUPPLY_IDS = new Set([
-  "zsd-zephyr-protocol",
-  "zys-zephyr-protocol",
 ]);
 const LOGOS_FILE = "data/logos.json";
 
@@ -73,13 +70,6 @@ function readCanonicalOrder(): string[] {
   }
 }
 
-function hasSupportedOnchainSupplyContract(coin: StablecoinMeta): boolean {
-  return coin.contracts?.some((contract) => {
-    if (contract.chain === "solana") return true;
-    return CHAIN_META[contract.chain]?.type === "evm" && contract.address.startsWith("0x");
-  }) ?? false;
-}
-
 function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
   if (coin.status === "pre-launch") return null;
   if (coin.llamaId) return null;
@@ -88,11 +78,11 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
   if (isCommodity && coin.geckoId) return null;
 
   if (coin.detailProvider === "coingecko") {
-    if (ZEPHYR_SCANNER_SUPPLY_IDS.has(coin.id)) return null;
-    if (coin.geckoId || hasSupportedOnchainSupplyContract(coin)) return null;
+    if (coin.geckoId || hasRuntimeOnchainSupplyPath(coin)) return null;
 
     return (
-      "active detailProvider=coingecko asset needs geckoId or a supported on-chain supply contract " +
+      "active detailProvider=coingecko asset needs geckoId, Zephyr Scanner support, a curated aggregate supply path, " +
+      "or one unambiguous supported on-chain supply contract " +
       "so sync-stablecoins can admit it into /api/stablecoins"
     );
   }
@@ -107,7 +97,7 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
 
   return (
     "active asset lacks a /api/stablecoins cache admission path; add llamaId, or mark detailProvider=coingecko " +
-    "with geckoId or a supported on-chain supply contract"
+    "with geckoId or a runtime-supported on-chain supply path"
   );
 }
 

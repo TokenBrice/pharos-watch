@@ -2,7 +2,7 @@
   "id": "mmxn-moneta-digital",
   "name": "Moneta Digital",
   "symbol": "MMXN",
-  "oneLiner": "MMXN is Moneta Digital's Mexican peso stablecoin, self-reporting 1:1 MXN bank reserves; no independent attestation cadence is currently published.",
+  "oneLiner": "MMXN is Moneta Digital's MXN stablecoin; CoinGecko is preview-only with no API price or market cap, so Pharos keeps it out of active runtime surfaces.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
@@ -91,6 +91,9 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "status": "pre-launch",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "Contracts are deployed on Ethereum and Tron, but CoinGecko currently lists MMXN as preview-only with no public API price or market-cap data, and Pharos has no safe aggregate Ethereum+Tron runtime supply path. Keep the asset out of active runtime surfaces until CoinGecko exposes usable market data or a verified aggregate runtime source is added.",
   "reserves": [
     {
       "name": "Mexican peso bank reserves (issuer self-reported)",

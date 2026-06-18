@@ -1,12 +1,16 @@
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
+import {
+  isZephyrScannerSupplyId,
+  ZEPHYR_ZSD_ASSET_ID,
+  ZEPHYR_ZYS_ASSET_ID,
+} from "@shared/lib/onchain-supply-probe";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 import { pegTypeKey, getSupplementalChainLabels, toPositiveFiniteNumber } from "./supplemental-assets/shared";
 
-export const ZEPHYR_ZSD_ASSET_ID = "zsd-zephyr-protocol";
-export const ZEPHYR_ZYS_ASSET_ID = "zys-zephyr-protocol";
+export { ZEPHYR_ZSD_ASSET_ID, ZEPHYR_ZYS_ASSET_ID };
 
 const ZEPHYR_SUPPLY_SOURCE = "zephyr-scanner";
 const ZEPHYR_LIVESTATS_URL = "https://zephyrprotocol.com/api/v1/livestats";
@@ -117,7 +121,7 @@ function resolveZephyrPrice(
 }
 
 export function isZephyrScannerAssetId(id: string): boolean {
-  return id === ZEPHYR_ZSD_ASSET_ID || id === ZEPHYR_ZYS_ASSET_ID;
+  return isZephyrScannerSupplyId(id);
 }
 
 function buildZephyrPeggedAsset(

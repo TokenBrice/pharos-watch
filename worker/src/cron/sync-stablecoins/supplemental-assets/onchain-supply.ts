@@ -1,6 +1,12 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/lib/chains";
+import {
+  CURATED_ONCHAIN_SUPPLY_CONTRACTS,
+  selectCuratedAggregateOnchainSupplyProbeContracts,
+  selectSingleOnchainSupplyProbeContract,
+  selectSupplementalOnchainSupplyProbeContract,
+} from "@shared/lib/onchain-supply-probe";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { throwIfAborted } from "../../../lib/abort";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
@@ -14,34 +20,11 @@ import { runBoundedQueue } from "../../shared/bounded-queue";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
 
-export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<
-  string,
-  { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }
-> = {
-  // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
-  // vault supply plus the guarded protocol-redeem price keeps the asset visible.
-  "susdc-spark": { chain: "ethereum" },
-};
 const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   // CoinGecko's ember-earn market row resolves the Sui token, while Pharos
   // tracks the Ethereum eEARN vault token used by Royco Dawn.
   "eearn-ember",
 ]);
-const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
-  string,
-  readonly { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }[]
-> = {
-  // DefiLlama currently lists these active assets but intermittently reports a
-  // zero supply row. Use only verified live deployments and fail closed if any
-  // configured chain cannot be read, so this cannot silently undercount.
-  "cadd-cad-digital": [{ chain: "ethereum" }, { chain: "base" }],
-  // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
-  // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
-  "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
-  "jpym-mento": [{ chain: "celo" }],
-  "zarm-mento": [{ chain: "celo" }],
-  "xofm-mento": [{ chain: "celo" }],
-};
 const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
 
 export interface OnChainMcapResult {
@@ -50,30 +33,8 @@ export interface OnChainMcapResult {
   chainCirculating?: Record<string, number>;
 }
 
-function isSupportedOnChainSupplyContract(contract: NonNullable<StablecoinMeta["contracts"]>[number]): boolean {
-  return contract.chain === "solana" || (contract.chain !== "stellar" && contract.chain !== "tron");
-}
-
-export function selectSingleOnChainSupplyContract(
-  meta: StablecoinMeta,
-): NonNullable<StablecoinMeta["contracts"]>[number] | null {
-  const contracts = meta.contracts ?? [];
-  if (contracts.length !== 1) return null;
-  const [contract] = contracts;
-  return contract && isSupportedOnChainSupplyContract(contract) ? contract : null;
-}
-
-export function selectSupplementalOnChainSupplyContract(
-  meta: StablecoinMeta,
-): NonNullable<StablecoinMeta["contracts"]>[number] | null {
-  const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
-  if (curated) {
-    const contract = meta.contracts?.find((entry) => entry.chain === curated.chain);
-    return contract && isSupportedOnChainSupplyContract(contract) ? contract : null;
-  }
-
-  return selectSingleOnChainSupplyContract(meta);
-}
+export const selectSingleOnChainSupplyContract = selectSingleOnchainSupplyProbeContract;
+export const selectSupplementalOnChainSupplyContract = selectSupplementalOnchainSupplyProbeContract;
 
 export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {
   return PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
@@ -230,20 +191,15 @@ export async function fetchCuratedAggregateOnChainMcap(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<OnChainMcapResult | null> {
-  const curatedContracts = CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
-  if (!curatedContracts || curatedContracts.length === 0) return null;
+  const selectedContracts = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+  if (!selectedContracts) {
+    return null;
+  }
 
   let totalMcap = 0;
   const chainCirculating: Record<string, number> = {};
-  for (const curated of curatedContracts) {
+  for (const { config: curated, contract: supplyContract } of selectedContracts) {
     throwIfAborted(signal);
-    const supplyContract = meta.contracts?.find((entry) => entry.chain === curated.chain);
-    if (!supplyContract || !isSupportedOnChainSupplyContract(supplyContract)) {
-      console.warn(
-        `[fiat-cg] ${meta.symbol}: configured aggregate supply chain ${curated.chain} is missing or unsupported`,
-      );
-      return null;
-    }
 
     const result = await fetchOnChainSupplyForContract({
       meta,
