@@ -99,6 +99,39 @@ function makeSafetySnapshotCache(
   };
 }
 
+function makeDewsOverflowPlan(now: number, chatId = "chat-overflow") {
+  return {
+    chatId,
+    alertType: "dews" as const,
+    estimatedChunks: 1,
+    entry: {
+      lastActiveAt: now,
+      alerts: {
+        dews: [{
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          oldBand: "CALM",
+          newBand: "WARNING",
+          score: 55,
+          topSignals: [],
+        }],
+        depegTriggered: [],
+        depegResolved: [],
+        depegWorsening: [],
+        safety: [],
+        launch: [],
+        reserve: [],
+      },
+      quietHoursEnabled: false,
+      quietHoursStartUtc: null,
+      quietHoursEndUtc: null,
+      timezone: null,
+      specificCount: 1,
+      globalCount: 0,
+    },
+  };
+}
+
 function countPendingAlertInsertBatches(db: MockD1Database): () => number {
   const originalBatch = db.batch.bind(db);
   let pendingInsertBatchCount = 0;
@@ -290,6 +323,31 @@ describe("dispatchTelegramAlerts", () => {
     expect(pendingInsert?.binds[4]).toBe(now + 600);
   });
 
+  it("does not format planned overflow while global backoff is active", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const overflowPlan = makeDewsOverflowPlan(now);
+
+    const db = mockD1([]);
+    const result = await deliverTelegramSubscriberQueue({
+      db,
+      subscriberQueue: [],
+      overflowPlanned: [overflowPlan],
+      overflowFormatBudget: 1,
+      botToken: "bot-token",
+      drainResult: emptyDrainResult(),
+      maxMessagesPerRun: 10,
+      nowSec: now,
+      chatsInBackoff: new Map(),
+      globalBackoffUntil: now + 60,
+      dispatchStartedAtMs: Date.now(),
+    });
+
+    expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
+    expect(result.pendingEnqueued).toBe(0);
+    expect(result.freshOverflow).toBe(1);
+    expect(result.remainingOverflowPlanned).toEqual([overflowPlan]);
+  });
+
   it("skips when circuit breaker is open", async () => {
     mockShouldAttemptFetch.mockResolvedValue(false);
 
@@ -383,6 +441,79 @@ describe("dispatchTelegramAlerts", () => {
     expect(history.some((entry) => entry.sql.includes("SELECT p.id, p.chat_id, p.message_html"))).toBe(false);
   });
 
+  it("drains stored overflow plans during an eventless run", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const overflowPlan = makeDewsOverflowPlan(now);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      if (key === "telegram:dispatch-overflow-plan") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            writtenAt: now - 60,
+            plans: [{ ...overflowPlan, expiresAt: now + 3600 }],
+          }),
+          updatedAt: now - 60,
+        };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 12, band: "CALM", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "GROUP BY chat_id", rows: [] },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventlessFastPath?: boolean;
+      pendingEnqueued: number;
+      freshOverflow: number;
+      cappedAtLimit: boolean;
+    };
+
+    expect(result.itemCount).toBe(0);
+    expect(metadata.eventlessFastPath).toBe(true);
+    expect(metadata.pendingEnqueued).toBe(1);
+    expect(metadata.freshOverflow).toBe(1);
+    expect(metadata.cappedAtLimit).toBe(true);
+    expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(true);
+
+    const overflowBacklogWrite = mockSetCache.mock.calls.find((call) =>
+      call[1] === "telegram:dispatch-overflow-plan"
+    );
+    expect(overflowBacklogWrite).toBeDefined();
+    const overflowBacklog = JSON.parse(String(overflowBacklogWrite?.[2])) as {
+      plans: unknown[];
+    };
+    expect(overflowBacklog.plans).toHaveLength(0);
+  });
+
   it("still drains due pending rows during an otherwise eventless run", async () => {
     const now = Math.floor(Date.now() / 1000);
 
@@ -440,6 +571,30 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.eventlessFastPath).toBe(true);
     expect(metadata.pendingTotal).toBe(1);
     expect(result.itemCount).toBe(0);
+    expect(progressUpdates.find((update) => update.stage === "source-loading")).toMatchObject({
+      itemsTotal: 5,
+      metadata: {
+        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve"],
+      },
+    });
+    expect(progressUpdates.find((update) => update.stage === "source-loaded")).toMatchObject({
+      itemsDone: 5,
+      itemsTotal: 5,
+      metadata: {
+        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve"],
+        reserveSourceUnavailable: true,
+        countTotals: {
+          reserveDriftIds: 0,
+        },
+      },
+    });
+    expect(progressUpdates.find((update) => update.stage === "event-detection")).toMatchObject({
+      itemsTotal: 5,
+      metadata: {
+        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve"],
+        reserveSourceUnavailable: true,
+      },
+    });
     expect(progressUpdates.find((update) => update.stage === "pending-drain")).toMatchObject({
       metadata: {
         providerFamily: "telegram-api",
@@ -1665,23 +1820,37 @@ describe("dispatchTelegramAlerts", () => {
       freshCandidateChats: number;
       freshCandidateCount: number;
       freshOverflow: number;
+      pendingEnqueued: number;
       perAlertTypeTargets: Record<string, { chats: number; chunks: number }>;
     };
 
     // The hot fresh-send path (formatPlannedSubscribers) formats only the selected
-    // slice — bounded by the format budget, NOT once per candidate. The overflow
-    // tail is formatted lazily for enqueue, so no alert is dropped.
+    // slice — bounded by the format budget, NOT once per candidate. The residual
+    // overflow tail is persisted unformatted for a later bounded enqueue pass, so
+    // no alert is dropped and formatting does not scale with all subscribers.
     const totalFormats = formatConsolidatedMessageSpy.mock.calls.length;
-    expect(totalFormats).toBe(subscriberCount);
+    expect(totalFormats).toBe(formatBudget);
     // perAlertTypeTargets cover only the formatted-selected (hot-path) set, which
     // is capped at the format budget even though all candidates are accounted for.
-    expect(metadata.perAlertTypeTargets.dews.chats).toBeLessThanOrEqual(formatBudget);
+    expect(metadata.perAlertTypeTargets.dews.chats).toBe(formatBudget);
     expect(metadata.perAlertTypeTargets.dews.chats).toBeGreaterThan(TELEGRAM_MAX_MESSAGES_PER_RUN);
     // Candidate metrics still reflect ALL routed chats via the cheap estimate.
     expect(metadata.freshCandidateChats).toBe(subscriberCount);
     expect(metadata.freshCandidateCount).toBe(subscriberCount);
-    // Every candidate beyond the fresh send budget is enqueued (no alert loss).
+    // Every candidate beyond the fresh send budget is accounted for: the selected
+    // allowance is enqueued now, and the residual tail is durably planned.
     expect(metadata.freshOverflow).toBe(subscriberCount - TELEGRAM_MAX_MESSAGES_PER_RUN);
+    expect(metadata.pendingEnqueued).toBe(TELEGRAM_FORMAT_BUDGET_ALLOWANCE);
+    const overflowBacklogWrite = mockSetCache.mock.calls.find((call) =>
+      call[1] === "telegram:dispatch-overflow-plan"
+    );
+    expect(overflowBacklogWrite).toBeDefined();
+    const overflowBacklog = JSON.parse(String(overflowBacklogWrite?.[2])) as {
+      version: number;
+      plans: unknown[];
+    };
+    expect(overflowBacklog.version).toBe(1);
+    expect(overflowBacklog.plans).toHaveLength(overflowTail);
   });
 
   it("writes snapshots even when subscriber queue is capped", async () => {
@@ -3169,12 +3338,12 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.perAlertType.depeg.sent).toBe(0);
   });
 
-  it("chunks a 120-coin depeg fan-out for one chat and overflows the message cap to pending", async () => {
+  it("chunks a 120-coin depeg fan-out for one chat and preserves overflow past the format budget", async () => {
     // P1-T2: a single chat subscribed to 120 stablecoins receives one
     // consolidated depeg message that splits into multiple chunks. Many
     // additional global subscribers push total chunk demand past the
-    // MAX_MESSAGES_PER_RUN cap so the overflow lands in the pending
-    // queue rather than being dropped, while the heavy chat is still attempted.
+    // MAX_MESSAGES_PER_RUN cap so overflow is preserved rather than being
+    // dropped, while the heavy chat is still attempted.
     const now = Math.floor(Date.now() / 1000);
 
     // 120 distinct synthetic stablecoin ids. They do not need to be in the
@@ -3269,18 +3438,22 @@ describe("dispatchTelegramAlerts", () => {
     expect(indices[0]).toBe(0);
     expect(indices[indices.length - 1]).toBe(megaMessages.length - 1);
 
-    // Cap and overflow: the queue is capped and excess subscribers spill into
-    // the pending queue.
+    // Cap and overflow: the queue is capped and excess subscribers are accounted
+    // for without formatting the whole deferred tail in this invocation.
     expect(metadata.cappedAtLimit).toBe(true);
-    expect(metadata.pendingEnqueued).toBeGreaterThan(0);
     // freshAttempted is bounded by the cap.
     expect(metadata.freshAttempted).toBeLessThanOrEqual(TELEGRAM_MAX_MESSAGES_PER_RUN);
 
-    // The overflow INSERT was issued (rather than the rows being dropped).
-    const enqueueCalls = db.getHistory().filter((entry) =>
-      entry.sql.includes("INSERT INTO telegram_pending_alerts"),
+    // The residual overflow was persisted as an unformatted plan for a later
+    // bounded enqueue pass.
+    const overflowBacklogWrite = mockSetCache.mock.calls.find((call) =>
+      call[1] === "telegram:dispatch-overflow-plan"
     );
-    expect(enqueueCalls.length).toBeGreaterThan(0);
+    expect(overflowBacklogWrite).toBeDefined();
+    const overflowBacklog = JSON.parse(String(overflowBacklogWrite?.[2])) as {
+      plans: unknown[];
+    };
+    expect(overflowBacklog.plans.length).toBeGreaterThan(0);
 
     // Mega chat is among the chats that got at least one fresh attempt — the
     // multi-chunk consumer did not prevent other chats from being processed.
@@ -3377,6 +3550,137 @@ describe("dispatchTelegramAlerts", () => {
     expect(cycle2Meta.messagesSent).toBe(1);
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
     expect(mockSendToChat.mock.calls[0]?.[0]).toBe("555");
+  });
+
+  it("does not reset the reserve baseline when the producer snapshot is corrupt", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    let producerReserveSnapshot = "{";
+    let cachedReserveDispatched = JSON.stringify(["usdc-circle"]);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot" || key === "alert:dews-alertable-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({});
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({}, now - 60);
+      }
+      if (key === "alert:reserve-snapshot") {
+        return { value: producerReserveSnapshot, updatedAt: now - 60 };
+      }
+      if (key === "alert:reserve-dispatched-snapshot") {
+        return { value: cachedReserveDispatched, updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    mockSetCache.mockImplementation(async (_db: unknown, key: string, value: string) => {
+      if (key === "alert:reserve-dispatched-snapshot") {
+        cachedReserveDispatched = value;
+      }
+      return undefined;
+    });
+
+    const dbCycle1 = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+    ]);
+
+    const cycle1 = await dispatchTelegramAlerts(dbCycle1, "bot-token");
+    const cycle1Meta = JSON.parse(cycle1.metadata) as {
+      eventlessFastPath?: boolean;
+      reserveSourceUnavailable?: boolean;
+      eventsDetected: { reserve: number };
+    };
+
+    expect(cycle1Meta.eventlessFastPath).toBe(true);
+    expect(cycle1Meta.reserveSourceUnavailable).toBe(true);
+    expect(cycle1Meta.eventsDetected.reserve).toBe(0);
+    expect(JSON.parse(cachedReserveDispatched)).toEqual(["usdc-circle"]);
+
+    producerReserveSnapshot = JSON.stringify(["usdc-circle"]);
+    const dbCycle2 = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+    ]);
+
+    const cycle2 = await dispatchTelegramAlerts(dbCycle2, "bot-token");
+    const cycle2Meta = JSON.parse(cycle2.metadata) as {
+      eventlessFastPath?: boolean;
+      reserveSourceUnavailable?: boolean;
+      eventsDetected: { reserve: number };
+    };
+
+    expect(cycle2Meta.eventlessFastPath).toBe(true);
+    expect(cycle2Meta.reserveSourceUnavailable).toBe(false);
+    expect(cycle2Meta.eventsDetected.reserve).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
+  it("persists alert job manifests for reserve fanout", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot" || key === "alert:dews-alertable-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({});
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({}, now - 60);
+      }
+      if (key === "alert:reserve-snapshot") {
+        return { value: JSON.stringify(["usdc-circle"]), updatedAt: now - 60 };
+      }
+      if (key === "alert:reserve-dispatched-snapshot") {
+        return { value: JSON.stringify([]), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_reserve = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "555", last_active_at: now }],
+      },
+      { match: "WHERE global_alert_reserve = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { reserve: number };
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.reserve).toBe(1);
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT INTO telegram_alert_jobs") &&
+      entry.binds[1] === "reserve"
+    )).toBe(true);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT INTO telegram_alert_job_targets") &&
+      entry.binds[4] === "reserve"
+    )).toBe(true);
   });
 
   it("emits only the new trigger when an active depeg closes and reopens within one window", async () => {

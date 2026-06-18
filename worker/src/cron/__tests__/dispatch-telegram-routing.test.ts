@@ -9,7 +9,9 @@ import {
   buildSubscriberQueue,
   collapseBurstChats,
   expandSubscriberChunks,
+  planSubscriberQueue,
   routeAlertEvents,
+  selectChatsToFormat,
   splitFreshQueue,
   type AlertsByChatEntry,
   type RoutedSubscriberAlert,
@@ -247,6 +249,40 @@ describe("dispatch telegram routing helpers", () => {
     expect(result.toSend.map((entry) => entry.chatId)).toEqual(["first"]);
     expect(result.deferredPerChat.map((entry) => entry.chatId)).toEqual(["in-backoff"]);
     expect(result.toEnqueue.map((entry) => entry.chatId)).toEqual(["in-backoff", "overflow"]);
+  });
+
+  it("counts reserve alerts in the cheap pre-format chunk estimate", () => {
+    const reserveAlerts = Array.from({ length: 17 }, (_, index) => ({
+      stablecoinId: `reserve-${index}`,
+      symbol: `R${index}`,
+      name: `Reserve ${index}`,
+    })) as NonNullable<ConsolidatedAlerts["reserve"]>;
+    const planned = planSubscriberQueue(
+      new Map([
+        [
+          "older-dews",
+          alertsEntry({
+            lastActiveAt: 100,
+            alerts: emptyAlerts({ dews: [DEWS_WARNING] }),
+          }),
+        ],
+        [
+          "newer-reserve",
+          alertsEntry({
+            lastActiveAt: 200,
+            alerts: emptyAlerts({ reserve: reserveAlerts }),
+          }),
+        ],
+      ]),
+    );
+
+    expect(planned.map((entry) => [entry.chatId, entry.estimatedChunks])).toEqual([
+      ["newer-reserve", 2],
+      ["older-dews", 1],
+    ]);
+    const selected = selectChatsToFormat(planned, 2);
+    expect(selected.toFormat.map((entry) => entry.chatId)).toEqual(["newer-reserve"]);
+    expect(selected.overflow.map((entry) => entry.chatId)).toEqual(["older-dews"]);
   });
 
   it("expands chunks with private-chat Mini App markup and skips blocked chats", () => {

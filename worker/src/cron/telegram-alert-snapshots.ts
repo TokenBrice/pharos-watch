@@ -201,7 +201,7 @@ export async function writeSnapshots(
     depeg: DepegSnapshot;
     safety?: AlertSafetySnapshotEnvelope | null;
     launch: string[];
-    reserveDispatched: string[];
+    reserveDispatched: string[] | null;
   },
 ): Promise<void> {
   const writes: Promise<unknown>[] = [

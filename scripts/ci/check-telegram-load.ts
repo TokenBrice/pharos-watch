@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
-type AlertType = "depeg" | "dews" | "safety" | "launch";
+type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve";
 type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "admin-broadcast" | "telegram-429-storm";
 type SloStatus = "ok" | "slow" | "breach" | "exploratory";
 type QueryPlanStatus = "ok" | "review" | "fail";
@@ -13,6 +13,7 @@ interface AlertFlags {
   dews: boolean;
   safety: boolean;
   launch: boolean;
+  reserve: boolean;
 }
 
 interface DirectSubscription {
@@ -23,7 +24,7 @@ interface DirectSubscription {
 
 interface PresetSubscription {
   presetId: keyof typeof PRESET_MEMBERS;
-  flags: Omit<AlertFlags, "launch">;
+  flags: Omit<AlertFlags, "launch" | "reserve">;
 }
 
 interface SyntheticWatcher {
@@ -279,8 +280,8 @@ const PRESET_MEMBERS = {
 
 const PRESET_IDS = Object.keys(PRESET_MEMBERS) as Array<keyof typeof PRESET_MEMBERS>;
 
-function hasAlertFlag(flags: AlertFlags | Omit<AlertFlags, "launch">, alertType: AlertType): boolean {
-  if (alertType === "launch") return false;
+function hasAlertFlag(flags: AlertFlags | Omit<AlertFlags, "launch" | "reserve">, alertType: AlertType): boolean {
+  if (alertType === "launch" || alertType === "reserve") return false;
   return flags[alertType] === true;
 }
 
@@ -290,6 +291,7 @@ function mergeFlags(left: AlertFlags, right: AlertFlags): AlertFlags {
     dews: left.dews || right.dews,
     safety: left.safety || right.safety,
     launch: left.launch || right.launch,
+    reserve: left.reserve || right.reserve,
   };
 }
 
@@ -299,6 +301,7 @@ function buildDirectFlags(i: number, j: number): AlertFlags {
     dews: (i + 2 * j) % 3 === 0,
     safety: (i + j) % 4 === 0,
     launch: (i + j) % 19 === 0,
+    reserve: (i + j) % 23 === 0,
   };
 }
 
@@ -308,6 +311,7 @@ function buildGlobalFlags(i: number): AlertFlags {
     dews: i % 29 === 0,
     safety: i % 14 === 0,
     launch: i % 101 === 0,
+    reserve: i % 67 === 0,
   };
 }
 
@@ -370,13 +374,14 @@ function hasDeliverableState(watcher: SyntheticWatcher): boolean {
     watcher.globals.dews ||
     watcher.globals.safety ||
     watcher.globals.launch ||
-    watcher.directSubscriptions.some((sub) => sub.flags.depeg || sub.flags.dews || sub.flags.safety || sub.flags.launch) ||
+    watcher.globals.reserve ||
+    watcher.directSubscriptions.some((sub) => sub.flags.depeg || sub.flags.dews || sub.flags.safety || sub.flags.launch || sub.flags.reserve) ||
     watcher.presetSubscriptions.some((preset) => preset.flags.depeg || preset.flags.dews || preset.flags.safety)
   );
 }
 
 export function summarizeFixture(fixture: SyntheticTelegramFixture): SyntheticFixtureSummary {
-  const globalOptIns: Record<AlertType, number> = { depeg: 0, dews: 0, safety: 0, launch: 0 };
+  const globalOptIns: Record<AlertType, number> = { depeg: 0, dews: 0, safety: 0, launch: 0, reserve: 0 };
   let directSubscriptions = 0;
   let presetFollowers = 0;
   let groupChats = 0;
@@ -442,7 +447,7 @@ function hasDirectMatch(watcher: SyntheticWatcher, event: EventSpec): boolean {
 }
 
 function hasPresetMatch(watcher: SyntheticWatcher, event: EventSpec): boolean {
-  if (event.alertType === "launch") return false;
+  if (event.alertType === "launch" || event.alertType === "reserve") return false;
   return watcher.presetSubscriptions.some(
     (preset) => {
       const presetMembers: readonly string[] = PRESET_MEMBERS[preset.presetId];
@@ -547,7 +552,7 @@ function buildScenarioResult(args: {
     [...args.hitsByChat.values()].flatMap((hit) =>
       [...hit.hitKeys]
         .map((key) => key.split(":")[0])
-        .filter((key): key is AlertType => key === "depeg" || key === "dews" || key === "safety" || key === "launch"),
+        .filter((key): key is AlertType => key === "depeg" || key === "dews" || key === "safety" || key === "launch" || key === "reserve"),
     ),
   ).size;
   const blockedAttempts = countBlockedMessageChunks(args.hitsByChat);
@@ -627,6 +632,7 @@ export function simulateLoadScenarios(fixture: SyntheticTelegramFixture): LoadSc
   const dewsSafetyEvents: EventSpec[] = [
     ...HOT_COIN_IDS.slice(0, 12).map((stablecoinId) => ({ alertType: "dews" as const, stablecoinId })),
     ...HOT_COIN_IDS.slice(5, 15).map((stablecoinId) => ({ alertType: "safety" as const, stablecoinId })),
+    ...HOT_COIN_IDS.slice(10, 20).map((stablecoinId) => ({ alertType: "reserve" as const, stablecoinId })),
   ];
 
   return [
@@ -647,9 +653,9 @@ export function simulateLoadScenarios(fixture: SyntheticTelegramFixture): LoadSc
     buildScenarioResult({
       fixture,
       scenarioId: "dews-safety-burst",
-      scenarioLabel: "DEWS plus safety-grade burst",
+      scenarioLabel: "DEWS, safety-grade, and reserve burst",
       hitsByChat: collectEventHits(fixture, dewsSafetyEvents),
-      fanoutReadQueries: 9,
+      fanoutReadQueries: 11,
     }),
     buildScenarioResult({
       fixture,
@@ -729,6 +735,7 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
               OR alert_depeg = 1
               OR alert_safety = 1
               OR alert_launch = 1
+              OR alert_reserve = 1
             THEN 1 ELSE 0
           END
         ) AS active_sub_count
@@ -738,6 +745,7 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   OR s.global_alert_depeg = 1
   OR s.global_alert_safety = 1
   OR s.global_alert_launch = 1
+  OR s.global_alert_reserve = 1
   OR COALESCE(sub.active_sub_count, 0) > 0`;
 
   return [
@@ -787,6 +795,29 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
           AND alert_snooze_until_ts > ?`,
       binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000],
       requiredDetails: ["idx_tg_sub_coin"],
+    },
+    {
+      id: "fanout-direct-reserve",
+      category: "fan-out",
+      sql: `SELECT sub.stablecoin_id, sub.chat_id, u.last_active_at
+         FROM telegram_subscriptions sub
+         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
+        WHERE sub.stablecoin_id IN (?, ?, ?)
+          AND sub.alert_reserve = 1
+          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
+          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
+      requiredDetails: ["idx_tg_sub_coin", "sqlite_autoindex_telegram_subscribers_1"],
+    },
+    {
+      id: "fanout-global-reserve",
+      category: "fan-out",
+      sql: `SELECT chat_id, last_active_at
+         FROM telegram_subscribers
+        WHERE global_alert_reserve = 1
+          AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)`,
+      binds: [1_800_000_000],
+      requiredDetails: ["idx_telegram_subscribers_global_alert_reserve"],
     },
     {
       id: "pending-drain-ready",
@@ -868,12 +899,13 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
                    OR s.global_alert_depeg = 1
                    OR s.global_alert_safety = 1
                    OR s.global_alert_launch = 1
+                   OR s.global_alert_reserve = 1
                    OR COALESCE(sub.active_sub_count, 0) > 0
                  THEN 1 ELSE 0 END) AS active_watchers
            FROM telegram_subscribers s
            LEFT JOIN (
              SELECT chat_id,
-                    SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 THEN 1 ELSE 0 END) AS active_sub_count
+                    SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1 THEN 1 ELSE 0 END) AS active_sub_count
                FROM telegram_subscriptions
               GROUP BY chat_id
            ) sub ON sub.chat_id = s.chat_id`,
@@ -890,6 +922,7 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
           OR alert_depeg = 1
           OR alert_safety = 1
           OR alert_launch = 1
+          OR alert_reserve = 1
        GROUP BY stablecoin_id
        ORDER BY subscribers DESC, stablecoin_id ASC
        LIMIT 5`,
@@ -1028,7 +1061,7 @@ function printReport(report: TelegramLoadCheckReport): void {
       `Fixture ${summary.activeWatchers.toLocaleString()} active watchers: ${summary.directSubscriptions.toLocaleString()} direct subs, ${summary.presetFollowers.toLocaleString()} preset followers, ${summary.groupChats.toLocaleString()} groups, ${summary.quietHoursChats.toLocaleString()} quiet-hours chats, ${summary.chatSnoozes.toLocaleString()} chat snoozes, ${summary.perCoinSnoozes.toLocaleString()} per-coin snoozes, ${summary.blockedChats.toLocaleString()} blocked chats.`,
     );
     console.log(
-      `  Global opt-ins: depeg ${summary.globalOptIns.depeg.toLocaleString()}, dews ${summary.globalOptIns.dews.toLocaleString()}, safety ${summary.globalOptIns.safety.toLocaleString()}, launch ${summary.globalOptIns.launch.toLocaleString()}.`,
+      `  Global opt-ins: depeg ${summary.globalOptIns.depeg.toLocaleString()}, dews ${summary.globalOptIns.dews.toLocaleString()}, safety ${summary.globalOptIns.safety.toLocaleString()}, launch ${summary.globalOptIns.launch.toLocaleString()}, reserve ${summary.globalOptIns.reserve.toLocaleString()}.`,
     );
   }
 

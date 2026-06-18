@@ -14,7 +14,6 @@ import {
 } from "./dispatch-telegram-state";
 import {
   drainPendingQueue,
-  buildDedupeKey,
   cleanupExpiredPendingAlerts,
   emptyDrainResult,
   loadChatsInBackoff,
@@ -29,9 +28,9 @@ import {
   formatPlannedSubscribers,
   planSubscriberQueue,
   routeAlertEvents,
-  selectChatsToFormat,
   type AlertsByChatEntry,
   type BurstMarkerMap,
+  type PlannedSubscriberAlert,
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
 import {
@@ -43,7 +42,14 @@ import {
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,
 } from "./telegram-alert-jobs";
-import { loadTerminalTelegramAlertTargetKeys } from "./telegram-alert-target-status";
+import {
+  drainOverflowBacklogOnly,
+  persistEventlessOverflowBacklog,
+  persistFanoutOverflowBacklog,
+  readOverflowPlanBacklog,
+  splitFreshPlansForOverflowPriority,
+} from "./dispatch-telegram-overflow";
+import { pruneAlreadyTerminalSubscribers } from "./dispatch-telegram-terminal-targets";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 import { logTelegramEvent } from "../lib/telegram-log";
 import {
@@ -79,8 +85,7 @@ import {
 } from "./dispatch-telegram-subscribers";
 
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
-
-type SubscriberQueueEntry = ReturnType<typeof formatPlannedSubscribers>[number];
+const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
 
 export interface TelegramDispatchSharedState {
   pendingCapacitySnapshot?: PendingCapacitySnapshot;
@@ -99,33 +104,6 @@ function pendingTailState(snapshot: PendingCapacitySnapshot | null | undefined):
     oldestPendingAgeSec: snapshot.oldestPendingAgeSec,
     estimatedDrainTimeSec: snapshot.estimatedDrainTimeSec,
   };
-}
-
-function targetKeysForSubscriber(sub: SubscriberQueueEntry): string[] {
-  return sub.chunks.map((chunk, chunkIndex) => buildDedupeKey({
-    chatId: sub.chatId,
-    html: chunk,
-    canonicalHtml: sub.canonicalHtml,
-    disableNotification: sub.disableNotification,
-    chunkIndex,
-    alertType: sub.alertType,
-  }));
-}
-
-async function pruneAlreadyTerminalSubscribers(
-  db: D1Database,
-  subscriberQueue: SubscriberQueueEntry[],
-): Promise<Set<string>> {
-  const targetKeys = subscriberQueue.flatMap(targetKeysForSubscriber);
-  if (targetKeys.length === 0) return new Set();
-  const terminalKeys = await loadTerminalTelegramAlertTargetKeys(db, targetKeys);
-  if (terminalKeys.size === 0) return terminalKeys;
-  const filteredQueue = subscriberQueue.filter((sub) => {
-    const keys = targetKeysForSubscriber(sub);
-    return keys.length === 0 || !keys.every((key) => terminalKeys.has(key));
-  });
-  subscriberQueue.splice(0, subscriberQueue.length, ...filteredQueue);
-  return terminalKeys;
 }
 
 async function readPresetFailureCount(db: D1Database): Promise<number> {
@@ -179,6 +157,7 @@ type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
 interface SeedPathContext {
   db: D1Database;
   currentSnapshots: DispatchSnapshotState["currentSnapshots"];
+  reserveSourceUnavailable: boolean;
   safetySnapshotNeedsSeed: boolean;
   safetySourceAssessment: AlertSafetySourceAssessment;
   suppressedSafetyChangesAtSeed: number;
@@ -192,10 +171,12 @@ interface EventlessFastPathContext {
   db: D1Database;
   botToken: string;
   currentSnapshots: DispatchSnapshotState["currentSnapshots"];
+  reserveSourceUnavailable: boolean;
   safetySourceAssessment: AlertSafetySourceAssessment;
   suppressedMethodologyChanges: number;
   suppressedSafetyChangesAtSeed: number;
   pendingCapacityBefore: PendingCapacitySnapshot;
+  overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
   chatsWithActiveSnooze: number;
   signal?: AbortSignal;
@@ -210,6 +191,7 @@ interface FullFanoutPathContext {
   events: DispatchEvents;
   suppressedSafetyChangesAtSeed: number;
   pendingCapacityBefore: PendingCapacitySnapshot;
+  overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
   dispatchStartedAtMs: number;
   chatsWithActiveSnooze: number;
@@ -221,6 +203,7 @@ interface FullFanoutPathContext {
 async function executeSeedPath({
   db,
   currentSnapshots,
+  reserveSourceUnavailable,
   safetySnapshotNeedsSeed,
   safetySourceAssessment,
   suppressedSafetyChangesAtSeed,
@@ -234,10 +217,11 @@ async function executeSeedPath({
     message: "Seeding Telegram alert snapshots",
     providerFamily: "d1",
     itemsDone: 0,
-    itemsTotal: 4,
+    itemsTotal: 5,
     metadata: {
       safetySnapshotNeedsSeed,
       suppressedSafetyChangesAtSeed,
+      reserveSourceUnavailable,
       deferredTail: pendingTailState(pendingCapacityBefore),
     },
   });
@@ -256,15 +240,17 @@ async function executeSeedPath({
     ),
   );
   result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
+  result.reserveSourceUnavailable = reserveSourceUnavailable;
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
   await reportDigestProgress(reportProgress, {
     stage: "complete",
     message: "Seeded Telegram alert snapshots without fanout",
     providerFamily: "telegram-dispatch",
-    itemsDone: 4,
-    itemsTotal: 4,
+    itemsDone: 5,
+    itemsTotal: 5,
     metadata: {
       snapshotSeeded: true,
+      reserveSourceUnavailable,
       deferredTail: pendingTailState(pendingCapacityBefore),
     },
   });
@@ -275,10 +261,12 @@ async function executeEventlessFastPath({
   db,
   botToken,
   currentSnapshots,
+  reserveSourceUnavailable,
   safetySourceAssessment,
   suppressedMethodologyChanges,
   suppressedSafetyChangesAtSeed,
   pendingCapacityBefore,
+  overflowBacklog,
   nowSec,
   chatsWithActiveSnooze,
   signal,
@@ -302,8 +290,19 @@ async function executeEventlessFastPath({
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
     : 0;
+  const overflowDeliveryResult = await drainOverflowBacklogOnly({
+    db,
+    botToken,
+    overflowBacklog,
+    drainResult,
+    nowSec,
+    signal,
+  });
+  await persistEventlessOverflowBacklog(db, overflowDeliveryResult, overflowBacklog, nowSec);
   const pendingCapacityAfter =
-    pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0
+    pendingCapacityBefore.due > 0 ||
+      pendingCapacityBefore.expired > 0 ||
+      (overflowDeliveryResult?.pendingEnqueued ?? 0) > 0
       ? await readPendingCapacitySnapshot(db, nowSec)
       : pendingCapacityBefore;
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
@@ -318,6 +317,7 @@ async function executeEventlessFastPath({
     messagesSent: drainResult.sent,
     blockedUsersCleanedUp: drainResult.blockedCleanedUp,
     blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
+    cappedAtLimit: overflowDeliveryResult?.cappedAtLimit ?? false,
     pendingAttempted: drainResult.attempted,
     pendingDrained: drainResult.sent,
     pendingSent: drainResult.sent,
@@ -328,13 +328,17 @@ async function executeEventlessFastPath({
     pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
     pendingDeferred: drainResult.deferred,
     pendingRateLimited: drainResult.rateLimited,
+    reserveSourceUnavailable,
     pendingRetryAfterSec: drainResult.retryAfterSec,
+    pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
     pendingExpired: expiredCount,
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore,
     pendingCapacityAfter,
+    freshOverflow: overflowDeliveryResult?.freshOverflow ?? 0,
     chatsWithActiveSnooze,
     ...safetySourceFields(safetySourceAssessment, false),
+    perAlertType: overflowDeliveryResult?.perAlertType ?? base.perAlertType,
     suppressedSafetyChangesAtSeed,
     eventlessFastPath: true,
   };
@@ -342,6 +346,7 @@ async function executeEventlessFastPath({
   const hasSuccessfulEffect =
     result.messagesSent > 0 ||
     result.blockedUsersCleanedUp > 0 ||
+    result.pendingEnqueued > 0 ||
     result.pendingAttempted === 0;
   await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect);
   await reportDigestProgress(reportProgress, {
@@ -371,6 +376,7 @@ async function executeFullFanoutPath({
   events,
   suppressedSafetyChangesAtSeed,
   pendingCapacityBefore,
+  overflowBacklog,
   nowSec,
   dispatchStartedAtMs,
   chatsWithActiveSnooze,
@@ -400,13 +406,14 @@ async function executeFullFanoutPath({
     message: "Loading Telegram fanout subscriber inputs",
     providerFamily: "telegram-dispatch",
     itemsDone: 0,
-    itemsTotal: Math.max(dewsIds.length + depegIds.length + safetyIds.length + launchIds.length, 1),
+    itemsTotal: Math.max(dewsIds.length + depegIds.length + safetyIds.length + launchIds.length + reserveIds.length, 1),
     metadata: {
       countTotals: {
         dewsIds: dewsIds.length,
         depegIds: depegIds.length,
         safetyIds: safetyIds.length,
         launchIds: launchIds.length,
+        reserveIds: reserveIds.length,
       },
     },
   });
@@ -571,8 +578,10 @@ async function executeFullFanoutPath({
     );
   const plannedQueue = planSubscriberQueue(alertsByChat);
   const formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE;
-  const { toFormat, overflow: overflowPlanned } = selectChatsToFormat(plannedQueue, formatBudget);
+  const { toFormat, overflowPlanned, overflowFormatBudget } =
+    splitFreshPlansForOverflowPriority(plannedQueue, overflowBacklog, formatBudget);
   const subscriberQueue = formatPlannedSubscribers(toFormat, resolveDisableNotification);
+  const combinedOverflowPlanned = [...overflowBacklog, ...overflowPlanned];
   const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
   // Candidate metrics cover ALL routed chats (cheap estimate); target metrics
   // cover only the formatted-selected set actually dispatched this run.
@@ -664,11 +673,13 @@ async function executeFullFanoutPath({
     pendingEnqueued,
     cappedAtLimit,
     perAlertType,
+    remainingOverflowPlanned,
   } = await deliverTelegramSubscriberQueue({
     db,
     botToken,
     subscriberQueue,
-    overflowPlanned,
+    overflowPlanned: combinedOverflowPlanned,
+    overflowFormatBudget,
     resolveDisableNotification,
     drainResult,
     maxMessagesPerRun: TELEGRAM_MAX_MESSAGES_PER_RUN,
@@ -679,6 +690,7 @@ async function executeFullFanoutPath({
     terminalTargetKeys: await pruneAlreadyTerminalSubscribers(db, subscriberQueue),
     signal,
   });
+  await persistFanoutOverflowBacklog(db, remainingOverflowPlanned, overflowBacklog, overflowPlanned, nowSec);
   await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
 
   await writeSnapshots(db, currentSnapshots);
@@ -741,6 +753,7 @@ async function executeFullFanoutPath({
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore,
     pendingCapacityAfter,
+    reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
     freshAttempted,
     freshSent,
     freshRetryQueued,
@@ -838,9 +851,9 @@ export async function dispatchTelegramAlerts(
       message: "Loading Telegram alert source snapshots",
       providerFamily: "telegram-dispatch",
       itemsDone: 0,
-      itemsTotal: 4,
+      itemsTotal: 5,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch"],
+        providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
       },
     });
     const sourceData = await loadDispatchSourceData(db);
@@ -860,21 +873,25 @@ export async function dispatchTelegramAlerts(
 
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
     const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
+    const overflowBacklog = await readOverflowPlanBacklog(db, nowSec);
     assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
     await reportDigestProgress(reportProgress, {
       stage: "source-loaded",
       message: "Loaded Telegram alert source snapshots",
       providerFamily: "telegram-dispatch",
-      itemsDone: 4,
-      itemsTotal: 4,
+      itemsDone: 5,
+      itemsTotal: 5,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch"],
+        providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
         countTotals: {
           dewsRows: sourceData.dewsRows.length,
           activeDepegRows: sourceData.activeDepegRows.length,
           safetyRows: sourceData.safetyRows.length,
+          reserveDriftIds: snapshotState.currentReserveDriftIds.length,
           chatsWithActiveSnooze,
+          overflowBacklogChats: overflowBacklog.length,
         },
+        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         safetyAlertSourceState: safetySourceAssessment.state,
         safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
         deferredTail: pendingTailState(pendingCapacityBefore),
@@ -885,6 +902,7 @@ export async function dispatchTelegramAlerts(
       const result = await executeSeedPath({
         db,
         currentSnapshots,
+        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         safetySnapshotNeedsSeed,
         safetySourceAssessment,
         suppressedSafetyChangesAtSeed,
@@ -901,9 +919,10 @@ export async function dispatchTelegramAlerts(
       message: "Detecting Telegram alert events",
       providerFamily: "telegram-dispatch",
       itemsDone: 0,
-      itemsTotal: 4,
+      itemsTotal: 5,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch"],
+        providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
+        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
       },
     });
     const {
@@ -936,7 +955,7 @@ export async function dispatchTelegramAlerts(
       itemsDone: eventCount,
       itemsTotal: Math.max(eventCount, 1),
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch"],
+        providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
         countTotals: {
           dews: dewsChanges.length,
           depegTriggered: depegTriggered.length,
@@ -944,8 +963,10 @@ export async function dispatchTelegramAlerts(
           depegWorsening: depegWorsening.length,
           safety: safetyChanges.length,
           launch: launchPromoted.length,
+          reserve: reservePromoted.length,
           suppressedMethodologyChanges,
         },
+        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
       },
     });
 
@@ -960,10 +981,12 @@ export async function dispatchTelegramAlerts(
         db,
         botToken,
         currentSnapshots,
+        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         safetySourceAssessment,
         suppressedMethodologyChanges,
         suppressedSafetyChangesAtSeed,
         pendingCapacityBefore,
+        overflowBacklog,
         nowSec,
         chatsWithActiveSnooze,
         signal,
@@ -993,6 +1016,7 @@ export async function dispatchTelegramAlerts(
         reserveIds,
       },
       pendingCapacityBefore,
+      overflowBacklog,
       suppressedSafetyChangesAtSeed,
       nowSec,
       dispatchStartedAtMs,

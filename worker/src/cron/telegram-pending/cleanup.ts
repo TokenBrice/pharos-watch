@@ -44,6 +44,7 @@ const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
   "alert_type",
 ] as const;
 const PENDING_ALERT_DEAD_LETTER_COLUMN_SQL = PENDING_ALERT_DEAD_LETTER_COLUMNS.join(", ");
+export const EXPIRED_PENDING_CLEANUP_BATCH_LIMIT = PENDING_DELETE_CHUNK_SIZE;
 
 function pendingAlertFilterClause(filter: PendingAlertAdminFilter): PendingAlertFilterClause {
   if ("chatId" in filter) {
@@ -247,9 +248,11 @@ export async function cleanupExpiredPendingAlerts(
       `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, expires_at
          FROM telegram_pending_alerts
         WHERE created_at < ?
-           OR (expires_at IS NOT NULL AND expires_at <= ?)`,
+           OR (expires_at IS NOT NULL AND expires_at <= ?)
+        ORDER BY id ASC
+        LIMIT ?`,
     )
-    .bind(cutoff, nowSec)
+    .bind(cutoff, nowSec, EXPIRED_PENDING_CLEANUP_BATCH_LIMIT)
     .all<ExpiredPendingRow>();
 
   const rows = expiredRows.results ?? [];
@@ -271,6 +274,16 @@ export async function cleanupExpiredPendingAlerts(
     );
     await deletePendingAlertsByIds(db, rows.map((row) => row.id));
     logExpiredPendingCleanupRows(rows, nowSec);
+    if (rows.length >= EXPIRED_PENDING_CLEANUP_BATCH_LIMIT) {
+      logTelegramEvent({
+        level: "info",
+        message: "expired pending Telegram alert cleanup reached batch cap",
+        action: "cleanup-expired-pending-alert-capped",
+        module: "telegram-pending-cleanup",
+        rowCount: rows.length,
+        cappedAtLimit: EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
+      });
+    }
     return rows.length;
   }
 

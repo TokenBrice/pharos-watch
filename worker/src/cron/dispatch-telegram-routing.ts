@@ -304,7 +304,8 @@ function countChatAlerts(alerts: ConsolidatedAlerts): number {
     alerts.depegResolved.length +
     alerts.depegWorsening.length +
     alerts.safety.length +
-    alerts.launch.length
+    alerts.launch.length +
+    (alerts.reserve?.length ?? 0)
   );
 }
 

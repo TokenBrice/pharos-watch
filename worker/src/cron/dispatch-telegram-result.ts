@@ -30,6 +30,8 @@ export interface DispatchCapacityMetadata {
   burstCollapsedChats?: number;
   /** C128: bursting chats fully suppressed this run because their coin set was already summarized. */
   burstDeltaSuppressed?: number;
+  /** True when the producer-written reserve drift snapshot was missing or malformed. */
+  reserveSourceUnavailable: boolean;
 }
 
 export type DispatchResult = TelegramDispatchCronResult & DispatchCapacityMetadata;
@@ -136,5 +138,6 @@ export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0):
     fanoutBuildMs: 0,
     fanoutTotalMs: 0,
     suppressedSafetyChangesAtSeed: 0,
+    reserveSourceUnavailable: false,
   };
 }

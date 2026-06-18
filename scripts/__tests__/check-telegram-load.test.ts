@@ -21,6 +21,7 @@ describe("Telegram load simulation", () => {
     expect(summary.globalOptIns.depeg).toBeGreaterThan(2_500);
     expect(summary.globalOptIns.dews).toBeGreaterThan(100);
     expect(summary.globalOptIns.safety).toBeGreaterThan(300);
+    expect(summary.globalOptIns.reserve).toBeGreaterThan(50);
     expect(summary.presetFollowers).toBeGreaterThan(350);
     expect(summary.groupChats).toBeGreaterThan(600);
     expect(summary.quietHoursChats).toBeGreaterThan(250);
@@ -43,6 +44,8 @@ describe("Telegram load simulation", () => {
     expect(scenarios.every((scenario) => scenario.targetChats > 0)).toBe(true);
     expect(scenarios.every((scenario) => scenario.d1Operations.reads > 0)).toBe(true);
     expect(scenarios.every((scenario) => scenario.d1Operations.writes > 0)).toBe(true);
+    expect(scenarios.find((scenario) => scenario.scenarioId === "dews-safety-burst")?.scenarioLabel)
+      .toContain("reserve");
   });
 
   it("includes the 500, 1000, 5000, and 10000 watcher targets by default", () => {

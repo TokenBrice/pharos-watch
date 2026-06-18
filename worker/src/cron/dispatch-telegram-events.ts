@@ -257,7 +257,7 @@ export async function buildTelegramDispatchEvents(
   const launchIds = launchPromoted.map((e) => e.stablecoinId);
   const reserveIds = reservePromoted.map((e) => e.stablecoinId);
 
-  const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds, ...reserveIds]);
+  const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds]);
   const safetyChanges = addSafetyReasonLines(
     rawSafetyChanges,
     currentSafetySnapshot,

@@ -438,6 +438,36 @@ describe("formatConsolidatedMessage", () => {
     expect(msg).toContain("View on Pharos");
   });
 
+  it("formats reserve drift alerts with a coin page link and reply markup", () => {
+    const alerts: ConsolidatedAlerts = {
+      dews: [],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+      reserve: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          name: "Circle USD Coin",
+        },
+      ],
+    };
+
+    const msg = formatConsolidatedMessage(alerts);
+    expect(msg).toContain("<b>Reserve Drift</b>");
+    expect(msg).toContain("<b>USDC</b> — Circle USD Coin live reserve mix has drifted");
+    expect(msg).toContain('href="https://pharos.watch/stablecoin/usdc-circle"');
+
+    const markup = buildAlertReplyMarkup(alerts, 0);
+    expect(markup.inline_keyboard.flat().map((button) =>
+      "callback_data" in button ? button.callback_data : undefined
+    )).toEqual(
+      expect.arrayContaining(["status:usdc-circle", "coinsnooze:usdc-circle:4h"]),
+    );
+  });
+
   it("includes depeg worsening when present", () => {
     const msg = formatConsolidatedMessage({
       dews: [],

@@ -186,13 +186,18 @@ export interface DispatchSnapshotState {
     depeg: DepegSnapshot;
     safety: AlertSafetySnapshotEnvelope | null;
     launch: string[];
-    /** Dispatch baseline written back: the producer's current drift id-set. */
-    reserveDispatched: string[];
+    /**
+     * Dispatch baseline written back: the producer's current drift id-set.
+     * `null` means the producer snapshot was unavailable and there was no
+     * prior baseline to preserve.
+     */
+    reserveDispatched: string[] | null;
   };
   /** Drift id-set the dispatcher last acted on (prior baseline). */
   previousReserveDriftIds: string[];
   /** Producer's current drift id-set (read-only in dispatch). */
   currentReserveDriftIds: string[];
+  reserveSourceUnavailable: boolean;
   mustSeedSnapshots: boolean;
   safeDewsSnapshot: DewsSnapshot;
   safeDewsAlertable: DewsSnapshot;
@@ -335,7 +340,8 @@ export function buildDispatchSnapshotState(
   // fires on the next healthy run (mirrors the launch P1.7 pattern). When there
   // is no parseable baseline we seed with the current producer set (no
   // transition to lose).
-  const currentReserveDriftIds = parseReserveSnapshotIds(sourceData.reserveCache) ?? [];
+  const parsedCurrentReserveDriftIds = parseReserveSnapshotIds(sourceData.reserveCache);
+  const reserveSourceUnavailable = parsedCurrentReserveDriftIds == null;
   const previousReserveDispatchedIds = parseReserveSnapshotIds(sourceData.reserveDispatchedCache);
 
   const mustSeedSnapshots =
@@ -365,10 +371,20 @@ export function buildDispatchSnapshotState(
         ? previousLaunchIds
         : PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
     reserveDispatched:
-      mustSeedSnapshots && previousReserveDispatchedIds != null
-        ? previousReserveDispatchedIds
-        : currentReserveDriftIds,
+      reserveSourceUnavailable
+        ? (previousReserveDispatchedIds ?? null)
+        : (
+            mustSeedSnapshots && previousReserveDispatchedIds != null
+              ? previousReserveDispatchedIds
+              : parsedCurrentReserveDriftIds
+          ),
   };
+  const previousReserveDriftIds = reserveSourceUnavailable
+    ? (previousReserveDispatchedIds ?? [])
+    : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
+  const currentReserveDriftIds = reserveSourceUnavailable
+    ? (previousReserveDispatchedIds ?? [])
+    : parsedCurrentReserveDriftIds;
 
   return {
     nowSec,
@@ -382,9 +398,11 @@ export function buildDispatchSnapshotState(
     currentSnapshots,
     // No prior baseline ⇒ this is a reserve seed: treat the current producer
     // set as the baseline so already-drifting coins produce no alert (the
-    // transition gate). Once a baseline exists, diff against it normally.
-    previousReserveDriftIds: previousReserveDispatchedIds ?? currentReserveDriftIds,
+    // transition gate). If the producer snapshot is unavailable, preserve the
+    // prior baseline and suppress reserve transitions for this run.
+    previousReserveDriftIds,
     currentReserveDriftIds,
+    reserveSourceUnavailable,
     mustSeedSnapshots,
     safeDewsSnapshot: previousDewsSnapshot ?? {},
     safeDewsAlertable: previousDewsAlertableSnapshot ?? {},

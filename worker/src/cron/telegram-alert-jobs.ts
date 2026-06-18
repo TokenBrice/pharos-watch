@@ -22,7 +22,7 @@ export interface TelegramAlertJobManifest {
   targetCount: number;
 }
 
-const ALERT_TYPES: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch"];
+const ALERT_TYPES: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch", "reserve"];
 
 function severityForAlertType(alertType: TelegramAlertType): "risk" | "info" {
   return alertType === "launch" ? "info" : "risk";

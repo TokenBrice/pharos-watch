@@ -31,6 +31,7 @@ interface DeliverTelegramSubscriberQueueOptions {
    * their bodies, never on the hot fresh-send path.
    */
   overflowPlanned?: readonly PlannedSubscriberAlert[];
+  overflowFormatBudget?: number;
   resolveDisableNotification?: (entry: AlertsByChatEntry) => boolean;
   botToken: string;
   drainResult: PendingDrainResult;
@@ -56,6 +57,38 @@ export interface DeliverTelegramSubscriberQueueResult {
   pendingEnqueued: number;
   cappedAtLimit: boolean;
   perAlertType: PerAlertTypeDelivery;
+  remainingOverflowPlanned: PlannedSubscriberAlert[];
+}
+
+function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {
+  return plans.reduce((sum, plan) => sum + Math.max(1, plan.estimatedChunks), 0);
+}
+
+function selectOverflowPlansToFormat(
+  planned: readonly PlannedSubscriberAlert[],
+  formatBudget: number,
+): { toFormat: PlannedSubscriberAlert[]; remaining: PlannedSubscriberAlert[] } {
+  const budget = Math.max(0, Math.floor(formatBudget));
+  if (planned.length === 0 || budget <= 0) {
+    return { toFormat: [], remaining: [...planned] };
+  }
+
+  const toFormat: PlannedSubscriberAlert[] = [];
+  const remaining: PlannedSubscriberAlert[] = [];
+  let allocated = 0;
+  let exhausted = false;
+
+  for (const plan of planned) {
+    if (!exhausted && (toFormat.length === 0 || allocated + plan.estimatedChunks <= budget)) {
+      toFormat.push(plan);
+      allocated += Math.max(1, plan.estimatedChunks);
+    } else {
+      exhausted = true;
+      remaining.push(plan);
+    }
+  }
+
+  return { toFormat, remaining };
 }
 
 async function loadExistingPendingAttempts(
@@ -87,6 +120,7 @@ export async function deliverTelegramSubscriberQueue({
   db,
   subscriberQueue,
   overflowPlanned = [],
+  overflowFormatBudget = 0,
   resolveDisableNotification = () => false,
   botToken,
   drainResult,
@@ -98,12 +132,6 @@ export async function deliverTelegramSubscriberQueue({
   terminalTargetKeys = new Set(),
   signal,
 }: DeliverTelegramSubscriberQueueOptions): Promise<DeliverTelegramSubscriberQueueResult> {
-  // C102: format the un-selected overflow tail lazily so it can be enqueued.
-  // These chats are beyond this run's fresh budget by construction, so they are
-  // never eligible for a fresh send here — only enqueued for a later drain.
-  const overflowDeferred = overflowPlanned.map((plan) =>
-    formatPlannedSubscriber(plan, resolveDisableNotification),
-  );
   const filterTerminalMessages = (messages: BatchMessage[]): BatchMessage[] =>
     terminalTargetKeys.size === 0
       ? messages
@@ -129,7 +157,7 @@ export async function deliverTelegramSubscriberQueue({
 
   if (globalBackoffUntil != null && globalBackoffUntil > nowSec) {
     const pendingMessages = filterTerminalMessages(
-      expandSubscriberChunks([...subscriberQueue, ...overflowDeferred]),
+      expandSubscriberChunks(subscriberQueue),
     );
     const perAlertType = emptyPerAlertTypeDelivery();
     for (const message of pendingMessages) {
@@ -146,11 +174,12 @@ export async function deliverTelegramSubscriberQueue({
       blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
       freshAttempted: 0,
       freshRetryQueued: 0,
-      freshOverflow: pendingMessages.length,
+      freshOverflow: pendingMessages.length + estimatedPlannedChunks(overflowPlanned),
       freshDeferredPerChat: 0,
       pendingEnqueued: pendingMessages.length,
-      cappedAtLimit: false,
+      cappedAtLimit: overflowPlanned.length > 0,
       perAlertType,
+      remainingOverflowPlanned: [...overflowPlanned],
     };
   }
 
@@ -221,12 +250,16 @@ export async function deliverTelegramSubscriberQueue({
     })));
   }
 
-  // C102 overflow tail: chats beyond the per-run format budget. Never sent fresh
-  // this run; enqueue with each chat's backoff `notBeforeAt` honored, mirroring
-  // the per-chat deferred path above.
+  // C102 overflow tail: chats beyond the per-run format budget. Format only the
+  // caller-granted slice; the caller persists any remaining unformatted plans.
+  const {
+    toFormat: overflowPlansToFormat,
+    remaining: remainingOverflowPlanned,
+  } = selectOverflowPlansToFormat(overflowPlanned, overflowFormatBudget);
   let overflowTailMessageCount = 0;
-  for (const overflow of overflowDeferred) {
+  for (const overflowPlan of overflowPlansToFormat) {
     throwIfAborted(signal);
+    const overflow = formatPlannedSubscriber(overflowPlan, resolveDisableNotification);
     if (blockedChats.has(overflow.chatId)) continue;
     const overflowTailMessages = filterTerminalMessages(expandSubscriberChunks([overflow], blockedChats));
     if (overflowTailMessages.length === 0) continue;
@@ -281,7 +314,12 @@ export async function deliverTelegramSubscriberQueue({
   await setTelegramGlobalBackoff(db, globalRateLimitNotBeforeAt);
   await recordTelegramAlertTargetStatuses(db, queuedTargetStatusUpdates);
 
-  const cappedOverflow = toEnqueue.length - deferredPerChat.length + overflowDeferred.length;
+  const remainingOverflowEstimatedChunks = estimatedPlannedChunks(remainingOverflowPlanned);
+  const cappedOverflow =
+    toEnqueue.length -
+    deferredPerChat.length +
+    overflowPlansToFormat.length +
+    remainingOverflowPlanned.length;
 
   return {
     subscribersNotified,
@@ -291,7 +329,7 @@ export async function deliverTelegramSubscriberQueue({
     blockedUsersCleanupFailed,
     freshAttempted,
     freshRetryQueued: retryableFreshMessages.length,
-    freshOverflow: overflowMessages.length + overflowTailMessageCount,
+    freshOverflow: overflowMessages.length + overflowTailMessageCount + remainingOverflowEstimatedChunks,
     freshDeferredPerChat: deferredPerChat.length,
     pendingEnqueued:
       overflowMessages.length +
@@ -300,5 +338,6 @@ export async function deliverTelegramSubscriberQueue({
       retryableFreshMessages.length,
     cappedAtLimit: cappedOverflow > 0,
     perAlertType,
+    remainingOverflowPlanned,
   };
 }
