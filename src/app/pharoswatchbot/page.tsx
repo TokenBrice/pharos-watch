@@ -462,7 +462,7 @@ export default function PharosWatchBotPage() {
                   5m
                 </p>
                 <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-                  dispatcher cadence for all four alert families
+                  dispatcher cadence for all five alert families
                 </p>
               </div>
             </div>

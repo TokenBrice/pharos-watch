@@ -15,7 +15,7 @@ describe("handleTelegramPulse", () => {
       reactivatedWatchersToday: 0,
       historySource: "live-fallback",
       topCoins: ["USDC"],
-      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, allTypes: 1 },
+      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, reserve: 0, allTypes: 1 },
       quietHoursEnabledChats: 2,
       pendingDeliveries: 0,
       updatedAt: Math.floor(Date.now() / 1000),
@@ -154,7 +154,7 @@ describe("handleTelegramPulse", () => {
                   reactivatedWatchers: 0,
                 },
               ],
-              alertTypeChats: { dews: 216, depeg: 479, safety: 86, launch: 9, allTypes: 5 },
+              alertTypeChats: { dews: 216, depeg: 479, safety: 86, launch: 9, reserve: 0, allTypes: 5 },
               quietHoursEnabledChats: 6,
               pendingDeliveries: 0,
               currentSnapshotAt: 1_778_681_248,
@@ -318,7 +318,7 @@ describe("handleTelegramPulse", () => {
       reactivatedWatchersToday: number;
       historySource: string;
       topCoins: string[];
-      alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; allTypes: number };
+      alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; reserve: number; allTypes: number };
       quietHoursEnabledChats: number | null;
       pendingDeliveries: number | null;
       currentSnapshotAt: number;
@@ -371,6 +371,7 @@ describe("handleTelegramPulse", () => {
         depeg: 3,
         safety: 2,
         launch: 1,
+        reserve: 0,
         allTypes: 1,
       },
       quietHoursEnabledChats: null,
@@ -816,7 +817,7 @@ describe("publishTelegramPulseSnapshot", () => {
       reactivatedWatchersToday: 0,
       historySource: "live-fallback",
       topCoins: ["USDC"],
-      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, allTypes: 1 },
+      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, reserve: 0, allTypes: 1 },
       quietHoursEnabledChats: 6,
       pendingDeliveries: 5,
       miniAppSessionsToday: 7,
@@ -933,7 +934,7 @@ describe("publishTelegramPulseSnapshot", () => {
       reactivatedWatchersToday: 0,
       historySource: "live-fallback",
       topCoins: ["USDC"],
-      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, allTypes: 1 },
+      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, reserve: 0, allTypes: 1 },
       quietHoursEnabledChats: 6,
       pendingDeliveries: 5,
       miniAppSessionsToday: 99,

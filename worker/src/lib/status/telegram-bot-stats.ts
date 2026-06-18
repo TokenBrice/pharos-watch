@@ -152,6 +152,7 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         AND (COALESCE(sub.depeg_enabled, 0) = 1 OR COALESCE(preset.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1)
         AND (COALESCE(sub.safety_enabled, 0) = 1 OR COALESCE(preset.safety_enabled, 0) = 1 OR s.global_alert_safety = 1)
         AND (COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1)
+        AND (COALESCE(sub.reserve_enabled, 0) = 1 OR s.global_alert_reserve = 1)
       THEN 1 ELSE 0
     END
   ) AS all_types_chats,

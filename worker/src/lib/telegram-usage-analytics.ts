@@ -140,7 +140,8 @@ const DELIVERY_DIAGNOSTIC_BATCH_SIZE = 100;
 const ACTIVE_SUBSCRIPTION_FLAGS = `alert_dews = 1
   OR alert_depeg = 1
   OR alert_safety = 1
-  OR alert_launch = 1`;
+  OR alert_launch = 1
+  OR alert_reserve = 1`;
 const ACTIVE_PRESET_FLAGS = `alert_dews = 1
   OR alert_depeg = 1
   OR alert_safety = 1`;
@@ -168,6 +169,7 @@ const ACTIVE_WATCHER_CONDITION = `s.global_alert_dews = 1
   OR s.global_alert_depeg = 1
   OR s.global_alert_safety = 1
   OR s.global_alert_launch = 1
+  OR s.global_alert_reserve = 1
   OR COALESCE(sub.active_sub_count, 0) > 0
   OR COALESCE(preset.active_preset_count, 0) > 0`;
 
@@ -444,6 +446,10 @@ export async function computeTelegramCurrentLifecycleSnapshot(
                  AND (
                    COALESCE(sub.launch_enabled, 0) = 1
                    OR s.global_alert_launch = 1
+                 )
+                 AND (
+                   COALESCE(sub.reserve_enabled, 0) = 1
+                   OR s.global_alert_reserve = 1
                  )
                THEN 1 ELSE 0
              END

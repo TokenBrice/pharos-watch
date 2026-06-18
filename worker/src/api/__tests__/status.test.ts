@@ -1950,7 +1950,7 @@ describe("handleStatus", () => {
         pendingDeliveries: number;
         customPreferenceChats: number;
         quietHoursEnabledChats: number;
-        alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; allTypes: number };
+        alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; reserve: number; allTypes: number };
         topStablecoins: Array<{
           stablecoinId: string;
           symbol: string;
@@ -1974,6 +1974,7 @@ describe("handleStatus", () => {
       depeg: 7,
       safety: 6,
       launch: 5,
+      reserve: 0,
       allTypes: 5,
     });
     expect(body.telegramBot?.topStablecoins).toEqual([

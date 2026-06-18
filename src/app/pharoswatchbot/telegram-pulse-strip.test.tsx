@@ -53,6 +53,7 @@ const pulse: TelegramPulse = {
     depeg: 1644,
     safety: 1512,
     launch: 1208,
+    reserve: 1104,
     allTypes: 1191,
   },
   quietHoursEnabledChats: 42,
@@ -156,7 +157,7 @@ describe("TelegramPulseBoard", () => {
     expect(within(pulseDetails).getByText("Depeg chats")).toBeTruthy();
     expect(within(pulseDetails).getByText("Safety chats")).toBeTruthy();
     expect(within(pulseDetails).getByText("Launch chats")).toBeTruthy();
-    expect(within(pulseDetails).getByText("All four families")).toBeTruthy();
+    expect(within(pulseDetails).getByText("All five families")).toBeTruthy();
     expect(within(pulseDetails).getByText("Delivery controls")).toBeTruthy();
     expect(within(pulseDetails).getByText("Quiet-hours chats")).toBeTruthy();
     expect(within(pulseDetails).getByText("1,701")).toBeTruthy();

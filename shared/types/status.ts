@@ -335,7 +335,7 @@ const TelegramAlertTypeChatsSchema = z.object({
   depeg: z.number(),
   safety: z.number(),
   launch: z.number(),
-  reserve: z.number(),
+  reserve: z.number().optional().default(0),
   allTypes: z.number(),
 });
 export type TelegramAlertTypeChats = z.infer<typeof TelegramAlertTypeChatsSchema>;

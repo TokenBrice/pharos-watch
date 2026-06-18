@@ -51,6 +51,7 @@ describe("status-metadata", () => {
         depegWorsening: "3",
         safety: 4,
         launch: "5",
+        reserve: "7",
         suppressedMethodologyChanges: "6",
       },
     });
@@ -100,6 +101,7 @@ describe("status-metadata", () => {
         depegWorsening: 3,
         safety: 4,
         launch: 5,
+        reserve: 7,
         suppressedMethodologyChanges: 6,
       },
       perAlertType: null,
@@ -121,6 +123,7 @@ describe("status-metadata", () => {
       depeg: { sent: 1, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: null },
       safety: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
       launch: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
+      reserve: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
     });
   });
 

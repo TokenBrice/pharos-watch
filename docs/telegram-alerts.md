@@ -732,7 +732,7 @@ When tracked coverage changed, the digest gains a `Tracking Changes` section spl
 - alert-enabled chats vs deliverable chats (explicit coin follows, preset follows, and global all-stablecoin follows all count)
 - explicit `telegram_subscriptions` rows, preset-implied coin follows, active preset followers, and average explicit follows per subscribed chat
 - pending disambiguation replies still within TTL
-- per-alert-type enablement counts (`dews`, `depeg`, `safety`, `launch`, all four)
+- per-alert-type enablement counts (`dews`, `depeg`, `safety`, `launch`, `reserve`, all five)
 - top subscribed stablecoins by subscriber count, split between explicit and preset-implied follows when available
 
 The status page also reads `crons["dispatch-telegram-alerts"].lastRun.metadata` to show the latest delivery run stats (`subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`, `snapshotSeeded`, `cappedAtLimit`).
@@ -762,7 +762,7 @@ The watchdog is wired through `runBestEffortScheduledJob` so its own failures ne
 
 ### Per-alert-type delivery breakdown
 
-The dispatch metadata also exposes a `perAlertType` map covering each of the four
+The dispatch metadata also exposes a `perAlertType` map covering each of the five
 alert categories: `dews`, `depeg`, `safety`, `launch`. Each entry reports the
 delivery outcome for that category in the latest run so operators can spot
 "DEWS delivery fine but safety alerts stalled" at a glance:

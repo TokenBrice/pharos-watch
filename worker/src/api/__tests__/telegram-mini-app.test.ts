@@ -641,6 +641,38 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step", ["42", "usdc-circle", 250])).toBe(true);
   });
 
+  it("applies reserve alert mutations through direct and alert-type patches", async () => {
+    const initData = await privateInitData();
+    const enableDb = mockD1(stateReadTables());
+
+    const enableResponse = await handleTelegramMiniAppMutation(enableDb, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: {
+        kind: "set-coin",
+        stablecoinId: "usdc-circle",
+        patch: { reserve: true },
+      },
+    }), BOT_TOKEN);
+
+    expect(enableResponse.status).toBe(200);
+    expect(historyHas(enableDb, "alert_reserve = excluded.alert_reserve", ["42", "usdc-circle", 1])).toBe(true);
+    expect(historyHas(enableDb, "alert_reserve = MAX(telegram_subscribers.alert_reserve, excluded.alert_reserve)", ["42", "alice", NOW_SEC])).toBe(true);
+
+    const disableDb = mockD1(stateReadTables());
+    const disableResponse = await handleTelegramMiniAppMutation(disableDb, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: {
+        kind: "set-coin",
+        stablecoinId: "usdc-circle",
+        patch: { alertTypes: { reserve: false }, reserve: true },
+      },
+    }), BOT_TOKEN);
+
+    expect(disableResponse.status).toBe(200);
+    expect(historyHas(disableDb, "alert_reserve = excluded.alert_reserve", ["42", "usdc-circle", 0])).toBe(true);
+    expect(historyHas(disableDb, "alert_reserve = excluded.alert_reserve", ["42", "usdc-circle", 1])).toBe(false);
+  });
+
   it("does not return a watchlist coin after disabling its last alert", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables({

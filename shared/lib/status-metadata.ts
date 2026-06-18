@@ -5,7 +5,7 @@ import type {
   TelegramDispatchCronMetadata,
 } from "../types/status";
 
-const TELEGRAM_ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
+const TELEGRAM_ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch", "reserve"];
 
 /**
  * Maps each tracked cache key to the primary upstream provider whose outage

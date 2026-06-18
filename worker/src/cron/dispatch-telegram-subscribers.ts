@@ -406,7 +406,13 @@ export async function loadBroadcastTargetChatIds(
              OR EXISTS (
                SELECT 1 FROM telegram_subscriptions ts
                 WHERE ts.chat_id = s.chat_id
-                  AND (ts.alert_dews = 1 OR ts.alert_depeg = 1 OR ts.alert_safety = 1 OR ts.alert_launch = 1)
+                  AND (
+                    ts.alert_dews = 1
+                    OR ts.alert_depeg = 1
+                    OR ts.alert_safety = 1
+                    OR ts.alert_launch = 1
+                    OR ts.alert_reserve = 1
+                  )
              )
              OR EXISTS (
                SELECT 1 FROM telegram_preset_subscriptions ps

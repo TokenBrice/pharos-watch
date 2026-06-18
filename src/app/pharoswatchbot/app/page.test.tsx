@@ -10,13 +10,13 @@ const baseState: TelegramMiniAppState = {
   viewer: { userId: "42", username: "watcher", chatId: "42", chatType: "private", canMutate: true, mutationBlockReason: null },
   subscriber: {
     exists: true,
-    globalAlerts: { dews: true, depeg: true, safety: false, launch: false, depegStepBps: 250 },
+    globalAlerts: { dews: true, depeg: true, safety: false, launch: false, reserve: false, depegStepBps: 250 },
     quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
     snoozeUntilTs: null,
   },
   presets: [],
   subscriptions: [
-    { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", alertTypes: { dews: true, depeg: true, safety: false, launch: false }, dewsMinBand: "ALERT", depegStepBps: 250, safetyMode: null, snoozeUntilTs: null },
+    { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", alertTypes: { dews: true, depeg: true, safety: false, launch: false, reserve: false }, dewsMinBand: "ALERT", depegStepBps: 250, safetyMode: null, snoozeUntilTs: null },
   ],
   catalog: {
     recommendedPresets: [{ id: "usd-top25", label: "USD Top 25" }],
@@ -488,7 +488,7 @@ describe("PharosWatchBotMiniAppPage", () => {
       subscriptions: [
         {
           ...baseState.subscriptions[0],
-          alertTypes: { dews: false, depeg: false, safety: false, launch: true },
+          alertTypes: { dews: false, depeg: false, safety: false, launch: true, reserve: false },
           depegStepBps: null,
         },
       ],
