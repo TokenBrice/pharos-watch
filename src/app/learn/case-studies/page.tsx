@@ -4,6 +4,9 @@ import { ArrowUpRight } from "lucide-react";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { cn } from "@/lib/utils";
+import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
+import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
 import { CASE_STUDY_LIST } from "./content";
 import { content as terraUst2022 } from "./content/terra-ust-2022";
 import { content as ironTitan2021 } from "./content/iron-titan-2021";
@@ -31,6 +34,7 @@ const priorityCaseStudies = [
       "Fei Protocol is the incentive-design case study: direct incentives, protocol-controlled value, and what breaks when peg defense fights users.",
   },
 ];
+const priorityCaseStudySlugs = new Set(priorityCaseStudies.map(({ study }) => study.slug));
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Depeg Case Studies",
@@ -50,7 +54,7 @@ const caseStudyListItems: readonly CaseStudyListItem[] = CASE_STUDY_LIST.map(
     outcome: study.outcome,
     eventDateLabel: study.eventDateLabel,
   }),
-);
+).filter((study) => !priorityCaseStudySlugs.has(study.slug));
 
 export default function CaseStudiesHub() {
   return (
@@ -65,10 +69,10 @@ export default function CaseStudiesHub() {
       <CaseStudyListJsonLd studies={CASE_STUDY_LIST} />
       <section aria-labelledby="case-study-starting-points" className="space-y-4 border-y border-border/60 py-5">
         <div className="space-y-2">
-          <p className="pharos-kicker">Start Here</p>
-          <h2 id="case-study-starting-points" className="text-xl font-semibold text-foreground">
+          <SectionKicker>Start Here</SectionKicker>
+          <SectionHeading id="case-study-starting-points">
             Reflexive collapse case studies
-          </h2>
+          </SectionHeading>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Start with the older evergreen failures that explain reflexive collapse patterns before reading the full
             archive.
@@ -79,8 +83,16 @@ export default function CaseStudiesHub() {
             <Link
               key={study.slug}
               href={`/learn/case-studies/${study.slug}/`}
-              className="pharos-focus-ring group flex h-full flex-col rounded-lg border border-border/60 bg-card/40 p-4 transition-colors hover:border-frost-blue/40"
+              className="pharos-focus-ring group flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-4 transition-colors hover:border-frost-blue/60"
             >
+              <p
+                className={cn(
+                  "pharos-kicker mb-2",
+                  ARCHETYPE_VISUALS[study.archetype].kickerClass,
+                )}
+              >
+                {study.eyebrow}
+              </p>
               <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
                 {study.title}
               </p>

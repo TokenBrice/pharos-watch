@@ -114,6 +114,7 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "learn",
     label: "LEARN",
     items: [
+      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Stablecoin mechanisms, case studies, and glossary definitions" },
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each stablecoin design produces its peg" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Long-form retrospectives of major depegs and failures" },
       { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined and version-pinned" },

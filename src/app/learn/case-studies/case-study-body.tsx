@@ -4,6 +4,7 @@ import {
   getMechanismArchetypeLabel,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
+import { slugifyId } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
 import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
@@ -15,31 +16,25 @@ import {
 } from "../_shared/section-primitives";
 import { CaseStudyChart } from "./case-study-chart";
 import {
+  CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
 } from "./case-study-outcomes";
 import { CaseStudyShare } from "./case-study-share";
 import { CaseStudyTimeline } from "./case-study-timeline";
+import { estimateCaseStudyReadingMinutes } from "./case-study-reading-time";
 import { CASE_STUDY_LIST } from "./content";
 import type { CaseStudy } from "./content/types";
-
-const WORDS_PER_MINUTE = 200;
 
 /** slug -> position in CASE_STUDY_LIST, built once so neighbour math avoids repeated O(n) scans. */
 const CASE_STUDY_INDEX_BY_SLUG = new Map(CASE_STUDY_LIST.map((study, index) => [study.slug, index]));
 
-/** Reading time in minutes from the lead + narrative body (~200 wpm, min 1). */
-function estimateReadingMinutes(study: CaseStudy): number {
-  const text = [
-    ...study.lead,
-    ...study.sections.flatMap((section) => section.paragraphs),
-  ].join(" ");
-  const words = text.trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
+function caseStudySectionId(index: number, heading: string): string {
+  return `section-${index + 1}-${slugifyId(heading)}`;
 }
 
 function ArticleMeta({ study }: { study: CaseStudy }) {
-  const minutes = estimateReadingMinutes(study);
+  const minutes = estimateCaseStudyReadingMinutes(study);
   return (
     <div className="-mt-4 flex flex-wrap items-center justify-between gap-3">
       <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
@@ -54,6 +49,51 @@ function ArticleMeta({ study }: { study: CaseStudy }) {
   );
 }
 
+function ArticleWayfinding({ study }: { study: CaseStudy }) {
+  const items = [
+    ...(study.takeaways?.length ? [{ href: "#key-takeaways", label: "Takeaways" }] : []),
+    ...(study.dataWidgets?.length ? [{ href: "#peg-on-the-tape", label: "Tape" }] : []),
+    { href: "#timeline", label: "Timeline" },
+    ...study.sections.map((section, index) => ({
+      href: `#${caseStudySectionId(index, section.heading)}`,
+      label: section.heading,
+    })),
+    { href: "#watchpoints", label: "Watchpoints" },
+    ...(study.relatedCoins?.length ? [{ href: "#related-coins", label: "Blast radius" }] : []),
+    { href: "#sources", label: "Sources" },
+  ];
+
+  return (
+    <nav
+      aria-label="Case study table of contents"
+      className="sticky top-3 z-10 -mx-1 rounded-xl border border-border/50 bg-background/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80"
+    >
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <Link
+          href="/learn/case-studies/"
+          className="pharos-focus-ring inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-frost-blue"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          Back to case studies
+        </Link>
+        <span className="pharos-kicker text-muted-foreground">Contents</span>
+      </div>
+      <ol className="flex gap-2 overflow-x-auto pb-1 whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+        {items.map((item) => (
+          <li key={item.href}>
+            <a
+              href={item.href}
+              className="pharos-focus-ring inline-flex rounded-full border border-border/60 px-2.5 py-1 transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+            >
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 function Takeaways({
   study,
   kickerClass,
@@ -64,7 +104,7 @@ function Takeaways({
   const takeaways = study.takeaways ?? [];
   if (takeaways.length === 0) return null;
   return (
-    <section className="space-y-5">
+    <section id="key-takeaways" className="space-y-5">
       <div className="space-y-2">
         <SectionKicker className={kickerClass}>The short version</SectionKicker>
         <SectionHeading>Key takeaways</SectionHeading>
@@ -217,7 +257,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
         <dd>
           <span
             className={cn(
-              "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
+              CASE_STUDY_OUTCOME_CHIP_BASE,
               CASE_STUDY_OUTCOME_CHIPS[study.outcome],
             )}
           >
@@ -266,14 +306,14 @@ function HowPharosSawIt({
 }) {
   if (!study.dataWidgets || study.dataWidgets.length === 0) return null;
   return (
-    <section className="space-y-6">
+    <section id="peg-on-the-tape" className="space-y-6">
       <div className="space-y-2">
         <SectionKicker className={kickerClass}>How Pharos saw it</SectionKicker>
         <SectionHeading>The peg on the tape</SectionHeading>
       </div>
       <div className="space-y-6">
-        {study.dataWidgets.map((widget) => (
-          <CaseStudyChart key={widget.coinId} widget={widget} />
+        {study.dataWidgets.map((widget, i) => (
+          <CaseStudyChart key={`${widget.coinId}-${i}`} widget={widget} />
         ))}
       </div>
     </section>
@@ -288,7 +328,7 @@ function Timeline({
   kickerClass: string;
 }) {
   return (
-    <section className="space-y-6">
+    <section id="timeline" className="space-y-6">
       <div className="space-y-2">
         <SectionKicker className={kickerClass}>How it unfolded</SectionKicker>
         <SectionHeading>Timeline</SectionHeading>
@@ -308,7 +348,7 @@ function Narrative({
   return (
     <>
       {study.sections.map((section, i) => (
-        <section key={i} className="space-y-4">
+        <section key={i} id={caseStudySectionId(i, section.heading)} className="space-y-4">
           <SectionKicker className={kickerClass}>
             {String(i + 1).padStart(2, "0")}
           </SectionKicker>
@@ -337,6 +377,7 @@ function Watchpoints({
       kicker="What to watch if this recurs"
       heading="Watchpoints"
       kickerClass={kickerClass}
+      id="watchpoints"
     />
   );
 }
@@ -356,6 +397,7 @@ function RelatedCoins({
       kickerClass={kickerClass}
       kicker="The blast radius"
       heading="Coins caught in the contagion"
+      id="related-coins"
     />
   );
 }
@@ -368,16 +410,16 @@ function Sources({
   kickerClass: string;
 }) {
   return (
-    <section className="space-y-5">
+    <section id="sources" className="space-y-5 rounded-xl border border-border/50 bg-card/25 p-5 sm:p-6">
       <SectionKicker className={kickerClass}>Primary sources</SectionKicker>
-      <ul className="divide-y divide-border/40">
+      <ul className="grid gap-2">
         {study.sources.map((source, i) => (
           <li key={i}>
             <a
               href={source.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring group flex items-start justify-between gap-3 py-3 text-[15px] leading-snug text-foreground transition-colors hover:text-frost-blue"
+              className="pharos-focus-ring group flex items-start justify-between gap-3 rounded-lg border border-border/40 bg-background/40 px-3 py-2.5 text-[15px] leading-snug text-foreground transition-colors hover:border-frost-blue/50 hover:text-frost-blue"
             >
               <span>{source.label}</span>
               <ArrowUpRight
@@ -396,6 +438,7 @@ export function CaseStudyBody({ study }: { study: CaseStudy }) {
   const kickerClass = ARCHETYPE_VISUALS[study.archetype].kickerClass;
   return (
     <>
+      <ArticleWayfinding study={study} />
       <ArticleMeta study={study} />
       <FactStrip study={study} />
       <Takeaways study={study} kickerClass={kickerClass} />

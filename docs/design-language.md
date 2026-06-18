@@ -101,6 +101,7 @@ Most routes use:
 - Methodology: `mx-auto w-full max-w-[76rem] space-y-8`
 - Digest archive: `mx-auto max-w-4xl`
 - Digest detail shell: `mx-auto max-w-4xl`, with editorial body copy constrained to `max-w-[68ch]`
+- Learn case-study pages: detail articles use the standard sans token with a sticky wayfinding rail on long reads; the hub's priority studies use a lighter editorial card treatment but are not nested cards, and archive rows keep outcome chips plus archetype accents rather than ordinal ranking.
 
 ### Start Here (Special)
 

@@ -7,6 +7,7 @@ import docsMetadata from "@/generated/docs-metadata.json";
 import { changelogs } from "@/data/changelogs";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
 import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
 import digests from "../../../data/digests.json";
 
@@ -87,6 +88,24 @@ describe("sitemap", () => {
       expect(entry).toBeDefined();
       expect(entry?.lastModified).toEqual(new Date(digest.generatedAt * 1000));
       expect(entry?.changeFrequency).toBe("never");
+    }
+  });
+
+  it("stamps every case-study detail page from generated per-study dates", () => {
+    const entries = sitemap();
+    const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
+    const lastEdited = sitemapDates as Record<string, string>;
+
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/learn/`)?.lastModified).toEqual(
+      new Date(lastEdited["/learn/"]),
+    );
+
+    for (const study of CASE_STUDY_LIST) {
+      const path = `/learn/case-studies/${study.slug}/`;
+      expect(lastEdited[path], `missing generated date for ${path}`).toBeDefined();
+      expect(entriesByUrl.get(`${SITE_ORIGIN}${path}`)?.lastModified).toEqual(
+        new Date(lastEdited[path]),
+      );
     }
   });
 

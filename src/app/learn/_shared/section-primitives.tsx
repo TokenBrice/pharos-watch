@@ -18,9 +18,15 @@ export function SectionKicker({
   return <p className={cn("pharos-kicker", className)}>{children}</p>;
 }
 
-export function SectionHeading({ children }: { children: ReactNode }) {
+export function SectionHeading({
+  children,
+  id,
+}: {
+  children: ReactNode;
+  id?: string;
+}) {
   return (
-    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
+    <h2 id={id} className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
       {children}
     </h2>
   );
@@ -31,14 +37,16 @@ export function NumberedListSection({
   kicker,
   heading,
   kickerClass,
+  id,
 }: {
   items: readonly ReactNode[];
   kicker: ReactNode;
   heading: ReactNode;
   kickerClass: string;
+  id?: string;
 }) {
   return (
-    <section className="space-y-6">
+    <section id={id} className="space-y-6">
       <div className="space-y-2">
         <SectionKicker className={kickerClass}>{kicker}</SectionKicker>
         <SectionHeading>{heading}</SectionHeading>

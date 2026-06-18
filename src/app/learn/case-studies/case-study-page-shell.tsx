@@ -25,13 +25,16 @@ export function CaseStudyPageShell({
       breadcrumbItems={breadcrumbItems}
       visibleBreadcrumbs={[
         { label: "Dashboard", href: "/" },
-        { label: "Learn" },
+        { label: "Learn", href: "/learn/" },
         ...(finalLabel
           ? [
               { label: "Case Studies", href: "/learn/case-studies/" },
               { label: finalLabel },
             ]
-          : [{ label: "Case Studies" }]),
+          : [
+              { label: "Learn", href: "/learn/" },
+              { label: "Case Studies" },
+            ]),
       ]}
       title={title}
       subtitle={subtitle}

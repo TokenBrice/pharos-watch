@@ -15,6 +15,7 @@ interface RelatedCoinsListProps {
   kickerClass: string;
   kicker: string;
   heading: string;
+  id?: string;
 }
 
 export function RelatedCoinsList({
@@ -22,10 +23,11 @@ export function RelatedCoinsList({
   kickerClass,
   kicker,
   heading,
+  id,
 }: RelatedCoinsListProps) {
   if (coins.length === 0) return null;
   return (
-    <section className="space-y-6">
+    <section id={id} className="space-y-6">
       <div className="space-y-2">
         <SectionKicker className={kickerClass}>{kicker}</SectionKicker>
         <SectionHeading>{heading}</SectionHeading>

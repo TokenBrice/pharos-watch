@@ -6,25 +6,16 @@ import {
 import { PHAROS_ORG_NODE, safeJsonLd } from "@/lib/json-ld";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import type { CaseStudy } from "./content/types";
+import {
+  caseStudyWordCount,
+  estimateCaseStudyReadingMinutes,
+} from "./case-study-reading-time";
 
 const HUB_PATH = "/learn/case-studies/";
 const SITEMAP_DATES = sitemapDates as Record<string, string>;
-const WORDS_PER_MINUTE = 200;
 
 function caseStudyUrl(slug: string): string {
   return `${SITE_ORIGIN}${HUB_PATH}${slug}/`;
-}
-
-/** Body word count, used for `wordCount` + `timeRequired` (reading time). */
-function caseStudyWordCount(study: CaseStudy): number {
-  const text = [
-    ...study.lead,
-    ...(study.takeaways ?? []),
-    ...study.sections.flatMap((section) => section.paragraphs),
-    ...study.timeline.map((entry) => `${entry.headline} ${entry.body}`),
-    ...study.watchpoints,
-  ].join(" ");
-  return text.split(/\s+/).filter(Boolean).length;
 }
 
 /** `Article` document for a single case study detail page. */
@@ -36,7 +27,8 @@ function buildCaseStudyArticleJsonLd(study: CaseStudy): Record<string, unknown> 
   const dateModified =
     SITEMAP_DATES[`${HUB_PATH}${study.slug}/`] ?? study.datePublished;
   const wordCount = caseStudyWordCount(study);
-  const timeRequired = `PT${Math.max(1, Math.round(wordCount / WORDS_PER_MINUTE))}M`;
+  const timeRequired = `PT${estimateCaseStudyReadingMinutes(study)}M`;
+  const archetypeLabel = getMechanismArchetypeLabel(study.archetype);
   return {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -51,15 +43,29 @@ function buildCaseStudyArticleJsonLd(study: CaseStudy): Record<string, unknown> 
     inLanguage: "en",
     isPartOf: `${SITE_ORIGIN}${HUB_PATH}`,
     articleSection: study.eyebrow,
+    keywords: [
+      study.eyebrow,
+      archetypeLabel,
+      study.outcome,
+      ...(study.relatedCoins ?? []).map((coin) => coin.coinId),
+      study.primaryCoinId,
+    ].filter(Boolean),
     about: {
       "@type": "DefinedTerm",
-      name: getMechanismArchetypeLabel(study.archetype),
+      name: archetypeLabel,
       termCode: study.archetype,
       url: `${SITE_ORIGIN}${getMechanismExplainerPath(study.archetype)}`,
     },
+    citation: study.sources.map((source) => ({
+      "@type": "CreativeWork",
+      name: source.label,
+      url: source.href,
+    })),
     wordCount,
     timeRequired,
-    datePublished: study.datePublished,
+    datePublished: study.datePublished.includes("T")
+      ? study.datePublished
+      : `${study.datePublished}T00:00:00Z`,
     dateModified,
   };
 }
@@ -77,12 +83,22 @@ function buildCaseStudyListJsonLd(
       "Long-form retrospectives of major stablecoin depeg and failure events, sourced from Pharos data.",
     url: `${SITE_ORIGIN}${HUB_PATH}`,
     numberOfItems: studies.length,
-    itemListElement: studies.map((study, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      url: caseStudyUrl(study.slug),
-      name: study.title,
-    })),
+    itemListElement: studies.map((study, index) => {
+      const url = caseStudyUrl(study.slug);
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        url,
+        name: study.title,
+        item: {
+          "@type": "Article",
+          "@id": url,
+          name: study.title,
+          description: study.subtitle,
+          image: `${SITE_ORIGIN}/og-learn-case-${study.slug}.png`,
+        },
+      };
+    }),
   };
 }
 

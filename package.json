@@ -143,8 +143,10 @@
     "check:og-learn": "node scripts/maintenance/build-og-learn-images.mjs --check",
     "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
     "check:og-editorial": "node scripts/maintenance/build-og-editorial.mjs --check",
-    "build:og-case-studies": "node scripts/maintenance/build-og-case-studies.mjs",
-    "check:og-case-studies": "node scripts/maintenance/build-og-case-studies.mjs --check",
+    "build:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts",
+    "check:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts --check",
+    "generate:case-study-client-index": "tsx scripts/maintenance/generate-case-study-client-index.ts",
+    "check:case-study-client-index": "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
     "format": "prettier --write .",
     "prepare": "git config core.hooksPath .githooks"
   },

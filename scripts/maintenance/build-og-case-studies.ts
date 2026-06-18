@@ -2,9 +2,8 @@
 /**
  * Generate one OG image per `/learn/case-studies/<slug>/` page.
  *
- * Cards are sourced directly from the content modules
- * (`src/app/learn/case-studies/content/*.ts`) — slug, eyebrow (kicker), title,
- * and outcome are regex-extracted so the OG copy never drifts from the page.
+ * Cards are sourced from the typed case-study registry so slug, eyebrow
+ * (kicker), title, outcome, and logo anchors never drift from the page.
  * Output: `public/og-learn-case-<slug>.png`, referenced by each page's
  * `generateMetadata`.
  *
@@ -12,8 +11,8 @@
  * Geist Mono subsets render faithfully (matches build-og-editorial). Long
  * titles word-wrap; the editorial OG template only handled short titles.
  *
- *   node scripts/maintenance/build-og-case-studies.mjs
- *   node scripts/maintenance/build-og-case-studies.mjs --check
+ *   tsx scripts/maintenance/build-og-case-studies.ts
+ *   tsx scripts/maintenance/build-og-case-studies.ts --check
  */
 import { firefox } from "playwright";
 import {
@@ -21,29 +20,33 @@ import {
   mkdirSync,
   writeFileSync,
   readFileSync,
-  readdirSync,
   unlinkSync,
   rmSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const PUBLIC = resolve(REPO_ROOT, "public");
 const STAGING_ROOT = resolve(REPO_ROOT, "agents/og-case-study-staging");
 const STAGING = resolve(STAGING_ROOT, `run-${process.pid}`);
-const CONTENT_DIR = resolve(REPO_ROOT, "src/app/learn/case-studies/content");
 const CHECK_MODE = process.argv.includes("--check");
 
 // Coin logo lookup: tracked coins via data/logos.json (id -> "/logos/<file>"),
 // cemetery-only coins (UST/IRON/FEI) via their cemetery logoUrl.
 const LOGOS_BY_ID = JSON.parse(readFileSync(resolve(REPO_ROOT, "data/logos.json"), "utf-8"));
+interface CemeteryLogoRow {
+  id: string;
+  logoUrl?: string | null;
+}
+
 const CEMETERY_ROWS = JSON.parse(
   readFileSync(resolve(REPO_ROOT, "public/datasets/stablecoin-cemetery.json"), "utf-8"),
-).rows;
+).rows as CemeteryLogoRow[];
 
-function resolveLogoPath(primaryCoinId, cemeteryId) {
+function resolveLogoPath(primaryCoinId: string | undefined, cemeteryId: string | undefined): string | null {
   if (primaryCoinId && LOGOS_BY_ID[primaryCoinId]) {
     const p = resolve(REPO_ROOT, "public" + LOGOS_BY_ID[primaryCoinId]);
     if (existsSync(p)) return p;
@@ -62,43 +65,18 @@ function resolveLogoPath(primaryCoinId, cemeteryId) {
 mkdirSync(STAGING, { recursive: true });
 mkdirSync(PUBLIC, { recursive: true });
 
-const OUTCOME_LABEL = { survived: "Survived", wounded: "Wounded", died: "Died" };
-const OUTCOME_COLOR = { survived: "#34d399", wounded: "#fbbf24", died: "#fb7185" };
+const OUTCOME_LABEL: Record<string, string> = { survived: "Survived", wounded: "Wounded", died: "Died" };
+const OUTCOME_COLOR: Record<string, string> = { survived: "#34d399", wounded: "#fbbf24", died: "#fb7185" };
 
-function field(src, key) {
-  // `\b` before the key keeps `title` from matching inside `subtitle`/`eventDateLabel`.
-  // eslint-disable-next-line security/detect-non-literal-regexp -- key is a fixed internal literal, not user input
-  const m = src.match(new RegExp(`\\b${key}:\\s*"([^"]+)"`));
-  return m ? m[1] : null;
-}
+const CARDS = CASE_STUDY_LIST.map((study) => ({
+  slug: study.slug,
+  kicker: study.eyebrow,
+  title: study.title,
+  outcome: study.outcome,
+  logoPath: resolveLogoPath(study.primaryCoinId, study.cemeteryId),
+}));
 
-const CARDS = readdirSync(CONTENT_DIR)
-  .filter((f) => f.endsWith(".ts") && f !== "types.ts" && f !== "index.ts" && f !== "client-index.ts")
-  .map((f) => {
-    const src = readFileSync(resolve(CONTENT_DIR, f), "utf-8");
-    const slug = field(src, "slug");
-    const title = field(src, "title");
-    const outcome = field(src, "outcome");
-    const missingFields = [
-      slug ? null : "slug",
-      title ? null : "title",
-      outcome ? null : "outcome",
-    ].filter(Boolean);
-    if (missingFields.length > 0) {
-      console.warn(`[build-og-case-studies] Skipping ${f}: missing ${missingFields.join(", ")}`);
-      return null;
-    }
-    return {
-      slug,
-      kicker: field(src, "eyebrow"),
-      title,
-      outcome,
-      logoPath: resolveLogoPath(field(src, "primaryCoinId"), field(src, "cemeteryId")),
-    };
-  })
-  .filter(Boolean);
-
-function escapeXml(s) {
+function escapeXml(s: string) {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -108,7 +86,7 @@ function escapeXml(s) {
 }
 
 /** Greedy word-wrap into at most `maxLines` lines of ~`maxChars` each. */
-function wrapTitle(title, maxChars, maxLines) {
+function wrapTitle(title: string, maxChars: number, maxLines: number) {
   const words = title.split(/\s+/);
   const lines = [];
   let line = "";
@@ -125,7 +103,17 @@ function wrapTitle(title, maxChars, maxLines) {
   return lines.slice(0, maxLines);
 }
 
-function buildSvg({ kicker, title, outcome, logoHref }) {
+function buildSvg({
+  kicker,
+  title,
+  outcome,
+  logoHref,
+}: {
+  kicker: string;
+  title: string;
+  outcome: string;
+  logoHref: string | null;
+}) {
   // Pick a font size that keeps the wrapped title to <= 3 lines.
   const tiers = [
     { maxChars: 26, size: 66, lh: 78 },
@@ -190,7 +178,7 @@ function buildSvg({ kicker, title, outcome, logoHref }) {
 `;
 }
 
-function buildHtml(svg) {
+function buildHtml(svg: string) {
   const newsreaderUrl = pathToFileURL(
     resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2"),
   ).href;
@@ -204,56 +192,63 @@ function buildHtml(svg) {
 </style></head><body>${svg}</body></html>`;
 }
 
-const browser = await firefox.launch({ headless: true });
-const staleFiles = [];
-try {
-  for (const card of CARDS) {
-    const fileName = `og-learn-case-${card.slug}.png`;
-    const svg = buildSvg({
-      ...card,
-      logoHref: card.logoPath ? pathToFileURL(card.logoPath).href : null,
-    });
-    const svgPath = resolve(STAGING, `${card.slug}.svg`);
-    const htmlPath = resolve(STAGING, `${card.slug}.html`);
-    writeFileSync(svgPath, svg);
-    writeFileSync(htmlPath, buildHtml(svg));
+async function main() {
+  const browser = await firefox.launch({ headless: true });
+  const staleFiles: string[] = [];
+  try {
+    for (const card of CARDS) {
+      const fileName = `og-learn-case-${card.slug}.png`;
+      const svg = buildSvg({
+        ...card,
+        logoHref: card.logoPath ? pathToFileURL(card.logoPath).href : null,
+      });
+      const svgPath = resolve(STAGING, `${card.slug}.svg`);
+      const htmlPath = resolve(STAGING, `${card.slug}.html`);
+      writeFileSync(svgPath, svg);
+      writeFileSync(htmlPath, buildHtml(svg));
 
-    const publicPath = resolve(PUBLIC, fileName);
-    const outPath = CHECK_MODE ? resolve(STAGING, `${card.slug}.check.png`) : publicPath;
-    const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
-    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
-    await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(400);
-    await page.screenshot({
-      path: outPath,
-      omitBackground: false,
-      clip: { x: 0, y: 0, width: 1200, height: 628 },
-      timeout: 30000,
-    });
-    await page.close();
+      const publicPath = resolve(PUBLIC, fileName);
+      const outPath = CHECK_MODE ? resolve(STAGING, `${card.slug}.check.png`) : publicPath;
+      const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
+      await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(400);
+      await page.screenshot({
+        path: outPath,
+        omitBackground: false,
+        clip: { x: 0, y: 0, width: 1200, height: 628 },
+        timeout: 30000,
+      });
+      await page.close();
 
-    if (CHECK_MODE) {
-      const expected = existsSync(publicPath) ? readFileSync(publicPath) : null;
-      const actual = readFileSync(outPath);
-      if (!expected || !actual.equals(expected)) staleFiles.push(fileName);
+      if (CHECK_MODE) {
+        const expected = existsSync(publicPath) ? readFileSync(publicPath) : null;
+        const actual = readFileSync(outPath);
+        if (!expected || !actual.equals(expected)) staleFiles.push(fileName);
+      }
+
+      try {
+        unlinkSync(svgPath);
+        unlinkSync(htmlPath);
+        if (CHECK_MODE) unlinkSync(outPath);
+      } catch {
+        /* swallow */
+      }
+      console.log(`${CHECK_MODE ? "Checked" : "Wrote"} ${publicPath}`);
     }
 
-    try {
-      unlinkSync(svgPath);
-      unlinkSync(htmlPath);
-      if (CHECK_MODE) unlinkSync(outPath);
-    } catch {
-      /* swallow */
+    if (staleFiles.length > 0) {
+      throw new Error(
+        `Case-study OG images are stale: ${staleFiles.join(", ")}. Run \`npm run build:og-case-studies\` to refresh them.`,
+      );
     }
-    console.log(`${CHECK_MODE ? "Checked" : "Wrote"} ${publicPath}`);
+  } finally {
+    await browser.close();
+    rmSync(STAGING, { recursive: true, force: true });
   }
-
-  if (staleFiles.length > 0) {
-    throw new Error(
-      `Case-study OG images are stale: ${staleFiles.join(", ")}. Run \`npm run build:og-case-studies\` to refresh them.`,
-    );
-  }
-} finally {
-  await browser.close();
-  rmSync(STAGING, { recursive: true, force: true });
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

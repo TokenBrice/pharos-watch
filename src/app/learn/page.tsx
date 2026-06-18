@@ -27,7 +27,7 @@ import {
 import { GLOSSARY_ENTRIES } from "./glossary/content";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Learn Stablecoins",
+  title: "Learn Stablecoin Mechanisms and Case Studies",
   description:
     "Learn how stablecoins hold their pegs, why they fail, and how Pharos names the risks across mechanisms, case studies, and glossary definitions.",
   canonical: "/learn/",

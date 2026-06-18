@@ -13,7 +13,7 @@ const TIMELINE_CARD_REM = 23;
 const SEVERITY_DOT: Record<CaseStudySeverity, string> = {
   high: "bg-rose-500",
   med: "bg-amber-500",
-  low: "bg-muted-foreground/60",
+  low: "bg-muted-foreground/80",
 };
 
 const SEVERITY_LEGEND: readonly { severity: CaseStudySeverity; label: string }[] = [
@@ -21,6 +21,12 @@ const SEVERITY_LEGEND: readonly { severity: CaseStudySeverity; label: string }[]
   { severity: "med", label: "Medium" },
   { severity: "low", label: "Low" },
 ];
+
+const SEVERITY_LABEL: Record<CaseStudySeverity, string> = {
+  high: "High severity",
+  med: "Medium severity",
+  low: "Low severity",
+};
 
 function TimelineSeverityLegend() {
   return (
@@ -73,7 +79,7 @@ function TimelineBody({ children }: { children: string }) {
   return <p className="text-[15px] leading-relaxed text-muted-foreground">{children}</p>;
 }
 
-function TimelineSourceLink({ href }: { href: string }) {
+function TimelineSourceLink({ href, headline }: { href: string; headline: string }) {
   return (
     <a
       href={href}
@@ -82,13 +88,14 @@ function TimelineSourceLink({ href }: { href: string }) {
       className="pharos-focus-ring inline-flex text-xs font-medium text-frost-blue underline-offset-4 hover:underline"
     >
       Source
+      <span className="sr-only"> for {headline} (opens in a new tab)</span>
     </a>
   );
 }
 
 /** Desktop (lg+): events alternate above/below a drawn axis as a snap-scroll track. */
 function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
-  const { ref, near } = useNearViewport<HTMLDivElement>("-40px");
+  const { ref, near } = useNearViewport<HTMLDivElement>("240px");
   const trackRem = (entries.length - 1) * TIMELINE_PITCH_REM + TIMELINE_CARD_REM;
   return (
     <div
@@ -99,9 +106,14 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
     >
       <div
         tabIndex={0}
-        aria-label="Timeline — scroll horizontally to follow the events"
+        role="region"
+        aria-label="Event timeline"
+        aria-describedby="case-study-timeline-help"
         className="scroll-shadow pharos-focus-ring snap-x snap-mandatory overflow-x-auto py-2"
       >
+        <p id="case-study-timeline-help" className="sr-only">
+          Use horizontal scrolling or arrow keys when the timeline is focused to review events in chronological order.
+        </p>
         {/* No column gap: each cell's row-2 line segment is flush with its
             neighbours, so the drawn axis reads as one continuous arrow that
             begins at the first event's dot. */}
@@ -112,9 +124,10 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
           {entries.map((entry, i) => {
             const above = i % 2 === 0;
             const isLast = i === entries.length - 1;
+            const severity = entry.severity ?? "low";
             return (
               <li
-                key={`${entry.dateISO}-${entry.headline}`}
+                key={`${entry.dateISO}-${i}`}
                 className="row-span-3 grid grid-rows-subgrid snap-start"
               >
                 <div
@@ -124,9 +137,12 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
                   }`}
                 >
                   <TimelineDate dateISO={entry.dateISO} />
+                  <p className="sr-only">
+                    Event {i + 1} of {entries.length}. {SEVERITY_LABEL[severity]}.
+                  </p>
                   <TimelineHeadline>{entry.headline}</TimelineHeadline>
                   <TimelineBody>{entry.body}</TimelineBody>
-                  {entry.href ? <TimelineSourceLink href={entry.href} /> : null}
+                  {entry.href ? <TimelineSourceLink href={entry.href} headline={entry.headline} /> : null}
                 </div>
                 <div
                   aria-hidden="true"
@@ -140,9 +156,8 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
                     }`}
                   />
                   <span
-                    className={`absolute left-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ring-4 ring-background ${
-                      SEVERITY_DOT[entry.severity ?? "low"]
-                    }`}
+                    aria-hidden="true"
+                    className={`absolute left-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ring-4 ring-background ${SEVERITY_DOT[severity]}`}
                   />
                   {isLast ? (
                     <span className="absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[5px] border-l-[9px] border-y-transparent border-l-foreground/30" />
@@ -161,22 +176,28 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
 function VerticalTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
   return (
     <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8 lg:hidden">
-      {entries.map((entry) => (
-        <li key={`${entry.dateISO}-${entry.headline}`} className="relative">
+      {entries.map((entry, i) => {
+        const severity = entry.severity ?? "low";
+        return (
+        <li key={`${entry.dateISO}-${i}`} className="relative">
           <span
             aria-hidden="true"
             className={`absolute -left-[1.9375rem] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-background sm:-left-[2.4375rem] ${
-              SEVERITY_DOT[entry.severity ?? "low"]
+              SEVERITY_DOT[severity]
             }`}
           />
           <div className="space-y-1.5">
             <TimelineDate dateISO={entry.dateISO} />
+            <p className="sr-only">
+              Event {i + 1} of {entries.length}. {SEVERITY_LABEL[severity]}.
+            </p>
             <TimelineHeadline>{entry.headline}</TimelineHeadline>
             <TimelineBody>{entry.body}</TimelineBody>
-            {entry.href ? <TimelineSourceLink href={entry.href} /> : null}
+            {entry.href ? <TimelineSourceLink href={entry.href} headline={entry.headline} /> : null}
           </div>
         </li>
-      ))}
+        );
+      })}
     </ol>
   );
 }

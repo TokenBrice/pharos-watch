@@ -3,10 +3,12 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
+import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_DIR = join(__dirname, "../../src/app");
 const STABLECOIN_COINS_DIR = join(__dirname, "../../shared/data/stablecoins/coins");
+const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/app/learn/case-studies/content");
 const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
 const CHECK_MODE = process.argv.includes("--check");
 const STABLECOIN_DETAIL_SHARED_SOURCES = [
@@ -14,6 +16,15 @@ const STABLECOIN_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/components/stablecoin-detail/static-seo-content.tsx"),
   join(__dirname, "../../src/lib/page-metadata.ts"),
   join(__dirname, "../../src/lib/stablecoin-detail-json-ld.ts"),
+];
+const CASE_STUDY_DETAIL_SHARED_SOURCES = [
+  join(__dirname, "../../src/app/learn/case-studies/[slug]/page.tsx"),
+  join(__dirname, "../../src/app/learn/case-studies/case-study-body.tsx"),
+  join(__dirname, "../../src/app/learn/case-studies/case-study-chart.tsx"),
+  join(__dirname, "../../src/app/learn/case-studies/case-study-json-ld.tsx"),
+  join(__dirname, "../../src/app/learn/case-studies/case-study-page-shell.tsx"),
+  join(__dirname, "../../src/app/learn/case-studies/case-study-timeline.tsx"),
+  join(__dirname, "../../src/app/learn/case-studies/content/types.ts"),
 ];
 
 function getLastModified(pagePath: string): string {
@@ -71,9 +82,27 @@ function addStablecoinDetailDates(dates: Record<string, string>): void {
   }
 }
 
+function addCaseStudyDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...CASE_STUDY_DETAIL_SHARED_SOURCES.map(getLastModified));
+
+  for (const study of CASE_STUDY_LIST) {
+    const contentPath = join(CASE_STUDY_CONTENT_DIR, `${study.slug}.ts`);
+    dates[`/learn/case-studies/${study.slug}/`] = latestIso(
+      getLastModified(contentPath),
+      sharedLastModified,
+    );
+  }
+
+  dates["/learn/case-studies/"] = latestIso(
+    getLastModified(join(APP_DIR, "learn/case-studies/page.tsx")),
+    getLastModified(CASE_STUDY_CONTENT_DIR),
+  );
+}
+
 const dates: Record<string, string> = {};
 walkPages(APP_DIR, "/", dates);
 addStablecoinDetailDates(dates);
+addCaseStudyDates(dates);
 
 // The mechanism explainer hub date must move when any archetype content
 // module under the cluster changes — per-archetype Article JSON-LD sources

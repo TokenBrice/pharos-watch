@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
 import type { CaseStudyOutcome } from "./content/types";
 import {
+  CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
 } from "./case-study-outcomes";
@@ -120,12 +121,16 @@ export function CaseStudyList({
       </div>
 
       {visible.length === 0 ? (
-        <p className="py-8 text-sm text-muted-foreground">
+        <p className="py-8 text-sm text-muted-foreground" aria-live="polite">
           No case studies match these filters yet.
         </p>
       ) : (
-        <ol className="divide-y divide-border/60">
-          {visible.map((study, index) => (
+        <>
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground" aria-live="polite">
+            {visible.length} case {visible.length === 1 ? "study" : "studies"}
+          </p>
+          <ol className="divide-y divide-border/60">
+          {visible.map((study) => (
             <li key={study.slug}>
               <Link
                 href={`/learn/case-studies/${study.slug}/`}
@@ -138,9 +143,6 @@ export function CaseStudyList({
                       ARCHETYPE_VISUALS[study.archetype].kickerClass,
                     )}
                   >
-                    <span className="mr-2 tabular-nums text-muted-foreground">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
                     {study.eyebrow}
                   </p>
                   <h2 className="text-[clamp(1.6rem,2.4vw,2.25rem)] font-extrabold leading-[1.05] tracking-[-0.025em] text-foreground transition-colors group-hover:text-frost-blue">
@@ -154,7 +156,7 @@ export function CaseStudyList({
                     <span>{archetypeLabels[study.archetype]}</span>
                     <span
                       className={cn(
-                        "inline-flex rounded-full border px-2 py-0.5 tracking-wide",
+                        CASE_STUDY_OUTCOME_CHIP_BASE,
                         CASE_STUDY_OUTCOME_CHIPS[study.outcome],
                       )}
                     >
@@ -171,7 +173,8 @@ export function CaseStudyList({
               </Link>
             </li>
           ))}
-        </ol>
+          </ol>
+        </>
       )}
     </div>
   );

@@ -256,6 +256,7 @@ describe("validate-ci parity", () => {
     const expectedCommands = [
       "node scripts/maintenance/generate-agent-code-map.mjs",
       "tsx scripts/maintenance/generate-sitemap-dates.ts",
+      "tsx scripts/maintenance/generate-case-study-client-index.ts",
       "tsx scripts/maintenance/generate-docs-metadata.ts",
       "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
       "tsx scripts/maintenance/generate-cemetery-dataset.ts",
@@ -270,11 +271,12 @@ describe("validate-ci parity", () => {
       "node scripts/maintenance/generate-api-reference.mjs",
       "node scripts/maintenance/build-og-editorial.mjs",
       "node scripts/maintenance/build-og-learn-images.mjs",
-      "node scripts/maintenance/build-og-case-studies.mjs",
+      "tsx scripts/maintenance/build-og-case-studies.ts",
     ];
     const expectedCheckCommands = [
       "node scripts/maintenance/generate-agent-code-map.mjs --check",
       "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
+      "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
       "tsx scripts/maintenance/generate-docs-metadata.ts --check",
       "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
       "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
@@ -289,12 +291,13 @@ describe("validate-ci parity", () => {
       "node scripts/maintenance/generate-api-reference.mjs --check",
       "node scripts/maintenance/build-og-editorial.mjs --check",
       "node scripts/maintenance/build-og-learn-images.mjs --check",
-      "node scripts/maintenance/build-og-case-studies.mjs --check",
+      "tsx scripts/maintenance/build-og-case-studies.ts --check",
     ];
 
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
       "agent-code-map",
       "sitemap-dates",
+      "case-study-client-index",
       "docs-metadata",
       "depeg-event-search-data",
       "cemetery-dataset",

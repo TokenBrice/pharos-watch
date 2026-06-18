@@ -451,6 +451,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/generate-sitemap-dates.ts",
   },
   {
+    id: "case-study-client-index",
+    checkCommand: "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
+    command: "tsx scripts/maintenance/generate-case-study-client-index.ts",
+    script: "scripts/maintenance/generate-case-study-client-index.ts",
+  },
+  {
     id: "docs-metadata",
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
@@ -537,9 +543,9 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   },
   {
     id: "og-case-studies",
-    checkCommand: "node scripts/maintenance/build-og-case-studies.mjs --check",
-    command: "node scripts/maintenance/build-og-case-studies.mjs",
-    script: "scripts/maintenance/build-og-case-studies.mjs",
+    checkCommand: "tsx scripts/maintenance/build-og-case-studies.ts --check",
+    command: "tsx scripts/maintenance/build-og-case-studies.ts",
+    script: "scripts/maintenance/build-og-case-studies.ts",
   },
 ];
 

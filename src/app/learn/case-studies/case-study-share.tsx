@@ -27,7 +27,7 @@ export function CaseStudyShare() {
     <button
       type="button"
       onClick={copy}
-      aria-live="polite"
+      aria-label="Copy link"
       className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
     >
       {copied ? (
@@ -35,7 +35,10 @@ export function CaseStudyShare() {
       ) : (
         <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
       )}
-      {copied ? "Link copied" : "Copy link"}
+      Copy link
+      <span className="sr-only" role="status" aria-live="polite">
+        {copied ? "Link copied" : ""}
+      </span>
     </button>
   );
 }

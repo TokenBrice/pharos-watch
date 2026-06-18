@@ -10,10 +10,44 @@ import {
 import {
   CASE_STUDY_CLIENT_BY_CEMETERY_ID,
   CASE_STUDY_CLIENT_BY_COIN_ID,
+  CASE_STUDY_EVENT_WINDOWS,
+  caseStudySlugForEvent as clientCaseStudySlugForEvent,
 } from "../content/client-index";
+import type { CaseStudy } from "../content/types";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const CEMETERY_PATH = join(process.cwd(), "public/datasets/stablecoin-cemetery.json");
+const CONTENT_DIR = join(process.cwd(), "src/app/learn/case-studies/content");
+const KNOWN_INTERNAL_ROUTES = new Set([
+  "/about/",
+  "/api/",
+  "/cemetery/",
+  "/changelog/",
+  "/compare/",
+  "/coverage/",
+  "/dependency-map/",
+  "/depeg/",
+  "/digest/",
+  "/freezewatch/",
+  "/learn/",
+  "/learn/case-studies/",
+  "/learn/glossary/",
+  "/learn/mechanisms/",
+  "/liquidity/",
+  "/methodology/",
+  "/mica/",
+  "/portfolio/",
+  "/screener/",
+  "/stablecoins/",
+  "/stability-index/",
+  "/timeline/",
+]);
+const NON_STUDY_CONTENT_FILES = new Set([
+  "client-index.ts",
+  "event-window-resolver.ts",
+  "index.ts",
+  "types.ts",
+]);
 
 const TRACKED_COIN_IDS = new Set(
   readdirSync(COINS_DIR)
@@ -29,10 +63,49 @@ const CEMETERY_IDS = new Set(
 
 const VALID_ARCHETYPES = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
 const VALID_OUTCOMES = new Set(["survived", "wounded", "died"]);
+const DEPEG_EVENT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*-\d{4}-\d{2}-\d{2}(?:-(?:up|down))?$/;
+const CONTENT_MODULE_SLUGS = readdirSync(CONTENT_DIR)
+  .filter((file) => file.endsWith(".ts") && !NON_STUDY_CONTENT_FILES.has(file))
+  .map((file) => file.replace(/\.ts$/, ""));
+
+const CASE_STUDY_SLUGS = new Set(CONTENT_MODULE_SLUGS);
+
+function eventWindowProjection(study: CaseStudy) {
+  return {
+    slug: study.slug,
+    primaryCoinId: study.primaryCoinId ?? null,
+    relatedCoinIds: (study.relatedCoins ?? []).map((coin) => coin.coinId),
+    startISO: study.eventWindow.startISO,
+    endISO: study.eventWindow.endISO ?? null,
+  };
+}
+
+function stripFragment(href: string): string {
+  return href.split("#", 1)[0];
+}
+
+function isKnownInternalRoute(href: string): boolean {
+  const path = stripFragment(href);
+  if (!path.startsWith("/") || path.startsWith("//")) return false;
+  if (KNOWN_INTERNAL_ROUTES.has(path)) return true;
+  if (/^\/stablecoin\/[^/]+\/$/.test(path)) {
+    return TRACKED_COIN_IDS.has(path.split("/")[2]);
+  }
+  if (/^\/learn\/mechanisms\/[^/]+\/$/.test(path)) {
+    return VALID_ARCHETYPES.has(path.split("/")[3]);
+  }
+  if (/^\/learn\/case-studies\/[^/]+\/$/.test(path)) {
+    return CASE_STUDY_SLUGS.has(path.split("/")[3]);
+  }
+  if (/^\/depeg\/[^/]+\/$/.test(path)) {
+    return DEPEG_EVENT_SLUG_PATTERN.test(path.split("/")[2]);
+  }
+  return false;
+}
 
 describe("case-study content", () => {
-  it("ships twenty-four studies with unique slugs", () => {
-    expect(CASE_STUDY_LIST).toHaveLength(24);
+  it("ships one study per content module with unique slugs", () => {
+    expect(CASE_STUDY_LIST).toHaveLength(CONTENT_MODULE_SLUGS.length);
     expect(new Set(CASE_STUDY_LIST.map((study) => study.slug)).size).toBe(CASE_STUDY_LIST.length);
   });
 
@@ -40,6 +113,22 @@ describe("case-study content", () => {
     for (const study of CASE_STUDY_LIST) {
       expect(CASE_STUDIES[study.slug]).toBe(study);
     }
+  });
+
+  it("keeps reverse lookup keys unique", () => {
+    const primaryCoinIds = CASE_STUDY_LIST.map((study) => study.primaryCoinId).filter(Boolean);
+    const cemeteryIds = CASE_STUDY_LIST.map((study) => study.cemeteryId).filter(Boolean);
+    const depegEventSlugs = CASE_STUDY_LIST.map((study) => study.depegEventSlug).filter(Boolean);
+
+    expect(new Set(primaryCoinIds).size).toBe(primaryCoinIds.length);
+    expect(new Set(cemeteryIds).size).toBe(cemeteryIds.length);
+    expect(new Set(depegEventSlugs).size).toBe(depegEventSlugs.length);
+  });
+
+  it("keeps content filenames aligned with slugs", () => {
+    expect([...CASE_STUDY_LIST.map((study) => study.slug)].sort()).toEqual(
+      [...CONTENT_MODULE_SLUGS].sort(),
+    );
   });
 
   it("keeps the client-safe coin lookup in sync without importing article bodies", () => {
@@ -66,6 +155,10 @@ describe("case-study content", () => {
     );
 
     expect(CASE_STUDY_CLIENT_BY_CEMETERY_ID).toEqual(expected);
+  });
+
+  it("keeps the client-safe event-window index in sync without importing article bodies", () => {
+    expect(CASE_STUDY_EVENT_WINDOWS).toEqual(CASE_STUDY_LIST.map(eventWindowProjection));
   });
 
   describe.each(CASE_STUDY_LIST)("$slug", (study) => {
@@ -104,15 +197,61 @@ describe("case-study content", () => {
       expect(study.sources.length).toBeGreaterThan(0);
     });
 
+    it("uses parseable chronological timeline and event-window dates", () => {
+      const windowStart = Date.parse(study.eventWindow.startISO);
+      const windowEnd = study.eventWindow.endISO ? Date.parse(study.eventWindow.endISO) : windowStart;
+      expect(Number.isFinite(windowStart), `invalid eventWindow.startISO: ${study.eventWindow.startISO}`).toBe(true);
+      expect(Number.isFinite(windowEnd), `invalid eventWindow.endISO: ${study.eventWindow.endISO}`).toBe(true);
+      expect(windowEnd).toBeGreaterThanOrEqual(windowStart);
+
+      let previous = Number.NEGATIVE_INFINITY;
+      for (const entry of study.timeline) {
+        const next = Date.parse(entry.dateISO);
+        expect(Number.isFinite(next), `invalid timeline date: ${entry.dateISO}`).toBe(true);
+        expect(next, `timeline out of order at ${entry.dateISO}`).toBeGreaterThanOrEqual(previous);
+        previous = next;
+      }
+    });
+
+    it("uses parseable publication dates that are not in the future", () => {
+      const published = Date.parse(study.datePublished);
+      expect(Number.isFinite(published), `invalid datePublished: ${study.datePublished}`).toBe(true);
+      expect(published).toBeLessThanOrEqual(Date.now());
+    });
+
     it("keeps the meta description within 160 chars", () => {
       expect(study.metaDescription.length).toBeLessThanOrEqual(160);
     });
 
     it("links to its mechanism explainer", () => {
-      const hasMechanismLink = study.crossLinks.some((l) =>
-        l.href.startsWith("/learn/mechanisms/"),
+      expect(study.crossLinks.some((l) => l.href === `/learn/mechanisms/${study.archetype}/`)).toBe(
+        true,
       );
-      expect(hasMechanismLink).toBe(true);
+    });
+
+    it("uses valid internal cross-links", () => {
+      for (const link of study.crossLinks) {
+        expect(isKnownInternalRoute(link.href), `unknown internal route: ${link.href}`).toBe(true);
+      }
+    });
+
+    it("uses sane deviation metadata when provided", () => {
+      if (study.eventWindow.lowPrice !== undefined) {
+        expect(study.eventWindow.lowPrice, `implausible lowPrice: ${study.eventWindow.lowPrice}`).toBeGreaterThan(0.05);
+        expect(study.eventWindow.lowPrice, `implausible lowPrice: ${study.eventWindow.lowPrice}`).toBeLessThanOrEqual(2);
+      }
+      if (study.eventWindow.peakDeviationBps !== undefined) {
+        expect(
+          Math.abs(study.eventWindow.peakDeviationBps),
+          `implausible peakDeviationBps: ${study.eventWindow.peakDeviationBps}`,
+        ).toBeLessThanOrEqual(10_000);
+      }
+    });
+
+    it("uses a route-compatible depeg event slug when set", () => {
+      if (study.depegEventSlug) {
+        expect(DEPEG_EVENT_SLUG_PATTERN.test(study.depegEventSlug)).toBe(true);
+      }
     });
   });
 });
@@ -139,5 +278,21 @@ describe("caseStudySlugForEvent", () => {
   it("returns undefined for events outside any study window", () => {
     expect(caseStudySlugForEvent("usdt-tether", Date.UTC(2018, 9, 15))).toBeUndefined();
     expect(caseStudySlugForEvent("usdc-circle", Date.UTC(2024, 5, 30))).toBeUndefined();
+  });
+
+  it("matches the generated client-safe resolver", () => {
+    for (const study of CASE_STUDY_LIST) {
+      const ts = Date.parse(study.eventWindow.startISO);
+      if (study.primaryCoinId) {
+        expect(clientCaseStudySlugForEvent(study.primaryCoinId, ts)).toBe(
+          caseStudySlugForEvent(study.primaryCoinId, ts),
+        );
+      }
+      for (const related of study.relatedCoins ?? []) {
+        expect(clientCaseStudySlugForEvent(related.coinId, ts)).toBe(
+          caseStudySlugForEvent(related.coinId, ts),
+        );
+      }
+    }
   });
 });
