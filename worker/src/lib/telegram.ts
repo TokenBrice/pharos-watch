@@ -496,6 +496,10 @@ export interface EditMessageOpts {
   replyMarkup?: unknown;
 }
 
+function isNotModifiedDescription(description: unknown): boolean {
+  return typeof description === "string" && /is not modified/i.test(description);
+}
+
 /**
  * Edit a previously sent message in place. Used by inline-keyboard flows
  * (e.g. /settings) so a tap mutates the visible message rather than appending
@@ -524,8 +528,14 @@ export async function editMessage(
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    await drainResponseBody(res);
-    return res.ok;
+    const responseText = await res.text();
+    if (res.ok) return true;
+    try {
+      const parsed = JSON.parse(responseText) as { description?: unknown };
+      return isNotModifiedDescription(parsed.description);
+    } catch {
+      return false;
+    }
   } catch {
     return false;
   }

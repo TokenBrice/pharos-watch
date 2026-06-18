@@ -509,6 +509,42 @@ describe("handleSettingsCallback — per-coin", () => {
     expect(editCalls().length).toBe(1);
     expect(sendCalls().length).toBe(1);
   });
+
+  it("does not send a duplicate panel when editMessageText reports not modified", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers WHERE chat_id = ?",
+        rows: [],
+        first: null,
+      },
+    ]);
+    fetchSpy.mockImplementation(async (url: string) => {
+      if (String(url).includes("editMessageText")) {
+        return new Response(
+          JSON.stringify({ ok: false, description: "Bad Request: message is not modified" }),
+          { status: 400 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await handleSettingsCallback(
+      db,
+      "fake-token",
+      {
+        id: "cb",
+        data: "settings:home",
+        from: { id: 1 },
+        message: { chat: { id: 42 }, message_id: 999 },
+      },
+      "home",
+      "",
+    );
+
+    expect(editCalls().length).toBe(1);
+    expect(sendCalls().length).toBe(0);
+    expect(ackCalls().length).toBe(1);
+  });
 });
 
 describe("callback_data size budget", () => {
