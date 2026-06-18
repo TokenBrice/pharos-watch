@@ -124,6 +124,20 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
+  it("uses the Telegram first name when no username is available", async () => {
+    const state: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, username: null, firstName: "Ada", chatId: "42" },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { first_name: "Ada" } }, ready: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => state }));
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Ada")).toBeTruthy());
+    expect(screen.queryByText("Chat 42")).toBeNull();
+  });
+
   it("shows authorization-specific copy when the session API rejects initData", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: "Invalid Telegram Mini App session" }) });

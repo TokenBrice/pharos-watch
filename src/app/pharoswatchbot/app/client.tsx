@@ -272,7 +272,9 @@ export function PharosWatchBotMiniAppClient() {
   if (status === "preview") return <PreviewState previewName={previewName} />;
   if (forgottenView) return <ForgottenView onClose={handleClose} />;
 
-  const heading = state?.viewer.username ? `@${state.viewer.username}` : state?.viewer.chatId ? `Chat ${state.viewer.chatId}` : "PharosWatchBot";
+  const heading = state?.viewer.username
+    ? `@${state.viewer.username}`
+    : state?.viewer.firstName ?? "PharosWatchBot";
   const canMutate = Boolean(initData && state?.viewer.canMutate);
   const nowSec = Math.floor(Date.now() / 1000);
 
