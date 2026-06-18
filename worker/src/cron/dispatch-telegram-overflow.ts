@@ -38,7 +38,7 @@ function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-export function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {
+function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {
   return plans.reduce((sum, plan) => sum + Math.max(1, plan.estimatedChunks), 0);
 }
 
@@ -201,7 +201,7 @@ export async function persistEventlessOverflowBacklog(
   );
 }
 
-export function splitFreshPlansForOverflowPriority(
+function splitFreshPlansForOverflowPriority(
   plannedQueue: readonly PlannedSubscriberAlert[],
   overflowBacklog: readonly PlannedSubscriberAlert[],
   formatBudget: number,
