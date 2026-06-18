@@ -141,7 +141,11 @@ function buildChainsFreshnessMeta(
 }
 
 export const handleChains = withErrorHandler("chains", async (db: D1Database): Promise<Response> => {
-  const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  const stablecoinsResult = await loadStablecoinsCache(db, {
+    mode: "strict",
+    contract: "published",
+    allowLegacyArray: false,
+  });
   if (stablecoinsResult.kind !== "ok") {
     return errorResponse(503, "Data not yet available");
   }

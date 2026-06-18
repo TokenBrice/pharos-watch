@@ -32,14 +32,35 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
 
 import { handleChains } from "../chains";
 
-function freshCache(payload: unknown, ageSeconds = 60) {
+function withPublishedStablecoinDefaults(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") return payload;
+  const record = payload as { peggedAssets?: unknown };
+  if (!Array.isArray(record.peggedAssets)) return payload;
+
+  return {
+    ...record,
+    peggedAssets: record.peggedAssets.map((asset) => {
+      if (!asset || typeof asset !== "object") return asset;
+      return {
+        pegMechanism: "test-fixture",
+        priceSource: "test-fixture",
+        chainCirculating: {},
+        chains: [],
+        ...(asset as Record<string, unknown>),
+      };
+    }),
+  };
+}
+
+function freshCache(payload: unknown, ageSeconds = 60, options: { publishedFixture?: boolean } = {}) {
+  const value = options.publishedFixture === false ? payload : withPublishedStablecoinDefaults(payload);
   return {
     match: "cache",
     matchBinds: ["stablecoins"],
     rows: [],
     first: {
       key: "stablecoins",
-      value: JSON.stringify(payload),
+      value: JSON.stringify(value),
       updated_at: Math.floor(Date.now() / 1000) - ageSeconds,
     },
   };
@@ -77,6 +98,20 @@ function reportCardCache(
 describe("handleChains", () => {
   it("returns 503 when stablecoins cache is missing", async () => {
     const db = mockD1();
+    const response = await handleChains(db);
+    expect(response.status).toBe(503);
+  });
+
+  it("returns 503 when stablecoins cache does not satisfy the published contract", async () => {
+    const payload = {
+      peggedAssets: [{
+        id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1.0, pegType: "peggedUSD",
+        circulating: { peggedUSD: 100 },
+      }],
+    };
+
+    const db = mockD1([freshCache(payload, 60, { publishedFixture: false })]);
+
     const response = await handleChains(db);
     expect(response.status).toBe(503);
   });
