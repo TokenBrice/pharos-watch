@@ -8,7 +8,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { escapeHtml } from "../lib/telegram";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
-import { formatQuietHours } from "./telegram-webhook-messages";
+import { MANAGE_PAGE_SIZE, formatQuietHours } from "./telegram-webhook-messages";
 import { unixNow } from "./telegram-webhook-store";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import {
@@ -21,7 +21,10 @@ import {
   type SafetyModeCode,
 } from "./telegram-webhook-settings-shared";
 
-export function buildHomeMessage(subscriber: SubscriberRow | null): string {
+export function buildHomeMessage(
+  subscriber: SubscriberRow | null,
+  options: { hasCoinControls?: boolean } = {},
+): string {
   const depegSuffix =
     subscriber?.global_depeg_worsening_bps_step != null
       ? ` (+${subscriber.global_depeg_worsening_bps_step}bps)`
@@ -38,14 +41,22 @@ export function buildHomeMessage(subscriber: SubscriberRow | null): string {
     `Safety: ${onOff(subscriber?.global_alert_safety)}`,
     `Launch: ${onOff(subscriber?.global_alert_launch)}`,
     "",
-    "Tap a row to toggle. For a per-coin view send /settings &lt;ticker&gt;.",
+    options.hasCoinControls
+      ? "Tap a row to toggle. Tap a coin below or send /settings &lt;ticker&gt; for per-coin controls."
+      : "Tap a row to toggle. For a per-coin view send /settings &lt;ticker&gt;.",
   ];
   return lines.join("\n");
 }
 
 type SettingsButton = { text: string; callback_data?: string; web_app?: { url: string } };
 
-export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: { includeMiniAppButton?: boolean } = {}): {
+interface HomeKeyboardOptions {
+  includeMiniAppButton?: boolean;
+  subscriptions?: SubscriptionRow[];
+  subscriptionPage?: number;
+}
+
+export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: HomeKeyboardOptions = {}): {
   inline_keyboard: SettingsButton[][];
 } {
   const quietOn = Boolean(subscriber?.quiet_hours_enabled);
@@ -69,6 +80,7 @@ export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: { i
       },
     ]);
   }
+  rows.push(...buildCoinOpenRows(options.subscriptions ?? [], options.subscriptionPage ?? 0));
   if (options.includeMiniAppButton) {
     rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl("settings") } }]);
   }
@@ -115,6 +127,29 @@ export function buildCoinKeyboard(
 }
 
 // ---------- Row builders ----------
+
+function buildCoinOpenRows(subscriptions: SubscriptionRow[], page: number): SettingsButton[][] {
+  if (subscriptions.length === 0) return [];
+  const sorted = [...subscriptions].sort((a, b) => coinLabel(a.stablecoin_id).localeCompare(coinLabel(b.stablecoin_id)));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / MANAGE_PAGE_SIZE));
+  const clampedPage = Math.max(0, Math.min(page, totalPages - 1));
+  const start = clampedPage * MANAGE_PAGE_SIZE;
+  const rows: SettingsButton[][] = sorted.slice(start, start + MANAGE_PAGE_SIZE).map((row) => [
+    { text: `${coinLabel(row.stablecoin_id)} settings`, callback_data: `settings:o:${row.stablecoin_id}` },
+  ]);
+
+  if (totalPages > 1) {
+    const nav: SettingsButton[] = [];
+    if (clampedPage > 0) nav.push({ text: "Prev", callback_data: `settings:home:${clampedPage - 1}` });
+    if (clampedPage < totalPages - 1) nav.push({ text: "Next", callback_data: `settings:home:${clampedPage + 1}` });
+    if (nav.length > 0) rows.push(nav);
+  }
+  return rows;
+}
+
+function coinLabel(coinId: string): string {
+  return TRACKED_META_BY_ID.get(coinId)?.symbol ?? coinId;
+}
 
 function buildDewsRow(coinId: string, dewsBand: string | null): Array<{ text: string; callback_data: string }> {
   const row = (["A", "W", "D"] as const).map((code) => ({

@@ -24,6 +24,7 @@ import {
 import {
   clearAlertSnooze,
   loadSubscriberByChat,
+  loadSubscriptionRowsByChat,
   loadSubscriptionsByIds,
 } from "./telegram-webhook-store";
 import {
@@ -62,6 +63,7 @@ export interface SettingsCallbackQuery {
 type RenderTarget = { mode: "send" } | { mode: "edit"; messageId: number };
 interface SettingsRenderOptions {
   includeMiniAppButton?: boolean;
+  subscriptionPage?: number;
 }
 
 /**
@@ -116,11 +118,12 @@ export async function handleSettingsCallback(
   const target: RenderTarget = { mode: "edit", messageId };
 
   if (subAction === "home") {
-    if (subArg !== "") {
+    const subscriptionPage = parseSettingsHomePage(subArg);
+    if (subscriptionPage == null) {
       await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
       return;
     }
-    await renderHome(db, chatId, botToken, target);
+    await renderHome(db, chatId, botToken, target, { subscriptionPage });
     await answerCallbackQuery(cb.id, botToken);
     return;
   }
@@ -222,8 +225,24 @@ async function renderHome(
   target: RenderTarget,
   options: SettingsRenderOptions = {},
 ): Promise<void> {
-  const subscriber = await loadSubscriberByChat(db, chatId);
-  await deliver(db, chatId, buildHomeMessage(subscriber), buildHomeKeyboard(subscriber, options), botToken, target);
+  const [subscriber, subscriptions] = await Promise.all([
+    loadSubscriberByChat(db, chatId),
+    loadSubscriptionRowsByChat(db, chatId),
+  ]);
+  await deliver(
+    db,
+    chatId,
+    buildHomeMessage(subscriber, { hasCoinControls: subscriptions.length > 0 }),
+    buildHomeKeyboard(subscriber, { ...options, subscriptions }),
+    botToken,
+    target,
+  );
+}
+
+function parseSettingsHomePage(subArg: string): number | null {
+  if (subArg === "") return 0;
+  if (!/^\d+$/.test(subArg)) return null;
+  return Number(subArg);
 }
 
 async function renderCoin(

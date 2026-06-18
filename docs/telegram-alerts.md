@@ -214,7 +214,7 @@ Current actions:
 - `help:commands` for command-help navigation
 - `setup:*` for setup wizard steps
 - `tz:<IANA zone>` for timezone quick picks
-- `settings:home` — re-render the chat-level settings view
+- `settings:home` / `settings:home:<page>` — re-render the chat-level settings view and page through per-coin settings buttons
 - `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch` — toggle global alert flag
 - `settings:q:<1|0>` — enable (22-07 in the chat's configured timezone, UTC when unset) or disable quiet hours
 - `settings:sc` — clear an active snooze
@@ -225,7 +225,7 @@ Current actions:
   - `ds:100|250|500|0` — Depeg severity gate and worsening step in bps, or off (also clears `alert_depeg` for the coin)
   - `lc:1|0` — Launch on/off
 
-Settings callbacks edit the message in place via `editMessageText`. If the edit fails (e.g. the message is too old or content is unchanged) the handler falls back to a fresh `sendMessage` so the user still sees the new state.
+Settings callbacks edit the message in place via `editMessageText`. The chat-level settings keyboard includes paginated `settings:o:<stablecoinId>` buttons for explicitly subscribed coins, so users can open per-coin settings without typing `/settings <ticker>`. If the edit fails (e.g. the message is too old or content is unchanged) the handler falls back to a fresh `sendMessage` so the user still sees the new state.
 
 Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.

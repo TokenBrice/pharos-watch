@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import type { SubscriptionRow } from "../telegram-webhook-shared";
 
 const {
   buildCoinKeyboard,
@@ -29,6 +30,19 @@ function editCalls(): unknown[][] {
 
 function ackCalls(): unknown[][] {
   return fetchSpy.mock.calls.filter((c) => String(c[0]).includes("answerCallbackQuery"));
+}
+
+function subscriptionRow(stablecoinId: string): SubscriptionRow & Record<string, unknown> {
+  return {
+    stablecoin_id: stablecoinId,
+    alert_dews: 1,
+    alert_depeg: 0,
+    alert_safety: 0,
+    alert_launch: 0,
+    dews_min_band: "ALERT",
+    safety_mode: null,
+    depeg_worsening_bps_step: null,
+  };
 }
 
 beforeEach(() => {
@@ -64,6 +78,35 @@ describe("handleSettingsCommand", () => {
         "settings:gt:launch",
       ]),
     );
+  });
+
+  it("adds paginated per-coin owner buttons to the home view", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers WHERE chat_id = ?",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          "usdt-tether",
+          "usdc-circle",
+          "dai-makerdao",
+          "pyusd-paypal",
+          "usds-sky",
+          "usde-ethena",
+        ].map(subscriptionRow),
+      },
+    ]);
+    await handleSettingsCommand(db, "fake-token", "42", null, "");
+
+    const body = jsonBody(sendCalls()[0]) as {
+      reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data?: string }>> };
+    };
+    const buttons = body.reply_markup.inline_keyboard.flat();
+    expect(buttons.filter((button) => button.callback_data?.startsWith("settings:o:"))).toHaveLength(5);
+    expect(buttons.some((button) => button.callback_data === "settings:home:1")).toBe(true);
   });
 
   it("renders the coin view for /settings USDC", async () => {
@@ -122,6 +165,48 @@ describe("handleSettingsCallback — chat-level", () => {
 
     expect(editCalls().length).toBe(1);
     expect(sendCalls().length).toBe(0);
+    expect(ackCalls().length).toBe(1);
+  });
+
+  it("settings:home:<page> re-renders the requested coin-button page", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers WHERE chat_id = ?",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          "usdt-tether",
+          "usdc-circle",
+          "dai-makerdao",
+          "pyusd-paypal",
+          "usds-sky",
+          "usde-ethena",
+        ].map(subscriptionRow),
+      },
+    ]);
+    await handleSettingsCallback(
+      db,
+      "fake-token",
+      {
+        id: "cb",
+        data: "settings:home:1",
+        from: { id: 1 },
+        message: { chat: { id: 42 }, message_id: 999 },
+      },
+      "home",
+      "1",
+    );
+
+    expect(editCalls().length).toBe(1);
+    const body = jsonBody(editCalls()[0]) as {
+      reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data?: string }>> };
+    };
+    const buttons = body.reply_markup.inline_keyboard.flat();
+    expect(buttons.filter((button) => button.callback_data?.startsWith("settings:o:"))).toHaveLength(1);
+    expect(buttons.some((button) => button.callback_data === "settings:home:0")).toBe(true);
     expect(ackCalls().length).toBe(1);
   });
 
@@ -553,16 +638,19 @@ describe("callback_data size budget", () => {
   const LONG_ID = "isc-international-stable-currency";
 
   it("every keyboard data field stays within Telegram's 64-byte limit", () => {
-    const homeKb = buildHomeKeyboard({
-      alert_dews: 0,
-      alert_depeg: 0,
-      alert_safety: 0,
-      alert_launch: 0,
-      quiet_hours_enabled: 1,
-      quiet_hours_start_utc: 22,
-      quiet_hours_end_utc: 7,
-      alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3600,
-    });
+    const homeKb = buildHomeKeyboard(
+      {
+        alert_dews: 0,
+        alert_depeg: 0,
+        alert_safety: 0,
+        alert_launch: 0,
+        quiet_hours_enabled: 1,
+        quiet_hours_start_utc: 22,
+        quiet_hours_end_utc: 7,
+        alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3600,
+      },
+      { subscriptions: [subscriptionRow(LONG_ID)] },
+    );
     const coinKb = buildCoinKeyboard(LONG_ID, null);
     const sizes = [
       ...homeKb.inline_keyboard.flat(),

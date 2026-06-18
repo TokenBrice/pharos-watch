@@ -26,7 +26,7 @@ export async function handleSettingsInlineCallback(
   // `settings:c` uses colon delimiters; registry tests pin stablecoin ids to
   // the colon-free slug format so the action-specific split remains safe.
   const validSettingsCallback =
-    (subAction === "home" && parts.length === 2) ||
+    (subAction === "home" && (parts.length === 2 || (parts.length === 3 && /^\d+$/.test(parts[2] ?? "")))) ||
     ((subAction === "gt" || subAction === "q" || subAction === "o") && parts.length === 3) ||
     (subAction === "sc" && parts.length === 2) ||
     (subAction === "c" && parts.length === 5);

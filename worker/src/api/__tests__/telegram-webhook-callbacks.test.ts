@@ -1456,6 +1456,47 @@ describe("handleCallbackQuery", () => {
       expect(edits.length).toBe(1);
     });
 
+    it("settings:home:<page> routes to the requested per-coin button page", async () => {
+      const db = mockD1([
+        { match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null },
+        {
+          match: "FROM telegram_subscriptions",
+          rows: [
+            "usdt-tether",
+            "usdc-circle",
+            "dai-makerdao",
+            "pyusd-paypal",
+            "usds-sky",
+            "usde-ethena",
+          ].map((stablecoinId) => ({
+            stablecoin_id: stablecoinId,
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            alert_launch: 0,
+            dews_min_band: "ALERT",
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          })),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-settings-page",
+        data: "settings:home:1",
+        from: { id: 1 },
+        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      });
+
+      const edits = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("editMessageText"));
+      expect(edits.length).toBe(1);
+      const body = JSON.parse((edits[0][1] as RequestInit).body as string) as {
+        reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
+      };
+      const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((button) => button.callback_data);
+      expect(callbacks.filter((callback) => callback?.startsWith("settings:o:"))).toHaveLength(1);
+      expect(callbacks).toContain("settings:home:0");
+    });
+
     it("settings:c:<id>:db:A writes the alert_dews flag", async () => {
       const db = mockD1([
         { match: "FROM telegram_subscriptions", rows: [] },
