@@ -341,6 +341,7 @@ Supported payload schemes (lowercase, no spaces, max 64 characters, characters `
 | `why_<id>` | Runs the existing `/why` handler. Allowed in any chat. |
 | `coverage_<id>` | Runs the existing `/coverage` handler. Allowed in any chat. |
 | `setup` | Opens the standard two-branch setup wizard. |
+| `sample` | Alias entrypoint for `/sample`: in a private chat it runs the synthetic USDC DEWS preview (same message as `/sample`); in a group it falls back to the read-only start reply and does not run the preview. Surfaced by the Mini App Home "Send me a sample alert" deep link. |
 | `app` / `home` | Sends a Mini App launch nudge. Private chats receive a Web App button for the home panel; groups receive a DM link because Telegram rejects `web_app` buttons outside private chats. |
 | Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
 

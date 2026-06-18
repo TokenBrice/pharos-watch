@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock3, Home, ShieldAlert } from "lucide-react";
+import { Check, Clock3, Home, Send, ShieldAlert } from "lucide-react";
 import { RECOMMENDED_OPERATION, SNOOZE_DURATION_TOKENS } from "../constants";
 import { formatQuietHoursRange, formatSnoozePill, formatTime, isPausedSentinel } from "../format";
 import type {
@@ -26,6 +26,12 @@ export interface StatusPanelProps {
   homeScreenStatus: string | null;
   /** `webApp.addToHomeScreen` + haptic + checkHomeScreenStatus refresh. */
   onAddToHomeScreen: () => void;
+  /**
+   * Deep-links into the bot DM to trigger the synthetic `/sample` alert. Undefined
+   * when the client lacks `webApp.openTelegramLink`, which hides the CTA entirely
+   * (the Mini App cannot call the Bot API directly).
+   */
+  onSendSample?: () => void;
 }
 
 export const STALE_AUTH_READ_ONLY_COPY = {
@@ -49,7 +55,7 @@ function failureCopy(failureClass: string | null): { title: string; body: string
   };
 }
 
-export function StatusPanel({ state, canMutate, isMutating, pendingOperation, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen }: StatusPanelProps) {
+export function StatusPanel({ state, canMutate, isMutating, pendingOperation, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen, onSendSample }: StatusPanelProps) {
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozeActive = snoozeUntil != null;
   const paused = isPausedSentinel(snoozeUntil);
@@ -184,6 +190,15 @@ export function StatusPanel({ state, canMutate, isMutating, pendingOperation, on
           </p>
         </section>
       </div>
+
+      {onSendSample ? (
+        <div>
+          <MiniButton variant="secondary" ariaLabel="Send me a sample alert" onClick={onSendSample}>
+            <Send className="h-4 w-4" aria-hidden="true" /> Send me a sample alert
+          </MiniButton>
+          <p className="pharos-meta mt-2">Opens a chat with PharosWatchBot and previews a sample alert.</p>
+        </div>
+      ) : null}
     </div>
   );
 }

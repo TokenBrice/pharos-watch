@@ -804,6 +804,63 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
   });
 
+  it("renders the sample-alert CTA and deep-links into the bot DM when openTelegramLink is present", async () => {
+    const openTelegramLink = vi.fn();
+    const impactOccurred = vi.fn();
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), HapticFeedback: { impactOccurred }, openTelegramLink } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => baseState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+
+    const sampleButton = screen.getByRole("button", { name: "Send me a sample alert" });
+    fireEvent.click(sampleButton);
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=sample");
+    expect(impactOccurred).toHaveBeenCalledWith("light");
+  });
+
+  it("hides the sample-alert CTA when openTelegramLink is unavailable", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => baseState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Send me a sample alert" })).toBeNull();
+  });
+
+  it("arms forget-me into an explicit Confirm/Cancel row when showConfirm is absent", async () => {
+    // No showConfirm on the bridge → in-page Arm → Confirm/Cancel fallback.
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn() }, close: vi.fn() } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+
+    // First tap arms: reveals Confirm + Cancel, does NOT delete.
+    fireEvent.click(screen.getByRole("button", { name: "Delete all my data" }));
+    expect(screen.getByRole("button", { name: "Confirm delete all my data forever" })).toBeTruthy();
+    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Cancel returns to idle without firing onForgetMe.
+    fireEvent.click(cancelButton);
+    expect(screen.getByRole("button", { name: "Delete all my data" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Re-arm then Confirm fires the forget-me mutation.
+    fireEvent.click(screen.getByRole("button", { name: "Delete all my data" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete all my data forever" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "forget-me" } }),
+    }));
+  });
+
   it("does not stack MainButton listeners across view transitions", async () => {
     const onClickHandlers: Array<() => void> = [];
     const offClickHandlers: Array<() => void> = [];

@@ -11,6 +11,7 @@ describe("telegram usage analytics", () => {
   it("classifies deep-link payloads without storing raw payloads", () => {
     expect(classifyTelegramStartSource("")).toBe("none");
     expect(classifyTelegramStartSource("setup")).toBe("setup");
+    expect(classifyTelegramStartSource("sample")).toBe("sample");
     expect(classifyTelegramStartSource("sub_dews-depeg_usd-top25")).toBe("subscribe");
     expect(classifyTelegramStartSource("status_usdc-circle")).toBe("status");
     expect(classifyTelegramStartSource("why_usdc-circle")).toBe("why");

@@ -291,6 +291,29 @@ describe("webhook command handlers", () => {
     expectMiniAppButton(buttonsFromBody(body), "Open control panel", "watchlist");
   });
 
+  it("/start sample runs the synthetic preview in private chats", async () => {
+    const replyToChat = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ chatType: "private", replyToChat });
+
+    await handleStart(ctx, "sample");
+
+    expect(replyToChat).toHaveBeenCalledTimes(1);
+    const message = replyToChat.mock.calls[0]![0] as string;
+    expect(message).toContain("sample alert");
+    expect(message).toContain("USDC");
+  });
+
+  it("/start sample does not run the preview in groups", async () => {
+    const replyToChat = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ chatType: "group", replyToChat });
+
+    await handleStart(ctx, "sample");
+
+    expect(replyToChat).toHaveBeenCalledTimes(1);
+    const message = replyToChat.mock.calls[0]![0] as string;
+    expect(message).not.toContain("sample alert");
+  });
+
   it("/health renders delivery diagnostics and opens the contextual app view", async () => {
     const db = mockD1([
       { match: "FROM telegram_subscribers", rows: [], first: subscriberRow({ quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7 }) },

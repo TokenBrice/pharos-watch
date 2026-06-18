@@ -10,6 +10,7 @@ import { isGroupAdminActor, isGroupChatType } from "../telegram-webhook-auth";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import type { WebhookCommandHandler } from "./context";
 import { handleSubscribe } from "./subscribe";
+import { handleSample } from "./sample";
 import { handleStatus } from "./status";
 import { handleWhy } from "./why";
 import { handleCoverage } from "./coverage";
@@ -77,6 +78,11 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
       });
       return;
     }
+    case "sample":
+      // `?start=sample` aliases `/sample`. `handleSample` enforces the
+      // private-chat-only guard itself, so groups get the read-only reply.
+      await handleSample(ctx, "");
+      return;
     case "setup":
     case "none":
       if (

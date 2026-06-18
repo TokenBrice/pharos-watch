@@ -123,6 +123,13 @@ describe("parseStartPayload", () => {
     expect(parseStartPayload("SETUP")).toEqual({ kind: "setup" });
   });
 
+  it("returns sample for the sample keyword (case-insensitive) only", () => {
+    expect(parseStartPayload("sample")).toEqual({ kind: "sample" });
+    expect(parseStartPayload("SAMPLE")).toEqual({ kind: "sample" });
+    expect(parseStartPayload("sampleX")).toEqual({ kind: "none" });
+    expect(parseStartPayload("sample_")).toEqual({ kind: "none" });
+  });
+
   it("translates sub_<types>_<targets> into subscribe args", () => {
     expect(parseStartPayload("sub_dews-depeg_usd-top25")).toEqual({
       kind: "subscribe",

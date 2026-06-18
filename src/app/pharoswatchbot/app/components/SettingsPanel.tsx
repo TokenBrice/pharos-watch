@@ -184,7 +184,9 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
   hasShowConfirm: boolean;
 }) {
   // When the bridge can drive two native confirmations, tap once and let the
-  // bridge escalate. Otherwise fall back to an in-page two-tap armed state.
+  // bridge escalate. Otherwise fall back to an in-page explicit Arm → Confirm/Cancel
+  // flow: the first tap reveals a distinct Confirm/Cancel row so an incidental
+  // focus change (no longer wired to onBlur) can never fire the deletion.
   const [forgetArmed, setForgetArmed] = useState(false);
   const requiresArming = !hasShowConfirm;
 
@@ -196,27 +198,38 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
         <MiniButton variant="danger" disabled={!canMutate || isMutating} onClick={onUnsubscribeAll}>
           Unsubscribe from all
         </MiniButton>
-        <button
-          type="button"
-          disabled={!canMutate || isMutating}
-          aria-label="Delete all my data"
-          onClick={() => {
-            if (requiresArming && !forgetArmed) {
-              setForgetArmed(true);
-              return;
-            }
-            onForgetMe();
-          }}
-          onBlur={() => setForgetArmed(false)}
-          className={cn(
-            "pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-            forgetArmed
-              ? "border-red-600/80 bg-red-600 text-white hover:bg-red-700"
-              : "border-red-500/35 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300",
-          )}
-        >
-          {forgetArmed ? "Tap again to confirm forever" : "Delete all my data"}
-        </button>
+        {requiresArming && forgetArmed ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={!canMutate || isMutating}
+              aria-label="Confirm delete all my data forever"
+              onClick={onForgetMe}
+              className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-600/80 bg-red-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Confirm delete forever
+            </button>
+            <MiniButton variant="secondary" disabled={!canMutate || isMutating} onClick={() => setForgetArmed(false)}>
+              Cancel
+            </MiniButton>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={!canMutate || isMutating}
+            aria-label="Delete all my data"
+            onClick={() => {
+              if (requiresArming) {
+                setForgetArmed(true);
+                return;
+              }
+              onForgetMe();
+            }}
+            className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300"
+          >
+            Delete all my data
+          </button>
+        )}
       </div>
     </section>
   );

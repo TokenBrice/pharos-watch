@@ -335,6 +335,7 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
 export type ParsedStartPayload =
   | { kind: "none" }
   | { kind: "setup" }
+  | { kind: "sample" }
   | { kind: "app" }
   | { kind: "subscribe"; args: string }
   | { kind: "status"; coinId: string }
@@ -347,6 +348,7 @@ export type ParsedStartPayload =
  * - `sub_<types>_<targets>` (e.g. `sub_dews-depeg_usd-top25`) → subscribe
  * - `status_<id>` / `why_<id>` / `coverage_<id>` → read-only insights
  * - `setup` → setup wizard placeholder
+ * - `sample` → synthetic `/sample` preview (private-chat-only)
  * - `app` / `home` → Mini App launch nudge (see registry in
  *   `@shared/lib/telegram-mini-app-payloads`)
  * Unknown or malformed payloads return `{ kind: "none" }`.
@@ -363,6 +365,7 @@ export function parseStartPayload(args: string): ParsedStartPayload {
 
   const lower = payload.toLowerCase();
   if (lower === "setup") return { kind: "setup" };
+  if (lower === "sample") return { kind: "sample" };
   if (lower === "app" || lower === "home") return { kind: "app" };
 
   const firstSep = lower.indexOf("_");

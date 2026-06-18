@@ -215,6 +215,7 @@ export function classifyTelegramStartSource(args: string): string {
   if (!token) return "none";
   const lower = token.toLowerCase();
   if (lower === "setup") return "setup";
+  if (lower === "sample") return "sample";
   if (lower.startsWith("sub_")) return "subscribe";
   if (lower.startsWith("status_")) return "status";
   if (lower.startsWith("why_")) return "why";

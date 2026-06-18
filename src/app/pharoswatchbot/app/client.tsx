@@ -24,6 +24,8 @@ import { isPausedSentinel } from "./format";
 import { postMiniAppJson, TelegramMiniAppStateSchema } from "./mini-app-api";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
+/** Bot DM deep link that triggers the synthetic `/sample` alert (the Mini App cannot call the Bot API). */
+const BOT_DM_SAMPLE_LINK = "https://t.me/PharosWatchBot?start=sample";
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
 const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
 
@@ -227,6 +229,17 @@ export function PharosWatchBotMiniAppClient() {
     webApp?.close?.();
   }, [webApp]);
 
+  // Sample-alert deep link: the Mini App cannot call the Bot API, so open the
+  // bot DM with `?start=sample` to trigger the synthetic `/sample` preview.
+  // Undefined when `openTelegramLink` is unavailable so the CTA stays hidden.
+  const handleSendSample = useMemo(() => {
+    if (!webApp?.openTelegramLink) return undefined;
+    return () => {
+      webApp.HapticFeedback?.impactOccurred?.("light");
+      webApp.openTelegramLink?.(BOT_DM_SAMPLE_LINK);
+    };
+  }, [webApp]);
+
   // Scroll-to-coin: when launched with `coin_<id>`, scroll the matching row
   // into view and apply a temporary highlight. Runs once per coin target.
   useEffect(() => {
@@ -375,6 +388,7 @@ export function PharosWatchBotMiniAppClient() {
                   optimisticHomeHeadline={headline}
                   homeScreenStatus={homeScreenStatus}
                   onAddToHomeScreen={handleAddToHomeScreen}
+                  onSendSample={handleSendSample}
                 />
               </section>
             ) : null}
