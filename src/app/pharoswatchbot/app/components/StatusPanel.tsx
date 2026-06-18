@@ -26,36 +26,31 @@ export interface StatusPanelProps {
   onAddToHomeScreen: () => void;
 }
 
+export const STALE_AUTH_READ_ONLY_COPY = {
+  title: "Reopen Telegram to edit settings",
+  body: "This session is still readable, but edits require a fresh launch from Telegram.",
+} as const;
+
 export function StatusPanel({ state, canMutate, isMutating, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen }: StatusPanelProps) {
-  const readOnlyCopy = state.viewer.mutationBlockReason === "stale-auth"
-    ? {
-      title: "Reopen Telegram to edit settings",
-      body: <span>This session is still readable, but edits require a fresh launch from Telegram.</span>,
-    }
-    : {
-      title: "Group settings are command-only for now",
-      body: (
-        <span>
-          Use{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.6875rem] text-foreground">
-            /settings@PharosWatchBot
-          </code>{" "}
-          in the group. Only group admins can change alert settings.
-        </span>
-      ),
-    };
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozeActive = snoozeUntil != null;
+  const showGroupReadOnlyCopy = !state.viewer.canMutate && state.viewer.mutationBlockReason !== "stale-auth";
 
   return (
     <div className="space-y-4">
-      {!state.viewer.canMutate ? (
+      {showGroupReadOnlyCopy ? (
         <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
           <div className="flex gap-3">
             <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
             <div>
-              <h2 className="text-sm font-semibold text-foreground">{readOnlyCopy.title}</h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{readOnlyCopy.body}</p>
+              <h2 className="text-sm font-semibold text-foreground">Group settings are command-only for now</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Use{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.6875rem] text-foreground">
+                  /settings@PharosWatchBot
+                </code>{" "}
+                in the group. Only group admins can change alert settings.
+              </p>
             </div>
           </div>
         </section>

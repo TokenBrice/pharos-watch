@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
@@ -14,7 +14,7 @@ import { MiniButton } from "./components/MiniButton";
 import { HomeSkeleton } from "./components/HomeSkeleton";
 import { ForgottenView } from "./components/ForgottenView";
 import { PreviewState } from "./components/PreviewState";
-import { StatusPanel } from "./components/StatusPanel";
+import { STALE_AUTH_READ_ONLY_COPY, StatusPanel } from "./components/StatusPanel";
 import { WatchlistPanel } from "./components/WatchlistPanel";
 import { CoinInsightPanel } from "./components/CoinInsightPanel";
 import { PresetsPanel } from "./components/PresetsPanel";
@@ -276,6 +276,7 @@ export function PharosWatchBotMiniAppClient() {
     ? `@${state.viewer.username}`
     : state?.viewer.firstName ?? "PharosWatchBot";
   const canMutate = Boolean(initData && state?.viewer.canMutate);
+  const showStaleAuthBanner = optimisticState?.viewer.mutationBlockReason === "stale-auth";
   const nowSec = Math.floor(Date.now() / 1000);
 
   const openPrivacy = (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -345,6 +346,17 @@ export function PharosWatchBotMiniAppClient() {
         {status === "loading" && optimisticState ? <p className="sr-only" aria-live="polite">Refreshing settings</p> : null}
         {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => { if (initData) void loadSession(initData); }}>Retry</MiniButton></div></section> : null}
         {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
+        {showStaleAuthBanner ? (
+          <section className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="flex gap-3">
+              <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">{STALE_AUTH_READ_ONLY_COPY.title}</h2>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{STALE_AUTH_READ_ONLY_COPY.body}</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {optimisticState ? (
           <>

@@ -298,6 +298,23 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
   });
 
+  it("keeps stale-auth read-only copy visible outside the home tab", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "settings", user: { username: "watcher" } }, ready: vi.fn() } };
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => staleState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Global alerts")).toBeTruthy());
+    expect(screen.getAllByText("Reopen Telegram to edit settings")).toHaveLength(1);
+    expect(screen.getByText("This session is still readable, but edits require a fresh launch from Telegram.")).toBeTruthy();
+    expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
+  });
+
   it("renders the group settings command as inline code", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
     const groupState: TelegramMiniAppState = {
