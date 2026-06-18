@@ -44,7 +44,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 1. Ingress
 
-**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, the per-chat command-flood cap (20 commands / 60 s across all commands, fail-open, one notice at first exceed then silent drops), group-admin gate, and per-command cooldown. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
+**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, the ingress flood cap, group-admin gate, and per-command cooldown. The flood cap covers commands, callback taps, and pending text replies; private chats use a 20-action / 60 s chat key, while group/supergroup chats use a 20-action / 60 s `(chat_id, actor_user_id)` key plus a higher best-effort chat-wide ceiling. The first-exceed notice is advisory because concurrent deliveries can drop or duplicate it. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)
@@ -88,7 +88,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 3. Callback routing
 
-**Responsibility.** Translate `callback_query` updates into action invocations. Validate the `action:arg` shape against an allowlist (`CALLBACK_ACTIONS`) before any D1 touch. Per-action: validate args, gate group admins for mutating actions, call the appropriate action helper or directly persist, then `answerCallbackQuery`. Bulk `setup:*` and `settings:*` namespaces have their own sub-dispatchers for compact validation tables.
+**Responsibility.** Translate `callback_query` updates into action invocations. Ingress applies the shared flood cap before this router runs and maps read-heavy `status:`, `why:`, and `coverage:` callbacks onto the matching command cooldown bucket. Validate the `action:arg` shape against an allowlist (`CALLBACK_ACTIONS`) before any handler D1 touch. Per-action: validate args, gate group admins for mutating actions, call the appropriate action helper or directly persist, then `answerCallbackQuery`. Bulk `setup:*` and `settings:*` namespaces have their own sub-dispatchers for compact validation tables.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-callbacks.ts`
@@ -190,7 +190,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 7. State / persistence
 
-**Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload and the setup-wizard state), the processed-update idempotency claim, the command-cooldown gate, group-to-supergroup chat-ID migration merges, and the chat-delivery diagnostics.
+**Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload and the setup-wizard state), the processed-update idempotency claim, the command-cooldown gate and best-effort cooldown release for transient/throwing handlers, group-to-supergroup chat-ID migration merges, and the chat-delivery diagnostics.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-store.ts` (compatibility barrel re-exporting `telegram-store/*`) and `worker/src/api/telegram-store/*` (the topic-specific SQL builders: `subscribers`, `subscriptions`, `disambiguation`, `snooze`, `presets`, `forget`, `processed-updates`). The import contract — per-coin/preset write SQL belongs in `telegram-webhook-store` — still holds via the barrel.

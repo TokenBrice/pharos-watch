@@ -11,7 +11,7 @@ import {
   recordTelegramUsageEvent,
   type TelegramUsageEventType,
 } from "../lib/telegram-usage-analytics";
-import { acquireTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
+import { acquireTelegramCommandCooldown, releaseTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
 import { TelegramMiniAppMutationRequestSchema, TelegramMiniAppSessionRequestSchema, type TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationActionDetail } from "./telegram-mini-app-mutations";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
@@ -25,6 +25,29 @@ const MUTATION_COOLDOWN_SEC = 5;
 const MUTATION_COOLDOWN_KEY = "mini-app:mutation:any";
 const MAX_REQUEST_BODY_BYTES = 16 * 1024;
 const NO_STORE = { noStore: true };
+
+async function releaseMiniAppCooldownBestEffort(
+  db: D1Database,
+  input: { chatId: string; commandKey: string; operation: string },
+): Promise<void> {
+  try {
+    await releaseTelegramCommandCooldown(db, {
+      chatId: input.chatId,
+      commandKey: input.commandKey,
+    });
+  } catch (err) {
+    logWorkerEvent({
+      scope: "api",
+      level: "warn",
+      event: "telegram_mini_app_cooldown_release_failed",
+      route: "telegram-mini-app-mutation",
+      source: "telegram-mini-app",
+      message: "Telegram Mini App cooldown release failed",
+      metadata: { operation: input.operation },
+      error: err,
+    });
+  }
+}
 
 /**
  * Stable machine-readable error codes the Mini App frontend can switch on
@@ -366,6 +389,13 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       await applyTelegramMiniAppMutation(db, auth, parsed.operation);
     } catch (err) {
       if (err instanceof TelegramMiniAppMutationError) {
+        if (err.status >= 500) {
+          await releaseMiniAppCooldownBestEffort(db, {
+            chatId: auth.userId,
+            commandKey: MUTATION_COOLDOWN_KEY,
+            operation: parsed.operation.kind,
+          });
+        }
         await recordMiniAppEvent(db, {
           eventType: "mini_app_mutation_denied",
           auth,
@@ -376,6 +406,11 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         });
         return miniAppError(err.status, mutationErrorResponseCode(err.code), mutationErrorMessage(err));
       }
+      await releaseMiniAppCooldownBestEffort(db, {
+        chatId: auth.userId,
+        commandKey: MUTATION_COOLDOWN_KEY,
+        operation: parsed.operation.kind,
+      });
       throw err;
     }
 

@@ -727,6 +727,31 @@ describe("handleTelegramWebhook", () => {
     warn.mockRestore();
   });
 
+  it("releases an acquired command cooldown when the handler throws", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM daily_digest", rows: [], throwError: new Error("digest read failed") },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/brief"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Something went wrong");
+    expect(
+      db.getHistory().some((entry) =>
+        entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
+        entry.binds.includes("telegram:command-cooldown:123:/brief"),
+      ),
+    ).toBe(true);
+    warn.mockRestore();
+  });
+
   it("drops commands over the per-chat flood cap and replies once at first exceed", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     // 21st command inside the window: counter row already at the limit of 20.
@@ -782,6 +807,67 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
+    nowSpy.mockRestore();
+  });
+
+  it("uses actor-scoped flood keys in groups before the chat-wide ceiling", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:-123:actor:222"],
+        rows: [],
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:-123"],
+        rows: [{ key: "telegram:command-flood:-123", value: "20", updated_at: 1_699_999_990 }],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/help@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 222,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Commands");
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.binds.includes("telegram:command-flood:-123:actor:222"))).toBe(true);
+    expect(history.some((entry) => entry.binds.includes("telegram:command-flood:-123"))).toBe(true);
+    nowSpy.mockRestore();
+  });
+
+  it("drops flooded group commands for the actor that exceeded the cap", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:-123:actor:222"],
+        rows: [{ key: "telegram:command-flood:-123:actor:222", value: "20", updated_at: 1_699_999_990 }],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/help@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 222,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Too many commands at once");
+    expect(db.getHistory().some((entry) => entry.binds.includes("actor-flood"))).toBe(true);
     nowSpy.mockRestore();
   });
 
@@ -1300,6 +1386,36 @@ describe("handleTelegramWebhook", () => {
     expect(body).toContain("CALM");
     expect(body).toContain("Safety: A");
     expect(body).toContain("Price: $0.9999");
+  });
+
+  it("rate-limits /start status_<coinId> through the /status cooldown bucket", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        matchBinds: ["telegram:command-cooldown:1:/status", "1", 1_700_000_000, 1_699_999_980],
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-cooldown:1:/status"],
+        rows: [{ updated_at: 1_700_000_000 }],
+      },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(1, "/start status_usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Please try /status again");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.binds.includes("telegram:command-cooldown:1:/status"))).toBe(true);
+    nowSpy.mockRestore();
   });
 
   it("/start why_<coinId> dispatches into /why", async () => {
@@ -2787,6 +2903,49 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Only the user who started this pending selection can complete it");
   });
 
+  it("counts group pending-selection replies against the actor flood cap", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const ambiguous = resolveTicker("USDF");
+    if (ambiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF to be ambiguous for pending reply flood test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "111",
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:-123:actor:222"],
+        rows: [{ key: "telegram:command-flood:-123:actor:222", value: "20", updated_at: 1_699_999_990 }],
+      },
+    ]);
+
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "1", "test-secret", { chatType: "supergroup", fromId: 222 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(sentMessageBody().text).toContain("Too many Telegram actions");
+    expect(sentMessageBody().text).not.toContain("Only the user who started");
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+    nowSpy.mockRestore();
+  });
+
   it("ignores unrelated group text from non-initiators while a pending selection exists", async () => {
     const ambiguous = resolveTicker("USDF");
     if (ambiguous.status !== "ambiguous") {
@@ -3405,6 +3564,85 @@ describe("handleTelegramWebhook", () => {
           (entry.binds as unknown[]).includes("confirm-bulk"),
       ),
     ).toBe(false);
+  });
+
+  it("drops callback taps over the ingress flood cap before callback handlers run", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:123"],
+        rows: [{ key: "telegram:command-flood:123", value: "20", updated_at: 1_699_999_990 }],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeCallbackRequest("status:usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const answerCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("answerCallbackQuery"));
+    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toContain("Too many button taps");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.binds.includes("callback:status"))).toBe(true);
+    nowSpy.mockRestore();
+  });
+
+  it("rate-limits status callbacks through the /status cooldown bucket", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        matchBinds: ["telegram:command-cooldown:123:/status", "1", 1_700_000_000, 1_699_999_980],
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-cooldown:123:/status"],
+        rows: [{ updated_at: 1_700_000_000 }],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeCallbackRequest("status:usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const answerCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("answerCallbackQuery"));
+    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toContain("Please try /status again");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.binds.includes("telegram:command-cooldown:123:/status"))).toBe(true);
+    nowSpy.mockRestore();
+  });
+
+  it("releases a status callback cooldown when the callback handler throws", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [], throwError: new Error("status read failed") },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeCallbackRequest("status:usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(
+      db.getHistory().some((entry) =>
+        entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
+        entry.binds.includes("telegram:command-cooldown:123:/status"),
+      ),
+    ).toBe(true);
+    warn.mockRestore();
   });
 
   it("confirm:bulk callback executes a deferred /unsubscribe all", async () => {

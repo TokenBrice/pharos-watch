@@ -228,6 +228,17 @@ export async function acquireTelegramCommandCooldown(
   return { allowed: false, retryAfterSec };
 }
 
+export async function releaseTelegramCommandCooldown(
+  db: D1Database,
+  input: {
+    chatId: string;
+    commandKey: string;
+  },
+): Promise<void> {
+  const key = `telegram:command-cooldown:${input.chatId}:${input.commandKey}`;
+  await db.prepare("DELETE FROM cache WHERE key = ?").bind(key).run();
+}
+
 export interface TelegramChatCommandFloodResult {
   allowed: boolean;
   /** True exactly when this command crossed the limit, so callers reply once. */

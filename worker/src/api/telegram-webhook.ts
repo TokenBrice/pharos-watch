@@ -1,5 +1,5 @@
 import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
-import { escapeHtml } from "../lib/telegram";
+import { answerCallbackQuery, escapeHtml } from "../lib/telegram";
 import {
   formatAdministratorMentions,
   getCachedChatAdministrators,
@@ -19,6 +19,7 @@ import { handleSetupTickerInput, parseSetupState } from "./telegram-webhook-setu
 import {
   parseCommand,
   parsePendingDisambiguation,
+  parseStartPayload,
 } from "./telegram-webhook-parsing";
 import {
   acquireTelegramCommandCooldown,
@@ -30,6 +31,7 @@ import {
   migrateTelegramChatId,
   maybePruneTelegramProcessedUpdates,
   recordTelegramChatCommandFlood,
+  releaseTelegramCommandCooldown,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   unixNow,
   type TelegramChatCommandFloodResult,
@@ -137,6 +139,7 @@ type PendingDisambiguationRow = Awaited<ReturnType<typeof loadPendingDisambiguat
 type FinishOk = (errorClass?: string | null) => Promise<Response>;
 type ReplyFn = (message: string) => Promise<void>;
 type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
+type FloodScope = "actor" | "chat";
 
 /**
  * Cache TTL for the per-chat welcome-on-add idempotency marker. Telegram can
@@ -159,6 +162,7 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
 // replies. Well above any human typing rate.
 const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;
 const CHAT_COMMAND_FLOOD_LIMIT = 20;
+const GROUP_CHAT_COMMAND_FLOOD_LIMIT = CHAT_COMMAND_FLOOD_LIMIT * 4;
 
 const GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC = 20;
 
@@ -257,9 +261,57 @@ export const handleTelegramWebhook = withErrorHandler(
     try {
       if (update.callback_query) {
         let callbackErrorClass: string | null = null;
+        let callbackCooldownKey: string | null = null;
+        const callbackChatId = update.callback_query.message?.chat?.id?.toString() ?? null;
+        const callbackAction = callbackActionDetail(update.callback_query.data ?? "");
         try {
+          if (callbackChatId) {
+            const floodAllowed = await enforceIngressFlood(db, {
+              chatId: callbackChatId,
+              chatType: update.callback_query.message?.chat?.type ?? "private",
+              actorUserId: update.callback_query.from?.id != null ? String(update.callback_query.from.id) : null,
+              nowSec,
+              actionDetail: callbackAction,
+              noticeMessage: "Too many button taps at once — please slow down for a minute.",
+              reply: async (message) => {
+                await answerCallbackQuery(update.callback_query!.id, botToken, { text: message });
+              },
+            });
+            if (!floodAllowed) return finishOk();
+
+            const callbackCooldownCommand = resolveCallbackCooldownCommandKey(update.callback_query.data ?? "");
+            if (callbackCooldownCommand) {
+              const cooldown = await enforceCommandCooldown(
+                db,
+                callbackChatId,
+                callbackCooldownCommand,
+                "callback",
+                async (message) => {
+                  await answerCallbackQuery(update.callback_query!.id, botToken, { text: message });
+                },
+              );
+              if (!cooldown.allowed) {
+                await recordTelegramUsageEvent(db, {
+                  eventType: "command",
+                  actionDetail: callbackAction,
+                  outcome: cooldown.outcome,
+                  failureClass: cooldown.failureClass,
+                });
+                return finishOk();
+              }
+              callbackCooldownKey = cooldown.commandKey;
+            }
+          }
           await handleCallbackQuery(db, botToken, update.callback_query);
         } catch (err) {
+          if (callbackChatId && callbackCooldownKey) {
+            await releaseCommandCooldownBestEffort(db, {
+              chatId: callbackChatId,
+              commandKey: callbackCooldownKey,
+              action: "callback-cooldown-release",
+              command: callbackAction,
+            });
+          }
           logTelegramEvent({
             message: "callback_query failed",
             chatId: update.callback_query.message?.chat?.id ?? null,
@@ -371,6 +423,21 @@ async function handleTelegramMessageUpdate(args: {
     const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
     const isSetupPending =
       Boolean(pendingRow && pendingNotExpired && pendingRow.action_type === SETUP_PENDING_ACTION_TYPE);
+    let ingressFloodApplied = false;
+
+    if (pendingRow && pendingNotExpired) {
+      const floodAllowed = await enforceIngressFlood(db, {
+        chatId,
+        chatType,
+        actorUserId,
+        nowSec: Math.floor(Date.now() / 1000),
+        actionDetail: parsedCommand?.command ?? "pending-reply",
+        noticeMessage: "Too many Telegram actions at once — please slow down for a minute.",
+        reply,
+      });
+      ingressFloodApplied = floodAllowed;
+      if (!floodAllowed) return finishOk();
+    }
 
     if (isSetupPending && pendingRow) {
       const setupResult = await handleSetupPendingBeforeDispatch({
@@ -415,6 +482,7 @@ async function handleTelegramMessageUpdate(args: {
       commandContext,
       reply,
       replyWithMarkup,
+      skipFlood: ingressFloodApplied,
     });
     return finishOk();
   } catch (err) {
@@ -589,6 +657,7 @@ async function dispatchParsedTelegramCommand(args: {
   commandContext: WebhookCommandContext;
   reply: ReplyFn;
   replyWithMarkup: ReplyWithMarkupFn;
+  skipFlood?: boolean;
 }): Promise<void> {
   const {
     db,
@@ -600,59 +669,21 @@ async function dispatchParsedTelegramCommand(args: {
     commandContext,
     reply,
     replyWithMarkup,
+    skipFlood = false,
   } = args;
   const commandStartedAtMs = Date.now();
 
-  // Per-chat flood cap runs first so dropped commands skip admin gating
-  // (a Telegram API call) and handler work entirely. Fails open only for the
-  // flood-check store error itself: once the cap says no, the command must
-  // not run even if the notice reply or usage write fails.
-  let flood: TelegramChatCommandFloodResult | null = null;
-  try {
-    flood = await recordTelegramChatCommandFlood(db, {
+  if (!skipFlood) {
+    const floodAllowed = await enforceIngressFlood(db, {
       chatId,
+      chatType,
+      actorUserId,
       nowSec: Math.floor(commandStartedAtMs / 1000),
-      windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
-      limit: CHAT_COMMAND_FLOOD_LIMIT,
+      actionDetail: parsedCommand.command,
+      noticeMessage: "Too many commands at once — please slow down for a minute.",
+      reply,
     });
-  } catch (err) {
-    logTelegramEvent({
-      level: "warn",
-      message: "chat command flood check failed",
-      chatId,
-      action: "command-flood",
-      command: parsedCommand.command,
-      err: toErrorMessage(err),
-    });
-  }
-  if (flood && !flood.allowed) {
-    if (flood.firstExceeded) {
-      try {
-        await reply("Too many commands at once — please slow down for a minute.");
-      } catch (err) {
-        logTelegramEvent({
-          level: "warn",
-          message: "chat command flood notice reply failed",
-          chatId,
-          action: "command-flood",
-          command: parsedCommand.command,
-          err: toErrorMessage(err),
-        });
-      }
-    }
-    try {
-      await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "rate_limited", "chat-flood");
-    } catch (err) {
-      logTelegramEvent({
-        level: "warn",
-        message: "chat command flood usage record failed",
-        chatId,
-        action: "command-flood",
-        command: parsedCommand.command,
-        err: toErrorMessage(err),
-      });
-    }
-    return;
+    if (!floodAllowed) return;
   }
 
   if (
@@ -692,7 +723,19 @@ async function dispatchParsedTelegramCommand(args: {
       );
       return;
     }
-    await handler(commandContext, parsedCommand.args);
+    try {
+      await handler(commandContext, parsedCommand.args);
+    } catch (err) {
+      if (cooldown.commandKey) {
+        await releaseCommandCooldownBestEffort(db, {
+          chatId,
+          commandKey: cooldown.commandKey,
+          action: "command-cooldown-release",
+          command: parsedCommand.command,
+        });
+      }
+      throw err;
+    }
     await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "ok");
     return;
   }
@@ -761,6 +804,126 @@ function classifyWebhookError(err: unknown): string {
   return "unknown";
 }
 
+function floodScopesForUpdate(
+  chatId: string,
+  chatType: string,
+  actorUserId: string | null,
+): Array<{ key: string; scope: FloodScope; limit: number }> {
+  if (isGroupChatType(chatType) && actorUserId) {
+    return [
+      { key: `${chatId}:actor:${actorUserId}`, scope: "actor", limit: CHAT_COMMAND_FLOOD_LIMIT },
+      { key: chatId, scope: "chat", limit: GROUP_CHAT_COMMAND_FLOOD_LIMIT },
+    ];
+  }
+  return [{ key: chatId, scope: "chat", limit: CHAT_COMMAND_FLOOD_LIMIT }];
+}
+
+async function enforceIngressFlood(
+  db: D1Database,
+  input: {
+    chatId: string;
+    chatType: string;
+    actorUserId: string | null;
+    nowSec: number;
+    actionDetail: string;
+    noticeMessage: string;
+    reply: ReplyFn;
+  },
+): Promise<boolean> {
+  let blocked:
+    | { flood: TelegramChatCommandFloodResult; scope: FloodScope }
+    | null = null;
+  for (const floodScope of floodScopesForUpdate(input.chatId, input.chatType, input.actorUserId)) {
+    try {
+      const flood = await recordTelegramChatCommandFlood(db, {
+        chatId: floodScope.key,
+        nowSec: input.nowSec,
+        windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
+        limit: floodScope.limit,
+      });
+      if (!flood.allowed) {
+        blocked = { flood, scope: floodScope.scope };
+        break;
+      }
+    } catch (err) {
+      logTelegramEvent({
+        level: "warn",
+        message: "chat command flood check failed",
+        chatId: input.chatId,
+        userId: input.actorUserId,
+        action: "command-flood",
+        command: input.actionDetail,
+        err: toErrorMessage(err),
+      });
+    }
+  }
+
+  if (!blocked) return true;
+
+  if (blocked.flood.firstExceeded) {
+    try {
+      await input.reply(input.noticeMessage);
+    } catch (err) {
+      logTelegramEvent({
+        level: "warn",
+        message: "chat command flood notice reply failed",
+        chatId: input.chatId,
+        userId: input.actorUserId,
+        action: "command-flood",
+        command: input.actionDetail,
+        err: toErrorMessage(err),
+      });
+    }
+  }
+
+  try {
+    await recordTelegramUsageEvent(db, {
+      eventType: "command",
+      actionDetail: input.actionDetail,
+      outcome: "rate_limited",
+      failureClass: blocked.scope === "actor" ? "actor-flood" : "chat-flood",
+    });
+  } catch (err) {
+    logTelegramEvent({
+      level: "warn",
+      message: "chat command flood usage record failed",
+      chatId: input.chatId,
+      userId: input.actorUserId,
+      action: "command-flood",
+      command: input.actionDetail,
+      err: toErrorMessage(err),
+    });
+  }
+
+  return false;
+}
+
+async function releaseCommandCooldownBestEffort(
+  db: D1Database,
+  input: {
+    chatId: string;
+    commandKey: string;
+    action: string;
+    command: string;
+  },
+): Promise<void> {
+  try {
+    await releaseTelegramCommandCooldown(db, {
+      chatId: input.chatId,
+      commandKey: input.commandKey,
+    });
+  } catch (err) {
+    logTelegramEvent({
+      level: "warn",
+      message: "command cooldown release failed",
+      chatId: input.chatId,
+      action: input.action,
+      command: input.command,
+      err: toErrorMessage(err),
+    });
+  }
+}
+
 async function enforceCommandCooldown(
   db: D1Database,
   chatId: string,
@@ -768,12 +931,12 @@ async function enforceCommandCooldown(
   args: string,
   reply: (message: string) => Promise<void>,
 ): Promise<
-  | { allowed: true }
-  | { allowed: false; outcome: "rate_limited" | "failure"; failureClass: string | null }
+  | { allowed: true; commandKey: string | null }
+  | { allowed: false; commandKey: string | null; outcome: "rate_limited" | "failure"; failureClass: string | null }
 > {
-  const commandKey = canonicalCommandKey(command);
+  const commandKey = effectiveCooldownCommandKey(command, args);
   const cooldownSec = resolveCommandCooldownSec(commandKey, args);
-  if (cooldownSec == null) return { allowed: true };
+  if (cooldownSec == null) return { allowed: true, commandKey: null };
 
   let cooldown;
   try {
@@ -793,16 +956,39 @@ async function enforceCommandCooldown(
       err: toErrorMessage(err),
     });
     await reply("Command traffic is busy. Please try again shortly.");
-    return { allowed: false, outcome: "failure", failureClass: "cooldown-store-error" };
+    return { allowed: false, commandKey, outcome: "failure", failureClass: "cooldown-store-error" };
   }
 
-  if (cooldown.allowed) return { allowed: true };
+  if (cooldown.allowed) return { allowed: true, commandKey };
   await reply(formatCommandCooldownMessage(commandKey, cooldown.retryAfterSec));
-  return { allowed: false, outcome: "rate_limited", failureClass: null };
+  return { allowed: false, commandKey, outcome: "rate_limited", failureClass: null };
 }
 
 function canonicalCommandKey(command: string): string {
   return CANONICAL_COMMAND_KEYS[command] ?? command;
+}
+
+function effectiveCooldownCommandKey(command: string, args: string): string {
+  const commandKey = canonicalCommandKey(command);
+  if (commandKey !== "/start") return commandKey;
+  const payload = parseStartPayload(args);
+  if (payload.kind === "status") return "/status";
+  if (payload.kind === "why") return "/why";
+  if (payload.kind === "coverage") return "/coverage";
+  return commandKey;
+}
+
+function resolveCallbackCooldownCommandKey(data: string): string | null {
+  const action = data.split(":")[0] ?? "";
+  if (action === "status") return "/status";
+  if (action === "why") return "/why";
+  if (action === "coverage") return "/coverage";
+  return null;
+}
+
+function callbackActionDetail(data: string): string {
+  const action = data.split(":")[0] || "unknown";
+  return `callback:${action}`;
 }
 
 function resolveCommandCooldownSec(command: string, args: string): number | null {

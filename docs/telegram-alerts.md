@@ -184,7 +184,7 @@ Receiver behavior accepts either current or previous secret whenever both are co
 
 Every subscriber alert sent from the dispatcher carries an inline keyboard.
 Multi-coin or overflow chunks keep the snooze row (`Snooze 1h | 4h | 24h`).
-Single-coin first chunks also include contextual actions (`Status`, `Depeg +250`,
+Single-coin first chunks also include contextual actions (`Status`, `Depeg step 250`,
 and `Safety downgrades`) so a user can inspect or tighten routing without typing
 the full command. Tapping a button yields a Telegram `callback_query` update,
 routed to `worker/src/api/telegram-webhook-callbacks.ts`.
@@ -224,6 +224,11 @@ Settings callbacks edit the message in place via `editMessageText`. If the edit 
 Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.
 
+Callbacks share the webhook ingress flood cap with commands before the callback
+router touches action-specific D1 state. Read-heavy `status:`, `why:`, and
+`coverage:` buttons also reuse the matching command cooldown bucket, so button
+taps cannot bypass the `/status`, `/why`, or `/coverage` read limits.
+
 Registration script `npx tsx scripts/maintenance/register-telegram.ts --action webhook` declares
 `allowed_updates = ["message", "callback_query", "my_chat_member"]` so Telegram forwards only
 update types the bot handles.
@@ -234,7 +239,7 @@ update types the bot handles.
 
 The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. During rotation it accepts either `TELEGRAM_WEBHOOK_SECRET` or `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
 
-In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands and commands addressed to the public channel handle are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available; unrelated group text from other users is ignored.
+In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands and commands addressed to the public channel handle are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available; unrelated group text from other users is ignored. Pending text replies are counted by the same ingress flood cap as commands and callbacks.
 
 ### Group Admin Gating
 
@@ -244,6 +249,13 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 - **Soft (emergency rollback):** changing the code-level toggle to `"soft"` and redeploying warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
 
 Mutating group authorization uses a fresh `getChatMember` check on every command or callback, so a demoted admin loses mutation access on the next webhook delivery and a newly promoted admin can act immediately. The five-minute `telegram:chat-member:<chat_id>:<user_id>` cache remains available for non-authorization diagnostics, and `telegram:chat-admins:<chat_id>` still caches the administrator list for denial copy. If Telegram's fresh member lookup fails, hard-gated mutations fail closed. Private chats remain open to every chat member.
+
+The ingress flood cap is actor-aware in groups: each Telegram actor gets the
+normal 20 actions / 60 seconds allowance inside the chat, with a higher
+best-effort chat-wide ceiling as a secondary abuse guard. Private chats use the
+chat ID alone. Cooldown rows are acquired before heavy command or Mini App work;
+handler throws and transient Mini App 5xx-style failures release the cooldown
+row best-effort, while validation and permission denials keep the cooldown.
 
 ### Setup Wizard
 
@@ -747,7 +759,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 ## Operational Notes
 
 - The dedicated 5-minute Telegram trigger reconciles both webhook registration and native slash-command suggestions through `worker/src/lib/telegram-webhook-registration.ts`. After deploying a command-list change, the production bot menu users see when typing `/` should update on the next Telegram slot.
-- The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a slim list (`subscribe`, `unsubscribe`, `list`, `health`, `status`, `mute`, `help`) under `scope: { type: "all_group_chats" }`. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
+- The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a group-safe list under `scope: { type: "all_group_chats" }`. The group menu includes read-only commands and group-valid subscription/settings controls, but intentionally omits `/start` and `/forget` because setup deep links and destructive data deletion stay private-chat only. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
 - The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `shared/lib/telegram-bot-registration.ts` so changes flow through code review and are reused by manual recovery tooling. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Profile-photo updates are not exposed via the Bot API — set the avatar manually through @BotFather using `public/pharos-icon.png`.
 - The cron connection-budget check includes the command/profile/webhook reconciliation as a budget-only entry on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job, but its serial Bot API calls are still visible to `npm run check:cron-connections`.
 - `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, `npx tsx scripts/maintenance/register-telegram.ts --action commands`, and `npx tsx scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.

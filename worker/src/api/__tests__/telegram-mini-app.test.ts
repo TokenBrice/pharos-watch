@@ -622,6 +622,27 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "INSERT INTO telegram_preset_subscriptions", ["42", "usd-top25", 1, 1, 0])).toBe(true);
   });
 
+  it("releases mutation cooldown when preset data is transiently unavailable", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: "preset-unavailable" });
+    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:command-cooldown:42:mini-app:mutation:any"])).toBe(true);
+  });
+
   it("follows and unfollows presets through exact preset tables", async () => {
     const initData = await privateInitData();
     const followDb = mockD1([stablecoinsCacheTable(), ...stateReadTables()]);
@@ -859,6 +880,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(400);
+    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:command-cooldown:42:mini-app:mutation:any"])).toBe(false);
   });
 
   it("rejects set-quiet-hours with equal start and end hours", async () => {
@@ -900,6 +922,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(false);
+    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:command-cooldown:42:mini-app:mutation:any"])).toBe(true);
   });
 
   it("validates initData with the previous bot token when current rejects", async () => {
