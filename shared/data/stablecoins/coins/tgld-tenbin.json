@@ -86,6 +86,11 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "signingModel": "Tenbin deployments identify this backend signer as minter_role; mints use KYC-gated off-chain signed orders processed through the Controller.",
+          "caps": "Supply cap is controlled by the separate dev multisig cap_adjuster_role; signer-side hard limits were not resolved.",
+          "unsupportedReason": "The custody model for the backend signing keys and any HSM/rate-limit enforcement remain unresolved."
+        },
         "evidence": "Holds minter_role on the tGLD deployment per Tenbin's deployments.json; mints execute from off-chain KYC-gated signed orders processed through the Controller (0x5e631388b24ec493619DAEEAef6fc34B33d97Dcd)."
       },
       {
@@ -97,6 +102,10 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Owner multisig holds DEFAULT_ADMIN_ROLE and can grant or revoke minter_role and other privileged roles.",
+          "unsupportedReason": "The multisig implementation, threshold, signer set, modules, and guard were not independently verified."
+        },
         "evidence": "Holds DEFAULT_ADMIN_ROLE on the tGLD deployment per deployments.json; can grant or revoke minter_role and other privileged roles. Multisig threshold and signer set not independently verified."
       },
       {

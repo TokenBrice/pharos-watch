@@ -159,6 +159,12 @@
         "address": "0xe167330e2eac88666de253e9607c6d9ae0ca2824",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "AccessManager gates apxUSD.mint() and MinterV0.executeMint(); ROLE_MINT_STRAT is the EIP-712 order-flow contract and ROLE_MINTER is the Safe.",
+          "rateLimits": "MinterV0 includes rate limiting and AccessManager-enforced execution delay.",
+          "caps": "Review evidence states supply cap is enforced in mint(); AccessManager admin can alter roles/delays rather than acting as an immutable cap.",
+          "pausersAdminsUpgraders": "ADMIN_ROLE is held by the deployer EOA; ROLE_MINTER and ROLE_MINT_STRAT were confirmed via RoleGranted logs."
+        },
         "evidence": "OZ v5 AccessManager deployed at Ethereum block 24481039 by EOA 0x0442cc5bbfbc4b7dc3a14f9766c21c82b45f0024 (initialAdmin). ADMIN_ROLE (roleId=0) held by deployer EOA. ROLE_MINT_STRAT (roleId=1, labelled 'ROLE_MINT_STRAT') held by MinterV0 contract 0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e. ROLE_MINTER (roleId=2, labelled 'ROLE_MINTER') held by Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. Both roles confirmed via RoleGranted event logs.",
         "sources": [
           {
@@ -200,6 +206,11 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "Safe holds ROLE_MINTER directly; mint execution requires the Safe threshold with no enabled modules or guard detected.",
+          "caps": "Safe direct minting is subject to the token mint path's supply cap; this control cannot raise that cap.",
+          "pausersAdminsUpgraders": "Safe is 3-of-6 at the reviewed block; AccessManager admin remains the role-granting surface."
+        },
         "safe": {
           "owners": [
             "0xb51f89dea7df709cebb4809b40c6431361e61d0d",

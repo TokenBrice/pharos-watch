@@ -119,6 +119,11 @@
         "address": "7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
+        "routeChecks": {
+          "signingModel": "Solomon docs restrict direct 1:1 mint/burn/redeem to whitelisted KYC'd market makers and institutions.",
+          "trustedPeerOrRemote": "Live Solana mint authority is a PDA owned by program D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax.",
+          "unsupportedReason": "Program identity for D4AiKFxj and the EOA upgrade-authority control remain unresolved."
+        },
         "evidence": "Solomon docs state direct 1:1 mint/burn/redeem of USDv is permissioned to approved market makers and compliant institutions; Solana RPC returned this live SPL mint authority for token Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C and null freeze authority."
       },
       {

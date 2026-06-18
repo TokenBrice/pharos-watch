@@ -186,6 +186,11 @@
         "signerCount": 6,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "Noon admin Safe controls MinterHandlerV2 limits and holds MINTER_ROLE; current per-block/per-day caps live on the handler.",
+          "pausersAdminsUpgraders": "Safe is 3-of-6 with no modules and zero guard in the Safe API snapshot.",
+          "unsupportedReason": "The operational custody wallet and off-chain signer/signature model remain unresolved in the profile review."
+        },
         "safe": {
           "threshold": 3,
           "owners": [

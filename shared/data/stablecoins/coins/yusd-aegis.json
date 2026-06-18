@@ -103,6 +103,11 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Aegis admin Safe is owner/defaultAdmin for AegisMinting; reviewed as 3-of-5 with no modules and zero guard.",
+          "caps": "Safe can administer mint limits and trusted-signer/cross-chain operator roles; active signer/operator ownership remains a review question.",
+          "unsupportedReason": "Trusted signer ownership and current cross-chain operator role holder remain unresolved in the profile review."
+        },
         "safe": {
           "threshold": 3,
           "owners": [

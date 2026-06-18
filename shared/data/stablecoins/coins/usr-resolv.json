@@ -169,6 +169,11 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "requestSwap/completeSwap relied on an off-chain SERVICE_ROLE backend signer; incident reporting describes a single EOA AWS-KMS key compromise.",
+          "onchainAmountBounds": "Minting contract performed no oracle, ratio, per-transaction, or max-supply check tying minted USR to deposited collateral.",
+          "unsupportedReason": "Post-exploit SERVICE_ROLE holder set still includes multiple contracts/signers; this frozen asset remains scored as unbounded/compromised."
+        },
         "evidence": "Post-mortem and incident analyses describe a requestSwap/completeSwap flow where the minted USR amount is supplied by an off-chain SERVICE_ROLE backend (single EOA, AWS-KMS key) with no on-chain validation tying minted amount to deposited collateral; its compromise produced 80M unbacked USR."
       },
       {
@@ -182,6 +187,10 @@
         "address": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
         "signerCount": 6,
         "threshold": 4,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Admin Safe holds DEFAULT_ADMIN/token owner posture and can authorize SERVICE_ROLE changes; reviewed as 4-of-6 Safe v1.3 with no modules or guard.",
+          "caps": "Admin can manage roles, but the compromised mint route had no effective on-chain collateral or max-supply bound."
+        },
         "evidence": "At block 25295177: USR token owner() = 0xd6889f…; Blockscout: GnosisSafeProxy; getThreshold() = 4; getOwners() returned 6 addresses; masterCopy slot0 = 0xd9db270c… (Safe v1.3); guard slot = 0x0; modules empty. DEFAULT_ADMIN RoleGranted to this Safe is active (initial 0x8729dae was revoked).",
         "safe": {
           "owners": [

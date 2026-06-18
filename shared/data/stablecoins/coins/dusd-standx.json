@@ -127,6 +127,11 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "Docs describe Gateway minting when users deposit USDT/USDC into the StandX Secure Vault, with redemption subject to a 7-day lock.",
+          "trustedPeerOrRemote": "Solana mint authority is a PDA owned by the immutable StandX program; BSC MINTER_ROLE resolves to the Gateway controller proxy.",
+          "unsupportedReason": "BSC DEFAULT_ADMIN_ROLE is an unverified 171-byte contract and the 52M->103.6M RoleGranted range remains unscanned, so the BSC route is not fully attested."
+        },
         "sources": [
           {
             "label": "Minting $DUSD",
@@ -146,6 +151,11 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "signingModel": "StandX docs place the off-chain Settler and RSV Fund multisig in the mint/redeem lifecycle and allow redemption rejection.",
+          "lockboxOrEscrow": "Settler/RSV multisig moves collateral between on-chain and off-chain venues supporting the Gateway route.",
+          "unsupportedReason": "The exact signer set, threshold, and BSC role-grant history for this backend control remain unresolved."
+        },
         "evidence": "The Settler manages delta-neutral positions across CEXes and the RSV Fund multisig bridges assets between on-chain and off-chain platforms; StandX can reject redemption orders, making the issuer backend a controlling party over the mint/redeem lifecycle.",
         "sources": [
           {

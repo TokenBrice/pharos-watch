@@ -301,6 +301,11 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "signingModel": "Ethena docs describe signed mint/redeem order flows with the token minter contract as the active minting endpoint.",
+          "onchainAmountBounds": "This review confirmed the token minter address but did not resolve a hard on-chain max supply or per-transaction cap.",
+          "pausersAdminsUpgraders": "Token owner Safe can administer the token minter path."
+        },
         "sources": [
           {
             "label": "Ethena mint and redeem docs",
@@ -324,6 +329,10 @@
         "signerCount": 10,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "USDe owner is a 5-of-10 Safe with no modules and zero guard in the Safe API snapshot.",
+          "caps": "Owner/admin cap-raising posture remains unknown; this Safe controls the minter-administration surface."
+        },
         "safe": {
           "owners": [
             "0x66096e581863EC2682e4E317Da41B80510a274F6",

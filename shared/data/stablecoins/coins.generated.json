@@ -1887,6 +1887,12 @@
           "directMintAbility": "can-authorize",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "signingModel": "AccessManager gates apxUSD.mint() and MinterV0.executeMint(); ROLE_MINT_STRAT is the EIP-712 order-flow contract and ROLE_MINTER is the Safe.",
+            "rateLimits": "MinterV0 includes rate limiting and AccessManager-enforced execution delay.",
+            "caps": "Review evidence states supply cap is enforced in mint(); AccessManager admin can alter roles/delays rather than acting as an immutable cap.",
+            "pausersAdminsUpgraders": "ADMIN_ROLE is held by the deployer EOA; ROLE_MINTER and ROLE_MINT_STRAT were confirmed via RoleGranted logs."
+          },
           "sources": [
             {
               "label": "apxUSD AccessManager on Etherscan",
@@ -1944,6 +1950,11 @@
             "masterCopy": null,
             "observedBlock": 25294762,
             "source": "onchain"
+          },
+          "routeChecks": {
+            "signingModel": "Safe holds ROLE_MINTER directly; mint execution requires the Safe threshold with no enabled modules or guard detected.",
+            "caps": "Safe direct minting is subject to the token mint path's supply cap; this control cannot raise that cap.",
+            "pausersAdminsUpgraders": "Safe is 3-of-6 at the reviewed block; AccessManager admin remains the role-granting surface."
           },
           "sources": [
             {
@@ -16164,6 +16175,11 @@
           "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
+          "routeChecks": {
+            "lockboxOrEscrow": "Docs describe Gateway minting when users deposit USDT/USDC into the StandX Secure Vault, with redemption subject to a 7-day lock.",
+            "trustedPeerOrRemote": "Solana mint authority is a PDA owned by the immutable StandX program; BSC MINTER_ROLE resolves to the Gateway controller proxy.",
+            "unsupportedReason": "BSC DEFAULT_ADMIN_ROLE is an unverified 171-byte contract and the 52M->103.6M RoleGranted range remains unscanned, so the BSC route is not fully attested."
+          },
           "sources": [
             {
               "label": "Minting $DUSD",
@@ -16183,6 +16199,11 @@
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
+          "routeChecks": {
+            "lockboxOrEscrow": "Settler/RSV multisig moves collateral between on-chain and off-chain venues supporting the Gateway route.",
+            "signingModel": "StandX docs place the off-chain Settler and RSV Fund multisig in the mint/redeem lifecycle and allow redemption rejection.",
+            "unsupportedReason": "The exact signer set, threshold, and BSC role-grant history for this backend control remain unresolved."
+          },
           "sources": [
             {
               "label": "$DUSD Solutions",
@@ -43364,6 +43385,12 @@
           "directMintAbility": "direct",
           "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs on LP deposit.",
           "canRaiseCap": false,
+          "routeChecks": {
+            "lockboxOrEscrow": "NUSD supply expands only when LPs add liquidity to the Synapse nexus SwapFlashLoan pool.",
+            "caps": "No independent fixed supply cap; minting is bounded by pool deposit/accounting logic.",
+            "pausersAdminsUpgraders": "Pool ownership is held by the separately reviewed 2-of-3 Safe.",
+            "onchainAmountBounds": "LPToken mint() is onlyOwner and the owner is the SwapFlashLoan pool contract."
+          },
           "sources": [
             {
               "label": "NUSD LPToken (Blockscout)",
@@ -43400,6 +43427,10 @@
             "fallbackHandler": "unknown",
             "observedBlock": 25295203,
             "source": "onchain"
+          },
+          "routeChecks": {
+            "caps": "Safe can administer the pool route, but the reviewed LPToken mint path remains pool-deposit/accounting driven.",
+            "pausersAdminsUpgraders": "Safe owns the SwapFlashLoan pool that owns the LPToken mint path; Safe v1.3 was reviewed with no modules or guard."
           },
           "sources": [
             {
@@ -58871,6 +58902,11 @@
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "signingModel": "Tenbin deployments identify this backend signer as minter_role; mints use KYC-gated off-chain signed orders processed through the Controller.",
+            "caps": "Supply cap is controlled by the separate dev multisig cap_adjuster_role; signer-side hard limits were not resolved.",
+            "unsupportedReason": "The custody model for the backend signing keys and any HSM/rate-limit enforcement remain unresolved."
+          },
           "evidence": "Holds minter_role on the tGLD deployment per Tenbin's deployments.json; mints execute from off-chain KYC-gated signed orders processed through the Controller (0x5e631388b24ec493619DAEEAef6fc34B33d97Dcd)."
         },
         {
@@ -58882,6 +58918,10 @@
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
+          "routeChecks": {
+            "pausersAdminsUpgraders": "Owner multisig holds DEFAULT_ADMIN_ROLE and can grant or revoke minter_role and other privileged roles.",
+            "unsupportedReason": "The multisig implementation, threshold, signer set, modules, and guard were not independently verified."
+          },
           "evidence": "Holds DEFAULT_ADMIN_ROLE on the tGLD deployment per deployments.json; can grant or revoke minter_role and other privileged roles. Multisig threshold and signer set not independently verified."
         },
         {
@@ -63323,6 +63363,12 @@
           "capDescription": "USDB supply tracks stablecoins escrowed in the L1 bridge/yield manager; mint/burn is driven by L1 deposits and withdrawals, not a fixed cap.",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "lockboxOrEscrow": "USDB supply tracks stablecoins escrowed in the L1 USDYieldManager / bridge route.",
+            "caps": "No fixed cap; bridge mint capacity follows escrowed stablecoin balances in the yield manager.",
+            "pausersAdminsUpgraders": "USDYieldManager owner is the separately reviewed Blast operator Safe.",
+            "onchainAmountBounds": "Mint/burn is driven by L1 deposits and withdrawals rather than a standalone token minter."
+          },
           "sources": [
             {
               "label": "Metalayer contracts",
@@ -63357,6 +63403,10 @@
             "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
             "observedBlock": 25294780,
             "source": "onchain"
+          },
+          "routeChecks": {
+            "caps": "Safe can administer the bridge/yield manager route, whose mint capacity follows escrowed stablecoin balances rather than an immutable cap.",
+            "pausersAdminsUpgraders": "Blast operator Safe owns the USDYieldManager bridge/yield route; reviewed as 3-of-5 with no modules."
           },
           "sources": [
             {
@@ -65072,6 +65122,11 @@
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "signingModel": "Ethena docs describe signed mint/redeem order flows with the token minter contract as the active minting endpoint.",
+            "pausersAdminsUpgraders": "Token owner Safe can administer the token minter path.",
+            "onchainAmountBounds": "This review confirmed the token minter address but did not resolve a hard on-chain max supply or per-transaction cap."
+          },
           "sources": [
             {
               "label": "Ethena mint and redeem docs",
@@ -65115,6 +65170,10 @@
             "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
             "observedBlock": 25294739,
             "source": "safe-api"
+          },
+          "routeChecks": {
+            "caps": "Owner/admin cap-raising posture remains unknown; this Safe controls the minter-administration surface.",
+            "pausersAdminsUpgraders": "USDe owner is a 5-of-10 Safe with no modules and zero guard in the Safe API snapshot."
           },
           "sources": [
             {
@@ -66836,6 +66895,11 @@
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "signingModel": "USDh minting is two-step: KYC-whitelisted minter request/deposit first, then Hermetica confirm-mint operators release USDh after off-chain hedge execution.",
+            "pausersAdminsUpgraders": "New minting contracts and owner changes are subject to the hq-v1 1008-block timelock.",
+            "onchainAmountBounds": "hq-v1 minting-contracts map limits active mint routes to reviewed contracts; no permissionless mint path exists."
+          },
           "sources": [
             {
               "label": "Hermetica minting contract docs",
@@ -66857,6 +66921,10 @@
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "pausersAdminsUpgraders": "hq-v1 owner is a Stacks P2SH/multisig address and owner changes/new minting contracts use a 1008-block timelock.",
+            "unsupportedReason": "Stacks P2SH signer set and threshold were not enumerated on-chain."
+          },
           "sources": [
             {
               "label": "Hiro API — hq-v1 owner data-var",
@@ -66872,6 +66940,10 @@
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
+          "routeChecks": {
+            "signingModel": "Only KYC/KYB-approved participants can request direct mints/redemptions; Hermetica administers this off-chain whitelist.",
+            "unsupportedReason": "The off-chain whitelist administration process and signer controls are issuer-operated and not enumerated on-chain."
+          },
           "evidence": "Only KYC/KYB-approved participants whitelisted by Hermetica can request mints/redemptions directly; access to the mint route is administered off-chain by the issuer."
         }
       ],
@@ -73916,6 +73988,11 @@
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present",
+          "routeChecks": {
+            "trustedPeerOrRemote": "Live Solana mint authority is a PDA owned by program D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax.",
+            "signingModel": "Solomon docs restrict direct 1:1 mint/burn/redeem to whitelisted KYC'd market makers and institutions.",
+            "unsupportedReason": "Program identity for D4AiKFxj and the EOA upgrade-authority control remain unresolved."
+          },
           "evidence": "Solomon docs state direct 1:1 mint/burn/redeem of USDv is permissioned to approved market makers and compliant institutions; Solana RPC returned this live SPL mint authority for token Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C and null freeze authority."
         },
         {
@@ -75577,6 +75654,11 @@
             "observedBlock": 25165875,
             "source": "safe-api"
           },
+          "routeChecks": {
+            "caps": "Noon admin Safe controls MinterHandlerV2 limits and holds MINTER_ROLE; current per-block/per-day caps live on the handler.",
+            "pausersAdminsUpgraders": "Safe is 3-of-6 with no modules and zero guard in the Safe API snapshot.",
+            "unsupportedReason": "The operational custody wallet and off-chain signer/signature model remain unresolved in the profile review."
+          },
           "sources": [
             {
               "label": "Noon admin Safe API",
@@ -76286,6 +76368,11 @@
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "signingModel": "requestSwap/completeSwap relied on an off-chain SERVICE_ROLE backend signer; incident reporting describes a single EOA AWS-KMS key compromise.",
+            "onchainAmountBounds": "Minting contract performed no oracle, ratio, per-transaction, or max-supply check tying minted USR to deposited collateral.",
+            "unsupportedReason": "Post-exploit SERVICE_ROLE holder set still includes multiple contracts/signers; this frozen asset remains scored as unbounded/compromised."
+          },
           "evidence": "Post-mortem and incident analyses describe a requestSwap/completeSwap flow where the minted USR amount is supplied by an off-chain SERVICE_ROLE backend (single EOA, AWS-KMS key) with no on-chain validation tying minted amount to deposited collateral; its compromise produced 80M unbacked USR."
         },
         {
@@ -76315,6 +76402,10 @@
             "fallbackHandler": "unknown",
             "observedBlock": 25295177,
             "source": "onchain"
+          },
+          "routeChecks": {
+            "caps": "Admin can manage roles, but the compromised mint route had no effective on-chain collateral or max-supply bound.",
+            "pausersAdminsUpgraders": "Admin Safe holds DEFAULT_ADMIN/token owner posture and can authorize SERVICE_ROLE changes; reviewed as 4-of-6 Safe v1.3 with no modules or guard."
           },
           "sources": [
             {
@@ -87023,6 +87114,11 @@
             "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
             "observedBlock": 25165875,
             "source": "safe-api"
+          },
+          "routeChecks": {
+            "caps": "Safe can administer mint limits and trusted-signer/cross-chain operator roles; active signer/operator ownership remains a review question.",
+            "pausersAdminsUpgraders": "Aegis admin Safe is owner/defaultAdmin for AegisMinting; reviewed as 3-of-5 with no modules and zero guard.",
+            "unsupportedReason": "Trusted signer ownership and current cross-chain operator role holder remain unresolved in the profile review."
           },
           "sources": [
             {

@@ -126,6 +126,12 @@
         "chain": "ethereum",
         "address": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8",
         "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs on LP deposit.",
+        "routeChecks": {
+          "lockboxOrEscrow": "NUSD supply expands only when LPs add liquidity to the Synapse nexus SwapFlashLoan pool.",
+          "onchainAmountBounds": "LPToken mint() is onlyOwner and the owner is the SwapFlashLoan pool contract.",
+          "caps": "No independent fixed supply cap; minting is bounded by pool deposit/accounting logic.",
+          "pausersAdminsUpgraders": "Pool ownership is held by the separately reviewed 2-of-3 Safe."
+        },
         "evidence": "At Ethereum block 25295203: NUSD token Blockscout shows ContractName 'LPToken'; owner() returned 0x1116898…; Blockscout confirms that address as ContractName 'SwapFlashLoan' (Solidity 0.6.12, AGPL-3.0). Pool's own owner() = 0x67f60b0891…",
         "sources": [
           {
@@ -149,6 +155,10 @@
         "signerCount": 3,
         "threshold": 2,
         "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Safe owns the SwapFlashLoan pool that owns the LPToken mint path; Safe v1.3 was reviewed with no modules or guard.",
+          "caps": "Safe can administer the pool route, but the reviewed LPToken mint path remains pool-deposit/accounting driven."
+        },
         "evidence": "At Ethereum block 25295203: SwapFlashLoan pool's owner() = 0x67f60b…; Blockscout: ContractName 'GnosisSafeProxy'; getThreshold() = 2; getOwners() returned 3 addresses (0xb3dad3c…, 0x9ce9dc8…, 0x0d745ad…); masterCopy slot0 = 0xd9db270c… (Safe v1.3); guard storage slot = 0x0; modules sentinel only (empty).",
         "safe": {
           "owners": [

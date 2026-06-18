@@ -127,6 +127,12 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "USDB supply tracks stablecoins escrowed in the L1 bridge/yield manager; mint/burn is driven by L1 deposits and withdrawals, not a fixed cap.",
+        "routeChecks": {
+          "lockboxOrEscrow": "USDB supply tracks stablecoins escrowed in the L1 USDYieldManager / bridge route.",
+          "onchainAmountBounds": "Mint/burn is driven by L1 deposits and withdrawals rather than a standalone token minter.",
+          "caps": "No fixed cap; bridge mint capacity follows escrowed stablecoin balances in the yield manager.",
+          "pausersAdminsUpgraders": "USDYieldManager owner is the separately reviewed Blast operator Safe."
+        },
         "evidence": "At Ethereum block 25294780: eth_getCode(0xa230285d5683C74935aD14c446e137c8c8828438) returned contract bytecode. owner() = 0x4f72ee94b8ba3be7f886565d3583a7f636c58b05 (Blast operator Safe). Metalayer/Blast docs confirm this contract escrows stablecoins and routes yield.",
         "sources": [
           {
@@ -146,6 +152,10 @@
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 3,
         "signerCount": 5,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Blast operator Safe owns the USDYieldManager bridge/yield route; reviewed as 3-of-5 with no modules.",
+          "caps": "Safe can administer the bridge/yield manager route, whose mint capacity follows escrowed stablecoin balances rather than an immutable cap."
+        },
         "safe": {
           "owners": [
             "0x6520ad883d3d76f0120443c72ad7463cab2439a4",
