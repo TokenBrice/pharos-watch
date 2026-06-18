@@ -411,6 +411,15 @@
     --mini-accent-fill: color-mix(in oklab, var(--mini-accent) 12%, transparent);
     --mini-accent-border: color-mix(in oklab, var(--mini-accent) 34%, transparent);
   }
+  @media (prefers-color-scheme: dark) {
+    :root:has(.pharos-mini-app) {
+      --telegram-bg: var(--p-neutral-975);
+      --telegram-text: var(--p-neutral-50);
+    }
+    .pharos-mini-app {
+      color-scheme: dark;
+    }
+  }
   .pharos-mini-app .mini-selected {
     border-color: var(--mini-accent-border);
     background-color: var(--mini-accent-fill);
