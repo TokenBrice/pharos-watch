@@ -100,14 +100,18 @@ describe("runFourHourlyReserveSyncSlot", () => {
     };
   }
 
-  it("runs kinesis supply and drift check even when sync-live-reserves throws", async () => {
+  it("skips downstream reserve tasks but still runs drift check when sync-live-reserves throws", async () => {
     vi.mocked(syncLiveReserves).mockRejectedValue(new Error("sync blew up"));
 
-    await runFourHourlyReserveSyncSlot(buildRuntime());
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
+      jobsRun: 0,
+      jobsErrored: 1,
+      jobsSkipped: 2,
+    });
 
     expect(syncLiveReserves).toHaveBeenCalledTimes(1);
-    expect(syncRedemptionBackstops).toHaveBeenCalledTimes(1);
-    expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
+    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    expect(syncKinesisSupply).not.toHaveBeenCalled();
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Live reserves sync failed"),
@@ -115,19 +119,20 @@ describe("runFourHourlyReserveSyncSlot", () => {
     );
   });
 
-  it("runs drift check even when redemption backstops + kinesis throw", async () => {
+  it("skips kinesis but still runs drift check when redemption backstops throws", async () => {
     vi.mocked(syncRedemptionBackstops).mockRejectedValue(new Error("rb blew up"));
     vi.mocked(syncKinesisSupply).mockRejectedValue(new Error("ks blew up"));
 
-    await runFourHourlyReserveSyncSlot(buildRuntime());
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
+      jobsRun: 1,
+      jobsErrored: 1,
+      jobsSkipped: 1,
+    });
 
+    expect(syncKinesisSupply).not.toHaveBeenCalled();
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Redemption backstops sync failed"),
-      expect.any(Error),
-    );
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Kinesis supply sync failed"),
       expect.any(Error),
     );
   });

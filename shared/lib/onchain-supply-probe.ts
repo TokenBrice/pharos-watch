@@ -26,7 +26,7 @@ export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, CuratedOnchainSupp
   "susdc-spark": { chain: "ethereum" },
 };
 
-export const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
+const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
   readonly CuratedOnchainSupplyContractConfig[]
 > = {

@@ -3,13 +3,13 @@ import type { PegCurrency } from "@shared/types";
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
 export const TRACKED_STABLECOIN_COUNT = 406;
-export const ACTIVE_STABLECOIN_COUNT = 371;
-export const PRE_LAUNCH_STABLECOIN_COUNT = 31;
+export const ACTIVE_STABLECOIN_COUNT = 370;
+export const PRE_LAUNCH_STABLECOIN_COUNT = 32;
 export const FROZEN_STABLECOIN_COUNT = 4;
 export const DEAD_STABLECOIN_COUNT = 88;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
-  centralized: 182,
+  centralized: 181,
   "centralized-dependent": 169,
   decentralized: 20,
 } as const;
@@ -31,7 +31,7 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   PHP: 2,
   RUB: 1,
   CNH: 1,
-  MXN: 6,
+  MXN: 5,
   VND: 1,
   ARS: 1,
   KGS: 1,
@@ -505,6 +505,7 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "brl-b3",
   "usdf-flipcash",
   "hkdr-rd-technologies",
+  "mmxn-moneta-digital",
   "brd-volpon",
   "krw1-bdacs",
   "rusd-revolut",

@@ -181,7 +181,8 @@ export function MintAuthoritySection({
   const scoreTriggerLabel = score
     ? `Mint Authority Score ${score.scoreLabel}, ${score.bandLabel}. Explain methodology.`
     : undefined;
-  const hasVerificationGaps = !!profile.sourceFreeRationale || profile.unresolvedQuestions.length > 0;
+  const unresolvedQuestions = profile.unresolvedQuestions ?? [];
+  const hasVerificationGaps = !!profile.sourceFreeRationale || unresolvedQuestions.length > 0;
 
   return (
     <Card
@@ -295,9 +296,9 @@ export function MintAuthoritySection({
                 {profile.sourceFreeRationale ? (
                   <p className="mt-1 text-xs leading-relaxed">{profile.sourceFreeRationale}</p>
                 ) : null}
-                {profile.unresolvedQuestions.length > 0 ? (
+                {unresolvedQuestions.length > 0 ? (
                   <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-relaxed">
-                    {profile.unresolvedQuestions.map((question) => (
+                    {unresolvedQuestions.map((question) => (
                       <li key={question}>{question}</li>
                     ))}
                   </ul>

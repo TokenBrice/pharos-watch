@@ -86,13 +86,13 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(31);
+    expect(preLaunchCoins).toHaveLength(32);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
     expect(TRACKED_STABLECOINS).toHaveLength(406);
-    expect(ACTIVE_STABLECOINS).toHaveLength(371);
+    expect(ACTIVE_STABLECOINS).toHaveLength(370);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -102,6 +102,7 @@ describe("tracked stablecoin metadata", () => {
       "pgold-polaris",
       "klarnausd-klarna",
       "bd-basedollar",
+      "mmxn-moneta-digital",
       "trusd-tori",
       "rgbp-revolut",
       "jpysc-sbi-startale",
