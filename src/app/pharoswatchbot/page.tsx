@@ -796,7 +796,7 @@ export default function PharosWatchBotPage() {
                 chrome="content"
                 density="compact"
                 className="bg-background/35"
-                tableClassName="min-w-[720px] text-sm"
+                tableClassName="min-w-0 text-sm sm:min-w-[720px]"
                 tableProps={{ "aria-label": "PharosWatchBot command reference" }}
                 viewportClassName="-mx-1 px-1"
                 viewportProps={{ compactBottomPadding: false, mobileScrollHint: false }}
