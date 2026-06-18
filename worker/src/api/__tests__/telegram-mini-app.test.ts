@@ -991,6 +991,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(setResponse.status).toBe(200);
+    expect(historyHas(setDb, "INSERT INTO telegram_subscribers", ["42", null, NOW_SEC])).toBe(true);
     expect(historyHas(setDb, "INSERT INTO telegram_subscriptions", ["42", "usdc-circle", NOW_SEC + 3600])).toBe(true);
 
     const clearDb = mockD1(stateReadTables());
@@ -1000,6 +1001,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(clearResponse.status).toBe(200);
+    expect(historyHas(clearDb, "INSERT INTO telegram_subscribers", ["42", null, NOW_SEC])).toBe(true);
     expect(historyHas(clearDb, "INSERT INTO telegram_subscriptions", ["42", "usdc-circle", null])).toBe(true);
   });
 

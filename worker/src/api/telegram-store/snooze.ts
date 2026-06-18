@@ -56,7 +56,14 @@ export async function setSubscriptionSnooze(
   untilSec: number | null,
 ): Promise<void> {
   const now = unixNow();
+  const parentUpsert = buildSubscriberUpsert({
+    kind: "bump",
+    chatId,
+    username: null,
+    nowSec: now,
+  });
   await db.batch([
+    db.prepare(parentUpsert.sql).bind(...parentUpsert.binds),
     db
       .prepare(
         `INSERT INTO telegram_subscriptions (
@@ -68,9 +75,6 @@ export async function setSubscriptionSnooze(
            alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
       )
       .bind(chatId, stablecoinId, untilSec),
-    db
-      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-      .bind(now, chatId),
   ]);
 }
 
