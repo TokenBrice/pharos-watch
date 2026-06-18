@@ -107,10 +107,7 @@ const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
  * no-incident unbounded cap. Unparseable or missing dates stay at the
  * strictest tier.
  */
-function resolveIncidentCap(
-  incidents: NonNullable<MintAuthorityProfile["mintIncidents"]>,
-  nowMs: number,
-): number {
+function resolveIncidentCap(incidents: NonNullable<MintAuthorityProfile["mintIncidents"]>, nowMs: number): number {
   let latestMs = Number.NEGATIVE_INFINITY;
   for (const incident of incidents) {
     const parsed = Date.parse(`${incident.date}T00:00:00Z`);
@@ -146,10 +143,7 @@ const ISSUER_CONTEXT_PATHS = new Set<MintAuthorityMintPath>(MINT_AUTHORITY_ISSUE
 
 export type MintAuthorityScoreBand = "hardened" | "governed" | "managed" | "concentrated" | "exposed";
 
-export const MINT_AUTHORITY_SCORE_BANDS: Record<
-  MintAuthorityScoreBand,
-  { min: number; label: string }
-> = {
+export const MINT_AUTHORITY_SCORE_BANDS: Record<MintAuthorityScoreBand, { min: number; label: string }> = {
   hardened: { min: 80, label: "Hardened" },
   governed: { min: 65, label: "Governed" },
   managed: { min: 50, label: "Managed" },
@@ -167,6 +161,11 @@ const MINT_AUTHORITY_SCORE_BAND_TABLE: readonly { band: MintAuthorityScoreBand; 
 ];
 
 export type MintAuthorityCapKind = "incident-cap" | "unbounded-cap" | "eoa-cap" | "confidence-cap";
+
+export interface MintAuthorityCapTrace {
+  kind: MintAuthorityCapKind;
+  limit: number;
+}
 
 export interface MintAuthorityScoringControlInput {
   label?: string;
@@ -196,7 +195,11 @@ export interface MintAuthorityWeakestControlResult {
   score: number;
   authorityType: MintAuthorityType;
   directMintAbility: MintAuthorityDirectMintAbility;
-  custodyLabel: "Single-key address - custody unverifiable" | "Single-key address - MPC-attested" | "Single-key address - HSM-attested" | null;
+  custodyLabel:
+    | "Single-key address - custody unverifiable"
+    | "Single-key address - MPC-attested"
+    | "Single-key address - HSM-attested"
+    | null;
 }
 
 export interface MintAuthorityScoreComponents {
@@ -213,6 +216,7 @@ export interface MintAuthorityScoreResult {
   components: MintAuthorityScoreComponents;
   weakestControl: MintAuthorityWeakestControlResult | null;
   capsApplied: MintAuthorityCapKind[];
+  capTraces: MintAuthorityCapTrace[];
   confidenceCap: number | null;
   inheritedFromId: string | null;
   unresolvedReason: string | null;
@@ -263,6 +267,7 @@ function nullResult(reason: string, inheritedFromId: string | null = null): Mint
     components: { route: null, controller: null, bounds: null, posture: null },
     weakestControl: null,
     capsApplied: [],
+    capTraces: [],
     confidenceCap: null,
     inheritedFromId,
     unresolvedReason: reason,
@@ -276,11 +281,20 @@ function finalizeResult(args: {
   components: MintAuthorityScoreComponents;
   weakestControl: MintAuthorityWeakestControlResult | null;
   capsApplied: MintAuthorityCapKind[];
+  capTraces: MintAuthorityCapTrace[];
   confidenceCap: number;
   inheritedFromId?: string | null;
 }): MintAuthorityScoreResult {
   const score = Math.max(0, Math.min(100, Math.round(args.score)));
   const band = resolveMintAuthorityScoreBand(score);
+  const capTraceKeys = new Set<string>();
+  const capTraces = args.capTraces.filter((trace) => {
+    const key = `${trace.kind}:${trace.limit}`;
+    if (capTraceKeys.has(key)) return false;
+    capTraceKeys.add(key);
+    return true;
+  });
+
   return {
     score,
     band,
@@ -290,6 +304,7 @@ function finalizeResult(args: {
     // Inherited results carry the parent's trace; a wrapper re-applying the
     // same cap (e.g. unbounded-cap on both) must not list it twice.
     capsApplied: [...new Set(args.capsApplied)],
+    capTraces,
     confidenceCap: args.confidenceCap,
     inheritedFromId: args.inheritedFromId ?? null,
     unresolvedReason: null,
@@ -327,7 +342,12 @@ function scoreMultisigControl(control: MintAuthorityScoringControlInput): number
       (threshold >= 4 ? MINT_MULTISIG_BONUSES.thresholdFourPlus : 0);
   }
 
-  if (threshold != null && control.signerCount != null && control.signerCount > 0 && threshold / control.signerCount >= 0.5) {
+  if (
+    threshold != null &&
+    control.signerCount != null &&
+    control.signerCount > 0 &&
+    threshold / control.signerCount >= 0.5
+  ) {
     score += MINT_MULTISIG_BONUSES.thresholdAtLeastHalfSignerSet;
   }
   if (control.modulesOrGuardsStatus === "none-detected") {
@@ -420,8 +440,7 @@ export function scoreMintAuthorityBounds(
   return (
     (allNonUpgradeControlsAreCapped
       ? MINT_BOUNDS_SCORES.allNonUpgradeControlsCapped
-      : MINT_BOUNDS_SCORES.partiallyCappedControls) +
-    (allCapsKnownImmutable ? MINT_BOUNDS_SCORES.immutableCapBonus : 0)
+      : MINT_BOUNDS_SCORES.partiallyCappedControls) + (allCapsKnownImmutable ? MINT_BOUNDS_SCORES.immutableCapBonus : 0)
   );
 }
 
@@ -435,33 +454,45 @@ function hasEoaCapTrigger(input: MintAuthorityScoringInput): boolean {
   );
 }
 
+function recordCap(
+  kind: MintAuthorityCapKind,
+  limit: number,
+  capsApplied: MintAuthorityCapKind[],
+  capTraces: MintAuthorityCapTrace[],
+) {
+  capsApplied.push(kind);
+  capTraces.push({ kind, limit });
+}
+
 function applyCaps(
   score: number,
   input: MintAuthorityScoringInput,
   confidenceCap: number,
   capsApplied: MintAuthorityCapKind[],
+  capTraces: MintAuthorityCapTrace[],
   nowMs: number,
 ): number {
   let cappedScore = score;
 
   if (input.authorityPosture === "unbounded-or-compromised") {
     if (input.mintIncidents && input.mintIncidents.length > 0) {
-      cappedScore = Math.min(cappedScore, resolveIncidentCap(input.mintIncidents, nowMs));
-      capsApplied.push("incident-cap");
+      const incidentCap = resolveIncidentCap(input.mintIncidents, nowMs);
+      cappedScore = Math.min(cappedScore, incidentCap);
+      recordCap("incident-cap", incidentCap, capsApplied, capTraces);
     } else {
       cappedScore = Math.min(cappedScore, MINT_AUTHORITY_CAPS.unbounded);
-      capsApplied.push("unbounded-cap");
+      recordCap("unbounded-cap", MINT_AUTHORITY_CAPS.unbounded, capsApplied, capTraces);
     }
   }
 
   if (hasEoaCapTrigger(input)) {
     cappedScore = Math.min(cappedScore, MINT_AUTHORITY_CAPS.eoa);
-    capsApplied.push("eoa-cap");
+    recordCap("eoa-cap", MINT_AUTHORITY_CAPS.eoa, capsApplied, capTraces);
   }
 
   if (cappedScore > confidenceCap) {
     cappedScore = confidenceCap;
-    capsApplied.push("confidence-cap");
+    recordCap("confidence-cap", confidenceCap, capsApplied, capTraces);
   }
 
   return cappedScore;
@@ -514,7 +545,8 @@ function computeInheritedScore(
           ),
         );
   const capsApplied = [...parentResult.capsApplied];
-  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied, nowMs);
+  const capTraces = [...parentResult.capTraces];
+  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied, capTraces, nowMs);
 
   return finalizeResult({
     score: cappedScore,
@@ -525,6 +557,7 @@ function computeInheritedScore(
     },
     weakestControl: weakestWrapperControl ?? parentResult.weakestControl,
     capsApplied,
+    capTraces,
     confidenceCap,
     inheritedFromId,
   });
@@ -567,7 +600,8 @@ export function computeMintAuthorityScore(
       posture * MINT_AUTHORITY_COMPONENT_WEIGHTS.posture,
   );
   const capsApplied: MintAuthorityCapKind[] = [];
-  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied, nowMs);
+  const capTraces: MintAuthorityCapTrace[] = [];
+  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied, capTraces, nowMs);
 
   return finalizeResult({
     score: cappedScore,
@@ -575,6 +609,7 @@ export function computeMintAuthorityScore(
     components,
     weakestControl,
     capsApplied,
+    capTraces,
     confidenceCap,
     inheritedFromId: null,
   });

@@ -29,10 +29,11 @@ interface ScoreBadgeWrapperProps {
    * controls.
    */
   interactive?: boolean;
+  /** Optional accessible label for the methodology trigger. */
+  triggerAriaLabel?: string;
 }
 
-const SUFFIX_CLASS =
-  "ml-1 pharos-numeric text-[10px] text-muted-foreground select-none";
+const SUFFIX_CLASS = "ml-1 pharos-numeric text-[10px] text-muted-foreground select-none";
 
 /**
  * Wraps a score badge with a methodology-aware tooltip (W1-C `<Term>` dispatch
@@ -48,6 +49,7 @@ export function ScoreBadgeWrapper({
   className,
   suffixClassName,
   interactive = true,
+  triggerAriaLabel,
 }: ScoreBadgeWrapperProps) {
   const item = METHODOLOGY_CONTEXT[topic];
   const versionLabel = item?.versionLabel;
@@ -56,6 +58,7 @@ export function ScoreBadgeWrapper({
     <MethodologyHint topic={topic} asChild>
       <MethodologyTriggerButton
         topic={topic}
+        aria-label={triggerAriaLabel}
         className="pharos-focus-ring inline-flex min-h-11 min-w-11 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-inherit sm:min-h-6 sm:min-w-0"
       >
         {children}
@@ -69,11 +72,7 @@ export function ScoreBadgeWrapper({
     <span className={cn("inline-flex items-center", className)}>
       {trigger}
       {showSuffix ? (
-        <sup
-          aria-hidden="true"
-          className={cn(SUFFIX_CLASS, suffixClassName)}
-          data-score-badge-version={versionLabel}
-        >
+        <sup aria-hidden="true" className={cn(SUFFIX_CLASS, suffixClassName)} data-score-badge-version={versionLabel}>
           {versionLabel}
         </sup>
       ) : null}

@@ -22,6 +22,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
       authorityTypeLabel: "DAO governor",
       directMintAbilityLabel: "Cap-limited",
       locationLabel: "ethereum / 0x1234...abcd",
+      fullLocationLabel: "ethereum / 0x123400000000000000000000000000000000abcd",
       addressUrl: "https://etherscan.io/address/0x123400000000000000000000000000000000abcd",
       securitySetupLabel: "DAO governor, 3/5 threshold",
       thresholdLabel: "3/5 threshold",
@@ -85,6 +86,8 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   },
   reviewedAt: "2026-05-12",
   mintIncidents: [],
+  sourceFreeRationale: null,
+  unresolvedQuestions: [],
 };
 
 describe("MintAuthoritySection", () => {
@@ -94,14 +97,49 @@ describe("MintAuthoritySection", () => {
     expect(html).toBe("");
   });
 
+  it("renders a compact not-reviewed state", () => {
+    const html = renderToStaticMarkup(
+      <MintAuthoritySection
+        profile={{
+          status: "not-reviewed",
+          reviewLabel: "Not reviewed by Pharos",
+          mintPathLabel: "Unknown",
+          mintPathShortLabel: "Unknown",
+          authorityPostureLabel: "Unknown",
+          authorityPostureTone: "neutral",
+          confidenceLabel: "Not reviewed",
+          confidenceVerified: false,
+          summary: "Unknown does not mean no privileged mint authority.",
+          inheritedFrom: null,
+          controls: [],
+          sources: [],
+          score: null,
+          reviewedAt: null,
+          mintIncidents: [],
+          sourceFreeRationale: null,
+          unresolvedQuestions: [],
+        }}
+      />,
+    );
+
+    expect(html).toContain("Not reviewed by Pharos");
+    expect(html).toContain("Mint Authority Score: NR");
+    expect(html).toContain("Unknown does not mean no privileged mint authority.");
+  });
+
   it("renders reviewed mint authority summary, controls, and sources", () => {
-    const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} />);
+    const html = renderToStaticMarkup(
+      <MintAuthoritySection
+        profile={REVIEWED_PROFILE}
+        decentralizationDrag={{ value: "-4", detail: "70/100 (Governed)" }}
+      />,
+    );
 
     expect(html).toContain("Facilitator bucket mint");
     expect(html).toContain("70/100");
     expect(html).toContain("Governed");
-    expect(html).toContain("Feeds Decentralization");
-    expect(html).toContain("Penalty-only Safety Score input (v8.0)");
+    expect(html).toContain("Decentralization drag -4");
+    expect(html).toContain("MAS v1.2; Safety Score v8 penalty-only input");
     expect(html).toContain("Scoring breakdown");
     expect(html).toContain("Controller");
     expect(html).toContain("40%");
@@ -122,7 +160,7 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket capacity limits minting");
     expect(html).toContain("Aave GHO facilitators");
     expect(html).toContain("https://example.com/gho-facilitators");
-    expect(html).toContain("Methodology v1.1");
+    expect(html).toContain("Methodology v1.2");
     expect(html).toContain("Reviewed 2026-05-12");
   });
 
@@ -154,6 +192,7 @@ describe("MintAuthoritySection", () => {
             {
               date: "2024-06-13",
               summary: "Privileged mint authority created unbacked supply during an exploit.",
+              sources: [{ label: "Incident report", url: "https://example.com/incident" }],
             },
           ],
         }}
@@ -163,6 +202,8 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Mint incident 2024-06-13");
     expect(html).toContain("Privileged mint authority created unbacked supply");
     expect(html).toContain("Incident cap &lt;= 10");
+    expect(html).toContain("Incident report");
+    expect(html).toContain("https://example.com/incident");
     expect(html).toContain("Single-key address - custody unverifiable");
   });
 
@@ -175,10 +216,12 @@ describe("MintAuthoritySection", () => {
             {
               date: "2025-10-04",
               summary: "Second exploit borrowed stablecoin with no collateral.",
+              sources: [],
             },
             {
               date: "2024-01-30",
               summary: "First exploit turned the borrow route into bad debt.",
+              sources: [],
             },
           ],
         }}
@@ -191,5 +234,21 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("2024-01-30");
     expect(html).toContain("First exploit turned the borrow route into bad debt.");
     expect(html).not.toContain("Mint incident 2025-10-04");
+  });
+
+  it("renders verification gaps when review questions remain", () => {
+    const html = renderToStaticMarkup(
+      <MintAuthoritySection
+        profile={{
+          ...REVIEWED_PROFILE,
+          sourceFreeRationale: "No public Safe module page exists for this chain.",
+          unresolvedQuestions: ["Confirm whether the proxy admin can upgrade mint logic."],
+        }}
+      />,
+    );
+
+    expect(html).toContain("Verification gaps");
+    expect(html).toContain("No public Safe module page exists for this chain.");
+    expect(html).toContain("Confirm whether the proxy admin can upgrade mint logic.");
   });
 });

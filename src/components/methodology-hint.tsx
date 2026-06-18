@@ -34,13 +34,7 @@ type MethodologyTriggerButtonProps = ComponentPropsWithoutRef<"button"> & {
   topic: MethodologyContextKey;
 };
 
-function MethodologyLinks({
-  item,
-  showVersion = true,
-}: {
-  item: MethodologyContextItem;
-  showVersion?: boolean;
-}) {
+function MethodologyLinks({ item, showVersion = true }: { item: MethodologyContextItem; showVersion?: boolean }) {
   return (
     <>
       {showVersion && item.versionLabel ? <span>Methodology {item.versionLabel}</span> : null}
@@ -63,7 +57,10 @@ function MethodologyLinks({
 }
 
 export const MethodologyTriggerButton = forwardRef<HTMLButtonElement, MethodologyTriggerButtonProps>(
-  function MethodologyTriggerButton({ topic, className, onClick, onKeyDown, type = "button", children, ...props }, ref) {
+  function MethodologyTriggerButton(
+    { topic, className, onClick, onKeyDown, type = "button", children, "aria-label": ariaLabel, ...props },
+    ref,
+  ) {
     const item = METHODOLOGY_CONTEXT[topic];
 
     return (
@@ -71,7 +68,7 @@ export const MethodologyTriggerButton = forwardRef<HTMLButtonElement, Methodolog
         {...props}
         ref={ref}
         type={type}
-        aria-label={`Explain ${item.title}`}
+        aria-label={ariaLabel ?? `Explain ${item.title}`}
         onClick={(event) => {
           stopPropagation(event);
           onClick?.(event);
@@ -88,13 +85,7 @@ export const MethodologyTriggerButton = forwardRef<HTMLButtonElement, Methodolog
   },
 );
 
-function HintBody({
-  topic,
-  className,
-}: {
-  topic: MethodologyContextKey;
-  className?: string;
-}) {
+function HintBody({ topic, className }: { topic: MethodologyContextKey; className?: string }) {
   const item = METHODOLOGY_CONTEXT[topic];
 
   return (
@@ -177,7 +168,12 @@ export function MethodologyHint({
             (WCAG 2.1.1). Popover keeps focus inside and dismisses on Esc. */}
         <Popover>
           <PopoverTrigger asChild>{renderTrigger()}</PopoverTrigger>
-          <PopoverContent className={cn("w-auto max-w-[280px] border border-border/70 bg-popover px-3 py-3 text-popover-foreground shadow-xl", contentClassName)}>
+          <PopoverContent
+            className={cn(
+              "w-auto max-w-[280px] border border-border/70 bg-popover px-3 py-3 text-popover-foreground shadow-xl",
+              contentClassName,
+            )}
+          >
             <HintBody topic={topic} />
           </PopoverContent>
         </Popover>
@@ -233,7 +229,12 @@ export function MethodologyCardActions({
   const item = METHODOLOGY_CONTEXT[topic];
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 pt-3 text-xs text-muted-foreground", className)}>
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 pt-3 text-xs text-muted-foreground",
+        className,
+      )}
+    >
       <MethodologyLinks item={item} showVersion={showVersion} />
       {showWorkToggle ? <ShowYourWorkToggle /> : null}
       {trailing ? <span className="ml-auto">{trailing}</span> : null}

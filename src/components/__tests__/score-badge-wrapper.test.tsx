@@ -45,6 +45,24 @@ describe("ScoreBadgeWrapper", () => {
     expect(screen.queryByText(versionLabel as string)).toBeNull();
   });
 
+  it("can override the methodology trigger accessible label", () => {
+    render(
+      <ScoreBadgeWrapper
+        topic="mintAuthorityScore"
+        variant="tooltip-only"
+        triggerAriaLabel="Mint Authority Score 70/100, Governed. Explain methodology."
+      >
+        <span data-testid="badge-content">70/100</span>
+      </ScoreBadgeWrapper>,
+    );
+
+    expect(
+      screen.getAllByRole("button", {
+        name: /mint authority score 70\/100, governed\. explain methodology\./i,
+      }).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("omits the suffix when the topic has no version label", () => {
     // `totalStablecoinMcap` has no methodology version.
     render(

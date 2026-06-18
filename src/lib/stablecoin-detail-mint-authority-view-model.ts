@@ -14,7 +14,11 @@ import {
 } from "@/lib/mint-authority-display";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
-import { EOA_UNVERIFIED_CUSTODY_LABEL } from "@shared/lib/mint-authority-scoring";
+import {
+  EOA_UNVERIFIED_CUSTODY_LABEL,
+  type MintAuthorityCapKind,
+  type MintAuthorityCapTrace,
+} from "@shared/lib/mint-authority-scoring";
 
 export type MintAuthorityDetailStatus = "reviewed" | "not-reviewed";
 
@@ -32,6 +36,7 @@ export interface MintAuthorityDetailControlViewModel {
   authorityTypeLabel: string;
   directMintAbilityLabel: string;
   locationLabel: string;
+  fullLocationLabel: string;
   addressUrl: string | null;
   securitySetupLabel: string;
   thresholdLabel: string | null;
@@ -52,6 +57,7 @@ export interface MintAuthorityDetailScoreComponentViewModel {
 export interface MintAuthorityDetailIncidentViewModel {
   date: string;
   summary: string;
+  sources: MintAuthorityDetailSourceViewModel[];
 }
 
 export interface MintAuthorityDetailScoreViewModel {
@@ -89,6 +95,8 @@ export interface MintAuthorityDetailViewModel {
   score: MintAuthorityDetailScoreViewModel | null;
   reviewedAt: string | null;
   mintIncidents: MintAuthorityDetailIncidentViewModel[];
+  sourceFreeRationale: string | null;
+  unresolvedQuestions: string[];
 }
 
 export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, "mintAuthority"> & {
@@ -118,6 +126,8 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   score: null,
   reviewedAt: null,
   mintIncidents: [],
+  sourceFreeRationale: null,
+  unresolvedQuestions: [],
 };
 
 const MINT_PATH_LABELS: Record<string, string> = {
@@ -228,30 +238,24 @@ const MODULES_OR_GUARDS_AUTHORITY_TYPES = new Set(["safe", "multisig", "unknown"
 
 const MINT_AUTHORITY_SCORE_COMPONENT_KEYS = ["route", "controller", "bounds", "posture"] as const;
 
-const MINT_AUTHORITY_SCORE_COMPONENT_LABELS: Record<
-  MintAuthorityDetailScoreComponentViewModel["key"],
-  string
-> = {
+const MINT_AUTHORITY_SCORE_COMPONENT_LABELS: Record<MintAuthorityDetailScoreComponentViewModel["key"], string> = {
   route: "Route",
   controller: "Controller",
   bounds: "Bounds",
   posture: "Posture",
 };
 
-const MINT_AUTHORITY_SCORE_COMPONENT_WEIGHTS: Record<
-  MintAuthorityDetailScoreComponentViewModel["key"],
-  string
-> = {
+const MINT_AUTHORITY_SCORE_COMPONENT_WEIGHTS: Record<MintAuthorityDetailScoreComponentViewModel["key"], string> = {
   route: "30%",
   controller: "40%",
   bounds: "15%",
   posture: "15%",
 };
 
-const MINT_AUTHORITY_CAP_LABELS: Record<string, string> = {
-  "incident-cap": "Incident cap <= 10",
-  "unbounded-cap": "Unbounded cap <= 25",
-  "eoa-cap": "EOA cap <= 40",
+const MINT_AUTHORITY_CAP_LABELS: Record<MintAuthorityCapKind, string> = {
+  "incident-cap": "Incident cap",
+  "unbounded-cap": "Unbounded cap",
+  "eoa-cap": "EOA cap",
   "confidence-cap": "Confidence cap",
 };
 
@@ -304,7 +308,6 @@ function formatTimelock(seconds: number | null): string | null {
   return `${minutes}m timelock`;
 }
 
-
 function readSources(value: unknown): MintAuthorityDetailSourceViewModel[] {
   if (!Array.isArray(value)) return [];
   const sources: MintAuthorityDetailSourceViewModel[] = [];
@@ -328,9 +331,7 @@ function readMintAuthorityCandidate(coin: StablecoinDetailCoinMeta): MintAuthori
   // Single untrusted boundary: the summary is produced in-repo with the
   // MintAuthorityClientSummary shape, but the isRecord guard keeps callers that
   // pass arbitrary input (e.g. tests) safe before narrowing to the producer type.
-  return isRecord(coin.mintAuthoritySummary)
-    ? (coin.mintAuthoritySummary as MintAuthorityClientSummary)
-    : null;
+  return isRecord(coin.mintAuthoritySummary) ? (coin.mintAuthoritySummary as MintAuthorityClientSummary) : null;
 }
 
 function postureToneFrom(value: unknown): MintAuthorityPostureTone {
@@ -350,8 +351,12 @@ function formatMintAuthorityScoreValue(score: number | null): string {
   return score != null ? `${score}/100` : "NR";
 }
 
-function formatMintAuthorityCap(cap: string): string {
+function formatMintAuthorityCap(cap: MintAuthorityCapKind): string {
   return MINT_AUTHORITY_CAP_LABELS[cap] ?? cap.replaceAll("-", " ");
+}
+
+function formatMintAuthorityCapTrace(trace: MintAuthorityCapTrace): string {
+  return `${formatMintAuthorityCap(trace.kind)} <= ${trace.limit}`;
 }
 
 function formatMintAuthorityUnresolvedReason(reason: string | null): string | null {
@@ -366,15 +371,13 @@ function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel
     if (!isRecord(incident)) continue;
     const date = stringValue(incident.date);
     const summary = stringValue(incident.summary);
-    if (date && summary) incidents.push({ date, summary });
+    if (date && summary) incidents.push({ date, summary, sources: readSources(incident.sources) });
   }
   // Newest first: the callout leads with the most recent incident.
   return incidents.sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function buildMintAuthorityScoreViewModel(
-  display: MintAuthorityScoreDisplay,
-): MintAuthorityDetailScoreViewModel {
+function buildMintAuthorityScoreViewModel(display: MintAuthorityScoreDisplay): MintAuthorityDetailScoreViewModel {
   const result = display.result;
   const components = MINT_AUTHORITY_SCORE_COMPONENT_KEYS.map((key) => {
     const score = result.components[key];
@@ -399,11 +402,12 @@ function buildMintAuthorityScoreViewModel(
     rawScoreLabel: result.rawScore != null ? formatMintAuthorityScoreValue(result.rawScore) : null,
     confidenceCapLabel: result.confidenceCap != null ? `<= ${result.confidenceCap}` : null,
     weakestControlLabel: result.weakestControl?.label ?? null,
-    weakestControlScoreLabel: result.weakestControl
-      ? formatMintAuthorityScoreValue(result.weakestControl.score)
-      : null,
+    weakestControlScoreLabel: result.weakestControl ? formatMintAuthorityScoreValue(result.weakestControl.score) : null,
     weakestControlCustodyLabel: result.weakestControl?.custodyLabel ?? null,
-    capsApplied: result.capsApplied.map(formatMintAuthorityCap),
+    capsApplied:
+      result.capTraces.length > 0
+        ? result.capTraces.map(formatMintAuthorityCapTrace)
+        : result.capsApplied.map(formatMintAuthorityCap),
     unresolvedReasonLabel: formatMintAuthorityUnresolvedReason(result.unresolvedReason),
   };
 }
@@ -421,6 +425,7 @@ function buildMintAuthorityControlViewModel(
   const custodyAttestationLabel = formatMintAuthorityCustodyAttestation(control.keyCustodyAttestation);
   const locationLabel =
     [chain, address ? formatAddress(address, 8, 6) : null].filter(Boolean).join(" / ") || "No address published";
+  const fullLocationLabel = [chain, address].filter(Boolean).join(" / ") || "No address published";
   const addressUrl = address
     ? buildExplorerUrl({ chainKey: chain ?? undefined, entityType: "address", value: address })
     : null;
@@ -432,6 +437,7 @@ function buildMintAuthorityControlViewModel(
     authorityTypeLabel,
     directMintAbilityLabel: labelFromMap(control.directMintAbility, DIRECT_MINT_ABILITY_LABELS),
     locationLabel,
+    fullLocationLabel,
     addressUrl,
     securitySetupLabel: thresholdLabel ? `${authorityTypeLabel}, ${thresholdLabel}` : authorityTypeLabel,
     thresholdLabel,
@@ -467,9 +473,7 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
   const controls = (candidate.controls ?? [])
     .map(buildMintAuthorityControlViewModel)
     .filter((control): control is MintAuthorityDetailControlViewModel => control !== null);
-  const score = buildMintAuthorityScoreViewModel(
-    resolveMintAuthorityScoreDisplay(coin.id, coin.mintAuthoritySummary),
-  );
+  const score = buildMintAuthorityScoreViewModel(resolveMintAuthorityScoreDisplay(coin.id, coin.mintAuthoritySummary));
 
   return {
     status: "reviewed",
@@ -487,5 +491,7 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     score,
     reviewedAt: candidate.reviewedAt ?? null,
     mintIncidents: readMintIncidents(candidate.mintIncidents),
+    sourceFreeRationale: candidate.sourceFreeRationale ?? null,
+    unresolvedQuestions: candidate.unresolvedQuestions ?? [],
   };
 }

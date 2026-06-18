@@ -54,7 +54,7 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
     <li className="px-3 py-2.5">
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{control.label}</p>
+          <p className="text-sm font-medium text-foreground">{control.label}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {control.roleLabel} / {control.authorityTypeLabel}
           </p>
@@ -64,16 +64,23 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
             href={control.addressUrl}
             target="_blank"
             rel="noopener noreferrer"
+            title={control.fullLocationLabel}
+            aria-label={`Open ${control.fullLocationLabel} in explorer`}
             className={cn(
-              "pharos-focus-ring inline-flex items-center gap-1 transition-colors hover:text-foreground",
+              "pharos-focus-ring inline-flex min-w-0 items-center gap-1 break-all transition-colors hover:text-foreground sm:break-normal",
               locationClassName,
             )}
           >
-            <span className="truncate">{control.locationLabel}</span>
+            <span>{control.locationLabel}</span>
             <ExternalLink aria-hidden className="h-3 w-3 shrink-0" />
           </a>
         ) : (
-          <span className={cn("inline-flex truncate", locationClassName)}>{control.locationLabel}</span>
+          <span
+            title={control.fullLocationLabel}
+            className={cn("inline-flex break-all sm:break-normal", locationClassName)}
+          >
+            {control.locationLabel}
+          </span>
         )}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
@@ -85,6 +92,31 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
       </div>
       {control.capDescription ? <p className="mt-2 text-xs text-muted-foreground">{control.capDescription}</p> : null}
     </li>
+  );
+}
+
+function MintAuthorityIncidentSources({
+  sources,
+}: {
+  sources: MintAuthorityDetailViewModel["mintIncidents"][number]["sources"];
+}) {
+  if (sources.length === 0) return null;
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 text-[11px]">
+      {sources.map((source) => (
+        <a
+          key={`${source.label}:${source.url}`}
+          href={source.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-2 transition-colors hover:text-red-900 dark:hover:text-red-100"
+        >
+          {source.label}
+          <ExternalLink aria-hidden className="h-3 w-3" />
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -131,10 +163,25 @@ function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScor
   );
 }
 
-export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetailViewModel | null }) {
-  const isReviewed = profile?.status === "reviewed";
-  if (!isReviewed || !profile) return null;
+export interface MintAuthorityDecentralizationDragViewModel {
+  value: string;
+  detail?: string | null;
+}
+
+export function MintAuthoritySection({
+  profile,
+  decentralizationDrag,
+}: {
+  profile?: MintAuthorityDetailViewModel | null;
+  decentralizationDrag?: MintAuthorityDecentralizationDragViewModel | null;
+}) {
+  if (!profile) return null;
+  const isReviewed = profile.status === "reviewed";
   const score = profile.score;
+  const scoreTriggerLabel = score
+    ? `Mint Authority Score ${score.scoreLabel}, ${score.bandLabel}. Explain methodology.`
+    : undefined;
+  const hasVerificationGaps = !!profile.sourceFreeRationale || profile.unresolvedQuestions.length > 0;
 
   return (
     <Card
@@ -147,7 +194,7 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
             <MethodologyLabel topic="mintAuthorityScore">Mint Authority</MethodologyLabel>
           </DetailSectionTitle>
           {score ? (
-            <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only">
+            <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only" triggerAriaLabel={scoreTriggerLabel}>
               <Badge
                 variant="outline"
                 className={cn("px-2.5 py-1 pharos-numeric text-lg", score.badgeClassName)}
@@ -156,100 +203,155 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
                 {score.scoreLabel}
               </Badge>
             </ScoreBadgeWrapper>
-          ) : null}
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-border/60 bg-muted/30 px-2.5 py-1 pharos-numeric text-lg text-muted-foreground"
+              title="Mint Authority Score is not rated."
+            >
+              NR
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {score ? (
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-            <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
-            <DetailBadge>Feeds Decentralization</DetailBadge>
-            <span className="text-xs text-muted-foreground">Penalty-only Safety Score input (v8.0)</span>
-          </div>
-        ) : null}
-
-        <div className="flex flex-wrap gap-1.5">
-          <DetailBadge>{profile.mintPathLabel}</DetailBadge>
-          <DetailBadge>
-            <span
-              aria-hidden
-              className={cn("h-1.5 w-1.5 shrink-0 rounded-full", POSTURE_DOT_CLASS[profile.authorityPostureTone])}
-            />
-            {profile.authorityPostureLabel}
-          </DetailBadge>
-          <DetailBadge>
-            {profile.confidenceVerified ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />}
-            Confidence: {profile.confidenceLabel}
-          </DetailBadge>
-          {profile.inheritedFrom ? <DetailBadge>Inherited from {profile.inheritedFrom}</DetailBadge> : null}
-        </div>
-
-        <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
-
-        {profile.mintIncidents.length > 0 ? (
-          <div className="flex gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-            <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
-            <div>
-              {profile.mintIncidents.length > 1 ? (
-                <p className="pb-1 font-medium">Repeat mint incidents ({profile.mintIncidents.length})</p>
-              ) : null}
-              <div className="divide-y divide-red-500/20">
-                {profile.mintIncidents.map((incident) => (
-                  <div key={incident.date} className="py-1.5 first:pt-0 last:pb-0">
-                    <p className="font-medium">
-                      {profile.mintIncidents.length > 1 ? incident.date : `Mint incident ${incident.date}`}
-                    </p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-red-700/85 dark:text-red-300/85">
-                      {incident.summary}
-                    </p>
-                  </div>
+        {!isReviewed ? (
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              <DetailBadge>{profile.reviewLabel}</DetailBadge>
+              <DetailBadge>Mint Authority Score: NR</DetailBadge>
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
+            <MethodologyCardActions topic="mintAuthorityScore" />
+          </>
+        ) : (
+          <>
+            {score ? (
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+                <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
+                {decentralizationDrag ? (
+                  <a
+                    href="#report-card"
+                    title={decentralizationDrag.detail ?? undefined}
+                    className="pharos-focus-ring inline-flex items-center rounded-full border border-blue-500/25 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 transition-colors hover:border-blue-500/45 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                  >
+                    Decentralization drag {decentralizationDrag.value}
+                  </a>
+                ) : (
+                  <DetailBadge>Feeds Decentralization</DetailBadge>
+                )}
+                <span className="text-xs text-muted-foreground">MAS v1.2; Safety Score v8 penalty-only input</span>
+                {score.capsApplied.map((cap) => (
+                  <DetailBadge key={cap}>{cap}</DetailBadge>
                 ))}
               </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-1.5">
+              <DetailBadge>{profile.mintPathLabel}</DetailBadge>
+              <DetailBadge>
+                <span
+                  aria-hidden
+                  className={cn("h-1.5 w-1.5 shrink-0 rounded-full", POSTURE_DOT_CLASS[profile.authorityPostureTone])}
+                />
+                {profile.authorityPostureLabel}
+              </DetailBadge>
+              <DetailBadge>
+                {profile.confidenceVerified ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />}
+                Confidence: {profile.confidenceLabel}
+              </DetailBadge>
+              {profile.inheritedFrom ? <DetailBadge>Inherited from {profile.inheritedFrom}</DetailBadge> : null}
             </div>
-          </div>
-        ) : null}
 
-        {score ? <MintAuthorityScoreBreakdown score={score} /> : null}
+            <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
 
-        {profile.controls.length > 0 ? (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Primary controls</p>
-            <ul className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-muted/15">
-              {profile.controls.map((control) => (
-                <MintAuthorityControlRow key={control.key} control={control} />
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-            No primary control rows are published in the compact review summary.
-          </div>
+            {profile.mintIncidents.length > 0 ? (
+              <div className="flex gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+                <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  {profile.mintIncidents.length > 1 ? (
+                    <p className="pb-1 font-medium">Repeat mint incidents ({profile.mintIncidents.length})</p>
+                  ) : null}
+                  <div className="divide-y divide-red-500/20">
+                    {profile.mintIncidents.map((incident) => (
+                      <div key={incident.date} className="py-1.5 first:pt-0 last:pb-0">
+                        <p className="font-medium">
+                          {profile.mintIncidents.length > 1 ? incident.date : `Mint incident ${incident.date}`}
+                        </p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-red-700/85 dark:text-red-300/85">
+                          {incident.summary}
+                        </p>
+                        <MintAuthorityIncidentSources sources={incident.sources} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {hasVerificationGaps ? (
+              <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em]">Verification gaps</p>
+                {profile.sourceFreeRationale ? (
+                  <p className="mt-1 text-xs leading-relaxed">{profile.sourceFreeRationale}</p>
+                ) : null}
+                {profile.unresolvedQuestions.length > 0 ? (
+                  <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-relaxed">
+                    {profile.unresolvedQuestions.map((question) => (
+                      <li key={question}>{question}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+
+            {score ? <MintAuthorityScoreBreakdown score={score} /> : null}
+
+            {profile.controls.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Primary controls
+                </p>
+                <ul className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-muted/15">
+                  {profile.controls.map((control) => (
+                    <MintAuthorityControlRow key={control.key} control={control} />
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                No primary control rows are published in the compact review summary.
+              </div>
+            )}
+
+            {profile.sources.length > 0 ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Evidence sources
+                </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
+                  {profile.sources.map((source) => (
+                    <a
+                      key={`${source.label}:${source.url}`}
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                    >
+                      {source.label}
+                      <ExternalLink aria-hidden className="h-3 w-3" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <MethodologyCardActions
+              topic="mintAuthorityScore"
+              trailing={profile.reviewedAt ? `Reviewed ${profile.reviewedAt}` : undefined}
+            />
+          </>
         )}
-
-        {profile.sources.length > 0 ? (
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Evidence sources</p>
-            <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
-              {profile.sources.map((source) => (
-                <a
-                  key={`${source.label}:${source.url}`}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
-                >
-                  {source.label}
-                  <ExternalLink aria-hidden className="h-3 w-3" />
-                </a>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        <MethodologyCardActions
-          topic="mintAuthorityScore"
-          trailing={profile.reviewedAt ? `Reviewed ${profile.reviewedAt}` : undefined}
-        />
       </CardContent>
     </Card>
   );

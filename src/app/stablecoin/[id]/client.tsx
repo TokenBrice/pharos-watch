@@ -62,13 +62,19 @@ const MarketDataSection = dynamic(
   },
 );
 
-const DEWSDetail = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DEWSDetail), {
-  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
-});
+const DEWSDetail = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DEWSDetail),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
 
-const ReportCardDetail = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.ReportCardDetail), {
-  loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
-});
+const ReportCardDetail = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.ReportCardDetail),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+  },
+);
 
 const ReservePanel = dynamic(
   () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.ReservePanel),
@@ -77,9 +83,12 @@ const ReservePanel = dynamic(
   },
 );
 
-const DepegHistory = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DepegHistory), {
-  loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
-});
+const DepegHistory = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DepegHistory),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
+  },
+);
 
 const FlowsSection = dynamic(
   () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.FlowsSection),
@@ -109,17 +118,26 @@ const BlacklistHistorySection = dynamic(
   },
 );
 
-const KeyInfoCard = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.KeyInfoCard), {
-  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
-});
+const KeyInfoCard = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.KeyInfoCard),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
 
-const YieldDetailSection = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldDetailSection), {
-  loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
-});
+const YieldDetailSection = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldDetailSection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+  },
+);
 
-const DexLiquidityCard = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DexLiquidityCard), {
-  loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
-});
+const DexLiquidityCard = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DexLiquidityCard),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
+  },
+);
 
 const DistributionSection = dynamic(
   () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DistributionSection),
@@ -129,8 +147,7 @@ const DistributionSection = dynamic(
 );
 
 const SafetyScoreHistorySection = dynamic(
-  () =>
-    import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.SafetyScoreHistorySection),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.SafetyScoreHistorySection),
   {
     loading: () => <DetailSectionSkeleton className="h-[220px] w-full rounded-xl" />,
   },
@@ -408,10 +425,7 @@ export default function StablecoinDetailClient({
         <div className="min-w-0">
           {/* ── Key Info ── */}
           <div>
-            <section
-              id="info"
-              className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
-            >
+            <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
               <KeyInfoCard
                 meta={viewModel.coin}
                 resolvedMechanismArchetype={resolvedMechanismArchetype}
@@ -453,7 +467,10 @@ export default function StablecoinDetailClient({
               hasCollateralUsage={hasCollateralUsage}
               collateralUsageEntries={collateralUsageEntries}
             />
-            <MintAuthoritySection profile={viewModel.mintAuthority} />
+            <MintAuthoritySection
+              profile={viewModel.mintAuthority}
+              decentralizationDrag={viewModel.mintAuthorityDecentralizationDrag}
+            />
             {showPegChart ? (
               <MarketDataSection
                 stablecoinId={viewModel.id}

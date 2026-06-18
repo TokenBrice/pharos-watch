@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import {
-  buildStablecoinDetailHeroViewModel,
-  buildStablecoinDetailViewModel,
-} from "../stablecoin-detail-view-model";
+import { buildStablecoinDetailHeroViewModel, buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import {
   buildMintAuthorityDetailViewModel,
   buildStablecoinDetailClientCoin,
@@ -126,6 +123,25 @@ describe("stablecoin detail view-model builder", () => {
     expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
   });
 
+  it("projects mint-authority review gaps into the detail view model", () => {
+    const viewModel = buildMintAuthorityDetailViewModel({
+      mintAuthoritySummary: {
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "concentrated-admin",
+        confidence: "manual-review",
+        summary: "Issuer backend can mint after off-chain approval.",
+        sourceFreeRationale: "Issuer API roles were described in docs but no contract source is published.",
+        unresolvedQuestions: ["Confirm whether the backend signer can be rotated without governance."],
+      },
+    } as never);
+
+    expect(viewModel).toMatchObject({
+      status: "reviewed",
+      sourceFreeRationale: "Issuer API roles were described in docs but no contract source is published.",
+      unresolvedQuestions: ["Confirm whether the backend signer can be rotated without governance."],
+    });
+  });
+
   it("adds explorer links and security setup labels to mint-authority controls", () => {
     const viewModel = buildMintAuthorityDetailViewModel({
       mintAuthoritySummary: {
@@ -151,6 +167,7 @@ describe("stablecoin detail view-model builder", () => {
 
     expect(viewModel.controls[0]).toMatchObject({
       locationLabel: "ethereum / 0x123400...00abcd",
+      fullLocationLabel: "ethereum / 0x123400000000000000000000000000000000abcd",
       addressUrl: "https://etherscan.io/address/0x123400000000000000000000000000000000abcd",
       securitySetupLabel: "Safe, 2/3 threshold",
       thresholdLabel: "2/3 threshold",
@@ -209,6 +226,12 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.mintIncidents[0]).toMatchObject({
       date: "2026-03-22",
       summary: expect.stringContaining("80M unbacked USR"),
+      sources: expect.arrayContaining([
+        expect.objectContaining({
+          label: expect.any(String),
+          url: expect.stringContaining("https://"),
+        }),
+      ]),
     });
     expect(viewModel.score).toMatchObject({
       score: 10,
@@ -311,7 +334,17 @@ describe("stablecoin detail view-model builder", () => {
           },
           reportCards: {
             data: {
-              cards: [{ id: "usdt-tether", overallScore: 90, dimensions: {} }],
+              cards: [
+                {
+                  id: "usdt-tether",
+                  overallScore: 90,
+                  dimensions: {
+                    decentralization: {
+                      detailItems: [{ label: "Mint authority", value: "40/100 (Concentrated)", detail: "-8" }],
+                    },
+                  },
+                },
+              ],
               dependencyGraph: { nodes: [], edges: [] },
             } as never,
             dataUpdatedAt: 1,
@@ -340,6 +373,10 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.hasFlows).toBe(true);
     expect(viewModel.pegScoreResult?.pegScore).toBe(99);
     expect(viewModel.hasYieldSection).toBe(false);
+    expect(viewModel.mintAuthorityDecentralizationDrag).toEqual({
+      value: "-8",
+      detail: "40/100 (Concentrated)",
+    });
   });
 
   it("keeps NAV tokens out of peg-distressed verdicts", () => {
@@ -1443,7 +1480,9 @@ describe("stablecoin detail hero view-model builder", () => {
   });
 
   it("builds the peg Record field with honest omissions", () => {
-    expect(buildPassportHero({ pegRecord: { eventCount: 0 } }).passportItems.find((item) => item.key === "record")).toMatchObject({
+    expect(
+      buildPassportHero({ pegRecord: { eventCount: 0 } }).passportItems.find((item) => item.key === "record"),
+    ).toMatchObject({
       category: "Record",
       value: "Clean",
       href: "#depeg-history",
@@ -1451,7 +1490,9 @@ describe("stablecoin detail hero view-model builder", () => {
       ariaLabel: "Peg record: clean — no depeg events over the last 4 years of tracking — jump to Depeg History",
     });
 
-    expect(buildPassportHero({ pegRecord: { eventCount: 1 } }).passportItems.find((item) => item.key === "record")).toMatchObject({
+    expect(
+      buildPassportHero({ pegRecord: { eventCount: 1 } }).passportItems.find((item) => item.key === "record"),
+    ).toMatchObject({
       value: "1 depeg",
       ariaLabel: "Peg record: 1 depeg event over the last 4 years of tracking — jump to Depeg History",
     });

@@ -378,6 +378,12 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   staleQueries: StablecoinDetailStaleQuery[];
   verdict: StablecoinVerdict;
   mintAuthority: MintAuthorityDetailViewModel;
+  mintAuthorityDecentralizationDrag: MintAuthorityDecentralizationDragViewModel | null;
+}
+
+export interface MintAuthorityDecentralizationDragViewModel {
+  value: string;
+  detail: string | null;
 }
 
 export interface HeroTertiaryMetricViewModel {
@@ -776,6 +782,22 @@ export function buildStablecoinDetailHeroViewModel({
   };
 }
 
+function resolveMintAuthorityDecentralizationDrag(
+  reportCard: ReportCard | null | undefined,
+): MintAuthorityDecentralizationDragViewModel | null {
+  const item = reportCard?.dimensions?.decentralization?.detailItems?.find(
+    (candidate) => candidate.label === "Mint authority",
+  );
+  if (!item?.detail) return null;
+  const drag = Number.parseInt(item.detail, 10);
+  if (!Number.isFinite(drag) || drag >= 0) return null;
+
+  return {
+    value: item.detail,
+    detail: item.value,
+  };
+}
+
 export function buildStablecoinDetailViewModel({
   core: { id, coin, summary, logoSrc, handleRetryAll },
   queries,
@@ -819,6 +841,7 @@ export function buildStablecoinDetailViewModel({
   const childVariants = getClientVariants(id);
   const reserves = supplemental.reserves.live ?? getReserves(coin);
   const mintAuthority = buildMintAuthorityDetailViewModel(coin);
+  const mintAuthorityDecentralizationDrag = resolveMintAuthorityDecentralizationDrag(reportCard);
   const stressBand =
     featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
       ? featureAvailability.stressSignal.band
@@ -880,5 +903,6 @@ export function buildStablecoinDetailViewModel({
     staleQueries: buildStaleQueryInputs(queries),
     verdict,
     mintAuthority,
+    mintAuthorityDecentralizationDrag,
   };
 }

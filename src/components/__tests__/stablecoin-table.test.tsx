@@ -5,11 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { ALL_COLUMNS } from "@/lib/column-visibility";
-import {
-  cleanupFrontendTest,
-  installMatchMediaMock,
-  resetBrowserStorage,
-} from "@/test-utils/frontend";
+import { cleanupFrontendTest, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 const push = vi.fn();
@@ -143,14 +139,7 @@ describe("StablecoinTable", () => {
   it("normalizes persisted column visibility from localStorage", async () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["mcap", "bogus"]));
 
-    render(
-      <StablecoinTable
-        data={[coin]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     await waitFor(() => {
       expect(screen.getByText("Market Cap")).toBeTruthy();
@@ -160,21 +149,24 @@ describe("StablecoinTable", () => {
 
   it("keeps desktop column preferences from overriding mobile defaults", async () => {
     setMobileMedia(true);
-    localStorage.setItem("pharos-table-columns", JSON.stringify([
-      "rank",
-      "name",
-      "price",
-      "peg",
-      "mcap",
-      "change24h",
-      "change7d",
-      "grade",
-      "stability",
-      "liquidity",
-      "blacklistable",
-      "backing",
-      "type",
-    ]));
+    localStorage.setItem(
+      "pharos-table-columns",
+      JSON.stringify([
+        "rank",
+        "name",
+        "price",
+        "peg",
+        "mcap",
+        "change24h",
+        "change7d",
+        "grade",
+        "stability",
+        "liquidity",
+        "blacklistable",
+        "backing",
+        "type",
+      ]),
+    );
 
     render(
       <StablecoinTable
@@ -190,6 +182,7 @@ describe("StablecoinTable", () => {
       expect(screen.getByText("Market Cap")).toBeTruthy();
       expect(screen.queryByText("Blacklistable")).toBeNull();
       expect(screen.queryByText("Peg Score")).toBeNull();
+      expect(screen.getByTitle(/Mint Authority Score/i).textContent).toContain("Mint");
     });
   });
 
@@ -214,14 +207,7 @@ describe("StablecoinTable", () => {
   });
 
   it("keeps horizontal scrolling enabled on the table viewport", () => {
-    render(
-      <StablecoinTable
-        data={[coin]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const table = screen.getAllByRole("table")[0];
     const shell = screen.getByTestId("stablecoin-overview-table");
@@ -241,14 +227,7 @@ describe("StablecoinTable", () => {
   });
 
   it("sizes the table to the visible columns so fixed-layout cells never squeeze below content width", () => {
-    render(
-      <StablecoinTable
-        data={[coin]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const table = screen.getAllByRole("table")[0] as HTMLTableElement;
     const scrollContainer = table?.parentElement;
@@ -314,14 +293,7 @@ describe("StablecoinTable", () => {
   it("renders upstream FreezeWatch status without source-link affordance", () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["name", "blacklistable"]));
 
-    render(
-      <StablecoinTable
-        data={[dai]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[dai]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     expect(screen.getByText("Upstream")).toBeTruthy();
     expect(screen.queryByLabelText(/source/i)).toBeNull();
@@ -407,17 +379,12 @@ describe("StablecoinTable", () => {
   });
 
   it("adds full variant context to the accessible detail link", () => {
-    render(
-      <StablecoinTable
-        data={[susds]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[susds]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     expect(screen.getByLabelText("Savings variant")).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i }),
+    ).toHaveLength(1);
     expect(screen.getByText("Savings")).toBeTruthy();
   });
 
@@ -427,25 +394,13 @@ describe("StablecoinTable", () => {
     const pegRates = {};
 
     const { rerender } = render(
-      <StablecoinTable
-        data={rows}
-        isLoading={false}
-        activeFilters={activeFilters}
-        pegRates={pegRates}
-      />,
+      <StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} pegRates={pegRates} />,
     );
 
     const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
     scrollToMock.mockClear();
 
-    rerender(
-      <StablecoinTable
-        data={rows}
-        isLoading={false}
-        activeFilters={activeFilters}
-        pegRates={pegRates}
-      />,
-    );
+    rerender(<StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} pegRates={pegRates} />);
 
     expect(scrollToMock).not.toHaveBeenCalled();
   });
@@ -454,14 +409,7 @@ describe("StablecoinTable", () => {
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 1, start: 40, end: 80 });
     virtualTotalSizeMock.current = 80;
 
-    render(
-      <StablecoinTable
-        data={[coin, usdc]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[coin, usdc]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const bodyRows = document.querySelectorAll("tbody tr");
     const spacerCell = bodyRows[0]?.querySelector("td");
@@ -476,14 +424,7 @@ describe("StablecoinTable", () => {
   });
 
   it("keeps the virtual cursor idle until row intent", async () => {
-    render(
-      <StablecoinTable
-        data={[coin]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const row = screen.getByText("USDT").closest("tr");
 
@@ -499,14 +440,7 @@ describe("StablecoinTable", () => {
   });
 
   it("scrolls the virtual cursor only when keyboard intent targets an offscreen row", async () => {
-    render(
-      <StablecoinTable
-        data={[coin, usdc]}
-        isLoading={false}
-        activeFilters={[]}
-        pegRates={{}}
-      />,
-    );
+    render(<StablecoinTable data={[coin, usdc]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const firstLink = screen.getByRole("link", { name: /View Tether \(USDT\) details/i });
     firstLink.focus();

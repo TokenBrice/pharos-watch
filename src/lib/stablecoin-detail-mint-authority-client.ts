@@ -29,6 +29,11 @@ function canRaiseCapValue(value: unknown): MintAuthorityClientControlSummary["ca
   return value === true || value === false || value === "unknown" ? value : null;
 }
 
+function stringListValue(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(stringValue).filter((item): item is string => item != null && item.length > 0);
+}
+
 function appendSources(target: MintAuthorityClientSourceSummary[], sources: unknown, seenUrls: Set<string>) {
   if (!Array.isArray(sources)) return;
 
@@ -76,10 +81,7 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
   const label = stringValue(value.label);
   const role = enumValue(stringValue(value.role), MINT_AUTHORITY_CONTROL_ROLE_VALUES);
   const authorityType = enumValue(stringValue(value.authorityType), MINT_AUTHORITY_TYPE_VALUES);
-  const directMintAbility = enumValue(
-    stringValue(value.directMintAbility),
-    MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
-  );
+  const directMintAbility = enumValue(stringValue(value.directMintAbility), MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES);
   if (!label || !role || !authorityType || !directMintAbility) return null;
 
   // Mint-authority metadata is Zod-validated during the stablecoin-data build;
@@ -159,6 +161,10 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
   appendSources(sources, review?.sources, seenUrls);
   const reviewedAt = stringValue(review?.reviewedAt);
   if (reviewedAt) summary.reviewedAt = reviewedAt;
+  const sourceFreeRationale = stringValue(review?.sourceFreeRationale);
+  if (sourceFreeRationale) summary.sourceFreeRationale = sourceFreeRationale;
+  const unresolvedQuestions = stringListValue(review?.unresolvedQuestions);
+  if (unresolvedQuestions.length > 0) summary.unresolvedQuestions = unresolvedQuestions;
   for (const incident of mintIncidents ?? []) {
     appendSources(sources, incident.sources, seenUrls);
   }

@@ -46,6 +46,8 @@ export interface MintAuthorityClientSummary {
   controls?: MintAuthorityClientControlSummary[];
   sources?: StablecoinLink[];
   reviewedAt?: string;
+  sourceFreeRationale?: string;
+  unresolvedQuestions?: string[];
 }
 
 export interface MintAuthorityCoverageControlSummary {
