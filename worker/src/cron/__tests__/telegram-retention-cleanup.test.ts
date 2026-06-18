@@ -185,6 +185,16 @@ function createStubDb(state: StubState): D1Database {
           );
           return { success: true, meta: { changes: removed } };
         }
+        if (sql.startsWith("DELETE FROM cache")) {
+          const [prefixLike, cutoff, limit] = bound as [string, number, number];
+          const prefix = prefixLike.endsWith("%") ? prefixLike.slice(0, -1) : prefixLike;
+          const removed = deleteMatching(
+            state.cache,
+            (row) => row.key.startsWith(prefix) && row.updated_at < cutoff,
+            Number.isFinite(limit) ? limit : Number.POSITIVE_INFINITY,
+          );
+          return { success: true, meta: { changes: removed } };
+        }
         return { success: true, meta: { changes: 0 } };
       },
       first: async () => null,
@@ -310,5 +320,62 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.cappedAtLimit.usageDaily).toBe(true);
     expect(metadata.cappedAtLimit.jobTargets).toBe(true);
     expect(metadata.cappedAtLimit.jobs).toBe(false);
+  });
+
+  it("prunes stale Telegram chat cache residue by prefix", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    const staleShortLived = now - (8 * 24 * 60 * 60);
+    const freshShortLived = now - 3600;
+    const staleWarning = now - (31 * 24 * 60 * 60);
+    const freshWarning = now - (20 * 24 * 60 * 60);
+    state.cache.push(
+      { key: "telegram:command-cooldown:42:/status", value: "1", updated_at: staleShortLived },
+      { key: "telegram:command-flood:42", value: "1", updated_at: staleShortLived },
+      { key: "telegram:chat-member:42:99", value: "1", updated_at: staleShortLived },
+      { key: "telegram:chat-admins:-42", value: "1", updated_at: staleShortLived },
+      { key: "telegram:group-welcome:-42", value: "1", updated_at: staleShortLived },
+      { key: "telegram:re-engagement-warned:42", value: "1", updated_at: staleWarning },
+      { key: "telegram:command-cooldown:43:/status", value: "1", updated_at: freshShortLived },
+      { key: "telegram:command-flood:43", value: "1", updated_at: freshShortLived },
+      { key: "telegram:chat-member:43:99", value: "1", updated_at: freshShortLived },
+      { key: "telegram:chat-admins:-43", value: "1", updated_at: freshShortLived },
+      { key: "telegram:group-welcome:-43", value: "1", updated_at: freshShortLived },
+      { key: "telegram:re-engagement-warned:43", value: "1", updated_at: freshWarning },
+      { key: "telegram:processed-updates:prune:last-run", value: "1", updated_at: staleShortLived },
+    );
+    const db = createStubDb(state);
+
+    const result = await runTelegramRetentionCleanup(db);
+
+    expect(state.cache.map((row) => row.key).sort()).toEqual([
+      "telegram:command-cooldown:43:/status",
+      "telegram:command-flood:43",
+      "telegram:chat-admins:-43",
+      "telegram:chat-member:43:99",
+      "telegram:group-welcome:-43",
+      "telegram:processed-updates:prune:last-run",
+      "telegram:re-engagement-warned:43",
+    ].sort());
+    const metadata = JSON.parse(result.metadata!) as {
+      commandCooldownCachePruned: number;
+      commandFloodCachePruned: number;
+      chatMemberCachePruned: number;
+      chatAdminsCachePruned: number;
+      groupWelcomeCachePruned: number;
+      reEngagementWarningCachePruned: number;
+      retentionDays: {
+        shortLivedChatCache: number;
+        reEngagementWarningCache: number;
+      };
+    };
+    expect(metadata.commandCooldownCachePruned).toBe(1);
+    expect(metadata.commandFloodCachePruned).toBe(1);
+    expect(metadata.chatMemberCachePruned).toBe(1);
+    expect(metadata.chatAdminsCachePruned).toBe(1);
+    expect(metadata.groupWelcomeCachePruned).toBe(1);
+    expect(metadata.reEngagementWarningCachePruned).toBe(1);
+    expect(metadata.retentionDays.shortLivedChatCache).toBe(7);
+    expect(metadata.retentionDays.reEngagementWarningCache).toBe(30);
   });
 });

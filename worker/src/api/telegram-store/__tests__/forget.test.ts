@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
-import { migrateTelegramChatId, unsubscribeAll } from "../forget";
+import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../forget";
 
 interface SqliteD1Statement {
   bind(...values: unknown[]): SqliteD1Statement;
@@ -152,6 +152,49 @@ describe("unsubscribeAll", () => {
       .find((entry) => /UPDATE telegram_subscribers/.test(entry.sql));
     expect(update).toBeDefined();
     expect(update!.sql).toContain("alert_snooze_until_ts = NULL");
+  });
+});
+
+describe("forgetSubscriber", () => {
+  it("clears chat-owned cache residue while preserving neighboring chat keys", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const chatId = "42";
+    sqlite.prepare(`
+      INSERT INTO telegram_subscribers (
+        chat_id, username, created_at, last_active_at
+      )
+      VALUES (?, ?, ?, ?)
+    `).run(chatId, "alice", 100, 200);
+    const deletedCacheKeys = [
+      `telegram:command-flood:${chatId}`,
+      `telegram:command-flood:${chatId}:actor:99`,
+      `telegram:command-cooldown:${chatId}:/status`,
+      `telegram:chat-member:${chatId}:99`,
+      `telegram:chat-admins:${chatId}`,
+      `telegram:group-welcome:${chatId}`,
+      `telegram:re-engagement-warned:${chatId}`,
+    ];
+    const neighboringCacheKeys = [
+      "telegram:command-flood:420",
+      "telegram:command-flood:420:actor:99",
+      "telegram:command-cooldown:420:/status",
+      "telegram:chat-member:420:99",
+      "telegram:re-engagement-warned:420",
+    ];
+    const cacheRows = [...deletedCacheKeys, ...neighboringCacheKeys];
+    for (const key of cacheRows) {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(key, "1", 123);
+    }
+
+    await forgetSubscriber(db, chatId);
+
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: 0 });
+    for (const key of deletedCacheKeys) {
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
+    }
+    expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all())
+      .toEqual([...neighboringCacheKeys].sort().map((key) => ({ key })));
   });
 });
 

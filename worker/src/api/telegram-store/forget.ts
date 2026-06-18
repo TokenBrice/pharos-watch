@@ -36,14 +36,42 @@ export async function unsubscribeAll(db: D1Database, chatId: string): Promise<vo
  * `telegram_processed_updates` so replay-ack idempotency survives a re-/start.
  */
 export async function forgetSubscriber(db: D1Database, chatId: string): Promise<void> {
-  await db.batch([
+  await batchExecute(db, [
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
+    ...prepareDeleteTelegramChatCacheStatements(db, chatId),
   ]);
+}
+
+const CHAT_CACHE_EXACT_KEY_BUILDERS = [
+  (chatId: string) => `telegram:command-flood:${chatId}`,
+  (chatId: string) => `telegram:re-engagement-warned:${chatId}`,
+  (chatId: string) => `telegram:chat-admins:${chatId}`,
+  (chatId: string) => `telegram:group-welcome:${chatId}`,
+] as const;
+
+const CHAT_CACHE_PREFIX_BUILDERS = [
+  (chatId: string) => `telegram:command-cooldown:${chatId}:`,
+  (chatId: string) => `telegram:command-flood:${chatId}:`,
+  (chatId: string) => `telegram:chat-member:${chatId}:`,
+] as const;
+
+export function prepareDeleteTelegramChatCacheStatements(
+  db: D1Database,
+  chatId: string,
+): D1PreparedStatement[] {
+  return [
+    ...CHAT_CACHE_EXACT_KEY_BUILDERS.map((buildKey) =>
+      db.prepare("DELETE FROM cache WHERE key = ?").bind(buildKey(chatId)),
+    ),
+    ...CHAT_CACHE_PREFIX_BUILDERS.map((buildPrefix) =>
+      db.prepare("DELETE FROM cache WHERE key LIKE ?").bind(`${buildPrefix(chatId)}%`),
+    ),
+  ];
 }
 
 const CHAT_MIGRATION_CACHE_KEY_BUILDERS = [

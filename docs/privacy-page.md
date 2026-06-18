@@ -90,6 +90,8 @@ The visible policy must enumerate every Telegram-owned D1 table, its purpose, an
 | `telegram_watcher_lifecycle_daily` | Daily active-watcher snapshots for public pulse history | Aggregate (no per-chat detail); 400-day prune via `telegram-retention-cleanup` (same window as `telegram_usage_daily`) |
 | `telegram_chat_delivery_diagnostics` | Per-chat delivery diagnostics used by `/health` | Kept while subscriber exists; 90-day stale prune |
 
+Telegram also uses the shared D1 `cache` table for short-lived chat-scoped bot state. `/forget` clears the caller's command cooldown/flood, chat-member/admin, group-welcome, and re-engagement warning cache keys immediately. The daily `telegram-retention-cleanup` job also removes stale chat-scoped cache keys in capped batches: 7 days for command cooldown/flood, chat-member/admin, and group-welcome keys, 30 days for re-engagement warning markers.
+
 ### Mini App `initData`
 
 The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` endpoints validate signed Telegram `initData` but never persist it — neither the raw `initData` nor its hash is written to the `cache` table or any other store. Mutation requests are bounded by a short freshness window plus a per-user mutation cooldown rather than a one-shot replay claim: Telegram exposes a single `initData` value per launch, so reusing it across several edits inside the window is expected. The mutation freshness window is 5 minutes (`TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC`); session reads accept `auth_date` within the last 24 hours (`TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC`).

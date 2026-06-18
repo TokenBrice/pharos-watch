@@ -8,6 +8,8 @@ const DAY_SEC = 24 * 60 * 60;
 const ALERT_AUDIT_RETENTION_SEC = 90 * DAY_SEC;
 const USAGE_DAILY_RETENTION_SEC = 400 * DAY_SEC;
 const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
+const SHORT_LIVED_CHAT_CACHE_RETENTION_SEC = 7 * DAY_SEC;
+const RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC = 30 * DAY_SEC;
 const RETENTION_DELETE_BATCH_LIMIT = 10_000;
 
 interface CappedDeleteResult {
@@ -21,6 +23,32 @@ async function deleteOlderThanCapped(
   cutoff: number | string,
 ): Promise<CappedDeleteResult> {
   const result = await db.prepare(sql).bind(cutoff, cutoff, RETENTION_DELETE_BATCH_LIMIT).run();
+  const pruned = Number(result.meta?.changes ?? 0);
+  return {
+    pruned,
+    cappedAtLimit: pruned >= RETENTION_DELETE_BATCH_LIMIT,
+  };
+}
+
+async function deleteCachePrefixOlderThanCapped(
+  db: D1Database,
+  prefix: string,
+  cutoff: number,
+): Promise<CappedDeleteResult> {
+  const result = await db
+    .prepare(
+      `DELETE FROM cache
+        WHERE key IN (
+          SELECT key
+            FROM cache
+           WHERE key LIKE ?
+             AND updated_at < ?
+           ORDER BY updated_at ASC, key ASC
+           LIMIT ?
+        )`,
+    )
+    .bind(`${prefix}%`, cutoff, RETENTION_DELETE_BATCH_LIMIT)
+    .run();
   const pruned = Number(result.meta?.changes ?? 0);
   return {
     pruned,
@@ -84,6 +112,48 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
     nowSec - CHAT_DIAGNOSTICS_RETENTION_SEC,
   );
+  throwIfAborted(signal);
+
+  const commandCooldownCache = await deleteCachePrefixOlderThanCapped(
+    db,
+    "telegram:command-cooldown:",
+    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+  );
+  throwIfAborted(signal);
+
+  const commandFloodCache = await deleteCachePrefixOlderThanCapped(
+    db,
+    "telegram:command-flood:",
+    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+  );
+  throwIfAborted(signal);
+
+  const chatMemberCache = await deleteCachePrefixOlderThanCapped(
+    db,
+    "telegram:chat-member:",
+    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+  );
+  throwIfAborted(signal);
+
+  const chatAdminsCache = await deleteCachePrefixOlderThanCapped(
+    db,
+    "telegram:chat-admins:",
+    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+  );
+  throwIfAborted(signal);
+
+  const groupWelcomeCache = await deleteCachePrefixOlderThanCapped(
+    db,
+    "telegram:group-welcome:",
+    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+  );
+  throwIfAborted(signal);
+
+  const reEngagementWarningCache = await deleteCachePrefixOlderThanCapped(
+    db,
+    "telegram:re-engagement-warned:",
+    nowSec - RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC,
+  );
 
   const totalPruned =
     processedUpdatesPruned +
@@ -92,7 +162,13 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     jobs.pruned +
     usageDaily.pruned +
     watcherLifecycle.pruned +
-    diagnostics.pruned;
+    diagnostics.pruned +
+    commandCooldownCache.pruned +
+    commandFloodCache.pruned +
+    chatMemberCache.pruned +
+    chatAdminsCache.pruned +
+    groupWelcomeCache.pruned +
+    reEngagementWarningCache.pruned;
 
   return createCronResult({
     status: "ok",
@@ -105,6 +181,12 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
       usageDailyPruned: usageDaily.pruned,
       watcherLifecyclePruned: watcherLifecycle.pruned,
       diagnosticsPruned: diagnostics.pruned,
+      commandCooldownCachePruned: commandCooldownCache.pruned,
+      commandFloodCachePruned: commandFloodCache.pruned,
+      chatMemberCachePruned: chatMemberCache.pruned,
+      chatAdminsCachePruned: chatAdminsCache.pruned,
+      groupWelcomeCachePruned: groupWelcomeCache.pruned,
+      reEngagementWarningCachePruned: reEngagementWarningCache.pruned,
       expiredTargetsReconciled,
       deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
       cappedAtLimit: {
@@ -114,12 +196,20 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
         usageDaily: usageDaily.cappedAtLimit,
         watcherLifecycle: watcherLifecycle.cappedAtLimit,
         diagnostics: diagnostics.cappedAtLimit,
+        commandCooldownCache: commandCooldownCache.cappedAtLimit,
+        commandFloodCache: commandFloodCache.cappedAtLimit,
+        chatMemberCache: chatMemberCache.cappedAtLimit,
+        chatAdminsCache: chatAdminsCache.cappedAtLimit,
+        groupWelcomeCache: groupWelcomeCache.cappedAtLimit,
+        reEngagementWarningCache: reEngagementWarningCache.cappedAtLimit,
       },
       retentionDays: {
         alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
         usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
+        shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
+        reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
         processedUpdates: 7,
       },
     },
