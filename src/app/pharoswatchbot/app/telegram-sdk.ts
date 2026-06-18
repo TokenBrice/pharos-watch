@@ -61,6 +61,7 @@ export interface TelegramWebAppSdk {
     user?: { first_name?: string; username?: string };
     start_param?: string;
   };
+  colorScheme?: "light" | "dark";
   viewportHeight?: number;
   viewportStableHeight?: number;
   safeAreaInset?: TelegramSafeAreaInset;
@@ -128,9 +129,10 @@ export function getTelegramLaunchContext(): {
   };
 }
 
-// Cards intentionally keep Pharos card tokens (`bg-card`, `border-border`) and use Telegram theme
-// tokens only for outer scope styling. The full Bot API 6.9+ theme palette is exported as CSS
-// variables so future surfaces can opt in without rewiring this helper.
+// The Mini App shell scopes Pharos bridge tokens (`bg-card`, `border-border`,
+// `text-foreground`) to the live Telegram palette. Export the full Bot API
+// 6.9+ theme set as CSS variables so surface components can keep normal Pharos
+// utility classes while still matching Telegram light/dark chrome.
 export function applyTelegramTheme(webApp: TelegramWebAppSdk | null): void {
   if (typeof document === "undefined" || !webApp) return;
   const height = webApp.viewportStableHeight ?? webApp.viewportHeight;
@@ -164,6 +166,9 @@ export function applyTelegramTheme(webApp: TelegramWebAppSdk | null): void {
   setThemeVar("--telegram-section-header-text", theme?.section_header_text_color);
   setThemeVar("--telegram-subtitle-text", theme?.subtitle_text_color);
   setThemeVar("--telegram-destructive-text", theme?.destructive_text_color);
+  if (webApp.colorScheme === "dark" || webApp.colorScheme === "light") {
+    root.setProperty("--telegram-color-scheme", webApp.colorScheme);
+  }
   if (webApp.isVersionAtLeast?.("8.0")) {
     setThemeVar("--telegram-bottom-bar-bg", theme?.bottom_bar_bg_color);
   }

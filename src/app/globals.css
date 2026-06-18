@@ -399,25 +399,53 @@
     font-variant-numeric: tabular-nums slashed-zero;
   }
 
-  /* Telegram Mini App scope: native-feeling system font for chrome, plus a single
-     selection accent derived from the live Telegram theme with a Pharos fallback.
-     Telegram theme vars are injected at runtime by telegram-sdk.ts; the fallback
-     chain ends at --brand-accent for browser preview / SSR / pre-8.0 clients. */
+  /* Telegram Mini App scope: native-feeling system font, Telegram-themed bridge
+     tokens, and a single selection accent derived from the live Telegram theme.
+     Telegram theme vars are injected at runtime by telegram-sdk.ts; fallbacks
+     keep browser preview and the pre-bridge render usable. */
   .pharos-mini-app {
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
       "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color-scheme: var(--telegram-color-scheme, light dark);
+    --mini-bg: var(--telegram-bg, var(--surface-base));
+    --mini-text: var(--telegram-text, var(--text-primary));
+    --mini-panel: var(
+      --telegram-secondary-bg,
+      color-mix(in oklab, var(--mini-bg) 90%, var(--mini-text) 10%)
+    );
+    --mini-card: var(--telegram-section-bg, var(--mini-panel));
+    --mini-control: color-mix(in oklab, var(--mini-card) 88%, var(--mini-text) 12%);
+    --mini-control-hover: color-mix(in oklab, var(--mini-card) 78%, var(--mini-text) 22%);
     --mini-accent: var(--telegram-accent-text, var(--telegram-button, var(--brand-accent)));
-    --mini-accent-readable: var(--telegram-text, var(--foreground));
+    --mini-accent-readable: var(--mini-text);
     --mini-accent-fill: color-mix(in oklab, var(--mini-accent) 12%, transparent);
     --mini-accent-border: color-mix(in oklab, var(--mini-accent) 34%, transparent);
+    --background: var(--mini-bg);
+    --foreground: var(--mini-text);
+    --card: var(--mini-card);
+    --card-foreground: var(--mini-text);
+    --popover: var(--mini-card);
+    --popover-foreground: var(--mini-text);
+    --primary: var(--telegram-button, var(--mini-accent));
+    --primary-foreground: var(--telegram-button-text, var(--text-inverse));
+    --secondary: var(--mini-control);
+    --secondary-foreground: var(--mini-text);
+    --muted: var(--mini-control);
+    --muted-foreground: var(
+      --telegram-subtitle-text,
+      var(--telegram-hint, color-mix(in oklab, var(--mini-text) 70%, var(--mini-bg)))
+    );
+    --accent: var(--mini-control-hover);
+    --accent-foreground: var(--mini-text);
+    --border: color-mix(in oklab, var(--mini-text) 18%, transparent);
+    --input: color-mix(in oklab, var(--mini-text) 22%, transparent);
+    --ring: var(--mini-accent);
   }
   @media (prefers-color-scheme: dark) {
     :root:has(.pharos-mini-app) {
       --telegram-bg: var(--p-neutral-975);
       --telegram-text: var(--p-neutral-50);
-    }
-    .pharos-mini-app {
-      color-scheme: dark;
+      --telegram-color-scheme: dark;
     }
   }
   .pharos-mini-app .mini-selected {

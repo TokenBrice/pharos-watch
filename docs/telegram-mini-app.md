@@ -104,7 +104,7 @@ Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsi
 
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 
-The Mini App stylesheet seeds `--telegram-bg` and `--telegram-text` from `prefers-color-scheme: dark` when the document contains `.pharos-mini-app`, and sets `color-scheme: dark` on the Mini App shell. These values only cover the pre-bridge render; `applyTelegramTheme()` remains authoritative once Telegram theme parameters are available.
+The Mini App stylesheet seeds `--telegram-bg`, `--telegram-text`, and `--telegram-color-scheme` from `prefers-color-scheme: dark` when the document contains `.pharos-mini-app`. Once the Telegram bridge is available, `applyTelegramTheme()` is authoritative: it exports Telegram theme params and `colorScheme`, and `.pharos-mini-app` scopes the Pharos bridge tokens (`--background`, `--card`, `--foreground`, `--muted`, `--border`, `--ring`) to that Telegram palette so internal cards, tabs, selects, and buttons do not mix a dark Telegram shell with light Pharos controls.
 
 ## BotFather Operator Checklist
 
