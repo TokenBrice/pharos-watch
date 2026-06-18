@@ -10,14 +10,16 @@ import {
   SAFETY_MODE_OPTIONS,
   SNOOZE_DURATION_TOKENS,
 } from "../constants";
-import { formatSnoozePill } from "../format";
+import { computeEffectiveSource, formatSnoozePill } from "../format";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type {
   CoinInsightTarget,
+  FollowedPreset,
   SubscribedCoin,
   TelegramAlertType,
   TelegramCoinSnoozeDurationToken,
   TelegramMiniAppOperation,
+  TelegramMiniAppState,
 } from "../types";
 import { MiniButton } from "./MiniButton";
 import { TogglePill } from "./TogglePill";
@@ -55,8 +57,36 @@ function SegmentedControl<T>({ value, options, onChange, disabled, ariaLabel }: 
   );
 }
 
+type SourceChip = { label: string; className: string };
+
+// C74: collapse the per-type effective-source map into the single dominant lane
+// the chip should advertise. Precedence for the displayed lane mirrors the model:
+// an enabled per-coin flag wins; otherwise an all-off row is a muted override;
+// otherwise the coin rides a preset/global default.
+function deriveSourceChip(
+  coin: SubscribedCoin,
+  globalAlerts: TelegramMiniAppState["subscriber"]["globalAlerts"],
+  presets: readonly FollowedPreset[],
+): SourceChip {
+  const sources = Object.values(computeEffectiveSource(coin, globalAlerts, presets));
+  if (sources.includes("per-coin")) {
+    return { label: "Per-coin", className: "border-primary/40 bg-primary/10 text-primary" };
+  }
+  if (sources.includes("off-override")) {
+    return { label: "Muted override", className: "border-border/60 bg-muted/40 text-muted-foreground" };
+  }
+  if (sources.includes("preset")) {
+    return { label: "Preset", className: "border-border/60 bg-muted/40 text-muted-foreground" };
+  }
+  return { label: "All-stablecoins", className: "border-border/60 bg-muted/40 text-muted-foreground" };
+}
+
 export interface CoinCardProps {
   coin: SubscribedCoin;
+  /** Subscriber global-default flags; used to classify the effective alert source (C74). */
+  globalAlerts: TelegramMiniAppState["subscriber"]["globalAlerts"];
+  /** Followed presets; used to classify the effective alert source (C74). */
+  presets: readonly FollowedPreset[];
   canMutate: boolean;
   isMutating: boolean;
   pendingOperation: TelegramMiniAppOperation | null;
@@ -70,7 +100,8 @@ export interface CoinCardProps {
   highlighted: boolean;
 }
 
-export function CoinCard({ coin, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, webApp, nowSec, highlighted }: CoinCardProps) {
+export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, webApp, nowSec, highlighted }: CoinCardProps) {
+  const sourceChip = deriveSourceChip(coin, globalAlerts, presets);
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled || coin.depegStepBps != null;
   const launchOnly = coin.alertTypes.launch && !showTune;
@@ -97,7 +128,17 @@ export function CoinCard({ coin, canMutate, isMutating, pendingOperation, onMuta
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-base font-semibold text-foreground">{coin.symbol}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="truncate text-base font-semibold text-foreground">{coin.symbol}</h3>
+            <span
+              className={cn(
+                "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                sourceChip.className,
+              )}
+            >
+              {sourceChip.label}
+            </span>
+          </div>
           <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
         </div>
         <MiniButton ariaLabel={`Remove ${coin.symbol}`} variant="secondary" disabled={!canMutate || isMutating} onClick={() => onRemove(coin)}>

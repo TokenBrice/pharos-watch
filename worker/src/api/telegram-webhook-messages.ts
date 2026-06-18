@@ -168,10 +168,11 @@ export function buildListMessage(
   } else {
     const sorted = sortSubscriptions(subscriptions);
     for (const row of sorted) {
-      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row, nowSec)}`);
+      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row, nowSec, { perCoinTag: true })}`);
     }
   }
 
+  lines.push("Precedence: per-coin > preset > all-stablecoins. A per-coin Muted overrides the rest.");
   lines.push("Tip: use /presets to browse dynamic watchlists, or /unsnooze to clear alert snooze.");
   return escapeHtml(lines.join("\n"));
 }
@@ -239,6 +240,7 @@ export function buildPresetUnsubscribeSummaryMessage(
 export function describeSubscriptionSettings(
   row: SubscriptionRow,
   nowSec: number = Math.floor(Date.now() / 1000),
+  options: { perCoinTag?: boolean } = {},
 ): string {
   const labels: string[] = [];
 
@@ -265,7 +267,16 @@ export function describeSubscriptionSettings(
     labels.push("Launch");
   }
 
-  const base = labels.join(", ") || "Muted";
+  // C74: in /list (perCoinTag) make the precedence model legible — an
+  // all-flags-0 row is a per-coin Muted that suppresses preset/global defaults
+  // (the C02 per-coin `off` precedence), and a flagged row is tagged so the
+  // active per-coin override lane is visible. Other callers keep the bare label.
+  let base: string;
+  if (labels.length === 0) {
+    base = options.perCoinTag ? "Muted (overrides defaults)" : "Muted";
+  } else {
+    base = options.perCoinTag ? `${labels.join(", ")} · per-coin` : labels.join(", ");
+  }
 
   // Per-coin snooze countdown (P1-U10): shown alongside the alert list so
   // /list surfaces an active per-coin snooze without forcing the user to

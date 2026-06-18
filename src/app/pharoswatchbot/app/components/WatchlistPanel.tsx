@@ -253,6 +253,8 @@ export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation,
           <CoinCard
             key={coin.stablecoinId}
             coin={coin}
+            globalAlerts={state.subscriber.globalAlerts}
+            presets={state.presets}
             canMutate={canMutate}
             isMutating={isMutating}
             pendingOperation={pendingOperation}

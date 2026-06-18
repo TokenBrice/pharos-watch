@@ -82,6 +82,16 @@ The load-bearing rules:
 
 The Mini App seam does not receive Telegram webhook updates and does not call the Telegram Bot API. Its only inbound surfaces are `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate`.
 
+## Effective Alert Source
+
+Each followed coin's `CoinCard` renders a compact source chip derived purely from already-projected session state (`computeEffectiveSource(coin, globalAlerts, presets)` in `src/app/pharoswatchbot/app/format.ts`), so it adds no extra reads. The chip mirrors the `/list` precedence model (**per-coin > preset > all-stablecoins**, see [`telegram-alerts.md`](./telegram-alerts.md)):
+
+- **Per-coin** — the coin has at least one explicit per-coin alert flag enabled; that lane wins over preset/global.
+- **Muted override** — the coin row exists with every flag off, so it actively suppresses any preset/global default for the coin (the C02 per-coin `off` precedence).
+- **Preset** / **All-stablecoins** — no per-coin flag is set but a followed preset or a global default would otherwise cover the coin.
+
+`computeEffectiveSource` returns the source per alert type; the chip shows the dominant lane. `PresetsPanel` labels preset coverage at the preset level only — it does not expand presets into member coins, because preset→coin membership is not in the session payload and client-side expansion would be cache-dependent. The chip is display-only and changes no fan-out behavior.
+
 ## Auth Model
 
 HMAC validation is implemented in `worker/src/lib/telegram-mini-app-auth.ts`:

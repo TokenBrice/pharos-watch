@@ -1,0 +1,62 @@
+// @vitest-environment jsdom
+
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { CoinCard } from "./CoinCard";
+import type { FollowedPreset, SubscribedCoin, TelegramMiniAppState } from "../types";
+
+type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];
+
+const NO_GLOBAL: GlobalAlerts = { dews: false, depeg: false, safety: false, launch: false, depegStepBps: null };
+
+function makeCoin(alertTypes: Partial<SubscribedCoin["alertTypes"]>): SubscribedCoin {
+  return {
+    stablecoinId: "usdc-circle",
+    symbol: "USDC",
+    name: "USD Coin",
+    alertTypes: { dews: false, depeg: false, safety: false, launch: false, ...alertTypes },
+    dewsMinBand: null,
+    depegStepBps: null,
+    safetyMode: null,
+    snoozeUntilTs: null,
+  };
+}
+
+function renderCard(overrides: { coin: SubscribedCoin; globalAlerts?: GlobalAlerts; presets?: FollowedPreset[] }) {
+  return render(
+    <CoinCard
+      coin={overrides.coin}
+      globalAlerts={overrides.globalAlerts ?? NO_GLOBAL}
+      presets={overrides.presets ?? []}
+      canMutate
+      isMutating={false}
+      pendingOperation={null}
+      onMutate={vi.fn()}
+      onRemove={vi.fn()}
+      onOpenInsight={vi.fn()}
+      webApp={null}
+      nowSec={1_700_000_000}
+      highlighted={false}
+    />,
+  );
+}
+
+afterEach(() => cleanup());
+
+describe("CoinCard source chip (C74)", () => {
+  it("renders a Per-coin chip when a per-coin flag is enabled", () => {
+    renderCard({ coin: makeCoin({ dews: true }) });
+    expect(screen.getByText("Per-coin")).toBeTruthy();
+  });
+
+  it("renders a Muted override chip for an all-off row that suppresses a global default", () => {
+    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, depegStepBps: null };
+    renderCard({ coin: makeCoin({}), globalAlerts: global });
+    expect(screen.getByText("Muted override")).toBeTruthy();
+  });
+
+  it("renders an All-stablecoins chip when nothing covers the coin", () => {
+    renderCard({ coin: makeCoin({}) });
+    expect(screen.getByText("All-stablecoins")).toBeTruthy();
+  });
+});

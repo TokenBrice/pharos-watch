@@ -138,6 +138,32 @@ describe("describeSubscriptionSettings", () => {
     };
     expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS");
   });
+
+  it("renders an all-flags-0 row as a muted override under perCoinTag (C74)", () => {
+    const row: SubscriptionRow = {
+      stablecoin_id: "x", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    };
+    expect(describeSubscriptionSettings(row, undefined, { perCoinTag: true })).toBe("Muted (overrides defaults)");
+  });
+
+  it("tags a flagged row as per-coin under perCoinTag (C74)", () => {
+    const row: SubscriptionRow = {
+      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    };
+    expect(describeSubscriptionSettings(row, undefined, { perCoinTag: true })).toBe("DEWS · per-coin");
+  });
+
+  it("keeps the snooze suffix alongside the per-coin tag (C74)", () => {
+    const nowSec = 1_700_000_000;
+    const row: SubscriptionRow = {
+      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+      alert_snooze_until_ts: nowSec + 38 * 60,
+    };
+    expect(describeSubscriptionSettings(row, nowSec, { perCoinTag: true })).toBe("DEWS · per-coin — snoozed for 38 min");
+  });
 });
 
 describe("describeGlobalAlertSettings", () => {
@@ -266,6 +292,38 @@ describe("buildListMessage", () => {
     };
     const msg = buildListMessage(sub, [subscription], [], NOON_UTC_SEC);
     expect(msg).toContain("snoozed for 2 h");
+  });
+
+  it("includes the precedence note even for an empty subscriber (C74)", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+    };
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
+    expect(msg).toContain("Precedence: per-coin &gt; preset &gt; all-stablecoins.");
+    expect(msg).toContain("A per-coin Muted overrides the rest.");
+  });
+
+  it("renders an all-flags-0 coin row as a muted override and tags flagged rows (C74)", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+    };
+    const mutedRow: SubscriptionRow = {
+      stablecoin_id: "usdc-circle",
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    };
+    const flaggedRow: SubscriptionRow = {
+      stablecoin_id: "dai-makerdao",
+      alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    };
+    const msg = buildListMessage(sub, [mutedRow, flaggedRow], [], NOON_UTC_SEC);
+    expect(msg).toContain("Muted (overrides defaults)");
+    expect(msg).toContain("DEWS · per-coin");
   });
 });
 
