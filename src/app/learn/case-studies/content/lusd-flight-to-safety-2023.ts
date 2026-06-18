@@ -19,7 +19,7 @@ export const content: CaseStudy = {
     },
     {
       coinId: "dai-makerdao",
-      note: "Dai held a majority of its collateral in USDC through MakerDAO's Peg Stability Module, so it inherited the depeg almost one-for-one, falling to about $0.85 as the PSM turned from a stabilizer into an exit ramp. Where Dai's peg leaned on centralized collateral it could not throttle in time, LUSD's leaned only on ETH it never had to defend.",
+      note: "Dai held roughly half of its collateral in USDC through MakerDAO's Peg Stability Module, so it inherited the depeg almost one-for-one, falling to about $0.85 as the PSM turned from a stabilizer into an exit ramp. Where Dai's peg leaned on centralized collateral it could not throttle in time, LUSD's leaned only on ETH it never had to defend.",
     },
     {
       coinId: "frax-frax",
@@ -46,7 +46,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2021-04-05",
       headline: "Liquity launches: ETH-only, immutable, 110% MCR",
-      body: "Liquity went live on Ethereum mainnet, issuing LUSD as a 0%-interest loan against ETH at a minimum 110% collateral ratio. The contracts have no admin keys, no governance, and no upgrade path; stability rests on a Stability Pool, debt redistribution, and direct LUSD-for-ETH redemption at face value.",
+      body: "Liquity went live on Ethereum mainnet, issuing LUSD as a 0%-interest loan against ETH at a minimum 110% collateral ratio. The contracts have no admin keys, no governance, and no upgrade path; stability rests on a Stability Pool, debt redistribution, and direct LUSD-for-ETH redemption at face value, with redemptions enabled after the initial two-week bootstrap period.",
       severity: "low",
       href: "https://www.liquity.org/blog/liquity-goes-live-on-ethereum-mainnet",
     },

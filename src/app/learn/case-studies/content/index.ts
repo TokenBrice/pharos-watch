@@ -1,9 +1,14 @@
-import { DAY_MS as EVENT_MATCH_DAY_MS } from "@/lib/constants";
 import type { CaseStudy } from "./types";
+import {
+  resolveCaseStudySlugForEvent,
+  type CaseStudyEventWindowResolverItem,
+} from "./event-window-resolver";
 import { content as usdcSvb2023 } from "./usdc-svb-2023";
 import { content as terraUst2022 } from "./terra-ust-2022";
 import { content as daiBlackThursday } from "./dai-black-thursday";
 import { content as usdeOracle2025 } from "./usde-oracle-2025";
+import { content as buidlTokenizedTbill2025 } from "./buidl-tokenized-tbill-2025";
+import { content as usycNavPricing2025 } from "./usyc-nav-pricing-2025";
 import { content as usd0ppUsual2025 } from "./usd0pp-usual-2025";
 import { content as crvusdExploitTrilogy } from "./crvusd-exploit-trilogy";
 import { content as ironTitan2021 } from "./iron-titan-2021";
@@ -24,6 +29,7 @@ import { content as usdnNeutrino2022 } from "./usdn-neutrino-2022";
 import { content as usdxKava2022 } from "./usdx-kava-2022";
 import { content as ftxContagion2022 } from "./ftx-contagion-2022";
 import { content as usddTronReserve2024 } from "./usdd-tron-reserve-2024";
+import { content as usdrRealUsd2023 } from "./usdr-real-usd-2023";
 
 /**
  * Canonical display + sitemap order. Tier 1 (one per archetype, marquee) first,
@@ -35,6 +41,8 @@ export const CASE_STUDY_LIST: readonly CaseStudy[] = [
   terraUst2022,
   daiBlackThursday,
   usdeOracle2025,
+  buidlTokenizedTbill2025,
+  usycNavPricing2025,
   usd0ppUsual2025,
   crvusdExploitTrilogy,
   susdSip4202025,
@@ -48,6 +56,7 @@ export const CASE_STUDY_LIST: readonly CaseStudy[] = [
   busdPaxos2023,
   multichainUsdc2023,
   ftxContagion2022,
+  usdrRealUsd2023,
   eurtMicaExit2024,
   usddTronReserve2024,
   usdxKava2022,
@@ -77,31 +86,23 @@ export const CASE_STUDY_BY_DEPEG_SLUG: Record<string, CaseStudy> = Object.fromEn
   CASE_STUDY_LIST.filter((s) => s.depegEventSlug).map((s) => [s.depegEventSlug!, s]),
 );
 
+const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] = CASE_STUDY_LIST.map(
+  (study) => ({
+    slug: study.slug,
+    primaryCoinId: study.primaryCoinId ?? null,
+    relatedCoinIds: (study.relatedCoins ?? []).map((coin) => coin.coinId),
+    startISO: study.eventWindow.startISO,
+    endISO: study.eventWindow.endISO ?? null,
+  }),
+);
+
 /**
- * Resolve the case study that covers a charted event for `coinId` at `tsMs`.
- * Matches the coin against each study's subject (primaryCoinId) first, then its
- * contagion set (relatedCoins), and requires the timestamp to fall inside the
- * study's event window (± a day of slack). Lets the chart-annotation legend
- * link a pin to its long-form retrospective without storing slugs in the
- * curated annotation data.
+ * Server-side resolver for surfaces that already import the full content
+ * registry. Client chart overlays import the generated implementation from
+ * `client-index.ts` instead, so article prose stays out of charted bundles.
  */
 export function caseStudySlugForEvent(coinId: string, tsMs: number): string | undefined {
-  const inWindow = (study: CaseStudy): boolean => {
-    const start = Date.parse(study.eventWindow.startISO);
-    if (!Number.isFinite(start)) return false;
-    const end = study.eventWindow.endISO
-      ? Date.parse(study.eventWindow.endISO) + EVENT_MATCH_DAY_MS
-      : start + 2 * EVENT_MATCH_DAY_MS;
-    return tsMs >= start - 2 * EVENT_MATCH_DAY_MS && tsMs <= end;
-  };
-  const primary = CASE_STUDY_LIST.find(
-    (s) => s.primaryCoinId === coinId && inWindow(s),
-  );
-  if (primary) return primary.slug;
-  const related = CASE_STUDY_LIST.find(
-    (s) => (s.relatedCoins?.some((c) => c.coinId === coinId) ?? false) && inWindow(s),
-  );
-  return related?.slug;
+  return resolveCaseStudySlugForEvent(CASE_STUDY_EVENT_WINDOWS, coinId, tsMs);
 }
 
 export type { CaseStudy } from "./types";

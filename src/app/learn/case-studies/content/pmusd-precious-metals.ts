@@ -5,27 +5,27 @@ export const content: CaseStudy = {
   eyebrow: "Chronic fragility",
   title: "pmUSD and the in-situ gold collateral chain",
   subtitle:
-    "RAAC's gold-RWA dollar token has never settled at par — hundreds of recorded sub-peg events, then a ~55.7% intraday crater on May 2, 2026 — yet it is still live. The story is structural, not a single blowup.",
+    "RAAC's gold-RWA dollar token has never settled at par — hundreds of recorded sub-peg events, then an ~88% crater to its May 4, 2026 all-time low — yet it is still live. The story is structural, not a single blowup.",
   lead: [
     "pmUSD is a live dollar stablecoin issued by RAAC, built as a fork of f(x) Protocol 1.0 that the project labels RWf(x). Where the original f(x) splits ETH collateral into a stable token and a leveraged companion, RAAC applies the same volatility-splitting to gold: pmUSD is the stable fToken and xPM (the gold-volatility companion) absorbs the swings. What sits underneath is unusual. pmUSD is minted against a base token RAAC calls TokenBlender, which is itself minted against ION.au, a digital security issued by I-ON Digital Corp that represents a claim on in-situ — that is, un-mined, in-the-ground — gold reserves rather than vaulted bullion.",
-    "Pharos has recorded 354 distinct deviation events on pmUSD between February 15 and May 2, 2026: 337 below par and 17 above. The overwhelming majority of the below-peg readings are shallow but persistent, clustered between roughly 100 and 356 basis points under par, with a median around 174 bps and most readings in the 100-to-200 bps band. This is not the signature of a token that occasionally wobbles and snaps back; it is a token that has spent most of its tracked life trading at a visible discount, with only 17 brief excursions above par.",
-    "On May 2, 2026, the drift became a crater. pmUSD fell from about $0.988 to roughly $0.443 intraday — a peak deviation near 5,568 bps, about 55.7% below the reference peg — and the event carries no recorded recovery print. The token remains live, so Pharos classifies the outcome as wounded rather than collapsed. This study treats pmUSD as a case of chronic structural fragility: a layered, opaque collateral stack, manager-only minting, and a one-directional peg-defense module that together explain both the persistent discount and how a single day could erase more than half the price.",
+    "Pharos has recorded 354 distinct deviation events on pmUSD across its February-to-May 2026 drift: 337 below par and 17 above. The overwhelming majority of the below-peg readings are shallow but persistent, clustered between roughly 100 and 356 basis points under par, with a median around 174 bps and most readings in the 100-to-200 bps band. This is not the signature of a token that occasionally wobbles and snaps back; it is a token that has spent most of its tracked life trading at a visible discount, with only 17 brief excursions above par.",
+    "In early May 2026, the drift became a crater. pmUSD fell from near par into a deep selloff that reached a CoinGecko all-time low near $0.116 on May 4 — a peak deviation around 8,840 bps, roughly 88% below the reference peg. It later recovered partway, trading around the low-to-mid $0.70s by mid-June, but it did not snap back to par. The token remains live, so Pharos classifies the outcome as wounded rather than collapsed. This study treats pmUSD as a case of chronic structural fragility: a layered, opaque collateral stack, manager-only minting, and a one-directional peg-defense module that together explain both the persistent discount and how a single week could erase most of the price.",
   ],
   takeaways: [
-    "pmUSD has never reliably held par: 337 below-peg readings clustered at 100-200 bps under $1, then a ~55.7% crater on May 2, 2026 — chronic fragility, not a single blowup.",
+    "pmUSD has never reliably held par: 337 below-peg readings clustered mostly at 100-200 bps under $1, then an ~88% crater to a May 4, 2026 all-time low — chronic fragility, not a single blowup.",
     "Its backing is a multi-layer chain (pmUSD → TokenBlender → ION.au → in-situ, un-mined gold) that puts assertion, not redeemable metal, between the holder and the collateral.",
     "The peg defense is a reserve-gated, one-directional PSM plus manager-only minting, so there is no symmetric arbitrage to pin par — once the module pauses, a thin Curve market sets the price.",
     "Sustained sub-peg drift is itself the signal: a token living at a standing discount for months is telling you its backing is doubted or its floor is finite.",
   ],
   primaryCoinId: "pmusd-precious-metals",
-  archetype: "rwa-credit-fund",
+  archetype: "cdp",
   outcome: "wounded",
   eventDateLabel: "2026 (ongoing)",
   eventWindow: {
     startISO: "2026-02-15",
-    endISO: "2026-05-02",
-    peakDeviationBps: -5568,
-    lowPrice: 0.443,
+    endISO: "2026-05-04",
+    peakDeviationBps: -8840,
+    lowPrice: 0.1162,
   },
   timeline: [
     {
@@ -48,15 +48,15 @@ export const content: CaseStudy = {
       severity: "med",
     },
     {
-      dateISO: "2026-03-26",
-      headline: "Issuer's listed equity drops on the partnership disclosure",
-      body: "I-ON Digital's publicly traded shares fell sharply — reported near 18% on the day — when the gold-token, stablecoin, and DeFi-liquidity model was detailed to public-market investors. The reaction is a useful external signal: traditional equity holders repriced the same structure DeFi was already discounting.",
+      dateISO: "2026-03-31",
+      headline: "I-ON files a late annual-report notice",
+      body: "I-ON Digital filed an NT 10-K notice around the same period the market was digesting the gold-token and DeFi-liquidity model. The filing is a cleaner public-market signal than the previously cited equity move: the same issuer disclosures that traditional investors were reading sat beneath the collateral story DeFi was already discounting.",
       severity: "med",
     },
     {
-      dateISO: "2026-05-02",
-      headline: "Intraday crater to roughly $0.44",
-      body: "On May 2, 2026, pmUSD dropped from about $0.988 to roughly $0.443 — a peak deviation near 5,568 bps, around 55.7% below the reference peg, by far the largest in its recorded history. The event has no recorded recovery price; the token continued trading at a steep, unresolved discount rather than snapping back to par.",
+      dateISO: "2026-05-04",
+      headline: "Selloff reaches an all-time low near $0.116",
+      body: "After the early-May break began, pmUSD reached a CoinGecko all-time low around $0.116 on May 4 — a peak deviation near 8,840 bps, roughly 88% below the reference peg. It later recovered into the low-to-mid $0.70s by mid-June, but that partial recovery still left the token at a steep, unresolved discount rather than back at par.",
       severity: "high",
     },
   ],
@@ -80,7 +80,7 @@ export const content: CaseStudy = {
     {
       heading: "The May 2026 crater",
       paragraphs: [
-        "On May 2, 2026, the same asymmetry produced a much larger move. pmUSD fell roughly 55.7% intraday to about $0.443. In a deep, freely arbitraged market, a 55% gap in a dollar token would invite overwhelming buy-side pressure; here it did not close, and Pharos has no recorded recovery print for the event. The crater is best read as the chronic fragility expressed under stress rather than as a new, separate failure mode.",
+        "In early May 2026, the same asymmetry produced a much larger move. pmUSD fell from near par into a selloff that reached roughly $0.116 on May 4. In a deep, freely arbitraged market, an 88% gap in a dollar token would invite overwhelming buy-side pressure; here it only partially closed, recovering into the low-to-mid $0.70s by mid-June rather than snapping back to par. The crater is best read as the chronic fragility expressed under stress rather than as a new, separate failure mode.",
         "Two structural facts make a move of this size mechanically possible. First, the reserve-gated PSM has a hard limit: once its sUSDS reserve crosses the pause threshold, the engineered floor simply switches off, and price discovery reverts to a thin secondary market that can gap far below par on modest flow. Second, the collateral chain offers no fast, public redemption path to gold; a holder cannot convert pmUSD into deliverable metal to enforce a price, so confidence — not arbitrage — sets the level. When confidence in the layered backing wavers, there is little to catch the price until it finds whatever bid the Curve pools will support.",
         "Pharos does not assert a cause for the specific trigger on that day, and the public record does not establish one. What the crater revealed is structural: the depth of the peg defense, the thinness of the market beneath it, and the absence of a redemption backstop that could enforce par independently of sentiment.",
       ],
@@ -88,7 +88,7 @@ export const content: CaseStudy = {
     {
       heading: "What is and isn't verifiable",
       paragraphs: [
-        "Several elements of pmUSD's stack are genuinely checkable on-chain or in public filings. The pmUSD contract, its supply, and its trading history are observable; the f(x)-fork mechanism, the manager-controlled operations pattern, and the PSM's reserve-gated behavior are documented in RAAC's materials and visible in contract logic. I-ON Digital is a reporting public company, and its disclosures, audit opinion, and reserve-classification references can be examined directly. The on-chain price record — including the chronic discount and the May 2 crater — is recorded and is the firmest fact in this study.",
+        "Several elements of pmUSD's stack are genuinely checkable on-chain or in public filings. The pmUSD contract, its supply, and its trading history are observable; the f(x)-fork mechanism, the manager-controlled operations pattern, and the PSM's reserve-gated behavior are documented in RAAC's materials and visible in contract logic. I-ON Digital is a reporting public company, and its disclosures, audit opinion, and reserve-classification references can be examined directly. The price record — including the chronic discount, the May 4 all-time low, and the partial recovery visible on aggregators — is the firmest fact in this study.",
         "Other elements rest on issuer assertion and cannot be independently confirmed from on-chain data. The specific in-situ reserve quantities, the exact title and lien documentation over the underlying mineral rights, and the controls that are said to prevent over-issuance are described by the issuer rather than provable by inspecting the chain. The headline coverage figures — the 5:1 ratio and the 80% spot haircut — describe how ION.au's gold layer is valued, not pmUSD's live on-chain solvency, and a conservative reader should treat them as a model of the deepest layer rather than a guarantee at the token a holder actually owns.",
         "The Chainlink Proof of Reserve feed and the Instruxi attestation are real components, but a proof-of-reserve feed verifies that an attested quantity exists at its named source; it does not transform an in-situ gold claim into deliverable bullion, nor does it close the gap between the gold layer and the pmUSD layer. Pharos flags this asset's custody as institutional-unregulated and its reserve as high-risk for exactly these reasons: the structure is partly verifiable and partly asserted, and the unverifiable parts sit closest to the actual collateral. None of this implies fraud or bad faith; it is a statement about what an outside observer can and cannot confirm.",
       ],
@@ -106,7 +106,7 @@ export const content: CaseStudy = {
       kind: "peg-deviation",
       coinId: "pmusd-precious-metals",
       caption:
-        "Hundreds of recorded sub-peg events (mostly 100-200 bps below par) and the May 2, 2026 crater to ~$0.44 (~5,568 bps).",
+        "Hundreds of recorded sub-peg events (mostly 100-200 bps below par) and the early-May 2026 crater to a CoinGecko all-time low near $0.116 (~8,840 bps).",
     },
   ],
   watchpoints: [
@@ -116,7 +116,7 @@ export const content: CaseStudy = {
     "Secondary-market depth: pmUSD trades in a thin set of Curve pools, so once the PSM is paused or depleted, modest flow can move the price far from par.",
   ],
   crossLinks: [
-    { href: "/learn/mechanisms/rwa-credit-fund/", label: "Mechanism: RWA credit-fund stablecoins" },
+    { href: "/learn/mechanisms/cdp/", label: "Mechanism: CDP stablecoins" },
     { href: "/stablecoin/pmusd-precious-metals/", label: "pmUSD overview" },
     { href: "/learn/case-studies/usd0pp-usual-2025/", label: "Case study: USD0++ and redemption-terms risk" },
     { href: "/methodology/", label: "Pharos methodology" },
@@ -142,8 +142,16 @@ export const content: CaseStudy = {
       label: "Chainlink — ION Proof of Reserve feed (Ethereum mainnet)",
       href: "https://data.chain.link/feeds/ethereum/mainnet/ion-por",
     },
+    {
+      label: "CoinGecko — Precious Metals USD (PMUSD) price and all-time low",
+      href: "https://www.coingecko.com/en/coins/precious-metals-usd",
+    },
+    {
+      label: "CryptoRank — Precious Metals USD price statistics",
+      href: "https://cryptorank.io/price/precious-metals-usd",
+    },
   ],
   metaDescription:
-    "pmUSD, RAAC's gold-RWA dollar token, has logged hundreds of sub-peg events and a ~55.7% crater on May 2, 2026 — chronic structural fragility, still live.",
+    "pmUSD, RAAC's gold-RWA dollar token, logged chronic sub-peg events and an ~88% crash to a May 4, 2026 all-time low, but remains live.",
   datePublished: "2026-05-23",
 };

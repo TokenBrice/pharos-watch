@@ -29,9 +29,9 @@ export const content: CaseStudy = {
   ],
   archetype: "fiat-cash",
   outcome: "died",
-  eventDateLabel: "November 2022",
+  eventDateLabel: "October-November 2022",
   eventWindow: {
-    startISO: "2022-11-06",
+    startISO: "2022-10-31",
     endISO: "2022-11-16",
     peakDeviationBps: -7200,
     lowPrice: 0.28,
@@ -41,7 +41,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2022-10-31",
       headline: "Huobi delists HUSD; volume routed into USDD",
-      body: "After Justin Sun took a senior role at Huobi, the exchange announced it was delisting HUSD and helping users swap into USDT, while steering ecosystem volume toward Sun's own stablecoin, USDD. HUSD's market cap had already shrunk from over $1B in 2021 to about $63M, and the token slid toward ~$0.28 with no redemption backstop.",
+      body: "After Justin Sun took a senior role at Huobi, the exchange announced it was delisting HUSD and helping users swap into USDT, while steering ecosystem volume toward Sun's own stablecoin, USDD. HUSD's market cap had already shrunk from a peak around $400M-$555M to about $63M, and the token slid toward ~$0.28 with no redemption backstop.",
       severity: "high",
       href: "https://www.coindesk.com/business/2022/10/31/after-huobi-delisting-stablecoin-husd-falls-72-from-dollar-peg",
     },
@@ -50,7 +50,7 @@ export const content: CaseStudy = {
       headline: "CoinDesk publishes Alameda's FTT-heavy balance sheet",
       body: "CoinDesk reported that of roughly $14.6B in Alameda Research assets, around $5.8B was its affiliate's own FTT token — a position that could not be liquidated at quoted prices. The disclosure reframed FTX's market-maker arm as structurally undercapitalized.",
       severity: "med",
-      href: "https://www.coindesk.com/markets/2022/11/12/the-epic-collapse-of-sam-bankman-frieds-ftx-exchange-a-crypto-markets-timeline",
+      href: "https://www.coindesk.com/business/2022/11/02/divisions-in-sam-bankman-frieds-crypto-empire-blur-on-his-trading-titan-alamedas-balance-sheet",
     },
     {
       dateISO: "2022-11-06",
@@ -106,7 +106,7 @@ export const content: CaseStudy = {
       heading: "HUSD: the casualty that didn't recover",
       paragraphs: [
         "HUSD was a fiat-backed dollar tied to the Huobi exchange ecosystem. Its decline began before FTX's final days: after Justin Sun took a senior position at Huobi, the exchange moved to delist HUSD and shift trading volume into Sun's own stablecoin, USDD. With its home venue actively winding it down and helping users swap into USDT, HUSD lost the one thing a custodial dollar depends on — a credible redemption path.",
-        "On 31 October 2022 HUSD fell about 72% from its peg, touching roughly $0.28, and its market capitalization had already collapsed from more than $1B in 2021 to around $63M. There was no run on reserves in the usual sense; the issuer's ecosystem simply chose to stop supporting it, and the token had no independent demand to fall back on. It never reclaimed the dollar and now sits in the Pharos cemetery, recorded as a counterparty failure rather than a mechanism failure.",
+        "On 31 October 2022 HUSD fell about 72% from its peg, touching roughly $0.28, and its market capitalization had already collapsed from a peak in the hundreds of millions — roughly $393M in the Pharos cemetery, with some external trackers higher — to around $63M. There was no run on reserves in the usual sense; the issuer's ecosystem simply chose to stop supporting it, and the token had no independent demand to fall back on. It never reclaimed the dollar and now sits in the Pharos cemetery, recorded as a counterparty failure rather than a mechanism failure.",
         "HUSD is the cleanest illustration of the thesis. It was not the weakest stablecoin design in the market — it was a custodial dollar whose fate was decided by the entity that controlled it. When that entity pivoted to a competing product, the peg died, and the FTX-weekend stablecoin turmoil that pulled USDD toward $0.96 was the same Sun-and-USDD nexus that had already finished HUSD off.",
       ],
     },
@@ -143,6 +143,10 @@ export const content: CaseStudy = {
     {
       label: "CoinDesk — The epic collapse of Sam Bankman-Fried's FTX: a timeline",
       href: "https://www.coindesk.com/markets/2022/11/12/the-epic-collapse-of-sam-bankman-frieds-ftx-exchange-a-crypto-markets-timeline",
+    },
+    {
+      label: "CoinDesk — Alameda's FTT-heavy balance sheet (Nov. 2, 2022)",
+      href: "https://www.coindesk.com/business/2022/11/02/divisions-in-sam-bankman-frieds-crypto-empire-blur-on-his-trading-titan-alamedas-balance-sheet",
     },
     {
       label: "CoinDesk — FTX token falls 80% despite Binance bailout as Alameda contagion spreads",

@@ -8,8 +8,8 @@ export const content: CaseStudy = {
     "An overcollateralized CDP dollar broke its peg in May 2022 because a single whitelisted collateral asset — TerraUSD — collapsed, and it never durably recovered.",
   lead: [
     "USDX was Kava Mint's crypto-collateralized dollar, minted as overcollateralized debt against a basket of accepted assets. By design it was the opposite of an algorithmic peg: every USDX in circulation was backed by collateral worth more than the debt it secured, with liquidations meant to retire under-water positions before they could threaten par. On paper, that structure should have absorbed the May 2022 shock. It did not.",
-    "The flaw was on the whitelist. Kava Mint accepted TerraUSD (UST) as collateral alongside KAVA, ATOM, wrapped Bitcoin, and Ether. When UST entered its death spiral in May 2022 — collapsing more than 90% in a week toward roughly $0.10 — the positions backed by UST became instantly under-collateralized. The liquidation machinery fired into a market with no bid for the toxic asset, and the cascade dragged USDX off its dollar peg. It fell to about $0.47 mid-week before a partial bounce to roughly $0.89 and a renewed slide to around $0.56.",
-    "Kava governance voted to remove UST from Kava Mint, and the team — citing USDX's non-algorithmic, collateralized design — said the peg would return once UST was out of the system. It never did. The acute break gave way to a slow fade: USDX languished well below a dollar for years, with a recorded all-time low near $0.10, and trades around $0.65 on negligible volume today. It is the first died-CDP case in this library: an overcollateralized stablecoin killed not by its mechanism but by one bad name on its collateral list.",
+    "The flaw was on the whitelist. Kava Mint accepted TerraUSD (UST) as collateral alongside KAVA, ATOM, wrapped Bitcoin, and Ether. When UST entered its death spiral in May 2022 — detaching on May 7-8 and collapsing more than 90% in a week toward roughly $0.10 — the positions backed by UST became instantly under-collateralized. The liquidation machinery fired into a market with no bid for the toxic asset, and the cascade dragged USDX off its dollar peg. It fell to about $0.47 mid-week before a partial bounce to roughly $0.89 and a renewed slide to around $0.56.",
+    "Kava governance voted to remove UST from Kava Mint, and the team — citing USDX's non-algorithmic, collateralized design — said the peg would return once UST was out of the system. It never did. The acute break gave way to a slow fade: USDX languished well below a dollar for years, with a recorded all-time low near $0.10, and traded around $0.70 on negligible volume by mid-2026. It is the first died-CDP case in this library: an overcollateralized stablecoin killed not by its mechanism but by one bad name on its collateral list.",
   ],
   takeaways: [
     "Overcollateralization is not a blanket safeguard — it is only as sound as the worst asset on the collateral whitelist. One toxic collateral leg (UST) was terminal even though USDX was nominally over-backed.",
@@ -29,9 +29,9 @@ export const content: CaseStudy = {
   },
   timeline: [
     {
-      dateISO: "2022-05-09",
+      dateISO: "2022-05-08",
       headline: "UST begins its death spiral; Kava Mint's whitelist is exposed",
-      body: "TerraUSD detached from a dollar and began its uncontrolled collapse. Because UST was an accepted collateral asset in Kava Mint, every USDX position backed by UST started losing its margin of safety as the collateral itself headed toward a dime.",
+      body: "TerraUSD detached from a dollar over May 7-8 and began its uncontrolled collapse. Because UST was an accepted collateral asset in Kava Mint, every USDX position backed by UST started losing its margin of safety as the collateral itself headed toward a dime.",
       severity: "med",
     },
     {
@@ -67,7 +67,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2026-05-11",
       headline: "Effectively defunct",
-      body: "Years on, USDX still trades at a deep discount — around $0.65 with a market cap near $73 million and daily volume in the low thousands of dollars. It survives as a legacy debt token on Kava Mint rather than a functioning stablecoin, with a recorded all-time low near $0.10.",
+      body: "Years on, USDX still trades at a deep discount — around $0.70 with a market cap near $78 million and daily volume in the low thousands of dollars. It survives as a legacy debt token on Kava Mint rather than a functioning stablecoin, with a recorded all-time low near $0.10.",
       severity: "low",
     },
   ],
@@ -100,7 +100,7 @@ export const content: CaseStudy = {
       heading: "The slow fade",
       paragraphs: [
         "Acute depegs usually resolve one of two ways: the coin recovers to par, or it is wound down. USDX did neither cleanly. The toxic collateral was removed and the contagion stopped, but the peg never came back, and the token was not retired. It settled into a long half-life as a discounted legacy claim.",
-        "By later years USDX traded persistently below a dollar, with a recorded all-time low near $0.10 and a market value that drifted down with its credibility. As of mid-2026 it changes hands around $0.65 with a market cap near $73 million and daily volume measured in the low thousands of dollars — present in the data, but no longer functioning as a stablecoin in any meaningful sense.",
+        "By later years USDX traded persistently below a dollar, with a recorded all-time low near $0.10 and a market value that drifted down with its credibility. As of mid-2026 it changes hands around $0.70 with a market cap near $78 million and daily volume measured in the low thousands of dollars — present in the data, but no longer functioning as a stablecoin in any meaningful sense.",
         "This is why the case is filed as died rather than wounded. A wounded stablecoin takes structural damage and goes on operating near par; USDX lost the one property that defined it and never got it back. The CDP machinery still runs, but what it produces is no longer a dollar.",
       ],
     },

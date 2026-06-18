@@ -6,8 +6,8 @@ import type { CaseStudy } from "./types";
  * Accountable dashboard — slides into a downside depeg as
  * Bitcoin falls and the preferred shares trade below par. The asset class is
  * labelled real-world, but the dominant leg is Bitcoin-correlated, so the
- * reserve weakened exactly when a dollar should hold. The incident opened on
- * June 2 and is still unresolved. Annotations: see
+ * reserve weakened exactly when a dollar should hold. The incident opened in
+ * Pharos's June 2 snapshot and is still unresolved. Annotations: see
  * shared/data/annotations/curated-annotations.ts keyed "apxusd-apyx" (2026-06-04).
  */
 export const content: CaseStudy = {
@@ -18,12 +18,12 @@ export const content: CaseStudy = {
     "Apyx markets apxUSD as an RWA-backed dollar, but roughly 62% of its reserve is Strategy preferred equity — a Bitcoin-correlated asset that fell with crypto in early June 2026, opening a downside depeg that is still unresolved.",
   lead: [
     "apxUSD is a dollar stablecoin issued through Apyx and facilitated by Preference Capital (BVI) Ltd. under British Virgin Islands law. It is mintable 1:1 and described as real-world-asset-backed, but the composition of that backing is unusual. By Apyx's own Accountable reserve dashboard, the majority of the reserve — around 62% — is STRC, preferred equity issued by Strategy, the largest corporate Bitcoin treasury, with a fractional sliver of Strive's SATA preferred and the remaining share in cash and short-term U.S. Treasury Bills (including USDC) for liquidity. CoinDesk's reporting confirms preferred equity is the majority leg but does not publish a precise split; the label says RWA, and the dominant leg is a claim on a company whose balance sheet is Bitcoin.",
-    "On June 2, 2026, that distinction stopped being academic. As Bitcoin fell and Strategy's preferred shares traded below their par value, apxUSD's reserve marked down with it. The token slid from about $0.99 to a recorded low near $0.89 — a peak deviation of roughly −1,059 basis points, around 10.6% below par. Two days later CoinDesk reported the break, and Apyx framed it publicly as expected behaviour for a preferred-equity-backed dollar rather than a failure. The cash-and-Treasury buffer, sized at under 40% of reserves, could not absorb a drawdown on a leg nearly twice its size.",
-    "The episode has not closed. Pharos still flags the June incident as an active depeg, and as of mid-June 2026 apxUSD trades near $0.96 — roughly 378 basis points under par — with a DISTRESSED status, a Safety grade of D (49/100), a DEWS reading of WATCH (29/100), and circulating supply down about 8.6% over thirty days as holders exit. Because the token remains live and is structurally scarred rather than decommissioned, Pharos classifies the outcome as wounded. This study treats apxUSD as a case of correlated collateral: an RWA dollar whose reserve was, in substance, long the very asset its peg was supposed to be stable against.",
+    "In early June 2026, that distinction stopped being academic. As Bitcoin fell and Strategy's preferred shares traded below their par value, apxUSD's reserve marked down with it. The token slid from about $0.99 toward the low-$0.90s in the first break and later printed a deeper all-time low near $0.865 on June 18 — about 13.5% below par. CoinDesk reported the break on June 4, and Apyx framed it publicly as expected behaviour for a preferred-equity-backed dollar rather than a failure. The cash-and-Treasury buffer, sized at under 40% of reserves, could not absorb a drawdown on a leg nearly twice its size.",
+    "The episode has not closed. Pharos still flags the June incident as an active depeg, and on June 18, 2026 apxUSD traded around $0.87 — roughly 1,300 basis points under par — with a DISTRESSED status, a Safety grade of D (49/100), a DEWS reading of WATCH (29/100), and circulating supply down about 8.6% over thirty days as holders exit. Because the token remains live and is structurally scarred rather than decommissioned, Pharos classifies the outcome as wounded. This study treats apxUSD as a case of correlated collateral: an RWA dollar whose reserve was, in substance, long the very asset its peg was supposed to be stable against.",
   ],
   takeaways: [
     "The 'RWA-backed' label hides the risk: the majority leg (~62% per Apyx's dashboard) is Strategy's STRC preferred equity, a Bitcoin-correlated asset that falls when a dollar most needs to hold.",
-    "When crypto sold off in June 2026, reserve and stress shared a common factor — the cash/T-Bill buffer was sized below the volatile leg, so apxUSD slid to ~$0.89 and was still depegged (~$0.96) mid-June.",
+    "When crypto sold off in June 2026, reserve and stress shared a common factor — the cash/T-Bill buffer was sized below the volatile leg, so apxUSD slid through the low-$0.90s and was still depegged near $0.87 on June 18.",
     "Redemption is whitelisted, so retail's only exit is a thin Curve market; the participants who can arbitrage par lose the incentive to defend it exactly when the reserve is falling.",
     "An issuer calling a depeg 'a feature, not a bug' is telling you the design permits the price to move with its collateral — take it literally.",
   ],
@@ -40,8 +40,8 @@ export const content: CaseStudy = {
   eventDateLabel: "June 2026 (ongoing)",
   eventWindow: {
     startISO: "2026-06-02",
-    peakDeviationBps: -1059,
-    lowPrice: 0.8939,
+    peakDeviationBps: -1352,
+    lowPrice: 0.8648,
   },
   timeline: [
     {
@@ -52,14 +52,14 @@ export const content: CaseStudy = {
     },
     {
       dateISO: "2026-03-23",
-      headline: "A brief upside spike to $1.13 hints at thin liquidity",
-      body: "apxUSD prints a 30-minute upside dislocation to about $1.13 — a +1,257 bps deviation — before snapping back to par. An isolated spike of that size in a dollar token is a liquidity signal: the secondary market is thin enough that modest flow can move the price far from $1 in either direction.",
+      headline: "A brief upside spike to $1.11 hints at thin liquidity",
+      body: "apxUSD prints a short upside dislocation to about $1.11 — roughly a +1,100 bps deviation — before snapping back to par. An isolated spike of that size in a dollar token is a liquidity signal: the secondary market is thin enough that modest flow can move the price far from $1 in either direction.",
       severity: "low",
     },
     {
       dateISO: "2026-06-02",
       headline: "Downside incident opens as Bitcoin and STRC fall",
-      body: "As Bitcoin declines and Strategy's STRC preferred shares trade below their par value, apxUSD's reserve marks down and the token slides from about $0.99 to a recorded low near $0.89 — roughly −1,059 bps. Pharos opens a depeg incident on June 2; it carries no recovery print and remains active.",
+      body: "As Bitcoin declines and Strategy's STRC preferred shares trade below their par value, apxUSD's reserve marks down and the token slides from about $0.99 toward the low-$0.90s. Pharos opens a depeg incident from the June 2 snapshot; it carries no recovery print and remains active.",
       severity: "high",
       href: "https://www.coindesk.com/markets/2026/06/04/apyx-s-stablecoin-suffers-a-brief-depeg-protocol-says-its-a-feature-not-bug",
     },
@@ -71,9 +71,9 @@ export const content: CaseStudy = {
       href: "https://www.coindesk.com/markets/2026/06/04/apyx-s-stablecoin-suffers-a-brief-depeg-protocol-says-its-a-feature-not-bug",
     },
     {
-      dateISO: "2026-06-15",
-      headline: "Still unresolved: ~$0.96, DISTRESSED, supply shrinking",
-      body: "Roughly two weeks on, apxUSD trades near $0.96 (about −378 bps) and Pharos still shows an active depeg. Safety sits at D (49/100), DEWS at WATCH (29/100), liquidity at 60 across 17 pools, and circulating supply is down about 8.6% over thirty days to ~407.5M as holders redeem and exit.",
+      dateISO: "2026-06-18",
+      headline: "Still unresolved: ~$0.87, DISTRESSED, supply shrinking",
+      body: "By June 18, apxUSD trades near $0.87 after printing an all-time low around $0.865, and Pharos still shows an active depeg. Safety sits at D (49/100), DEWS at WATCH (29/100), liquidity at 60 across 17 pools, and circulating supply is down about 8.6% over thirty days as holders redeem and exit.",
       severity: "high",
     },
   ],
@@ -89,7 +89,7 @@ export const content: CaseStudy = {
       heading: "Why a real-world asset moved with crypto",
       paragraphs: [
         "A stablecoin's reserve does its job when it holds value precisely in the moments the peg is tested. T-Bill-backed dollars work because the collateral is, to a first approximation, uncorrelated with the crypto markets where the token trades — when crypto sells off, the bills are still worth par. apxUSD inverts that property. Its dominant leg is a Bitcoin-correlated preferred share, so a crypto drawdown weakens the reserve at the same instant redemption pressure rises. The collateral and the stress share a common factor, and a common factor is exactly what a stablecoin reserve is supposed to avoid.",
-        "The buffer could not cover the gap. With roughly 38% in cash and Treasuries against roughly 62% in the volatile leg, even a moderate markdown on STRC pushes net collateral toward — or through — the value of apxUSD outstanding before the buffer is exhausted. The cash sleeve is enough to clear an orderly trickle of redemptions; it is not enough to defend par when the majority of the reserve is falling in lockstep with the broader market. The June low near $0.89 is what that arithmetic looks like under stress.",
+        "The buffer could not cover the gap. With roughly 38% in cash and Treasuries against roughly 62% in the volatile leg, even a moderate markdown on STRC pushes net collateral toward — or through — the value of apxUSD outstanding before the buffer is exhausted. The cash sleeve is enough to clear an orderly trickle of redemptions; it is not enough to defend par when the majority of the reserve is falling in lockstep with the broader market. The June low near $0.865 is what that arithmetic looks like under stress.",
         "This is the structural cousin of pmUSD's gold-RWA fragility: in both cases the headline is a real-world asset, and in both cases the peg depends on a layer whose value the token holder cannot independently pin down or convert on demand. apxUSD's chain runs apxUSD → preferred shares → a Bitcoin-treasury company → Bitcoin, and a shock anywhere along it propagates straight up to the token.",
       ],
     },
@@ -105,7 +105,7 @@ export const content: CaseStudy = {
       heading: "How Pharos saw it",
       paragraphs: [
         "The signal was structural before it was a price. Pharos scores apxUSD's collateral quality as RWA with a single-entity governance posture, flags the STRC and SATA legs as high-risk in the live reserve map, and routes the asset through the RWA-credit-fund mechanism rather than treating it as a cash-backed dollar. Those classifications are why a token that spent its first months near par still carried structural caution rather than a clean bill of health.",
-        "When the incident opened, the live surfaces moved together. The depeg resolver flagged the June 2 downside event and has kept it open with no recovery print; DEWS sits at WATCH (29/100) and Safety at D (49/100); and the supply trend turned negative — down about 8.6% over thirty days — as redemptions and exits shrank the float to roughly 407.5M against a $392M market cap. The peg and liquidity sub-scores (65 and 60 across 17 pools) capture a token that can still clear sellers, but only at a standing discount. apxUSD also appears inside other protocols' reserves as Pendle PT collateral, so its stress is a dependency worth tracing on the map, not only a price on its own page.",
+        "When the incident opened, the live surfaces moved together. The depeg resolver flagged the June 2 downside event and has kept it open with no recovery print; DEWS sits at WATCH (29/100) and Safety at D (49/100); and the supply trend turned negative — down about 8.6% over thirty days — as redemptions and exits shrank the float. The peg and liquidity sub-scores (65 and 60 across 17 pools) capture a token that can still clear sellers, but only at a standing discount. apxUSD also appears inside other protocols' reserves as Pendle PT collateral, so its stress is a dependency worth tracing on the map, not only a price on its own page.",
       ],
     },
     {
@@ -121,14 +121,14 @@ export const content: CaseStudy = {
       kind: "peg-deviation",
       coinId: "apxusd-apyx",
       caption:
-        "apxUSD's peg-deviation history on Pharos. The June 2026 incident opened on the 2nd and drove a recorded low near $0.89 (about −1,059 bps); daily snapshots smooth the intraday path, and the deviation was still unresolved in mid-June with the token near $0.96.",
+        "apxUSD's peg-deviation history on Pharos. The June 2026 incident opened from the June 2 snapshot, first drove the token into the low-$0.90s, and later printed an all-time low near $0.865 on June 18.",
     },
   ],
   watchpoints: [
     "STRC and Bitcoin: the ~62% Strategy-preferred leg is the dominant reserve risk, and its value tracks Bitcoin and Strategy's ability to service its preferred — a crypto drawdown weakens collateral and peg together.",
     "Buffer adequacy: whether Apyx grows the cash and T-Bill sleeve relative to the volatile preferred-equity leg, or the ~38%/62% split that failed to defend par in June persists.",
     "Redemption access and Curve depth: direct redemption is whitelisted, so retail exits through a thin secondary market — watch whether the whitelisted rebalancers and POL actually buy the discount back toward par.",
-    "Incident resolution: the June 2 depeg has no recovery print and supply is shrinking; a return to par versus a continued managed discount is the difference between wounded and worse.",
+    "Incident resolution: the June depeg has no recovery print and supply is shrinking; a return to par versus a continued managed discount is the difference between wounded and worse.",
     "Attestation and disclosure: a niche attestor with no monthly attestation, no public GENIUS authorization, and a ToS that disclaims its own financial terminology limit what a holder can enforce below par.",
   ],
   crossLinks: [
@@ -172,6 +172,6 @@ export const content: CaseStudy = {
     },
   ],
   metaDescription:
-    "apxUSD's RWA-backed dollar is ~62% Bitcoin-correlated Strategy preferred equity; when crypto fell in June 2026 it slid to ~$0.89 and is still depegged.",
+    "apxUSD's RWA-backed dollar is ~62% Bitcoin-correlated Strategy preferred equity; when crypto fell in June 2026 it slid below $0.90 and is still depegged.",
   datePublished: "2026-06-15",
 };

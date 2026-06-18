@@ -8,12 +8,12 @@ export const content: CaseStudy = {
     "A fully-reserved dollar stablecoin lost its peg for hours in April 2025 — not because its backing failed, but because a high-profile competitor publicly called its custodian insolvent and the market ran first and checked later.",
   lead: [
     "On April 2, 2025, Tron founder Justin Sun posted on X that First Digital Trust (FDT) — the Hong Kong custodian behind the FDUSD stablecoin — was \"effectively insolvent and unable to fulfill client fund redemptions,\" urging users to secure their assets immediately. FDUSD, a fiat-backed token meant to redeem 1:1 against short-dated US Treasuries, cash, and overnight deposits, fell to roughly $0.87 within hours — about a 13% deviation, near 1,300 bps below par.",
-    "Nothing in FDUSD's reserve had changed. The claim grew out of a separate dispute over TUSD: Sun alleged that FDT had moved about $456 million of custodial client funds tied to TrueUSD to a private entity in Dubai without authorization. FDUSD's own reserve — which FDT's February 2025 report put at roughly $2.05 billion, primarily US Treasury bills, against about $2.04 billion of issued tokens — was not the subject of the dispute. The depeg was a counterparty-trust event: holders priced the risk that the entity custodying their backing might be impaired, regardless of what that backing actually was.",
+    "Nothing in FDUSD's reserve had changed. The claim grew out of a separate dispute over TUSD: Sun alleged that FDT had moved about $456 million of custodial client funds tied to TrueUSD to a private entity in Dubai without authorization. FDUSD's own reserve attestation with a March 1, 2025 record date put reserves at roughly $2.05 billion, primarily US Treasury bills and overnight term deposits, against about $2.04 billion of issued tokens; FDUSD was not the subject of the dispute. The depeg was a counterparty-trust event: holders priced the risk that the entity custodying their backing might be impaired, regardless of what that backing actually was.",
     "FDT denied the allegations as a \"malicious\" smear, reaffirmed that FDUSD was fully backed and redeemable, kept processing redemptions, and filed a defamation claim against Sun in Hong Kong's High Court. On-chain data showed the issuer honored roughly $26 million of FDUSD redemptions in the days after the post. The peg recovered toward $0.98 and higher. The episode is studied here as the reflexive social-media bank run — distinct from USDC's March 2023 depeg, where a bank holding the reserve genuinely failed.",
   ],
   takeaways: [
     "FDUSD fell to ~$0.87 within hours of an April 2, 2025 tweet calling its custodian First Digital Trust \"effectively insolvent\" — the reserve itself never changed.",
-    "The allegation grew out of a separate ~$456M TUSD custody dispute, not FDUSD; FDT's February 2025 report put FDUSD reserves near $2.05B, mostly US Treasury bills, against ~$2.04B issued.",
+    "The allegation grew out of a separate ~$456M TUSD custody dispute, not FDUSD; FDUSD's March 1, 2025 attestation put reserves near $2.05B, mostly US Treasury bills and overnight term deposits, against ~$2.04B issued.",
     "Custodian counterparty trust is its own risk axis: a fiat-backed coin can depeg on doubt about who holds the backing, not just on what the backing is.",
     "FDT denied the claim, processed ~$26M of redemptions, filed a defamation suit, and FDUSD recovered toward $0.98+ — recovery came from honored redemptions, not a policy backstop.",
   ],
@@ -33,7 +33,7 @@ export const content: CaseStudy = {
   eventDateLabel: "April 2025",
   eventWindow: {
     startISO: "2025-04-02",
-    endISO: "2025-04-04",
+    endISO: "2025-04-09",
     peakDeviationBps: -1300,
     lowPrice: 0.87,
   },
@@ -54,7 +54,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2025-04-02",
       headline: "First Digital denies, cites ~$2.05B in reserves",
-      body: "First Digital Trust rejected the claim as false and malicious, said the dispute concerned TUSD rather than FDUSD, and stated FDUSD remained fully backed and redeemable. Its February 2025 report put reserves near $2.05 billion — primarily US Treasury bills — against roughly $2.04 billion of issued FDUSD.",
+      body: "First Digital Trust rejected the claim as false and malicious, said the dispute concerned TUSD rather than FDUSD, and stated FDUSD remained fully backed and redeemable. FDUSD's attestation with a March 1, 2025 record date put reserves near $2.05 billion — primarily US Treasury bills and overnight term deposits — against roughly $2.04 billion of issued FDUSD.",
       severity: "med",
     },
     {
@@ -65,8 +65,8 @@ export const content: CaseStudy = {
       href: "https://cointelegraph.com/news/first-digital-redeems-26m-fdusd-after-stablecoin-depeg",
     },
     {
-      dateISO: "2025-04-04",
-      headline: "Sun escalates; First Digital files defamation claim",
+      dateISO: "2025-04-09",
+      headline: "Sun escalates; First Digital serves defamation claim",
       body: "Sun doubled down, alleging FDT had transferred roughly $456 million of custodial client funds to a Dubai entity, and announced a $50 million bounty. First Digital served Sun with a defamation claim in Hong Kong's High Court (Case No. HCA 680), seeking an injunction and damages. The dispute remained unresolved well beyond the depeg.",
       severity: "med",
       href: "https://www.coindesk.com/policy/2025/04/09/first-digital-trust-serves-justin-sun-with-defamation-claim",
@@ -83,7 +83,7 @@ export const content: CaseStudy = {
     {
       heading: "Custodian counterparty risk",
       paragraphs: [
-        "The accusation was not, strictly, about FDUSD. It grew out of a dispute over TrueUSD: Sun alleged that First Digital Trust had moved roughly $456 million of TUSD-linked custodial funds to a private entity in Dubai without authorization. FDUSD's reserve — reported near $2.05 billion in T-bills against about $2.04 billion issued — was a separate pool. But FDUSD and TUSD shared the same trustee, so a question about how that trustee handled one client's money read, to the market, as a question about its solvency overall.",
+        "The accusation was not, strictly, about FDUSD. It grew out of a dispute over TrueUSD: Sun alleged that First Digital Trust had moved roughly $456 million of TUSD-linked custodial funds to a private entity in Dubai without authorization. FDUSD's reserve — attested near $2.05 billion in T-bills and overnight term deposits against about $2.04 billion issued, using a March 1, 2025 record date — was a separate pool. But FDUSD and TUSD shared the same trustee, so a question about how that trustee handled one client's money read, to the market, as a question about its solvency overall.",
         "This is the counterparty-trust axis that fiat-backed designs cannot escape. A token can be fully and conservatively reserved and still depeg if holders lose confidence in the institution that custodies the reserve and stands behind redemption. The asset that matters is not only what backs the coin but who holds it, who can move it, and whether that party's other obligations are sound. When the custodian's integrity is in doubt, every token it backs inherits the doubt.",
       ],
     },
@@ -141,6 +141,14 @@ export const content: CaseStudy = {
     {
       label: "CoinDesk — First Digital Trust serves Justin Sun with defamation claim",
       href: "https://www.coindesk.com/policy/2025/04/09/first-digital-trust-serves-justin-sun-with-defamation-claim",
+    },
+    {
+      label: "First Digital Labs — Transparency and FDUSD reserve reports",
+      href: "https://www.firstdigitallabs.com/transparency",
+    },
+    {
+      label: "Binance Square — FDUSD audit report summary with March 1, 2025 record date",
+      href: "https://www.binance.com/en/square/post/22395282658474",
     },
     {
       label: "The Defiant — Justin Sun declares First Digital Trust insolvent, FDUSD depegs as Binance holds $1.67B",

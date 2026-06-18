@@ -54,14 +54,14 @@ export const content: CaseStudy = {
       headline: "SVB enters receivership; Circle discloses exposure",
       body: "Silicon Valley Bank was taken into FDIC receivership on Friday, March 10. Late that day Circle disclosed that about $3.3 billion of the USDC reserve — roughly 8% of the cash backing — was held at the bank and could not be withdrawn. Primary-market redemption queues stalled.",
       severity: "med",
-      href: "https://www.circle.com/blog/an-update-on-usdc-and-silicon-valley-bank",
+      href: "https://www.circle.com/pressroom/3-3-billion-of-usdc-reserve-risk-removed-dollar-de-peg-closes",
     },
     {
       dateISO: "2023-03-11",
       headline: "Secondary-market low near $0.87",
       body: "With redemptions effectively paused into the weekend, selling pressure moved to secondary markets. USDC fell from $1.00 to a low near $0.87 on March 11 — a peak deviation around 1,300 bps below peg, the largest ever recorded for the issuer. Curve's 3pool saw record volume as holders rotated out of USDC.",
       severity: "high",
-      href: "https://www.circle.com/blog/an-update-on-usdc-and-silicon-valley-bank",
+      href: "https://www.circle.com/pressroom/3-3-billion-of-usdc-reserve-risk-removed-dollar-de-peg-closes",
     },
     {
       dateISO: "2023-03-12",
@@ -96,7 +96,7 @@ export const content: CaseStudy = {
     {
       heading: "Contagion through DeFi",
       paragraphs: [
-        "USDC is not just a token people hold; it is collateral and plumbing for much of on-chain finance. Any protocol that treated USDC as a hard dollar inherited the depeg directly. The cleanest channel was MakerDAO's Peg Stability Module, which let users swap USDC for Dai 1:1. With a majority of Dai's collateral in USDC, the PSM passed the discount straight through and Dai fell with it, while a corrective governance vote sat behind a 48-hour timelock until after the worst had passed.",
+        "USDC is not just a token people hold; it is collateral and plumbing for much of on-chain finance. Any protocol that treated USDC as a hard dollar inherited the depeg directly. The cleanest channel was MakerDAO's Peg Stability Module, which let users swap USDC for Dai 1:1. With roughly half of Dai's collateral in USDC, the PSM passed the discount straight through and Dai fell with it, while a corrective governance vote sat behind a 48-hour timelock until after the worst had passed.",
         "Frax propagated the shock through a different mechanism: it held USDC in its backing and valued collateral at a hardcoded $1 for redemption, so an impaired USDC leg dragged FRAX to roughly $0.88. alUSD, whose collateral routes through DAI- and USDC-denominated yield strategies, was exposed to the same dislocation by composition rather than by any flaw in its own design.",
         "Capital that fled the USDC-exposed cluster flowed toward coins seen as unexposed, and tokens like USDT briefly traded above par on the rotation. The episode is a reference case for how a single fiat issuer's banking incident becomes a system-wide event once that issuer is wired into DeFi as base collateral. Pharos models this propagation explicitly in the dependency map.",
       ],
@@ -132,8 +132,8 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "Circle — An update on USDC and Silicon Valley Bank",
-      href: "https://www.circle.com/blog/an-update-on-usdc-and-silicon-valley-bank",
+      label: "Circle — $3.3B of USDC reserve risk removed; dollar depeg closes",
+      href: "https://www.circle.com/pressroom/3-3-billion-of-usdc-reserve-risk-removed-dollar-de-peg-closes",
     },
     {
       label: "Federal Reserve — Joint Statement by Treasury, Federal Reserve, and FDIC (March 12, 2023)",

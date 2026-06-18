@@ -7,7 +7,7 @@ export const content: CaseStudy = {
   subtitle:
     "The third-largest stablecoin did not depeg — it was lawfully wound down. A fully-reserved, solvent coin can still die by order.",
   lead: [
-    "Binance USD never broke its dollar peg. At its February 2023 peak it was the third-largest stablecoin in circulation, with a market value around $23.5 billion, fully backed one-for-one by US Treasuries and overnight reverse repo held in bankruptcy-remote accounts at issuer Paxos. By the conventional test of a stablecoin — can holders redeem at par — BUSD passed throughout its decline and beyond. It died anyway.",
+    "Binance USD never broke its dollar peg. At its November 2022 all-time high it was the third-largest stablecoin in circulation, with a market value around $23.5 billion; by the February 2023 regulatory action, Paxos's reserve report put BUSD near $16 billion, fully backed one-for-one by US Treasuries and overnight reverse repo held in bankruptcy-remote accounts. By the conventional test of a stablecoin — can holders redeem at par — BUSD passed throughout its decline and beyond. It died anyway.",
     "On February 3, 2023 the SEC sent Paxos a Wells notice arguing that BUSD was an unregistered security. Ten days later, on February 13, the New York Department of Financial Services ordered Paxos to stop minting new BUSD, effective February 21, citing unresolved failures in Paxos's oversight of its relationship with Binance. Minting was the only lever that mattered: a fiat-backed token whose issuance is switched off can only shrink. Redemptions stayed open and the peg held, but the supply could now move in one direction.",
     "What followed was not a run but a managed wind-down. Paxos guaranteed redemption — for US dollars or conversion to its other regulated stablecoin, Pax Dollar (USDP) — through at least February 2024, and the peg never wavered. Binance, the demand engine behind BUSD, ended support on its platform in December 2023 and auto-converted remaining user balances to First Digital USD (FDUSD). Circulating BUSD decayed monotonically toward zero. This is the archive's reference case for a failure mode that has nothing to do with backing: regulatory mortality. Redeemability is not survival.",
   ],
@@ -56,7 +56,7 @@ export const content: CaseStudy = {
       severity: "high",
     },
     {
-      dateISO: "2023-08-01",
+      dateISO: "2023-08-31",
       headline: "Binance signals a gradual exit",
       body: "Over the months that followed, Binance — the exchange whose trading pairs and incentives had created most BUSD demand — telegraphed that it would gradually phase out support for the token. With issuance frozen and its primary demand venue retreating, BUSD's float drained steadily through 2023.",
       severity: "low",
@@ -87,7 +87,7 @@ export const content: CaseStudy = {
       paragraphs: [
         "BUSD was a plain fiat-backed stablecoin issued by Paxos Trust Company, a New York limited-purpose trust company under NYDFS supervision. Each token was redeemable one-for-one against a reserve of short-dated US Treasuries and overnight reverse repo, segregated and held in bankruptcy-remote accounts. As of January 31, 2023, that reserve stood at roughly $16 billion. There was no structural fragility in the backing: no algorithmic stabilizer, no volatile collateral, no thin liquidity base.",
         "On February 3, 2023 the SEC delivered a Wells notice asserting that BUSD was an unregistered security. On February 13, the NYDFS ordered Paxos to stop minting, effective February 21, on the grounds that Paxos had not adequately overseen its Binance relationship — not on any claim that the reserves were short. The two actions came from different angles, securities law and prudential supervision, but converged on the same outcome: new BUSD could no longer be created.",
-        "From there the coin simply ran down. Redemptions stayed open, the dollar peg held, and Binance migrated its users to FDUSD over the course of 2023, auto-converting the last balances at year-end. Peak circulation of about $23.5 billion bled toward zero with no panic and no loss to holders. BUSD is recorded in the Pharos cemetery with cause of death 'regulatory' — the cleanest example in the archive of a stablecoin that was killed rather than one that failed.",
+        "From there the coin simply ran down. Redemptions stayed open, the dollar peg held, and Binance migrated its users to FDUSD over the course of 2023, auto-converting the last balances at year-end. The late-2022 high of about $23.5 billion bled toward zero with no panic and no loss to holders. BUSD is recorded in the Pharos cemetery with cause of death 'regulatory' — the cleanest example in the archive of a stablecoin that was killed rather than one that failed.",
       ],
     },
     {

@@ -9,7 +9,7 @@ export const content: CaseStudy = {
   lead: [
     "Neutrino USD (USDN) was an algorithmic stablecoin in the Waves ecosystem, not the US-centric DeFi mainstream. Its dollar peg rested on a single reflexive collateral asset: WAVES, the Waves chain's native token. Users locked WAVES in Neutrino's smart contracts to mint USDN, and redeeming USDN destroyed it to unlock WAVES. That single-token backing meant the stablecoin's solvency tracked WAVES' market value one-for-one — and WAVES had just run up more than 200% over March 2022, from roughly $19 to a record near $60, lifting USDN's circulating value toward the billion-dollar mark.",
     "On 31 March 2022 the on-chain analyst 0xHamZ alleged a circular leverage loop: the Waves team was said to be borrowing USDC and USDT against USDN on Vires.finance, the dominant Waves lending market, buying WAVES with the proceeds, staking that WAVES to mint fresh USDN, and borrowing again — a self-funding cycle that pumped WAVES on borrowed money. The accompanying warning was arithmetic: if WAVES fell far enough that its market cap dropped below the USDN outstanding, USDN was insolvent, and a large USDC short on Vires could be forced to liquidate roughly $607M of the ~$875M USDN supply. Waves founder Sasha Ivanov denied it and blamed a coordinated short campaign by Alameda Research.",
-    "The peg broke on 4 April 2022. USDN fell about 15% to the low-$0.80s — Cointelegraph reported $0.822 against a market cap that slid to ~$824M from a year-to-date high near $960M — with some venues printing intraday lows reported in the $0.65–0.76 range before a partial bounce. Ivanov proposed clamping WAVES/USDN liquidation thresholds and the protocol held emergency votes, but USDN never durably reclaimed a dollar. A second break followed in May during the Terra contagion, and the project ultimately abandoned the $1 peg entirely, rebranding USDN to the floating Neutrino Index Token (XTN), which trades around a few cents today and is effectively dead. The full collapse landed about five weeks before TerraUSD — the same reflexive failure mode, a smaller stage, and a warning the wider market read as a Waves-specific accident.",
+    "The peg broke on 4 April 2022. USDN fell about 15% to the low-$0.80s — press reports put the spot near $0.82 against a market cap that slid to ~$824M from a year-to-date high near $960M — with some venues printing intraday lows reported in the $0.66–0.76 range before a partial bounce. Ivanov proposed clamping WAVES/USDN liquidation thresholds and the protocol held emergency votes, but USDN never durably reclaimed a dollar. A second break followed in May during the Terra contagion, the protocol tried recapitalization through SURF, and the project ultimately abandoned the $1 peg entirely, rebranding USDN to the floating Neutrino Index Token (XTN), which trades around a few cents today and is effectively dead. The full collapse landed about five weeks before TerraUSD — the same reflexive failure mode, a smaller stage, and a warning the wider market read as a Waves-specific accident.",
   ],
   takeaways: [
     "USDN's peg was backed by a single reflexive asset — WAVES — so its solvency tracked one volatile token's market cap; the same run-up that lifted USDN toward a billion dollars set up the fall.",
@@ -23,7 +23,7 @@ export const content: CaseStudy = {
   eventWindow: {
     startISO: "2022-03-31",
     endISO: "2022-04-04",
-    lowPrice: 0.65,
+    lowPrice: 0.66,
   },
   cemeteryId: "usdn-neutrino-usd-2022-04",
   timeline: [
@@ -48,7 +48,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2022-04-04",
       headline: "USDN breaks peg to the low-$0.80s",
-      body: "USDN fell roughly 15% to the low-$0.80s — Cointelegraph reported $0.822 — as its market cap dropped to about $824M from a year-to-date high near $960M. Some venues printed sharper intraday lows reported in the $0.65–0.76 range before a partial recovery toward $0.88. The protocol still claimed a backing ratio of 2.62, but confidence, not stated collateral, was the binding constraint.",
+      body: "USDN fell roughly 15% to the low-$0.80s, with press reports putting the spot near $0.82 as its market cap dropped to about $824M from a year-to-date high near $960M. Some venues printed sharper intraday lows reported in the $0.66–0.76 range before a partial recovery toward $0.88. The protocol still claimed a backing ratio of 2.62, but confidence, not stated collateral, was the binding constraint.",
       severity: "high",
     },
     {
@@ -58,9 +58,16 @@ export const content: CaseStudy = {
       severity: "high",
     },
     {
-      dateISO: "2023-01-01",
+      dateISO: "2022-08-08",
+      headline: "SURF recapitalization attempts to repair the reserve",
+      body: "The protocol introduced SURF, a Smart Utility Recapitalization Feature token meant to recapitalize USDN reserves when the backing ratio was below target. It was a repair layer for undercollateralization, not a restoration of the single-asset peg's original credibility.",
+      severity: "med",
+      href: "https://medium.com/neutrinoteam/what-is-surf-and-why-is-it-important-for-the-neutrino-ecosystem-8962c2230049",
+    },
+    {
+      dateISO: "2023-02-15",
       headline: "USDN abandons the dollar peg and becomes XTN",
-      body: "Conceding that USDN could not withstand the market's volatility, the Neutrino community voted to drop the $1 peg and rebrand the asset as the Neutrino Index Token (XTN) — a floating token backed by a basket of Waves-ecosystem assets rather than a single-asset stablecoin. The dollar peg was formally retired in early 2023.",
+      body: "Conceding that USDN could not withstand the market's volatility, the Neutrino community voted to drop the $1 peg and rebrand the asset as the Neutrino Index Token (XTN) — a floating token backed by a basket of Waves-ecosystem assets rather than a single-asset stablecoin. The transition plan targeted a complete rebrand around mid-February 2023.",
       severity: "med",
     },
     {
@@ -76,7 +83,7 @@ export const content: CaseStudy = {
       paragraphs: [
         "Neutrino USD was an algorithmic, crypto-collateralized stablecoin on the Waves blockchain, pegged to the dollar but backed by WAVES rather than cash or Treasuries. Minting one USDN required locking a dollar's worth of WAVES in Neutrino's contracts; redeeming USDN burned it to release WAVES. The arrangement borrowed the language of over-collateralization — the protocol cited a backing ratio above 2 — but the collateral was a single reflexive token whose value moved with the same sentiment that drove demand for the stablecoin.",
         "Through March 2022 WAVES rallied more than 200% to a record near $60, and USDN's circulating value swelled toward roughly a billion dollars. On 31 March an on-chain analyst published a detailed allegation that the rally was being financed by a circular leverage loop on Vires.finance, and that the structure left USDN one sharp WAVES drawdown away from insolvency. The peg began wobbling immediately.",
-        "On 4 April USDN broke, falling about 15% into the low-$0.80s with reported intraday lows materially deeper, while its market cap slid roughly $130M+ from its recent high. The founder framed it as an Alameda-driven short attack and proposed emergency liquidation-threshold changes, but the peg never durably returned. A second break arrived in May alongside Terra, and the project eventually abandoned the dollar target altogether, rebranding USDN as the floating index token XTN. Pharos preserves USDN in the stablecoin cemetery rather than on a public coin page.",
+        "On 4 April USDN broke, falling about 15% into the low-$0.80s with reported intraday lows materially deeper, while its market cap slid roughly $130M+ from its recent high. The founder framed it as an Alameda-driven short attack and proposed emergency liquidation-threshold changes, but the peg never durably returned. A second break arrived in May alongside Terra, recapitalization efforts followed through SURF, and the project eventually abandoned the dollar target altogether, rebranding USDN as the floating index token XTN. Pharos preserves USDN in the stablecoin cemetery rather than on a public coin page.",
       ],
     },
     {
@@ -99,7 +106,7 @@ export const content: CaseStudy = {
       heading: "The slow death and the XTN rebrand",
       paragraphs: [
         "Unlike Terra, USDN did not vaporize in a single week. After the April break it bounced into the high-$0.80s and low-$0.90s without ever durably reclaiming a dollar, then broke again in May 2022 as the Terra collapse drained confidence across every reflexive design at once. Each recovery restored a price without restoring the trust the peg actually required, and the gap between the two only widened as WAVES kept sliding through the year.",
-        "By late 2022 the team had conceded the point. In a community post the developers acknowledged that 'with the current setup, clearly, USDN can not withstand the unprecedented market volatility,' and governance voted to abandon the dollar peg outright. In early 2023 USDN was rebranded as the Neutrino Index Token (XTN): no longer a stablecoin, but a floating token whose value tracks a basket of Waves-ecosystem assets and a backing ratio rather than a fixed $1.",
+        "By late 2022 the team had conceded the point. In a community post the developers acknowledged that 'with the current setup, clearly, USDN can not withstand the unprecedented market volatility,' and governance voted to abandon the dollar peg outright. After a February 2023 transition, USDN was rebranded as the Neutrino Index Token (XTN): no longer a stablecoin, but a floating token whose value tracks a basket of Waves-ecosystem assets and a backing ratio rather than a fixed $1.",
         "The rebrand was an obituary in the language of a relaunch. Stripped of its peg, the renamed asset traded far below a dollar, its supply was wound down sharply, and it has since lingered around a few cents and is widely listed as inactive. For the purposes of a stablecoin archive, USDN died in 2022; XTN is the marker left on the grave.",
       ],
     },
@@ -132,8 +139,8 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "Cointelegraph — Neutrino Dollar breaks peg, falls to $0.82 amid WAVES manipulation accusations",
-      href: "https://cointelegraph.com/news/neutrino-dollar-breaks-peg-falls-to-0-82-amid-waves-price-manipulation-accusations",
+      label: "CryptoCompare archive — USDN transitioning from stablecoin to Neutrino Index Token (XTN)",
+      href: "https://resources.cryptocompare.com/asset-management/642/1741081490633.pdf",
     },
     {
       label: "CoinDesk — Waves' USDN Stablecoin Loses Peg, Drops 15% Amid Manipulation Scare",
@@ -144,12 +151,16 @@ export const content: CaseStudy = {
       href: "https://forkast.news/waves-usdn-loses-peg-price-manipulation-allegations/",
     },
     {
+      label: "Neutrino Protocol — SURF recapitalization feature",
+      href: "https://medium.com/neutrinoteam/what-is-surf-and-why-is-it-important-for-the-neutrino-ecosystem-8962c2230049",
+    },
+    {
       label: "CoinDesk — Crisis in Terra's UST stablecoin spreads to Neutrino USD on Waves",
       href: "https://www.coindesk.com/markets/2022/05/11/crisis-in-terras-ust-stablecoin-spreads-to-neutrino-usd-on-waves-protocol",
     },
     {
-      label: "Waves blog — USDN is transitioning from stablecoin to Neutrino Index Token (XTN)",
-      href: "https://blog.waves.tech/usdn-is-transitioning-from-stablecoin-to-neutrino-index-token-xtn",
+      label: "CoinGecko — Neutrino Index Token (XTN) price and market data",
+      href: "https://www.coingecko.com/en/coins/neutrino-index-token",
     },
   ],
   metaDescription:

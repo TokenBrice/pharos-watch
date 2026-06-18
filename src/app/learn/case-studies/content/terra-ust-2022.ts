@@ -9,13 +9,13 @@ export const content: CaseStudy = {
   lead: [
     "TerraUSD held its dollar peg through reflexivity, not reserves. The protocol let anyone burn $1 of UST to mint $1 of its sister token LUNA, or burn $1 of LUNA to mint one UST. As long as LUNA carried a deep, confident market, that two-way convertibility kept UST near par. The design had no cash, no Treasuries, and no collateral pool to fall back on — only the assumption that LUNA's market capitalization would stay comfortably larger than the UST it was meant to absorb.",
     "Most of the demand was rented. Anchor, Terra's flagship lending market, advertised a roughly 20% yield on UST deposits, and by spring 2022 around three-quarters of all UST sat parked there. That yield was subsidized rather than earned, and the subsidy reserve was visibly draining. When a wave of withdrawals hit a thinning on-chain liquidity base in early May, UST slipped below a dollar and the convertibility mechanism — designed to defend the peg — instead became the accelerant.",
-    "Within a week UST had fallen to the ~$0.10 dime level by May 12 and kept sliding toward a few cents in the sessions that followed, LUNA's supply ballooned from a few hundred million tokens into the trillions, and the Terra chain was halted twice to fend off a governance takeover. Peak UST market value of roughly $18.77B was effectively gone, and the shock rippled outward: USDT briefly traded under a dollar, MIM cracked, and several leveraged crypto lenders later failed.",
+    "Within a week UST had fallen to the ~$0.10 dime level by May 12 and kept sliding toward a few cents in the sessions that followed, LUNA's supply ballooned from a few hundred million tokens into the trillions, and the Terra chain was halted twice to fend off a governance takeover. Peak UST market value of roughly $18.7B was effectively gone, and the shock rippled outward: USDT briefly traded under a dollar, MIM wobbled, and several leveraged crypto lenders later failed.",
   ],
   takeaways: [
     "An uncollateralized mint-burn peg defended only by a sister token (LUNA) has no floor: the same convertibility that holds par in calm markets becomes an unlimited dilution engine in a run.",
     "Demand was rented, not earned — ~75% of UST sat in Anchor chasing a subsidized ~20% yield, so the float left together the moment that subsidy looked unsustainable.",
     "Once LUNA's market cap fell below the UST it backstopped, the math guaranteed not everyone could exit at par; spending the LFG Bitcoin reserve only delayed recognition.",
-    "At ~$18.77B peak value erased it remains the largest stablecoin failure on record, and its contagion (USDT, MIM, leveraged lenders) reset how the market reads reflexive backing.",
+    "At roughly $18.7B peak value erased it remains the largest stablecoin failure on record, and its contagion (USDT, MIM, leveraged lenders) reset how the market reads reflexive backing.",
   ],
   relatedCoins: [
     {
@@ -24,7 +24,7 @@ export const content: CaseStudy = {
     },
     {
       coinId: "mim-abracadabra",
-      note: "CDP stablecoin with exposure to Terra-linked collateral; fell to roughly $0.93 on 2022-05-12 in the same contagion window.",
+      note: "CDP stablecoin with Terra-linked collateral exposure; wobbled to roughly $0.98 on 2022-05-12, with a deeper $0.93 break arriving in a later June 2022 stress.",
     },
   ],
   archetype: "algorithmic",
@@ -77,7 +77,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2022-05-13",
       headline: "Second halt and a delegation freeze; UST near zero",
-      body: "The chain was halted again and patched to disable LUNA delegations, locking down governance while assets remained on the network. LUNA was effectively worthless and UST kept falling below the ~$0.10 dime level of May 12 toward a few cents in later sessions. Peak UST value of roughly $18.77B had been erased.",
+      body: "The chain was halted again and patched to disable LUNA delegations, locking down governance while assets remained on the network. LUNA was effectively worthless and UST kept falling below the ~$0.10 dime level of May 12 toward a few cents in later sessions. Peak UST value of roughly $18.7B had been erased.",
       severity: "high",
     },
   ],
@@ -87,7 +87,7 @@ export const content: CaseStudy = {
       paragraphs: [
         "UST was a seigniorage-style algorithmic stablecoin: no reserve account stood behind it, only an arbitrage relationship with LUNA. Holders could always burn one UST to mint a dollar's worth of LUNA, and vice versa, so when UST drifted off par the protocol expected traders to close the gap for profit. That worked while LUNA was large and liquid relative to UST.",
         "In early May 2022 a cluster of withdrawals and large stablecoin swaps hit at the same moment liquidity was unusually thin. UST slipped below a dollar, and instead of arbitrage quietly restoring the peg, the redemption mechanism began minting LUNA into a falling market. The faster holders fled, the more LUNA the protocol printed, and the cheaper LUNA became — a self-reinforcing loop with no floor.",
-        "By 2022-05-13 the system had unwound completely. LUNA's supply had hyperinflated by orders of magnitude, the chain had been halted to protect what remained, and UST's roughly $18.77B peak was effectively wiped out. It remains the largest stablecoin failure on record and the canonical example of an algorithmic peg breaking.",
+        "By 2022-05-13 the system had unwound completely. LUNA's supply had hyperinflated by orders of magnitude, the chain had been halted to protect what remained, and UST's roughly $18.7B peak was effectively wiped out. It remains the largest stablecoin failure on record and the canonical example of an algorithmic peg breaking.",
         "Pharos does not surface UST on a public coin page, but it preserves the asset's historical price and supply series as a shadow record so the collapse continues to inform the Pharos Stability Index calibration.",
       ],
     },
@@ -111,7 +111,7 @@ export const content: CaseStudy = {
       heading: "Contagion",
       paragraphs: [
         "Terra was deeply wired into the rest of crypto, so the collapse did not stay contained. As redemptions spiked on 2022-05-12, even the largest fiat-backed stablecoin wobbled: USDT briefly traded near $0.95 on some venues before market makers arbitraged it back to par. The deviation was shallow and short-lived, but it showed how a single algorithmic failure can stress otherwise unrelated, reserve-backed assets.",
-        "Crypto-collateralized stablecoins took direct damage. MIM, the Abracadabra CDP stablecoin, fell to roughly $0.93 in the same window as collateral values and confidence dropped together. The shock then propagated into leveraged credit: several large lenders and funds carrying Terra exposure or correlated positions failed in the weeks and months that followed.",
+        "Crypto-collateralized stablecoins took direct damage. MIM, the Abracadabra CDP stablecoin, wobbled to roughly $0.98 during the Terra window as collateral values and confidence dropped together, then suffered a deeper break in later June stress. The shock then propagated into leveraged credit: several large lenders and funds carrying Terra exposure or correlated positions failed in the weeks and months that followed.",
         "The episode reset how the market and regulators viewed stablecoin risk. It drew a sharp line between assets backed by liquid reserves and assets backed by their own reflexivity, and it became the reference case in subsequent stablecoin rulemaking and risk frameworks.",
       ],
     },

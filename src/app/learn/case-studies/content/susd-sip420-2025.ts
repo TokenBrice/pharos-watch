@@ -18,7 +18,7 @@ export const content: CaseStudy = {
   lead: [
     "sUSD is Synthetix's crypto-collateralized dollar: a CDP-style stablecoin minted against staked SNX. For most of its life the peg was defended by a simple reflexive loop — each staker carried their own share of the system's sUSD debt, so whenever sUSD traded below a dollar, those stakers had a direct incentive to buy it back cheap and burn it to close their position at a discount. That individual arbitrage, repeated across thousands of stakers, was the mechanism that pulled the price back to par.",
     "In 2025 a governance proposal, SIP-420, deliberately dismantled that loop. It moved nearly all individual debt into a single protocol-owned pool and dropped the minting ratio for the pool to 200%, far below the several-hundred-percent ratios solo stakers had carried. The intent was capital efficiency and simpler staking. The side effect was that debt was no longer personal: a staker who deposited into the pool had their obligation forgiven over twelve months and no longer had a reason to defend the peg with their own balance sheet. The phrase that captures it is \"it's not your debt anymore.\"",
-    "With the repeg incentive severed and the lower ratio making minting cheap, sUSD oversupplied. It slid to roughly $0.68 in April 2025 when the change took effect, and kept grinding down to an all-time low near $0.21 in August — an ~80% drawdown — while its float stubbornly stayed alive around the low-30-millions. This is the lesson none of the other studies on Pharos cover: a live CDP can be depegged by its own governance, and the fix is slow because the thing that broke was an incentive, not a contract.",
+    "With the repeg incentive severed and the lower ratio making minting cheap, sUSD oversupplied. It slid to roughly $0.664 in April 2025 when the change took effect, and kept grinding down to an all-time low near $0.21 in August — an ~80% drawdown — while its float stubbornly stayed alive around the low-30-millions. This is the lesson none of the other studies on Pharos cover: a live CDP can be depegged by its own governance, and the fix is slow because the thing that broke was an incentive, not a contract.",
   ],
   takeaways: [
     "This was a self-inflicted governance depeg, not a hack or an insolvency: SIP-420 pooled per-staker debt and dropped the minting ratio to 200%, and sUSD lost its peg as a direct consequence of the vote.",
@@ -46,8 +46,8 @@ export const content: CaseStudy = {
     },
     {
       dateISO: "2025-04-18",
-      headline: "The 420 Pool goes live; sUSD slides toward $0.68",
-      body: "As the pooled-debt model takes effect, sUSD breaks down to roughly $0.68 — a ~31% deviation — with intraday prints lower still. Synthetix launches the 420 Pool the same day, offering 5 million SNX over twelve months to stakers who lock sUSD, the first of the demand-side measures. Day one draws roughly 100 million SNX in deposits.",
+      headline: "The 420 Pool goes live; sUSD slides toward $0.664",
+      body: "As the pooled-debt model takes effect, sUSD breaks down to roughly $0.664 — a ~34% deviation — with intraday prints lower still. Synthetix launches the 420 Pool the same day, offering 5 million SNX over twelve months to stakers who lock sUSD, the first of the demand-side measures.",
       severity: "high",
       href: "https://cointelegraph.com/news/synthetic-usd-stablecoin-fall-new-lows-depeg",
     },
@@ -76,7 +76,7 @@ export const content: CaseStudy = {
       heading: "What happened",
       paragraphs: [
         "sUSD is minted against staked SNX, which makes it a collateralized debt position in the same family as Dai or crvUSD — value comes from over-collateralized backing, not from a bank reserve or a delta-neutral hedge. Through 2025 nothing went wrong with that backing in the conventional sense. There was no exploit, no oracle failure, and no insolvency event in which collateral fell short of the debt it secured. The coin simply stopped trading at a dollar and stayed there.",
-        "The proximate cause was a vote. SIP-420 restructured how Synthetix carries debt: instead of each SNX staker owning a personal slice of the system's outstanding sUSD, the protocol pooled that debt into a single contract it owns and manages, and lowered the issuance ratio for the pool to 200%. sUSD broke toward $0.68 as the change took effect in April, oversupplied through the summer, and reached an all-time low near $0.21 in August. The discount has been narrowing since, but a year on the coin is still below par — wounded rather than dead, with its supply intact.",
+        "The proximate cause was a vote. SIP-420 restructured how Synthetix carries debt: instead of each SNX staker owning a personal slice of the system's outstanding sUSD, the protocol pooled that debt into a single contract it owns and manages, and lowered the issuance ratio for the pool to 200%. sUSD broke toward $0.664 as the change took effect in April, oversupplied through the summer, and reached an all-time low near $0.21 in August. The discount has been narrowing since, but a year on the coin is still below par — wounded rather than dead, with its supply intact.",
       ],
     },
     {

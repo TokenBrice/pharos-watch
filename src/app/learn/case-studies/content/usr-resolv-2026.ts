@@ -58,7 +58,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2026-04-27",
       headline: "USR frozen",
-      body: "With liabilities exceeding assets and no path back to par, USR is frozen. Pharos records the asset as deceased under counterparty failure, peak market cap roughly $586M.",
+      body: "With liabilities exceeding assets and no path back to par, USR is frozen. Pharos records the asset as deceased under counterparty failure; public market-cap context was closer to the low hundreds of millions, while broader protocol asset/TVL figures were higher.",
       severity: "high",
     },
   ],

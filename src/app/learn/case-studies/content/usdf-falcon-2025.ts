@@ -25,7 +25,7 @@ export const content: CaseStudy = {
     },
     {
       coinId: "usr-resolv",
-      note: "The died peer. Resolv's USR was decommissioned after a compromised mint key issued tokens against no collateral — a mechanism-level solvency failure. USDf stayed solvent throughout; its backing was real but unseen. The contrast isolates the variable: USR lost the collateral, USDf only lost the ability to prove it in real time.",
+      note: "The died peer. Resolv's USR was frozen after a compromised mint key issued tokens against no collateral — a mechanism-level solvency failure. USDf stayed solvent throughout; its backing was real but unseen. The contrast isolates the variable: USR lost the collateral, USDf only lost the ability to prove it in real time.",
     },
   ],
   archetype: "synthetic-delta-neutral",
@@ -103,7 +103,7 @@ export const content: CaseStudy = {
       paragraphs: [
         "The instinctive read is that transparency is a governance virtue — nice to have, orthogonal to whether the peg holds. USDf shows it is a peg input in the literal sense. The same backing, at the same overcollateralization ratio, trades at a different price depending on whether holders can verify and reach it. A 116% claim that cannot be independently checked, redeemed against on demand, or seen on-chain is worth less than backing a holder can confirm — and that difference shows up directly in the secondary-market price.",
         "This is why Pharos does not score a synthetic dollar on its collateral ratio alone. The reserve-transparency and redemption surfaces are first-class inputs: where the backing is custodied, how current the attestation is, whether composition is fully disclosed, and how fast and to whom primary redemption is open. A coin with strong real-time on-chain proof and open redemption earns a structurally tighter band than one whose backing is real but only visible through a delayed off-chain report — even when the dollar value of the collateral is identical.",
-        "The mirror image is informative. When USDe printed to ~$0.65 in October 2025, holders could point to a live transparency dashboard and a primary mint-and-redeem channel clearing at par, which is much of why that deviation was correctly read as a venue artifact and mean-reverted within the hour. USDf had neither lever fully available during its stress, so a milder fundamental scare produced a deeper and slower-healing deviation. Visibility and redeemability are not the same property as solvency, but under stress they price like they are.",
+        "The mirror image is informative. When USDe printed to ~$0.65 in October 2025, holders could point to a live transparency dashboard and a primary mint-and-redeem channel clearing at par, which is much of why that deviation was correctly read as a venue artifact and mean-reverted within hours. USDf had neither lever fully available during its stress, so a milder fundamental scare produced a deeper and slower-healing deviation. Visibility and redeemability are not the same property as solvency, but under stress they price like they are.",
       ],
     },
     {

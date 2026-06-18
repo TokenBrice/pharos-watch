@@ -7,7 +7,7 @@ export const content: CaseStudy = {
   subtitle:
     "EURT never broke its euro peg. In November 2024 Tether simply withdrew it rather than pursue MiCA authorization — the first wave of EU rules retired a non-dollar stablecoin instead of cracking it.",
   lead: [
-    "Euro Tether tracked the euro, not the dollar. EURT was a fiat-backed token meant to redeem one-for-one against a euro reserve, and for most of its life it did exactly that — its deviation, where it mattered, was measured against one EUR, not one USD. The coin reached a peak circulation worth roughly $324M, but it had been shrinking for years: Tether stopped accepting new issuance requests after 2022, and by late 2024 only about $27M remained outstanding against larger euro rivals.",
+    "Euro Tether tracked the euro, not the dollar. EURT was a fiat-backed token meant to redeem one-for-one against a euro reserve, and for most of its life it did exactly that — its deviation, where it mattered, was measured against one EUR, not one USD. The coin reached low-hundreds-of-millions circulation on Pharos and secondary summaries put its peak above $500M, but it had been shrinking for years: Tether stopped accepting new issuance requests after 2022, and by late 2024 only about $27M remained outstanding against larger euro rivals.",
     "What ended EURT was not a run, a reserve gap, or a liquidity crisis. It was a jurisdiction. The EU's Markets in Crypto-Assets regulation (MiCA) brought its rules for e-money tokens into application on 30 June 2024, and under those rules a euro-pegged stablecoin can only be issued by an EU-authorized credit or electronic-money institution. Tether held no such authorization for EURT and chose not to seek one. On 27 November 2024 it announced it would discontinue support for EUR₮ on every chain, stop minting, and give holders a one-year window to redeem.",
     "This is a different shape of death from the depeg cases in this archive. The peg held to the end; the coin was simply withdrawn from the market. EURT is the cleanest example of a structurally sound stablecoin retired by regulation rather than by price — and a reminder that for a non-dollar peg, the terminal risk is often which regulator claims the currency, not whether the reserve is real. The MiCA-compliant euro lane it vacated passed to Circle's EURC and Monerium's EURe.",
   ],
@@ -37,9 +37,9 @@ export const content: CaseStudy = {
   cemeteryId: "eurt-euro-tether-2024-11",
   timeline: [
     {
-      dateISO: "2021-11-01",
+      dateISO: "2022-07-01",
       headline: "EURT circulates as the leading euro stablecoin",
-      body: "Tether's euro token had been live since 2016 and, after a 2021 expansion onto additional chains, briefly led the small euro-stablecoin segment with circulation worth roughly $324M at its peak. It was a conventional fiat-backed design: redeem one EURT for one euro from reserves.",
+      body: "Tether's euro token had been live since 2016 and, after a 2021 expansion onto additional chains, led the small euro-stablecoin segment through 2022. Pharos records low-hundreds-of-millions circulation and secondary market summaries put the peak above $500M. It was a conventional fiat-backed design: redeem one EURT for one euro from reserves.",
       severity: "low",
     },
     {
@@ -86,7 +86,7 @@ export const content: CaseStudy = {
     {
       heading: "What happened",
       paragraphs: [
-        "EURT was Tether's euro-denominated stablecoin, structurally a sibling of USDT: a fiat-backed token redeemable one-for-one against a reserve, with its peg referenced to one euro rather than one dollar. It launched in 2016, expanded across more chains in 2021, and at its high point carried circulation worth around $324M — modest by USDT standards but enough to lead the thin euro-stablecoin segment for a stretch.",
+        "EURT was Tether's euro-denominated stablecoin, structurally a sibling of USDT: a fiat-backed token redeemable one-for-one against a reserve, with its peg referenced to one euro rather than one dollar. It launched in 2016, expanded across more chains in 2021, and at its high point carried circulation in the low hundreds of millions on Pharos, with secondary market summaries placing the broader peak above $500M — modest by USDT standards but enough to lead the thin euro-stablecoin segment for a stretch.",
         "By the time regulation forced a decision, EURT was already a legacy product. Tether had stopped accepting new issuance requests after 2022, so the float only ever shrank from there, falling to roughly $27M outstanding by late 2024 — well behind Circle's EURC and other euro rivals. The coin was not in distress; it was simply small and getting smaller.",
         "On 27 November 2024 Tether announced it would discontinue support for EUR₮ on every supported chain, stop minting, and let holders redeem over the following year. Crucially, the euro peg held the entire time. There was no deviation event to record, no reserve shortfall, no run. EURT left the market the way a discontinued product line does — by being withdrawn — and its redemptions closed about a year later.",
       ],
@@ -141,6 +141,10 @@ export const content: CaseStudy = {
     {
       label: "CoinDesk — Tether to Shutter Euro Stablecoin (EURT) as Key MiCA Deadline Looms",
       href: "https://www.coindesk.com/business/2024/11/27/tether-to-shutter-euro-stablecoin-as-key-mi-ca-deadline-looms",
+    },
+    {
+      label: "CoinMarketCap Academy — Tether to phase out EURT amid regulatory challenges",
+      href: "https://coinmarketcap.com/academy/article/tether-to-phase-out-euro-backed-stablecoin-eurt-amid-regulatory-challenges",
     },
     {
       label: "ESMA — Markets in Crypto-Assets Regulation (MiCA)",

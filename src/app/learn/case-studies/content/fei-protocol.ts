@@ -9,7 +9,7 @@ export const content: CaseStudy = {
   lead: [
     "Fei Protocol launched in April 2021 as one of the most heavily funded experiments in decentralized stablecoin design. Its genesis event drew roughly 639,000 ETH (about $1.3B at the time), and the asset arrived with a novel pitch: instead of holding fiat in a bank or over-collateralizing with volatile crypto, FEI would defend its dollar peg through a combination of bonding curves, algorithmic reweights, and a pool of Protocol Controlled Value (PCV) the protocol itself owned and managed.",
     "The defense mechanism was called direct incentives. Selling FEI below a dollar triggered a burn penalty that scaled with the size of the deviation, while buying back toward the peg earned a reward. The intent was to make running for the exit expensive enough that the peg would self-correct. In practice the design inverted: FEI traded below a dollar almost immediately, the burn penalty trapped holders who wanted out, and each algorithmic reweight became the single best moment to dump, restarting the slide.",
-    "Fei survived the launch shock and eventually clawed back to parity, then removed direct incentives entirely in a V2 redesign. But the deeper problem, that PCV is not the same thing as guaranteed redeemability, was never fully resolved. After Fei merged with Rari Capital to form Tribe DAO and an $80M reentrancy exploit drained the merged lending markets in April 2022, governance fractured. By August 2022, in the aftermath of Terra's collapse, Tribe DAO voted to wind the project down. The asset was effectively abandoned.",
+    "Fei survived the launch shock and eventually clawed back to parity, then removed direct incentives entirely in a V2 redesign. But the deeper problem, that PCV is not the same thing as guaranteed redeemability, was never fully resolved. After Fei merged with Rari Capital to form Tribe DAO and an $80M reentrancy exploit drained the merged lending markets in April 2022, governance fractured. In August 2022, in the aftermath of Terra's collapse, Fei Labs proposed winding the project down; by late September, the redemption path was active and the asset was effectively abandoned.",
   ],
   takeaways: [
     "Reflexive incentives are fragile peg defenses: FEI's burn penalty on sub-peg sells trapped holders instead of creating buyers, and each algorithmic reweight became the best moment to dump — it depegged to ~$0.73 within days of launch.",
@@ -22,7 +22,7 @@ export const content: CaseStudy = {
   eventDateLabel: "2021–2022",
   eventWindow: {
     startISO: "2021-04-03",
-    endISO: "2022-08-31",
+    endISO: "2022-09-22",
     lowPrice: 0.73,
   },
   cemeteryId: "fei-fei-usd-2022-08",
@@ -60,10 +60,17 @@ export const content: CaseStudy = {
     },
     {
       dateISO: "2022-08-19",
-      headline: "Tribe DAO votes to wind down and redeem FEI for DAI",
-      body: "Citing mounting technical, financial, and regulatory risk in the post-Terra climate, Fei Labs proposed dissolving Tribe DAO. FEI holders would redeem one-to-one for DAI and remaining PCV would be distributed pro rata to TRIBE holders. The plan, contentious over partial hack reimbursement, passed; the asset was effectively abandoned by month's end.",
+      headline: "Fei Labs proposes a wind-down",
+      body: "Citing mounting technical, financial, and regulatory risk in the post-Terra climate, Fei Labs proposed dissolving Tribe DAO. The proposal sketched one-to-one FEI redemption for DAI, pro rata PCV distribution to TRIBE holders, and a contentious compromise over Rari hack reimbursement.",
       severity: "high",
       href: "https://www.axios.com/2022/08/25/algorithmic-stablecoin-tribedao-fei",
+    },
+    {
+      dateISO: "2022-09-22",
+      headline: "Redemption plan passes and the protocol enters wind-down",
+      body: "After another round of governance, Tribe DAO moved ahead with hack repayment and the wind-down path. FEI became redeemable one-to-one for DAI, TRIBE holders could redeem against remaining PCV, and most protocol functions were effectively suspended.",
+      severity: "high",
+      href: "https://blockworks.co/news/fei-flips-again-repays-crypto-hack-victims",
     },
   ],
   sections: [
@@ -88,7 +95,7 @@ export const content: CaseStudy = {
       paragraphs: [
         "Fei removed direct incentives in its V2 redesign in late 2021 and made FEI redeemable one-to-one against PCV, a meaningful move toward genuine backing. It then merged with Rari Capital to form Tribe DAO, binding the stablecoin's treasury and governance to Rari's Fuse lending pools.",
         "On 30 April 2022 an attacker exploited a reentrancy bug in those pools, a variant of the long-known Compound-fork vulnerability, re-entering through the exitMarket() function that an earlier patch had left unprotected. Roughly $80M was drained. A $10M bounty went unanswered as the proceeds were laundered, leaving Tribe DAO to decide who would bear the loss.",
-        "That decision split the community. An initial vote to fully repay depositors was overridden, and the reimbursement fight bled into the broader collapse of confidence after Terra. In August 2022 Tribe DAO voted to wind down: FEI holders would redeem one-to-one for DAI and remaining assets would be distributed to TRIBE holders. The protocol that raised $1.3B to reinvent the stablecoin chose to dissolve itself. The on-chain unwind and contract closures stretched on well past the vote.",
+        "That decision split the community. An initial vote to fully repay depositors was overridden, and the reimbursement fight bled into the broader collapse of confidence after Terra. In August 2022 Fei Labs proposed a wind-down, and by late September Tribe DAO had moved ahead with redemption: FEI holders could redeem one-to-one for DAI and remaining assets would be distributed to TRIBE holders. The protocol that raised $1.3B to reinvent the stablecoin chose to dissolve itself. The on-chain unwind and contract closures stretched on well past the vote.",
       ],
     },
     {
@@ -136,6 +143,10 @@ export const content: CaseStudy = {
     {
       label: "The Defiant — Fei Community Up In Arms Over Dissolution Plan",
       href: "https://thedefiant.io/news/defi/fei-shutdown-uproar",
+    },
+    {
+      label: "Blockworks — Fei flips again, repays crypto hack victims",
+      href: "https://blockworks.co/news/fei-flips-again-repays-crypto-hack-victims",
     },
   ],
   metaDescription:

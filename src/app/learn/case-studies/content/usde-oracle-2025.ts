@@ -51,7 +51,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2025-10-11",
       headline: "Primary redemption absorbs the run; print recovers",
-      body: "Ethena's mint-and-redeem channel cleared at one dollar as supply fell sharply, with the protocol reporting roughly $2 billion redeemed within about 24 hours — and redemption capacity reaching ~$6 billion almost immediately — without basis positions needing to be unwound. Independent attestors reported USDe remained overcollateralized by roughly $66 million across the event.",
+      body: "Ethena's mint-and-redeem channel cleared at one dollar as supply fell sharply: the protocol reported roughly $2 billion redeemed within about 24 hours, and supply moved from roughly $9 billion toward $6 billion almost immediately, without basis positions needing to be unwound. Independent attestors reported USDe remained overcollateralized by roughly $66 million across the event.",
       severity: "med",
     },
     {
@@ -76,7 +76,7 @@ export const content: CaseStudy = {
       paragraphs: [
         "A peg break and a venue print look similar on a single chart and behave nothing alike underneath. A genuine peg break is a backing problem: it appears across venues at once, primary redemption either halts or clears below par, and the deviation persists until reserves are restored or the asset is retired. The 2023 USDC episode is the reference case — the deviation was global and redemption was effectively paused over a weekend until the reserve shortfall was backstopped.",
         "October 2025 was the inverse on every axis. The deviation was local to one order book; the deepest pools stayed within about a percent of par; and Ethena's primary mint-and-redeem channel cleared at a dollar the entire time, absorbing billions in outflows. A holder who could reach primary redemption or a deep venue never faced a 35-cent loss; only accounts marked against the distressed local index did.",
-        "Pharos encodes exactly this separation. PegScore reads price stability across the venues a coin actually trades on, and DEWS is built to flag sustained, structural deviation rather than a single-venue spike that mean-reverts within the hour. Treating the $0.65 tick as a peg break would overstate the event; treating it as nothing would understate a real, if exogenous, stress on holders who used USDe as exchange collateral.",
+        "Pharos encodes exactly this separation. PegScore reads price stability across the venues a coin actually trades on, and DEWS is built to flag sustained, structural deviation rather than a single-venue spike that mean-reverts within hours. Treating the $0.65 tick as a peg break would overstate the event; treating it as nothing would understate a real, if exogenous, stress on holders who used USDe as exchange collateral.",
       ],
     },
     {

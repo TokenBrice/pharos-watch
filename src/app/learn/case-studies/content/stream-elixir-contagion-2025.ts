@@ -9,7 +9,7 @@ export const content: CaseStudy = {
   lead: [
     "Stream Finance's xUSD was a yield-bearing synthetic dollar in the delta-neutral mold: deposits were handed to an external manager who ran hedged positions and recycled the proceeds back into an on-chain token holders could lend, borrow against, and re-deposit. The marketing leaned on DeFi's usual promises — transparency, composability, programmable yield — while the engine that produced the yield sat off-chain, inside a single manager's trading book with no multisig, no published custody, and no real-time attestation of what backed each xUSD.",
     "That gap mattered because xUSD was not held; it was levered. Across Morpho, Euler, and Silo, third-party curators built isolated vaults where users supplied USDC against xUSD collateral, and the borrowed USDC was looped back into more xUSD — a recursive structure that inflated the token's apparent footprint far beyond its real backing. The lending markets pricing this collateral did not mark xUSD to its traded value. They read a hardcoded $1, which meant that when the real price fell, the liquidation machinery that should have unwound the loans never fired.",
-    "On 10 October 2025 an ETH crash liquidated the manager's leveraged positions, and on 4 November Stream disclosed roughly $93M in losses and froze withdrawals. xUSD fell about 77% toward $0.26, stranding around $160M of deposits. The hole then propagated outward through the collateral graph: Elixir's deUSD, which had lent roughly 65% of its backing to Stream, collapsed near 98% to about $0.015 and was wound down, and Stables Labs' USDX broke below $0.60 days later. Researchers traced roughly $285M of interconnected debt across the affected vaults; lenders froze markets and roughly $1B exited DeFi yield within a week. None of the three coins recovered.",
+    "On 10 October 2025 an ETH crash liquidated the manager's leveraged positions, and on 4 November Stream disclosed roughly $93M in losses and froze withdrawals. xUSD initially fell about 77% toward a 24-hour low near $0.26, stranding around $160M of deposits. The hole then propagated outward through the collateral graph: Elixir's deUSD, which had lent roughly 65% of its backing to Stream, collapsed near 98% to about $0.015 and was wound down, and Stables Labs' USDX broke below $0.60 days later. Researchers traced roughly $285M of interconnected debt across the affected vaults; lenders froze markets and roughly $1B exited DeFi yield within a week. None of the three coins recovered.",
   ],
   takeaways: [
     "A ~$93M off-chain trading loss at Stream Finance broke three stablecoins — xUSD, deUSD, and USDX — and exposed ~$285M of interconnected DeFi debt.",
@@ -22,7 +22,7 @@ export const content: CaseStudy = {
   eventDateLabel: "November 2025",
   eventWindow: {
     startISO: "2025-11-04",
-    endISO: "2025-11-07",
+    endISO: "2025-11-08",
     peakDeviationBps: -7700,
     lowPrice: 0.26,
   },
@@ -37,7 +37,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2025-11-04",
       headline: "Stream discloses ~$93M loss and halts withdrawals",
-      body: "Stream Finance announced roughly $93M of losses attributed to an external fund manager, suspended all deposits and redemptions, and engaged outside counsel for an investigation. xUSD fell about 77% from $1 toward $0.26 within a day, freezing on the order of $160M of user deposits.",
+      body: "Stream Finance announced roughly $93M of losses attributed to an external fund manager, suspended all deposits and redemptions, and engaged outside counsel for an investigation. xUSD fell about 77% from $1 toward a 24-hour low near $0.26, freezing on the order of $160M of user deposits.",
       severity: "high",
       href: "https://www.coindesk.com/markets/2025/11/04/stream-finance-faces-usd93-million-loss-launches-legal-investigation",
     },
@@ -48,7 +48,7 @@ export const content: CaseStudy = {
       severity: "high",
     },
     {
-      dateISO: "2025-11-05",
+      dateISO: "2025-11-06",
       headline: "Elixir's deUSD collapses to ~$0.015",
       body: "Elixir had lent roughly 65% of deUSD's backing — about $68M — to Stream through private Morpho vaults. With that collateral impaired, deUSD broke from its peg and fell near 98% to about $0.015. Elixir halted minting and redemption and moved to wind the asset down, pledging 1:1 redemption for pre-event holders via a claims process.",
       severity: "high",
@@ -71,7 +71,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2025-12-08",
       headline: "Lawsuit alleges misappropriation",
-      body: "A subsequent lawsuit filed by Stream's entity alleged that the manager had used protocol assets to cover personal trading losses after the October liquidation, rather than a market loss alone. The legal record remains contested; Pharos records xUSD as deceased under counterparty failure and does not adjudicate the alleged intent.",
+      body: "A subsequent lawsuit filed by Stream's entity alleged that named parties tied to the external manager and trader used protocol assets to cover personal trading losses after the October liquidation, rather than a market loss alone. The legal record remains contested; Pharos records xUSD as deceased under counterparty failure and does not adjudicate the alleged intent.",
       severity: "med",
     },
   ],
@@ -80,7 +80,7 @@ export const content: CaseStudy = {
       heading: "What happened",
       paragraphs: [
         "Stream Finance issued xUSD as a yield-bearing synthetic dollar. Deposits funded positions run by an external fund manager, and the returns were packaged into an on-chain token that could be lent, borrowed against, and re-deposited across DeFi. The hedge and the trading book lived off-chain, behind a single manager, with no multisig over the capital, no published custody arrangement, and no live attestation tying circulating xUSD to verifiable backing.",
-        "On 10 October 2025 a sharp ETH decline liquidated that off-chain book. The loss was real immediately but invisible on-chain for weeks, because the lending markets holding xUSD priced it at a fixed $1. On 4 November Stream disclosed roughly $93M of losses, halted withdrawals, and opened an investigation; xUSD fell about 77% toward $0.26 and stranded on the order of $160M of deposits. A separate Balancer exploit the same week added noise, but the trigger was the trading loss, not a smart-contract hack.",
+        "On 10 October 2025 a sharp ETH decline liquidated that off-chain book. The loss was real immediately but invisible on-chain for weeks, because the lending markets holding xUSD priced it at a fixed $1. On 4 November Stream disclosed roughly $93M of losses, halted withdrawals, and opened an investigation; xUSD fell about 77% toward a 24-hour low near $0.26 and stranded on the order of $160M of deposits. A separate Balancer exploit the same week added noise, but the trigger was the trading loss, not a smart-contract hack.",
         "The failure did not stay inside Stream. Because xUSD had been re-hypothecated as collateral across protocols, the hole propagated through the collateral graph: Elixir's deUSD, roughly 65% backed by loans to Stream, collapsed near 98% to about $0.015 and was wound down, and Stables Labs' USDX broke below $0.60 within days. Analysts mapped roughly $285M of interconnected debt; lenders froze markets and roughly $1B left DeFi yield products in a week.",
       ],
     },

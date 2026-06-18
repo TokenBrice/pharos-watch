@@ -33,10 +33,11 @@ export const content: CaseStudy = {
   },
   timeline: [
     {
-      dateISO: "2023-08-01",
+      dateISO: "2023-07-13",
       headline: "Antecedent: Bluechip assigns USDD its lowest grade",
       body: "Before the Bitcoin episode, the stablecoin-rating firm Bluechip rated USDD at the bottom of its stability scale, citing heavy reliance on TRX and weak transparency. The critique that would define the 2024 controversy was already on record.",
       severity: "low",
+      href: "https://bluechip.org/en/news/stablecoin-rating-platform-bluechip-launches",
     },
     {
       dateISO: "2024-08-19",
@@ -134,6 +135,18 @@ export const content: CaseStudy = {
     {
       label: "Decrypt — Justin Sun's USDD Stablecoin Loses Bitcoin Backing",
       href: "https://decrypt.co/246054/justin-suns-usdd-stablecoin-loses-bitcoin-backing",
+    },
+    {
+      label: "Bluechip — Stablecoin rating platform launch, including USDD rating context",
+      href: "https://bluechip.org/en/news/stablecoin-rating-platform-bluechip-launches",
+    },
+    {
+      label: "CryptoRank — TRON DAO loses Bitcoin backing",
+      href: "https://cryptorank.io/news/feed/6363d-tron-dao-loses-bitcoin-backing",
+    },
+    {
+      label: "Protos — Justin Sun's USDD removes 12,000 BTC without DAO approval",
+      href: "https://protos.com/justin-suns-usdd-removes-12000-btc-without-dao-approval/",
     },
     {
       label: "Messari — USDD One Year After 2.0: Yield, Peg Stability, and Multichain Execution",

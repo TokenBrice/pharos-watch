@@ -50,7 +50,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2020-03-19",
       headline: "MKR debt auction recapitalizes the protocol",
-      body: "With the buffer exhausted, Maker triggered debt auctions: newly minted MKR sold for Dai, diluting MKR holders to cover the shortfall. Lots opened at 250 MKR per 50,000 Dai (~200 Dai/MKR); the auctions raised over 5M Dai, with Paradigm winning roughly 68% of the MKR sold.",
+      body: "With the buffer exhausted, Maker triggered debt auctions: newly minted MKR sold for Dai, diluting MKR holders to cover the shortfall. Lots opened at 250 MKR per 50,000 Dai (~200 Dai/MKR); the auctions raised about 4.3M Dai across roughly 86 auctions, with Paradigm winning roughly 68% of the MKR sold.",
       severity: "med",
     },
     {
@@ -86,7 +86,7 @@ export const content: CaseStudy = {
       heading: "How the CDP design recovered",
       paragraphs: [
         "Crucially, Maker did not need an emergency shutdown. The protocol already had a recapitalization path written into its mechanism: when collateral auctions fail to cover a vault's debt and the Dai buffer is empty, the system triggers a debt auction. Debt auctions mint new MKR and sell it for Dai, deliberately diluting MKR holders — the governance token absorbs losses that the stablecoin holders should not.",
-        "Starting 2020-03-19, those auctions opened at 250 MKR per 50,000 Dai and raised over 5M Dai, enough to close the shortfall, with Paradigm taking roughly 68% of the MKR sold. The MKR-as-backstop design did exactly what it was meant to do: it kept Dai whole at the cost of MKR dilution.",
+        "Starting 2020-03-19, those auctions opened at 250 MKR per 50,000 Dai and raised about 4.3M Dai across roughly 86 auctions, with Paradigm taking roughly 68% of the MKR sold. The MKR-as-backstop design did exactly what it was meant to do: it kept Dai whole at the cost of MKR dilution.",
         "The structural fixes that followed were as important as the recapitalization. Maker overhauled its collateral-auction system (eventually replacing the old Flip English auctions with the instant-settling Clip Dutch-auction model), lengthened oracle update windows, added circuit breakers, and broadened the keeper ecosystem. The lesson was specific: a CDP can be perfectly overcollateralized on paper and still fail if its liquidation venue cannot function under congestion.",
       ],
     },
@@ -131,6 +131,10 @@ export const content: CaseStudy = {
     {
       label: "Whiterabbit — Black Thursday for MakerDAO: $8.32M liquidated for 0 DAI",
       href: "https://medium.com/@whiterabbit_hq/black-thursday-for-makerdao-8-32-million-was-liquidated-for-0-dai-36b83cac56b6",
+    },
+    {
+      label: "Modern Consensus — MakerDAO debt auction raises about 4.3M Dai",
+      href: "https://modernconsensus.com/cryptocurrencies/makerdao-debt-auction-achieves-its-goal-late-bidders-reap-reward/",
     },
     {
       label: "Cointelegraph — Maker debt-crisis post-mortem recommends new safeguards",

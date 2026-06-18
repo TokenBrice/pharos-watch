@@ -23,7 +23,8 @@ export const content: CaseStudy = {
   eventWindow: {
     startISO: "2021-06-16",
     endISO: "2021-06-17",
-    lowPrice: 0.0,
+    peakDeviationBps: -2600,
+    lowPrice: 0.74,
   },
   cemeteryId: "iron-iron-2021-06",
   timeline: [

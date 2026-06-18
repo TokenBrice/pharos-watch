@@ -56,7 +56,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2024-02-22",
       headline: "QiDao settles the last bad debt; recovery is partial",
-      body: "QiDao's community voted to burn treasury assets to cover the remaining bad debt, settling roughly $668K on Polygon via buy-and-burn. The token still traded near $0.88 at settlement. The peg recovered toward par over the following period, but liquidity stayed fragmented and some chain-specific MAI representations continued to trade well below a dollar.",
+      body: "QiDao's community voted to burn treasury assets to cover the remaining bad debt, settling roughly $668K on Polygon via buy-and-burn. The token still traded near $0.88 at settlement — a point-in-time print, while Messari's broader Q1 average was much lower near $0.53. The peg recovered toward par over the following period, but liquidity stayed fragmented and some chain-specific MAI representations continued to trade well below a dollar.",
       severity: "low",
       href: "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/",
     },
