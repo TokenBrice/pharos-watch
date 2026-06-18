@@ -43,7 +43,7 @@ export const handleAdminActionLog = makeAdminRoute(
       target: r.target,
       result: r.result,
       httpStatus: r.http_status,
-      details: safeJsonParse<unknown>(r.details_json, null),
+      details: safeJsonParse<unknown>(r.details_json, null, `admin-action-log:${r.id}:details_json`),
     }));
     return jsonResponse({ entries });
   },

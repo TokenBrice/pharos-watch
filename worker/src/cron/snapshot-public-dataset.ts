@@ -349,7 +349,11 @@ export async function snapshotPublicDataset(
       computedAt: psiRow.computed_at,
       score: psiRow.score,
       band: psiRow.band,
-      components: safeJsonParse<Record<string, unknown> | null>(psiRow.components, null),
+      components: safeJsonParse<Record<string, unknown> | null>(
+        psiRow.components,
+        null,
+        `snapshot-public-dataset:psi:${snapshotDate}:components`,
+      ),
       methodologyVersion: psiRow.methodology_version ?? methodologyVersions.psi,
     },
     dews: stressRows.map((row) => ({
@@ -357,7 +361,11 @@ export async function snapshotPublicDataset(
       computedAt: row.computed_at,
       score: row.score,
       band: row.band,
-      signals: safeJsonParse<Record<string, unknown> | null>(row.signals_json, null),
+      signals: safeJsonParse<Record<string, unknown> | null>(
+        row.signals_json,
+        null,
+        `snapshot-public-dataset:dews:${row.stablecoin_id}:${row.computed_at}:signals_json`,
+      ),
     })),
     liquidity: dexRows.map((row) => ({
       stablecoinId: row.stablecoin_id,

@@ -100,8 +100,11 @@ const ALLOWED_EXTRA_KEYS = new Set<string>([
   "orderbookDepthUsd", "orderbookDepthUpUsd", "orderbookTvlBasis",
 ]);
 
-export function normalizeTopPools(json: string | null): DexLiquidityPoolResponse[] {
-  const parsed = safeJsonParse<unknown>(json, []);
+export function normalizeTopPools(
+  json: string | null,
+  context = "dex-liquidity-response:top_pools_json",
+): DexLiquidityPoolResponse[] {
+  const parsed = safeJsonParse<unknown>(json, [], context);
   if (!Array.isArray(parsed)) return [];
 
   const pools: DexLiquidityPoolResponse[] = [];

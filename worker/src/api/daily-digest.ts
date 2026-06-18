@@ -22,7 +22,7 @@ export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1D
   }
 
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
-  const inputData = safeJsonParse(row.input_data, null);
+  const inputData = safeJsonParse(row.input_data, null, `daily-digest:${row.generated_at}:input_data`);
   const intelligence = selectDigestIntelligence(inputData);
 
   return jsonResponse({

@@ -96,7 +96,11 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   // Weekly recaps store WeeklyInputData (with a dailyDigests[] array) instead of
   // DigestInputData.  Detect that shape and extract the last daily's inputData as
   // the end-of-week snapshot, with the first daily as prevInputData for deltas.
-  const rawInputData = safeJsonParse<Record<string, unknown> | null>(targetRow.input_data, null);
+  const rawInputData = safeJsonParse<Record<string, unknown> | null>(
+    targetRow.input_data,
+    null,
+    `digest-snapshot:${targetRow.generated_at}:input_data`,
+  );
 
   let inputData: DigestInputData | null = null;
   let prevInputData: DigestInputData | null = null;
@@ -117,7 +121,11 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   } else {
     inputData = isDigestInputDataLike(rawInputData) ? rawInputData : null;
     const rawPrev = prevRow
-      ? safeJsonParse<unknown>(prevRow.input_data, null)
+      ? safeJsonParse<unknown>(
+          prevRow.input_data,
+          null,
+          `digest-snapshot:${prevRow.generated_at}:prev_input_data`,
+        )
       : null;
     prevInputData = isDigestInputDataLike(rawPrev) ? rawPrev : null;
   }

@@ -310,7 +310,11 @@ export const handleStressSignals = withErrorHandler(
 
       let malformedRows = 0;
       const currentParsed = latest
-        ? safeJsonParse<Record<string, unknown> | null>(latest.signals_json, null)
+        ? safeJsonParse<Record<string, unknown> | null>(
+            latest.signals_json,
+            null,
+            `stress-signals:${canonicalId}:current:signals_json`,
+          )
         : null;
       const currentUnwrapped = unwrapStressSignalsEnvelope(currentParsed);
       if (latest && currentUnwrapped == null) malformedRows++;
@@ -323,7 +327,11 @@ export const handleStressSignals = withErrorHandler(
       const currentStatus: StressSignalDataStatus = currentUnwrapped == null ? "unavailable" : "ok";
 
       const historyRows = history.results.map((r) => {
-        const parsed = safeJsonParse<Record<string, unknown> | null>(r.signals_json, null);
+        const parsed = safeJsonParse<Record<string, unknown> | null>(
+          r.signals_json,
+          null,
+          `stress-signals:${canonicalId}:${r.snapshot_date}:signals_json`,
+        );
         const unwrapped = unwrapStressSignalsEnvelope(parsed);
         if (unwrapped == null) {
           malformedRows++;
@@ -400,7 +408,11 @@ export const handleStressSignals = withErrorHandler(
         continue;
       }
       readableRows.add(row.stablecoin_id);
-      const parsed = safeJsonParse<Record<string, unknown> | null>(row.signals_json, null);
+      const parsed = safeJsonParse<Record<string, unknown> | null>(
+        row.signals_json,
+        null,
+        `stress-signals:${row.stablecoin_id}:${row.computed_at}:signals_json`,
+      );
       const unwrapped = unwrapStressSignalsEnvelope(parsed);
       if (unwrapped == null) {
         malformedRows++;

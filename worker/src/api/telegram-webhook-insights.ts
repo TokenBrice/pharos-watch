@@ -56,7 +56,11 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
     return "No digest brief is available yet.";
   }
 
-  const input = safeJsonParse<DigestInputData | null>(row.input_data, null);
+  const input = safeJsonParse<DigestInputData | null>(
+    row.input_data,
+    null,
+    `telegram-webhook-insights:${row.generated_at}:input_data`,
+  );
   const lines = [
     `<b>Pharos Market Brief</b>`,
     row.digest_title ? `<b>${escapeHtml(row.digest_title)}</b>` : null,

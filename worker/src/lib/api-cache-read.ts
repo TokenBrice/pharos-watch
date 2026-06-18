@@ -45,7 +45,7 @@ export function resetCacheJsonParseFailureCountersForTests(): void {
   _cacheRead.reset();
 }
 
-export function safeJsonParse<T>(json: string | null | undefined, fallback: T, context = "safeJsonParse"): T {
+export function safeJsonParse<T>(json: string | null | undefined, fallback: T, context: string): T {
   if (json == null) return fallback;
   try {
     return JSON.parse(json) as T;

@@ -49,7 +49,11 @@ export const handleStatusProbeHistory = makeAdminRoute<AdminRouteContext>(
       .all<ProbeRunRow>();
 
     const runs = (rows.results ?? []).map((row) => {
-      const details = safeJsonParse<unknown>(row.details_json, null);
+      const details = safeJsonParse<unknown>(
+        row.details_json,
+        null,
+        `status-probe-history:${row.created_at}:details_json`,
+      );
       const failedList: FailedProbe[] = details && typeof details === "object" && "failed" in details
         ? Array.isArray((details as { failed?: unknown }).failed)
           ? ((details as { failed: FailedProbe[] }).failed)

@@ -524,7 +524,11 @@ function buildSupplementalHealth(
   const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
     const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     const ageSec = ageSeconds(now, row?.updated_at);
-    const payload = safeJsonParse<Record<string, unknown> | null>(row?.value ?? null, null);
+    const payload = safeJsonParse<Record<string, unknown> | null>(
+      row?.value ?? null,
+      null,
+      `yield-health:supplemental:${family}`,
+    );
     const sourceCount = getNumber(payload?.sourceCount);
     const status = freshnessStatus(
       ageSec,
@@ -609,7 +613,11 @@ export async function loadYieldHealthSummary(
   const byKey = new Map((rows.results ?? []).map((row) => [row.key, row]));
 
   const rankingsRow = byKey.get(YIELD_RANKINGS_CACHE_KEY) ?? null;
-  const rankingsPayload = safeJsonParse<Record<string, unknown> | null>(rankingsRow?.value ?? null, null);
+  const rankingsPayload = safeJsonParse<Record<string, unknown> | null>(
+    rankingsRow?.value ?? null,
+    null,
+    `yield-health:cache:${YIELD_RANKINGS_CACHE_KEY}`,
+  );
   const rankingUpdatedAt = rankingsRow?.updated_at ?? getNumber(rankingsPayload?.updatedAt);
   const rankingAgeSec = ageSeconds(now, rankingUpdatedAt);
   const rankingStatus = rankingsPayload == null
@@ -644,7 +652,11 @@ export async function loadYieldHealthSummary(
     : benchmarkStaleness;
 
   const coverageAuditUpdatedAt = byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.updated_at ?? null;
-  const coverageAuditPayload = safeJsonParse<Record<string, unknown> | null>(byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.value ?? null, null);
+  const coverageAuditPayload = safeJsonParse<Record<string, unknown> | null>(
+    byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.value ?? null,
+    null,
+    `yield-health:cache:${YIELD_COVERAGE_AUDIT_CACHE_KEY}`,
+  );
   const coverageAuditAgeSec = ageSeconds(now, coverageAuditUpdatedAt);
   const coverageAuditStatus = freshnessStatus(
     coverageAuditAgeSec,

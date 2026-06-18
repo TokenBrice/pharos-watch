@@ -121,7 +121,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       chainCount: row.chain_count,
       protocolTvl: safeJsonParse<Record<string, number>>(row.protocol_tvl_json, {}, `dex-liquidity:${id}:protocol_tvl_json`),
       chainTvl: safeJsonParse<Record<string, number>>(row.chain_tvl_json, {}, `dex-liquidity:${id}:chain_tvl_json`),
-      topPools: normalizeTopPools(row.top_pools_json),
+      topPools: normalizeTopPools(row.top_pools_json, `dex-liquidity:${id}:top_pools_json`),
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,
