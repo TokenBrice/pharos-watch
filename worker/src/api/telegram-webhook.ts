@@ -39,7 +39,12 @@ import { withErrorHandler } from "../lib/api-utils";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
-import { isGroupAdminActor, isGroupChatType, validateTelegramWebhookSecret } from "./telegram-webhook-auth";
+import {
+  isChannelChatType,
+  isGroupAdminActor,
+  isGroupChatType,
+  validateTelegramWebhookSecret,
+} from "./telegram-webhook-auth";
 import {
   UNKNOWN_COMMAND_ACTION_DETAIL,
   recordTelegramUsageEvent,
@@ -233,6 +238,22 @@ export const handleTelegramWebhook = withErrorHandler(
               callbackCooldownKey = cooldown.commandKey;
             }
           }
+          if (
+            callbackChatId &&
+            isChannelChatType(update.callback_query.message?.chat?.type) &&
+            callbackMutatesChatState(update.callback_query.data ?? "")
+          ) {
+            await answerCallbackQuery(update.callback_query.id, botToken, {
+              text: "Channel-originated actions are not supported.",
+            });
+            await recordTelegramUsageEvent(db, {
+              eventType: "command",
+              actionDetail: callbackAction,
+              outcome: "denied",
+              failureClass: "channel_mutation",
+            });
+            return finishOk();
+          }
           await handleCallbackQuery(db, botToken, update.callback_query);
         } catch (err) {
           if (callbackChatId && callbackCooldownKey) {
@@ -241,6 +262,20 @@ export const handleTelegramWebhook = withErrorHandler(
               commandKey: callbackCooldownKey,
               action: "callback-cooldown-release",
               command: callbackAction,
+            });
+          }
+          try {
+            await answerCallbackQuery(update.callback_query.id, botToken, {
+              text: "Action failed. Try again.",
+            });
+          } catch (ackErr) {
+            logTelegramEvent({
+              level: "warn",
+              message: "callback_query failure ack failed",
+              chatId: update.callback_query.message?.chat?.id ?? null,
+              userId: update.callback_query.from?.id ?? null,
+              action: "callback_query",
+              err: toErrorMessage(ackErr),
             });
           }
           logTelegramEvent({
@@ -473,6 +508,15 @@ async function dispatchParsedTelegramCommand(args: {
       reply,
     });
     if (!floodAllowed) return;
+  }
+
+  if (
+    isChannelChatType(chatType) &&
+    commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
+  ) {
+    await reply("Channel-originated mutations are not supported. Manage alerts from a private chat or group.");
+    await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied", "channel_mutation");
+    return;
   }
 
   if (
@@ -778,6 +822,18 @@ function resolveCallbackCooldownCommandKey(data: string): string | null {
 function callbackActionDetail(data: string): string {
   const action = data.split(":")[0] || "unknown";
   return `callback:${action}`;
+}
+
+function callbackMutatesChatState(data: string): boolean {
+  const [action, subAction] = data.split(":");
+  if (action === "status" || action === "why" || action === "coverage" || action === "help") {
+    return false;
+  }
+  if (action === "settings" && (subAction === "home" || subAction === "o")) {
+    return false;
+  }
+  if (action === "manage") return false;
+  return true;
 }
 
 function resolveCommandCooldownSec(command: string, args: string): number | null {

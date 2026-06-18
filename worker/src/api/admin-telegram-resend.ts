@@ -17,12 +17,13 @@ import {
   type DepegAlertPayload,
   type DewsChange,
   type LaunchAlert,
+  type ReserveAlert,
   type SafetyChange,
 } from "../lib/telegram-alerts";
 import { extractTopSignals } from "../cron/telegram-alert-snapshots";
 import { z } from "zod";
 
-const ALERT_TYPES = ["dews", "depeg", "safety", "launch"] as const;
+const ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
 type AlertType = (typeof ALERT_TYPES)[number];
 
 interface ResendRequestBody {
@@ -70,6 +71,7 @@ function emptyAlerts(): ConsolidatedAlerts {
     depegWorsening: [],
     safety: [],
     launch: [],
+    reserve: [],
   };
 }
 
@@ -171,6 +173,16 @@ function buildLaunchEvent(stablecoinId: string): LaunchAlert | null {
   };
 }
 
+function buildReserveEvent(stablecoinId: string): ReserveAlert | null {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  if (!meta) return null;
+  return {
+    stablecoinId,
+    symbol: meta.symbol,
+    name: meta.name,
+  };
+}
+
 async function buildSyntheticAlerts(
   db: D1Database,
   alertType: AlertType,
@@ -193,6 +205,10 @@ async function buildSyntheticAlerts(
     const event = buildLaunchEvent(stablecoinId);
     if (!event) return null;
     alerts.launch.push(event);
+  } else if (alertType === "reserve") {
+    const event = buildReserveEvent(stablecoinId);
+    if (!event) return null;
+    alerts.reserve?.push(event);
   }
   return alerts;
 }

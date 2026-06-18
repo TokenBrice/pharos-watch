@@ -258,6 +258,8 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 
 In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands and commands addressed to the public channel handle are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available; unrelated group text from other users is ignored. Pending text replies are counted by the same ingress flood cap as commands and callbacks.
 
+Channel-originated mutating commands and callbacks are rejected instead of applying subscription state, because channel admin ownership is not part of the shared-chat authorization model. When Telegram reports the bot was removed from a channel, the webhook still clears the chat-owned subscriber state and lifecycle caches.
+
 While a pending selection is active, `/sample` remains available without
 clearing the pending row. `/forget` clears the pending row for the initiating
 user before showing its destructive-data confirmation prompt, so stale
@@ -594,8 +596,9 @@ Risk pending alerts have a 1-hour TTL (`PENDING_TTL_SEC = 3600`). Launch and adm
 broadcast rows use a 30-minute TTL because they are lower-priority during contention.
 The TTL — not a per-row attempts cap — bounds how long the queue keeps retrying.
 Each drain re-selects unexpired rows whose `not_before_at` has elapsed; rows that age
-past their TTL are copied into `telegram_alert_dead_letters` and then deleted at the end
-of the run.
+past their TTL are copied into `telegram_alert_dead_letters` and then deleted in a
+capped cleanup batch at the end of the run, leaving any overflow for later dispatch
+runs.
 Admin broadcasts preflight `messageHtml` before target selection or enqueue. The accepted
 Telegram HTML subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`,
 `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; only simple

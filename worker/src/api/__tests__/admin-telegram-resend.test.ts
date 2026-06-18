@@ -136,6 +136,9 @@ describe("handleAdminTelegramResend", () => {
       telegramBotToken: BOT_TOKEN,
     });
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: "alertType must be one of: dews, depeg, safety, launch, reserve",
+    });
   });
 
   it("rejects unknown stablecoinId with 400", async () => {
@@ -277,6 +280,29 @@ describe("handleAdminTelegramResend", () => {
     const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
     const sentBody = JSON.parse(init.body as string) as { text: string };
     expect(sentBody.text).toContain("Stablecoin Launched");
+  });
+
+  it("sends a reserve alert built from tracked stablecoin metadata", async () => {
+    const db = mockD1([subscriberRows(), deliveryDiagnosticsRow(), auditRow()]);
+    const res = await handleAdminTelegramResend({
+      db,
+      request: adminRequest({ chatId: "12345", alertType: "reserve", stablecoinId: "usdc-circle" }),
+      trustedAdmin: true,
+      telegramBotToken: BOT_TOKEN,
+    });
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const sentBody = JSON.parse(init.body as string) as {
+      text: string;
+      reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
+    };
+    expect(sentBody.text).toContain("Reserve Drift");
+    expect(sentBody.text).toContain("<b>USDC</b>");
+    expect(sentBody.text).toContain("USD Coin");
+    expect(sentBody.text).toContain("https://pharos.watch/stablecoin/usdc-circle");
+    expect(sentBody.reply_markup?.inline_keyboard?.flat().some((button) =>
+      button.callback_data === "status:usdc-circle"
+    )).toBe(true);
   });
 
   it("returns 502 and audits http_status 502 when Telegram delivery fails", async () => {

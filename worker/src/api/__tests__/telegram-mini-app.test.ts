@@ -76,6 +76,7 @@ function stateReadTables(overrides: {
         global_alert_depeg: 0,
         global_alert_safety: 0,
         global_alert_launch: 0,
+        global_alert_reserve: 0,
         global_depeg_worsening_bps_step: null,
         quiet_hours_enabled: 0,
         quiet_hours_start_utc: null,
@@ -1183,6 +1184,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "DELETE FROM telegram_subscriptions", ["42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM telegram_preset_subscriptions", ["42"])).toBe(true);
     expect(historyHas(db, "global_depeg_worsening_bps_step = NULL", [NOW_SEC, "42"])).toBe(true);
+    expect(historyHas(db, "alert_reserve = 0", [NOW_SEC, "42"])).toBe(true);
+    expect(historyHas(db, "global_alert_reserve = 0", [NOW_SEC, "42"])).toBe(true);
   });
 
   it("forget-me deletes subscriber-owned rows but retains processed_updates", async () => {

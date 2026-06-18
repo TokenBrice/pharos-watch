@@ -10,6 +10,10 @@ export function isGroupChatType(chatType: string | null | undefined): boolean {
   return chatType === "group" || chatType === "supergroup";
 }
 
+export function isChannelChatType(chatType: string | null | undefined): boolean {
+  return chatType === "channel";
+}
+
 export type TelegramWebhookSecretAuthResult = "missing" | "valid" | "invalid";
 
 export async function validateTelegramWebhookSecret(
@@ -92,6 +96,12 @@ export async function requireGroupAdminForCallback(
   actorUserId: string | null,
   denialText: string,
 ): Promise<boolean> {
+  if (isChannelChatType(chatType)) {
+    await answerCallbackQuery(callbackQueryId, botToken, {
+      text: "Channel-originated actions are not supported.",
+    });
+    return false;
+  }
   if (!isGroupChatType(chatType)) return true;
   if (await isGroupAdminActor(botToken, chatId, actorUserId)) return true;
   await answerCallbackQuery(callbackQueryId, botToken, { text: denialText });

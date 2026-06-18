@@ -5095,7 +5095,7 @@ Returns `404` with `{ "error": "Not found", "chatId": "<id>" }` when no `telegra
 
 ### `POST /api/admin-telegram-resend`
 
-Force-resends a single Telegram alert to one chat, bypassing the pending queue. Used for incident triage when a known alert did not reach a subscriber. The handler validates the chat exists, builds a synthetic `ConsolidatedAlerts` from current source data (`stress_signals` for dews, `depeg_events` for depeg, `safety_grade_history` for safety, tracked metadata for launch), and invokes the same `sendToChat` path as the dispatch cron. Validated resend attempts that reach subscriber lookup, source lookup, or delivery are recorded in `admin_action_audit`; malformed requests and missing configuration can return before audit logging.
+Force-resends a single Telegram alert to one chat, bypassing the pending queue. Used for incident triage when a known alert did not reach a subscriber. The handler validates the chat exists, builds a synthetic `ConsolidatedAlerts` from current source data (`stress_signals` for dews, `depeg_events` for depeg, `safety_grade_history` for safety, tracked metadata for launch/reserve), and invokes the same `sendToChat` path as the dispatch cron. Validated resend attempts that reach subscriber lookup, source lookup, or delivery are recorded in `admin_action_audit`; malformed requests and missing configuration can return before audit logging.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required).
 
@@ -5109,7 +5109,7 @@ Force-resends a single Telegram alert to one chat, bypassing the pending queue. 
 }
 ```
 
-`alertType` must be one of `dews`, `depeg`, `safety`, `launch`. `stablecoinId` must match a tracked stablecoin ID. `chatId` is a signed integer string.
+`alertType` must be one of `dews`, `depeg`, `safety`, `launch`, `reserve`. `stablecoinId` must match a tracked stablecoin ID. `chatId` is a signed integer string.
 
 **Response**
 

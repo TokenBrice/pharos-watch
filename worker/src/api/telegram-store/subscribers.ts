@@ -64,10 +64,10 @@ type UpsertSubscriberKind =
 /**
  * Build the SQL + binds for a single `telegram_subscribers` upsert. All five
  * subscriber-row UPSERT sites in this file route through this builder so that
- * the 15-column INSERT shape, the `created_at`/`last_active_at` defaults, and
- * the COALESCE(excluded.username, ...) preservation rule live in exactly one
- * place. Bind order is stable so the existing `binds[6] === 1` assertion in
- * `telegram-webhook-settings.test.ts` continues to hold for the bump/override
+ * the alert/default INSERT shape, the `created_at`/`last_active_at` defaults,
+ * and the COALESCE(excluded.username, ...) preservation rule live in exactly
+ * one place. Bind order is stable so the existing `binds[6] === 1` assertion
+ * in `telegram-webhook-settings.test.ts` continues to hold for the bump/override
  * shapes.
  */
 export function buildSubscriberUpsert(
@@ -344,6 +344,7 @@ export async function upsertGlobalAlertTypes(
       depeg: alertTypes.has("depeg") ? 1 : 0,
       safety: alertTypes.has("safety") ? 1 : 0,
       launch: alertTypes.has("launch") ? 1 : 0,
+      reserve: alertTypes.has("reserve") ? 1 : 0,
     },
   });
 }

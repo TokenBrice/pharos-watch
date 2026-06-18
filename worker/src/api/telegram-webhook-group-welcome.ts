@@ -2,7 +2,7 @@ import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../lib/telegram";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { logTelegramEvent } from "../lib/telegram-log";
-import { isGroupChatType } from "./telegram-webhook-auth";
+import { isChannelChatType, isGroupChatType } from "./telegram-webhook-auth";
 import { forgetSubscriber } from "./telegram-webhook-store";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC } from "../lib/telegram-constants";
@@ -94,20 +94,19 @@ export async function handleMyChatMember(
   const chatId = payload.chat?.id;
   if (typeof chatId !== "number" || !Number.isFinite(chatId)) return;
   const chatIdStr = String(chatId);
-  if (
-    isGroupChatType(chatType) &&
-    isBotRemovedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)
-  ) {
+  const botRemoved = isBotRemovedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status);
+  if ((isGroupChatType(chatType) || isChannelChatType(chatType)) && botRemoved) {
     await forgetSubscriber(db, chatIdStr);
     await clearGroupLifecycleCache(db, chatIdStr);
     logTelegramEvent({
       level: "info",
-      message: "telegram group removed bot; subscriber state cleared",
+      message: `telegram ${isChannelChatType(chatType) ? "channel" : "group"} removed bot; subscriber state cleared`,
       chatId: chatIdStr,
-      action: "group-removal",
+      action: isChannelChatType(chatType) ? "channel-removal" : "group-removal",
     });
     return;
   }
+  if (isChannelChatType(chatType)) return;
   if (!isBotAddedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)) {
     return;
   }

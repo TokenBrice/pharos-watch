@@ -1,5 +1,6 @@
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { decodeWatchlistToken } from "../../lib/telegram-watchlist-token";
+import { escapeHtml } from "../../lib/telegram";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PENDING_OWNERSHIP_CONFLICT_MESSAGE, persistPendingConfirmBulk } from "../telegram-webhook-store";
 import type { ConfirmBulkPayload } from "../telegram-webhook-shared";
@@ -9,9 +10,33 @@ import {
   dedupePresetIds,
   subscribableCoinCount,
 } from "./action-runner";
+import { TELEGRAM_PRESET_LABEL_BY_ID } from "../../lib/telegram-presets";
 import type { WebhookCommandHandler } from "./context";
 
 const VALID_IMPORT_ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch", "reserve"]);
+
+function buildImportConfirmMessage(
+  coinCount: number,
+  alertTypes: readonly string[],
+  symbols: readonly string[],
+  presetLabels: readonly string[],
+): string {
+  if (presetLabels.length === 0) {
+    return buildBulkConfirmMessage("subscribe", coinCount, alertTypes, symbols);
+  }
+
+  const targetParts: string[] = [];
+  if (coinCount > 0) targetParts.push(`${coinCount} ${coinCount === 1 ? "coin" : "coins"}`);
+  targetParts.push(`${presetLabels.length} ${presetLabels.length === 1 ? "preset" : "presets"}`);
+
+  const previewParts = [
+    symbols.length > 0 ? symbols.join(", ") : "",
+    `Presets: ${presetLabels.join(", ")}`,
+  ].filter(Boolean);
+  const previewLine = previewParts.length > 0 ? `\n${escapeHtml(previewParts.join("\n"))}` : "";
+  const types = alertTypes.length > 0 ? alertTypes.join(", ") : "all";
+  return `This will subscribe ${targetParts.join(" and ")} for alert types ${escapeHtml(types)}. Confirm?${previewLine}`;
+}
 
 /**
  * `/import <token>` — decode a watchlist token, validate ids against the live
@@ -79,9 +104,10 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
   }
 
   const symbols = cappedIds.map((id) => TRACKED_META_BY_ID.get(id)?.symbol ?? id);
+  const presetLabels = presetIds.map((presetId) => TELEGRAM_PRESET_LABEL_BY_ID.get(presetId) ?? presetId);
   const droppedNote = droppedUnknown > 0 ? `\n(${droppedUnknown} no longer tracked and were skipped.)` : "";
   await ctx.replyToChatWithMarkup(
-    buildBulkConfirmMessage("subscribe", cappedIds.length, alertTypes, symbols) + droppedNote,
+    buildImportConfirmMessage(cappedIds.length, alertTypes, symbols, presetLabels) + droppedNote,
     { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
   );
   await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "import", outcome: "preview" });

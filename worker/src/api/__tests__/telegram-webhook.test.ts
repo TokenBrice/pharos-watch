@@ -8,6 +8,7 @@ const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
 const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
 const { resetTelegramInvalidSecretLogStateForTests } = await import("../../lib/telegram-log");
+const { encodeWatchlistToken } = await import("../../lib/telegram-watchlist-token");
 
 function makeWebhookRequest(
   chatId: number,
@@ -433,6 +434,34 @@ describe("handleTelegramWebhook", () => {
     expect(history.some((entry) =>
       entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
       entry.binds.includes("telegram:chat-admins:-123"),
+    )).toBe(true);
+  });
+
+  it("cleans up channel subscriber state when my_chat_member reports bot removal", async () => {
+    const db = mockD1();
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest({
+        chatId: -100123,
+        chatType: "channel",
+        oldStatus: "administrator",
+        newStatus: "left",
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const history = db.getHistory();
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM telegram_subscribers") &&
+      entry.binds.includes("-100123"),
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
+      entry.binds.includes("telegram:group-welcome:-100123"),
     )).toBe(true);
   });
 
@@ -1944,6 +1973,25 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("In groups");
   });
 
+  it("rejects channel-originated mutating commands without changing subscriptions", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-100123, "/subscribe dews USDC", "test-secret", {
+        chatType: "channel",
+        fromId: 222,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Channel-originated mutations are not supported");
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"))).toBe(false);
+  });
+
   it("keeps discovery keyboards for addressed /coverage commands in group chats", async () => {
     const db = mockD1([
       { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
@@ -2500,6 +2548,46 @@ describe("handleTelegramWebhook", () => {
     expect(body.reply_markup).toBeDefined();
   });
 
+  it("subscribe reserve all (after Confirm) writes the global reserve flag", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "confirm-bulk",
+          action_payload: JSON.stringify({
+            kind: "subscribe",
+            alertTypes: ["reserve"],
+            coinIds: [],
+            presetIds: [],
+            subscribeAll: true,
+          }),
+          alert_types: JSON.stringify([]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "",
+          candidates: JSON.stringify([]),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(
+      db,
+      makeCallbackRequest("confirm:bulk", { chatId: 123, fromId: 999, fromUsername: "requester" }),
+      "test-secret",
+      "bot-token",
+    );
+
+    const subscriberUpsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"));
+    expect(subscriberUpsert).toBeDefined();
+    expect(subscriberUpsert!.sql).toContain("global_alert_reserve = MAX");
+    expect(subscriberUpsert!.binds[11]).toBe(1);
+  });
+
   it("gates /subscribe with a >10-coin preset behind a confirmation prompt", async () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
@@ -2530,6 +2618,37 @@ describe("handleTelegramWebhook", () => {
     expect(confirmInsert!.binds).toContain("confirm-bulk");
     const body = sentMessageBody();
     expect(body.text).toContain("Confirm?");
+    expect(body.reply_markup).toBeDefined();
+  });
+
+  it("includes preset work in preset-only /import confirmation copy", async () => {
+    const token = encodeWatchlistToken({
+      coinIds: [],
+      alertTypes: ["dews", "reserve"],
+      presetIds: ["usd-top25"],
+    });
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    const confirmInsert = history.find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
+    );
+    expect(confirmInsert).toBeDefined();
+    const payload = JSON.parse(String(confirmInsert?.binds[2] ?? "{}")) as {
+      coinIds: string[];
+      presetIds: string[];
+      alertTypes: string[];
+    };
+    expect(payload.coinIds).toEqual([]);
+    expect(payload.presetIds).toEqual(["usd-top25"]);
+    expect(payload.alertTypes).toEqual(["dews", "reserve"]);
+
+    const body = sentMessageBody();
+    expect(body.text).toContain("1 preset");
+    expect(body.text).toContain("Presets: USD Top 25");
+    expect(body.text).not.toContain("0 coins");
     expect(body.reply_markup).toBeDefined();
   });
 
@@ -3605,7 +3724,9 @@ describe("handleTelegramWebhook", () => {
     const updateSql = history.find((e) => e.sql.includes("UPDATE telegram_subscribers"));
     expect(updateSql).toBeDefined();
     expect(updateSql!.sql).toContain("alert_launch = 0");
+    expect(updateSql!.sql).toContain("alert_reserve = 0");
     expect(updateSql!.sql).toContain("global_alert_launch = 0");
+    expect(updateSql!.sql).toContain("global_alert_reserve = 0");
     expect(updateSql!.sql).toContain("global_depeg_worsening_bps_step = NULL");
   });
 
@@ -3778,7 +3899,7 @@ describe("handleTelegramWebhook", () => {
     );
 
     expect(res.status).toBe(200);
-    const answerCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("answerCallbackQuery"));
+    const answerCall = [...fetchSpy.mock.calls].reverse().find((call) => String(call[0]).includes("answerCallbackQuery"));
     expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toContain("Too many button taps");
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.binds.includes("callback:status"))).toBe(true);
@@ -3809,7 +3930,7 @@ describe("handleTelegramWebhook", () => {
     );
 
     expect(res.status).toBe(200);
-    const answerCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("answerCallbackQuery"));
+    const answerCall = [...fetchSpy.mock.calls].reverse().find((call) => String(call[0]).includes("answerCallbackQuery"));
     expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toContain("Please try /status again");
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.binds.includes("telegram:command-cooldown:123:/status"))).toBe(true);
@@ -3836,7 +3957,27 @@ describe("handleTelegramWebhook", () => {
         entry.binds.includes("telegram:command-cooldown:123:/status"),
       ),
     ).toBe(true);
+    const answerCall = [...fetchSpy.mock.calls].reverse().find((call) => String(call[0]).includes("answerCallbackQuery"));
+    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toBe("Action failed. Try again.");
     warn.mockRestore();
+  });
+
+  it("rejects channel-originated mutating callbacks before callback handlers run", async () => {
+    const db = mockD1();
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeCallbackRequest("quicksub:usdc-circle", { chatId: -100123, chatType: "channel" }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const answerCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("answerCallbackQuery"));
+    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toBe(
+      "Channel-originated actions are not supported.",
+    );
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
   });
 
   it("confirm:bulk callback executes a deferred /unsubscribe all", async () => {

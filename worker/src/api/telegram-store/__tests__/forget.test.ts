@@ -45,10 +45,12 @@ function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
       alert_depeg INTEGER NOT NULL DEFAULT 0,
       alert_safety INTEGER NOT NULL DEFAULT 0,
       alert_launch INTEGER NOT NULL DEFAULT 0,
+      alert_reserve INTEGER NOT NULL DEFAULT 0,
       global_alert_dews INTEGER NOT NULL DEFAULT 0,
       global_alert_depeg INTEGER NOT NULL DEFAULT 0,
       global_alert_safety INTEGER NOT NULL DEFAULT 0,
       global_alert_launch INTEGER NOT NULL DEFAULT 0,
+      global_alert_reserve INTEGER NOT NULL DEFAULT 0,
       quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
       quiet_hours_start_utc INTEGER,
       quiet_hours_end_utc INTEGER,
@@ -68,6 +70,7 @@ function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
       alert_depeg INTEGER NOT NULL DEFAULT 0,
       alert_safety INTEGER NOT NULL DEFAULT 0,
       alert_launch INTEGER NOT NULL DEFAULT 0,
+      alert_reserve INTEGER NOT NULL DEFAULT 0,
       dews_min_band TEXT,
       safety_mode TEXT,
       depeg_worsening_bps_step INTEGER,
@@ -153,6 +156,17 @@ describe("unsubscribeAll", () => {
     expect(update).toBeDefined();
     expect(update!.sql).toContain("alert_snooze_until_ts = NULL");
   });
+
+  it("clears reserve flags with the other per-chat and global alert flags", async () => {
+    const db = mockD1([]);
+    await unsubscribeAll(db, "42");
+    const update = db
+      .getHistory()
+      .find((entry) => /UPDATE telegram_subscribers/.test(entry.sql));
+    expect(update).toBeDefined();
+    expect(update!.sql).toContain("alert_reserve = 0");
+    expect(update!.sql).toContain("global_alert_reserve = 0");
+  });
 });
 
 describe("forgetSubscriber", () => {
@@ -206,13 +220,13 @@ describe("migrateTelegramChatId", () => {
 
     sqlite.prepare(`
       INSERT INTO telegram_subscribers (
-        chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch,
-        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+        chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
         global_depeg_worsening_bps_step, timezone, alert_snooze_until_ts,
         consecutive_block_count, consecutive_block_first_at, created_at, last_active_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       oldChatId,
       "legacy-group",
@@ -221,9 +235,11 @@ describe("migrateTelegramChatId", () => {
       1,
       0,
       1,
+      1,
       0,
       1,
       0,
+      1,
       1,
       22,
       6,
@@ -237,13 +253,13 @@ describe("migrateTelegramChatId", () => {
     );
     sqlite.prepare(`
       INSERT INTO telegram_subscribers (
-        chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch,
-        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+        chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
         global_depeg_worsening_bps_step, timezone, alert_snooze_until_ts,
         consecutive_block_count, consecutive_block_first_at, created_at, last_active_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       newChatId,
       null,
@@ -252,9 +268,11 @@ describe("migrateTelegramChatId", () => {
       0,
       1,
       0,
+      0,
       1,
       0,
       1,
+      0,
       0,
       8,
       20,
@@ -269,18 +287,18 @@ describe("migrateTelegramChatId", () => {
 
     sqlite.prepare(`
       INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
         dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(oldChatId, "usdc", 1, 0, 1, 0, "ALERT", "downgrade", 50, 500);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(oldChatId, "usdc", 1, 0, 1, 0, 1, "ALERT", "downgrade", 50, 500);
     sqlite.prepare(`
       INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
         dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(newChatId, "usdc", 0, 1, 0, 1, null, null, null, 900);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(newChatId, "usdc", 0, 1, 0, 1, 0, null, null, null, 900);
 
     sqlite.prepare(`
       INSERT INTO telegram_preset_subscriptions (
@@ -368,7 +386,9 @@ describe("migrateTelegramChatId", () => {
 
     expect(sqlite.prepare(`
       SELECT username, alert_dews, alert_depeg, alert_safety, alert_launch,
+             alert_reserve,
              global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+             global_alert_reserve,
              quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
              global_depeg_worsening_bps_step, timezone, alert_snooze_until_ts,
              consecutive_block_count, consecutive_block_first_at, created_at, last_active_at
@@ -380,10 +400,12 @@ describe("migrateTelegramChatId", () => {
       alert_depeg: 1,
       alert_safety: 1,
       alert_launch: 1,
+      alert_reserve: 1,
       global_alert_dews: 1,
       global_alert_depeg: 1,
       global_alert_safety: 1,
       global_alert_launch: 1,
+      global_alert_reserve: 1,
       quiet_hours_enabled: 1,
       quiet_hours_start_utc: 22,
       quiet_hours_end_utc: 6,
@@ -397,7 +419,7 @@ describe("migrateTelegramChatId", () => {
     });
 
     expect(sqlite.prepare(`
-      SELECT alert_dews, alert_depeg, alert_safety, alert_launch,
+      SELECT alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
              dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
         FROM telegram_subscriptions
        WHERE chat_id = ? AND stablecoin_id = 'usdc'
@@ -406,6 +428,7 @@ describe("migrateTelegramChatId", () => {
       alert_depeg: 1,
       alert_safety: 1,
       alert_launch: 1,
+      alert_reserve: 1,
       dews_min_band: "ALERT",
       safety_mode: "downgrade",
       depeg_worsening_bps_step: 50,
