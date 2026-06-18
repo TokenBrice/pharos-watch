@@ -343,13 +343,12 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     const captured = pendingUndo;
     if (!captured) return;
     clearPendingUndo();
-    const patch: { alertTypes: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: typeof captured.dewsMinBand; depegStepBps?: typeof captured.depegStepBps; safetyMode?: typeof captured.safetyMode; launch?: boolean } = {
+    const patch: { alertTypes: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: typeof captured.dewsMinBand; depegStepBps?: typeof captured.depegStepBps; safetyMode?: typeof captured.safetyMode } = {
       alertTypes: { ...captured.alertTypes },
     };
     if (captured.dewsMinBand !== null) patch.dewsMinBand = captured.dewsMinBand;
     if (captured.depegStepBps !== null) patch.depegStepBps = captured.depegStepBps;
     if (captured.safetyMode !== null) patch.safetyMode = captured.safetyMode;
-    if (captured.alertTypes.launch) patch.launch = true;
     void performMutation({ kind: "set-coin", stablecoinId: captured.stablecoinId, patch });
   }, [clearPendingUndo, pendingUndo, performMutation]);
 
