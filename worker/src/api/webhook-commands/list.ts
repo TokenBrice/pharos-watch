@@ -1,7 +1,10 @@
 import { buildListMessage, buildManageEntryKeyboard, buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import { buildTelegramMiniAppUrl } from "../../lib/telegram-webhook-registration";
-import { loadPresetSubscriptions, loadSubscriberByChat } from "../telegram-webhook-store";
-import type { SubscriptionRow } from "../telegram-webhook-shared";
+import {
+  loadPresetSubscriptions,
+  loadSubscriberByChat,
+  loadSubscriptionRowsByChat,
+} from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 
 export const handleList: WebhookCommandHandler = async (ctx) => {
@@ -10,19 +13,11 @@ export const handleList: WebhookCommandHandler = async (ctx) => {
   const subscriber = await loadSubscriberByChat(db, chatId);
 
   const [subscriptions, presetSubscriptions] = await Promise.all([
-    db
-      .prepare(
-        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
-           FROM telegram_subscriptions
-          WHERE chat_id = ?
-          ORDER BY stablecoin_id`,
-      )
-      .bind(chatId)
-      .all<SubscriptionRow>(),
+    loadSubscriptionRowsByChat(db, chatId),
     loadPresetSubscriptions(db, chatId),
   ]);
 
-  const rows = subscriptions.results ?? [];
+  const rows = subscriptions;
   if (!subscriber && rows.length === 0 && presetSubscriptions.length === 0) {
     const message = "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.";
     if (isPrivateChat) {

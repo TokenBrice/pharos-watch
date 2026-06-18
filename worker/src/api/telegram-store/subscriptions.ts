@@ -11,6 +11,22 @@ import {
   type UpsertSubscriberInput,
 } from "./subscribers";
 
+export async function loadSubscriptionRowsByChat(
+  db: D1Database,
+  chatId: string,
+): Promise<SubscriptionRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
+         FROM telegram_subscriptions
+        WHERE chat_id = ?
+        ORDER BY stablecoin_id`,
+    )
+    .bind(chatId)
+    .all<SubscriptionRow>();
+  return result.results ?? [];
+}
+
 export function prepareSubscriberAndSubscriptionStatements(
   db: D1Database,
   chatId: string,
