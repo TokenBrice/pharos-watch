@@ -64,12 +64,33 @@ const CEMETERY_IDS = new Set(
 
 const VALID_ARCHETYPES = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
 const VALID_OUTCOMES = new Set(["survived", "wounded", "died"]);
-const DEPEG_EVENT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*-\d{4}-\d{2}-\d{2}(?:-(?:up|down))?$/;
 const CONTENT_MODULE_SLUGS = readdirSync(CONTENT_DIR)
   .filter((file) => file.endsWith(".ts") && !NON_STUDY_CONTENT_FILES.has(file))
   .map((file) => file.replace(/\.ts$/, ""));
 
 const CASE_STUDY_SLUGS = new Set(CONTENT_MODULE_SLUGS);
+
+function isSafeSlugPart(part: string): boolean {
+  return part.length > 0 && [...part].every((char) =>
+    (char >= "a" && char <= "z") || (char >= "0" && char <= "9")
+  );
+}
+
+function isDatePart(part: string, length: number): boolean {
+  return part.length === length && [...part].every((char) => char >= "0" && char <= "9");
+}
+
+function isDepegEventSlug(slug: string): boolean {
+  const parts = slug.split("-");
+  const direction = parts.at(-1);
+  const hasDirection = direction === "up" || direction === "down";
+  const dateEnd = hasDirection ? parts.length - 1 : parts.length;
+  if (dateEnd < 4) return false;
+  const [year, month, day] = parts.slice(dateEnd - 3, dateEnd);
+  if (!year || !month || !day) return false;
+  if (!isDatePart(year, 4) || !isDatePart(month, 2) || !isDatePart(day, 2)) return false;
+  return parts.slice(0, dateEnd - 3).every(isSafeSlugPart);
+}
 
 function eventWindowProjection(study: CaseStudy) {
   return {
@@ -99,7 +120,7 @@ function isKnownInternalRoute(href: string): boolean {
     return CASE_STUDY_SLUGS.has(path.split("/")[3]);
   }
   if (/^\/depeg\/[^/]+\/$/.test(path)) {
-    return DEPEG_EVENT_SLUG_PATTERN.test(path.split("/")[2]);
+    return isDepegEventSlug(path.split("/")[2] ?? "");
   }
   return false;
 }
@@ -279,7 +300,7 @@ describe("case-study content", () => {
 
     it("uses a route-compatible depeg event slug when set", () => {
       if (study.depegEventSlug) {
-        expect(DEPEG_EVENT_SLUG_PATTERN.test(study.depegEventSlug)).toBe(true);
+        expect(isDepegEventSlug(study.depegEventSlug)).toBe(true);
       }
     });
   });

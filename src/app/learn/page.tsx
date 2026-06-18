@@ -118,7 +118,7 @@ export default function LearnIndexPage() {
         { name: "Learn", url: "/learn/" },
       ]}
       visibleBreadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Learn" }]}
-      title="Learn the peg"
+      title="How Stables Work & Break"
       subtitle="How stablecoins hold a dollar, why they break it, and the vocabulary Pharos uses to name the risk."
       leadParagraphs={[
         "Three ways in, meant to be read in order: how a peg is produced, how it breaks, and the words for both.",

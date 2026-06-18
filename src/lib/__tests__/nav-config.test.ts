@@ -85,6 +85,7 @@ describe("nav-config", () => {
     const learnGroup = NAV_GROUPS.find((group) => group.key === "learn");
     expect(learnGroup?.label).toBe("LEARN");
     expect(learnGroup?.items.map((item) => item.href)).toEqual([
+      "/learn/",
       "/learn/mechanisms/",
       "/learn/case-studies/",
       "/learn/glossary/",

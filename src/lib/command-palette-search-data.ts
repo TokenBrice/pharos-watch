@@ -356,7 +356,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["idrx-idrx", "IDRX", "IDRX"],
   ["cngn-compliant-naira", "Compliant Naira", "cNGN"],
   ["mxnb-juno", "MXNB", "MXNB"],
-  ["mmxn-moneta-digital", "Moneta Digital", "MMXN"],
+  ["mmxn-moneta-digital", "Moneta Digital", "MMXN", "pre-launch"],
   ["brl1-brl1", "BRL1", "BRL1"],
   ["wars-argentine-peso", "Argentine Peso", "WARS"],
   ["wbrl-ripio", "Ripio wBRL", "WBRL"],
