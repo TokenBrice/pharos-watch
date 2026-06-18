@@ -51,9 +51,11 @@ function loadFromStorage(): string[] {
   const legacyPinned = readLegacy(storage, LEGACY_PINNED_KEY);
   const legacyYield = readLegacy(storage, LEGACY_YIELD_KEY);
   const merged = normalize([...legacyPinned, ...legacyYield]);
-  writeJsonStorageValue(storage, WATCHLIST_STORAGE_KEY, merged);
-  safeStorageRemoveItem(storage, LEGACY_PINNED_KEY);
-  safeStorageRemoveItem(storage, LEGACY_YIELD_KEY);
+  const migrated = writeJsonStorageValue(storage, WATCHLIST_STORAGE_KEY, merged);
+  if (migrated) {
+    safeStorageRemoveItem(storage, LEGACY_PINNED_KEY);
+    safeStorageRemoveItem(storage, LEGACY_YIELD_KEY);
+  }
   return merged;
 }
 

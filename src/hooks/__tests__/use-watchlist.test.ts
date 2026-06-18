@@ -1,14 +1,19 @@
 // @vitest-environment jsdom
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useWatchlist, WATCHLIST_STORAGE_KEY } from "@/hooks/use-watchlist";
 
+const LEGACY_PINNED_STORAGE_KEY = "pharos-pinned-stablecoins";
 const LEGACY_YIELD_STORAGE_KEY = "pharos:yield-watchlist:v1";
 
 describe("useWatchlist", () => {
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("hydrates with an empty list and flips isHydrated", async () => {
@@ -62,6 +67,29 @@ describe("useWatchlist", () => {
 
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
     await waitFor(() => expect([...result.current.idSet].sort()).toEqual(["dai-mkr", "usdc-circle"]));
+  });
+
+  it("keeps legacy watchlist keys when canonical migration storage write fails", async () => {
+    const pinned = ["usdc-circle"];
+    const yieldList = ["dai-mkr"];
+    window.localStorage.setItem(LEGACY_PINNED_STORAGE_KEY, JSON.stringify(pinned));
+    window.localStorage.setItem(LEGACY_YIELD_STORAGE_KEY, JSON.stringify(yieldList));
+
+    const originalSetItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function setItem(this: Storage, key, value) {
+      if (key === WATCHLIST_STORAGE_KEY) {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      }
+      return Reflect.apply(originalSetItem, this, [key, value]);
+    });
+
+    const { result } = renderHook(() => useWatchlist());
+
+    await waitFor(() => expect(result.current.isHydrated).toBe(true));
+    await waitFor(() => expect([...result.current.idSet].sort()).toEqual(["dai-mkr", "usdc-circle"]));
+    expect(window.localStorage.getItem(WATCHLIST_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem(LEGACY_PINNED_STORAGE_KEY) ?? "null")).toEqual(pinned);
+    expect(JSON.parse(window.localStorage.getItem(LEGACY_YIELD_STORAGE_KEY) ?? "null")).toEqual(yieldList);
   });
 
   it("ignores malformed stored values", async () => {
