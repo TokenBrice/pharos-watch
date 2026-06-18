@@ -150,6 +150,7 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
   "/brief": 30,
   "/top": 20,
   "/why": 20,
+  "/status": 20,
   "/coverage": 20,
 };
 

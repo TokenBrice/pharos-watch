@@ -657,6 +657,41 @@ describe("handleTelegramWebhook", () => {
     nowSpy.mockRestore();
   });
 
+  it("rate-limits /status before loading coin status rows", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: { updated_at: 1_700_000_000 },
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/status USDC"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Please try /status again");
+    expect(
+      db.getHistory().some((entry) =>
+        entry.binds.includes("telegram:command-cooldown:123:/status"),
+      ),
+    ).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM price_cache"))).toBe(false);
+    nowSpy.mockRestore();
+  });
+
   it("records cooldown-store-error when the command cooldown write fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const db = mockD1([
