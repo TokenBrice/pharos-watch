@@ -7,6 +7,44 @@ interface FetchWithRetryOptions {
   returnFinalResponse?: boolean;
   timeoutMs?: number;
 }
+
+function responseWithTimeoutLifetime(response: Response, dispose: () => void): Response {
+  if (!response.body) {
+    dispose();
+    return response;
+  }
+
+  const reader = response.body.getReader();
+  let disposed = false;
+  const disposeOnce = () => {
+    if (disposed) return;
+    disposed = true;
+    dispose();
+  };
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const result = await reader.read();
+        if (result.done) {
+          disposeOnce();
+          controller.close();
+          return;
+        }
+        controller.enqueue(result.value);
+      } catch (err) {
+        disposeOnce();
+        controller.error(err);
+      }
+    },
+    async cancel(reason) {
+      disposeOnce();
+      await reader.cancel(reason);
+    },
+  });
+
+  return new Response(body, response);
+}
+
 function getRetryDelayMs(response: Response, attempt: number): number | null {
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
@@ -46,15 +84,11 @@ export async function fetchWithRetry(
         timeoutReason: new DOMException(`fetch timed out after ${timeoutMs}ms`, "TimeoutError"),
         parentSignal: signal,
       });
-      let res: Response;
-      try {
-        res = await fetch(url, {
-          ...opts,
-          signal: perRequestTimeout.signal,
-        });
-      } finally {
-        perRequestTimeout.dispose();
-      }
+      const fetched = await fetch(url, {
+        ...opts,
+        signal: perRequestTimeout.signal,
+      });
+      const res = responseWithTimeoutLifetime(fetched, perRequestTimeout.dispose);
       if (res.ok) return res;
       if (passthroughStatuses.has(res.status)) {
         const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i) : null;

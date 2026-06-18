@@ -22,6 +22,7 @@ describe("fetchWithRetry", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -118,4 +119,31 @@ describe("fetchWithRetry", () => {
     expect(sleepWithSignalMock).toHaveBeenNthCalledWith(1, 5000, undefined);
     expect(sleepWithSignalMock).toHaveBeenNthCalledWith(2, 10000, undefined);
   });
+
+  it("keeps the per-request timeout active while callers consume the response body", async () => {
+    vi.useFakeTimers();
+
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const signal = init?.signal;
+      return new Response(new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          await new Promise<void>((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+          });
+          controller.close();
+        },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchWithRetry("https://example.test/slow-body", undefined, 0, { timeoutMs: 200 });
+    expect(res).not.toBeNull();
+
+    const bodyRead = res!.text();
+    const assertion = expect(bodyRead).rejects.toMatchObject({ name: "TimeoutError" });
+    await vi.advanceTimersByTimeAsync(201);
+
+    await assertion;
+  });
+
 });
