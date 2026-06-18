@@ -18505,9 +18505,10 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "blacklistStatus": "possible",
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
+      "inheritedFrom": "usdc-circle",
       "controls": [
         {
           "authorityType": "contract",
