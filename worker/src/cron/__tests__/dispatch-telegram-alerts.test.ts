@@ -11,6 +11,19 @@ import type { CronProgressUpdate } from "../../lib/cron-logger";
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
 
+const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
+  peggedAssets: [
+    {
+      id: "usdc-circle",
+      symbol: "USDC",
+      name: "USD Coin",
+      pegType: "peggedUSD",
+      price: 1,
+      circulating: { peggedUSD: 50_000_000_000 },
+    },
+  ],
+});
+
 vi.mock("../../lib/db-cache", () => mockDbCache({
   getCacheFn: mockGetCache,
   setCacheFn: mockSetCache,
@@ -2635,6 +2648,9 @@ describe("dispatchTelegramAlerts", () => {
       if (key === "telegram:preset-query-failure-count") {
         return null;
       }
+      if (key === "stablecoins") {
+        return { value: STABLECOINS_CACHE_WITH_USDC, updatedAt: now - 60 };
+      }
       return null;
     });
 
@@ -2710,6 +2726,70 @@ describe("dispatchTelegramAlerts", () => {
       // Preset failure no longer poisons the Telegram API circuit when direct
       // delivery succeeds.
       expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), expect.anything(), true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("does not resolve dynamic presets when no preset subscriber rows exist", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "telegram:preset-query-failure-count") {
+        return null;
+      }
+      if (key === "stablecoins") {
+        return { value: STABLECOINS_CACHE_WITH_USDC, updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        matchBinds: ["usdc-circle", now, now],
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "direct-chat", last_active_at: now }],
+      },
+      { match: "FROM telegram_preset_subscriptions p", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    try {
+      const result = await dispatchTelegramAlerts(db, "bot-token");
+      const metadata = JSON.parse(result.metadata) as {
+        presetFailure: boolean;
+        presetQueryFailures: number;
+        presetResolutionFailures: number;
+        subscribersNotified: number;
+        messagesSent: number;
+      };
+
+      expect(metadata.presetFailure).toBe(false);
+      expect(metadata.presetQueryFailures).toBe(0);
+      expect(metadata.presetResolutionFailures).toBe(0);
+      expect(metadata.subscribersNotified).toBe(1);
+      expect(metadata.messagesSent).toBe(1);
+      expect(mockSendToChat).toHaveBeenCalledTimes(1);
+      expect(mockSendToChat.mock.calls[0]?.[0]).toBe("direct-chat");
+
+      expect(parseLogRecords(warnSpy).some((record) => record.action === "preset-resolution")).toBe(false);
     } finally {
       warnSpy.mockRestore();
     }
@@ -2792,9 +2872,8 @@ describe("dispatchTelegramAlerts", () => {
         failureKind: "resolution-failed",
         alertType: "dews",
         reason: "stablecoins-cache-unavailable",
-        presetIds: ["usd-top25"],
-        presetCount: 1,
-        subscriberRowCount: 1,
+        presetIds: expect.arrayContaining(["usd-top25"]),
+        presetCount: 10,
         requestedStablecoinCount: 1,
       });
     } finally {
@@ -2817,6 +2896,9 @@ describe("dispatchTelegramAlerts", () => {
       }
       if (key === "telegram:preset-query-failure-count") {
         return { value: "2", updatedAt: now - 60 };
+      }
+      if (key === "stablecoins") {
+        return { value: STABLECOINS_CACHE_WITH_USDC, updatedAt: now - 60 };
       }
       return null;
     });

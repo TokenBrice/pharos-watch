@@ -140,7 +140,7 @@ export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation,
       .filter((match): match is { coin: (typeof state.catalog.searchableCoins)[number]; rank: number } => match != null)
       .sort((a, b) => a.rank - b.rank || a.coin.symbol.localeCompare(b.coin.symbol));
     return { results: matches.slice(0, 8).map((match) => match.coin), total: matches.length };
-  }, [query, state.catalog.searchableCoins]);
+  }, [query, state]);
   const { results, total: resultTotal } = search;
   const suggestions = useMemo(
     () =>

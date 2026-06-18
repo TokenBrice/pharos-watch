@@ -64,6 +64,8 @@ Payload constraints: the frontend `?startapp=` parser accepts up to 512 characte
 
 The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. The schema literals in `worker/src/api/telegram-mini-app-schemas.ts` and `src/app/pharoswatchbot/app/types.ts` must be edited in lockstep if that default changes; broader preset follows use the separate `follow-preset` mutation.
 
+Per-coin `set-coin` patches treat a non-null `depegStepBps` as an enabling operation unless the same patch explicitly disables `alertTypes.depeg`. The Mini App frontend normally sends `alertTypes.depeg=true` with a step when the visible toggle is off, but the worker owns the semantic guarantee so direct mutation callers cannot store an inactive depeg step.
+
 The `subscriptions[]` state projection includes rows with at least one enabled alert family, plus snooze-only rows. All-disabled rows with no per-coin snooze are hidden so old clear/disable writes do not appear as active watchlist coins.
 
 ## Seam Rules

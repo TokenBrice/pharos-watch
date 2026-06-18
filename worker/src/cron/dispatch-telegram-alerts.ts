@@ -43,6 +43,7 @@ import { loadTerminalTelegramAlertTargetKeys } from "./telegram-alert-target-sta
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { TELEGRAM_MAX_MESSAGES_PER_RUN } from "../lib/telegram-constants";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
 import { recordSystemicFreshFailure } from "./dispatch-telegram-alerts-observability";
 import {
   buildTelegramDispatchEvents,
@@ -401,6 +402,11 @@ async function executeFullFanoutPath({
     },
   });
   const fanoutQueryStartedAtMs = Date.now();
+  let presetStablecoinsCacheResult: Promise<StablecoinsCacheLoadResult> | null = null;
+  const getPresetStablecoinsCacheResult = () => {
+    presetStablecoinsCacheResult ??= loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+    return presetStablecoinsCacheResult;
+  };
   const {
     directDewsSubs,
     directDepegSubs,
@@ -420,7 +426,10 @@ async function executeFullFanoutPath({
     { dewsIds, depegIds, safetyIds, launchIds },
     {
       loadSubscriberRowsBatch,
-      loadPresetSubscriberRowsBatch,
+      loadPresetSubscriberRowsBatch: (fanoutDb, stablecoinIds, type, fanoutNowSec) =>
+        loadPresetSubscriberRowsBatch(fanoutDb, stablecoinIds, type, fanoutNowSec, {
+          getStablecoinsCacheResult: getPresetStablecoinsCacheResult,
+        }),
       loadGlobalSubscriberRows,
       loadPerCoinSnoozeMap,
       loadPerCoinExplicitlyOffMap,

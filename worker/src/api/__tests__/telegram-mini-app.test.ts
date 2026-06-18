@@ -622,6 +622,24 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(batchSizes[0]).toBeGreaterThan(1);
   });
 
+  it("enables per-coin depeg alerts when setting a worsening step", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: {
+        kind: "set-coin",
+        stablecoinId: "usdc-circle",
+        patch: { depegStepBps: 250 },
+      },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(historyHas(db, "alert_depeg = 1", ["42", "usdc-circle", 250])).toBe(true);
+    expect(historyHas(db, "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step", ["42", "usdc-circle", 250])).toBe(true);
+  });
+
   it("does not return a watchlist coin after disabling its last alert", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables({

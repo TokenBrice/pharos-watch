@@ -1,7 +1,12 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { buildInClause, chunkArray } from "../lib/db";
 import { logTelegramEvent } from "../lib/telegram-log";
-import { listTelegramPresets, resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
+import {
+  listTelegramPresets,
+  resolveTelegramPresetTargets,
+  type TelegramPresetId,
+  type TelegramPresetResolveOptions,
+} from "../lib/telegram-presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
 import { toErrorMessage } from "../lib/error-utils";
@@ -13,7 +18,7 @@ const ALERT_COLUMN_BY_TYPE = {
   launch: "alert_launch",
 } as const;
 
-export const GLOBAL_ALERT_COLUMN_BY_TYPE = {
+const GLOBAL_ALERT_COLUMN_BY_TYPE = {
   dews: "global_alert_dews",
   depeg: "global_alert_depeg",
   safety: "global_alert_safety",
@@ -225,6 +230,7 @@ export async function loadPresetSubscriberRowsBatch(
   stablecoinIds: string[],
   type: Exclude<TelegramAlertType, "launch">,
   nowSec: number,
+  options: TelegramPresetResolveOptions = {},
 ): Promise<PresetSubscriberLoadResult> {
   if (stablecoinIds.length === 0) return { kind: "ok", rows: new Map() };
   const alertColumn = ALERT_COLUMN_BY_TYPE[type];
@@ -233,7 +239,40 @@ export async function loadPresetSubscriberRowsBatch(
   }
   const wantedIds = new Set(stablecoinIds);
   const allPresetIds = listTelegramPresets().map((definition) => definition.id);
-  const resolved = await resolveTelegramPresetTargets(db, allPresetIds);
+  const allPresetInClause = buildInClause(allPresetIds);
+  let hasCandidateRows = false;
+  try {
+    const candidate = await db
+      .prepare(
+        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
+        // against the hardcoded allowlist above before interpolation.
+        `SELECT 1 AS has_row
+           FROM telegram_preset_subscriptions p
+          JOIN telegram_subscribers u ON u.chat_id = p.chat_id
+          WHERE p.${alertColumn} = 1
+            AND p.preset_id IN (${allPresetInClause.sql})
+            AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
+          LIMIT 1`,
+      )
+      .bind(...allPresetInClause.binds, nowSec)
+      .first<{ has_row: number }>();
+    hasCandidateRows = candidate != null;
+  } catch (err) {
+    logTelegramEvent({
+      level: "warn",
+      message: "dynamic preset query failed",
+      action: "preset-query",
+      module: "dispatch-telegram-subscribers",
+      failureKind: "query-failed",
+      alertType: type,
+      requestedStablecoinCount: stablecoinIds.length,
+      err: toErrorMessage(err),
+    });
+    return { kind: "query-failed", error: err };
+  }
+  if (!hasCandidateRows) return { kind: "ok", rows: new Map() };
+
+  const resolved = await resolveTelegramPresetTargets(db, allPresetIds, options);
   if (resolved.kind !== "ok") {
     logTelegramEvent({
       level: "warn",
@@ -245,6 +284,7 @@ export async function loadPresetSubscriberRowsBatch(
       reason: resolved.reason,
       presetIds: allPresetIds,
       presetCount: allPresetIds.length,
+      subscriberRowCount: 1,
       requestedStablecoinCount: stablecoinIds.length,
     });
     return { kind: "resolution-failed" };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { Area, AreaChart } from "recharts";
 import { ChevronDown } from "lucide-react";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
@@ -198,64 +198,65 @@ function PulseStatGroup({
 
 export function TelegramPulseStrip() {
   const { data, isLoading, isError } = useTelegramPulse();
+  let content: ReactNode;
 
   if (isLoading) {
-    return (
-      <div
-        className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
-        aria-live="polite"
-        aria-busy="true"
-      >
+    content = (
+      <>
         <Skeleton className="h-3.5 w-20 sm:w-24" />
         <Skeleton className="h-3.5 w-24 sm:w-28" />
         <Skeleton className="hidden h-3.5 w-28 sm:block" />
-      </div>
+      </>
     );
-  }
-
-  if (!data || isError) {
-    return (
-      <p className="text-xs text-muted-foreground" aria-live="polite" aria-busy="false">
+  } else if (!data || isError) {
+    content = (
+      <p>
         Telegram adoption metrics unavailable; commands still work.
       </p>
+    );
+  } else {
+    content = (
+      <>
+        <span className="text-muted-foreground">
+          <span className="font-semibold text-foreground font-mono">{formatCount(data.activeWatchers)}</span> active
+          Telegram chats
+        </span>
+        <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+        <span className="text-muted-foreground">
+          <span className="font-semibold text-foreground font-mono">
+            {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
+          </span>{" "}
+          estimated capacity
+        </span>
+        <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+        <span className="text-muted-foreground">
+          <span className="font-semibold text-foreground font-mono">{formatCount(data.coinSubscriptions)}</span> alert
+          links (incl. presets)
+        </span>
+        <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+        <span className="text-muted-foreground">
+          updated every {Math.round((data.updatedEverySeconds ?? 300) / 60)}m
+        </span>
+        {data.topCoins.length > 0 && (
+          <>
+            <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+            <span className="text-muted-foreground">
+              most followed:{" "}
+              <span className="font-medium text-foreground">{data.topCoins.slice(0, 3).join(", ")}</span>
+            </span>
+          </>
+        )}
+      </>
     );
   }
 
   return (
     <div
-      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs tabular-nums"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground tabular-nums"
       aria-live="polite"
-      aria-busy="false"
+      aria-busy={isLoading ? "true" : "false"}
     >
-      <span className="text-muted-foreground">
-        <span className="font-semibold text-foreground font-mono">{formatCount(data.activeWatchers)}</span> active
-        Telegram chats
-      </span>
-      <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
-      <span className="text-muted-foreground">
-        <span className="font-semibold text-foreground font-mono">
-          {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
-        </span>{" "}
-        estimated capacity
-      </span>
-      <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
-      <span className="text-muted-foreground">
-        <span className="font-semibold text-foreground font-mono">{formatCount(data.coinSubscriptions)}</span> alert
-        links (incl. presets)
-      </span>
-      <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
-      <span className="text-muted-foreground">
-        updated every {Math.round((data.updatedEverySeconds ?? 300) / 60)}m
-      </span>
-      {data.topCoins.length > 0 && (
-        <>
-          <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
-          <span className="text-muted-foreground">
-            most followed:{" "}
-            <span className="font-medium text-foreground">{data.topCoins.slice(0, 3).join(", ")}</span>
-          </span>
-        </>
-      )}
+      {content}
     </div>
   );
 }

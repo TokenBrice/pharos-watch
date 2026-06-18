@@ -5,7 +5,7 @@ import {
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/registry";
 import type { PegCurrency } from "@shared/types/core";
-import { loadStablecoinsCache } from "./stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "./stablecoins-cache";
 
 /** Matches the ResolvedCoin shape from telegram-alerts.ts — duplicated here to avoid a circular import. */
 interface ResolvedCoin { id: string; symbol: string; name: string }
@@ -53,6 +53,10 @@ interface TelegramPresetResolveOk {
 export type TelegramPresetResolveResult =
   | TelegramPresetResolveError
   | TelegramPresetResolveOk;
+
+export interface TelegramPresetResolveOptions {
+  getStablecoinsCacheResult?: () => Promise<StablecoinsCacheLoadResult>;
+}
 
 const TELEGRAM_PRESET_DEFINITIONS: TelegramPresetDefinition[] = [
   {
@@ -203,8 +207,11 @@ function idsToResolvedCoins(ids: string[]): ResolvedCoin[] {
 export async function resolveTelegramPresetTargets(
   db: D1Database,
   presetIds: readonly TelegramPresetId[],
+  options: TelegramPresetResolveOptions = {},
 ): Promise<TelegramPresetResolveResult> {
-  const cacheResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  const cacheResult = options.getStablecoinsCacheResult
+    ? await options.getStablecoinsCacheResult()
+    : await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
   if (cacheResult.kind !== "ok") {
     return {
       kind: "error",

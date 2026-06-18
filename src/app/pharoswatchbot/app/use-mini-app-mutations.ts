@@ -130,7 +130,7 @@ export interface UseMiniAppMutationsResult {
   /** Returned status when `checkHomeScreenStatus` probe ran. Null until then. */
   homeScreenStatus: string | null;
 
-  /** Optimistic dispatch: applyOptimistic + performMutation. For non-destructive flows. */
+  /** Optimistic dispatch for non-destructive local mutations; server-resolved preset follows dispatch directly. */
   mutate: (operation: TelegramMiniAppOperation) => void;
   /** Imperative dispatch: skips optimistic layer, returns the server snapshot on success. */
   performMutation: (operation: TelegramMiniAppOperation) => Promise<TelegramMiniAppState | null>;
@@ -314,6 +314,10 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, [initData, onStateReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
+    if (operation.kind === "recommended-setup" || operation.kind === "follow-preset") {
+      void performMutation(operation);
+      return;
+    }
     startTransition(() => {
       applyOptimisticOperation(operation);
     });

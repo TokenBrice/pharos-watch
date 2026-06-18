@@ -17,12 +17,9 @@ const ROTATE_MS = 5_000;
 
 export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readonly MiniAppScreenshot[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (media.matches) setPaused(true);
-  }, []);
+  const [paused, setPaused] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 
   useEffect(() => {
     if (paused || screenshots.length <= 1) return;
