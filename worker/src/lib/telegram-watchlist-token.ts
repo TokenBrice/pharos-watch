@@ -64,6 +64,7 @@ export function decodeWatchlistToken(raw: string): WatchlistTokenDecodeResult {
   // Tolerate copy-paste: drop a leading "/import ", code-block fences, and all whitespace.
   const cleaned = raw
     .trim()
+    // eslint-disable-next-line security/detect-unsafe-regex -- bounded command-prefix strip before explicit max-length validation.
     .replace(/^\/import(@\S+)?\s+/i, "")
     .replace(/[`\s]/g, "");
   if (cleaned.length === 0) return { ok: false, error: "empty" };

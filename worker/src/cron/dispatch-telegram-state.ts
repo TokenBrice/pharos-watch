@@ -146,7 +146,7 @@ function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
 }
 
 /** Parse a LAUNCH-STYLE id-set snapshot (reserve-drift, C123). */
-export function parseReserveSnapshotIds(cached: CachedValue): string[] | null {
+function parseReserveSnapshotIds(cached: CachedValue): string[] | null {
   return parseLaunchSnapshotIds(cached);
 }
 

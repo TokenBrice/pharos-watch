@@ -312,7 +312,7 @@ function countChatAlerts(alerts: ConsolidatedAlerts): number {
  * Cheap, format-free estimate of how many message chunks a chat will produce,
  * mirroring the load-harness `ALERTS_PER_MESSAGE_CHUNK` model. Always >= 1.
  */
-export function estimateChatChunks(alerts: ConsolidatedAlerts): number {
+function estimateChatChunks(alerts: ConsolidatedAlerts): number {
   return Math.max(
     1,
     Math.ceil(countChatAlerts(alerts) / TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE),

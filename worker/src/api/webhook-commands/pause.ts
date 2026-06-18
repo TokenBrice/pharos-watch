@@ -34,7 +34,7 @@ export const handlePause: WebhookCommandHandler = async (ctx, args) => {
   const { db, chatId, username } = ctx;
   const token = args.trim().toLowerCase();
 
-  if (token === "") {
+  if (token.length === 0) {
     await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS);
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",

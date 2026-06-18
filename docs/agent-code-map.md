@@ -533,7 +533,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/digest-risk-summary.ts` - selectDigestRiskSignal
 - `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
-- ... 121 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 123 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
 - `worker/src/lib/chain-config.ts` - ChainConfig, chainConfig
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
-- ... 231 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 232 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

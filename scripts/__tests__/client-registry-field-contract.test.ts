@@ -30,6 +30,7 @@ describe("client registry field contract", () => {
       name: "USDC",
       symbol: "USDC",
       oneLiner: "A dollar-backed stablecoin.",
+      marketAvailability: "market-traded",
       flags: {
         pegCurrency: "USD",
         backing: "fiat",
