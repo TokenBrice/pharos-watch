@@ -152,6 +152,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "USDtb mint and redeem docs",
+              "url": "https://docs.usdtb.money/mint-and-redeem"
+            }
+          ]
+        },
         "sources": [
           {
             "label": "USDtb mint and redeem docs",
@@ -173,6 +182,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "USDtb introduction",
+              "url": "https://docs.usdtb.money/introduction"
+            }
+          ]
+        },
         "sources": [
           {
             "label": "Ethereum USDtb contract",

@@ -66,13 +66,36 @@ describe("mint-authority-review-audit", () => {
             },
           },
         }),
+        coin({
+          id: "reserve-custody",
+          symbol: "RC",
+          mintAuthority: {
+            mintPath: "issuer-direct-mint",
+            authorityPosture: "concentrated-admin",
+            confidence: "manual-review",
+            summary: "Reserve assets are held with an institutional custodian; privileged signer controls are not described.",
+            controls: [
+              {
+                label: "Issuer EOA",
+                role: "direct-minter",
+                authorityType: "eoa",
+                directMintAbility: "direct",
+              },
+            ],
+            review: {
+              evidence: "Issuer-operated minting; reserve custody is disclosed separately from key controls.",
+              reviewer: "Pharos",
+              reviewedAt: "2026-06-18",
+            },
+          },
+        }),
       ],
     });
 
     expect(audit.summary).toMatchObject({
-      trackedCoins: 3,
-      activeCoins: 3,
-      reviewedProfiles: 2,
+      trackedCoins: 4,
+      activeCoins: 4,
+      reviewedProfiles: 3,
       activeMissingReviews: 1,
       reviewedButUnscoreable: 1,
       routeCheckQueue: 1,

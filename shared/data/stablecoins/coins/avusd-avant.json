@@ -230,6 +230,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Avant secure asset management",
+              "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+            }
+          ]
+        },
         "evidence": "At Avalanche block 87747021, eth_getCode returned empty bytecode (EOA confirmed). owner() on AvantMintingV2, avUSD token (Avalanche, Ethereum, Linea) all returned this same address. Avant docs describe Fireblocks/Fordefi MPC custody for privileged operations.",
         "sources": [
           {

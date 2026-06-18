@@ -13,7 +13,7 @@ const ROUTE_CHECK_MINT_PATHS = new Set<MintAuthorityProfile["mintPath"]>([
   "m0-permissioned-minter",
 ]);
 
-const CUSTODY_PROSE_PATTERN = /\b(mpc|hsm|fireblocks|custod(?:y|ian)|key management)\b/i;
+const KEY_CUSTODY_PROSE_PATTERN = /\b(mpc|hsm|fireblocks|key management|key custody|signing key)\b/i;
 
 export interface MintAuthorityAuditCoinRow {
   coinId: string;
@@ -167,7 +167,7 @@ function shouldQueueCustodyAttestation(profile: MintAuthorityProfile, control: M
   if (control.authorityType !== "eoa") return false;
   if (!isMintCapableAbility(control.directMintAbility)) return false;
   if (control.keyCustodyAttestation) return false;
-  return CUSTODY_PROSE_PATTERN.test(proseForCustodyScan(profile, control));
+  return KEY_CUSTODY_PROSE_PATTERN.test(proseForCustodyScan(profile, control));
 }
 
 function sortRows<T extends { coinId: string }>(rows: T[]): T[] {

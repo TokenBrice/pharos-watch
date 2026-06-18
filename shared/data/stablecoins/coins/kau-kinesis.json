@@ -101,6 +101,19 @@
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": true,
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "KAU proxy on Etherscan (Fireblocks Proxy, ERC1967)",
+              "url": "https://etherscan.io/address/0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+            },
+            {
+              "label": "ERC20F implementation (Fireblocks)",
+              "url": "https://etherscan.io/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+            }
+          ]
+        },
         "evidence": "At Ethereum block 25296044: KAU proxy (0x14dab79f) is a Fireblocks ERC1967Proxy (UUPS pattern). Implementation = 0x0f25045d15c163478bb67c56c5d9d602628f4f62 (same ERC20F as KAG). EIP-1967 proxy admin slot = 0x0 (UUPS, no ProxyAdmin). Constructor args show admin addresses 0xe584e152bed254a177351cea587aa44c2a83a8ae, 0x4b1f9e5b20e8b9949b3db4b3ef5887f49d69c8dd, 0x6eff1bb0073c9b00fb6e090a19f8ac201a4f9138 — all confirmed EOAs (eth_getCode returns 0x). Kinesis mints KAU against LBMA-approved gold in ABX vaults and burns on physical redemption."
       }
     ],
