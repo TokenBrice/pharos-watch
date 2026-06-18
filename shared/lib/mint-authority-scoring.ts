@@ -415,13 +415,13 @@ export function scoreMintAuthorityBounds(
   // "every active minter is capped" denominator.
   const nonUpgradeMintCapable = mintCapable.filter((control) => control.directMintAbility !== "upgrade-only");
   const allNonUpgradeControlsAreCapped = capped.length === nonUpgradeMintCapable.length;
-  const capCanBeRaised = capped.some((control) => control.canRaiseCap === true);
+  const allCapsKnownImmutable = capped.every((control) => control.canRaiseCap === false);
 
   return (
     (allNonUpgradeControlsAreCapped
       ? MINT_BOUNDS_SCORES.allNonUpgradeControlsCapped
       : MINT_BOUNDS_SCORES.partiallyCappedControls) +
-    (capCanBeRaised ? 0 : MINT_BOUNDS_SCORES.immutableCapBonus)
+    (allCapsKnownImmutable ? MINT_BOUNDS_SCORES.immutableCapBonus : 0)
   );
 }
 

@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_AUTHORITY_V1: readonly MethodologyChangelogEntry[] = [
   {
+    version: "1.2",
+    title: "Immutable-cap bonus requires explicit immutability",
+    date: "2026-06-18",
+    effectiveAt: 1781740800,
+    summary:
+      "The bounds component now grants the immutable-cap bonus only when every cap-limited mint-capable control explicitly records `canRaiseCap: false`. Unknown or omitted cap mutability keeps the route capped but no longer earns the immutable-cap bonus.",
+    impact: [
+      "Cap-limited controls with `canRaiseCap: true`, `canRaiseCap: \"unknown\"`, or missing cap-mutability evidence score as capped but mutable/unknown in the bounds component",
+      "The slim client registry now projects `canRaiseCap` in `mintAuthoritySummary.controls[]` so aggregate surfaces compute the same Mint Authority Score as full metadata",
+      "Route, controller, posture, incident, unbounded, EOA, confidence, and Decentralization blend weights are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "1.1",
     title: "Time-based incident-cap decay",
     date: "2026-06-11",

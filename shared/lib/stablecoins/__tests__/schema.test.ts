@@ -602,6 +602,141 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/inheritedFrom/);
   });
 
+  it("requires wrapped mint authority profiles to publish inheritedFrom explicitly", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "parent-usd",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "implicit-wrapper-usd",
+        variantOf: "parent-usd",
+        variantKind: "savings-passthrough",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/requires inheritedFrom/);
+  });
+
+  it("rejects active variants without an explicit mint authority review", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "variant-without-mint-review",
+        variantOf: "parent-usd",
+        variantKind: "savings-passthrough",
+      }),
+    ], "fixture")).toThrow(/active variants require mintAuthority review/);
+  });
+
+  it("rejects active wrappers inheriting from frozen mint authority parents", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "frozen-parent-usd",
+        status: "frozen",
+        frozenAt: "2026-06-01",
+        obituary: {
+          causeOfDeath: "abandoned",
+          deathDate: "2026-06",
+          epitaph: "Archived.",
+          obituary: "Archived fixture.",
+          sourceUrl: "https://example.com/frozen-parent",
+          sourceLabel: "Fixture",
+        },
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "active-wrapper-of-frozen-usd",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          inheritedFrom: "frozen-parent-usd",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/must reference an active tracked stablecoin/);
+  });
+
+  it("rejects mint authority inheritance cycles and runtime-depth-limit chains", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "cycle-a",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "partially-bounded-admin",
+          inheritedFrom: "cycle-b",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "cycle-b",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "partially-bounded-admin",
+          inheritedFrom: "cycle-a",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/must not form a cycle/);
+
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "depth-0",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "partially-bounded-admin",
+          inheritedFrom: "depth-1",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "depth-1",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "partially-bounded-admin",
+          inheritedFrom: "depth-2",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "depth-2",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "partially-bounded-admin",
+          inheritedFrom: "depth-3",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "depth-3",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "partially-bounded-admin",
+          inheritedFrom: "depth-4",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "depth-4",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/depth/);
+  });
+
   it("requires wrapper none-resolved posture to inherit from a none-resolved parent", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({
@@ -626,14 +761,28 @@ describe("StablecoinMeta schema — mint authority", () => {
 describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1)", () => {
   it("accepts a coin with matching variantOf and pegReferenceId", () => {
     const json = [
+      makeCoin({
+        id: "variant-parent-ok",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          controls: undefined,
+        }),
+      }),
       {
         id: "fixture-variant-ok",
         name: "Fixture Variant",
         symbol: "FVT",
         flags: baseFlags,
-        variantOf: "usdt-tether",
+        variantOf: "variant-parent-ok",
         variantKind: "savings-passthrough",
-        pegReferenceId: "usdt-tether",
+        pegReferenceId: "variant-parent-ok",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          inheritedFrom: "variant-parent-ok",
+          controls: undefined,
+        }),
       },
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
@@ -641,13 +790,27 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
 
   it("accepts a coin with variantOf only (no pegReferenceId)", () => {
     const json = [
+      makeCoin({
+        id: "variant-parent-no-peg",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          controls: undefined,
+        }),
+      }),
       {
         id: "fixture-variant-no-peg",
         name: "Fixture Variant No Peg",
         symbol: "FVP",
         flags: baseFlags,
-        variantOf: "usdt-tether",
+        variantOf: "variant-parent-no-peg",
         variantKind: "savings-passthrough",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          inheritedFrom: "variant-parent-no-peg",
+          controls: undefined,
+        }),
       },
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();

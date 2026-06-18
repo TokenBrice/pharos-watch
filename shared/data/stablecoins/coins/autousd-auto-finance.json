@@ -18,6 +18,55 @@
     "reviewer": "Codex Royco coverage addition",
     "reviewedAt": "2026-06-13"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "autoUSD is a strategy-vault share token over USDC; wrapper share minting occurs through deposits into the Auto Finance autopool, while base USDC mint authority is inherited from Circle.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
+        "label": "Auto Finance autoUSD autopool share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Wrapper share minting represents deposits into the autoUSD autopool and does not create base USDC supply.",
+        "sources": [
+          {
+            "label": "Auto Finance contract addresses",
+            "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+          },
+          {
+            "label": "Auto Finance docs",
+            "url": "https://docs.auto.finance/"
+          }
+        ],
+        "evidence": "The tracked autoUSD contract is reviewed as a USDC strategy-vault wrapper; live-reserve metadata expects USDC as the underlying asset, so wrapper minting creates vault shares rather than durable base USDC."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Auto Finance contract addresses",
+          "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+        },
+        {
+          "label": "Existing USDC mint authority review",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        }
+      ],
+      "evidence": "autoUSD is tracked as a USDC strategy-vault variant with 100% USDC wrapper reserves in Pharos metadata. No separate base-supply mint authority is modeled for the wrapper; base USDC mint authority is inherited from Circle.",
+      "reviewer": "Codex mint-authority upgrade",
+      "reviewedAt": "2026-06-18",
+      "unresolvedQuestions": [
+        "Upgrade/admin controls for the Auto Finance autopool contract were not independently re-read on-chain in this review; this profile only closes inherited base-mint coverage."
+      ]
+    }
+  },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",

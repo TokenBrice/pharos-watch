@@ -250,7 +250,7 @@ export function syncGeneratedPerCoinAsset({
   const absoluteGeneratedPath = resolve(rootDir, GENERATED_PER_COIN_ASSET_FILE);
   // Repo-owned catalog helpers only check the checked-in generated aggregate path.
   const current = existsSync(absoluteGeneratedPath)
-    ? formatJson(loadGeneratedPerCoinCoins(rootDir))
+    ? formatJson(readJson(GENERATED_PER_COIN_ASSET_FILE, rootDir))
     : "";
 
   if (check) {

@@ -11,6 +11,7 @@ import {
   type MintAuthorityScoringInput,
 } from "../mint-authority-scoring";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../stablecoins/registry";
+import { MINT_AUTHORITY_MINT_PATH_VALUES } from "../../types/core";
 
 function input(overrides: Partial<MintAuthorityScoringInput> = {}): MintAuthorityScoringInput {
   return {
@@ -44,6 +45,27 @@ describe("Mint Authority Score", () => {
     }
 
     expect(score({ mintPath: "unknown" }).score).toBeNull();
+  });
+
+  it("keeps the route score table exhaustive for every direct scored route", () => {
+    const directScoredRoutes = MINT_AUTHORITY_MINT_PATH_VALUES.filter(
+      (mintPath) => mintPath !== "unknown" && mintPath !== "wrapped-or-variant-inherited",
+    );
+
+    expect(Object.keys(MINT_ROUTE_SCORES).sort()).toEqual([...directScoredRoutes].sort());
+  });
+
+  it("pins the weighted direct-profile formula", () => {
+    const result = computeMintAuthorityScore(input());
+
+    expect(result.components).toEqual({
+      route: 50,
+      controller: 65,
+      bounds: 30,
+      posture: 60,
+    });
+    expect(result.rawScore).toBe(55);
+    expect(result.score).toBe(55);
   });
 
   it("classifies mint-capable abilities", () => {
@@ -158,6 +180,20 @@ describe("Mint Authority Score", () => {
       ],
       "partially-bounded-admin",
     )).toBe(85);
+    expect(scoreMintAuthorityBounds(
+      [
+        { authorityType: "safe", directMintAbility: "cap-limited", canRaiseCap: "unknown" },
+        { authorityType: "dao-governor", directMintAbility: "upgrade-only" },
+      ],
+      "partially-bounded-admin",
+    )).toBe(75);
+    expect(scoreMintAuthorityBounds(
+      [
+        { authorityType: "safe", directMintAbility: "cap-limited" },
+        { authorityType: "dao-governor", directMintAbility: "upgrade-only" },
+      ],
+      "partially-bounded-admin",
+    )).toBe(75);
   });
 
   it("applies incident, unbounded, and confidence caps with traces", () => {
@@ -208,6 +244,24 @@ describe("Mint Authority Score", () => {
     }));
     expect(manual.score).toBe(85);
     expect(manual.capsApplied).toContain("confidence-cap");
+
+    const probable = computeMintAuthorityScore(input({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved",
+      confidence: "probable",
+      controls: [],
+    }));
+    expect(probable.score).toBe(90);
+    expect(probable.capsApplied).toContain("confidence-cap");
+
+    const verified = computeMintAuthorityScore(input({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved",
+      confidence: "verified",
+      controls: [],
+    }));
+    expect(verified.score).toBe(100);
+    expect(verified.capsApplied).not.toContain("confidence-cap");
   });
 
   it("resolves inherited wrapper scores without letting wrappers outscore parents", () => {
@@ -233,12 +287,16 @@ describe("Mint Authority Score", () => {
     expect(wrapperScore.capsApplied).toContain("eoa-cap");
   });
 
-  it("returns NR for missing parents, cycles, and unknown confidence", () => {
+  it("returns NR for missing parents, missing resolver, cycles, depth limits, and unknown confidence", () => {
     expect(computeMintAuthorityScore(input({ confidence: "unknown" })).score).toBeNull();
     expect(computeMintAuthorityScore(input({
       mintPath: "wrapped-or-variant-inherited",
       inheritedFrom: "missing",
     }), () => null).unresolvedReason).toBe("parent-not-found");
+    expect(computeMintAuthorityScore(input({
+      mintPath: "wrapped-or-variant-inherited",
+      inheritedFrom: "missing-resolver",
+    })).unresolvedReason).toBe("parent-resolver-missing");
 
     const cyclic = input({
       id: "cycle",
@@ -246,6 +304,26 @@ describe("Mint Authority Score", () => {
       inheritedFrom: "cycle",
     });
     expect(computeMintAuthorityScore(cyclic, () => cyclic).unresolvedReason).toBe("inheritance-cycle");
+
+    const cycleA = input({ id: "cycle-a", mintPath: "wrapped-or-variant-inherited", inheritedFrom: "cycle-b" });
+    const cycleB = input({ id: "cycle-b", mintPath: "wrapped-or-variant-inherited", inheritedFrom: "cycle-c" });
+    const cycleC = input({ id: "cycle-c", mintPath: "wrapped-or-variant-inherited", inheritedFrom: "cycle-a" });
+    const cycleParents = new Map([cycleA, cycleB, cycleC].map((entry) => [entry.id!, entry]));
+    expect(computeMintAuthorityScore(cycleA, (id) => cycleParents.get(id) ?? null).unresolvedReason).toBe(
+      "inheritance-cycle",
+    );
+
+    const depthParent = (id: string): MintAuthorityScoringInput | null => {
+      if (id === "depth-1") return input({ id, mintPath: "wrapped-or-variant-inherited", inheritedFrom: "depth-2" });
+      if (id === "depth-2") return input({ id, mintPath: "wrapped-or-variant-inherited", inheritedFrom: "depth-3" });
+      if (id === "depth-3") return input({ id, mintPath: "wrapped-or-variant-inherited", inheritedFrom: "depth-4" });
+      if (id === "depth-4") return input({ id, mintPath: "immutable-user-collateralized", authorityPosture: "none-resolved", controls: [] });
+      return null;
+    };
+    expect(computeMintAuthorityScore(
+      input({ id: "depth-0", mintPath: "wrapped-or-variant-inherited", inheritedFrom: "depth-1" }),
+      depthParent,
+    ).unresolvedReason).toBe("parent-not-scoreable");
   });
 
   it("maps score bands at the approved thresholds", () => {

@@ -18,6 +18,55 @@
     "reviewer": "Codex Royco coverage addition",
     "reviewedAt": "2026-06-13"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "eEARN is a vault/share token over USDC; wrapper share minting occurs through deposits into the Ember Earn vault, while base USDC mint authority is inherited from Circle.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "label": "Ember Earn eEARN vault share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Wrapper share minting represents deposits into the eEARN vault and does not create base USDC supply.",
+        "sources": [
+          {
+            "label": "Ethereum eEARN contract",
+            "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract"
+          },
+          {
+            "label": "Royco Dawn",
+            "url": "https://dawn.royco.org/"
+          }
+        ],
+        "evidence": "The tracked eEARN contract is reviewed as a USDC vault/share wrapper; live-reserve metadata expects USDC as the underlying asset, so wrapper minting creates vault shares rather than durable base USDC."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ethereum eEARN contract",
+          "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract"
+        },
+        {
+          "label": "Existing USDC mint authority review",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        }
+      ],
+      "evidence": "eEARN is tracked as a USDC strategy-vault variant with 100% USDC wrapper reserves in Pharos metadata. No separate base-supply mint authority is modeled for the wrapper; base USDC mint authority is inherited from Circle.",
+      "reviewer": "Codex mint-authority upgrade",
+      "reviewedAt": "2026-06-18",
+      "unresolvedQuestions": [
+        "Upgrade/admin controls for the eEARN vault contract were not independently re-read on-chain in this review; this profile only closes inherited base-mint coverage."
+      ]
+    }
+  },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",

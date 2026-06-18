@@ -65,7 +65,7 @@ export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
       "Mint Authority Score NR (missing or unresolved review) leaves the dimension untouched - a missing review never penalizes",
       "No separate confidence gate: the Mint Authority confidence caps (verified 100 / probable 90 / manual-review 85) already encode evidence quality inside the score",
       "111 of 368 scoreable active coins move down, none up; biggest dimension drops are mint-incident and unbounded-mint protocols (DOLA 75 to 56, reUSD 55 to 39, MIM 45 to 33, USDe 45 to 38, crvUSD 85 to 77); USDT, USDC, LUSD, and BOLD are unchanged because their governance scores already reflect their mint topology",
-      "Dimension weights, the peg multiplier, and the other four dimensions are unchanged; raw inputs now expose the blended mintAuthorityScore",
+      "Dimension weights, the peg multiplier, and the other four dimensions are unchanged; raw inputs now expose the standalone mintAuthorityScore input",
     ],
     commits: [],
     reconstructed: false,

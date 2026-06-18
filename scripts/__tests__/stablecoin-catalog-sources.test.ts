@@ -167,6 +167,24 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => syncGeneratedPerCoinAsset({ check: true, rootDir })).not.toThrow();
   });
 
+  it("can replace a stale aggregate that no longer satisfies catalog-level invariants", () => {
+    const rootDir = makeTempRoot();
+    const perCoin = makeCoin("per-coin-usd");
+
+    writeLegacyShards(rootDir);
+    writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", perCoin);
+    writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", [
+      makeCoin("stale-variant-usd", {
+        variantOf: "parent-usd",
+        variantKind: "savings-passthrough",
+      }),
+    ]);
+
+    const result = syncGeneratedPerCoinAsset({ rootDir });
+    expect(result.changed).toBe(true);
+    expect(loadGeneratedPerCoinCoins(rootDir)).toEqual([perCoin]);
+  });
+
   it("rejects duplicate per-coin IDs before generating the aggregate", () => {
     const rootDir = makeTempRoot();
     const duplicateCoin = makeCoin("duplicate-usd");

@@ -402,7 +402,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 26 keys
 - `shared/data/stablecoins/coins/ausd-agora.json` - 25 keys
 - `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 26 keys
-- `shared/data/stablecoins/coins/autousd-auto-finance.json` - 23 keys
+- `shared/data/stablecoins/coins/autousd-auto-finance.json` - 24 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 22 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 21 keys
 - `shared/data/stablecoins/coins/aznd-mu-digital.json` - 26 keys

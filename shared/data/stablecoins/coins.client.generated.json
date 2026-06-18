@@ -34,7 +34,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
@@ -108,6 +109,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -156,7 +158,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
@@ -222,11 +225,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -365,6 +370,7 @@
           "directMintAbility": "direct",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -372,11 +378,13 @@
           "directMintAbility": "direct",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -480,11 +488,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -492,11 +502,13 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -743,11 +755,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -831,11 +845,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -945,7 +961,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -1030,16 +1047,19 @@
           "directMintAbility": "direct",
           "threshold": 2,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -1078,7 +1098,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -1136,12 +1157,14 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
           "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -1181,7 +1204,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -1404,13 +1428,15 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -1447,6 +1473,20 @@
     ],
     "collateralQuality": "exotic",
     "blacklistStatus": "inherited",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "canRaiseCap": false,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ]
+    },
     "liveReserveAdapter": "erc4626-single-asset"
   },
   {
@@ -1542,16 +1582,19 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -1588,7 +1631,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
@@ -1718,7 +1762,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -1766,7 +1811,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -1898,7 +1944,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -1945,7 +1992,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -2024,7 +2072,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -2164,11 +2213,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only"
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -2387,7 +2438,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -2490,12 +2542,14 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
           "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -2545,7 +2599,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -2669,7 +2724,8 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -2724,15 +2780,18 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "parameter-only"
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -2793,6 +2852,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -2872,11 +2932,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -2932,6 +2994,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -2969,7 +3032,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -3043,11 +3107,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -3091,12 +3157,14 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
           "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -3224,11 +3292,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
-          "directMintAbility": "parameter-only"
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "unknown",
@@ -3378,7 +3448,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
@@ -3491,6 +3562,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -3528,7 +3600,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
@@ -3757,11 +3830,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -3805,6 +3880,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -3812,6 +3888,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -3853,13 +3930,15 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "parameter-only",
           "threshold": 2,
           "signerCount": 4,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -3904,7 +3983,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -3976,12 +4056,14 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
           "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -4313,6 +4395,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4471,6 +4554,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -4536,6 +4620,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4725,11 +4810,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -4766,7 +4853,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -4914,11 +5002,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -5061,21 +5151,25 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "parameter-only",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -5231,11 +5325,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -5272,11 +5368,13 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -5326,11 +5424,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -5442,6 +5542,20 @@
     ],
     "collateralQuality": "exotic",
     "blacklistStatus": "inherited",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "canRaiseCap": false,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ]
+    },
     "liveReserveAdapter": "erc4626-single-asset"
   },
   {
@@ -5817,6 +5931,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -5882,11 +5997,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -6086,11 +6203,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -6151,6 +6270,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -6158,6 +6278,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -6234,11 +6355,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -6364,11 +6487,13 @@
       "controls": [
         {
           "authorityType": "eoa",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -6430,11 +6555,13 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 4,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -6442,11 +6569,13 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 3,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -6454,11 +6583,13 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 4,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -6466,11 +6597,13 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 3,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -6518,16 +6651,19 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -6593,6 +6729,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -6607,6 +6744,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -6619,11 +6757,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -6713,6 +6853,7 @@
           "directMintAbility": "direct",
           "threshold": 2,
           "signerCount": 2,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -6725,6 +6866,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -6780,18 +6922,21 @@
       "controls": [
         {
           "authorityType": "eoa",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -6833,7 +6978,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -6889,11 +7035,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -7137,7 +7285,8 @@
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -7186,11 +7335,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -7337,6 +7488,7 @@
           "directMintAbility": "direct",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -7511,6 +7663,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -8061,6 +8214,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -8178,31 +8332,37 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8329,6 +8489,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -8449,6 +8610,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -8456,6 +8618,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -8499,6 +8662,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -8506,6 +8670,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -8549,11 +8714,13 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -8829,11 +8996,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8924,16 +9093,19 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8973,16 +9145,19 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -9209,16 +9384,19 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -9341,11 +9519,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -9654,6 +9834,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -10017,21 +10198,25 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -10071,11 +10256,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -10145,11 +10332,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -10191,13 +10380,15 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -10366,11 +10557,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -10699,6 +10892,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -10743,11 +10937,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -10919,6 +11115,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -10926,6 +11123,7 @@
           "directMintAbility": "parameter-only",
           "threshold": 3,
           "signerCount": 4,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -10933,6 +11131,7 @@
           "directMintAbility": "none",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -11043,11 +11242,13 @@
         {
           "authorityType": "bridge",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "bridge",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -11460,11 +11661,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -11515,6 +11718,7 @@
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -12022,6 +12226,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -12029,6 +12234,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -12036,6 +12242,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -12288,6 +12495,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -12454,6 +12662,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -12590,6 +12799,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -12882,6 +13092,7 @@
           "directMintAbility": "direct",
           "threshold": 5,
           "signerCount": 10,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -12997,11 +13208,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -13170,6 +13383,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -13527,6 +13741,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -13534,6 +13749,7 @@
           "directMintAbility": "parameter-only",
           "threshold": 3,
           "signerCount": 4,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -13816,11 +14032,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -13980,6 +14198,7 @@
           "directMintAbility": "direct",
           "threshold": 2,
           "signerCount": 3,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -14035,11 +14254,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -14047,6 +14268,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -14108,6 +14330,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -14172,11 +14395,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -14184,6 +14409,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -14240,17 +14466,20 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -14305,6 +14534,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -14421,17 +14651,20 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -14746,6 +14979,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -14753,6 +14987,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -14760,6 +14995,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -14877,7 +15113,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -14916,16 +15153,19 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -15288,6 +15528,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -15338,6 +15579,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -15345,6 +15587,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 2,
           "signerCount": 3,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -15750,7 +15993,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -16202,11 +16446,13 @@
           "directMintAbility": "direct",
           "threshold": 2,
           "signerCount": 31,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -16877,11 +17123,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -16936,7 +17184,8 @@
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -17108,6 +17357,7 @@
           "directMintAbility": "parameter-only",
           "threshold": 2,
           "signerCount": 3,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -17207,7 +17457,8 @@
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -17360,7 +17611,8 @@
         },
         {
           "authorityType": "unknown",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -17517,11 +17769,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -17558,7 +17812,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
@@ -17721,7 +17976,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -17784,11 +18040,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -17994,11 +18252,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -18518,11 +18778,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -18649,6 +18911,7 @@
           "authorityType": "contract",
           "directMintAbility": "direct",
           "timelockDelaySec": 259200,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18709,7 +18972,8 @@
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -18762,6 +19026,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18815,6 +19080,7 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18869,6 +19135,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18978,6 +19245,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -19089,11 +19357,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -19150,6 +19420,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -19252,11 +19523,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -19350,7 +19623,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -19396,6 +19670,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -19489,6 +19764,7 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -19537,7 +19813,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -19647,7 +19924,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "safe",
@@ -19791,6 +20069,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -19798,6 +20077,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 2,
           "signerCount": 3,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -19892,6 +20172,7 @@
           "directMintAbility": "direct",
           "threshold": 2,
           "signerCount": 4,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -19941,11 +20222,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -20108,15 +20391,18 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
-          "directMintAbility": "parameter-only"
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -20554,11 +20840,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only"
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -20597,6 +20885,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -20703,7 +20992,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -20939,6 +21229,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -20946,6 +21237,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 3,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -21504,11 +21796,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -21549,16 +21843,19 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -21696,11 +21993,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -21840,6 +22139,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -21847,6 +22147,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 5,
           "signerCount": 10,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -21898,6 +22199,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -22386,11 +22688,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -22546,16 +22850,19 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -22718,11 +23025,13 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -23016,7 +23325,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
@@ -23277,7 +23587,8 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -23607,11 +23918,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -23817,7 +24130,8 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
@@ -24259,6 +24573,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -24266,6 +24581,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -24273,11 +24589,13 @@
           "directMintAbility": "upgrade-only",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -24285,6 +24603,7 @@
           "directMintAbility": "direct",
           "threshold": 2,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -24292,6 +24611,7 @@
           "directMintAbility": "upgrade-only",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -24559,6 +24879,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 2,
           "signerCount": 2,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -24566,6 +24887,7 @@
           "directMintAbility": "upgrade-only",
           "threshold": 2,
           "signerCount": 2,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -24605,11 +24927,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24963,11 +25287,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -25126,6 +25452,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -25296,11 +25623,13 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "none",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -25348,11 +25677,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -25389,11 +25720,13 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "custodian",
           "directMintAbility": "none",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -25495,16 +25828,19 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -25692,6 +26028,7 @@
           "directMintAbility": "direct",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -25889,6 +26226,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -26152,6 +26490,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -26307,6 +26646,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -26428,11 +26768,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "custodian",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -26523,11 +26865,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -26577,11 +26921,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -26788,6 +27134,7 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -26839,11 +27186,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -26884,11 +27233,13 @@
           "directMintAbility": "direct",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -26942,11 +27293,13 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only"
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "multisig",
@@ -27001,11 +27354,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -27117,6 +27472,7 @@
           "directMintAbility": "direct",
           "threshold": 1,
           "signerCount": 2,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -27260,6 +27616,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -27300,11 +27657,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -27410,7 +27769,8 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "eoa",
@@ -27455,6 +27815,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -27462,16 +27823,19 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -27512,6 +27876,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -27519,16 +27884,19 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -27568,6 +27936,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -27575,16 +27944,19 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -27624,6 +27996,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -27631,16 +28004,19 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -27729,6 +28105,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -27766,16 +28143,19 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -27820,6 +28200,7 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -27827,6 +28208,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -27880,6 +28262,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -27925,6 +28308,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -27932,16 +28316,19 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -27981,6 +28368,7 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
@@ -27988,16 +28376,19 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 7,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -28189,11 +28580,13 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -28307,36 +28700,43 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -28376,6 +28776,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -28428,6 +28829,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 4,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -28466,11 +28868,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
@@ -28516,6 +28920,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -28523,6 +28928,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -28566,6 +28972,7 @@
           "directMintAbility": "cap-limited",
           "threshold": 8,
           "signerCount": 15,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -28689,11 +29096,13 @@
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         }
       ]
     }
@@ -28732,11 +29141,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -29020,6 +29431,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -29043,6 +29455,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 10,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -29081,11 +29494,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -29295,6 +29710,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
@@ -29318,6 +29734,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 10,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -29559,16 +29976,19 @@
           "directMintAbility": "can-authorize",
           "threshold": 4,
           "signerCount": 6,
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -29674,6 +30094,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -29780,11 +30201,13 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown"
         },
         {
           "authorityType": "custodian",
-          "directMintAbility": "none"
+          "directMintAbility": "none",
+          "canRaiseCap": "unknown"
         }
       ]
     },
@@ -29875,16 +30298,19 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -30054,6 +30480,7 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {

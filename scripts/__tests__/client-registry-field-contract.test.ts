@@ -7,6 +7,8 @@ import {
   projectMintAuthoritySummary,
   readCanonicalClientFields,
 } from "../build-data/build-client-registry.mjs";
+import { computeMintAuthorityScore, stablecoinToMintAuthorityScoringInput } from "../../shared/lib/mint-authority-scoring";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { STABLECOIN_CLIENT_META_FIELDS } from "../../shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
@@ -92,6 +94,7 @@ describe("client registry field contract", () => {
             threshold: 2,
             signerCount: 3,
             timelockDelaySec: 86_400,
+            canRaiseCap: "unknown",
             capDescription: "Daily cap",
             modulesOrGuardsStatus: "none-detected",
             safe: {
@@ -121,6 +124,7 @@ describe("client registry field contract", () => {
           threshold: 2,
           signerCount: 3,
           timelockDelaySec: 86_400,
+          canRaiseCap: "unknown",
           modulesOrGuardsStatus: "none-detected",
         },
       ],
@@ -263,5 +267,35 @@ describe("client registry field contract", () => {
 
   it("returns no mint-authority summary when the source profile is absent", () => {
     expect(projectMintAuthoritySummary({ id: "unknown" })).toBeUndefined();
+  });
+
+  it("keeps projected mint-authority summaries score-equivalent with full metadata", () => {
+    const clientFields = readCanonicalClientFields();
+    const projectedById = new Map(
+      TRACKED_STABLECOINS.map((coin) => [coin.id, projectCoin(coin, clientFields)] as const),
+    );
+    const fullResolver = (id: string) => stablecoinToMintAuthorityScoringInput(TRACKED_META_BY_ID.get(id));
+    const projectedResolver = (id: string) => {
+      const projected = projectedById.get(id);
+      return stablecoinToMintAuthorityScoringInput(
+        projected ? { id: projected.id, mintAuthority: projected.mintAuthoritySummary as never } : null,
+      );
+    };
+
+    for (const coin of TRACKED_STABLECOINS) {
+      const full = computeMintAuthorityScore(stablecoinToMintAuthorityScoringInput(coin), fullResolver);
+      const projected = projectedById.get(coin.id);
+      const compact = computeMintAuthorityScore(
+        stablecoinToMintAuthorityScoringInput(
+          projected ? { id: projected.id, mintAuthority: projected.mintAuthoritySummary as never } : null,
+        ),
+        projectedResolver,
+      );
+
+      expect(compact.score, coin.id).toBe(full.score);
+      expect(compact.rawScore, coin.id).toBe(full.rawScore);
+      expect(compact.capsApplied, coin.id).toEqual(full.capsApplied);
+      expect(compact.unresolvedReason, coin.id).toBe(full.unresolvedReason);
+    }
   });
 });

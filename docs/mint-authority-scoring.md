@@ -4,7 +4,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.1`
+- **Current methodology version:** `v1.2`
 - **Runtime/version source:** `shared/lib/methodology-versions/mint-authority.ts`
 - **Scoring source:** `shared/lib/mint-authority-scoring.ts`
 - **Public methodology anchor:** `/methodology/#mint-authority-score`
@@ -24,7 +24,7 @@ Primary fields:
 - `mintPath` - route family, such as immutable user collateral, permissioned minter, issuer direct mint, bridge/OFT synthetic, M0 minter, or inherited wrapper.
 - `authorityPosture` - reviewed posture band: none resolved, bounded admin, partially bounded admin, concentrated admin, unbounded or compromised, or unknown.
 - `confidence` - evidence quality: verified, probable, manual-review, or unknown.
-- `controls[]` - mint-capable or mint-adjacent control paths, including role, authority type, direct mint ability, threshold, signer count, timelock, cap status, Safe module/guard state, key-custody attestation, sources, and evidence.
+- `controls[]` - mint-capable or mint-adjacent control paths, including role, authority type, direct mint ability, threshold, signer count, timelock, cap status, cap-mutability evidence, Safe module/guard state, key-custody attestation, sources, and evidence.
 - `inheritedFrom` - parent stablecoin id for wrappers and variants that inherit mint authority from a reviewed parent.
 - `mintIncidents` - historical unbacked-mint or privileged-mint exploit evidence (one entry per incident) used for the hard incident cap.
 
@@ -49,6 +49,8 @@ rawScore = round(
 | Posture    | 15%    | Curated operator posture from no privileged route through unbounded or compromised authority.                                                                    |
 
 The controller component is weakest-link by design. If any mint-capable path can directly mint, authorize a minter, raise a cap, or upgrade mint logic, the lowest controller score among those paths constrains the component.
+
+The bounds component treats cap-limited mint-capable controls as bounded, but the immutable-cap bonus is stricter in `v1.2`: every cap-limited mint-capable control must explicitly record `canRaiseCap: false`. Controls with `canRaiseCap: true`, `canRaiseCap: "unknown"`, or omitted cap-mutability evidence keep the capped-path score but do not receive the immutable-cap bonus.
 
 ## Caps
 
@@ -83,7 +85,7 @@ Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or bey
 ## Surfaces
 
 - Stablecoin detail pages show the score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data exists.
-- The homepage table and `/screener/` show sortable Mint Score columns. `/screener/` also supports score threshold and band filters, and CSV export includes status, score, and band.
+- The homepage table and `/screener/` show sortable Mint Score columns. `/screener/` also supports score threshold and band filters, and CSV export includes status, score, and band. Compact client projections include cap-mutability evidence needed to keep aggregate Mint Authority Scores equivalent to full metadata.
 - `/coverage/` counts curated review breadth by route bucket and also exposes score-band breakdown chips.
 - Safety Score report cards: the Decentralization dimension applies the penalty-only blend (v8.0) and shows a `Mint authority` detail row when the drag binds; raw inputs expose `mintAuthorityScore`.
 

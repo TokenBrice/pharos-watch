@@ -104,6 +104,11 @@ export function MintAuthorityScoreMethodologySection() {
           <h3 className="text-foreground font-medium">Caps</h3>
           <ul className="list-disc list-inside space-y-1">
             <li>
+              Bounds: cap-limited controls receive the immutable-cap bonus only when every cap-limited mint-capable
+              control explicitly records that its cap cannot be raised. Unknown or omitted cap-mutability evidence stays
+              bounded, but does not score as immutable.
+            </li>
+            <li>
               Incident cap: unbounded or compromised authority with a recorded mint incident is capped by the age of
               the most recent incident — 10 when under 2 years old, 15 at 2-4 years, 20 at 4+ years. Decay is purely
               time-based and always stays below the no-incident unbounded cap.

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters-config";
-import { isReadableStablecoinMeta } from "./status";
+import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
@@ -294,15 +294,20 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
   });
 
 function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.RefinementCtx): void {
-  if (stablecoins.length < 2) {
-    return;
-  }
-
   const catalogById = new Map(stablecoins.map((stablecoin) => [stablecoin.id, stablecoin]));
+  const catalogIndexById = new Map(stablecoins.map((stablecoin, index) => [stablecoin.id, index]));
+  const hasCatalogContext = stablecoins.length > 1;
 
   for (let index = 0; index < stablecoins.length; index += 1) {
     const stablecoin = stablecoins[index]!;
     const mintAuthority = stablecoin.mintAuthority;
+    if (mintAuthority == null && isActiveStablecoinMeta(stablecoin) && stablecoin.variantOf != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "active variants require mintAuthority review so inherited mint risk cannot silently become NR",
+        path: [index, "mintAuthority"],
+      });
+    }
     if (mintAuthority == null) {
       continue;
     }
@@ -310,10 +315,17 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
     const inheritedFrom = mintAuthority.inheritedFrom;
     if (inheritedFrom != null) {
       const parent = catalogById.get(inheritedFrom);
-      if (parent == null || !isReadableStablecoinMeta(parent)) {
+      if ((parent == null && hasCatalogContext) || (parent != null && !isReadableStablecoinMeta(parent))) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "mintAuthority.inheritedFrom must reference an active or frozen tracked stablecoin",
+          path: [index, "mintAuthority", "inheritedFrom"],
+        });
+      }
+      if (parent != null && isActiveStablecoinMeta(stablecoin) && !isActiveStablecoinMeta(parent)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "active mintAuthority.inheritedFrom must reference an active tracked stablecoin",
           path: [index, "mintAuthority", "inheritedFrom"],
         });
       }
@@ -323,10 +335,10 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
       continue;
     }
 
-    if (inheritedFrom == null && stablecoin.variantOf == null) {
+    if (inheritedFrom == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "wrapped-or-variant-inherited mintAuthority requires inheritedFrom or variantOf",
+        message: "wrapped-or-variant-inherited mintAuthority requires inheritedFrom",
         path: [index, "mintAuthority", "inheritedFrom"],
       });
     }
@@ -351,6 +363,44 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
         message: "wrapped mintAuthority can use authorityPosture none-resolved only when the parent is none-resolved",
         path: [index, "mintAuthority", "authorityPosture"],
       });
+    }
+  }
+
+  for (let index = 0; index < stablecoins.length; index += 1) {
+    const stablecoin = stablecoins[index]!;
+    if (stablecoin.mintAuthority?.mintPath !== "wrapped-or-variant-inherited") {
+      continue;
+    }
+
+    const seen = new Set<string>();
+    let current: StablecoinMeta | undefined = stablecoin;
+    let depth = 0;
+    while (current?.mintAuthority?.mintPath === "wrapped-or-variant-inherited") {
+      if (seen.has(current.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mintAuthority inheritance must not form a cycle",
+          path: [index, "mintAuthority", "inheritedFrom"],
+        });
+        break;
+      }
+      if (depth >= 3) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mintAuthority inheritance depth must stay within the runtime resolver limit",
+          path: [index, "mintAuthority", "inheritedFrom"],
+        });
+        break;
+      }
+
+      seen.add(current.id);
+      const parentId = current.mintAuthority.inheritedFrom;
+      if (parentId == null) {
+        break;
+      }
+      const parentIndex = catalogIndexById.get(parentId);
+      current = parentIndex != null ? stablecoins[parentIndex] : undefined;
+      depth += 1;
     }
   }
 }
