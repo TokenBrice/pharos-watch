@@ -6,10 +6,15 @@ import {
 } from "../lib/telegram-constants";
 import { deliverTelegramSubscriberQueue, type DeliverTelegramSubscriberQueueResult } from "./dispatch-telegram-delivery";
 import {
+  formatPlannedSubscribers,
+  planSubscriberQueue,
   selectChatsToFormat,
   type AlertsByChatEntry,
   type PlannedSubscriberAlert,
+  type RoutedSubscriberAlert,
 } from "./dispatch-telegram-routing";
+import { hasEscalation } from "./dispatch-telegram-predicates";
+import { isQuietHoursActive } from "./telegram-quiet-hours";
 import {
   loadChatsInBackoff,
   readTelegramGlobalBackoff,
@@ -211,6 +216,45 @@ export function splitFreshPlansForOverflowPriority(
     ? selectChatsToFormat(plannedQueue, freshFormatBudget)
     : { toFormat: [], overflow: [...plannedQueue] };
   return { toFormat, overflowPlanned: overflow, overflowFormatBudget };
+}
+
+export function buildOverflowAwareSubscriberQueue(args: {
+  alertsByChat: Map<string, AlertsByChatEntry>;
+  overflowBacklog: readonly PlannedSubscriberAlert[];
+  nowSec: number;
+  formatBudget: number;
+}): {
+  plannedQueue: PlannedSubscriberAlert[];
+  subscriberQueue: RoutedSubscriberAlert[];
+  overflowPlanned: PlannedSubscriberAlert[];
+  combinedOverflowPlanned: PlannedSubscriberAlert[];
+  overflowFormatBudget: number;
+  resolveDisableNotification: (entry: AlertsByChatEntry) => boolean;
+} {
+  const resolveDisableNotification = (entry: AlertsByChatEntry): boolean =>
+    !hasEscalation(entry.alerts) ||
+    isQuietHoursActive(
+      args.nowSec,
+      entry.quietHoursEnabled,
+      entry.quietHoursStartUtc,
+      entry.quietHoursEndUtc,
+      entry.timezone,
+    );
+  const plannedQueue = planSubscriberQueue(args.alertsByChat);
+  const { toFormat, overflowPlanned, overflowFormatBudget } = splitFreshPlansForOverflowPriority(
+    plannedQueue,
+    args.overflowBacklog,
+    args.formatBudget,
+  );
+  const subscriberQueue = formatPlannedSubscribers(toFormat, resolveDisableNotification);
+  return {
+    plannedQueue,
+    subscriberQueue,
+    overflowPlanned,
+    combinedOverflowPlanned: [...args.overflowBacklog, ...overflowPlanned],
+    overflowFormatBudget,
+    resolveDisableNotification,
+  };
 }
 
 export async function persistFanoutOverflowBacklog(

@@ -8,10 +8,7 @@ import { toErrorMessage } from "../lib/error-utils";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { writeSnapshots } from "./telegram-alert-snapshots";
-import {
-  buildDispatchSnapshotState,
-  loadDispatchSourceData,
-} from "./dispatch-telegram-state";
+import { buildDispatchSnapshotState, loadDispatchSourceData } from "./dispatch-telegram-state";
 import {
   drainPendingQueue,
   cleanupExpiredPendingAlerts,
@@ -25,8 +22,6 @@ import {
 } from "./telegram-pending";
 import {
   collapseBurstChats,
-  formatPlannedSubscribers,
-  planSubscriberQueue,
   routeAlertEvents,
   type AlertsByChatEntry,
   type BurstMarkerMap,
@@ -43,14 +38,13 @@ import {
   persistTelegramAlertJobManifests,
 } from "./telegram-alert-jobs";
 import {
+  buildOverflowAwareSubscriberQueue,
   drainOverflowBacklogOnly,
   persistEventlessOverflowBacklog,
   persistFanoutOverflowBacklog,
   readOverflowPlanBacklog,
-  splitFreshPlansForOverflowPriority,
 } from "./dispatch-telegram-overflow";
 import { pruneAlreadyTerminalSubscribers } from "./dispatch-telegram-terminal-targets";
-import { isQuietHoursActive } from "./telegram-quiet-hours";
 import { logTelegramEvent } from "../lib/telegram-log";
 import {
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
@@ -64,7 +58,6 @@ import {
 } from "./dispatch-telegram-events";
 import {
   getSymbol,
-  hasEscalation,
   meetsDepegStepThreshold,
   meetsDewsThreshold,
   shouldIncludeDepegWorsening,
@@ -547,9 +540,6 @@ async function executeFullFanoutPath({
     perCoinExplicitlyOffMaps.reserve,
   );
 
-  // C128: collapse global-dominant burst chats into a single summary BEFORE the
-  // expensive formatting pass (so the collapse also bounds CPU — the C102 dep).
-  // No-op at the default BURST_EVENT_THRESHOLD; markers persist after delivery.
   const burstMarkersCached = await getCache(db, "telegram:burst-markers");
   let burstMarkers: BurstMarkerMap = {};
   if (burstMarkersCached) {
@@ -562,29 +552,16 @@ async function executeFullFanoutPath({
   }
   const burstOutcome = collapseBurstChats(alertsByChat, burstMarkers, nowSec);
 
-  // C102: cap and sort candidate chats by recency BEFORE the expensive
-  // `formatConsolidatedMessage` pass. The pending drain (below) can only shrink
-  // the real fresh budget, so the upper-bound format budget is the full per-run
-  // cap plus a small allowance. Only the selected slice is formatted; the
-  // overflow tail can never be sent fresh this run and is enqueued lazily.
-  const resolveDisableNotification = (entry: AlertsByChatEntry): boolean =>
-    !hasEscalation(entry.alerts) ||
-    isQuietHoursActive(
-      nowSec,
-      entry.quietHoursEnabled,
-      entry.quietHoursStartUtc,
-      entry.quietHoursEndUtc,
-      entry.timezone,
-    );
-  const plannedQueue = planSubscriberQueue(alertsByChat);
   const formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE;
-  const { toFormat, overflowPlanned, overflowFormatBudget } =
-    splitFreshPlansForOverflowPriority(plannedQueue, overflowBacklog, formatBudget);
-  const subscriberQueue = formatPlannedSubscribers(toFormat, resolveDisableNotification);
-  const combinedOverflowPlanned = [...overflowBacklog, ...overflowPlanned];
+  const {
+    plannedQueue,
+    subscriberQueue,
+    overflowPlanned,
+    combinedOverflowPlanned,
+    overflowFormatBudget,
+    resolveDisableNotification,
+  } = buildOverflowAwareSubscriberQueue({ alertsByChat, overflowBacklog, nowSec, formatBudget });
   const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
-  // Candidate metrics cover ALL routed chats (cheap estimate); target metrics
-  // cover only the formatted-selected set actually dispatched this run.
   const perAlertTypeTargets = buildPerAlertTypeTargets(subscriberQueue);
   const freshCandidateChats = plannedQueue.length;
   const freshCandidateCount = plannedQueue.reduce((sum, plan) => sum + plan.estimatedChunks, 0);
@@ -694,8 +671,6 @@ async function executeFullFanoutPath({
   await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
 
   await writeSnapshots(db, currentSnapshots);
-  // Persist burst markers only when there is something to track — avoids a
-  // needless cache write every 5-minute run; expired entries self-prune on read.
   if (
     burstOutcome.collapsedChats > 0 ||
     burstOutcome.deltaSuppressed > 0 ||
