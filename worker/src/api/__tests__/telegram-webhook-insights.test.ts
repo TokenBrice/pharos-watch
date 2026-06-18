@@ -1,7 +1,39 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { buildTopMessage } from "../telegram-webhook-insights";
+import { buildBriefMessage, buildTopMessage } from "../telegram-webhook-insights";
+
+describe("buildBriefMessage", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("flags stale digest briefs without suppressing the stored brief text", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-14T12:00:00Z"));
+    const generatedAt = Math.floor(new Date("2026-05-11T12:00:00Z").getTime() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM daily_digest",
+        rows: [
+          {
+            digest_title: "Calm Drift",
+            digest_text: "Stored brief body.",
+            digest_extended: null,
+            generated_at: generatedAt,
+            input_data: null,
+          },
+        ],
+      },
+    ]);
+
+    const message = await buildBriefMessage(db);
+
+    expect(message).toContain("Updated: 3d old");
+    expect(message).toContain("May be stale: latest digest is 3d old.");
+    expect(message).toContain("Stored brief body.");
+  });
+});
 
 describe("buildTopMessage", () => {
   afterEach(() => {

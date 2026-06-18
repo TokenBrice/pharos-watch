@@ -17,6 +17,7 @@ import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 
 const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
+const DIGEST_BRIEF_STALE_AFTER_SEC = 48 * 3600;
 
 function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
   return formatTelegramAge(ts, nowSec, { invalidFallback: "unknown age" });
@@ -56,6 +57,8 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
     return "No digest brief is available yet.";
   }
 
+  const nowSec = Math.floor(Date.now() / 1000);
+  const digestAgeSec = Math.max(0, nowSec - row.generated_at);
   const input = safeJsonParse<DigestInputData | null>(
     row.input_data,
     null,
@@ -64,10 +67,15 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
   const lines = [
     `<b>Pharos Market Brief</b>`,
     row.digest_title ? `<b>${escapeHtml(row.digest_title)}</b>` : null,
-    `Updated: ${formatAge(row.generated_at)}`,
+    `Updated: ${formatAge(row.generated_at, nowSec)}`,
   ].filter((line): line is string => Boolean(line));
+  if (digestAgeSec > DIGEST_BRIEF_STALE_AFTER_SEC) {
+    lines.push(`May be stale: latest digest is ${formatAge(row.generated_at, nowSec)}.`);
+  }
 
+  let hasStructuredBrief = false;
   if (input?.riskTape?.length) {
+    hasStructuredBrief = true;
     lines.push("");
     lines.push("<b>Risk tape</b>");
     for (const item of input.riskTape.slice(0, 4)) {
@@ -82,6 +90,7 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
       ...input.changeSummary.resolvedSignals,
     ].slice(0, 4);
     if (changes.length > 0) {
+      hasStructuredBrief = true;
       lines.push("");
       lines.push("<b>Signal changes</b>");
       for (const change of changes) {
@@ -91,6 +100,7 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
   }
 
   if (input?.nextTriggers?.length) {
+    hasStructuredBrief = true;
     lines.push("");
     lines.push("<b>Next triggers</b>");
     for (const trigger of input.nextTriggers.slice(0, 3)) {
@@ -98,7 +108,7 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
     }
   }
 
-  if (lines.length <= 3) {
+  if (!hasStructuredBrief) {
     lines.push("");
     lines.push(escapeHtml(truncate(row.digest_text ?? row.digest_extended ?? "Digest text unavailable.")));
   }
