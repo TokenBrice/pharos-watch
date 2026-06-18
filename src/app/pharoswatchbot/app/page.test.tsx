@@ -118,6 +118,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(ready).toHaveBeenCalled();
     expect(expand).toHaveBeenCalled();
     expect(screen.getByText("Global alerts")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "watchlist" }).className).toContain("truncate");
     expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data" }),

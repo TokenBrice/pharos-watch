@@ -329,7 +329,7 @@ export function PharosWatchBotMiniAppClient() {
                   onClick={() => activateView(key)}
                   onKeyDown={handleTabKeyDown}
                   className={cn(
-                    "pharos-focus-ring min-h-11 rounded-lg px-2 text-sm font-semibold capitalize transition-colors",
+                    "pharos-focus-ring min-h-11 truncate rounded-lg px-2 text-sm font-semibold capitalize transition-colors",
                     view === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/40",
                   )}
                 >
