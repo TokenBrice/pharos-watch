@@ -554,7 +554,8 @@ export default function PharosWatchBotPage() {
                   Control every alert from the Mini App.
                 </h2>
                 <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted-foreground">
-                  Open it from Telegram to follow coins, tune thresholds, and pause noise without typing commands.
+                  Open it from Telegram to follow coins, tune thresholds, and pause noise without typing commands. Deep reads like{" "}
+                  <code>/why</code>, <code>/brief</code>, and <code>/top</code> still stay in chat.
                 </p>
 
                 <ol className="mt-7 grid grid-cols-1 gap-x-7 sm:grid-cols-2">
