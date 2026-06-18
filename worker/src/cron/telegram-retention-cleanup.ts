@@ -8,14 +8,24 @@ const DAY_SEC = 24 * 60 * 60;
 const ALERT_AUDIT_RETENTION_SEC = 90 * DAY_SEC;
 const USAGE_DAILY_RETENTION_SEC = 400 * DAY_SEC;
 const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
+const RETENTION_DELETE_BATCH_LIMIT = 10_000;
 
-async function deleteOlderThan(
+interface CappedDeleteResult {
+  pruned: number;
+  cappedAtLimit: boolean;
+}
+
+async function deleteOlderThanCapped(
   db: D1Database,
   sql: string,
   cutoff: number | string,
-): Promise<number> {
-  const result = await db.prepare(sql).bind(cutoff).run();
-  return Number(result.meta?.changes ?? 0);
+): Promise<CappedDeleteResult> {
+  const result = await db.prepare(sql).bind(cutoff, cutoff, RETENTION_DELETE_BATCH_LIMIT).run();
+  const pruned = Number(result.meta?.changes ?? 0);
+  return {
+    pruned,
+    cappedAtLimit: pruned >= RETENTION_DELETE_BATCH_LIMIT,
+  };
 }
 
 export async function runTelegramRetentionCleanup(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
@@ -27,23 +37,23 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
   const processedUpdatesPruned = await pruneTelegramProcessedUpdates(db, { nowSec });
   throwIfAborted(signal);
 
-  const deadLettersPruned = await deleteOlderThan(
+  const deadLetters = await deleteOlderThanCapped(
     db,
-    "DELETE FROM telegram_alert_dead_letters WHERE expired_at < ?",
+    "DELETE FROM telegram_alert_dead_letters WHERE expired_at < ? AND id IN (SELECT id FROM telegram_alert_dead_letters WHERE expired_at < ? ORDER BY expired_at ASC, id ASC LIMIT ?)",
     nowSec - ALERT_AUDIT_RETENTION_SEC,
   );
   throwIfAborted(signal);
 
-  const jobTargetsPruned = await deleteOlderThan(
+  const jobTargets = await deleteOlderThanCapped(
     db,
-    "DELETE FROM telegram_alert_job_targets WHERE created_at < ?",
+    "DELETE FROM telegram_alert_job_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
     nowSec - ALERT_AUDIT_RETENTION_SEC,
   );
   throwIfAborted(signal);
 
-  const jobsPruned = await deleteOlderThan(
+  const jobs = await deleteOlderThanCapped(
     db,
-    "DELETE FROM telegram_alert_jobs WHERE created_at < ?",
+    "DELETE FROM telegram_alert_jobs WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_jobs WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
     nowSec - ALERT_AUDIT_RETENTION_SEC,
   );
   throwIfAborted(signal);
@@ -55,47 +65,56 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     .toISOString()
     .slice(0, 10);
 
-  const usageDailyPruned = await deleteOlderThan(
+  const usageDaily = await deleteOlderThanCapped(
     db,
-    "DELETE FROM telegram_usage_daily WHERE day < ?",
+    "DELETE FROM telegram_usage_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_usage_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
     cutoffDayString,
   );
   throwIfAborted(signal);
 
-  const watcherLifecyclePruned = await deleteOlderThan(
+  const watcherLifecycle = await deleteOlderThanCapped(
     db,
-    "DELETE FROM telegram_watcher_lifecycle_daily WHERE day < ?",
+    "DELETE FROM telegram_watcher_lifecycle_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_watcher_lifecycle_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
     cutoffDayString,
   );
   throwIfAborted(signal);
 
-  const diagnosticsPruned = await deleteOlderThan(
+  const diagnostics = await deleteOlderThanCapped(
     db,
-    "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ?",
+    "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
     nowSec - CHAT_DIAGNOSTICS_RETENTION_SEC,
   );
 
   const totalPruned =
     processedUpdatesPruned +
-    deadLettersPruned +
-    jobTargetsPruned +
-    jobsPruned +
-    usageDailyPruned +
-    watcherLifecyclePruned +
-    diagnosticsPruned;
+    deadLetters.pruned +
+    jobTargets.pruned +
+    jobs.pruned +
+    usageDaily.pruned +
+    watcherLifecycle.pruned +
+    diagnostics.pruned;
 
   return createCronResult({
     status: "ok",
     itemCount: totalPruned,
     metadata: {
       processedUpdatesPruned,
-      deadLettersPruned,
-      jobTargetsPruned,
-      jobsPruned,
-      usageDailyPruned,
-      watcherLifecyclePruned,
-      diagnosticsPruned,
+      deadLettersPruned: deadLetters.pruned,
+      jobTargetsPruned: jobTargets.pruned,
+      jobsPruned: jobs.pruned,
+      usageDailyPruned: usageDaily.pruned,
+      watcherLifecyclePruned: watcherLifecycle.pruned,
+      diagnosticsPruned: diagnostics.pruned,
       expiredTargetsReconciled,
+      deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
+      cappedAtLimit: {
+        deadLetters: deadLetters.cappedAtLimit,
+        jobTargets: jobTargets.cappedAtLimit,
+        jobs: jobs.cappedAtLimit,
+        usageDaily: usageDaily.cappedAtLimit,
+        watcherLifecycle: watcherLifecycle.cappedAtLimit,
+        diagnostics: diagnostics.cappedAtLimit,
+      },
       retentionDays: {
         alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
         usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,

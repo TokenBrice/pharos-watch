@@ -64,6 +64,28 @@ function makeState(): StubState {
  * prune-cron-history.test.ts and telegram-inactive-cleanup.test.ts.
  */
 function createStubDb(state: StubState): D1Database {
+  function boundDeleteLimit(bound: unknown[]): number {
+    const limit = Number(bound[2]);
+    return Number.isFinite(limit) ? limit : Number.POSITIVE_INFINITY;
+  }
+
+  function deleteMatching<T>(
+    rows: T[],
+    predicate: (row: T) => boolean,
+    limit = Number.POSITIVE_INFINITY,
+  ): number {
+    let removed = 0;
+    for (let i = 0; i < rows.length && removed < limit;) {
+      if (predicate(rows[i])) {
+        rows.splice(i, 1);
+        removed += 1;
+      } else {
+        i += 1;
+      }
+    }
+    return removed;
+  }
+
   function prepare(sql: string): D1PreparedStatement {
     let bound: unknown[] = [];
     const stmt = {
@@ -96,46 +118,34 @@ function createStubDb(state: StubState): D1Database {
         }
         if (sql.startsWith("DELETE FROM telegram_processed_updates")) {
           const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = state.processedUpdates.length - 1; i >= 0; i--) {
-            if (state.processedUpdates[i].received_at < cutoff) {
-              state.processedUpdates.splice(i, 1);
-              removed += 1;
-            }
-          }
+          const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff);
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_alert_dead_letters")) {
           const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = state.deadLetters.length - 1; i >= 0; i--) {
-            if (state.deadLetters[i].expired_at < cutoff) {
-              state.deadLetters.splice(i, 1);
-              removed += 1;
-            }
-          }
+          const removed = deleteMatching(
+            state.deadLetters,
+            (row) => row.expired_at < cutoff,
+            boundDeleteLimit(bound),
+          );
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_alert_job_targets")) {
           const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = state.jobTargets.length - 1; i >= 0; i--) {
-            if (state.jobTargets[i].created_at < cutoff) {
-              state.jobTargets.splice(i, 1);
-              removed += 1;
-            }
-          }
+          const removed = deleteMatching(
+            state.jobTargets,
+            (row) => row.created_at < cutoff,
+            boundDeleteLimit(bound),
+          );
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_alert_jobs")) {
           const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = state.jobs.length - 1; i >= 0; i--) {
-            if (state.jobs[i].created_at < cutoff) {
-              state.jobs.splice(i, 1);
-              removed += 1;
-            }
-          }
+          const removed = deleteMatching(
+            state.jobs,
+            (row) => row.created_at < cutoff,
+            boundDeleteLimit(bound),
+          );
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_usage_daily")) {
@@ -145,13 +155,11 @@ function createStubDb(state: StubState): D1Database {
               `telegram_usage_daily.day is TEXT; cutoff must be a YYYY-MM-DD string, got ${typeof cutoff}`,
             );
           }
-          let removed = 0;
-          for (let i = state.usageDaily.length - 1; i >= 0; i--) {
-            if (state.usageDaily[i].day < cutoff) {
-              state.usageDaily.splice(i, 1);
-              removed += 1;
-            }
-          }
+          const removed = deleteMatching(
+            state.usageDaily,
+            (row) => row.day < cutoff,
+            boundDeleteLimit(bound),
+          );
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_watcher_lifecycle_daily")) {
@@ -161,24 +169,20 @@ function createStubDb(state: StubState): D1Database {
               `telegram_watcher_lifecycle_daily.day is TEXT; cutoff must be a YYYY-MM-DD string, got ${typeof cutoff}`,
             );
           }
-          let removed = 0;
-          for (let i = state.watcherLifecycle.length - 1; i >= 0; i--) {
-            if (state.watcherLifecycle[i].day < cutoff) {
-              state.watcherLifecycle.splice(i, 1);
-              removed += 1;
-            }
-          }
+          const removed = deleteMatching(
+            state.watcherLifecycle,
+            (row) => row.day < cutoff,
+            boundDeleteLimit(bound),
+          );
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_chat_delivery_diagnostics")) {
           const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = state.diagnostics.length - 1; i >= 0; i--) {
-            if (state.diagnostics[i].updated_at < cutoff) {
-              state.diagnostics.splice(i, 1);
-              removed += 1;
-            }
-          }
+          const removed = deleteMatching(
+            state.diagnostics,
+            (row) => row.updated_at < cutoff,
+            boundDeleteLimit(bound),
+          );
           return { success: true, meta: { changes: removed } };
         }
         return { success: true, meta: { changes: 0 } };
@@ -276,5 +280,35 @@ describe("runTelegramRetentionCleanup", () => {
     await expect(runTelegramRetentionCleanup(db)).resolves.toMatchObject({ status: "ok" });
     expect(state.usageDaily).toHaveLength(0);
     expect(state.watcherLifecycle).toHaveLength(0);
+  });
+
+  it("caps large retention deletes per table and reports cappedAtLimit metadata", async () => {
+    const state = makeState();
+    for (let i = 0; i < 10_001; i += 1) {
+      state.usageDaily.push({ day: "2024-01-01" });
+      state.jobTargets.push({ created_at: 1 });
+    }
+    const db = createStubDb(state);
+
+    const result = await runTelegramRetentionCleanup(db);
+
+    expect(state.usageDaily).toHaveLength(1);
+    expect(state.jobTargets).toHaveLength(1);
+    const metadata = JSON.parse(result.metadata!) as {
+      deleteBatchLimit: number;
+      usageDailyPruned: number;
+      jobTargetsPruned: number;
+      cappedAtLimit: {
+        usageDaily: boolean;
+        jobTargets: boolean;
+        jobs: boolean;
+      };
+    };
+    expect(metadata.deleteBatchLimit).toBe(10_000);
+    expect(metadata.usageDailyPruned).toBe(10_000);
+    expect(metadata.jobTargetsPruned).toBe(10_000);
+    expect(metadata.cappedAtLimit.usageDaily).toBe(true);
+    expect(metadata.cappedAtLimit.jobTargets).toBe(true);
+    expect(metadata.cappedAtLimit.jobs).toBe(false);
   });
 });
