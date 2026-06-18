@@ -405,6 +405,37 @@ describe("handleTelegramWebhook", () => {
     expect(db.getHistory()).toHaveLength(0);
   });
 
+  it("cleans up group subscriber state when my_chat_member reports bot removal", async () => {
+    const db = mockD1();
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest({ oldStatus: "member", newStatus: "left" }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const history = db.getHistory();
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM telegram_subscribers") &&
+      entry.binds.includes("-123"),
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM telegram_pending_alerts") &&
+      entry.binds.includes("-123"),
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
+      entry.binds.includes("telegram:group-welcome:-123"),
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
+      entry.binds.includes("telegram:chat-admins:-123"),
+    )).toBe(true);
+  });
+
   it("ignores my_chat_member status changes that are not bot-added transitions", async () => {
     const db = mockD1([]);
 

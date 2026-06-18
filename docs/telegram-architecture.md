@@ -61,8 +61,10 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 - Write subscription state directly — go through State / persistence helpers.
 - Reorganize the `COMMAND_HANDLERS` table without adding/removing a command. The two switch statements were intentionally collapsed in P1-M1; do not re-expand.
 
-Group welcome idempotency is part of this seam: when a bot-added `my_chat_member`
-transition sends the audited welcome reply successfully, Ingress stamps the
+Group lifecycle is part of this seam: when a group/supergroup `my_chat_member`
+transition says the bot was removed, Ingress runs the subscriber-state cascade
+and clears exact group lifecycle cache keys. When a bot-added transition sends
+the audited welcome reply successfully, Ingress stamps the
 `telegram:group-welcome:<chat_id>` cache marker directly from that send result.
 
 > Note on `telegram-webhook-shared.ts`: it contains `TelegramWebhookUpdate`, `PendingAction`, `ConfirmBulkPayload`, etc. — types crossing the Ingress / Action-handler boundary. Treat it as a contract file; widening it is fine, restructuring it is a seam change.

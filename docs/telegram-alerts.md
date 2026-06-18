@@ -137,6 +137,12 @@ The webhook claims individual Telegram update IDs in `telegram_processed_updates
 
 When Telegram upgrades a group to a supergroup, the webhook handles `migrate_to_chat_id` and `migrate_from_chat_id` service messages before command parsing. The migration helper merges the old numeric chat ID into the new one across subscriber state, per-coin subscriptions, preset follows, pending selections, pending/dead-letter delivery rows, alert job targets, delivery diagnostics, processed-update chat references, and known exact D1 cache keys such as `telegram:chat-admins:<chat_id>` and `telegram:group-welcome:<chat_id>`. The helper is idempotent because Telegram can deliver either service message first.
 
+When `my_chat_member` reports that a group or supergroup removed the bot
+(`left`/`kicked`), the webhook immediately runs the same subscriber-state
+cascade as `/forget` for that chat and clears the group welcome/admin cache
+keys. Processed-update idempotency rows and aggregate usage counters are
+retained.
+
 ## Secrets and Bindings
 
 | Binding | Required | Used by |

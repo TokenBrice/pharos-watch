@@ -4,7 +4,7 @@ import {
   formatAdministratorMentions,
   getCachedChatAdministrators,
 } from "../lib/telegram-chat-member";
-import { getCache, setCache } from "../lib/db-cache";
+import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import {
   formatDisambiguation,
   findInvalidDisambiguationToken,
@@ -32,6 +32,7 @@ import {
   maybePruneTelegramProcessedUpdates,
   recordTelegramChatCommandFlood,
   releaseTelegramCommandCooldown,
+  forgetSubscriber,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   unixNow,
   type TelegramChatCommandFloodResult,
@@ -1176,6 +1177,20 @@ function isBotAddedTransition(
   return wasAbsent && isPresent;
 }
 
+function isBotRemovedTransition(
+  oldStatus: string | undefined,
+  newStatus: string | undefined,
+): boolean {
+  const wasPresent = Boolean(oldStatus && oldStatus !== "left" && oldStatus !== "kicked");
+  const isAbsent = newStatus === "left" || newStatus === "kicked";
+  return wasPresent && isAbsent;
+}
+
+async function clearGroupLifecycleCache(db: D1Database, chatId: string): Promise<void> {
+  await deleteCache(db, `telegram:group-welcome:${chatId}`);
+  await deleteCache(db, `telegram:chat-admins:${chatId}`);
+}
+
 function buildGroupWelcomeMessage(adderMention: string): string {
   return [
     `<b>Thanks for adding Pharos Watch</b>${adderMention ? `, ${adderMention}` : ""}.`,
@@ -1211,15 +1226,29 @@ async function handleMyChatMember(
 ): Promise<void> {
   const chatType = payload.chat?.type;
   // `my_chat_member` for private/sender chats is emitted on /start, on
-  // block/unblock, and on other 1:1 status changes. We only welcome on a
-  // bot-added-to-group transition.
+  // block/unblock, and on other 1:1 status changes. Group/supergroup updates
+  // drive lifecycle cleanup and welcome idempotency.
   if (chatType === "private" || chatType === "sender") return;
-  if (!isBotAddedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)) {
-    return;
-  }
   const chatId = payload.chat?.id;
   if (typeof chatId !== "number" || !Number.isFinite(chatId)) return;
   const chatIdStr = String(chatId);
+  if (
+    isGroupChatType(chatType) &&
+    isBotRemovedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)
+  ) {
+    await forgetSubscriber(db, chatIdStr);
+    await clearGroupLifecycleCache(db, chatIdStr);
+    logTelegramEvent({
+      level: "info",
+      message: "telegram group removed bot; subscriber state cleared",
+      chatId: chatIdStr,
+      action: "group-removal",
+    });
+    return;
+  }
+  if (!isBotAddedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)) {
+    return;
+  }
 
   // 24h idempotency marker per chat — Telegram may redeliver `my_chat_member`
   // when the bot is removed and re-added quickly; we never want two welcomes.
