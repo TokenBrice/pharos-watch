@@ -136,9 +136,9 @@ describe("handleAdminTelegramBroadcast", () => {
     expect(res.status).toBe(400);
   });
 
-  it("dry-run returns target count and a sample without enqueuing or auditing", async () => {
+  it("dry-run returns target count and a sample without enqueuing and audits the preview", async () => {
     const chatIds = ["1", "2", "3", "4", "5", "6", "7"];
-    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0)]);
+    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: true }),
@@ -162,7 +162,15 @@ describe("handleAdminTelegramBroadcast", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO admin_action_audit"))).toBe(false);
+    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit).toBeDefined();
+    expect(audit?.binds).toContain("admin-telegram-broadcast");
+    expect(audit?.binds).toContain("all");
+    expect(audit?.binds).toContain("ok");
+    expect(audit?.binds).toContain(200);
+    const details = JSON.parse(String(audit?.binds[6] ?? "{}")) as { dryRun?: boolean; targetChatCount?: number };
+    expect(details.dryRun).toBe(true);
+    expect(details.targetChatCount).toBe(7);
   });
 
   it("dry-run with global-subscribers scope filters by global_alert_* flags", async () => {
@@ -299,7 +307,7 @@ describe("handleAdminTelegramBroadcast", () => {
   });
 
   it("blocks live broadcasts projected to outlive the admin broadcast TTL without acknowledgement", async () => {
-    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(6_000)]);
+    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(6_000), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({
@@ -318,7 +326,12 @@ describe("handleAdminTelegramBroadcast", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO admin_action_audit"))).toBe(false);
+    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit).toBeDefined();
+    expect(audit?.binds).toContain("error");
+    expect(audit?.binds).toContain(409);
+    const details = JSON.parse(String(audit?.binds[6] ?? "{}")) as { rejectedReason?: string };
+    expect(details.rejectedReason).toBe("backlog-risk");
   });
 
   it("allows acknowledged live broadcasts with backlog risk and records short admin TTL", async () => {

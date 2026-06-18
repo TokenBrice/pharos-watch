@@ -123,6 +123,25 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
     const deliveryEstimate = buildDeliveryEstimate(pendingCapacity.active, targetMessageCount);
 
     if (dryRun) {
+      await logAdminAction(
+        db,
+        {
+          action: "admin-telegram-broadcast",
+          target: scope,
+          result: "ok",
+          httpStatus: 200,
+          details: {
+            scope,
+            dryRun: true,
+            targetChatCount: chatIds.length,
+            chunkCount: chunks.length,
+            targetMessageCount,
+            deliveryEstimate,
+            messageLength: messageHtml.length,
+          },
+        },
+        request,
+      );
       return adminJsonResponse(
         {
           targetChatCount: chatIds.length,
@@ -137,6 +156,26 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
     }
 
     if (deliveryEstimate.requiresAcknowledgement && !parsed.acknowledgeBacklogRisk) {
+      await logAdminAction(
+        db,
+        {
+          action: "admin-telegram-broadcast",
+          target: scope,
+          result: "error",
+          httpStatus: 409,
+          details: {
+            scope,
+            dryRun: false,
+            targetChatCount: chatIds.length,
+            chunkCount: chunks.length,
+            targetMessageCount,
+            deliveryEstimate,
+            messageLength: messageHtml.length,
+            rejectedReason: "backlog-risk",
+          },
+        },
+        request,
+      );
       return adminJsonResponse(
         {
           error: "Projected admin broadcast backlog exceeds the admin broadcast TTL window",
