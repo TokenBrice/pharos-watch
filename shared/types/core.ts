@@ -652,6 +652,14 @@ export interface FeaturedContent {
 export const STABLECOIN_STATUS_VALUES = ["pre-launch", "active", "frozen"] as const;
 export type StablecoinStatus = (typeof STABLECOIN_STATUS_VALUES)[number];
 
+export const MARKET_AVAILABILITY_VALUES = [
+  "market-traded",
+  "limited-trading",
+  "non-traded-utility",
+  "legacy-or-wind-down",
+] as const;
+export type MarketAvailability = (typeof MARKET_AVAILABILITY_VALUES)[number];
+
 export const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
 export type DetailProvider = (typeof DETAIL_PROVIDER_VALUES)[number];
 export const DetailProviderSchema = z.enum(DETAIL_PROVIDER_VALUES);
@@ -675,6 +683,7 @@ export interface StablecoinMeta {
   id: string;
   llamaId?: string;
   detailProvider?: DetailProvider;
+  marketAvailability?: MarketAvailability;
   name: string;
   symbol: string;
   oneLiner?: string;

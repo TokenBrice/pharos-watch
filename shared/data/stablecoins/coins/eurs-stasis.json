@@ -3,6 +3,7 @@
   "name": "Stasis Euro",
   "symbol": "EURS",
   "oneLiner": "EURS is STASIS Malta's MiCA-regulated euro stablecoin, redeemable 1:1 against euro deposits at licensed EU institutions including central-bank accounts.",
+  "marketAvailability": "market-traded",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -90,9 +91,24 @@
       "decimals": 2
     },
     {
+      "chain": "algorand",
+      "address": "227855942",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xd22a58f79e9481d1a88e00c343885a588b34b68b",
+      "decimals": 2
+    },
+    {
       "chain": "stellar",
       "address": "EURS-GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
       "decimals": 7
+    },
+    {
+      "chain": "xdc",
+      "address": "0x1ebb2c8a71a9ec59bf558886a8adf8f4a565814f",
+      "decimals": 2
     }
   ],
   "blacklistabilityReview": {

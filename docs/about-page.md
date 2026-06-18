@@ -76,6 +76,7 @@ The page is organized into these sections, in order:
 - Supply & Price copy should disclose scoped FX-par redemption quotes and curated fail-closed on-chain supply repairs when they affect public `priceSource` or `supplySource` fields.
 - Reserve copy should describe issuer/protocol APIs, proof portals, dashboards, and direct on-chain/accounting reads as source families; detailed adapter coverage belongs in `docs/live-reserves.md`.
 - Regulatory register copy should disclose both EU MiCA register/NCA sources and U.S. GENIUS implementation-watch sources when `/compliance/` surfaces them.
+- EUR stablecoin reference copy should disclose eurostablecoins.xyz when its coverage API is used for EUR-specific market-availability labels, chain-gap audits, or MiCA issuer cross-checks.
 - DEX/yield source copy should describe source families and runtime blocking of dead/deprecated venues; detailed protocol lists belong in `docs/dex-liquidity.md` and `docs/yield-intelligence.md`.
 - The visible reference-source roster currently includes FRED DFF, Bank of England IADB `IUDZOS2`, CBR DailyInfo `KeyRateXML`, CBRT EVDS BIST TLREF `TP.BISTTLREF.ORAN`, and Midas NAV-oracle coverage for Yield Intelligence; keep those aligned with `docs/yield-intelligence.md` when benchmark or yield-oracle sources change.
 - L2BEAT is disclosed as a static Chain Health chain-risk snapshot and Safety Score bridge-route review source, not as a live worker fetch.

@@ -971,6 +971,7 @@
     "id": "aeur-anchored-coins",
     "llamaId": "147",
     "detailProvider": "defillama",
+    "marketAvailability": "legacy-or-wind-down",
     "name": "Anchored Coins AEUR",
     "symbol": "AEUR",
     "oneLiner": "AEUR is Anchored Coins' centralized euro stablecoin, backed 1:1 by EUR deposits at Swissquote Bank, with the issuer winding down to comply with MiCAR.",
@@ -10778,6 +10779,7 @@
     "id": "ceur-celo",
     "llamaId": "52",
     "detailProvider": "defillama",
+    "marketAvailability": "limited-trading",
     "name": "Mento Euro",
     "symbol": "EURm",
     "oneLiner": "EURm is Mento's oracle-priced euro stablecoin on Celo, mint and redeem through the Mento reserve backed by a diversified crypto and stablecoin basket.",
@@ -14312,6 +14314,7 @@
   {
     "id": "deuro-deuro",
     "detailProvider": "coingecko",
+    "marketAvailability": "limited-trading",
     "name": "Decentralized Euro",
     "symbol": "DEURO",
     "oneLiner": "DEURO is a decentralized euro stablecoin minted from overcollateralized BTC, ETH, and crypto vaults using a Frankencoin-style oracle-free auction mechanism.",
@@ -17326,6 +17329,7 @@
   {
     "id": "eur0-usual",
     "detailProvider": "coingecko",
+    "marketAvailability": "limited-trading",
     "name": "Usual EUR",
     "symbol": "EUR0",
     "oneLiner": "EUR0 is Usual's euro stablecoin, minted by depositing eligible RWA collateral such as Spiko's tokenized Eurozone Treasury-bill fund (EUTBL) through Usual's app.",
@@ -17501,6 +17505,7 @@
     "id": "eurau-allunity",
     "llamaId": "319",
     "detailProvider": "defillama",
+    "marketAvailability": "limited-trading",
     "name": "AllUnity EUR",
     "symbol": "EURAU",
     "oneLiner": "EURAU is AllUnity's MiCA-licensed euro stablecoin, redeemable 1:1 against EUR held in full-reserve, segregated accounts at EU credit institutions.",
@@ -17747,6 +17752,7 @@
     "id": "eurc-circle",
     "llamaId": "50",
     "detailProvider": "defillama",
+    "marketAvailability": "market-traded",
     "name": "EURC",
     "symbol": "EURC",
     "oneLiner": "EURC is Circle's centralized euro stablecoin, redeemable 1:1 by qualifying customers and backed by cash and short-term assets denominated in euros.",
@@ -18045,6 +18051,7 @@
     "id": "eurcv-societe-generale-forge",
     "llamaId": "254",
     "detailProvider": "defillama",
+    "marketAvailability": "market-traded",
     "name": "EUR CoinVertible",
     "symbol": "EURCV",
     "oneLiner": "EURCV is Societe Generale-FORGE's regulated euro stablecoin issued under the EU MiCA framework, designed for institutional on-chain settlement.",
@@ -18237,6 +18244,7 @@
     "id": "eure-monerium",
     "llamaId": "101",
     "detailProvider": "defillama",
+    "marketAvailability": "market-traded",
     "name": "Monerium EUR emoney",
     "symbol": "EURE",
     "oneLiner": "EURE is Monerium's MiCA-regulated euro e-money, minted on SEPA deposits and redeemed 1:1 by an EMI; reserves sit in EUR bank deposits and an LVNAV fund.",
@@ -18412,6 +18420,11 @@
         "decimals": 18
       },
       {
+        "chain": "noble",
+        "address": "ueure",
+        "decimals": 6
+      },
+      {
         "chain": "osmosis",
         "address": "ibc/92AE2F53284505223A1BB80D132F859A00E190C6A738772F0B3EF65E20BA484F",
         "decimals": 6
@@ -18478,6 +18491,7 @@
     "id": "euri-banking-circle",
     "llamaId": "325",
     "detailProvider": "defillama",
+    "marketAvailability": "market-traded",
     "name": "Eurite",
     "symbol": "EURI",
     "oneLiner": "EURI is Banking Circle's MiCA-licensed euro stablecoin, issued by a Luxembourg credit institution with fee-free 1:1 redemption against segregated euro reserves.",
@@ -18898,6 +18912,7 @@
     "id": "euroe-membrane",
     "llamaId": "98",
     "detailProvider": "defillama",
+    "marketAvailability": "legacy-or-wind-down",
     "name": "EUROe",
     "symbol": "EUROe",
     "oneLiner": "EUROe was Membrane's Finnish EMI-licensed euro stablecoin, decommissioned in 2026 after Paxos acquired Membrane and switched the platform to redemption-only.",
@@ -19078,6 +19093,7 @@
     "id": "europ-schuman",
     "llamaId": "247",
     "detailProvider": "defillama",
+    "marketAvailability": "market-traded",
     "name": "Schuman EUROP",
     "symbol": "EUROP",
     "oneLiner": "EUROP is Schuman Financial's MiCA-licensed euro stablecoin, redeemable 1:1 and backed by euro cash at EU banks with an additional reserve buffer.",
@@ -19651,6 +19667,7 @@
     "id": "eurq-quantoz",
     "llamaId": "274",
     "detailProvider": "coingecko",
+    "marketAvailability": "market-traded",
     "name": "Quantoz EURQ",
     "symbol": "EURQ",
     "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short EU government bonds.",
@@ -19929,6 +19946,7 @@
     "id": "eurr-stablr",
     "llamaId": "239",
     "detailProvider": "defillama",
+    "marketAvailability": "limited-trading",
     "name": "StablR Euro",
     "symbol": "EURR",
     "oneLiner": "EURR is StablR's MiCA-licensed euro stablecoin issued from Malta, redeemable 1:1 against euro cash held at regulated EU institutions.",
@@ -20178,6 +20196,7 @@
     "id": "eurs-stasis",
     "llamaId": "51",
     "detailProvider": "defillama",
+    "marketAvailability": "market-traded",
     "name": "Stasis Euro",
     "symbol": "EURS",
     "oneLiner": "EURS is STASIS Malta's MiCA-regulated euro stablecoin, redeemable 1:1 against euro deposits at licensed EU institutions including central-bank accounts.",
@@ -20343,9 +20362,24 @@
         "decimals": 2
       },
       {
+        "chain": "algorand",
+        "address": "227855942",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xd22a58f79e9481d1a88e00c343885a588b34b68b",
+        "decimals": 2
+      },
+      {
         "chain": "stellar",
         "address": "EURS-GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
         "decimals": 7
+      },
+      {
+        "chain": "xdc",
+        "address": "0x1ebb2c8a71a9ec59bf558886a8adf8f4a565814f",
+        "decimals": 2
       }
     ],
     "blacklistabilityReview": {

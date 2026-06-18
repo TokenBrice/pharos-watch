@@ -3,6 +3,7 @@
   "name": "Schuman EUROP",
   "symbol": "EUROP",
   "oneLiner": "EUROP is Schuman Financial's MiCA-licensed euro stablecoin, redeemable 1:1 and backed by euro cash at EU banks with an additional reserve buffer.",
+  "marketAvailability": "market-traded",
   "mechanismArchetype": "fiat-cash",
   "flags": {
     "backing": "rwa-backed",

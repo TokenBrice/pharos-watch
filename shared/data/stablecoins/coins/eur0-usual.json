@@ -3,6 +3,7 @@
   "name": "Usual EUR",
   "symbol": "EUR0",
   "oneLiner": "EUR0 is Usual's euro stablecoin, minted by depositing eligible RWA collateral such as Spiko's tokenized Eurozone Treasury-bill fund (EUTBL) through Usual's app.",
+  "marketAvailability": "limited-trading",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",

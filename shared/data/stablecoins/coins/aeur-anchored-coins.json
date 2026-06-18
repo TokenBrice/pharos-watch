@@ -3,6 +3,7 @@
   "name": "Anchored Coins AEUR",
   "symbol": "AEUR",
   "oneLiner": "AEUR is Anchored Coins' centralized euro stablecoin, backed 1:1 by EUR deposits at Swissquote Bank, with the issuer winding down to comply with MiCAR.",
+  "marketAvailability": "legacy-or-wind-down",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",

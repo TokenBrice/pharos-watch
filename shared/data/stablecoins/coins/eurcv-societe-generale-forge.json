@@ -3,6 +3,7 @@
   "name": "EUR CoinVertible",
   "symbol": "EURCV",
   "oneLiner": "EURCV is Societe Generale-FORGE's regulated euro stablecoin issued under the EU MiCA framework, designed for institutional on-chain settlement.",
+  "marketAvailability": "market-traded",
   "mechanismArchetype": "fiat-cash",
   "flags": {
     "backing": "rwa-backed",

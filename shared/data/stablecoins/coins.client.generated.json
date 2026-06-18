@@ -323,6 +323,7 @@
     "name": "Anchored Coins AEUR",
     "symbol": "AEUR",
     "oneLiner": "AEUR is Anchored Coins' centralized euro stablecoin, backed 1:1 by EUR deposits at Swissquote Bank, with the issuer winding down to comply with MiCAR.",
+    "marketAvailability": "legacy-or-wind-down",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -3482,6 +3483,7 @@
     "name": "Mento Euro",
     "symbol": "EURm",
     "oneLiner": "EURm is Mento's oracle-priced euro stablecoin on Celo, mint and redeem through the Mento reserve backed by a diversified crypto and stablecoin basket.",
+    "marketAvailability": "limited-trading",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "EUR",
@@ -4775,6 +4777,7 @@
     "name": "Decentralized Euro",
     "symbol": "DEURO",
     "oneLiner": "DEURO is a decentralized euro stablecoin minted from overcollateralized BTC, ETH, and crypto vaults using a Frankencoin-style oracle-free auction mechanism.",
+    "marketAvailability": "limited-trading",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "EUR",
@@ -5888,6 +5891,7 @@
     "name": "Usual EUR",
     "symbol": "EUR0",
     "oneLiner": "EUR0 is Usual's euro stablecoin, minted by depositing eligible RWA collateral such as Spiko's tokenized Eurozone Treasury-bill fund (EUTBL) through Usual's app.",
+    "marketAvailability": "limited-trading",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -5958,6 +5962,7 @@
     "name": "AllUnity EUR",
     "symbol": "EURAU",
     "oneLiner": "EURAU is AllUnity's MiCA-licensed euro stablecoin, redeemable 1:1 against EUR held in full-reserve, segregated accounts at EU credit institutions.",
+    "marketAvailability": "limited-trading",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6024,6 +6029,7 @@
     "name": "EURC",
     "symbol": "EURC",
     "oneLiner": "EURC is Circle's centralized euro stablecoin, redeemable 1:1 by qualifying customers and backed by cash and short-term assets denominated in euros.",
+    "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6164,6 +6170,7 @@
     "name": "EUR CoinVertible",
     "symbol": "EURCV",
     "oneLiner": "EURCV is Societe Generale-FORGE's regulated euro stablecoin issued under the EU MiCA framework, designed for institutional on-chain settlement.",
+    "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6230,6 +6237,7 @@
     "name": "Monerium EUR emoney",
     "symbol": "EURE",
     "oneLiner": "EURE is Monerium's MiCA-regulated euro e-money, minted on SEPA deposits and redeemed 1:1 by an EMI; reserves sit in EUR bank deposits and an LVNAV fund.",
+    "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6299,6 +6307,7 @@
     "name": "Eurite",
     "symbol": "EURI",
     "oneLiner": "EURI is Banking Circle's MiCA-licensed euro stablecoin, issued by a Luxembourg credit institution with fee-free 1:1 redemption against segregated euro reserves.",
+    "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6447,6 +6456,7 @@
     "name": "EUROe",
     "symbol": "EUROe",
     "oneLiner": "EUROe was Membrane's Finnish EMI-licensed euro stablecoin, decommissioned in 2026 after Paxos acquired Membrane and switched the platform to redemption-only.",
+    "marketAvailability": "legacy-or-wind-down",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6513,6 +6523,7 @@
     "name": "Schuman EUROP",
     "symbol": "EUROP",
     "oneLiner": "EUROP is Schuman Financial's MiCA-licensed euro stablecoin, redeemable 1:1 and backed by euro cash at EU banks with an additional reserve buffer.",
+    "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6683,6 +6694,7 @@
     "name": "Quantoz EURQ",
     "symbol": "EURQ",
     "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short EU government bonds.",
+    "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6784,6 +6796,7 @@
     "name": "StablR Euro",
     "symbol": "EURR",
     "oneLiner": "EURR is StablR's MiCA-licensed euro stablecoin issued from Malta, redeemable 1:1 against euro cash held at regulated EU institutions.",
+    "marketAvailability": "limited-trading",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -6887,6 +6900,7 @@
     "name": "Stasis Euro",
     "symbol": "EURS",
     "oneLiner": "EURS is STASIS Malta's MiCA-regulated euro stablecoin, redeemable 1:1 against euro deposits at licensed EU institutions including central-bank accounts.",
+    "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",

@@ -3,6 +3,7 @@
   "name": "EUROe",
   "symbol": "EUROe",
   "oneLiner": "EUROe was Membrane's Finnish EMI-licensed euro stablecoin, decommissioned in 2026 after Paxos acquired Membrane and switched the platform to redemption-only.",
+  "marketAvailability": "legacy-or-wind-down",
   "status": "frozen",
   "frozenAt": "2026-05-15",
   "obituary": {

@@ -389,7 +389,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 28 keys
 - `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 28 keys
 - `shared/data/stablecoins/coins/aed-rakbank.json` - 20 keys
-- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 25 keys
+- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 26 keys
 - `shared/data/stablecoins/coins/aid-gaib.json` - 26 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 22 keys
 - `shared/data/stablecoins/coins/apxusd-apyx.json` - 26 keys
@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/rollback-pages-deployment.test.ts`
 - `scripts/__tests__/seo-sitemap.test.ts`
 - `scripts/__tests__/serve-static-export.test.ts`
-- ... 201 more files omitted; use `rg --files scripts` for the full list.
+- ... 202 more files omitted; use `rg --files scripts` for the full list.

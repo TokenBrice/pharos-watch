@@ -3,6 +3,7 @@
   "name": "Monerium EUR emoney",
   "symbol": "EURE",
   "oneLiner": "EURE is Monerium's MiCA-regulated euro e-money, minted on SEPA deposits and redeemed 1:1 by an EMI; reserves sit in EUR bank deposits and an LVNAV fund.",
+  "marketAvailability": "market-traded",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -96,6 +97,11 @@
       "chain": "polygon",
       "address": "0xe0aea583266584dafbb3f9c3211d5588c73fea8d",
       "decimals": 18
+    },
+    {
+      "chain": "noble",
+      "address": "ueure",
+      "decimals": 6
     },
     {
       "chain": "osmosis",

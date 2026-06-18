@@ -50,6 +50,7 @@ import {
   INFRASTRUCTURE_VALUES,
   LAUNCH_MILESTONE_TYPE_VALUES,
   LAUNCH_PHASE_VALUES,
+  MARKET_AVAILABILITY_VALUES,
   MECHANISM_ARCHETYPE_VALUES,
   MINT_AUTHORITY_CONFIDENCE_VALUES,
   MINT_AUTHORITY_CONTROL_ROLE_VALUES,
@@ -781,6 +782,7 @@ export const StablecoinMetaEnumSchemas = {
   infrastructures: z.array(z.enum(INFRASTRUCTURE_VALUES)),
   variantKind: z.enum(VARIANT_KIND_VALUES),
   launchPhase: z.enum(LAUNCH_PHASE_VALUES),
+  marketAvailability: z.enum(MARKET_AVAILABILITY_VALUES),
   status: z.enum(STABLECOIN_STATUS_VALUES),
   mechanismArchetype: z.enum(MECHANISM_ARCHETYPE_VALUES),
 } as const;

@@ -3,6 +3,7 @@
   "name": "Mento Euro",
   "symbol": "EURm",
   "oneLiner": "EURm is Mento's oracle-priced euro stablecoin on Celo, mint and redeem through the Mento reserve backed by a diversified crypto and stablecoin basket.",
+  "marketAvailability": "limited-trading",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",

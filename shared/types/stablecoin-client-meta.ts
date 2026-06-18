@@ -133,6 +133,7 @@ export type StablecoinClientMeta = Pick<
   | "name"
   | "symbol"
   | "oneLiner"
+  | "marketAvailability"
   | "flags"
   | "mechanismArchetype"
   | "archetypeOverride"
@@ -174,6 +175,7 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "name",
   "symbol",
   "oneLiner",
+  "marketAvailability",
   "flags",
   "mechanismArchetype",
   "archetypeOverride",

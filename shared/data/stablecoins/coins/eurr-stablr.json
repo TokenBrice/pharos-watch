@@ -3,6 +3,7 @@
   "name": "StablR Euro",
   "symbol": "EURR",
   "oneLiner": "EURR is StablR's MiCA-licensed euro stablecoin issued from Malta, redeemable 1:1 against euro cash held at regulated EU institutions.",
+  "marketAvailability": "limited-trading",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",

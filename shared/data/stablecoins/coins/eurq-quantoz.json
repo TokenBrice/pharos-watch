@@ -3,6 +3,7 @@
   "name": "Quantoz EURQ",
   "symbol": "EURQ",
   "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short EU government bonds.",
+  "marketAvailability": "market-traded",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",

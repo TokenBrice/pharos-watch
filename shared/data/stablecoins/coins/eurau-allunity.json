@@ -3,6 +3,7 @@
   "name": "AllUnity EUR",
   "symbol": "EURAU",
   "oneLiner": "EURAU is AllUnity's MiCA-licensed euro stablecoin, redeemable 1:1 against EUR held in full-reserve, segregated accounts at EU credit institutions.",
+  "marketAvailability": "limited-trading",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",

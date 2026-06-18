@@ -3,6 +3,7 @@
   "name": "EURC",
   "symbol": "EURC",
   "oneLiner": "EURC is Circle's centralized euro stablecoin, redeemable 1:1 by qualifying customers and backed by cash and short-term assets denominated in euros.",
+  "marketAvailability": "market-traded",
   "mechanismArchetype": "fiat-cash",
   "flags": {
     "backing": "rwa-backed",

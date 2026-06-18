@@ -139,6 +139,7 @@ const StablecoinMetaAssetSchemaShape = {
   id: StablecoinIdSchema,
   llamaId: z.string().optional(),
   detailProvider: DetailProviderSchema.optional(),
+  marketAvailability: StablecoinMetaEnumSchemas.marketAvailability.optional(),
   name: z.string(),
   symbol: z.string(),
   oneLiner: z.string().max(160).optional(),

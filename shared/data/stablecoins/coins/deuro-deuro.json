@@ -3,6 +3,7 @@
   "name": "Decentralized Euro",
   "symbol": "DEURO",
   "oneLiner": "DEURO is a decentralized euro stablecoin minted from overcollateralized BTC, ETH, and crypto vaults using a Frankencoin-style oracle-free auction mechanism.",
+  "marketAvailability": "limited-trading",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",
