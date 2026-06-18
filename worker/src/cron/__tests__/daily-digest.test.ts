@@ -1094,6 +1094,51 @@ describe("generateDailyDigest", () => {
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
   });
 
+  it("does not commit appendix state when the same-day Telegram marker already exists", async () => {
+    vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
+      appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
+      metadata: {
+        hasAppendix: true,
+        cemeteryDetected: 0,
+        trackedDetected: 1,
+        preLaunchDetected: 0,
+        cemeterySymbols: [],
+        trackedSymbols: ["USDX"],
+        preLaunchSymbols: [],
+        frozenDetected: 0,
+        frozenSymbols: [],
+        seededSnapshots: [],
+      },
+      commitSuccess: commitTelegramAppendices,
+      rollbackSuccess: rollbackTelegramAppendices,
+    });
+
+    const markerKey = "daily-digest:telegram-sent:2026-03-06";
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [markerKey],
+        rows: [{ key: markerKey, value: JSON.stringify({ sentAt: "2026-03-06T00:00:00.000Z" }), updated_at: 1 }],
+      },
+      ...makeBaseTables(),
+    ]);
+
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      null,
+      false,
+      {
+        botToken: "tg-token",
+        chatId: "tg-chat",
+      },
+    );
+
+    expect(result.metadata).toContain("telegram: skipped: already-sent");
+    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
+  });
+
   it("does not commit appendix state when Telegram delivery fails", async () => {
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>New Cemetery Entries</b>\n\n<code>UST</code> TerraUSD",

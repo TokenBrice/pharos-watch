@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ALERT_LABELS, DEPEG_STEP_OPTIONS } from "../constants";
-import { formatHour } from "../format";
+import { formatHour, formatQuietHoursRange, formatQuietHoursTimezone } from "../format";
 import type {
   TelegramAlertType,
   TelegramDepegStepBps,
@@ -16,8 +16,8 @@ import { TogglePill } from "./TogglePill";
 
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
 const QUIET_HOUR_FIELDS = [
-  { kind: "start", id: "mini-quiet-start", label: "Start (UTC)" },
-  { kind: "end", id: "mini-quiet-end", label: "End (UTC)" },
+  { kind: "start", id: "mini-quiet-start", label: "Start" },
+  { kind: "end", id: "mini-quiet-end", label: "End" },
 ] as const;
 
 function availableTimezones(): readonly string[] {
@@ -34,7 +34,7 @@ function availableTimezones(): readonly string[] {
   return FALLBACK_TIMEZONES;
 }
 
-function QuietHourSelect({ id, label, value, disabled, onChange, optionKeyPrefix, hours }: {
+function QuietHourSelect({ id, label, value, disabled, onChange, optionKeyPrefix, hours, timezoneLabel }: {
   id: string;
   label: string;
   value: number;
@@ -42,6 +42,7 @@ function QuietHourSelect({ id, label, value, disabled, onChange, optionKeyPrefix
   onChange: (value: number) => void;
   optionKeyPrefix: string;
   hours: readonly number[];
+  timezoneLabel: string;
 }) {
   return (
     <div>
@@ -54,7 +55,7 @@ function QuietHourSelect({ id, label, value, disabled, onChange, optionKeyPrefix
         onChange={(event) => onChange(Number(event.target.value))}
       >
         {hours.map((hour) => (
-          <option key={`${optionKeyPrefix}-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
+          <option key={`${optionKeyPrefix}-${hour}`} value={hour}>{formatHour(hour)} {timezoneLabel}</option>
         ))}
       </select>
     </div>
@@ -74,12 +75,13 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
   const [draftEndOverride, setDraftEnd] = useState<number | null>(null);
   const draftStart = draftStartOverride ?? currentStart ?? 22;
   const draftEnd = draftEndOverride ?? currentEnd ?? 7;
+  const timezoneLabel = formatQuietHoursTimezone(state.subscriber.quietHours.timezone);
 
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const selectDisabled = !canMutate || isMutating;
   const sameHours = draftStart === draftEnd;
   const summary = enabled && currentStart != null && currentEnd != null
-    ? `Quiet hours: ${formatHour(currentStart)}–${formatHour(currentEnd)} UTC`
+    ? `Quiet hours: ${formatQuietHoursRange(currentStart, currentEnd, state.subscriber.quietHours.timezone)}`
     : "Quiet hours off";
 
   return (
@@ -97,6 +99,7 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
             onChange={field.kind === "start" ? setDraftStart : setDraftEnd}
             optionKeyPrefix={field.kind}
             hours={hours}
+            timezoneLabel={timezoneLabel}
           />
         ))}
       </div>
@@ -112,7 +115,7 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
         </MiniButton>
       </div>
       {sameHours ? <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">Start and end must differ.</p> : null}
-      <p className="pharos-meta mt-3">Times are UTC. Pharos doesn&apos;t track your timezone; convert from your local time.</p>
+      <p className="pharos-meta mt-3">Times use {timezoneLabel}. Change timezone below.</p>
     </section>
   );
 }

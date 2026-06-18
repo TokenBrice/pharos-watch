@@ -5,7 +5,7 @@ import {
   formatQuietHours,
 } from "../telegram-webhook-messages";
 import { parseQuietHours } from "../telegram-webhook-parsing";
-import { unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
+import { loadSubscriberByChat, unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
 import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
 
 export const handleMute: WebhookCommandHandler = async (ctx, args) => {
@@ -15,6 +15,7 @@ export const handleMute: WebhookCommandHandler = async (ctx, args) => {
     await ctx.replyToChat(escapeHtml(parsed.error));
     return;
   }
+  const subscriber = await loadSubscriberByChat(db, chatId);
   await upsertSubscriberRow(db, {
     chatId,
     username,
@@ -31,7 +32,7 @@ export const handleMute: WebhookCommandHandler = async (ctx, args) => {
     outcome: "enabled",
   });
   const message = escapeHtml(
-    `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)}.\n` +
+    `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc, subscriber?.timezone ?? null)}.\n` +
       "Messages will still arrive, but Telegram notifications will be silenced in that window.",
   );
   await replyWithOptionalMiniApp(

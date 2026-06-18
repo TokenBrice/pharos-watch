@@ -17,3 +17,15 @@ export function formatHour(hour: number | null | undefined): string {
   if (hour == null) return "--";
   return `${String(hour).padStart(2, "0")}:00`;
 }
+
+export function formatQuietHoursTimezone(timezone: string | null | undefined): string {
+  return timezone?.trim() || "UTC";
+}
+
+export function formatQuietHoursRange(
+  startHour: number | null | undefined,
+  endHour: number | null | undefined,
+  timezone: string | null | undefined,
+): string {
+  return `${formatHour(startHour)}–${formatHour(endHour)} ${formatQuietHoursTimezone(timezone)}`;
+}

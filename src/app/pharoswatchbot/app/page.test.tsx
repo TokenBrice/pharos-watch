@@ -427,6 +427,26 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
+  it("renders quiet hours in the configured timezone", async () => {
+    const state: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { enabled: true, startHourUtc: 22, endHourUtc: 7, timezone: "Europe/Paris" },
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => state });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+
+    expect(screen.getAllByText("Quiet hours: 22:00–07:00 Europe/Paris").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/doesn.t track your timezone/i)).toBeNull();
+  });
+
   it("confirms unsubscribe-all once before dispatching", async () => {
     const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(true));
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() }, showConfirm } };

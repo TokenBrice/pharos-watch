@@ -69,7 +69,7 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
       includeQuickPick
         ? "Pick a common zone below, or send <code>/timezone &lt;IANA-zone&gt;</code> (e.g. <code>/timezone Europe/Paris</code>)."
         : "Ask a group admin to run <code>/timezone &lt;IANA-zone&gt;</code>.",
-      "Quiet hours from /mute are interpreted in this zone (NULL = UTC).",
+      "Quiet hours from /mute are interpreted in this zone; unset chats use UTC.",
     ].join("\n");
     if (!includeQuickPick) {
       await ctx.replyToChat(message);

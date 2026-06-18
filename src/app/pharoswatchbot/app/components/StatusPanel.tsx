@@ -2,7 +2,7 @@
 
 import { Check, Clock3, Home, ShieldAlert } from "lucide-react";
 import { RECOMMENDED_OPERATION, SNOOZE_DURATION_TOKENS } from "../constants";
-import { formatHour, formatSnoozePill, formatTime } from "../format";
+import { formatQuietHoursRange, formatSnoozePill, formatTime } from "../format";
 import type {
   TelegramMiniAppOperation,
   TelegramMiniAppState,
@@ -107,7 +107,11 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
           <p className="pharos-kicker">Quiet hours</p>
           <p className="mt-2 text-lg font-semibold text-foreground pharos-numeric">
             {state.subscriber.quietHours.enabled
-              ? `${formatHour(state.subscriber.quietHours.startHourUtc)}–${formatHour(state.subscriber.quietHours.endHourUtc)} UTC`
+              ? formatQuietHoursRange(
+                state.subscriber.quietHours.startHourUtc,
+                state.subscriber.quietHours.endHourUtc,
+                state.subscriber.quietHours.timezone,
+              )
               : "Off"}
           </p>
         </section>

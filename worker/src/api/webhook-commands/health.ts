@@ -52,11 +52,12 @@ function formatQuietHoursStatus(
   enabled: number | null | undefined,
   start: number | null | undefined,
   end: number | null | undefined,
+  timezone: string | null | undefined,
   nowSec: number,
 ): string {
   if (!enabled || start == null || end == null) return "Off";
-  const base = formatQuietHours(start, end);
-  return isQuietHoursActive(nowSec, true, start, end) ? `${base} (active now)` : base;
+  const base = formatQuietHours(start, end, timezone ?? null);
+  return isQuietHoursActive(nowSec, true, start, end, timezone ?? null) ? `${base} (active now)` : base;
 }
 
 async function loadPendingAlertCount(db: D1Database, chatId: string): Promise<number> {
@@ -149,6 +150,7 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
       subscriber?.quiet_hours_enabled,
       subscriber?.quiet_hours_start_utc,
       subscriber?.quiet_hours_end_utc,
+      subscriber?.timezone,
       nowSec,
     )}`,
     `Snooze: ${formatSnooze(subscriber?.alert_snooze_until_ts, nowSec)}`,

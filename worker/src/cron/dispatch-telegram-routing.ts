@@ -9,6 +9,7 @@ import { sendBatch, type BatchMessage, type BatchResult } from "../lib/telegram"
 import {
   SEND_BATCH_SIZE,
   buildDedupeKey,
+  clearPendingAlertsForDisabledChat,
   handleBlockedChat,
   resetChatOnSuccess,
 } from "./telegram-pending";
@@ -334,6 +335,10 @@ export async function deliverFreshAlerts(
       const blockedCascade = await handleBlockedChat(db, result.chatId, nowSec, blockedChats);
       if (blockedCascade.disabled) {
         blockedUsersCleanedUp++;
+        const cleanup = await clearPendingAlertsForDisabledChat(db, result.chatId, nowSec);
+        if (cleanup.failed) {
+          blockedUsersCleanupFailed++;
+        }
       } else if (blockedCascade.failed) {
         blockedUsersCleanupFailed++;
       }

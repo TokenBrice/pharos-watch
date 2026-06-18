@@ -441,6 +441,26 @@ describe("runTelegramInactiveCleanup", () => {
     expect(metadata.warningPass?.cappedAtLimit).toBe(false);
   });
 
+  it("omits Mini App reply markup for group re-engagement warnings", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    state.subscribers.push({
+      chat_id: "-100123",
+      last_active_at: now - WARN_WINDOW_START_SEC - ONE_DAY_SEC * 5,
+    });
+    state.subscriptions.push({ chat_id: "-100123" });
+    const db = createStubDb(state);
+
+    const result = await runTelegramInactiveCleanup(db, undefined, "bot-token-123");
+
+    expect(result.status).toBe("ok");
+    expect(sendToChatCalls).toHaveLength(1);
+    expect(sendToChatCalls[0]?.chatId).toBe("-100123");
+    expect(sendToChatCalls[0]?.opts).not.toMatchObject({
+      replyMarkup: expect.anything(),
+    });
+  });
+
   it("skips the warning pass entirely when botToken is not provided", async () => {
     const state = makeState();
     const now = Math.floor(Date.now() / 1000);

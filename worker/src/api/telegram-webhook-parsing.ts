@@ -391,7 +391,7 @@ export function parseStartPayload(args: string): ParsedStartPayload {
 export function parseQuietHours(args: string): { startHourUtc: number; endHourUtc: number } | { error: string } {
   const match = args.trim().match(/^(\d{1,2})-(\d{1,2})$/);
   if (!match) {
-    return { error: "Usage: /mute <start>-<end> in UTC, e.g. /mute 22-07" };
+    return { error: "Usage: /mute <start>-<end>, e.g. /mute 22-07. Hours use this chat's /timezone (UTC by default)." };
   }
 
   const startHourUtc = Number(match[1]);
@@ -405,7 +405,7 @@ export function parseQuietHours(args: string): { startHourUtc: number; endHourUt
     endHourUtc > 23 ||
     startHourUtc === endHourUtc
   ) {
-    return { error: "Quiet hours must be two different UTC hours between 0 and 23." };
+    return { error: "Quiet hours must be two different whole hours between 0 and 23." };
   }
 
   return { startHourUtc, endHourUtc };

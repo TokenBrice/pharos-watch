@@ -54,7 +54,7 @@ export async function sendAuditedTelegramReply(
         errorClass,
         statusCode: result.statusCode,
       });
-      if (result.errorClass === "rate_limit") break;
+      if (result.errorClass === "rate_limit" || !result.retryable) break;
     }
   }
   await recordTelegramReplyOutcome(db, { chatId, ok, errorClass });

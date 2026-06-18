@@ -124,7 +124,7 @@ export function buildGlobalAlertSummaryMessage(
     `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
     `Quiet hours: ${
       subscriber?.quiet_hours_enabled
-        ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)
+        ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc, subscriber.timezone)
         : "Off"
     }`,
   ].join("\n"));
@@ -315,10 +315,18 @@ export function formatCoinLines(coins: ResolvedCoin[]): string {
   return coins.map((coin) => `- ${coin.symbol} (${coin.id})`).join("\n") || "None";
 }
 
-export function formatQuietHours(startHourUtc: number | null | undefined, endHourUtc: number | null | undefined): string {
+function quietHoursTimezoneLabel(timezone: string | null | undefined): string {
+  return timezone?.trim() || "UTC";
+}
+
+export function formatQuietHours(
+  startHourUtc: number | null | undefined,
+  endHourUtc: number | null | undefined,
+  timezone: string | null | undefined = null,
+): string {
   if (startHourUtc == null || endHourUtc == null) return "Off";
   const pad = (h: number) => String(h).padStart(2, "0");
-  return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 UTC`;
+  return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 ${quietHoursTimezoneLabel(timezone)}`;
 }
 
 function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number): string {
@@ -327,10 +335,11 @@ function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number
   const end = subscriber.quiet_hours_end_utc;
   if (start == null || end == null) return "Off";
   const pad = (h: number) => String(h).padStart(2, "0");
-  if (isQuietHoursActive(nowSec, true, start, end)) {
-    return `active until ${pad(end)}:00 UTC`;
+  const zone = quietHoursTimezoneLabel(subscriber.timezone);
+  if (isQuietHoursActive(nowSec, true, start, end, subscriber.timezone ?? null)) {
+    return `active until ${pad(end)}:00 ${zone}`;
   }
-  return `${pad(start)}:00–${pad(end)}:00 UTC`;
+  return `${pad(start)}:00–${pad(end)}:00 ${zone}`;
 }
 
 function formatSnoozeLine(snoozeUntilSec: number | null, nowSec: number): string {

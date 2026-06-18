@@ -30,6 +30,7 @@ import {
   handleBlockedChat,
   resetChatOnSuccess,
 } from "./lifecycle";
+import { clearPendingAlertsForDisabledChat } from "./cleanup";
 import {
   emptyDrainResult,
   type DeadLetterPendingRow,
@@ -418,6 +419,7 @@ export async function drainPendingQueue(
   const pendingById = new Map(pending.map((row) => [row.id, row] as const));
   const blockedChatsThisLoop = new Set<string>();
   const chatsResetThisLoop = new Set<string>();
+  const disabledChatIds = new Set<string>();
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
     if (signal?.aborted || globalRateLimited) break;
@@ -472,6 +474,7 @@ export async function drainPendingQueue(
           const blockedCascade = await handleBlockedChat(db, result.chatId, nowSec, blockedChatsThisLoop);
           if (blockedCascade.disabled) {
             blockedCleanedUp++;
+            disabledChatIds.add(result.chatId);
           } else if (blockedCascade.failed) {
             blockedCleanupFailed++;
           }
@@ -514,6 +517,13 @@ export async function drainPendingQueue(
   const dropped = droppedMaxAttemptsFallback + droppedPermanentFailure;
 
   await recordPendingDrainTelemetry(db, deliveryDiagnostics, targetStatusUpdates);
+
+  for (const chatId of disabledChatIds) {
+    const cleanup = await clearPendingAlertsForDisabledChat(db, chatId, nowSec, completedIds);
+    if (cleanup.failed) {
+      blockedCleanupFailed++;
+    }
+  }
 
   const terminalDeleteGroups: Array<{ rows: DeadLetterPendingRow[]; reason: PendingDeadLetterReason }> = [
     { rows: blockedRowsToDelete, reason: "blocked_disabled" },

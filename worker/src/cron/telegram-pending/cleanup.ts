@@ -17,6 +17,11 @@ type PendingAlertFilterClause = {
   binds: readonly [string] | readonly [number];
 };
 
+export interface DisabledChatPendingCleanupResult {
+  deleted: number;
+  failed: boolean;
+}
+
 const TERMINAL_PENDING_ERROR_CLASSES = new Set(["blocked", "bad_request", "auth_error"]);
 const RETRYABLE_PENDING_ERROR_CLASSES = new Set([
   "rate_limit",
@@ -171,6 +176,65 @@ export async function clearPendingAlertsForAdmin(
   }
 
   return deleted;
+}
+
+export async function clearPendingAlertsForDisabledChat(
+  db: D1Database,
+  chatId: string,
+  nowSec: number,
+  excludeIds: Iterable<number> = [],
+): Promise<DisabledChatPendingCleanupResult> {
+  const excluded = new Set(excludeIds);
+  let deleted = 0;
+  let cursorId = 0;
+
+  try {
+    for (;;) {
+      const selected = await db
+        .prepare(
+          `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
+             FROM telegram_pending_alerts
+            WHERE chat_id = ?
+              AND id > ?
+            ORDER BY id ASC
+            LIMIT ?`,
+        )
+        .bind(chatId, cursorId, PENDING_DELETE_CHUNK_SIZE)
+        .all<DeadLetterPendingRow>();
+      const rows = selected.results ?? [];
+      if (rows.length === 0) break;
+
+      cursorId = rows[rows.length - 1]?.id ?? cursorId;
+      const rowsToDelete = rows.filter((row) => !excluded.has(row.id));
+      if (rowsToDelete.length > 0) {
+        const deadLettered = await deadLetterTerminalPendingRows(db, rowsToDelete, nowSec, "blocked_disabled");
+        if (!deadLettered) {
+          throw new Error("Failed to dead-letter disabled-chat pending alerts");
+        }
+        const deletedRows = await deletePendingAlertsByIds(db, rowsToDelete.map((row) => row.id));
+        deleted += deletedRows;
+        if (deletedRows < rowsToDelete.length) {
+          throw new Error(
+            `Deleted ${deletedRows} of ${rowsToDelete.length} selected disabled-chat pending alerts`,
+          );
+        }
+      }
+
+      if (rows.length < PENDING_DELETE_CHUNK_SIZE) break;
+    }
+    return { deleted, failed: false };
+  } catch (error) {
+    logTelegramEvent({
+      level: "warn",
+      message: `Failed to clear pending alerts for disabled chat: ${error instanceof Error ? error.message : String(error)}`,
+      chatId,
+      action: "clear-disabled-chat-pending",
+      module: "telegram-pending-cleanup",
+      reason: "blocked_disabled",
+      rowCount: deleted,
+    });
+    return { deleted, failed: true };
+  }
 }
 
 export async function cleanupExpiredPendingAlerts(

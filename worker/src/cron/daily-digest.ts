@@ -302,6 +302,17 @@ export async function generateDailyDigest(
             editionNumber,
             telegramAppendices?.appendixHtml ?? null,
           );
+          if (telegramAppendices?.metadata.hasAppendix) {
+            // Keep appendix pointer advancement coupled to an accepted
+            // Telegram post; already-sent same-day retries must not consume
+            // the next digest's pending notices.
+            try {
+              await telegramAppendices.commitSuccess();
+            } catch (err) {
+              degradedReasons.push("telegram-appendix-commit");
+              console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
+            }
+          }
         } catch (err) {
           try {
             await deleteCache(db, markerKey);
@@ -310,14 +321,6 @@ export async function generateDailyDigest(
             console.error("[daily-digest] Failed to roll back Telegram send marker after delivery failure:", rollbackErr);
           }
           throw err;
-        }
-      }
-      if (telegramAppendices?.metadata.hasAppendix) {
-        try {
-          await telegramAppendices.commitSuccess();
-        } catch (err) {
-          degradedReasons.push("telegram-appendix-commit");
-          console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
         }
       }
       if (sentMarker) return "skipped: already-sent";

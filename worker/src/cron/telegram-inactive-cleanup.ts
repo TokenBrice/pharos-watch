@@ -111,6 +111,10 @@ function buildWarningReplyMarkup(): { inline_keyboard: Array<Array<{ text: strin
   };
 }
 
+function isPrivateChatId(chatId: string): boolean {
+  return !chatId.startsWith("-");
+}
+
 async function isAlreadyWarned(db: D1Database, chatId: string, nowSec: number): Promise<boolean> {
   const cached = await getCache(db, `${WARN_CACHE_KEY_PREFIX}${chatId}`);
   if (!cached) return false;
@@ -156,7 +160,7 @@ async function runWarningPass(
       }
       const result = await sendToChat(row.chat_id, buildWarningText(), botToken, {
         disableWebPagePreview: true,
-        replyMarkup: buildWarningReplyMarkup(),
+        replyMarkup: isPrivateChatId(row.chat_id) ? buildWarningReplyMarkup() : undefined,
         signal,
       });
       if (result.ok) {

@@ -313,6 +313,39 @@ describe("webhook command handlers", () => {
     expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "health");
   });
 
+  it("/health evaluates active quiet hours in the saved timezone", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2024, 0, 15, 12, 0, 0));
+    try {
+      const db = mockD1([
+        {
+          match: "FROM telegram_subscribers",
+          rows: [],
+          first: subscriberRow({
+            quiet_hours_enabled: 1,
+            quiet_hours_start_utc: 13,
+            quiet_hours_end_utc: 14,
+            timezone: "Europe/Paris",
+          }),
+        },
+        { match: "FROM telegram_preset_subscriptions", rows: [] },
+        { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 0 } },
+        { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: 0 } },
+        { match: "SELECT last_error_class", rows: [], first: null },
+        { match: "FROM telegram_chat_delivery_diagnostics", rows: [], first: null },
+      ]);
+      const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+      const ctx = makeContext({ db, replyToChatWithMarkup });
+
+      await handleHealth(ctx, "");
+
+      const [message] = replyToChatWithMarkup.mock.calls[0]!;
+      expect(message).toContain("Quiet hours: 13:00–14:00 Europe/Paris (active now)");
+      expect(message).not.toContain("13:00–14:00 UTC");
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("/list empty private chats offers both the control panel and preset discovery", async () => {
     const db = mockD1([
       { match: "FROM telegram_subscribers", rows: [], first: null },

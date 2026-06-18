@@ -208,7 +208,7 @@ Current actions:
 - `tz:<IANA zone>` for timezone quick picks
 - `settings:home` — re-render the chat-level settings view
 - `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch` — toggle global alert flag
-- `settings:q:<1|0>` — enable (22-07 UTC) or disable quiet hours
+- `settings:q:<1|0>` — enable (22-07 in the chat's configured timezone, UTC when unset) or disable quiet hours
 - `settings:sc` — clear an active snooze
 - `settings:o:<stablecoinId>` — open the per-coin settings view (no mutation)
 - `settings:c:<stablecoinId>:<setting>:<value>` — apply a per-coin setting where `setting:value` uses short codes to stay within Telegram's 64-byte callback_data limit:
@@ -281,7 +281,7 @@ Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm
 | `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
 | `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
 | `/mute <start>-<end>` | Enables quiet hours interpreted in the chat's `/timezone` (defaults to UTC; messages still deliver, notifications are silenced) |
-| `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone. Private no-argument replies also include common-zone buttons and a Mini App quiet-hours button; group no-argument replies are read-only and omit the keyboard. NULL = UTC, the historical behavior. |
+| `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone. Private no-argument replies also include common-zone buttons and a Mini App quiet-hours button; group no-argument replies are read-only and omit the keyboard. Unset chats use UTC, the historical behavior. |
 | `/unsnooze` | Clears active alert snooze immediately; private replies include a Mini App snooze button |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
@@ -334,7 +334,7 @@ Additional alert controls:
 - `telegram_preset_subscriptions.depeg_worsening_bps_step`: optional dynamic preset depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
 - `global_depeg_worsening_bps_step`: optional all-stablecoin depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
 - `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type, including `launch`
-- quiet hours: subscriber-level hour window that forces `disable_notification = true`, interpreted in the subscriber's `timezone` column (NULL = UTC)
+- quiet hours: subscriber-level hour window that forces `disable_notification = true`, interpreted in the subscriber's `timezone` column (unset = UTC)
 
 `launch` alerts have no additional per-coin tuning beyond on/off subscription state, and can now be toggled through `/set <ticker> launch on|off` and `/set all launch on|off`.
 
@@ -506,7 +506,7 @@ Delivery semantics are explicit:
 - `permanent_failure`
 
 Fresh retryable failures are enqueued into `telegram_pending_alerts` instead of being dropped.
-`403` responses from the pending-queue dispatcher follow a two-strike rule: the first 403 stamps `consecutive_block_first_at` on `telegram_subscribers` and increments `consecutive_block_count` but leaves alert flags untouched; a second 403 within 24 hours of the first strike disables the subscriber's global flags and all per-coin alert booleans. Any successful send resets both counters. A first strike older than 24 hours is treated as fresh.
+`403` responses from the pending-queue dispatcher follow a two-strike rule: the first 403 stamps `consecutive_block_first_at` on `telegram_subscribers` and increments `consecutive_block_count` but leaves alert flags untouched; a second 403 within 24 hours of the first strike disables the subscriber's global flags and all per-coin alert booleans. When the second strike disables a chat, any other live pending rows for that chat are dead-lettered with `blocked_disabled` and deleted so a known-blocked bot is not retried until the 1-hour TTL. Any successful send resets both counters. A first strike older than 24 hours is treated as fresh.
 
 ### Pending Delivery Queue
 
@@ -612,7 +612,7 @@ Rollback must not require schema rollback. Keep the old pending sender readable 
 - First run seeds the current cemetery and tracked identity sets only when there is no queued tracked-addition state to drain.
 - Invalid snapshot payloads are reseeded; if queued tracked additions exist, those are still appended before the tracked snapshot is rewritten.
 - Pending additions are appended to the next successful Telegram daily digest post.
-- Snapshot advancement for pending additions is deferred until after Telegram accepts the digest post, so failed delivery does not lose pending notices.
+- Snapshot advancement for pending additions is deferred until after Telegram accepts the digest post. Already-sent same-day retries skip both the Telegram post and appendix commit, so the next genuine digest still carries any pending appendix notices.
 
 Stablecoin identity for cemetery diffs uses the stable dead-coin `id` from `shared/data/dead-stablecoins.json`. Legacy `llama:*` and `symbol|deathDate|name` snapshot entries are still treated as equivalent during migration, but new snapshots are rewritten to stable dead-coin IDs only. Tracked-coin diffs use the canonical Pharos stablecoin ID.
 

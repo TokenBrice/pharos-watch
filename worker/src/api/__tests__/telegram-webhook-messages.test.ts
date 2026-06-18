@@ -171,6 +171,10 @@ describe("formatQuietHours", () => {
     expect(formatQuietHours(22, 7)).toBe("22:00–07:00 UTC");
   });
 
+  it("formats hours with the configured timezone when present", () => {
+    expect(formatQuietHours(2, 7, "Europe/Paris")).toBe("02:00–07:00 Europe/Paris");
+  });
+
   it("returns Off for null values", () => {
     expect(formatQuietHours(null, null)).toBe("Off");
     expect(formatQuietHours(22, null)).toBe("Off");
@@ -222,6 +226,18 @@ describe("buildListMessage", () => {
     expect(msg).toContain("Quiet hours: active until 07:00 UTC");
     expect(msg).not.toContain("22:00–07:00 UTC");
     expect(msg).toContain("Snooze: Off");
+  });
+
+  it("evaluates active quiet hours in the subscriber timezone", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 13, quiet_hours_end_utc: 14,
+      timezone: "Europe/Paris",
+    };
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
+    expect(msg).toContain("Quiet hours: active until 14:00 Europe/Paris");
+    expect(msg).not.toContain("13:00–14:00 UTC");
   });
 
   it("renders quiet hours as a window when outside it", () => {

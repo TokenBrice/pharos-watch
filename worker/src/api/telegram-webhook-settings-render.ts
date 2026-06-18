@@ -203,7 +203,7 @@ function formatQuietHoursLine(subscriber: SubscriberRow | null): string {
   const start = subscriber.quiet_hours_start_utc;
   const end = subscriber.quiet_hours_end_utc;
   if (start == null || end == null) return "off";
-  return formatQuietHours(start, end);
+  return formatQuietHours(start, end, subscriber.timezone);
 }
 
 function formatSnoozeLine(subscriber: SubscriberRow | null): string {

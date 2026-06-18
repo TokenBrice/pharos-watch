@@ -875,6 +875,59 @@ describe("drainPendingQueue", () => {
     expect(subscriptionsCascade).toBeDefined();
   });
 
+  it("dead-letters and deletes sibling pending rows when a second 403 disables the chat", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      sqlite
+        .prepare(
+          `INSERT INTO telegram_subscribers (
+             chat_id, consecutive_block_count, consecutive_block_first_at,
+             alert_dews, alert_depeg, alert_safety, alert_launch,
+             global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch
+           )
+           VALUES (?, 1, ?, 1, 1, 1, 1, 1, 1, 1, 1)`,
+        )
+        .run("double-strike-siblings", now - 60);
+      insertPendingSqlite(sqlite, {
+        id: 210,
+        chatId: "double-strike-siblings",
+        html: "<b>Attempted</b>",
+        createdAt: now - 120,
+        dedupeKey: "double-strike-siblings:attempted",
+      });
+      insertPendingSqlite(sqlite, {
+        id: 211,
+        chatId: "double-strike-siblings",
+        html: "<b>Sibling</b>",
+        createdAt: now - 60,
+        notBeforeAt: now + 600,
+        dedupeKey: "double-strike-siblings:sibling",
+      });
+
+      mockSendToChat.mockResolvedValue({
+        ok: false, blocked: true, retryable: false, permanentFailure: true,
+        statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+      });
+
+      const result = await drainPendingQueue(db, "bot-token", 1);
+
+      expect(result.blocked).toBe(1);
+      expect(result.blockedCleanedUp).toBe(1);
+      expect(result.blockedCleanupFailed).toBe(0);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+      const deadLetters = sqlite
+        .prepare("SELECT pending_id, reason FROM telegram_alert_dead_letters ORDER BY pending_id ASC")
+        .all();
+      expect(deadLetters).toEqual([
+        { pending_id: 210, reason: "blocked_disabled" },
+        { pending_id: 211, reason: "blocked_disabled" },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("counts a blocked chat once while preserving per-row pending diagnostics", async () => {
     const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValue({
