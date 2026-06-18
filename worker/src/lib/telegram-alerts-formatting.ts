@@ -301,7 +301,7 @@ export function buildAlertReplyMarkup(
   const baseRows: AlertInlineButton[][] = [
     [
       { text: "Status", callback_data: `status:${stablecoinId}` },
-      { text: "Depeg +250", callback_data: `depegstep:${stablecoinId}:250` },
+      { text: "Depeg step 250", callback_data: `depegstep:${stablecoinId}:250` },
     ],
     [
       { text: "Safety downgrades", callback_data: `safetydown:${stablecoinId}` },

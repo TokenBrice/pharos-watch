@@ -868,6 +868,18 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     );
   }
 
+  function collectButtonText(markup: { inline_keyboard: ReadonlyArray<ReadonlyArray<unknown>> }): string[] {
+    return markup.inline_keyboard.flatMap((row) =>
+      row
+        .map((btn) =>
+          typeof btn === "object" && btn !== null && "text" in btn
+            ? (btn as { text?: unknown }).text
+            : undefined,
+        )
+        .filter((text): text is string => typeof text === "string"),
+    );
+  }
+
   function singleCoinAlerts(stablecoinId: string): ConsolidatedAlerts {
     return {
       dews: [
@@ -935,6 +947,11 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     expect(callbacks).toContain("snooze:1h");
     expect(callbacks).toContain("snooze:4h");
     expect(callbacks).toContain("snooze:24h");
+  });
+
+  it("uses the canonical depeg-step label for the one-tap tuning button", () => {
+    const markup = buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 0);
+    expect(collectButtonText(markup)).toContain("Depeg step 250");
   });
 
   it("omits the per-coin snooze row on multi-coin alerts", () => {

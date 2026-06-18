@@ -74,7 +74,7 @@ async function expectedWebhookCacheValue(
 
 function expectedCommandsCacheValue(): string {
   return JSON.stringify({
-    version: 5,
+    version: 6,
     scopes: {
       all_private_chats: TELEGRAM_BOT_COMMANDS,
       all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
@@ -584,13 +584,25 @@ describe("reconcileTelegramCommandRegistration", () => {
       scope: { type: "all_group_chats" },
     });
     expect(groupBody.commands.map((entry: { command: string }) => entry.command)).toEqual([
+      "help",
+      "sample",
+      "status",
+      "brief",
+      "top",
+      "why",
+      "coverage",
+      "health",
+      "list",
       "subscribe",
       "unsubscribe",
-      "list",
-      "health",
-      "status",
+      "presets",
+      "set",
+      "settings",
       "mute",
-      "help",
+      "timezone",
+      "unsnooze",
+      "unmutehours",
+      "cancel",
     ]);
 
     const writes = db.getHistory().filter((entry) => entry.sql.includes(CACHE_WRITE_MATCH));
@@ -598,6 +610,36 @@ describe("reconcileTelegramCommandRegistration", () => {
     expect(writes[0]?.binds[0]).toBe("telegram:commands-reconciled");
     expect(writes[0]?.binds[1]).toBe(expectedCommandsCacheValue());
     expect(typeof writes[0]?.binds[2]).toBe("number");
+  });
+
+  it("keeps group commands to group-safe commands only", () => {
+    const groupCommands = TELEGRAM_BOT_GROUP_COMMANDS.map((entry) => entry.command);
+    for (const command of groupCommands) {
+      expect(TELEGRAM_BOT_COMMANDS.some((entry) => entry.command === command)).toBe(true);
+    }
+    expect(groupCommands).not.toContain("start");
+    expect(groupCommands).not.toContain("forget");
+    expect(groupCommands).toEqual([
+      "help",
+      "sample",
+      "status",
+      "brief",
+      "top",
+      "why",
+      "coverage",
+      "health",
+      "list",
+      "subscribe",
+      "unsubscribe",
+      "presets",
+      "set",
+      "settings",
+      "mute",
+      "timezone",
+      "unsnooze",
+      "unmutehours",
+      "cancel",
+    ]);
   });
 
   it("skips the second scope call when Telegram rejects the private-chat registration", async () => {

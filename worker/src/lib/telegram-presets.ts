@@ -85,7 +85,7 @@ const TELEGRAM_PRESET_DEFINITIONS: TelegramPresetDefinition[] = [
   {
     id: "non-usd-top10",
     label: "Non-USD Top 10",
-    description: "Top 10 non-USD stablecoins by current market cap.",
+    description: "Top 10 non-USD pegs (fiat, gold/silver, baskets) by USD market cap.",
     category: "peg-leaders",
     kind: "peg-top",
     excludePegCurrency: "USD",
@@ -94,7 +94,7 @@ const TELEGRAM_PRESET_DEFINITIONS: TelegramPresetDefinition[] = [
   {
     id: "non-usd-top25",
     label: "Non-USD Top 25",
-    description: "Top 25 non-USD stablecoins by current market cap.",
+    description: "Top 25 non-USD pegs (fiat, gold/silver, baskets) by USD market cap.",
     category: "peg-leaders",
     kind: "peg-top",
     excludePegCurrency: "USD",
@@ -103,7 +103,7 @@ const TELEGRAM_PRESET_DEFINITIONS: TelegramPresetDefinition[] = [
   {
     id: "non-usd-top50",
     label: "Non-USD Top 50",
-    description: "Top 50 non-USD stablecoins by current market cap.",
+    description: "Top 50 non-USD pegs (fiat, gold/silver, baskets) by USD market cap.",
     category: "peg-leaders",
     kind: "peg-top",
     excludePegCurrency: "USD",

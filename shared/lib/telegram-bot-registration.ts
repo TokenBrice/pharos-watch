@@ -40,11 +40,23 @@ export const TELEGRAM_BOT_COMMANDS = [
 ] as const;
 
 export const TELEGRAM_BOT_GROUP_COMMANDS = [
+  { command: "help", description: "Command reference" },
+  { command: "sample", description: "Preview a synthetic alert before subscribing" },
+  { command: "status", description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)" },
+  { command: "brief", description: "Latest Pharos market brief" },
+  { command: "top", description: "Rank current views: depeg, dews, yield, liquidity, chains, safety" },
+  { command: "why", description: "Explain one coin Safety Score (e.g. /why USDC)" },
+  { command: "coverage", description: "Show which Pharos data surfaces cover one coin" },
+  { command: "health", description: "Show delivery diagnostics for this chat" },
+  { command: "list", description: "Show your current subscriptions and settings" },
   { command: "subscribe", description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)" },
   { command: "unsubscribe", description: "Remove coin subscriptions" },
-  { command: "list", description: "Show your current subscriptions and settings" },
-  { command: "health", description: "Show delivery diagnostics for this chat" },
-  { command: "status", description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)" },
-  { command: "mute", description: "Enable quiet hours in UTC (e.g. /mute 22-07)" },
-  { command: "help", description: "Command reference" },
+  { command: "presets", description: "Browse preset watchlists like usd-top25 / non-usd-top25" },
+  { command: "set", description: "Tune per-coin or global thresholds (e.g. /set all depeg-step 250)" },
+  { command: "settings", description: "Open the inline settings keyboard (e.g. /settings or /settings USDC)" },
+  { command: "mute", description: "Enable quiet hours (e.g. /mute 22-07; uses your /timezone)" },
+  { command: "timezone", description: "Set chat timezone for quiet hours (e.g. /timezone Europe/Paris)" },
+  { command: "unsnooze", description: "Clear active alert snooze" },
+  { command: "unmutehours", description: "Disable quiet hours" },
+  { command: "cancel", description: "Cancel a pending ticker selection" },
 ] as const;

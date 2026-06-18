@@ -60,6 +60,12 @@ describe("telegram preset catalog", () => {
     ]);
   });
 
+  it("describes non-USD presets as mixed non-USD pegs ranked by USD market cap", () => {
+    for (const preset of listTelegramPresets().filter((entry) => entry.id.startsWith("non-usd-top"))) {
+      expect(preset.description).toMatch(/non-USD pegs \(fiat, gold\/silver, baskets\) by USD market cap/);
+    }
+  });
+
   it("recognizes supported preset aliases", () => {
     expect(isTelegramPresetAlias("usd-top25")).toBe(true);
     expect(isTelegramPresetAlias("usd-top-25")).toBe(true);

@@ -27,8 +27,8 @@ import { runBoundedQueue } from "./shared/bounded-queue";
  * so an engaged-but-quiet user gets one warning before their row would be
  * removed at day 180. The warning is gated by a per-chat 30-day cache marker
  * so the same chat cannot receive a second nudge within the same warning
- * window. The sub-pass is a no-op when `botToken` is empty so unit tests and
- * the pre-wire production call site stay safe.
+ * window. The sub-pass is a no-op when `botToken` is empty so token-less test
+ * invocations stay safe.
  */
 const INACTIVE_RETENTION_SEC = 180 * 24 * 60 * 60;
 const WARN_WINDOW_START_SEC = 170 * 24 * 60 * 60;
@@ -242,8 +242,8 @@ export async function runTelegramInactiveCleanup(
   throwIfAborted(signal);
 
   // Warn-only sub-pass: nudge subscribers 170-179 days idle who still have
-  // active subscriptions or preset follows. No-op when no botToken is wired
-  // (existing prod call site has not been updated yet; tests opt in).
+  // active subscriptions or preset follows. Token-less invocations skip the
+  // send path, which keeps focused tests and manual dry probes side-effect-free.
   const warningPass = botToken && botToken.length > 0
     ? await runWarningPass(db, botToken, now, signal)
     : null;
