@@ -25,6 +25,16 @@ vi.mock("../preflight-skip", () => ({
 
 import { logSkippedCronRun } from "../preflight-skip";
 import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
+import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
+import { publishTelegramPulseSnapshot } from "../../../api/telegram-pulse";
+import { runTelegramDegradationWatchdog } from "../../../cron/telegram-degradation-watchdog";
+import { cleanExpiredDisambiguations } from "../../../cron/telegram-quiet-hours";
+import {
+  reconcileTelegramCommandRegistration,
+  reconcileTelegramMenuButton,
+  reconcileTelegramProfileRegistration,
+  reconcileTelegramWebhookRegistration,
+} from "../../../lib/telegram-webhook-registration";
 
 function buildRuntime(): ScheduledRuntimeContext {
   return {
@@ -63,5 +73,76 @@ describe("runFiveMinuteTelegramSlot", () => {
     expect(vi.mocked(logSkippedCronRun).mock.calls[0][1]).toMatchObject({
       reason: "missing-telegram-bot-token",
     });
+  });
+
+  it("runs reconciliation in order and still runs slot groups after a reconciliation failure", async () => {
+    const order: string[] = [];
+    vi.mocked(reconcileTelegramCommandRegistration).mockImplementation(async () => {
+      order.push("reconcile-commands");
+      return { attempted: true, skipped: false };
+    });
+    vi.mocked(reconcileTelegramProfileRegistration).mockImplementation(async () => {
+      order.push("reconcile-profile");
+      throw new Error("profile failed");
+    });
+    vi.mocked(reconcileTelegramMenuButton).mockImplementation(async () => {
+      order.push("reconcile-menu");
+      return { attempted: true, skipped: false, miniAppUrl: "https://pharos.watch/pharoswatchbot/app/" };
+    });
+    vi.mocked(reconcileTelegramWebhookRegistration).mockImplementation(async () => {
+      order.push("reconcile-webhook");
+      return { attempted: true, skipped: false, expectedUrl: "https://api.pharos.watch/api/telegram-webhook" };
+    });
+    vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => {
+      order.push("dispatch");
+      return { status: "ok", itemCount: 1 };
+    });
+    vi.mocked(runTelegramDegradationWatchdog).mockImplementation(async () => {
+      order.push("watchdog");
+      return { status: "ok", itemCount: 0 };
+    });
+    vi.mocked(cleanExpiredDisambiguations).mockImplementation(async () => {
+      order.push("cleanup");
+      return { status: "ok", itemCount: 0 };
+    });
+    vi.mocked(publishTelegramPulseSnapshot).mockImplementation(async () => {
+      order.push("pulse");
+    });
+
+    const runtime = buildRuntime();
+    runtime.env = {
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
+      SELF_URL: "https://api.pharos.watch",
+    } as ScheduledRuntimeContext["env"];
+    runtime.runLeasedCron = vi.fn(async (_job, fn) =>
+      fn(new AbortController().signal, vi.fn()),
+    );
+
+    const summary = await runFiveMinuteTelegramSlot(runtime);
+
+    expect(order).toEqual([
+      "reconcile-commands",
+      "reconcile-profile",
+      "reconcile-menu",
+      "reconcile-webhook",
+      "dispatch",
+      "watchdog",
+      "cleanup",
+      "pulse",
+    ]);
+    expect(vi.mocked(runtime.runLeasedCron).mock.calls.map(([job]) => job)).toEqual([
+      "dispatch-telegram-alerts",
+      "telegram-degradation-watchdog",
+      "telegram-disambiguation-cleanup",
+      "telegram-pulse-snapshot",
+    ]);
+    expect(summary.jobs.map((job) => job.job)).toEqual([
+      "dispatch-telegram-alerts",
+      "telegram-degradation-watchdog",
+      "telegram-disambiguation-cleanup",
+      "telegram-pulse-snapshot",
+    ]);
+    expect(summary.jobsErrored).toBe(0);
   });
 });
