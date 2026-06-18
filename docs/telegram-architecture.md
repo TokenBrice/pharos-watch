@@ -49,6 +49,8 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Owned files.**
 - `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)
 - `worker/src/api/telegram-webhook-auth.ts` (secret validation, group-admin gating)
+- `worker/src/api/telegram-webhook-pending-gate.ts` (the pending-disambiguation / setup-step gate decisions run before dispatch: `handleSetupPendingBeforeDispatch`, `handlePendingActionBeforeDispatch`, and the disambiguation-reply helpers)
+- `worker/src/api/telegram-webhook-group-welcome.ts` (the group lifecycle sub-seam: `handleMyChatMember` plus the bot-added/-removed transition checks, welcome message/markup builders, and the local `TelegramChatMemberUpdated` shape)
 - `worker/src/api/telegram-webhook-shared.ts` (types/constants used by both Ingress and Action handlers — see note below)
 
 **Allowed inbound dependencies.** `worker/src/index.ts` request router (this is an HTTP entrypoint).
@@ -61,11 +63,19 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 - Write subscription state directly — go through State / persistence helpers.
 - Reorganize the `COMMAND_HANDLERS` table without adding/removing a command. The two switch statements were intentionally collapsed in P1-M1; do not re-expand.
 
-Group lifecycle is part of this seam: when a group/supergroup `my_chat_member`
-transition says the bot was removed, Ingress runs the subscriber-state cascade
-and clears exact group lifecycle cache keys. When a bot-added transition sends
-the audited welcome reply successfully, Ingress stamps the
-`telegram:group-welcome:<chat_id>` cache marker directly from that send result.
+Group lifecycle is part of this seam, isolated in
+`telegram-webhook-group-welcome.ts` and invoked from the dispatcher loop: when a
+group/supergroup `my_chat_member` transition says the bot was removed, Ingress
+runs the subscriber-state cascade and clears exact group lifecycle cache keys.
+When a bot-added transition sends the audited welcome reply successfully, Ingress
+stamps the `telegram:group-welcome:<chat_id>` cache marker directly from that send
+result.
+
+The pending-flow gate is likewise isolated in
+`telegram-webhook-pending-gate.ts`: the dispatcher loop loads the pending row,
+applies the ingress flood cap, then delegates the setup-step / disambiguation
+decision (pass-through, clear-and-run, ownership refusal, or reply-and-stop) to
+that module before parsed commands reach `COMMAND_HANDLERS`.
 
 > Note on `telegram-webhook-shared.ts`: it contains `TelegramWebhookUpdate`, `PendingAction`, `ConfirmBulkPayload`, etc. — types crossing the Ingress / Action-handler boundary. Treat it as a contract file; widening it is fine, restructuring it is a seam change.
 

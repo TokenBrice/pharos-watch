@@ -4,27 +4,27 @@ import {
   formatAdministratorMentions,
   getCachedChatAdministrators,
 } from "../lib/telegram-chat-member";
-import { deleteCache, getCache, setCache } from "../lib/db-cache";
-import {
-  formatDisambiguation,
-  findInvalidDisambiguationToken,
-  parseDisambiguationReply,
-} from "../lib/telegram-alerts";
 import {
   SETUP_PENDING_ACTION_TYPE,
-  type PendingAction,
   type TelegramWebhookUpdate,
 } from "./telegram-webhook-shared";
-import { handleSetupTickerInput, parseSetupState } from "./telegram-webhook-setup";
 import {
   parseCommand,
-  parsePendingDisambiguation,
   parseStartPayload,
 } from "./telegram-webhook-parsing";
 import {
+  handlePendingActionBeforeDispatch,
+  handleSetupPendingBeforeDispatch,
+  type ParsedTelegramCommand,
+  type ReplyFn,
+} from "./telegram-webhook-pending-gate";
+import {
+  handleMyChatMember,
+  type TelegramChatMemberUpdated,
+} from "./telegram-webhook-group-welcome";
+import {
   acquireTelegramCommandCooldown,
   claimTelegramProcessedUpdate,
-  clearPendingDisambiguation,
   loadPendingDisambiguation,
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateProcessed,
@@ -32,8 +32,6 @@ import {
   maybePruneTelegramProcessedUpdates,
   recordTelegramChatCommandFlood,
   releaseTelegramCommandCooldown,
-  forgetSubscriber,
-  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   unixNow,
   type TelegramChatCommandFloodResult,
 } from "./telegram-webhook-store";
@@ -41,7 +39,6 @@ import { withErrorHandler } from "../lib/api-utils";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
-import { executePendingDisambiguationSelection } from "./telegram-webhook-disambiguation-selection";
 import { isGroupAdminActor, isGroupChatType, validateTelegramWebhookSecret } from "./telegram-webhook-auth";
 import {
   UNKNOWN_COMMAND_ACTION_DETAIL,
@@ -54,7 +51,6 @@ import {
   CHAT_COMMAND_FLOOD_WINDOW_SEC,
   GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
   GROUP_CHAT_COMMAND_FLOOD_LIMIT,
-  TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC,
 } from "../lib/telegram-constants";
 
 /**
@@ -79,75 +75,15 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
   "/unsnooze",
 ]);
 
-/**
- * Commands that, when issued while a pending disambiguation is active, clear
- * the pending state (after the permission check) and then run through the
- * normal dispatch. All other commands either run as-is or get the pending
- * reminder — see the dispatch loop below.
- */
-const PENDING_CLEAR_AND_RUN_COMMANDS = new Set([
-  "/subscribe",
-  "/unsubscribe",
-  "/set",
-  "/settings",
-  "/forget",
-  "/mute",
-  "/unmutehours",
-  "/unsnooze",
-  "/timezone",
-]);
-
-/**
- * Commands that may run even while a pending disambiguation is active, without
- * clearing it. These are read-only / informational commands.
- */
-const PENDING_PASSTHROUGH_COMMANDS = new Set([
-  "/presets",
-  "/help",
-  "/sample",
-  "/list",
-  "/status",
-  "/brief",
-  "/market",
-  "/top",
-  "/why",
-  "/coverage",
-  "/start",
-  "/health",
-]);
-
 // `botMention` is lowercased at parse time (telegram-webhook-parsing.ts), so
 // compare against the lowercased canonical handle.
 const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
-
-/**
- * Local `my_chat_member` shape. Defined here rather than in
- * `telegram-webhook-shared.ts` because that module is owned by another wave;
- * the dispatch only needs to read the few fields it acts on.
- */
-interface TelegramChatMemberUpdated {
-  chat?: {
-    id?: number;
-    type?: "private" | "group" | "supergroup" | "channel" | "sender" | string;
-    title?: string;
-  };
-  from?: {
-    id?: number;
-    username?: string;
-    first_name?: string;
-  };
-  old_chat_member?: { status?: string };
-  new_chat_member?: { status?: string };
-}
 
 type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
   my_chat_member?: TelegramChatMemberUpdated;
 };
 
-type ParsedTelegramCommand = NonNullable<ReturnType<typeof parseCommand>>;
-type PendingDisambiguationRow = Awaited<ReturnType<typeof loadPendingDisambiguation>>;
 type FinishOk = (errorClass?: string | null) => Promise<Response>;
-type ReplyFn = (message: string) => Promise<void>;
 type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
 type FloodScope = "actor" | "chat";
 
@@ -162,9 +98,6 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
 const CANONICAL_COMMAND_KEYS: Record<string, string> = {
   "/market": "/brief",
 };
-
-const SETUP_SLASH_TICKER_REPLY_PATTERN = /^\/[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
-const SETUP_TICKER_COMMAND_ESCAPES = new Set(["/cancel", "/start"]);
 
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
@@ -375,8 +308,6 @@ export const handleTelegramWebhook = withErrorHandler(
   },
 );
 
-type PendingFlowResult = "continue" | "finished";
-
 async function handleTelegramMessageUpdate(args: {
   db: D1Database;
   update: TelegramWebhookUpdateWithChatMember;
@@ -501,160 +432,6 @@ async function handleTelegramMessageUpdate(args: {
     await reply("Something went wrong, please try again.");
     return finishOk("command-dispatch");
   }
-}
-
-async function handleSetupPendingBeforeDispatch(args: {
-  db: D1Database;
-  botToken: string;
-  chatId: string;
-  actorUserId: string | null;
-  username: string | null;
-  text: string;
-  pendingRow: NonNullable<PendingDisambiguationRow>;
-  parsedCommand: ParsedTelegramCommand | null;
-  reply: ReplyFn;
-}): Promise<PendingFlowResult> {
-  const { db, botToken, chatId, actorUserId, username, text, pendingRow, parsedCommand, reply } = args;
-  const setupState = parseSetupState(pendingRow.action_payload, pendingRow.initiator_user_id ?? null);
-  const setupTickerInput = setupState?.step === "awaiting-ticker"
-    ? normalizeSetupTickerInput(text, parsedCommand)
-    : null;
-  if (setupState && setupState.step === "awaiting-ticker" && setupTickerInput != null) {
-    await handleSetupTickerInput(
-      { db, botToken, chatId, actorUserId, username },
-      setupTickerInput,
-      setupState,
-    );
-    return "finished";
-  }
-  if (!parsedCommand && canActOnPendingOwner(setupState?.initiatorUserId ?? null, actorUserId)) {
-    await reply("Tap one of the buttons above, or send /cancel to abort.");
-    return "finished";
-  }
-  if (parsedCommand) {
-    if (!setupState || canActOnPendingOwner(setupState.initiatorUserId, actorUserId)) {
-      if (parsedCommand.command === "/cancel") {
-        await clearPendingDisambiguation(db, chatId);
-        await reply("Setup cancelled. Send /start to begin again or /list to view subscriptions.");
-        return "finished";
-      }
-      await clearPendingDisambiguation(db, chatId);
-    } else if (!PENDING_PASSTHROUGH_COMMANDS.has(parsedCommand.command)) {
-      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-      return "finished";
-    }
-  }
-  return "continue";
-}
-
-function normalizeSetupTickerInput(
-  text: string,
-  parsedCommand: ParsedTelegramCommand | null,
-): string | null {
-  if (!parsedCommand) return text;
-  if (SETUP_TICKER_COMMAND_ESCAPES.has(parsedCommand.command)) return null;
-  const trimmed = text.trim();
-  if (!SETUP_SLASH_TICKER_REPLY_PATTERN.test(trimmed)) return null;
-  return trimmed.slice(1);
-}
-
-async function handlePendingActionBeforeDispatch(args: {
-  db: D1Database;
-  botToken: string;
-  chatId: string;
-  chatType: string;
-  actorUserId: string | null;
-  username: string | null;
-  text: string;
-  pendingRow: PendingDisambiguationRow;
-  pendingNotExpired: boolean;
-  parsedCommand: ParsedTelegramCommand | null;
-  reply: ReplyFn;
-}): Promise<PendingFlowResult> {
-  const {
-    db,
-    botToken,
-    chatId,
-    chatType,
-    actorUserId,
-    username,
-    text,
-    pendingRow,
-    pendingNotExpired,
-    parsedCommand,
-    reply,
-  } = args;
-  const parsedPending = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
-  // This path only runs when the row is not a setup step (see isSetupPending in
-  // the caller), so a setup sentinel here means the row was mis-routed; treat it
-  // as unrecoverable rather than a live disambiguation action.
-  const pendingAction =
-    parsedPending && parsedPending.actionType !== SETUP_PENDING_ACTION_TYPE ? parsedPending : null;
-  const pendingActive = Boolean(pendingRow && pendingAction && pendingNotExpired);
-
-  if (pendingRow && !pendingAction && pendingNotExpired) {
-    await clearPendingDisambiguation(db, chatId);
-    if (!parsedCommand) {
-      await reply("That pending selection could not be restored. Please rerun the command, or use /help for examples.");
-      return "finished";
-    }
-  }
-
-  if (pendingRow && !pendingActive) {
-    await clearPendingDisambiguation(db, chatId);
-  }
-
-  if (!pendingActive || !pendingAction) {
-    return "continue";
-  }
-
-  if (!parsedCommand) {
-    if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
-      if (isGroupChatType(chatType) && !canActOnPending(pendingAction, actorUserId)) return "finished";
-      await reply("Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
-      return "finished";
-    }
-    if (!canActOnPending(pendingAction, actorUserId)) {
-      if (isGroupChatType(chatType) && !looksLikeDisambiguationSelection(text)) {
-        return "finished";
-      }
-      await reply("Only the user who started this pending selection can complete it.");
-      return "finished";
-    }
-    await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username);
-    return "finished";
-  }
-
-  const command = parsedCommand.command;
-  if (command === "/cancel") {
-    if (!canActOnPending(pendingAction, actorUserId)) {
-      await reply("Only the user who started this pending selection can cancel it.");
-      return "finished";
-    }
-    await clearPendingDisambiguation(db, chatId);
-    await reply("Pending selection cancelled.");
-    return "finished";
-  }
-
-  if (PENDING_PASSTHROUGH_COMMANDS.has(command)) {
-    return "continue";
-  }
-  if (PENDING_CLEAR_AND_RUN_COMMANDS.has(command)) {
-    if (!canActOnPending(pendingAction, actorUserId)) {
-      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-      return "finished";
-    }
-    await clearPendingDisambiguation(db, chatId);
-    return "continue";
-  }
-  if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
-    await reply("You have a pending confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
-    return "finished";
-  }
-  await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
-
-${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.candidates))}`);
-  return "finished";
 }
 
 async function dispatchParsedTelegramCommand(args: {
@@ -1115,169 +892,4 @@ function formatAdminHint(admins: Awaited<ReturnType<typeof getCachedChatAdminist
 
 function isAddressedToPharosBot(botMention: string | null): boolean {
   return botMention != null && PHAROS_BOT_USERNAMES.has(botMention);
-}
-
-function canActOnPending(pending: PendingAction, actorUserId: string | null): boolean {
-  return canActOnPendingOwner(pending.initiatorUserId, actorUserId);
-}
-
-function canActOnPendingOwner(initiatorUserId: string | null, actorUserId: string | null): boolean {
-  return initiatorUserId == null || initiatorUserId === actorUserId;
-}
-
-function looksLikeDisambiguationSelection(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-
-  let hasDigit = false;
-  let pendingSeparator = false;
-  for (const char of trimmed) {
-    if (char >= "0" && char <= "9") {
-      hasDigit = true;
-      pendingSeparator = false;
-      continue;
-    }
-    if (char === "," || char.trim() === "") {
-      if (!hasDigit) return false;
-      pendingSeparator = true;
-      continue;
-    }
-    return false;
-  }
-
-  return hasDigit && !pendingSeparator;
-}
-
-async function handleDisambiguationReply(
-  db: D1Database,
-  chatId: string,
-  text: string,
-  pending: PendingAction,
-  botToken: string,
-  username: string | null,
-): Promise<void> {
-  if (pending.actionType === "confirm-bulk" || pending.actionType === "forget-confirm") {
-    // Bulk-confirm and forget-confirm use inline buttons; plain text replies are handled upstream.
-    return;
-  }
-  const selectedIndices = parseDisambiguationReply(text, pending.candidates.length);
-  if (!selectedIndices) {
-    const invalidToken = findInvalidDisambiguationToken(text, pending.candidates.length);
-    const reminder = [
-      invalidToken
-        ? `I could not parse "${invalidToken}" — reply with numbers only (1 to ${pending.candidates.length}).`
-        : 'Reply with the number(s) you want, e.g. "1" or "1,2".',
-      "Use /cancel to abandon this selection.",
-      formatDisambiguation(pending.ambiguousTicker, pending.candidates),
-    ].join("\n\n");
-    await sendAuditedTelegramReply(db, chatId, escapeHtml(reminder), botToken);
-    return;
-  }
-  await executePendingDisambiguationSelection(db, botToken, chatId, username, pending, selectedIndices);
-}
-
-function isBotAddedTransition(
-  oldStatus: string | undefined,
-  newStatus: string | undefined,
-): boolean {
-  const wasAbsent = oldStatus === "left" || oldStatus === "kicked";
-  const isPresent = newStatus === "member" || newStatus === "administrator";
-  return wasAbsent && isPresent;
-}
-
-function isBotRemovedTransition(
-  oldStatus: string | undefined,
-  newStatus: string | undefined,
-): boolean {
-  const wasPresent = Boolean(oldStatus && oldStatus !== "left" && oldStatus !== "kicked");
-  const isAbsent = newStatus === "left" || newStatus === "kicked";
-  return wasPresent && isAbsent;
-}
-
-async function clearGroupLifecycleCache(db: D1Database, chatId: string): Promise<void> {
-  await deleteCache(db, `telegram:group-welcome:${chatId}`);
-  await deleteCache(db, `telegram:chat-admins:${chatId}`);
-}
-
-function buildGroupWelcomeMessage(adderMention: string): string {
-  return [
-    `<b>Thanks for adding Pharos Watch</b>${adderMention ? `, ${adderMention}` : ""}.`,
-    "",
-    "I send stablecoin alerts into this chat: DEWS stress, depeg events, safety grade changes, and launches.",
-    "",
-    `Group admins can run <code>/subscribe@${TELEGRAM_BOT_USERNAME} dews usd-top25</code> here. For your own watchlist and quiet hours, message me in DM.`,
-  ].join("\n");
-}
-
-function buildGroupWelcomeReplyMarkup(): {
-  inline_keyboard: { text: string; url: string }[][];
-} {
-  return {
-    inline_keyboard: [
-      [{ text: "Read the docs →", url: `https://pharos.watch/${TELEGRAM_BOT_USERNAME.toLowerCase()}/` }],
-      [{ text: "Personal alerts in DM →", url: `https://t.me/${TELEGRAM_BOT_USERNAME}?start=setup` }],
-    ],
-  };
-}
-
-function formatAdderMention(from: TelegramChatMemberUpdated["from"]): string {
-  if (!from) return "";
-  if (from.username) return `@${from.username}`;
-  if (from.first_name) return escapeHtml(from.first_name);
-  return "";
-}
-
-async function handleMyChatMember(
-  db: D1Database,
-  botToken: string,
-  payload: TelegramChatMemberUpdated,
-): Promise<void> {
-  const chatType = payload.chat?.type;
-  // `my_chat_member` for private/sender chats is emitted on /start, on
-  // block/unblock, and on other 1:1 status changes. Group/supergroup updates
-  // drive lifecycle cleanup and welcome idempotency.
-  if (chatType === "private" || chatType === "sender") return;
-  const chatId = payload.chat?.id;
-  if (typeof chatId !== "number" || !Number.isFinite(chatId)) return;
-  const chatIdStr = String(chatId);
-  if (
-    isGroupChatType(chatType) &&
-    isBotRemovedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)
-  ) {
-    await forgetSubscriber(db, chatIdStr);
-    await clearGroupLifecycleCache(db, chatIdStr);
-    logTelegramEvent({
-      level: "info",
-      message: "telegram group removed bot; subscriber state cleared",
-      chatId: chatIdStr,
-      action: "group-removal",
-    });
-    return;
-  }
-  if (!isBotAddedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)) {
-    return;
-  }
-
-  // 24h idempotency marker per chat — Telegram may redeliver `my_chat_member`
-  // when the bot is removed and re-added quickly; we never want two welcomes.
-  const cacheKey = `telegram:group-welcome:${chatIdStr}`;
-  const cached = await getCache(db, cacheKey);
-  if (cached && Date.now() / 1000 - cached.updatedAt < TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC) {
-    return;
-  }
-
-  const adderMention = formatAdderMention(payload.from);
-  const welcomeSend = await sendAuditedTelegramReply(
-    db,
-    chatIdStr,
-    buildGroupWelcomeMessage(adderMention),
-    botToken,
-    {
-      actionDetail: "group-welcome",
-      replyMarkup: buildGroupWelcomeReplyMarkup(),
-    },
-  );
-  if (welcomeSend.ok) {
-    await setCache(db, cacheKey, "1");
-  }
 }
