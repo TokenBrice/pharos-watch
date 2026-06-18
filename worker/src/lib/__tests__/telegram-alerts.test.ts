@@ -19,6 +19,7 @@ import {
   isDewsDeescalation,
   suggestClosestToken,
   buildAlertReplyMarkup,
+  rankAlertCoins,
   resolveAlertLinkPreviewOptions,
   SNOOZE_REPLY_MARKUP,
   type ConsolidatedAlerts,
@@ -954,10 +955,10 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     expect(collectButtonText(markup)).toContain("Depeg step 250");
   });
 
-  it("omits the per-coin snooze row on multi-coin alerts", () => {
+  it("adds a compact per-coin snooze row for the top coins on the first multi-coin chunk (C118)", () => {
     const multiCoin: ConsolidatedAlerts = {
       dews: [
-        { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "ALERT", score: 42, topSignals: [] },
+        { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "WARNING", score: 42, topSignals: [] },
         { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
       ],
       depegTriggered: [],
@@ -968,8 +969,116 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     };
     const markup = buildAlertReplyMarkup(multiCoin, 0);
     const callbacks = collectCallbackData(markup);
+    // Top coin (USDC, WARNING) ranks above USDT (ALERT); both appear (top 2).
+    expect(callbacks).toContain("coinsnooze:usdc-circle:4h");
+    expect(callbacks).toContain("coinsnooze:usdt-tether:4h");
+    // Only the 4h per-coin snooze is offered in the compact row.
+    expect(callbacks.some((c) => c === "coinsnooze:usdc-circle:1h")).toBe(false);
+    expect(callbacks.some((c) => c === "coinsnooze:usdc-circle:24h")).toBe(false);
+    // The chat-level snooze row is preserved.
+    expect(callbacks).toContain("snooze:1h");
+    // The displayed symbol drives the button text; callback_data is id-only.
+    expect(collectButtonText(markup)).toContain("Snooze USDC 4h");
+  });
+
+  it("omits the per-coin snooze row on overflow chunks of multi-coin alerts (C118)", () => {
+    const multiCoin: ConsolidatedAlerts = {
+      dews: [
+        { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "WARNING", score: 42, topSignals: [] },
+        { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
+      ],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+    };
+    const markup = buildAlertReplyMarkup(multiCoin, 1);
+    const callbacks = collectCallbackData(markup);
     expect(callbacks.some((c) => c.startsWith("coinsnooze:"))).toBe(false);
     expect(callbacks).toContain("snooze:1h");
+  });
+
+  it("keeps the multi-coin per-coin snooze callback_data within 64 bytes for the longest ids", () => {
+    const ids = Array.from(TRACKED_META_BY_ID.keys());
+    const sorted = [...ids].sort((a, b) => b.length - a.length);
+    const [a, b] = sorted;
+    const multiCoin: ConsolidatedAlerts = {
+      dews: [
+        { stablecoinId: a, symbol: "AAA", oldBand: "CALM", newBand: "ALERT", score: 10, topSignals: [] },
+        { stablecoinId: b, symbol: "BBB", oldBand: "CALM", newBand: "WARNING", score: 10, topSignals: [] },
+      ],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safety: [],
+      launch: [],
+    };
+    const markup = buildAlertReplyMarkup(multiCoin, 0);
+    const callbacks = collectCallbackData(markup);
+    // Sanity: the multi-coin branch produced per-coin snooze callbacks.
+    expect(callbacks.some((c) => c.startsWith("coinsnooze:"))).toBe(true);
+    for (const data of callbacks) {
+      expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
+    }
+  });
+});
+
+describe("rankAlertCoins (C118)", () => {
+  const empty = {
+    dews: [],
+    depegTriggered: [],
+    depegResolved: [],
+    depegWorsening: [],
+    safety: [],
+    launch: [],
+  };
+
+  it("ranks a depeg bps severity above a DEWS WATCH band", () => {
+    const ranked = rankAlertCoins({
+      ...empty,
+      dews: [{ stablecoinId: "a", symbol: "A", oldBand: "CALM", newBand: "WATCH", score: 1, topSignals: [] }],
+      depegTriggered: [
+        { stablecoinId: "b", symbol: "B", direction: "below", deviationBps: 300, price: 0.97, pegReference: 1 },
+      ],
+    });
+    expect(ranked.map((c) => c.stablecoinId)).toEqual(["b", "a"]);
+  });
+
+  it("ranks a DANGER DEWS band above a WARNING DEWS band", () => {
+    const ranked = rankAlertCoins({
+      ...empty,
+      dews: [
+        { stablecoinId: "warn", symbol: "W", oldBand: "CALM", newBand: "WARNING", score: 1, topSignals: [] },
+        { stablecoinId: "danger", symbol: "D", oldBand: "CALM", newBand: "DANGER", score: 1, topSignals: [] },
+      ],
+    });
+    expect(ranked.map((c) => c.stablecoinId)).toEqual(["danger", "warn"]);
+  });
+
+  it("dedupes a coin appearing in multiple families, keeping its highest severity", () => {
+    const ranked = rankAlertCoins({
+      ...empty,
+      dews: [{ stablecoinId: "dup", symbol: "DUP", oldBand: "CALM", newBand: "WATCH", score: 1, topSignals: [] }],
+      depegTriggered: [
+        { stablecoinId: "dup", symbol: "DUP", direction: "below", deviationBps: 500, price: 0.95, pegReference: 1 },
+      ],
+    });
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0]).toMatchObject({ stablecoinId: "dup", severity: 500 });
+  });
+
+  it("preserves first-seen order on ties and returns at most two coins", () => {
+    const ranked = rankAlertCoins({
+      ...empty,
+      dews: [
+        { stablecoinId: "x", symbol: "X", oldBand: "CALM", newBand: "ALERT", score: 1, topSignals: [] },
+        { stablecoinId: "y", symbol: "Y", oldBand: "CALM", newBand: "ALERT", score: 1, topSignals: [] },
+        { stablecoinId: "z", symbol: "Z", oldBand: "CALM", newBand: "ALERT", score: 1, topSignals: [] },
+      ],
+    });
+    expect(ranked).toHaveLength(2);
+    expect(ranked.map((c) => c.stablecoinId)).toEqual(["x", "y"]);
   });
 });
 

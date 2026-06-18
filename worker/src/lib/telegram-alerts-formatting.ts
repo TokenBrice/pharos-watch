@@ -241,6 +241,67 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   return `${body}\n\n<a href="${url}">View on Pharos</a>`;
 }
 
+/**
+ * Feature flag: append the compact per-coin "Snooze <SYM> 4h" row to the first
+ * chunk of multi-coin alerts. Flip to `false` for a quick rollback that falls
+ * back to the prior multi-coin keyboard (snooze row + private Open Watchlist).
+ */
+const ALERT_TOPCOIN_SNOOZE_ROW: boolean = true;
+
+/** Max characters of a symbol shown on a compact per-coin snooze button. */
+const TOPCOIN_SNOOZE_SYMBOL_MAX = 12;
+
+export interface RankedAlertCoin {
+  stablecoinId: string;
+  symbol: string;
+  /** Severity score = max(depeg bps, DEWS band order, safety downgrade points). */
+  severity: number;
+}
+
+/**
+ * Rank the coins present in a consolidated alert by a deterministic severity
+ * score, dedupe by `stablecoinId`, and return the top two. A coin appearing in
+ * multiple alert families keeps the single highest severity across them.
+ *
+ * Severity is the max of three already-comparable magnitudes:
+ * - depeg deviation in bps (triggered / worsening current deviation),
+ * - DEWS band severity via `THREAT_BAND_ORDER` on the new band,
+ * - safety downgrade magnitude in score points (old − new, downgrades only).
+ *
+ * Pure (no IO). Ties preserve first-seen order so the output is stable.
+ */
+export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
+  const byId = new Map<string, RankedAlertCoin>();
+
+  const consider = (stablecoinId: string, symbol: string, severity: number) => {
+    const existing = byId.get(stablecoinId);
+    if (existing) {
+      if (severity > existing.severity) existing.severity = severity;
+      return;
+    }
+    byId.set(stablecoinId, { stablecoinId, symbol, severity });
+  };
+
+  for (const e of alerts.depegTriggered) consider(e.stablecoinId, e.symbol, e.deviationBps);
+  for (const e of alerts.depegWorsening ?? []) consider(e.stablecoinId, e.symbol, e.currentDeviationBps);
+  for (const e of alerts.depegResolved) consider(e.stablecoinId, e.symbol, 0);
+  for (const e of alerts.dews) {
+    consider(e.stablecoinId, e.symbol, THREAT_BAND_ORDER[e.newBand as keyof typeof THREAT_BAND_ORDER] ?? 0);
+  }
+  for (const e of alerts.safety) {
+    const drop = e.oldScore != null && e.newScore != null ? Math.max(0, e.oldScore - e.newScore) : 0;
+    consider(e.stablecoinId, e.symbol, drop);
+  }
+  for (const e of alerts.launch) consider(e.stablecoinId, e.symbol, 0);
+
+  // Stable sort: severity desc, falling back to insertion order on ties.
+  return [...byId.values()]
+    .map((coin, index) => ({ coin, index }))
+    .sort((a, b) => b.coin.severity - a.coin.severity || a.index - b.index)
+    .slice(0, 2)
+    .map(({ coin }) => coin);
+}
+
 export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string | null {
   const ids = [
     ...alerts.dews.map((e) => e.stablecoinId),
@@ -276,20 +337,43 @@ export function buildAlertReplyMarkup(
     // across multiple coins without copy-pasting symbols. Telegram rejects
     // `web_app` buttons in groups/channels, so this is gated on `privateChat`.
     const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length > 0;
-    if (privateChat && chunkIndex === 0 && hasAlerts) {
-      return {
-        inline_keyboard: [
-          [...SNOOZE_REPLY_MARKUP.inline_keyboard[0]],
-          [
-            {
-              text: "Open Watchlist",
-              web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) },
-            },
-          ],
-        ],
-      };
+
+    type AlertInlineButton =
+      | { text: string; callback_data: string }
+      | { text: string; web_app: { url: string } };
+    const rows: AlertInlineButton[][] = [];
+
+    // Compact per-coin mute (C118): on the first chunk of a multi-coin alert,
+    // surface a `Snooze <SYM> 4h` button for the top 1-2 most-severe coins so
+    // the user can silence the noisiest coin without opening settings. Reuses
+    // the existing `coinsnooze` callback (admin-gated in groups). The 64-byte
+    // callback_data limit is on `coinsnooze:<id>:4h` (id-only, already proven
+    // safe by the single-coin coinsnooze buttons); the displayed symbol is
+    // truncated independently.
+    if (ALERT_TOPCOIN_SNOOZE_ROW && chunkIndex === 0 && hasAlerts) {
+      const topCoins = rankAlertCoins(alerts).slice(0, 2);
+      if (topCoins.length > 0) {
+        rows.push(
+          topCoins.map((coin) => ({
+            text: `Snooze ${coin.symbol.slice(0, TOPCOIN_SNOOZE_SYMBOL_MAX)} 4h`,
+            callback_data: `coinsnooze:${coin.stablecoinId}:4h`,
+          })),
+        );
+      }
     }
-    return SNOOZE_REPLY_MARKUP;
+
+    rows.push([...SNOOZE_REPLY_MARKUP.inline_keyboard[0]]);
+
+    if (privateChat && chunkIndex === 0 && hasAlerts) {
+      rows.push([
+        {
+          text: "Open Watchlist",
+          web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) },
+        },
+      ]);
+    }
+
+    return rows.length > 1 ? { inline_keyboard: rows } : SNOOZE_REPLY_MARKUP;
   }
   // Per-coin snooze row (P1-U10): lets the user mute just this coin without
   // touching the chat-level snooze. callback_data stays within Telegram's

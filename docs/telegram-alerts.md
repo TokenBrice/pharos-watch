@@ -190,10 +190,20 @@ Receiver behavior accepts either current or previous secret whenever both are co
 
 Every subscriber alert sent from the dispatcher carries an inline keyboard.
 Multi-coin or overflow chunks keep the snooze row (`Snooze 1h | 4h | 24h`).
-Single-coin first chunks also include contextual actions (`Status`, `Depeg step 250`,
-and `Safety downgrades`) so a user can inspect or tighten routing without typing
-the full command. Tapping a button yields a Telegram `callback_query` update,
-routed to `worker/src/api/telegram-webhook-callbacks.ts`.
+On the first chunk of a multi-coin alert (more than one distinct coin), a
+compact per-coin mute row precedes the snooze row: `Snooze <SYM> 4h` buttons
+(`coinsnooze:<stablecoinId>:4h`) for the top one or two most-severe coins, so a
+user can silence the noisiest coin without opening settings. Coins are ranked by
+`rankAlertCoins` (deduped by `stablecoinId`, scored by the max of depeg
+deviation bps, DEWS band severity, and safety downgrade magnitude); the
+displayed symbol is truncated if long while the `callback_data` carries only the
+id. Overflow chunks (`chunkIndex > 0`) carry no per-coin row. In groups the
+`coinsnooze` callback stays admin-gated and yields the standard admin-denial
+toast for non-admins. Single-coin first chunks also include contextual actions
+(`Status`, `Depeg step 250`, and `Safety downgrades`) so a user can inspect or
+tighten routing without typing the full command. Tapping a button yields a
+Telegram `callback_query` update, routed to
+`worker/src/api/telegram-webhook-callbacks.ts`.
 
 The callback data format is `action:arg` (≤64 bytes, the Bot API limit).
 Current actions:
@@ -373,6 +383,8 @@ Quiet-hours windows must have different start and end hours. Use `/unmutehours`,
 If a configured timezone cannot be resolved by the Worker runtime ICU tables, quiet-hours evaluation falls back to UTC and emits a rate-limited structured Telegram warning keyed by the zone (`quietHoursTzFallback`).
 
 Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair, and a per-coin `off` suppresses matching preset/global fan-out for that coin and alert type.
+
+The effective precedence is **per-coin > preset > all-stablecoins**. `/list` surfaces this with one precedence note ("Precedence: per-coin > preset > all-stablecoins. A per-coin Muted overrides the rest.") and renders an explicit per-coin row whose flags are all `0` as "Muted (overrides defaults)" rather than a bare "Muted", because that row actively suppresses the preset/global default for the coin (the per-coin `off` precedence above). Per-coin rows with at least one flag enabled are tagged "· per-coin" so the active override lane is legible. `/list` does not expand presets into their member coins; preset coverage is shown at the preset level only. This is a display change; which alerts fire is unchanged.
 
 Global all-stablecoin safety follows are intentionally narrower than per-coin safety follows. The current product tier is:
 
