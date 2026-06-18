@@ -30,11 +30,19 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
   const readOnlyCopy = state.viewer.mutationBlockReason === "stale-auth"
     ? {
       title: "Reopen Telegram to edit settings",
-      body: "This session is still readable, but edits require a fresh launch from Telegram.",
+      body: <span>This session is still readable, but edits require a fresh launch from Telegram.</span>,
     }
     : {
       title: "Group settings are command-only for now",
-      body: "Use /settings@PharosWatchBot in the group. Only group admins can change alert settings.",
+      body: (
+        <span>
+          Use{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.6875rem] text-foreground">
+            /settings@PharosWatchBot
+          </code>{" "}
+          in the group. Only group admins can change alert settings.
+        </span>
+      ),
     };
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozeActive = snoozeUntil != null;

@@ -297,6 +297,20 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
   });
 
+  it("renders the group settings command as inline code", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    const groupState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "not-private" },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => groupState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Group settings are command-only for now")).toBeTruthy());
+    expect(screen.getByText("/settings@PharosWatchBot").tagName).toBe("CODE");
+  });
+
   it("posts mutations and replaces returned state", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
     const fetchMock = vi.fn()
