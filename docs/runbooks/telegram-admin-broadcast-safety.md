@@ -22,6 +22,8 @@ Admin broadcasts are lower priority than risk alerts. They enqueue into `telegra
         https://ops-api.pharos.watch/api/admin-telegram-broadcast
    ```
 
+   Dry-run and live requests both preflight `messageHtml` before target selection. Unsupported Telegram HTML tags/attributes/entities, malformed tags, or unbalanced tags return `422` with an error position and write an admin-audit error. The accepted subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; keep operator notices inside that subset.
+
 3. **Estimate drain time.** Read the dry-run `targetMessageCount` and `deliveryEstimate`. Prefer waiting if `deliveryEstimate.fitsWithinMinutes["30"]` is false. The API returns `409` for a live send whose projected drain exceeds the 30-minute admin TTL unless `acknowledgeBacklogRisk` is explicitly set.
 4. **Choose the smallest scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices, and `all` only when intentionally targeting every subscriber row.
 5. **Avoid market-event windows.** Do not broadcast during an active depeg, DEWS burst, safety-grade publication issue, or Telegram 429 storm.

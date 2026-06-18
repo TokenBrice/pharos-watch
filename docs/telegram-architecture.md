@@ -143,7 +143,7 @@ the audited welcome reply successfully, Ingress stamps the
 
 ## 5. Dispatch / fan-out
 
-**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch snapshots to detect events, load matching subscribers (direct + preset + global), filter for quiet hours, snooze, explicit per-coin off overrides, dews-min-band, safety-mode, depeg-step. Build per-chat consolidated messages and chunk them. Hand the chunk queue to Queue / rate-limit / retry plus Outbound transport. Persist alert-job manifests and per-target outcomes. When a depeg closes and a new active event for the same coin appears in the same window, dispatch emits only the new detected event and annotates it with the just-ended recovery duration instead of also sending a resolved line for that coin.
+**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch snapshots to detect events, load matching subscribers (direct + preset + global), filter for quiet hours, snooze, explicit per-coin off overrides, dews-min-band, safety-mode, depeg-step. Preset fan-out resolves preset membership before querying subscriber rows and narrows the SQL to presets that intersect the triggered stablecoins. Alert context reads the published report-card snapshot cache instead of rebuilding the report-card corpus inside the five-minute lane. Build per-chat consolidated messages and chunk them. Hand the chunk queue to Queue / rate-limit / retry plus Outbound transport. Persist alert-job manifests and per-target outcomes. When a depeg closes and a new active event for the same coin appears in the same window, dispatch emits only the new detected event and annotates it with the just-ended recovery duration instead of also sending a resolved line for that coin.
 
 **Owned files.**
 - `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration)
@@ -170,6 +170,7 @@ the audited welcome reply successfully, Ingress stamps the
 **Must NOT.**
 - Format command replies. Alert message formatting lives in `telegram-alerts.ts` (Common) and is shared between Dispatch and admin-broadcast; do not duplicate.
 - Inline subscriber-query SQL into the entrypoint. Add new fan-out paths in `dispatch-telegram-alerts-fanout.ts` or one of the existing helper modules.
+- Duplicate admin-broadcast target selection SQL. Broadcast scopes call the Dispatch-owned `loadBroadcastTargetChatIds(db, scope)` helper so global/per-coin/preset watcher predicates evolve in one place.
 - Import API action-handler modules for alert context. Dispatch-owned context and reason helpers live under `worker/src/cron/`.
 - Open new connections beyond Cloudflare's 6-per-trigger pool. Consume response bodies (`drainResponseBody`) before opening more fetches.
 
@@ -282,7 +283,7 @@ Per-coin subscription writes have two deliberate modes: subscribe-style follows 
 
 Files any seam may import:
 
-- `worker/src/lib/telegram-constants.ts` — central magic numbers and tokens (`SNOOZE_SECONDS`, `DEPEG_STEP_VALUES`, `TOP_VIEW_NAMES`, `TELEGRAM_MESSAGE_CHUNK_LIMIT`, all queue tuning, disambiguation TTL).
+- `worker/src/lib/telegram-constants.ts` — central magic numbers and tokens (`SNOOZE_SECONDS`, `DEPEG_STEP_VALUES`, `TOP_VIEW_NAMES`, `TELEGRAM_MESSAGE_CHUNK_LIMIT`, ingress flood limits, group welcome/admin cooldown TTLs, all queue tuning, disambiguation TTL).
 - `worker/src/lib/telegram-alerts.ts` — compatibility barrel for alert parsing and formatting exports.
 - `worker/src/lib/telegram-alerts-parser.ts` — ticker resolution, subscribe/set argument parsing, disambiguation parsing, and close-match suggestions.
 - `worker/src/lib/telegram-alerts-formatting.ts` — alert message formatting, `splitMessage`, and `SNOOZE_REPLY_MARKUP`.
@@ -354,4 +355,4 @@ If two or more of these happen, re-evaluate the seams (revise this doc, then ref
 
 - **Setup wizard state lives in `telegram_pending_disambiguation` with `action_type = "setup-step"`.** Sharing the TTL and cleanup cron with disambiguation was deliberate, but Ingress now branches on `isSetupPending` before any other pending-state logic — that branch will keep growing if more wizards arrive. Watch for a third pending-action-type before deciding whether wizards need their own row type.
 
-- **`admin-telegram-broadcast.ts` writes to `telegram_pending_alerts` directly with its own priority and TTL.** Filed under Dispatch in this doc, but it has Ingress-shaped concerns (it is an HTTP entrypoint). If a second admin write path appears, consider splitting "admin write surface" into its own seam.
+- **`admin-telegram-broadcast.ts` writes to `telegram_pending_alerts` directly with its own priority and TTL.** Filed under Dispatch in this doc, but it has Ingress-shaped concerns (it is an HTTP entrypoint). Its watcher targeting is delegated to Dispatch and its message body is preflighted against the supported Telegram HTML subset before target selection. If a second admin write path appears, consider splitting "admin write surface" into its own seam.

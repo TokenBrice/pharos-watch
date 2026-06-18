@@ -59,6 +59,8 @@ CI shape:
 4. `npm run test:merge-gate` mirrors the deploy-impact validate contract locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install.
 5. `npm run test:merge-gate:discover` mirrors the same local command plan for large failure-discovery passes. It keeps prebuild and independent postbuild lanes running after failures, skips smoke by default, and is diagnostic only; the final release check remains `npm run test:merge-gate`.
 
+Telegram load protection has two local shapes: `npm run check:telegram-load` is the blocking SLO guard, while direct `npx tsx scripts/ci/check-telegram-load.ts` is the advisory query-plan report. The merge gate adds the advisory report for Telegram dispatch, pending-queue, admin broadcast, Telegram constants, load-guard workflow/script, and Worker migration changes, and full deploy fallback includes it unconditionally.
+
 `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the `test:noncritical` complement.
 
 Selected specialized checks:

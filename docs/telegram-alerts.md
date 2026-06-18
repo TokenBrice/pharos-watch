@@ -353,6 +353,7 @@ Preset watchlists are persistent dynamic follows on top of the existing per-coin
 - `/subscribe ... <preset>` stores a persistent row in `telegram_preset_subscriptions` and also updates the currently resolved coin rows for backwards-compatible list/explicit-row behavior
 - `/unsubscribe <preset>` deletes the persistent preset row and removes the currently resolved coin rows for that chat
 - `/list` shows both dynamic preset rows and explicit coin rows
+- Preset DEWS follows use the default `ALERT` floor, and preset safety follows use the default all-changes mode, matching per-coin rows without custom tuning. Preset-level DEWS/safety tuning does not exist yet.
 - `launch` does not accept presets; launch alerts support explicit ticker/coin-id targets and the special `all` target
 - Preset resolution fails closed when the stablecoins cache is unavailable; the bot returns a temporary retry message instead of subscribing stale or incomplete cohorts
 
@@ -560,6 +561,12 @@ The TTL — not a per-row attempts cap — bounds how long the queue keeps retry
 Each drain re-selects unexpired rows whose `not_before_at` has elapsed; rows that age
 past their TTL are copied into `telegram_alert_dead_letters` and then deleted at the end
 of the run.
+Admin broadcasts preflight `messageHtml` before target selection or enqueue. The accepted
+Telegram HTML subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`,
+`code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; only simple
+HTML entities (`amp`, `lt`, `gt`, `quot`, `apos`, and numeric entities) are accepted.
+Malformed tags, unsupported attributes, unsupported entities, or unbalanced tags return
+`422` and write an admin-audit error without enqueueing rows.
 Operator clears through `POST /api/telegram-pending` should be previewed with
 `?dry_run=1` first. Dry-runs write only the matched count to admin audit; live clears
 use the same audit path with `reason = 'manual_clear'` before deleting filtered live rows.
@@ -632,6 +639,8 @@ The simulated scenarios are:
 The script reports target chats, message chunks, pending enqueues, estimated drain time, and rough D1 read/write statement counts using the current sender budget: 3,600 fresh attempts per run, 900 pending drain attempts per run, 5-minute cron cadence, 14-minute dispatch timeout, Telegram's ordinary 30 msg/sec broadcast guidance, a conservative p95 send-latency/D1-write pacing model, and 1-hour risk-alert pending TTL. It also replays the Telegram table migrations into local SQLite and runs `EXPLAIN QUERY PLAN` checks for fan-out, pending drain, pulse/status aggregates, and the current active-watcher history fallback. Direct/global fan-out and pending drain are index-gated; preset and fallback aggregate scans are marked `REVIEW`.
 
 The package-level `npm run check:telegram-load` command is blocking: it passes `--enforce-target-slo` and fails when the 5,000-watcher target misses the normal under-15-minute risk-alert SLO. For an advisory local report that only fails critical query-plan regressions, run `npx tsx scripts/ci/check-telegram-load.ts` directly without `--enforce-target-slo`.
+
+The local merge gate includes that advisory query-plan report whenever Telegram dispatch, pending-queue, admin broadcast, Telegram constants, Telegram load-script, Telegram load-workflow, or Worker migration files change; full deploy fallback includes it unconditionally. The GitHub Telegram Load Guard workflow also runs on pull requests touching the same paths, while the scheduled Monday run keeps the blocking SLO check.
 
 ### Rollout Plan for Higher Capacity
 
@@ -710,7 +719,7 @@ Additional Telegram bot status metrics now include:
 
 - Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, or any row is inside the 15-minute near-TTL window. Count/age/drain breaches use the sustained window (`telegram:degradation:pending-since`); near-TTL alerts immediately.
 - `alert:safety-source-cache` reports `state != "ok"` for more than two `publish-report-card-cache` intervals (cache key `telegram:degradation:safety-source-since`).
-- The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0` but `messagesSent == 0` for three consecutive runs (cache key `telegram:degradation:zero-send-streak`).
+- The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0`, `freshCandidateChats > 0`, and `messagesSent == 0` for three consecutive runs (cache key `telegram:degradation:zero-send-streak`).
 
 The watchdog is wired through `runBestEffortScheduledJob` so its own failures never block the dispatch lane, and its metadata captures `triggered`, `recovered`, and `alertSent` flags per condition for admin inspection via `cron_runs`.
 
@@ -753,6 +762,8 @@ Formatting helpers in `worker/src/lib/telegram-alerts.ts` emit:
 - Depeg-resolved messages with duration, peak deviation, and recovery price
 - Safety-grade changes with old/new grade and score when present
 - One contextual line when cached report-card, liquidity, or supply data is available for the affected coin. Rendered as an expandable Telegram blockquote (`<blockquote expandable>…</blockquote>`) so it collapses by default on mobile; gated by the `ALERT_BLOCKQUOTE_CONTEXT` flag in `telegram-alerts.ts` and requires Telegram Bot API 7.0+ (Mar 2024) — older clients render it as a regular blockquote.
+
+Alert context uses the published report-card snapshot cache. This keeps the five-minute dispatch lane from rebuilding the full report-card corpus just to attach a short annotation.
 
 Subscriber alert messages no longer carry a top-level `Pharos Alerts` header — the alert body starts directly with the first section. Each alert line is prefixed with a data-tied glyph so a subscriber can triage at a glance. These glyphs are a sanctioned exception to the repo's no-emoji rule because each one encodes a specific data dimension; **any future addition to the glyph set requires a separate review**.
 
