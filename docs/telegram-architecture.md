@@ -94,7 +94,7 @@ the audited welcome reply successfully, Ingress stamps the
 
 ## 3. Callback routing
 
-**Responsibility.** Translate `callback_query` updates into action invocations. Ingress applies the shared flood cap before this router runs and maps read-heavy `status:`, `why:`, and `coverage:` callbacks onto the matching command cooldown bucket. Validate the `action:arg` shape against an allowlist (`CALLBACK_ACTIONS`) before any handler D1 touch. Per-action: validate args, gate group admins for mutating actions, call the appropriate action helper or directly persist, then `answerCallbackQuery`. Bulk `setup:*` and `settings:*` namespaces have their own sub-dispatchers for compact validation tables.
+**Responsibility.** Translate `callback_query` updates into action invocations. Ingress applies the shared flood cap before this router runs and maps read-heavy `status:`, `why:`, and `coverage:` callbacks onto the matching command cooldown bucket. Validate the `action:arg` shape against an allowlist (`CALLBACK_ACTIONS`) before any handler D1 touch. Per-action: validate args, gate group admins for mutating actions, call the appropriate action helper or directly persist, then `answerCallbackQuery`. Bulk `setup:*` and `settings:*` namespaces have their own sub-dispatchers for compact validation tables; the setup dispatcher gates mutating steps in groups while leaving `setup:cancel` and `setup:branch:skip` to the initiator-ownership checks.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-callbacks.ts`

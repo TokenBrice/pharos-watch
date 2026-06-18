@@ -44,7 +44,8 @@ export async function handleSetupCallback(
     await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
-  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+  const mutatingSetupCallback = !(subAction === "cancel" || (subAction === "branch" && subArg === "skip"));
+  if (mutatingSetupCallback && !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
     return;
   }
 

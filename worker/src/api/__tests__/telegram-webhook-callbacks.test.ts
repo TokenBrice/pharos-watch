@@ -497,6 +497,30 @@ describe("handleCallbackQuery", () => {
       expect(body.text).toContain("/subscribe dews,depeg usd-top25");
     });
 
+    it("setup:branch:skip lets group non-admins exit their own wizard without an admin lookup", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromSetup(
+            { step: "branch", alertTypes: [], target: null },
+            { initiator_user_id: "7" },
+          ),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-skip-group",
+        data: "setup:branch:skip",
+        from: { id: 7, username: "member" },
+        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      });
+
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
+      expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+      expect(lastSentMessageBody().text).toContain("Command reference");
+      expect(lastAckBody().text).toBe("OK.");
+    });
+
     it("setup:type-toggle:safety flips selection", async () => {
       const db = mockD1([
         {
@@ -685,6 +709,30 @@ describe("handleCallbackQuery", () => {
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
       expect(lastSentMessageBody().text).toContain("Setup cancelled");
+    });
+
+    it("setup:cancel lets group non-admins cancel their own wizard without an admin lookup", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromSetup(
+            { step: "custom-types", alertTypes: ["dews"], target: null },
+            { initiator_user_id: "7" },
+          ),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-cancel-group",
+        data: "setup:cancel",
+        from: { id: 7, username: "member" },
+        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      });
+
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
+      expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+      expect(lastSentMessageBody().text).toContain("Setup cancelled");
+      expect(lastAckBody().text).toBe("Cancelled.");
     });
 
     it("setup:branch:recommended from a non-initiator user is refused", async () => {

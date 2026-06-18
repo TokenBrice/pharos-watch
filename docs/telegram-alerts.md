@@ -254,7 +254,7 @@ disambiguation cannot mask account deletion.
 
 ### Group Admin Gating
 
-`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The `tz:<zone>` callback handler enforces the same admin check before persisting.
+`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The `tz:<zone>` callback handler enforces the same admin check before persisting. Setup wizard callbacks gate mutating steps in groups, but `setup:cancel` and `setup:branch:skip` remain non-mutating exits and rely on the wizard initiator check instead.
 
 - **Hard gate (current default):** non-admin invocations receive a short command-specific refusal reply ("Only group admins can /subscribe. Ask @Alice or Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, capped to three names plus an overflow phrase, and are already visible to every member through the Telegram group member list.
 - **Soft (emergency rollback):** changing the code-level toggle to `"soft"` and redeploying warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
@@ -280,6 +280,7 @@ the send succeeded.
 - `setup:branch:custom` — toggles alert types (`setup:type-toggle:<type>`), then `setup:next` to pick a target (`setup:target:<preset|all|type>`), then `setup:confirm`.
 - `setup:branch:skip` — clears wizard state and returns a slim command-reference reply with a `/help` affordance for users who prefer typing commands.
 - `setup:target:type` — opens a `force_reply` prompt so the user can type a ticker; the next inbound message is resolved via `resolveTicker` and lands on the confirm step.
+- `setup:cancel` — clears the wizard state for the user who started it.
 
 Wizard state is persisted as a row in `telegram_pending_disambiguation` with `action_type = "setup-step"` and an `action_payload` JSON of `{ step, alertTypes, target }`. TTL is 5 min, shared with the disambiguation cleanup cron. When wizard state is active and a fresh slash command arrives, the wizard row is cleared so the command runs unmodified.
 
