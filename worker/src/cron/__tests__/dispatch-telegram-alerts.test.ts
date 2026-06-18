@@ -195,6 +195,70 @@ describe("dispatchTelegramAlerts", () => {
     expect(sent).toEqual([expect.objectContaining({ html: "chunk-1", chunkIndex: 1 })]);
   });
 
+  it("uses existing pending attempts when re-enqueuing a retryable fresh chunk", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const dedupeKey = buildDedupeKey({
+      chatId: "chat-1",
+      html: "chunk-0",
+      canonicalHtml: "canonical-body",
+      disableNotification: false,
+      chunkIndex: 0,
+      alertType: "depeg",
+    });
+    mockSendBatch.mockResolvedValue([
+      {
+        chatId: "chat-1",
+        ok: false,
+        blocked: false,
+        retryable: true,
+        permanentFailure: false,
+        statusCode: 500,
+        errorClass: "server_error",
+        delivery: "retryable_failure",
+        retryAfterSec: null,
+        attempted: true,
+      },
+    ]);
+    const db = mockD1([
+      { match: "SELECT dedupe_key, attempts", rows: [{ dedupe_key: dedupeKey, attempts: 4 }] },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+    ]);
+
+    const result = await deliverTelegramSubscriberQueue({
+      db,
+      subscriberQueue: [
+        {
+          chatId: "chat-1",
+          lastActiveAt: now,
+          alerts: {
+            dews: [],
+            depegTriggered: [],
+            depegResolved: [],
+            depegWorsening: [],
+            safety: [],
+            launch: [],
+          },
+          canonicalHtml: "canonical-body",
+          chunks: ["chunk-0"],
+          disableNotification: false,
+          alertType: "depeg",
+        },
+      ],
+      botToken: "bot-token",
+      drainResult: emptyDrainResult(),
+      maxMessagesPerRun: 10,
+      nowSec: now,
+      chatsInBackoff: new Map(),
+      globalBackoffUntil: null,
+      dispatchStartedAtMs: Date.now(),
+    });
+
+    expect(result.freshAttempted).toBe(1);
+    expect(result.freshRetryQueued).toBe(1);
+    const pendingInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
+    expect(pendingInsert?.binds[4]).toBe(now + 600);
+  });
+
   it("skips when circuit breaker is open", async () => {
     mockShouldAttemptFetch.mockResolvedValue(false);
 
@@ -1823,12 +1887,14 @@ describe("dispatchTelegramAlerts", () => {
 
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as {
+      freshAttempted: number;
       freshSent: number;
       freshRetryQueued: number;
       pendingEnqueued: number;
       messagesSent: number;
     };
 
+    expect(metadata.freshAttempted).toBe(5);
     expect(metadata.freshSent).toBe(4);
     expect(metadata.freshRetryQueued).toBe(4);
     expect(metadata.pendingEnqueued).toBe(4);

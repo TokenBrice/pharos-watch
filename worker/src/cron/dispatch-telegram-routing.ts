@@ -92,6 +92,7 @@ export interface RoutedSubscriberAlert {
 
 export interface FreshSendOutcome {
   subscribersNotified: number;
+  freshAttempted: number;
   freshSent: number;
   freshPermanentFailures: number;
   blockedUsersCleanedUp: number;
@@ -385,6 +386,7 @@ export async function deliverFreshAlerts(
 
   return {
     subscribersNotified,
+    freshAttempted: sendResults.filter((result) => result.attempted !== false).length,
     freshSent,
     freshPermanentFailures,
     blockedUsersCleanedUp,

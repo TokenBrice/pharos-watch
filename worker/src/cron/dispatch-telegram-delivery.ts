@@ -17,6 +17,7 @@ import {
 import type { PerAlertTypeDelivery } from "@shared/types/status";
 import { throwIfAborted } from "../lib/abort";
 import type { BatchMessage } from "../lib/telegram";
+import { buildInClause, chunkArray } from "../lib/db";
 
 interface DeliverTelegramSubscriberQueueOptions {
   db: D1Database;
@@ -45,6 +46,31 @@ export interface DeliverTelegramSubscriberQueueResult {
   pendingEnqueued: number;
   cappedAtLimit: boolean;
   perAlertType: PerAlertTypeDelivery;
+}
+
+async function loadExistingPendingAttempts(
+  db: D1Database,
+  messages: readonly BatchMessage[],
+): Promise<Map<string, number>> {
+  const dedupeKeys = Array.from(new Set(messages.map((message) => buildDedupeKey(message))));
+  const attemptsByDedupeKey = new Map<string, number>();
+  if (dedupeKeys.length === 0) return attemptsByDedupeKey;
+  for (const keyChunk of chunkArray(dedupeKeys)) {
+    const inClause = buildInClause(keyChunk);
+    const rows = await db
+      .prepare(
+        `SELECT dedupe_key, attempts
+           FROM telegram_pending_alerts
+          WHERE dedupe_key IN (${inClause.sql})`,
+      )
+      .bind(...inClause.binds)
+      .all<{ dedupe_key: string; attempts: number | null }>();
+    for (const row of rows.results ?? []) {
+      const attempts = Number(row.attempts ?? 0);
+      attemptsByDedupeKey.set(row.dedupe_key, Number.isFinite(attempts) ? Math.max(0, attempts) : 0);
+    }
+  }
+  return attemptsByDedupeKey;
 }
 
 export async function deliverTelegramSubscriberQueue({
@@ -122,6 +148,7 @@ export async function deliverTelegramSubscriberQueue({
     freshPermanentFailures,
     blockedUsersCleanedUp,
     blockedUsersCleanupFailed,
+    freshAttempted,
     blockedChats,
     retryableFreshMessages,
     perAlertType,
@@ -175,11 +202,15 @@ export async function deliverTelegramSubscriberQueue({
   }
 
   let globalRateLimitNotBeforeAt: number | null = null;
+  const existingAttemptsByDedupeKey = await loadExistingPendingAttempts(
+    db,
+    retryableFreshMessages.map((retry) => retry.message),
+  );
   const retryEnqueueGroups = new Map<string, { messages: typeof retryableFreshMessages[number]["message"][]; options: PendingEnqueueOptions }>();
   for (const retry of retryableFreshMessages) {
     const retryAfterSec = retry.result.retryAfterSec;
-    // Fresh sends entering the pending queue start at attempts=0; honor Retry-After when provided.
-    const notBeforeAt = nowSec + pendingBackoffSec(0, retryAfterSec);
+    const priorAttempts = existingAttemptsByDedupeKey.get(buildDedupeKey(retry.message)) ?? 0;
+    const notBeforeAt = nowSec + pendingBackoffSec(priorAttempts, retryAfterSec);
     if (retry.result.errorClass === "rate_limit" && retry.result.rateLimitScope === "global") {
       globalRateLimitNotBeforeAt = Math.max(globalRateLimitNotBeforeAt ?? 0, notBeforeAt);
     }
@@ -217,7 +248,7 @@ export async function deliverTelegramSubscriberQueue({
     freshPermanentFailures,
     blockedUsersCleanedUp,
     blockedUsersCleanupFailed,
-    freshAttempted: sendList.length,
+    freshAttempted,
     freshRetryQueued: retryableFreshMessages.length,
     freshOverflow: overflowMessages.length,
     freshDeferredPerChat: deferredPerChat.length,

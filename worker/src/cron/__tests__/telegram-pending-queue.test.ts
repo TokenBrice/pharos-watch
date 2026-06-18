@@ -1162,6 +1162,95 @@ describe("drainPendingQueue", () => {
     expect(mockSendToChat).toHaveBeenCalledTimes(8);
   });
 
+  it("short-circuits later pending rows for a chat already rate-limited in the same drain", async () => {
+    const okResult = {
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    };
+    const rateLimitResult = {
+      ok: false, blocked: false, retryable: true, permanentFailure: false,
+      statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45, rateLimitScope: "chat" as const,
+    };
+
+    mockSendToChat
+      .mockResolvedValueOnce(rateLimitResult)
+      .mockResolvedValue(okResult);
+
+    const rows = [
+      { id: 1, chat_id: "chat-a", message_html: "msg1", disable_notification: 0, created_at: 1000, attempts: 0 },
+      { id: 2, chat_id: "chat-b", message_html: "msg2", disable_notification: 0, created_at: 1000, attempts: 0 },
+      { id: 3, chat_id: "chat-c", message_html: "msg3", disable_notification: 0, created_at: 1000, attempts: 0 },
+      { id: 4, chat_id: "chat-d", message_html: "msg4", disable_notification: 0, created_at: 1000, attempts: 0 },
+      { id: 5, chat_id: "chat-a", message_html: "msg5", disable_notification: 0, created_at: 1000, attempts: 0 },
+    ];
+
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 20);
+
+    expect(result.attempted).toBe(4);
+    expect(result.sent).toBe(3);
+    expect(result.retryQueued).toBe(2);
+    expect(result.rateLimited).toBe(true);
+    expect(result.retryAfterSec).toBe(45);
+    expect(mockSendToChat).toHaveBeenCalledTimes(4);
+
+    const retryUpdates = db.getHistory().filter((entry) =>
+      entry.sql.includes("UPDATE telegram_pending_alerts") &&
+      entry.sql.includes("SET attempts = attempts + 1")
+    );
+    expect(retryUpdates.map((entry) => entry.binds[4])).toEqual([1, 5]);
+    expect(retryUpdates.every((entry) => entry.binds[0] === Math.floor(Date.now() / 1000) + 45)).toBe(true);
+  });
+
+  it("escalates repeated pending 429s across distinct chats to global backoff", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const okResult = {
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    };
+    const rateLimitResult = {
+      ok: false, blocked: false, retryable: true, permanentFailure: false,
+      statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 10, rateLimitScope: "chat" as const,
+    };
+
+    mockSendToChat
+      .mockResolvedValueOnce(rateLimitResult)
+      .mockResolvedValueOnce(rateLimitResult)
+      .mockResolvedValueOnce(rateLimitResult)
+      .mockResolvedValueOnce(okResult);
+
+    const rows = Array.from({ length: 5 }, (_, i) => ({
+      id: i + 1, chat_id: `chat-${i}`, message_html: `msg${i}`, disable_notification: 0, created_at: 1000, attempts: 0,
+    }));
+
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "UPDATE telegram_pending_alerts\n            SET processing_owner = NULL", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 20);
+
+    expect(result.attempted).toBe(4);
+    expect(result.sent).toBe(1);
+    expect(result.retryQueued).toBe(3);
+    expect(result.rateLimited).toBe(true);
+    expect(mockSendToChat).toHaveBeenCalledTimes(4);
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(cacheWrite?.binds).toEqual([
+      TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
+      String(now + 10),
+      now,
+    ]);
+  });
+
   it("stamps row-level backoff without setting global backoff on a chat-scoped 429", async () => {
     const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValue({

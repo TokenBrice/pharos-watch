@@ -45,6 +45,7 @@ import { logTelegramEvent } from "../../lib/telegram-log";
 
 const PENDING_CLAIM_TTL_SEC = 15 * 60;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
+const GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
   return row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec;
@@ -308,7 +309,29 @@ async function claimDuePendingRows(
 }
 
 /** The Telegram send result enriched with the originating pending row's id/chat/attempts. */
-type PendingSendResult = { id: number; chatId: string; attempts: number } & SendToChatResult;
+type PendingSendResult = { id: number; chatId: string; attempts: number; attempted?: boolean } & SendToChatResult;
+
+function buildSkippedChatRateLimitResult(
+  row: PendingAlertRow,
+  rateLimit: { notBeforeAt: number },
+  nowSec: number,
+): PendingSendResult {
+  return {
+    id: row.id,
+    chatId: row.chat_id,
+    attempts: row.attempts,
+    ok: false,
+    blocked: false,
+    retryable: true,
+    permanentFailure: false,
+    statusCode: 429,
+    errorClass: "rate_limit",
+    delivery: "retryable_failure",
+    retryAfterSec: Math.max(1, rateLimit.notBeforeAt - nowSec),
+    rateLimitScope: "chat",
+    attempted: false,
+  };
+}
 
 /**
  * Pure classification of a single send result into the mutually-exclusive
@@ -420,9 +443,12 @@ export async function drainPendingQueue(
   const blockedChatsThisLoop = new Set<string>();
   const chatsResetThisLoop = new Set<string>();
   const disabledChatIds = new Set<string>();
+  const chatRateLimitedThisLoop = new Map<string, { notBeforeAt: number }>();
+  const distinctRateLimitedChats = new Set<string>();
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
     if (signal?.aborted || globalRateLimited) break;
+    const skippedRateLimitResults: PendingSendResult[] = [];
     const batch = pending.slice(i, i + SEND_BATCH_SIZE).filter((row) => {
       if (!isPendingRowSnoozed(row, nowSec)) return true;
       deferred++;
@@ -430,8 +456,13 @@ export async function drainPendingQueue(
       appendPendingTargetStatus(targetStatusUpdates, row, "queued", nowSec);
       completedIds.add(row.id);
       return false;
+    }).filter((row) => {
+      const chatRateLimit = chatRateLimitedThisLoop.get(row.chat_id);
+      if (!chatRateLimit) return true;
+      skippedRateLimitResults.push(buildSkippedChatRateLimitResult(row, chatRateLimit, nowSec));
+      return false;
     });
-    if (batch.length === 0) continue;
+    if (batch.length === 0 && skippedRateLimitResults.length === 0) continue;
     const results = await Promise.all(
       batch.map(async (row) => {
         const result = await sendToChat(row.chat_id, row.message_html, botToken, {
@@ -440,13 +471,13 @@ export async function drainPendingQueue(
           replyMarkup: SNOOZE_REPLY_MARKUP,
           signal,
         });
-        return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ...result };
+        return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ...result, attempted: true };
       }),
     );
 
-    for (const result of results) {
+    for (const result of [...skippedRateLimitResults, ...results]) {
       throwIfAborted(signal);
-      attempted++;
+      if (result.attempted !== false) attempted++;
       const pendingRow = pendingById.get(result.id);
       const pushTargetStatus = (
         status: TelegramAlertTargetStatusUpdate["status"],
@@ -486,10 +517,17 @@ export async function drainPendingQueue(
           if (classification.rateLimit) {
             rateLimited = true;
             rateLimitRetryAfterSec = classification.rateLimit.retryAfterSec;
-            rateLimitNotBeforeAt = classification.rateLimit.notBeforeAt;
+            rateLimitNotBeforeAt = Math.max(rateLimitNotBeforeAt ?? 0, classification.rateLimit.notBeforeAt);
             if (classification.rateLimit.scope === "global") {
               globalRateLimited = true;
               await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
+            } else {
+              distinctRateLimitedChats.add(result.chatId);
+              chatRateLimitedThisLoop.set(result.chatId, { notBeforeAt: classification.rateLimit.notBeforeAt });
+              if (distinctRateLimitedChats.size >= GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
+                globalRateLimited = true;
+                await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
+              }
             }
           }
           break;

@@ -15,8 +15,8 @@ Detection signals:
 
 ## Quick Diagnostic Checklist
 
-1. **Is it global or per-chat?** With per-chat rate-limit isolation (P0-R3), one chat's 429 no longer cascades to others. Inspect `telegramBot.retryErrorClassCounts` together with `pendingDeliveryBacklog.deferred` — heavy `deferred` against a small set of chats means per-chat backoff is doing its job.
-2. **Telegram Bot API global limit hit?** Sustained 429 across many distinct chats indicates global throttling rather than per-chat backoff. Cross-reference [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) for the 6-connection-per-trigger cap; the dispatcher batches at 4 to stay under it.
+1. **Is it global or per-chat?** With per-chat rate-limit isolation (P0-R3), one chat's 429 no longer cascades to others. Inspect `telegramBot.retryErrorClassCounts` together with `pendingDeliveryBacklog.deferred` — heavy `deferred` against a small set of chats means per-chat backoff is doing its job. Later same-chat rows/chunks are short-circuited inside the same run rather than re-sent.
+2. **Telegram Bot API global limit hit?** Sustained 429 across many distinct chats indicates global throttling rather than per-chat backoff. The sender also treats an otherwise ambiguous 429 with `Retry-After >= 30s` as bot-wide and escalates to global backoff when several distinct chats return 429 in one run. Cross-reference [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) for the 6-connection-per-trigger cap; the dispatcher batches at 4 to stay under it.
 3. **Single chat starving the queue?** A chat with many subscriptions can still consume multiple message chunks inside the 3,600-attempt per-run cap. The per-chat `not_before_at` backoff prevents starvation, but inspect via the admin chat endpoint:
 
    ```bash

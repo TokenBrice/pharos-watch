@@ -150,13 +150,19 @@ export interface SendToChatResult {
   rateLimitScope?: "chat" | "global";
 }
 
-function inferRateLimitScope(responseBody: string): "chat" | "global" {
+const GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC = 30;
+const GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
+
+function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
   const lower = responseBody.toLowerCase();
   if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
     return "global";
   }
   if (lower.includes("chat") || lower.includes("group") || lower.includes("user")) {
     return "chat";
+  }
+  if (retryAfterSec != null && retryAfterSec >= GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC) {
+    return "global";
   }
   return "chat";
 }
@@ -176,7 +182,7 @@ function parseTelegramRetryAfter(responseBody: string): number | null {
   }
 }
 
-function buildResponseFailure(statusCode: number, responseBody = ""): SendToChatResult {
+function buildResponseFailure(statusCode: number, responseBody = "", retryAfterSec: number | null = null): SendToChatResult {
   if (statusCode === 403) {
     return {
       ok: false,
@@ -199,7 +205,7 @@ function buildResponseFailure(statusCode: number, responseBody = ""): SendToChat
       errorClass: "rate_limit",
       delivery: "retryable_failure",
       retryAfterSec: null,
-      rateLimitScope: inferRateLimitScope(responseBody),
+      rateLimitScope: inferRateLimitScope(responseBody, retryAfterSec),
     };
   }
   if (statusCode >= 500) {
@@ -312,10 +318,11 @@ export async function sendToChat(
       const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
       const body = await res.text().catch(() => "");
       const telegramRetryAfterSec = parseTelegramRetryAfter(body);
-      const failure = buildResponseFailure(res.status, body);
+      const resolvedRetryAfterSec = telegramRetryAfterSec ?? (Number.isFinite(retryAfterSec) ? retryAfterSec : null);
+      const failure = buildResponseFailure(res.status, body, resolvedRetryAfterSec);
       return {
         ...failure,
-        retryAfterSec: telegramRetryAfterSec ?? (Number.isFinite(retryAfterSec) ? retryAfterSec : null),
+        retryAfterSec: resolvedRetryAfterSec,
       };
     }
     await drainResponseBody(res);
@@ -412,6 +419,8 @@ export async function sendBatch(
   signal?: AbortSignal,
 ): Promise<BatchResult[]> {
   const results: BatchResult[] = [];
+  const chatRateLimitedUntil = new Map<string, number | null>();
+  const distinctRateLimitedChats = new Set<string>();
   for (let i = 0; i < messages.length; i += batchSize) {
     if (signal?.aborted) {
       results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
@@ -420,6 +429,14 @@ export async function sendBatch(
     const batch = messages.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map(async (msg) => {
+        if (chatRateLimitedUntil.has(msg.chatId)) {
+          return buildUnsentRetryResult(
+            msg,
+            "rate_limit",
+            chatRateLimitedUntil.get(msg.chatId) ?? null,
+            "chat",
+          );
+        }
         const result = await sendToChat(msg.chatId, msg.html, botToken, {
           // Caller-supplied preview options win; otherwise default to no preview
           // for batch alert sends to keep the message dense on mobile.
@@ -439,12 +456,32 @@ export async function sendBatch(
     const globalRateLimitedResult = batchResults.find(
       (r) => r.errorClass === "rate_limit" && r.rateLimitScope === "global",
     );
-    if (globalRateLimitedResult) {
+    let escalatedGlobalRateLimitedResult = globalRateLimitedResult;
+    if (!escalatedGlobalRateLimitedResult) {
+      for (const result of batchResults) {
+        if (result.attempted === false) continue;
+        if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
+          distinctRateLimitedChats.add(result.chatId);
+          chatRateLimitedUntil.set(result.chatId, result.retryAfterSec);
+        }
+      }
+      if (distinctRateLimitedChats.size >= GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
+        escalatedGlobalRateLimitedResult = batchResults.find(
+          (r) => r.errorClass === "rate_limit" && r.rateLimitScope !== "global" && r.attempted !== false,
+        );
+        for (const result of batchResults) {
+          if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
+            result.rateLimitScope = "global";
+          }
+        }
+      }
+    }
+    if (escalatedGlobalRateLimitedResult) {
       for (const skippedMessage of messages.slice(i + batchSize)) {
         results.push(buildUnsentRetryResult(
           skippedMessage,
           "rate_limit",
-          globalRateLimitedResult.retryAfterSec,
+          escalatedGlobalRateLimitedResult.retryAfterSec,
           "global",
         ));
       }

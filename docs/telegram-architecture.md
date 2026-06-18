@@ -170,7 +170,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 6. Queue / rate-limit / retry
 
-**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, drain, retry-with-backoff, dead-letter, expire. Hold per-chat and global backoff (`not_before_at`, `telegram:global-send-backoff-until`). Enforce the 2-strike rule for blocked subscribers, including dead-lettering/deleting sibling pending rows once a chat is disabled. Provide a dedupe key so duplicate chunks never queue.
+**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, drain, retry-with-backoff, dead-letter, expire. Hold per-chat and global backoff (`not_before_at`, `telegram:global-send-backoff-until`). A chat-scoped 429 short-circuits later same-chat rows/chunks in the current run; an explicit global 429, an ambiguous long `Retry-After`, or 429s across several distinct chats stamps the global backoff and stops broader sending. Enforce the 2-strike rule for blocked subscribers, including dead-lettering/deleting sibling pending rows once a chat is disabled. Provide a dedupe key so duplicate chunks never queue.
 
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)

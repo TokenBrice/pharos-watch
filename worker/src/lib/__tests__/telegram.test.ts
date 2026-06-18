@@ -135,7 +135,7 @@ describe("sendToChat", () => {
     expect(fetchSpy.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("returns rate_limit with retryAfterSec on 429", async () => {
+  it("classifies ambiguous long retry-after 429s as global", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response("Too Many Requests", {
         status: 429,
@@ -151,7 +151,7 @@ describe("sendToChat", () => {
       statusCode: 429,
       errorClass: "rate_limit",
       delivery: "retryable_failure",
-      rateLimitScope: "chat",
+      rateLimitScope: "global",
     });
     expect(result.retryAfterSec).toBe(30);
   });
@@ -168,8 +168,8 @@ describe("sendToChat", () => {
         JSON.stringify({
           ok: false,
           error_code: 429,
-          description: "Too Many Requests: retry after 38",
-          parameters: { retry_after: 38 },
+          description: "Too Many Requests: retry after 12",
+          parameters: { retry_after: 12 },
         }),
         { status: 429 },
       ),
@@ -177,7 +177,7 @@ describe("sendToChat", () => {
 
     const result = await sendToChat("12345", "test", "bot-token");
 
-    expect(result.retryAfterSec).toBe(38);
+    expect(result.retryAfterSec).toBe(12);
     expect(result.rateLimitScope).toBe("chat");
   });
 
@@ -293,6 +293,81 @@ describe("sendBatch", () => {
       rateLimitScope: "chat",
     });
     expect(results.slice(5).every((result) => result.ok)).toBe(true);
+  });
+
+  it("short-circuits later messages for a chat already rate-limited in the same run", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response("Too Many Requests: chat retry after 45", {
+          status: 429,
+          headers: { "Retry-After": "45" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const messages = [
+      { chatId: "same-chat", html: "<b>Alert 1</b>", disableNotification: false },
+      { chatId: "other-chat", html: "<b>Alert 2</b>", disableNotification: false },
+      { chatId: "same-chat", html: "<b>Alert 3</b>", disableNotification: false },
+      { chatId: "third-chat", html: "<b>Alert 4</b>", disableNotification: false },
+    ];
+
+    const results = await sendBatch(messages, "bot-token", 1);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(results).toHaveLength(4);
+    expect(results[0]).toMatchObject({
+      chatId: "same-chat",
+      errorClass: "rate_limit",
+      retryAfterSec: 45,
+      rateLimitScope: "chat",
+      attempted: true,
+    });
+    expect(results[2]).toMatchObject({
+      chatId: "same-chat",
+      errorClass: "rate_limit",
+      retryAfterSec: 45,
+      rateLimitScope: "chat",
+      attempted: false,
+    });
+    expect(results[1].ok).toBe(true);
+    expect(results[3].ok).toBe(true);
+  });
+
+  it("escalates repeated 429s across distinct chats to global backoff", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response("Too Many Requests: chat retry after 10", {
+          status: 429,
+          headers: { "Retry-After": "10" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response("Too Many Requests: chat retry after 10", {
+          status: 429,
+          headers: { "Retry-After": "10" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response("Too Many Requests: chat retry after 10", {
+          status: 429,
+          headers: { "Retry-After": "10" },
+        }),
+      );
+
+    const messages = Array.from({ length: 5 }, (_, index) => ({
+      chatId: `chat-${index}`,
+      html: `<b>Alert ${index}</b>`,
+      disableNotification: false,
+    }));
+
+    const results = await sendBatch(messages, "bot-token", 3);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(results).toHaveLength(5);
+    expect(results.slice(0, 3).every((result) => result.rateLimitScope === "global" && result.attempted === true)).toBe(true);
+    expect(results.slice(3).every((result) => result.rateLimitScope === "global" && result.attempted === false)).toBe(true);
   });
 
   it("marks the untouched tail as global retryable after a global rate limit stop", async () => {
