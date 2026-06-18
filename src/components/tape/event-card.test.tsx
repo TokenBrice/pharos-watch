@@ -293,6 +293,28 @@ describe("EventCard enrichment", () => {
     expect(screen.getByText("abandoned")).toBeTruthy();
   });
 
+  it("cemetery falls back to malformed prototype-key cause strings", () => {
+    const event = makeEvent({
+      type: "cemetery.entry.added",
+      severity: "notice",
+      title: "USDH entered cemetery (peak $14.0M)",
+      summary: "First Solana CDP, last one standing.",
+      coinId: "usdh-hubble-2026-05",
+      payload: {
+        symbol: "USDH",
+        name: "Hubble USDH",
+        causeOfDeath: "constructor",
+        deathDate: "2026-05",
+        peakMcap: 14_000_000,
+        sourceUrl: "https://www.coingecko.com/en/coins/usdh",
+        sourceLabel: "CoinGecko",
+      },
+      sourceUrl: "/cemetery/",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.getByText("constructor")).toBeTruthy();
+  });
+
   it("lifecycle renders the cause pill and the frozen date in absolute form", () => {
     const event = makeEvent({
       type: "lifecycle.tracked.frozen",
