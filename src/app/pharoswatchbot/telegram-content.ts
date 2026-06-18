@@ -203,8 +203,14 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/brief",
         description:
-          "Latest market brief: peg deviations, supply shifts, liquidity changes, and what changed overnight. Same inputs as @pharoswatch.",
+          "Latest market brief: peg deviations, supply shifts, liquidity changes, and what changed overnight. /market is a deprecated compatibility alias.",
         example: "/brief",
+      },
+      {
+        command: "/sample",
+        description:
+          "Private-chat-only preview of a synthetic USDC DEWS alert so you can inspect the alert format before subscribing.",
+        example: "/sample",
       },
       {
         command: "/top <view>",
@@ -249,6 +255,12 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/help",
         description: "Show command reference.",
+        example: null,
+      },
+      {
+        command: "/forget",
+        description:
+          "Private-chat-only, two-step deletion of subscriber data, alert settings, quiet hours, snooze state, and live delivery diagnostics.",
         example: null,
       },
     ],
@@ -314,12 +326,12 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "How do I unsubscribe?",
     answer:
-      "Send /unsubscribe <targets> to remove specific coin subscriptions, or /unsubscribe all to clear every subscription and disable all alert flags. This stops alerts but does not immediately delete operational chat metadata.",
+      "Send /unsubscribe <targets> to remove specific coin subscriptions, or /unsubscribe all to clear every subscription and disable all alert flags. This stops alerts but does not immediately delete operational chat metadata; use /forget in a private chat for immediate subscriber-data deletion.",
   },
   {
     question: "What does Pharos store for Telegram privacy?",
     answer:
-      "Pharos stores chat-level alert settings, quiet hours, snooze state, and short-lived command or delivery metadata. Inactive unsubscribed chats are pruned after 180 days, and public pulse metrics hide low-cardinality deltas while keeping the exact active watcher total visible.",
+      "Pharos stores chat-level alert settings, quiet hours, snooze state, and short-lived command or delivery metadata. /forget starts a private two-step deletion flow for subscriber data and live diagnostics. Inactive unsubscribed chats are pruned after 180 days, and public pulse metrics hide low-cardinality deltas while keeping the exact active watcher total visible.",
   },
 ];
 

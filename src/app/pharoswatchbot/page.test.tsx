@@ -106,6 +106,10 @@ describe("PharosWatchBotPage", () => {
       "table",
     );
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/sample").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/forget").length).toBeGreaterThan(0);
+    expect(screen.getByText(/\/market is a deprecated compatibility alias/i)).toBeTruthy();
+    expect(screen.getByText(/use \/forget in a private chat for immediate subscriber-data deletion/i)).toBeTruthy();
     expect(screen.getByText(String(TRACKED_STABLECOIN_COUNT))).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
     expect(screen.getByText(/Safety alerts include a reason line/i)).toBeTruthy();
