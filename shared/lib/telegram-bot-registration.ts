@@ -37,6 +37,8 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: "unsnooze", description: "Clear active alert snooze" },
   { command: "unmutehours", description: "Disable quiet hours" },
   { command: "cancel", description: "Cancel a pending ticker selection" },
+  { command: "export", description: "Copy your watchlist out as a shareable token" },
+  { command: "import", description: "Apply a watchlist token from /export (group admins only)" },
   { command: "forget", description: "Delete all your subscriber data" },
 ] as const;
 
@@ -61,4 +63,6 @@ export const TELEGRAM_BOT_GROUP_COMMANDS = [
   { command: "unsnooze", description: "Clear active alert snooze" },
   { command: "unmutehours", description: "Disable quiet hours" },
   { command: "cancel", description: "Cancel a pending ticker selection" },
+  { command: "export", description: "Copy your watchlist out as a shareable token" },
+  { command: "import", description: "Apply a watchlist token from /export (admins only)" },
 ] as const;

@@ -328,6 +328,8 @@ Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
 | `/forget` | Two-step inline-confirmed deletion of the caller's subscriber data (per-coin and preset subscriptions, global toggles, quiet hours, snooze, delivery diagnostics, pending alerts). Private chats only. Retained idempotency rows in `telegram_processed_updates` plus alert-job, target, and dead-letter delivery-audit rows are not removed. |
+| `/export` | Emits a copy-paste base64url **watchlist token** of your explicit coin follows, the alert types you use, and your followed presets (quiet hours / snooze are intentionally excluded). Read-only; works in any chat. |
+| `/import <token>` | Decodes an `/export` token, validates each coin id against the tracked registry (silently dropping any no-longer-tracked and reporting the count), then stages a bulk subscribe through the standard `[ Confirm ] [ Cancel ]` flow (single pending slot, initiator-locked). The token is versioned (`v:1`) and capped at 4000 chars; a malformed, oversized, or newer-version token is rejected without applying anything. In groups, `/import` is admin-gated like `/subscribe`. Copy-paste artifacts (a leading `/import`, surrounding backticks, whitespace) are tolerated. Import applies one uniform alert-type set to the imported coins (per-coin tuning is not part of the portable token). |
 
 ### /start Deep-Link Payloads
 

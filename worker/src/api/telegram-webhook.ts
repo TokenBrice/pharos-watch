@@ -74,6 +74,7 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
   "/pause",
   "/unmutehours",
   "/unsnooze",
+  "/import",
 ]);
 
 // `botMention` is lowercased at parse time (telegram-webhook-parsing.ts), so

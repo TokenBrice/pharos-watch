@@ -1,0 +1,88 @@
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { decodeWatchlistToken } from "../../lib/telegram-watchlist-token";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { PENDING_OWNERSHIP_CONFLICT_MESSAGE, persistPendingConfirmBulk } from "../telegram-webhook-store";
+import type { ConfirmBulkPayload } from "../telegram-webhook-shared";
+import {
+  BULK_CONFIRM_REPLY_MARKUP,
+  buildBulkConfirmMessage,
+  dedupePresetIds,
+  subscribableCoinCount,
+} from "./action-runner";
+import type { WebhookCommandHandler } from "./context";
+
+const VALID_IMPORT_ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch", "reserve"]);
+
+/**
+ * `/import <token>` — decode a watchlist token, validate ids against the live
+ * registry, and stage a bulk subscribe through the existing confirm-bulk flow
+ * (single pending slot + initiator lock). Group-admin-gated like /subscribe.
+ * Applies no writes until the user taps Confirm.
+ */
+export const handleImport: WebhookCommandHandler = async (ctx, args) => {
+  const { db, chatId } = ctx;
+  const decoded = decodeWatchlistToken(args ?? "");
+  if (!decoded.ok) {
+    const message =
+      decoded.error === "empty"
+        ? "Usage: /import <token> — paste a token from /export in another chat."
+        : decoded.error === "too-large"
+          ? "That token is too large to import."
+          : decoded.error === "unsupported-version"
+            ? "That token is from a newer version of the bot and can't be imported. Re-run /export to get a current token."
+            : "That token is malformed and could not be read. Copy the full token from /export and try again.";
+    await ctx.replyToChat(message);
+    await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "import", outcome: "invalid" });
+    return;
+  }
+
+  const seen = new Set<string>();
+  const validIds: string[] = [];
+  for (const id of decoded.state.coinIds) {
+    if (TRACKED_META_BY_ID.has(id) && !seen.has(id)) {
+      seen.add(id);
+      validIds.push(id);
+    }
+  }
+  const cappedIds = validIds.slice(0, subscribableCoinCount());
+  const droppedUnknown = decoded.state.coinIds.length - validIds.length;
+  const presetIds = dedupePresetIds(decoded.state.presetIds);
+
+  if (cappedIds.length === 0 && presetIds.length === 0) {
+    await ctx.replyToChat("No currently-tracked coins or presets were found in that token.");
+    await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "import", outcome: "invalid" });
+    return;
+  }
+
+  const filteredTypes = decoded.state.alertTypes.filter((type) => VALID_IMPORT_ALERT_TYPES.has(type));
+  // A valid /export always carries ≥1 alert type; default a degenerate token to the
+  // recommended set so import never writes all-zero (dead) subscription rows.
+  const alertTypes = filteredTypes.length > 0 ? filteredTypes : ["dews", "depeg"];
+
+  const payload: ConfirmBulkPayload = {
+    kind: "subscribe",
+    alertTypes,
+    presetIds,
+    depegWorseningBpsStep: null,
+    coinIds: cappedIds,
+    subscribeAll: false,
+  };
+
+  const persisted = await persistPendingConfirmBulk(db, {
+    chatId,
+    payload,
+    initiatorUserId: ctx.actorUserId,
+  });
+  if (!persisted) {
+    await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+    return;
+  }
+
+  const symbols = cappedIds.map((id) => TRACKED_META_BY_ID.get(id)?.symbol ?? id);
+  const droppedNote = droppedUnknown > 0 ? `\n(${droppedUnknown} no longer tracked and were skipped.)` : "";
+  await ctx.replyToChatWithMarkup(
+    buildBulkConfirmMessage("subscribe", cappedIds.length, alertTypes, symbols) + droppedNote,
+    { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+  );
+  await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "import", outcome: "preview" });
+};

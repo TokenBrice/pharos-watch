@@ -74,7 +74,7 @@ async function expectedWebhookCacheValue(
 
 function expectedCommandsCacheValue(): string {
   return JSON.stringify({
-    version: 7,
+    version: 8,
     scopes: {
       all_private_chats: TELEGRAM_BOT_COMMANDS,
       all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
@@ -576,6 +576,8 @@ describe("reconcileTelegramCommandRegistration", () => {
       "unsnooze",
       "unmutehours",
       "cancel",
+      "export",
+      "import",
       "forget",
     ]);
 
@@ -605,6 +607,8 @@ describe("reconcileTelegramCommandRegistration", () => {
       "unsnooze",
       "unmutehours",
       "cancel",
+      "export",
+      "import",
     ]);
 
     const writes = db.getHistory().filter((entry) => entry.sql.includes(CACHE_WRITE_MATCH));
@@ -642,6 +646,8 @@ describe("reconcileTelegramCommandRegistration", () => {
       "unsnooze",
       "unmutehours",
       "cancel",
+      "export",
+      "import",
     ]);
   });
 

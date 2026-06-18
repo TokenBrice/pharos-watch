@@ -1,0 +1,96 @@
+/**
+ * Portable watchlist token for the `/export` and `/import` commands (C129).
+ *
+ * A token is a base64url-encoded compact JSON body `{ v, c, t, p }`:
+ *   v — schema version (currently 1)
+ *   c — explicit coin ids
+ *   t — the alert types to apply on import (dews/depeg/safety/launch/reserve)
+ *   p — followed preset ids
+ *
+ * The codec never trusts ids: validity is checked by the importer against the
+ * live registry. Decoding is defensive — copy/paste artifacts (a leading
+ * `/import `, surrounding backticks, whitespace, newlines) are stripped, and
+ * malformed / oversized / wrong-version tokens fail closed instead of throwing.
+ *
+ * Import applies the token through the existing bulk-confirm subscribe flow, so
+ * the token deliberately carries a single uniform alert-type set rather than
+ * per-coin granularity (no new write code).
+ */
+
+const TOKEN_VERSION = 1;
+
+/** Hard ceiling well under Telegram's 4096-char message limit. */
+export const MAX_WATCHLIST_TOKEN_CHARS = 4000;
+
+export interface WatchlistTokenState {
+  coinIds: string[];
+  alertTypes: string[];
+  presetIds: string[];
+}
+
+export type WatchlistTokenDecodeError = "empty" | "too-large" | "malformed" | "unsupported-version";
+
+export type WatchlistTokenDecodeResult =
+  | { ok: true; state: WatchlistTokenState }
+  | { ok: false; error: WatchlistTokenDecodeError };
+
+function toBase64Url(input: string): string {
+  // btoa is Latin1; token payloads are ASCII (kebab-case ids/types).
+  return btoa(input).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(input: string): string {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  // Throws on invalid base64; callers wrap in try/catch.
+  return atob(padded);
+}
+
+export function encodeWatchlistToken(state: WatchlistTokenState): string {
+  const body = {
+    v: TOKEN_VERSION,
+    c: state.coinIds,
+    t: state.alertTypes,
+    p: state.presetIds,
+  };
+  return toBase64Url(JSON.stringify(body));
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+}
+
+export function decodeWatchlistToken(raw: string): WatchlistTokenDecodeResult {
+  // Tolerate copy-paste: drop a leading "/import ", code-block fences, and all whitespace.
+  const cleaned = raw
+    .trim()
+    .replace(/^\/import(@\S+)?\s+/i, "")
+    .replace(/[`\s]/g, "");
+  if (cleaned.length === 0) return { ok: false, error: "empty" };
+  if (cleaned.length > MAX_WATCHLIST_TOKEN_CHARS) return { ok: false, error: "too-large" };
+
+  let json: string;
+  try {
+    json = fromBase64Url(cleaned);
+  } catch {
+    return { ok: false, error: "malformed" };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return { ok: false, error: "malformed" };
+  }
+  if (!parsed || typeof parsed !== "object") return { ok: false, error: "malformed" };
+
+  const body = parsed as Record<string, unknown>;
+  if (body.v !== TOKEN_VERSION) return { ok: false, error: "unsupported-version" };
+
+  const coinIds = asStringArray(body.c);
+  const alertTypes = asStringArray(body.t);
+  const presetIds = asStringArray(body.p);
+  if (coinIds.length === 0 && presetIds.length === 0) return { ok: false, error: "empty" };
+
+  return { ok: true, state: { coinIds, alertTypes, presetIds } };
+}
