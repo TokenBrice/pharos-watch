@@ -1,6 +1,7 @@
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { writeResponseReadyCache } from "../../lib/api-cache-read";
+import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import { sendAlert } from "../../lib/alerts";
 import {
   savePriceCache,
@@ -123,7 +124,9 @@ export async function validateAndWriteStablecoinsCache(
   let responseReadyCacheError: string | null = null;
   if (cacheResult.written) {
     try {
-      await writeResponseReadyCache(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
+      await writeResponseReadyCache(db, "stablecoins", stablecoinsCacheBody, syncStartSec, {
+        schemaId: RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
+      });
     } catch (error) {
       responseReadyCacheError = error instanceof Error ? error.name : "UnknownError";
     }

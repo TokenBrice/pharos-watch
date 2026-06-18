@@ -636,7 +636,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/alert-marker.ts` - readAlertMarker
 - `worker/src/lib/alert-safety-source-cache.ts` - ALERT_SAFETY_SOURCE_CACHE_KEY, AlertSafetyDimensionSnapshot, AlertSafetyExplainSnapshot, AlertSafetyRawInputSnapshot, AlertSafetySnapshotEnvelope, AlertSafetySourceAssessment
 - `worker/src/lib/alerts.ts` - normalizeWebhookUrl, sendAlert
-- `worker/src/lib/api-cache-read.ts` - CachedJsonReadResult, createCacheHandler, getCacheJsonParseFailureCountersForTests, getResponseReadyCacheKey, readCachedJson, readCachedJsonOr503
+- `worker/src/lib/api-cache-read.ts` - CachedJsonReadResult, createCacheHandler, encodeResponseReadyCacheValue, getCacheJsonParseFailureCountersForTests, getResponseReadyCacheKey, readCachedJson
 - `worker/src/lib/api-freshness.ts` - CacheFreshnessDiagnostic, CacheStatusFailure, CronTimestampLookupResult, CronTimestampLookupStatus, FreshnessMeta, addFreshnessHeaders
 - `worker/src/lib/api-history.ts` - StablecoinHistoryQuery, StablecoinHistoryQueryOptions, handleStablecoinHistoryRequest, parseStablecoinHistoryQuery
 - `worker/src/lib/api-json-body.ts` - RequestJsonSchemaOptions, parseOptionalRequestJsonObject, parseRequestJsonWithSchema
@@ -680,7 +680,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
 - `worker/src/lib/chain-config.ts` - ChainConfig, chainConfig
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
-- ... 230 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 231 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

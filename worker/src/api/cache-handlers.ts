@@ -7,6 +7,7 @@ import {
   errorResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../lib/response-ready-cache-contracts";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";
 import {
@@ -25,6 +26,7 @@ export const handleStablecoins = createCacheHandler(
     schema: StablecoinListResponseSchema,
     malformedMessage: "Cached stablecoins payload is malformed",
     responseReadyCache: "json-object",
+    responseReadySchemaId: RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
   },
 );
 

@@ -8,7 +8,14 @@ import { IsolateLocalState } from "./isolate-local-state";
 import { toErrorMessage } from "./error-utils";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;
-const RESPONSE_READY_CACHE_VERSION = 1;
+const RESPONSE_READY_CACHE_VERSION = 2;
+const RESPONSE_READY_ENVELOPE_VERSION = 1;
+
+interface ResponseReadyCacheEnvelope {
+  version: typeof RESPONSE_READY_ENVELOPE_VERSION;
+  schemaId: string;
+  body: string;
+}
 
 const _cacheRead = new IsolateLocalState(() => ({
   jsonParseFailuresByContext: new Map<string, { count: number; lastMessage: string }>(),
@@ -90,13 +97,27 @@ export function getResponseReadyCacheKey(cacheKey: string): string {
   return `${cacheKey}:response-ready:v${RESPONSE_READY_CACHE_VERSION}`;
 }
 
+export function encodeResponseReadyCacheValue(body: string, schemaId: string): string {
+  return JSON.stringify({
+    version: RESPONSE_READY_ENVELOPE_VERSION,
+    schemaId,
+    body,
+  } satisfies ResponseReadyCacheEnvelope);
+}
+
 export async function writeResponseReadyCache(
   db: D1Database,
   cacheKey: string,
   body: string,
   updatedAt: number,
+  options: { schemaId: string },
 ): Promise<void> {
-  await setCacheIfNewer(db, getResponseReadyCacheKey(cacheKey), body, updatedAt);
+  await setCacheIfNewer(
+    db,
+    getResponseReadyCacheKey(cacheKey),
+    encodeResponseReadyCacheValue(body, options.schemaId),
+    updatedAt,
+  );
 }
 
 async function getResponseReadyCache(
@@ -112,6 +133,33 @@ async function getResponseReadyCache(
     );
     return null;
   }
+}
+
+function decodeResponseReadyCacheBody(
+  cacheKey: string,
+  cached: { value: string },
+  expectedSchemaId: string,
+): string | null {
+  const parsed = readCachedJson<ResponseReadyCacheEnvelope>(
+    "response-ready-cache",
+    getResponseReadyCacheKey(cacheKey),
+    cached,
+  );
+  if (parsed.status !== "ok") return null;
+
+  const envelope = parsed.data;
+  if (
+    !envelope ||
+    typeof envelope !== "object" ||
+    envelope.version !== RESPONSE_READY_ENVELOPE_VERSION ||
+    envelope.schemaId !== expectedSchemaId ||
+    typeof envelope.body !== "string"
+  ) {
+    console.warn(`[cache] Ignoring response-ready companion for "${cacheKey}" with missing or mismatched schema marker`);
+    return null;
+  }
+
+  return envelope.body;
 }
 
 function injectMetaIntoJsonObject(rawBody: string, updatedAt: number, maxAgeSec: number): string | null {
@@ -148,6 +196,7 @@ export function createCacheHandler(
     ) => Promise<unknown> | unknown;
     injectMeta?: "auto" | "never";
     responseReadyCache?: "json-object" | "raw-json";
+    responseReadySchemaId?: string;
     malformedMessage?: string;
   },
 ): (db: D1Database) => Promise<Response> {
@@ -159,9 +208,14 @@ export function createCacheHandler(
       if (canonicalUpdatedAt != null) {
         const responseReady = await getResponseReadyCache(db, cacheKey);
         if (responseReady?.updatedAt === canonicalUpdatedAt) {
-          const responseReadyBody = options.responseReadyCache === "json-object" && options.injectMeta !== "never"
-            ? injectMetaIntoJsonObject(responseReady.value, canonicalUpdatedAt, maxAgeSec)
-            : responseReady.value;
+          const trustedBody = options.responseReadySchemaId
+            ? decodeResponseReadyCacheBody(cacheKey, responseReady, options.responseReadySchemaId)
+            : null;
+          const responseReadyBody = trustedBody != null
+            && options.responseReadyCache === "json-object"
+            && options.injectMeta !== "never"
+            ? injectMetaIntoJsonObject(trustedBody, canonicalUpdatedAt, maxAgeSec)
+            : trustedBody;
           if (responseReadyBody != null) {
             return new Response(responseReadyBody, {
               headers: addFreshnessHeaders({
