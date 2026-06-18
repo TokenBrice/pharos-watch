@@ -246,7 +246,7 @@ describe("collapseDuplicateObservations", () => {
 });
 
 describe("filterRetainedPools", () => {
-  it("retains large direct pools when zero volume is explicitly unmeasured", () => {
+  it("drops large direct pools when zero volume is explicitly unmeasured", () => {
     const retained = filterRetainedPools([
       makePool({
         poolId: "base:0xslipstream",
@@ -264,7 +264,7 @@ describe("filterRetainedPools", () => {
       }),
     ]);
 
-    expect(retained).toHaveLength(1);
+    expect(retained).toHaveLength(0);
   });
 
   it("still drops large pools with measured low volume", () => {

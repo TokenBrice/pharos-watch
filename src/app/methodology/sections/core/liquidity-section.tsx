@@ -90,9 +90,11 @@ export function LiquidityMethodologySection() {
             toward zero between UTC day rollovers.
           </p>
           <p>
-            After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score input
-            is rebuilt from the retained pool set. That keeps filtered or downscaled pools from lingering in the final score
-            through stale pre-filter totals.
+            Large pools must also clear the minimum 24h volume floor even when a source marks volume as unmeasured, so
+            pool-state-only rows cannot bypass the retained-pool anti-poisoning guard. After bad pools are filtered and
+            secondary-source TVL caps are applied, every exported aggregate and score input is rebuilt from the retained
+            pool set. That keeps filtered or downscaled pools from lingering in the final score through stale pre-filter
+            totals.
           </p>
           <p>
             Curve balance, registry, token-price, and metapool TVL enrichment is applied only to Curve DeFiLlama rows.

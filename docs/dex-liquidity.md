@@ -2,7 +2,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.81`
+- **Current methodology version:** `v5.82`
 - **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Version timeline:** [liquidity-score-timeline.md](./liquidity-score-timeline.md)
@@ -64,7 +64,7 @@ During the scoring cron, UniV3/Aerodrome subgraph enrichment completes before th
 
 Balancer, Raydium, Orca, and resolver-backed Fluid pools now preserve richer metadata through `top_pools_json`: measured `balanceRatio`, per-token `balanceDetails`, and normalized `feeTier` badges in basis points. Balancer weighted pools compare actual USD composition versus target token weights before deriving balance health; Raydium and Orca derive inventory balance from token balances plus per-token USD prices; Fluid derives inventory from the official DexReservesResolver by summing collateral and debt real reserves per token. Fluid pools on chains without that resolver deployment, or on any chain where token decimals cannot be resolved safely, fall back to neutral balance.
 
-After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates. The strict cap now targets the inflation-prone secondary discovery families (`cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`) rather than clipping `direct_api` pools by default, so legitimate protocol-native liquidity is less likely to be suppressed by stale DefiLlama protocol ceilings.
+Large retained pools must pass the minimum 24-hour volume floor even when a source marks volume as unmeasured; the unmeasured flag is retained for diagnostics but does not bypass the large-pool anti-poisoning guard. After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates. The strict cap now targets the inflation-prone secondary discovery families (`cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`) rather than clipping `direct_api` pools by default, so legitimate protocol-native liquidity is less likely to be suppressed by stale DefiLlama protocol ceilings.
 
 `dex_pool_staging` is the handoff point for discovery-refresh rows (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty. It also retains bounded direct fallback probes after the primary/staged merge: DexScreener can still repair zero-pool, no-price, or materially weak partial on-chain coverage, while CoinGecko ticker/orderbook fallback is limited to assets with absent, no-price, or tiny DEX coverage so centralized synthetic books do not churn already-covered DEX assets.
 
