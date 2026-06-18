@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 
 const { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } = await import("../telegram-mini-app");
 const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
@@ -1046,6 +1047,19 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(response.status).toBe(200);
     // 4h = 14400s; alert_snooze_until_ts should be NOW + 14400.
     expect(historyHas(db, "alert_snooze_until_ts = excluded.alert_snooze_until_ts", ["42", "alice", NOW_SEC + 14400])).toBe(true);
+  });
+
+  it("writes the durable Paused sentinel via the pause op", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "pause" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(historyHas(db, "alert_snooze_until_ts = excluded.alert_snooze_until_ts", ["42", "alice", PAUSE_SENTINEL_TS])).toBe(true);
   });
 
   it("snoozes a single coin via set-coin-snooze and clears via the clear token", async () => {

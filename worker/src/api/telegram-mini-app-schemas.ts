@@ -72,6 +72,7 @@ const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
     kind: z.literal("set-snooze"),
     durationToken: SnoozeDurationTokenSchema,
   }).strict(),
+  z.object({ kind: z.literal("pause") }).strict(),
   z.object({
     kind: z.literal("set-coin-snooze"),
     stablecoinId: z.string().min(1),

@@ -2,7 +2,7 @@
 
 import { Check, Clock3, Home, ShieldAlert } from "lucide-react";
 import { RECOMMENDED_OPERATION, SNOOZE_DURATION_TOKENS } from "../constants";
-import { formatQuietHoursRange, formatSnoozePill, formatTime } from "../format";
+import { formatQuietHoursRange, formatSnoozePill, formatTime, isPausedSentinel } from "../format";
 import type {
   TelegramMiniAppOperation,
   TelegramMiniAppState,
@@ -52,6 +52,7 @@ function failureCopy(failureClass: string | null): { title: string; body: string
 export function StatusPanel({ state, canMutate, isMutating, pendingOperation, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen }: StatusPanelProps) {
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozeActive = snoozeUntil != null;
+  const paused = isPausedSentinel(snoozeUntil);
   const showGroupReadOnlyCopy = !state.viewer.canMutate && state.viewer.mutationBlockReason !== "stale-auth";
   const recentFailure = failureCopy(state.health.recentFailureClass);
   const lastDelivery = formatTime(state.health.lastSuccessfulDeliveryAt);
@@ -113,7 +114,9 @@ export function StatusPanel({ state, canMutate, isMutating, pendingOperation, on
             <p className="pharos-kicker">Snooze alerts</p>
             {snoozeActive ? (
               <span className="mini-selected shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold">
-                Quiet until <span className="pharos-numeric">{formatSnoozePill(snoozeUntil)}</span>
+                {paused
+                  ? "Paused indefinitely"
+                  : <>Quiet until <span className="pharos-numeric">{formatSnoozePill(snoozeUntil)}</span></>}
               </span>
             ) : null}
           </div>
@@ -125,24 +128,37 @@ export function StatusPanel({ state, canMutate, isMutating, pendingOperation, on
                 loading={pendingOperation?.kind === "clear-snooze"}
                 onClick={() => onMutate({ kind: "clear-snooze" })}
               >
-                <Clock3 className="h-4 w-4" aria-hidden="true" /> Clear snooze
+                <Clock3 className="h-4 w-4" aria-hidden="true" /> {paused ? "Resume alerts" : "Clear snooze"}
               </MiniButton>
             </div>
           ) : (
-            <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label="Snooze alerts">
-              {SNOOZE_DURATION_TOKENS.map((token) => (
+            <>
+              <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label="Snooze alerts">
+                {SNOOZE_DURATION_TOKENS.map((token) => (
+                  <MiniButton
+                    key={token}
+                    ariaLabel={`Snooze alerts for ${token}`}
+                    variant="secondary"
+                    disabled={!canMutate || isMutating}
+                    loading={pendingOperation?.kind === "set-snooze" && pendingOperation.durationToken === token}
+                    onClick={() => onMutate({ kind: "set-snooze", durationToken: token })}
+                  >
+                    {token}
+                  </MiniButton>
+                ))}
+              </div>
+              <div className="mt-2">
                 <MiniButton
-                  key={token}
-                  ariaLabel={`Snooze alerts for ${token}`}
+                  ariaLabel="Pause all alerts indefinitely"
                   variant="secondary"
                   disabled={!canMutate || isMutating}
-                  loading={pendingOperation?.kind === "set-snooze" && pendingOperation.durationToken === token}
-                  onClick={() => onMutate({ kind: "set-snooze", durationToken: token })}
+                  loading={pendingOperation?.kind === "pause"}
+                  onClick={() => onMutate({ kind: "pause" })}
                 >
-                  {token}
+                  <Clock3 className="h-4 w-4" aria-hidden="true" /> Pause indefinitely
                 </MiniButton>
-              ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </section>

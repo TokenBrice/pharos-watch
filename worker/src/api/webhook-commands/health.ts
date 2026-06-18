@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
+import { isPausedSentinel } from "../../lib/telegram-constants";
 import { formatTelegramAge } from "../../lib/telegram-format-age";
 import { loadTelegramChatHealthDiagnostics } from "../../lib/telegram-usage-analytics";
 import { isQuietHoursActive } from "../../cron/telegram-quiet-hours";
@@ -42,6 +43,7 @@ function formatAge(ts: number | null, nowSec: number): string {
 
 function formatSnooze(untilTs: number | null | undefined, nowSec: number): string {
   if (untilTs == null || untilTs <= nowSec) return "Off";
+  if (isPausedSentinel(untilTs)) return "Paused (indefinite)";
   const remaining = untilTs - nowSec;
   if (remaining < 90 * 60) return `Active for ${Math.round(remaining / 60)} min`;
   if (remaining < 48 * 3600) return `Active for ${Math.round(remaining / 3600)} h`;

@@ -2,7 +2,7 @@ import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { escapeHtml, type InlineKeyboardButton } from "../lib/telegram";
 import { formatTelegramAge } from "../lib/telegram-format-age";
-import { MANAGE_PAGE_SIZE } from "../lib/telegram-constants";
+import { MANAGE_PAGE_SIZE, isPausedSentinel } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import type {
@@ -359,6 +359,7 @@ function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number
 
 function formatSnoozeLine(snoozeUntilSec: number | null, nowSec: number): string {
   if (snoozeUntilSec == null || snoozeUntilSec <= nowSec) return "Snooze: Off";
+  if (isPausedSentinel(snoozeUntilSec)) return "Paused (indefinite)";
   return `Snoozed for ${formatSnoozeDuration(snoozeUntilSec - nowSec)}`;
 }
 

@@ -2,7 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { batchExecute } from "../lib/db";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
-import { SNOOZE_SECONDS } from "../lib/telegram-constants";
+import { PAUSE_SENTINEL_TS, SNOOZE_SECONDS } from "../lib/telegram-constants";
 import { isValidIanaTimezone } from "../cron/telegram-quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
 import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
@@ -182,6 +182,9 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       return;
     case "set-snooze":
       await setSubscriberSnooze(db, chatId, username, unixNow() + SNOOZE_SECONDS[operation.durationToken]);
+      return;
+    case "pause":
+      await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS);
       return;
     case "set-coin-snooze":
       assertCoin(operation.stablecoinId);

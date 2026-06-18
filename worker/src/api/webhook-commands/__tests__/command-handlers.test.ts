@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { PAUSE_SENTINEL_TS } from "../../../lib/telegram-constants";
 import type { WebhookCommandContext } from "../context";
 import { handleCancel } from "../cancel";
 import { handleHealth } from "../health";
@@ -344,6 +345,25 @@ describe("webhook command handlers", () => {
     } finally {
       nowSpy.mockRestore();
     }
+  });
+
+  it("/health renders the Paused sentinel distinctly", async () => {
+    const db = mockD1([
+      { match: "FROM telegram_subscribers", rows: [], first: subscriberRow({ alert_snooze_until_ts: PAUSE_SENTINEL_TS }) },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 0 } },
+      { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: 0 } },
+      { match: "SELECT last_error_class", rows: [], first: null },
+      { match: "FROM telegram_chat_delivery_diagnostics", rows: [], first: null },
+    ]);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChatWithMarkup });
+
+    await handleHealth(ctx, "");
+
+    const [message] = replyToChatWithMarkup.mock.calls[0]!;
+    expect(message).toContain("Snooze: Paused (indefinite)");
+    expect(message).not.toMatch(/Snooze: Active for \d+ d/);
   });
 
   it("/list empty private chats offers both the control panel and preset discovery", async () => {

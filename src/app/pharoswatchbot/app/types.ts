@@ -60,6 +60,7 @@ export type TelegramMiniAppOperation =
   | { kind: "set-quiet-hours"; enabled: boolean; startHourUtc?: number; endHourUtc?: number }
   | { kind: "clear-snooze" }
   | { kind: "set-snooze"; durationToken: TelegramSnoozeDurationToken }
+  | { kind: "pause" }
   | { kind: "set-coin-snooze"; stablecoinId: string; durationToken: TelegramCoinSnoozeDurationToken }
   | { kind: "set-timezone"; timezone: string | null }
   | { kind: "unsubscribe-all" }

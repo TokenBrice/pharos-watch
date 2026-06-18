@@ -449,6 +449,39 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
+  it("dispatches a durable pause", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Pause all alerts indefinitely" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "pause" } }),
+    }));
+  });
+
+  it("renders a paused chat distinctly and offers Resume", async () => {
+    const pausedState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: { ...baseState.subscriber, exists: true, snoozeUntilTs: 4102444800 },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => pausedState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("Paused indefinitely")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Resume alerts/i })).toBeTruthy();
+  });
+
   it("explains launch-only subscriptions without showing tune controls", async () => {
     const launchOnlyState: TelegramMiniAppState = {
       ...baseState,

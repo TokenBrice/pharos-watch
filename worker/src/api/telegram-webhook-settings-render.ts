@@ -7,6 +7,7 @@
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { escapeHtml } from "../lib/telegram";
+import { isPausedSentinel } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { MANAGE_PAGE_SIZE, formatQuietHours } from "./telegram-webhook-messages";
 import { unixNow } from "./telegram-webhook-store";
@@ -61,6 +62,7 @@ export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: Hom
 } {
   const quietOn = Boolean(subscriber?.quiet_hours_enabled);
   const snoozeActive = (subscriber?.alert_snooze_until_ts ?? 0) > unixNow();
+  const paused = isPausedSentinel(subscriber?.alert_snooze_until_ts ?? null);
   const rows: SettingsButton[][] = [
     [
       {
@@ -70,7 +72,9 @@ export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: Hom
     ],
   ];
   if (snoozeActive) {
-    rows.push([{ text: "Clear snooze", callback_data: "settings:sc" }]);
+    rows.push([
+      { text: paused ? "Resume alerts" : "Clear snooze", callback_data: "settings:sc" },
+    ]);
   }
   for (const type of GLOBAL_ALERT_TYPES) {
     rows.push([
@@ -244,6 +248,7 @@ function formatQuietHoursLine(subscriber: SubscriberRow | null): string {
 function formatSnoozeLine(subscriber: SubscriberRow | null): string {
   const until = subscriber?.alert_snooze_until_ts ?? null;
   if (until == null) return "off";
+  if (isPausedSentinel(until)) return "Paused (indefinite)";
   const remaining = until - unixNow();
   if (remaining <= 0) return "off";
   if (remaining < 90 * 60) return `${Math.round(remaining / 60)} min`;

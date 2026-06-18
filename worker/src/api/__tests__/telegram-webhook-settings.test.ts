@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
 const {
@@ -686,6 +687,52 @@ describe("message builders", () => {
       alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3 * 3600,
     };
     expect(buildHomeMessage(subscriber)).toContain("Snooze: 3 h");
+  });
+
+  it("home message renders the Paused sentinel distinctly (not a multi-thousand-day countdown)", () => {
+    const subscriber = {
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      alert_snooze_until_ts: PAUSE_SENTINEL_TS,
+    };
+    const message = buildHomeMessage(subscriber);
+    expect(message).toContain("Snooze: Paused (indefinite)");
+    expect(message).not.toMatch(/\d{3,} d/);
+  });
+
+  it("home keyboard shows Resume alerts when paused, Clear snooze otherwise", () => {
+    const paused = buildHomeKeyboard({
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      alert_snooze_until_ts: PAUSE_SENTINEL_TS,
+    });
+    const pausedButtons = paused.inline_keyboard.flat();
+    expect(pausedButtons.some((b) => b.text === "Resume alerts" && b.callback_data === "settings:sc")).toBe(true);
+    expect(pausedButtons.some((b) => b.text === "Clear snooze")).toBe(false);
+
+    const timed = buildHomeKeyboard({
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3600,
+    });
+    const timedButtons = timed.inline_keyboard.flat();
+    expect(timedButtons.some((b) => b.text === "Clear snooze" && b.callback_data === "settings:sc")).toBe(true);
+    expect(timedButtons.some((b) => b.text === "Resume alerts")).toBe(false);
   });
 
   it("coin message reflects mixed enabled settings", () => {

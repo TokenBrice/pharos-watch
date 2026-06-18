@@ -71,6 +71,7 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
   "/unsubscribe",
   "/set",
   "/mute",
+  "/pause",
   "/unmutehours",
   "/unsnooze",
 ]);

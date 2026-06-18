@@ -20,6 +20,7 @@ import { CoinInsightPanel } from "./components/CoinInsightPanel";
 import { PresetsPanel } from "./components/PresetsPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ALERT_LABELS, RECOMMENDED_OPERATION } from "./constants";
+import { isPausedSentinel } from "./format";
 import { postMiniAppJson, TelegramMiniAppStateSchema } from "./mini-app-api";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
@@ -263,7 +264,8 @@ export function PharosWatchBotMiniAppClient() {
         return { text: "Use recommended setup", handler: () => mutate(RECOMMENDED_OPERATION) };
       }
       if (optimisticState?.subscriber.snoozeUntilTs != null) {
-        return { text: "Clear snooze", handler: () => mutate({ kind: "clear-snooze" }) };
+        const label = isPausedSentinel(optimisticState.subscriber.snoozeUntilTs) ? "Resume alerts" : "Clear snooze";
+        return { text: label, handler: () => mutate({ kind: "clear-snooze" }) };
       }
     }
     return { text: null, handler: null };

@@ -15,6 +15,7 @@ import { handleUnsubscribe } from "./unsubscribe";
 import { handleSet } from "./set";
 import { handleSettings } from "./settings";
 import { handleMute } from "./mute";
+import { handlePause } from "./pause";
 import { handleTimezone } from "./timezone";
 import { handleUnmuteHours } from "./unmutehours";
 import { handleUnsnooze } from "./unsnooze";
@@ -49,6 +50,7 @@ export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/set": handleSet,
   "/settings": handleSettings,
   "/mute": handleMute,
+  "/pause": handlePause,
   "/timezone": handleTimezone,
   "/unmutehours": handleUnmuteHours,
   "/unsnooze": handleUnsnooze,

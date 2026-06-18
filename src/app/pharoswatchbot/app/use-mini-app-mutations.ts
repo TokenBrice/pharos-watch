@@ -47,6 +47,8 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
     }
     case "set-snooze":
       return `Snoozed for ${operation.durationToken}.`;
+    case "pause":
+      return "All alerts paused.";
     case "set-coin-snooze": {
       const symbol = state?.subscriptions.find((c) => c.stablecoinId === operation.stablecoinId)?.symbol ?? "Coin";
       return operation.durationToken === "clear"

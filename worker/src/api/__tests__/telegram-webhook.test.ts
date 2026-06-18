@@ -2154,6 +2154,35 @@ describe("handleTelegramWebhook", () => {
     expect(text).not.toContain("change alert settings");
   });
 
+  it("denies /pause for non-admin group users", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatMember")) {
+        return new Response(
+          JSON.stringify({ ok: true, result: { user: { id: 7, first_name: "member" }, status: "member" } }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/pause@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 7,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(latestSendMessageBody().text).toMatch(/Only group admins/i);
+    expect(db.getHistory().some((entry) => /INSERT INTO telegram_subscribers|UPDATE telegram_subscribers/i.test(entry.sql))).toBe(false);
+  });
+
   it("denies mutating /timezone args for non-admin group users", async () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
