@@ -43,7 +43,15 @@ vi.mock("@/hooks/use-url-filters", () => ({
 vi.mock("@/components/query-freshness-notices", () => ({
   QueryFreshnessNotices: (props: { onRetry: () => Promise<unknown>; queries: Array<{ label?: string; preset?: string }> }) => {
     mocks.QueryFreshnessNotices(props);
-    return <div data-testid="freshness-notices">{props.queries.map((q) => q.label ?? q.preset).join(",")}</div>;
+    const presetLabels: Record<string, string> = {
+      depegResolver: "Depeg Resolver",
+      depegResolverReview: "DDR Reviewer",
+    };
+    return (
+      <div data-testid="freshness-notices">
+        {props.queries.map((q) => q.label ?? (q.preset ? presetLabels[q.preset] ?? q.preset : "")).join(",")}
+      </div>
+    );
   },
 }));
 

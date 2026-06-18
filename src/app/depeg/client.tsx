@@ -248,8 +248,8 @@ export function DepegClient() {
           { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
           { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
           { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
-          ...(resolverEnabled ? [{ label: "Depeg Resolver", staleTime: 900_000, dataUpdatedAt: resolverUpdatedAt, error: resolverError, hasData: resolverData != null, meta: resolverMeta }] : []),
-          ...(resolverReviewerEnabled ? [{ label: "DDR Reviewer", staleTime: 900_000, dataUpdatedAt: resolverReviewUpdatedAt, error: resolverReviewError, hasData: resolverReviewData != null, meta: resolverReviewMeta }] : []),
+          ...(resolverEnabled ? [{ preset: "depegResolver", dataUpdatedAt: resolverUpdatedAt, error: resolverError, hasData: resolverData != null, meta: resolverMeta }] : []),
+          ...(resolverReviewerEnabled ? [{ preset: "depegResolverReview", dataUpdatedAt: resolverReviewUpdatedAt, error: resolverReviewError, hasData: resolverReviewData != null, meta: resolverReviewMeta }] : []),
         ]}
       />
 

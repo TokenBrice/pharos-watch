@@ -11,6 +11,8 @@ export const DATA_HEALTH_PRESETS = {
   pegSummary: { label: "Peg Data", staleTime: API_FRESHNESS_MAX_AGE_SEC.pegSummary * 1000 },
   stressSignals: { label: "DEWS", staleTime: API_FRESHNESS_MAX_AGE_SEC.stressSignals * 1000 },
   depegEvents: { label: "Depeg Events", staleTime: API_FRESHNESS_MAX_AGE_SEC.depegEvents * 1000 },
+  depegResolver: { label: "Depeg Resolver", staleTime: API_FRESHNESS_MAX_AGE_SEC.depegResolver * 1000 },
+  depegResolverReview: { label: "DDR Reviewer", staleTime: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview * 1000 },
   reportCards: { label: "Report Cards", staleTime: API_FRESHNESS_MAX_AGE_SEC.reportCards * 1000 },
   redemptionBackstops: { label: "Redemption Backstops", staleTime: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops * 1000 },
   stabilityIndex: { label: "Stability Index", staleTime: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex * 1000 },
