@@ -1901,6 +1901,39 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("In groups");
   });
 
+  it("keeps discovery keyboards for addressed /coverage commands in group chats", async () => {
+    const db = mockD1([
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "FROM depeg_events", rows: [] },
+      { match: "FROM dex_liquidity", rows: [] },
+      { match: "FROM yield_data", rows: [] },
+      { match: "FROM cache WHERE key = ?", rows: [] },
+    ]);
+
+    const coverageRes = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/coverage@PharosWatchBot USDC", "test-secret", { chatType: "group", fromId: 222 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(coverageRes.status).toBe(200);
+    const sentBodies = fetchSpy.mock.calls
+      .filter((call) => String(call[0]).includes("/sendMessage"))
+      .map(([, init]) => JSON.parse((init?.body as string) ?? "{}") as { text: string; reply_markup?: unknown });
+    const coverageBody = sentBodies.find((body) => body.text.includes("USDC coverage"));
+    expect(coverageBody).toBeDefined();
+    const coverageButtons = inlineButtons(coverageBody!);
+    expect(coverageButtons).toEqual(expect.arrayContaining([
+      { text: "Why?", callback_data: "why:usdc-circle" },
+      { text: "Coverage", callback_data: "coverage:usdc-circle" },
+      { text: "Subscribe", callback_data: "quicksub:usdc-circle" },
+    ]));
+    expect(coverageButtons.some((button) => button.web_app)).toBe(false);
+  });
+
   it("ignores commands addressed to the channel handle in group chats", async () => {
     const db = mockD1([]);
     const res = await handleTelegramWebhook(

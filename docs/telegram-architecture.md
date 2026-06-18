@@ -125,7 +125,7 @@ the audited welcome reply successfully, Ingress stamps the
 - `worker/src/api/telegram-webhook-disambiguation-selection.ts` — executes pending disambiguation selections from callback replies through the shared action runner
   - One file per command: `start.ts`, `help.ts`, `list.ts`, `status.ts`, `brief.ts`, `top.ts`, `why.ts`, `coverage.ts`, `health.ts`, `subscribe.ts`, `unsubscribe.ts`, `set.ts`, `settings.ts`, `mute.ts`, `timezone.ts`, `unmutehours.ts`, `unsnooze.ts`, `cancel.ts`, `presets.ts`, `forget.ts`, `sample.ts`, `single-target.ts` (shared helper for `/why` and `/coverage`)
 - `worker/src/api/telegram-webhook-messages.ts` (message builders shared across handlers)
-- `worker/src/api/telegram-webhook-insights.ts` (`/top`, `/why`, `/coverage` data-loading and rendering)
+- `worker/src/api/telegram-webhook-insights.ts` (`/top`, `/why`, `/coverage` data-loading and rendering; `/why` and `/coverage` attach the status discovery keyboard in every chat, with Mini App buttons only in private chats)
 - `worker/src/api/telegram-webhook-status.ts` (the `/status` data loader)
 - `worker/src/api/telegram-webhook-resolution.ts` (the coin-resolution flow used by `action-runner`)
 

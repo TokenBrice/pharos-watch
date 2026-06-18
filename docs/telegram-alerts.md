@@ -295,8 +295,8 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/status <ticker>` | Returns a compact snapshot: current price freshness, supply, DEWS band, safety grade, active-depeg state, DEX liquidity, and best yield context for the given coin. No subscription required. The reply carries a `[ Why? ] [ Coverage ] [ Subscribe ]` inline keyboard so users can drill down or quick-subscribe (DEWS + depeg) without retyping a command. The `Subscribe` button is gated by the same group admin check as `/subscribe`. |
 | `/brief` | Returns the latest compact market brief from the daily digest inputs and flags the reply when the latest digest is more than 48 hours old. `/market` is a deprecated compatibility alias and shares the same cooldown bucket. |
 | `/top <view>` | Returns ranked current views for `depeg`, `dews`, `yield`, `liquidity`, `chains`, or `safety` |
-| `/why <ticker>` | Explains the current Safety Score, weakest dimensions, and key risk notes for one coin |
-| `/coverage <ticker>` | Shows which Pharos data surfaces currently cover one coin |
+| `/why <ticker>` | Explains the current Safety Score, weakest dimensions, and key risk notes for one coin. The reply keeps the same `[ Why? ] [ Coverage ] [ Subscribe ]` discovery keyboard as `/status`; private chats also include the Mini App button. |
+| `/coverage <ticker>` | Shows which Pharos data surfaces currently cover one coin. The reply keeps the same `[ Why? ] [ Coverage ] [ Subscribe ]` discovery keyboard as `/status`; private chats also include the Mini App button. |
 | `/health` | Shows self-diagnostics for the current chat: last successful alert delivery, last successful command reply, queued alert count, recent failure class, quiet-hours/snooze state, and alert readiness |
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
 | `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a depeg severity gate plus worsening-step threshold (`100`, `250`, `500`, or `off`) |

@@ -224,7 +224,7 @@ describe("read-only webhook command handlers", () => {
     expectNoD1Mutation(usageCtx.db);
   });
 
-  it("/why and /coverage use discovery keyboards in private chats and plain replies in groups", async () => {
+  it("/why and /coverage use discovery keyboards in groups and add Mini App buttons only in private chats", async () => {
     vi.mocked(buildWhyMessage).mockResolvedValue("<b>USDC Safety Score</b>");
     vi.mocked(loadStatusForCoin).mockResolvedValue(statusFixture);
     vi.mocked(buildCoverageMessage).mockReturnValue("<b>USDC coverage</b>");
@@ -247,13 +247,34 @@ describe("read-only webhook command handlers", () => {
     expectMiniAppButton(buttonsFromMarkup(coverageOptions.replyMarkup), "Open in app", "coverage_usdc-circle");
     expectNoD1Mutation(privateCoverageCtx.db);
 
+    const groupWhyCtx = makeContext({ chatType: "group" });
+    await handleWhy(groupWhyCtx, "USDC");
+    expect(groupWhyCtx.replyToChat).not.toHaveBeenCalled();
+    expect(groupWhyCtx.replyToChatWithMarkup).toHaveBeenCalledTimes(1);
+    const [groupWhyMessage, groupWhyOptions] = vi.mocked(groupWhyCtx.replyToChatWithMarkup).mock.calls[0]!;
+    expect(groupWhyMessage).toBe("<b>USDC Safety Score</b>");
+    const groupWhyButtons = buttonsFromMarkup(groupWhyOptions.replyMarkup);
+    expectCallbackButton(groupWhyButtons, "Why?", "why:usdc-circle");
+    expectCallbackButton(groupWhyButtons, "Coverage", "coverage:usdc-circle");
+    expectCallbackButton(groupWhyButtons, "Subscribe", "quicksub:usdc-circle");
+    expect(groupWhyButtons.some((button) => button.web_app)).toBe(false);
+    expectNoD1Mutation(groupWhyCtx.db);
+
     const coverageCtx = makeContext({ chatType: "supergroup" });
     await handleCoverage(coverageCtx, "USDC");
 
     expect(loadStatusForCoin).toHaveBeenCalledWith(coverageCtx.db, "usdc-circle");
     expect(buildCoverageMessage).toHaveBeenCalledWith("USDC", statusFixture);
-    expect(coverageCtx.replyToChat).toHaveBeenCalledWith("<b>USDC coverage</b>");
-    expect(coverageCtx.replyToChatWithMarkup).not.toHaveBeenCalled();
+    expect(coverageCtx.replyToChat).not.toHaveBeenCalled();
+    expect(coverageCtx.replyToChatWithMarkup).toHaveBeenCalledTimes(1);
+    const [groupCoverageMessage, groupCoverageOptions] =
+      vi.mocked(coverageCtx.replyToChatWithMarkup).mock.calls[0]!;
+    expect(groupCoverageMessage).toBe("<b>USDC coverage</b>");
+    const groupCoverageButtons = buttonsFromMarkup(groupCoverageOptions.replyMarkup);
+    expectCallbackButton(groupCoverageButtons, "Why?", "why:usdc-circle");
+    expectCallbackButton(groupCoverageButtons, "Coverage", "coverage:usdc-circle");
+    expectCallbackButton(groupCoverageButtons, "Subscribe", "quicksub:usdc-circle");
+    expect(groupCoverageButtons.some((button) => button.web_app)).toBe(false);
     expectNoD1Mutation(coverageCtx.db);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
