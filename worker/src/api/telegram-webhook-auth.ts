@@ -1,6 +1,9 @@
 import { answerCallbackQuery, postTelegramBotApi } from "../lib/telegram";
 import { timingSafeCompare } from "../lib/auth";
-import { logTelegramInvalidSecretAttempt } from "../lib/telegram-log";
+import {
+  logTelegramInvalidSecretAttempt,
+  logTelegramMissingSecretAttempt,
+} from "../lib/telegram-log";
 import { drainResponseBody } from "../lib/response-body";
 
 export function isGroupChatType(chatType: string | null | undefined): boolean {
@@ -17,6 +20,10 @@ export async function validateTelegramWebhookSecret(
   const providedSecret =
     request.headers.get("X-Telegram-Bot-Api-Secret-Token")?.trim() ?? "";
   if (!providedSecret) {
+    logTelegramMissingSecretAttempt({
+      hasCurrentSecret: Boolean(webhookSecret?.trim()),
+      hasPreviousSecret: Boolean(previousWebhookSecret?.trim()),
+    });
     return "missing";
   }
 

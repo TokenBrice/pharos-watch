@@ -14,7 +14,7 @@ Rotate Telegram secrets one at a time. The webhook secret supports a short overl
    npx wrangler tail stablecoin-api --format pretty
    ```
 
-   Then send a benign Telegram command and confirm normal `telegram-webhook` handling. Invalid-secret probes should still return `200 ok` without side effects.
+   Then send a benign Telegram command and confirm normal `telegram-webhook` handling. Missing- or invalid-secret probes should still return `200 ok` without side effects while emitting throttled `auth-missing-secret` / `auth-invalid-secret` warning records.
 5. After Telegram has used the new secret for at least one successful webhook delivery, remove `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` and redeploy.
 
 ## Bot Token

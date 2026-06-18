@@ -20,13 +20,17 @@ export interface TelegramLogEvent {
   [key: string]: unknown;
 }
 
-const INVALID_SECRET_SPIKE_WINDOW_MS = 60_000;
-const INVALID_SECRET_SPIKE_THRESHOLD = 5;
+const SECRET_AUTH_SPIKE_WINDOW_MS = 60_000;
+const SECRET_AUTH_SPIKE_THRESHOLD = 5;
 
 // Intentional per-isolate cache — module-scope let used to throttle invalid-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
 let invalidSecretWindowStartedAt = 0;
 // Intentional per-isolate cache — module-scope let used to throttle invalid-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
 let invalidSecretWindowCount = 0;
+// Intentional per-isolate cache — module-scope let used to throttle missing-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
+let missingSecretWindowStartedAt = 0;
+// Intentional per-isolate cache — module-scope let used to throttle missing-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
+let missingSecretWindowCount = 0;
 
 interface TelegramLogRecord {
   ts: string;
@@ -84,7 +88,7 @@ export function logTelegramInvalidSecretAttempt(
   const nowMs = Date.now();
   if (
     invalidSecretWindowStartedAt === 0 ||
-    nowMs - invalidSecretWindowStartedAt > INVALID_SECRET_SPIKE_WINDOW_MS
+    nowMs - invalidSecretWindowStartedAt > SECRET_AUTH_SPIKE_WINDOW_MS
   ) {
     invalidSecretWindowStartedAt = nowMs;
     invalidSecretWindowCount = 0;
@@ -97,7 +101,34 @@ export function logTelegramInvalidSecretAttempt(
     action: "auth-invalid-secret",
     signal: "invalid_secret",
     invalidSecretWindowCount,
-    invalidSecretSpike: invalidSecretWindowCount >= INVALID_SECRET_SPIKE_THRESHOLD,
+    invalidSecretSpike: invalidSecretWindowCount >= SECRET_AUTH_SPIKE_THRESHOLD,
+    ...context,
+  });
+}
+
+export function logTelegramMissingSecretAttempt(
+  context: {
+    hasCurrentSecret: boolean;
+    hasPreviousSecret: boolean;
+  },
+): void {
+  const nowMs = Date.now();
+  if (
+    missingSecretWindowStartedAt === 0 ||
+    nowMs - missingSecretWindowStartedAt > SECRET_AUTH_SPIKE_WINDOW_MS
+  ) {
+    missingSecretWindowStartedAt = nowMs;
+    missingSecretWindowCount = 0;
+  }
+  missingSecretWindowCount += 1;
+
+  logTelegramEvent({
+    level: "warn",
+    message: "missing webhook secret",
+    action: "auth-missing-secret",
+    signal: "missing_secret",
+    missingSecretWindowCount,
+    missingSecretSpike: missingSecretWindowCount >= SECRET_AUTH_SPIKE_THRESHOLD,
     ...context,
   });
 }
@@ -106,4 +137,6 @@ export function logTelegramInvalidSecretAttempt(
 export function resetTelegramInvalidSecretLogStateForTests(): void {
   invalidSecretWindowStartedAt = 0;
   invalidSecretWindowCount = 0;
+  missingSecretWindowStartedAt = 0;
+  missingSecretWindowCount = 0;
 }
