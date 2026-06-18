@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const {
@@ -569,6 +570,16 @@ describe("callback_data size budget", () => {
     ].map((b) => new TextEncoder().encode(b.callback_data).length);
     for (const size of sizes) {
       expect(size).toBeLessThanOrEqual(64);
+    }
+  });
+
+  it("keeps settings coin callback data safe for every tracked coin id", () => {
+    for (const coinId of TRACKED_META_BY_ID.keys()) {
+      expect(coinId).toMatch(/^[a-z0-9-]+$/);
+      const coinKb = buildCoinKeyboard(coinId, null);
+      for (const button of coinKb.inline_keyboard.flat()) {
+        expect(new TextEncoder().encode(button.callback_data).length).toBeLessThanOrEqual(64);
+      }
     }
   });
 });

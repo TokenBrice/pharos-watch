@@ -1241,6 +1241,20 @@ describe("handleCallbackQuery", () => {
       expect(callbacks).not.toContain("unsub:usdc-circle");
     });
 
+    it("unsub:<id> clears the inline keyboard when the last subscription is removed", async () => {
+      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-unsub-empty",
+        data: "unsub:usdc-circle",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 100 },
+      });
+
+      const body = editMessageBody();
+      expect(body.text).toContain("No coin subscriptions");
+      expect(body.reply_markup?.inline_keyboard).toEqual([]);
+    });
+
     it("unsub:<id> in a group refuses non-admin without deleting", async () => {
       const db = mockD1([
         { match: "FROM cache WHERE key = ?", rows: [], first: null },
@@ -1300,6 +1314,43 @@ describe("handleCallbackQuery", () => {
       // After deletion only 5 coins remain — a single page — so no nav row.
       expect(callbacks.filter((c) => c?.startsWith("unsub:"))).toHaveLength(5);
       expect(callbacks.some((c) => c?.startsWith("manage:page:"))).toBe(false);
+    });
+
+    it("infers the current manage page from nav callback_data when labels change", async () => {
+      const remaining = [
+        "usdc-circle",
+        "usdt-tether",
+        "dai-makerdao",
+        "frax-frax",
+        "tusd-trueusd",
+        "lusd-liquity",
+        "susd-synthetix",
+        "pyusd-paypal",
+        "eurc-circle",
+        "xaut-tether",
+        "aeur-anchored-coins",
+      ].map(makeSubRow);
+      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-unsub-relabel",
+        data: "unsub:usdc-circle",
+        from: { id: 1, username: "alice" },
+        message: {
+          chat: { id: 42, type: "private" },
+          message_id: 100,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Remove USDC", callback_data: "unsub:usdc-circle" }],
+              [
+                { text: "Back", callback_data: "manage:page:0" },
+                { text: "Forward", callback_data: "manage:page:2" },
+              ],
+            ],
+          },
+        } as unknown as Parameters<typeof handleCallbackQuery>[2]["message"],
+      });
+
+      expect(editMessageBody().text).toContain("Page 2/3");
     });
   });
 

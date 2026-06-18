@@ -45,8 +45,9 @@ export async function renderManageWatchlistPage(
   const page = Math.max(0, Math.min(requestedPage, totalPages - 1));
   const messageId = cb.message?.message_id;
   const text = buildManageWatchlistMessage(subscriptions, page);
-  const replyMarkup =
-    subscriptions.length === 0 ? undefined : buildManageWatchlistKeyboard(subscriptions, page);
+  const replyMarkup = subscriptions.length === 0
+    ? { inline_keyboard: [] }
+    : buildManageWatchlistKeyboard(subscriptions, page);
 
   if (messageId != null) {
     const edited = await editMessage(chatId, messageId, text, botToken, {

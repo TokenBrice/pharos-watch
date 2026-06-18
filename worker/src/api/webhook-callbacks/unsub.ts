@@ -25,20 +25,27 @@ function inferCurrentManagePage(cb: TelegramCallbackQuery): number {
     | { reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string; text?: string }>> } }
     | undefined;
   const rows = message?.reply_markup?.inline_keyboard ?? [];
-  let prev: number | null = null;
-  let next: number | null = null;
+  const navPages: Array<{ page: number; text: string }> = [];
   for (const row of rows) {
     for (const button of row) {
       const data = button.callback_data;
       if (!data || !data.startsWith("manage:page:")) continue;
       const pageNum = Number(data.split(":")[2]);
-      if (!Number.isFinite(pageNum)) continue;
-      if (button.text?.includes("Prev")) prev = pageNum;
-      else if (button.text?.includes("Next")) next = pageNum;
+      if (!Number.isInteger(pageNum) || pageNum < 0) continue;
+      navPages.push({ page: pageNum, text: button.text ?? "" });
     }
   }
-  if (prev != null) return prev + 1;
-  if (next != null) return next - 1;
+  if (navPages.length >= 2) {
+    const sorted = [...navPages].sort((a, b) => a.page - b.page);
+    const min = sorted[0]?.page;
+    const max = sorted[sorted.length - 1]?.page;
+    if (min != null && max != null && max - min === 2) return min + 1;
+  }
+  const single = navPages[0];
+  if (single) {
+    if (single.text.includes("Prev")) return single.page + 1;
+    if (single.text.includes("Next")) return Math.max(0, single.page - 1);
+  }
   return 0;
 }
 

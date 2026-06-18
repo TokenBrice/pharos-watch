@@ -23,6 +23,8 @@ export async function handleSettingsInlineCallback(
 ): Promise<void> {
   const { arg: subAction = "", parts } = parsed;
   const subArg = parts.slice(2).join(":");
+  // `settings:c` uses colon delimiters; registry tests pin stablecoin ids to
+  // the colon-free slug format so the action-specific split remains safe.
   const validSettingsCallback =
     (subAction === "home" && parts.length === 2) ||
     ((subAction === "gt" || subAction === "q" || subAction === "o") && parts.length === 3) ||
