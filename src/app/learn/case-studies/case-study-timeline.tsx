@@ -172,10 +172,22 @@ function HorizontalTimeline({ entries }: { entries: readonly CaseStudyTimelineEn
   );
 }
 
-/** Mobile (< lg): the established vertical spine layout. */
-function VerticalTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
+/** Vertical spine layout, used by default on mobile and as an optional desktop linear view. */
+function VerticalTimeline({
+  entries,
+  desktop = false,
+}: {
+  entries: readonly CaseStudyTimelineEntry[];
+  desktop?: boolean;
+}) {
   return (
-    <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8 lg:hidden">
+    <ol
+      className={
+        desktop
+          ? "mt-6 space-y-7 border-l border-border/40 pl-6 sm:pl-8"
+          : "space-y-7 border-l border-border/40 pl-6 sm:pl-8 lg:hidden"
+      }
+    >
       {entries.map((entry, i) => {
         const severity = entry.severity ?? "low";
         return (
@@ -202,6 +214,17 @@ function VerticalTimeline({ entries }: { entries: readonly CaseStudyTimelineEntr
   );
 }
 
+function DesktopLinearTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
+  return (
+    <details className="hidden rounded-xl border border-border/50 bg-card/30 p-5 lg:block">
+      <summary className="pharos-focus-ring cursor-pointer font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-frost-blue">
+        Linear timeline
+      </summary>
+      <VerticalTimeline entries={entries} desktop />
+    </details>
+  );
+}
+
 export function CaseStudyTimeline({
   entries,
 }: {
@@ -212,6 +235,7 @@ export function CaseStudyTimeline({
       <TimelineSeverityLegend />
       <HorizontalTimeline entries={entries} />
       <VerticalTimeline entries={entries} />
+      <DesktopLinearTimeline entries={entries} />
     </div>
   );
 }
