@@ -11,6 +11,7 @@ import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import type { StaleQuery } from "@/components/stale-data-banner";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { DepegTrackerStats } from "@/components/depeg-tracker-stats";
 import { DepegControlBoard } from "@/components/depeg-control-board";
@@ -232,6 +233,29 @@ export function DepegClient() {
       ...(resolverReviewerEnabled ? [refetchResolverReview] : []),
     ]);
   }, [refetchDews, refetchEvents, refetchPeg, refetchResolver, refetchResolverReview, resolverEnabled, resolverReviewerEnabled]);
+  const freshnessQueries: StaleQuery[] = [
+    { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
+    { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
+    { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
+  ];
+  if (resolverEnabled) {
+    freshnessQueries.push({
+      preset: "depegResolver",
+      dataUpdatedAt: resolverUpdatedAt,
+      error: resolverError,
+      hasData: resolverData != null,
+      meta: resolverMeta,
+    });
+  }
+  if (resolverReviewerEnabled) {
+    freshnessQueries.push({
+      preset: "depegResolverReview",
+      dataUpdatedAt: resolverReviewUpdatedAt,
+      error: resolverReviewError,
+      hasData: resolverReviewData != null,
+      meta: resolverReviewMeta,
+    });
+  }
 
   // Loading state
   if (isPegLoading) {
@@ -244,13 +268,7 @@ export function DepegClient() {
         error={globalError}
         hasData={!!pegData?.coins?.length}
         onRetry={handleRetry}
-        queries={[
-          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
-          { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
-          { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
-          ...(resolverEnabled ? [{ preset: "depegResolver", dataUpdatedAt: resolverUpdatedAt, error: resolverError, hasData: resolverData != null, meta: resolverMeta }] : []),
-          ...(resolverReviewerEnabled ? [{ preset: "depegResolverReview", dataUpdatedAt: resolverReviewUpdatedAt, error: resolverReviewError, hasData: resolverReviewData != null, meta: resolverReviewMeta }] : []),
-        ]}
+        queries={freshnessQueries}
       />
 
       {/* DEWS radar (left) + prioritized stats and alert queue (right) — 2-column on desktop */}
