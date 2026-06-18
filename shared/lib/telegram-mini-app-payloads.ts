@@ -31,7 +31,7 @@ export const TELEGRAM_START_PAYLOAD_MAX_LENGTH = 64;
  * every payload we issue fits well under the `?start=` cap so this is only a
  * defensive ceiling for inbound parsing.
  */
-const TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH = 512;
+export const TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH = 512;
 
 /**
  * Allowed payload charset for both surfaces. Matches the `?start=` regex

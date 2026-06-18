@@ -191,7 +191,7 @@ describe("validateTelegramMiniAppInitData", () => {
     })).rejects.toMatchObject({ code: "invalid-auth" });
   });
 
-  it("rejects start_param with non-allowed charset", async () => {
+  it("ignores start_param with non-allowed charset", async () => {
     const initData = await signedInitData({
       auth_date: String(NOW_SEC - 60),
       chat_type: "private",
@@ -202,10 +202,10 @@ describe("validateTelegramMiniAppInitData", () => {
     await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
       maxAgeSec: 86_400,
       nowSec: NOW_SEC,
-    })).rejects.toMatchObject({ code: "invalid-auth" });
+    })).resolves.toMatchObject({ startParam: null });
   });
 
-  it("rejects start_param longer than 64 chars", async () => {
+  it("accepts Mini App start_param values longer than bot start payloads", async () => {
     const initData = await signedInitData({
       auth_date: String(NOW_SEC - 60),
       chat_type: "private",
@@ -216,7 +216,21 @@ describe("validateTelegramMiniAppInitData", () => {
     await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
       maxAgeSec: 86_400,
       nowSec: NOW_SEC,
-    })).rejects.toMatchObject({ code: "invalid-auth" });
+    })).resolves.toMatchObject({ startParam: "a".repeat(65) });
+  });
+
+  it("ignores start_param beyond the Mini App payload cap", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "private",
+      start_param: "a".repeat(513),
+      user: JSON.stringify({ id: 42 }),
+    });
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).resolves.toMatchObject({ startParam: null });
   });
 
   it("accepts initData signed by previous bot token when supplied", async () => {

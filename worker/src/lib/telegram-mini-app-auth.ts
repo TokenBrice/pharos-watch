@@ -1,4 +1,8 @@
 import { isRecord } from "@shared/lib/type-guards";
+import {
+  TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
+  TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH,
+} from "@shared/lib/telegram-mini-app-payloads";
 import { bytesToHex } from "./hash";
 import { timingSafeCompare } from "./auth";
 
@@ -34,7 +38,6 @@ interface ValidateTelegramMiniAppInitDataOptions {
 }
 
 const encoder = new TextEncoder();
-const START_PARAM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 const KNOWN_MINI_APP_CHAT_TYPES = new Set(["private", "sender", "group", "supergroup", "channel"]);
 const warnedNovelMiniAppChatTypes = new Set<string>();
@@ -130,10 +133,12 @@ export async function validateTelegramMiniAppInitData(
   const chatType = params.get("chat_type") || null;
   warnNovelMiniAppChatType(chatType);
   const rawStartParam = params.get("start_param");
-  const startParam = rawStartParam === null || rawStartParam === "" ? null : rawStartParam;
-  if (startParam !== null && !START_PARAM_PATTERN.test(startParam)) {
-    throw new TelegramMiniAppAuthError("invalid-auth");
-  }
+  const startParam = rawStartParam != null &&
+    rawStartParam.length > 0 &&
+    rawStartParam.length <= TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH &&
+    TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(rawStartParam)
+    ? rawStartParam
+    : null;
 
   return {
     userId: user.id,
