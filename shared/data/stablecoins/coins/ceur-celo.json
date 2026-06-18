@@ -88,6 +88,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Mento Broker minting is rate-limited by Mento exchange limits and circuit breakers on the EURm FPMM pool.",
         "sources": [
           {
             "label": "Celo EURm contract",

@@ -78,6 +78,7 @@
         "address": "0xe6c3c84c34ba2f4869b5df23161ea8700c14e1de1328808258702567e40366ea",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "TreasuryCap<SUI_USDE> is wrapped inside the shared Treasury object, so minting must route through Treasury module logic rather than an externally held TreasuryCap.",
         "sources": [
           {
             "label": "Sui fullnode RPC – Treasury object",

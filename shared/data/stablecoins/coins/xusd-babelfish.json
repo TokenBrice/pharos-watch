@@ -193,6 +193,7 @@
         "chain": "rootstock",
         "address": "0x1440d19436beeaf8517896bffb957a88ec95a00f",
         "canRaiseCap": false,
+        "capDescription": "XUSD minting is user-driven 1:1 against accepted bAsset deposits and basket-balance constraints in the masset manager, not discretionary supply creation.",
         "evidence": "At Rootstock block 8935202: XUSD token 0xb5999795 owner() returned masset manager proxy 0x1440d19436beeaf8517896bffb957a88ec95a00f (confirmed as a contract). Masset manager EIP-1967 proxy admin slot returned 0x37a706259f5201c03f6cb556a960f30f86842d01 (Gnosis Safe multisig, 2-of-5). Masset manager owner() returned 0xbd687d470a7e8b36c666968bb79376904725e4dd (Gnosis Safe multisig, 3-of-5). Minting is user-driven 1:1 against deposited bAssets, not discretionary.",
         "sources": [
           {

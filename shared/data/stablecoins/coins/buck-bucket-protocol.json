@@ -83,6 +83,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BUCK TreasuryCap is wrapped inside the shared BucketProtocol object; user minting is bounded by Bucket CDP/PSM module logic, while separate admin and package-upgrade controls can change parameters or code.",
         "sources": [
           {
             "label": "Bucket CDP docs",

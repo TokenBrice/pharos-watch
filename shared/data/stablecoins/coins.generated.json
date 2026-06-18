@@ -8630,6 +8630,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "BUCK TreasuryCap is wrapped inside the shared BucketProtocol object; user minting is bounded by Bucket CDP/PSM module logic, while separate admin and package-upgrade controls can change parameters or code.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -10823,6 +10824,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "Mento Broker minting is rate-limited by Mento exchange limits and circuit breakers on the EURm FPMM pool.",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -37599,6 +37601,7 @@
           "role": "bridge-admin",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "Wormhole NTT minting is bounded by configured transfer limits; the MUSD 5/9 Safe owns the NTT manager and can change those limits.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable",
           "routeChecks": {
@@ -55041,6 +55044,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "TreasuryCap<SUI_USDE> is wrapped inside the shared Treasury object, so minting must route through Treasury module logic rather than an externally held TreasuryCap.",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -55561,6 +55565,7 @@
           "role": "minter-admin",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "V3 minting is bounded by Synthetix debt-pool collateralization and market configuration, which the same governance Safe can update.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -56945,6 +56950,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "Inherited USDS_JOIN minting is bounded by the reviewed USDS adapter/accounting path; sUSDS share minting itself does not create base USDS.",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -57378,6 +57384,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "Inherited USN MinterHandlerV2 minting is bounded by the parent USN handler's per-block/per-day and whitelist controls, which Noon admin controls can update.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -61064,6 +61071,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "DaoCollateral minting is bounded by eligible RWA collateral backing requirements in the swap flow.",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -61081,6 +61089,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "SwapperEngine minting is bounded by eligible collateral deposit requirements in the swap flow.",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -71046,6 +71055,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "Branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps that Quill admin controls can update.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable",
           "evidence": "At Scroll block 34053392: USDQ token (0xdb9e8f82d6d45fff803161f2a5f75543972b229a) is a UUPS proxy with implementation at 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523 (code length 20084). No external proxy admin slot populated. Branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps."
@@ -75418,6 +75428,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "MinterHandlerV2 minting is bounded by role-gated order/directMint paths and on-chain per-block/per-day limits that Noon admin controls can update.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable",
           "routeChecks": {
@@ -84097,6 +84108,7 @@
           "directMintAbility": "cap-limited",
           "threshold": 8,
           "signerCount": 15,
+          "capDescription": "xDAI native accounting is bounded by the Gnosis bridge route and upstream USDS/DAI backing, with bridge owner controls able to change route parameters.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected",
           "routeChecks": {
@@ -85448,6 +85460,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "XTUSD minting is described as a MakerDAO-style vault route bounded by collateral and auctions; on-chain XSC cap/admin verification remains unresolved.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
           "evidence": "XT.com's TAI-to-XTUSD announcement describes XTUSD's economic system as an XTDao smart-contract project based on MakerDAO, with vault collateral and auctions used to keep enough collateral against outstanding debt."
@@ -85557,6 +85570,7 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "capDescription": "XUSD minting is user-driven 1:1 against accepted bAsset deposits and basket-balance constraints in the masset manager, not discretionary supply creation.",
           "canRaiseCap": false,
           "sources": [
             {

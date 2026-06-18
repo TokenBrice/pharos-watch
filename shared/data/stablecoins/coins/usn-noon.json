@@ -162,6 +162,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MinterHandlerV2 minting is bounded by role-gated order/directMint paths and on-chain per-block/per-day limits that Noon admin controls can update.",
         "routeChecks": {
           "caps": "mintLimitPerBlock and directMintLimitPerDay both read as 10,000,000 USN units at 18 decimals",
           "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE can set limits, whitelisted users/collateral, price feeds, custody wallet, and sUSN vault"

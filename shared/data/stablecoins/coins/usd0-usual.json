@@ -34,6 +34,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "DaoCollateral minting is bounded by eligible RWA collateral backing requirements in the swap flow.",
         "sources": [
           {
             "label": "Usual USD0 flow and architecture",
@@ -51,6 +52,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "SwapperEngine minting is bounded by eligible collateral deposit requirements in the swap flow.",
         "sources": [
           {
             "label": "Usual USD0 flow and architecture",

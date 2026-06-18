@@ -72,6 +72,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "capDescription": "XTUSD minting is described as a MakerDAO-style vault route bounded by collateral and auctions; on-chain XSC cap/admin verification remains unresolved.",
         "evidence": "XT.com's TAI-to-XTUSD announcement describes XTUSD's economic system as an XTDao smart-contract project based on MakerDAO, with vault collateral and auctions used to keep enough collateral against outstanding debt."
       },
       {

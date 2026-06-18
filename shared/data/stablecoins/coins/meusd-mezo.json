@@ -217,6 +217,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Wormhole NTT minting is bounded by configured transfer limits; the MUSD 5/9 Safe owns the NTT manager and can change those limits.",
         "routeChecks": {
           "attestorQuorum": "getThreshold() returned 1",
           "caps": "getCurrentOutboundCapacity() returned a very high capacity; inbound read reverted and needs follow-up"

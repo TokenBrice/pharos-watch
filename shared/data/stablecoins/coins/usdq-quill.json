@@ -182,6 +182,7 @@
         "address": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps that Quill admin controls can update.",
         "evidence": "At Scroll block 34053392: USDQ token (0xdb9e8f82d6d45fff803161f2a5f75543972b229a) is a UUPS proxy with implementation at 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523 (code length 20084). No external proxy admin slot populated. Branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps."
       },
       {

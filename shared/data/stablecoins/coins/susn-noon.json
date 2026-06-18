@@ -158,6 +158,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Inherited USN MinterHandlerV2 minting is bounded by the parent USN handler's per-block/per-day and whitelist controls, which Noon admin controls can update.",
         "sources": [
           {
             "label": "MinterHandlerV2 implementation",

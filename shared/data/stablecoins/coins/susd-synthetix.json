@@ -155,6 +155,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "V3 minting is bounded by Synthetix debt-pool collateralization and market configuration, which the same governance Safe can update.",
         "sources": [
           {
             "label": "Synthetix V3 Core Proxy on Etherscan",

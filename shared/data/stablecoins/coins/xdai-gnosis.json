@@ -71,6 +71,7 @@
         "signerCount": 15,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "xDAI native accounting is bounded by the Gnosis bridge route and upstream USDS/DAI backing, with bridge owner controls able to change route parameters.",
         "routeChecks": {
           "lockboxOrEscrow": "Official Gnosis bridge routes lock or account for upstream USDS/DAI backing native xDAI.",
           "trustedPeerOrRemote": "Official bridge route with current validator threshold resolved as 4-of-7.",

@@ -131,6 +131,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Inherited USDS_JOIN minting is bounded by the reviewed USDS adapter/accounting path; sUSDS share minting itself does not create base USDS.",
         "sources": [
           {
             "label": "Sky Chainlog",
