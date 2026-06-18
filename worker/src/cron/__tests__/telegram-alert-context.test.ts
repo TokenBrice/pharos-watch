@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAlertContextLines } from "../telegram-alert-context";
 
 const mocks = vi.hoisted(() => ({
-  buildReportCardsSnapshot: vi.fn(),
+  loadPublishedReportCardsSnapshot: vi.fn(),
   loadStablecoinsCache: vi.fn(),
   logTelegramEvent: vi.fn(),
 }));
 
-vi.mock("../../lib/report-cards-snapshot", () => ({
-  buildReportCardsSnapshot: mocks.buildReportCardsSnapshot,
+vi.mock("../../lib/report-cards-snapshot-cache", () => ({
+  loadPublishedReportCardsSnapshot: mocks.loadPublishedReportCardsSnapshot,
 }));
 
 vi.mock("../../lib/stablecoins-cache", () => ({
@@ -22,7 +22,7 @@ vi.mock("../../lib/telegram-log", () => ({
 
 describe("buildAlertContextLines", () => {
   beforeEach(() => {
-    mocks.buildReportCardsSnapshot.mockResolvedValue({ cards: [] });
+    mocks.loadPublishedReportCardsSnapshot.mockResolvedValue({ kind: "ok", payload: { cards: [] } });
     mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", payload: { peggedAssets: [] } });
     mocks.logTelegramEvent.mockReset();
   });

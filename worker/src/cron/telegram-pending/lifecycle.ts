@@ -1,6 +1,7 @@
 import { BLOCK_STRIKE_WINDOW_SEC } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { toErrorMessage } from "../../lib/error-utils";
+import { buildInClause, chunkArray } from "../../lib/db";
 
 /**
  * Two-strike gate for 403 responses. Increments the per-subscriber consecutive
@@ -117,6 +118,37 @@ export async function resetChatOnSuccess(
   if (chatsResetThisRun.has(chatId)) return;
   chatsResetThisRun.add(chatId);
   await resetSubscriberBlockCount(db, chatId);
+}
+
+export async function flushChatSuccessResets(
+  db: D1Database,
+  chatIds: Iterable<string>,
+): Promise<void> {
+  const unique = Array.from(new Set(chatIds));
+  if (unique.length === 0) return;
+  for (const chunk of chunkArray(unique)) {
+    const inClause = buildInClause(chunk);
+    try {
+      await db
+        .prepare(
+          `UPDATE telegram_subscribers
+              SET consecutive_block_count = 0,
+                  consecutive_block_first_at = NULL
+            WHERE chat_id IN (${inClause.sql})
+              AND (consecutive_block_count <> 0 OR consecutive_block_first_at IS NOT NULL)`,
+        )
+        .bind(...inClause.binds)
+        .run();
+    } catch (error) {
+      const message = toErrorMessage(error);
+      logTelegramEvent({
+        message: `Failed to batch reset block counts: ${message}`,
+        action: "reset-block-count-batch",
+        module: "telegram-pending-lifecycle",
+        affectedChats: chunk.length,
+      });
+    }
+  }
 }
 
 export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {

@@ -293,7 +293,8 @@ async function evaluateZeroSendStreak(
 
   const events = sumEvents(metadata);
   const messagesSent = metadata.messagesSent ?? 0;
-  const zeroSendRun = events > 0 && messagesSent === 0;
+  const freshCandidateChats = metadata.freshCandidateChats ?? 0;
+  const zeroSendRun = events > 0 && messagesSent === 0 && freshCandidateChats > 0;
 
   if (zeroSendRun) {
     const nextStreak = priorStreak + 1;
@@ -305,15 +306,15 @@ async function evaluateZeroSendStreak(
         outcome.alertSent = await sendAlert(
           alertWebhookUrl,
           "Telegram dispatch sent zero messages with pending events",
-          `eventsDetected=${events}, messagesSent=0, consecutiveZeroSendRuns=${nextStreak}`,
+          `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, messagesSent=0, consecutiveZeroSendRuns=${nextStreak}`,
         );
         if (outcome.alertSent) {
           await setCache(db, WATCHDOG_KEYS.zeroSendAlerted, "1");
         }
       }
-      outcome.detail = `eventsDetected=${events}, streak=${nextStreak}`;
+      outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
     } else {
-      outcome.detail = `eventsDetected=${events}, streak=${nextStreak}`;
+      outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
     }
     return outcome;
   }

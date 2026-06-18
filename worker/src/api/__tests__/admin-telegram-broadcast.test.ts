@@ -111,6 +111,38 @@ describe("handleAdminTelegramBroadcast", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects unsupported Telegram HTML before dry-run targeting", async () => {
+    const db = mockD1([auditRow()]);
+    const res = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({ messageHtml: "<div>bad</div>", scope: "all", dryRun: true }),
+      trustedAdmin: true,
+    });
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({
+      error: "Unsupported Telegram HTML tag <div>",
+      position: 0,
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers"))).toBe(false);
+    const audit = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit?.binds).toContain("error");
+    expect(audit?.binds).toContain(422);
+  });
+
+  it("rejects unbalanced Telegram HTML entities", async () => {
+    const db = mockD1([auditRow()]);
+    const res = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({ messageHtml: "<b>bad &copy;</b>", scope: "all", dryRun: true }),
+      trustedAdmin: true,
+    });
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({
+      error: "Malformed or unsupported HTML entity",
+      position: 7,
+    });
+  });
+
   it("rejects non-boolean dryRun with 400", async () => {
     const db = mockD1();
     const res = await handleAdminTelegramBroadcast({

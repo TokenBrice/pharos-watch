@@ -10,8 +10,8 @@ import {
   SEND_BATCH_SIZE,
   buildDedupeKey,
   clearPendingAlertsForDisabledChat,
+  flushChatSuccessResets,
   handleBlockedChat,
-  resetChatOnSuccess,
 } from "./telegram-pending";
 import { throwIfAborted } from "../lib/abort";
 import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
@@ -300,7 +300,7 @@ export async function deliverFreshAlerts(
   let blockedUsersCleanupFailed = blockedUsersCleanupFailedSeed;
   const deliveryDiagnostics: Array<{ chatId: string; ok: boolean; errorClass?: string | null }> = [];
   const targetStatusUpdates: FreshSendOutcome["targetStatusUpdates"] = [];
-  const chatsResetThisRun = new Set<string>();
+  const chatsToResetOnSuccess = new Set<string>();
 
   for (let index = 0; index < sendResults.length; index += 1) {
     throwIfAborted(signal);
@@ -319,7 +319,7 @@ export async function deliverFreshAlerts(
       deliveryDiagnostics.push({ chatId: result.chatId, ok: true });
       targetStatusUpdates.push({ targetKey: buildDedupeKey(sendPlan), status: "sent", at: nowSec });
       freshSent++;
-      await resetChatOnSuccess(db, result.chatId, chatsResetThisRun);
+      chatsToResetOnSuccess.add(result.chatId);
       if (bucket) {
         bucket.sent++;
         if (bucket.firstSendLatencyMs == null) {
@@ -374,6 +374,7 @@ export async function deliverFreshAlerts(
     }
   }
 
+  await flushChatSuccessResets(db, chatsToResetOnSuccess);
   await recordTelegramDeliveryOutcomes(db, deliveryDiagnostics);
 
   for (const sub of subscriberQueue) {

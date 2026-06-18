@@ -531,6 +531,8 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable 
   freshRetryQueued: number | null;
   freshPermanentFailures: number | null;
   freshDeferredPerChat: number | null;
+  freshCandidateChats: number | null;
+  freshCandidateCount: number | null;
   pendingAttempted: number | null;
   pendingDrained: number | null;
   pendingRetryQueued: number | null;

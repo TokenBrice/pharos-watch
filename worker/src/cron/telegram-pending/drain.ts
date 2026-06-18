@@ -27,8 +27,8 @@ import {
   PENDING_DELETE_CHUNK_SIZE,
 } from "./dead-letter";
 import {
+  flushChatSuccessResets,
   handleBlockedChat,
-  resetChatOnSuccess,
 } from "./lifecycle";
 import { clearPendingAlertsForDisabledChat } from "./cleanup";
 import {
@@ -441,7 +441,7 @@ export async function drainPendingQueue(
   const targetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [];
   const pendingById = new Map(pending.map((row) => [row.id, row] as const));
   const blockedChatsThisLoop = new Set<string>();
-  const chatsResetThisLoop = new Set<string>();
+  const chatsToResetOnSuccess = new Set<string>();
   const disabledChatIds = new Set<string>();
   const chatRateLimitedThisLoop = new Map<string, { notBeforeAt: number }>();
   const distinctRateLimitedChats = new Set<string>();
@@ -496,7 +496,7 @@ export async function drainPendingQueue(
         case "sent": {
           sentIdsToDelete.push(result.id);
           pushTargetStatus("sent");
-          await resetChatOnSuccess(db, result.chatId, chatsResetThisLoop);
+          chatsToResetOnSuccess.add(result.chatId);
           break;
         }
         case "blocked": {
@@ -554,6 +554,7 @@ export async function drainPendingQueue(
   const droppedPermanentFailure = outcomeKinds.filter((kind) => kind === "dropped-permanent").length;
   const dropped = droppedMaxAttemptsFallback + droppedPermanentFailure;
 
+  await flushChatSuccessResets(db, chatsToResetOnSuccess);
   await recordPendingDrainTelemetry(db, deliveryDiagnostics, targetStatusUpdates);
 
   for (const chatId of disabledChatIds) {

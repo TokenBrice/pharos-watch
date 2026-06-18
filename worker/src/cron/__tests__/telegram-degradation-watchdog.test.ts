@@ -437,6 +437,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0 },
         messagesSent: 0,
+        freshCandidateChats: 1,
       },
     });
 
@@ -460,6 +461,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 2, depeg: 1, safety: 0, launch: 0 },
         messagesSent: 0,
+        freshCandidateChats: 3,
       },
     });
 
@@ -489,6 +491,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0 },
         messagesSent: 7,
+        freshCandidateChats: 3,
       },
     });
 
@@ -520,6 +523,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 2, depeg: 1, safety: 0, launch: 0 },
         messagesSent: 0,
+        freshCandidateChats: 3,
       },
     });
 
@@ -540,6 +544,28 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 0, depeg: 0, safety: 0, launch: 0 },
         messagesSent: 0,
+        freshCandidateChats: 0,
+      },
+    });
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(meta.zeroSend.triggered).toBe(false);
+    expect(meta.zeroSend.streak).toBe(0);
+  });
+
+  it("ignores runs with events but no candidate chats", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    const db = makeDb({
+      pendingCount: 0,
+      dispatchMetadata: {
+        eventsDetected: { dews: 2, depeg: 0, safety: 0, launch: 0 },
+        messagesSent: 0,
+        freshCandidateChats: 0,
       },
     });
 

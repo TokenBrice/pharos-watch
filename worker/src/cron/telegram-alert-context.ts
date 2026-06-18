@@ -1,8 +1,8 @@
 import { formatCompactUsdShort } from "@shared/lib/format";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
 import { buildInClause, chunkArray } from "../lib/db";
 import { toErrorMessage } from "../lib/error-utils";
 import { logTelegramEvent } from "../lib/telegram-log";
@@ -20,12 +20,12 @@ export async function buildAlertContextLines(
   if (uniqueIds.length === 0) return new Map();
 
   const [snapshot, stablecoinsResult, liquidityResult] = await Promise.all([
-    buildReportCardsSnapshot(db).catch(() => null),
+    loadPublishedReportCardsSnapshot(db).catch(() => null),
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
     loadLiquidityRows(db, uniqueIds),
   ]);
 
-  const cards = new Map((snapshot?.cards ?? []).map((card) => [card.id, card]));
+  const cards = new Map((snapshot?.kind === "ok" ? snapshot.payload.cards : []).map((card) => [card.id, card]));
   const supplies = new Map<string, number>();
   if (stablecoinsResult?.kind === "ok") {
     const wantedIds = new Set(uniqueIds);

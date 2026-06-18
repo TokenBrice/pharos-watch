@@ -49,6 +49,13 @@ import {
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { toErrorMessage } from "../lib/error-utils";
+import {
+  CHAT_COMMAND_FLOOD_LIMIT,
+  CHAT_COMMAND_FLOOD_WINDOW_SEC,
+  GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
+  GROUP_CHAT_COMMAND_FLOOD_LIMIT,
+  TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC,
+} from "../lib/telegram-constants";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -144,14 +151,6 @@ type ReplyFn = (message: string) => Promise<void>;
 type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
 type FloodScope = "actor" | "chat";
 
-/**
- * Cache TTL for the per-chat welcome-on-add idempotency marker. Telegram can
- * deliver `my_chat_member` repeatedly for the same chat (e.g. on re-promote
- * after the bot was demoted), so we suppress the welcome message for 24h once
- * sent.
- */
-const TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC = 24 * 60 * 60;
-
 const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
   "/brief": 30,
   "/top": 20,
@@ -159,15 +158,6 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
   "/status": 20,
   "/coverage": 20,
 };
-
-// Generous per-chat cap across all commands (including light ones with no
-// per-command cooldown) so a single chat cannot flood D1 reads and Telegram
-// replies. Well above any human typing rate.
-const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;
-const CHAT_COMMAND_FLOOD_LIMIT = 20;
-const GROUP_CHAT_COMMAND_FLOOD_LIMIT = CHAT_COMMAND_FLOOD_LIMIT * 4;
-
-const GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC = 20;
 
 const CANONICAL_COMMAND_KEYS: Record<string, string> = {
   "/market": "/brief",

@@ -14,14 +14,32 @@ import {
 } from "../cron/telegram-pending";
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { splitMessage } from "../lib/telegram-alerts";
+import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../cron/dispatch-telegram-subscribers";
 import type { BatchMessage } from "../lib/telegram";
 import { z } from "zod";
 
 const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
-type BroadcastScope = (typeof SCOPES)[number];
+type BroadcastScope = TelegramBroadcastScope;
 
 const SAMPLE_SIZE = 5;
 const MESSAGE_HTML_MAX_LENGTH = 16_000;
+const TELEGRAM_HTML_ALLOWED_TAGS = new Set([
+  "a",
+  "b",
+  "blockquote",
+  "code",
+  "del",
+  "em",
+  "i",
+  "ins",
+  "pre",
+  "s",
+  "strike",
+  "strong",
+  "tg-spoiler",
+  "u",
+]);
+const TELEGRAM_HTML_VOID_TAGS = new Set<string>();
 
 interface BroadcastRequestBody {
   messageHtml: string;
@@ -53,35 +71,57 @@ async function parseBody(request: Request): Promise<BroadcastRequestBody | Respo
   });
 }
 
-async function loadTargetChatIds(db: D1Database, scope: BroadcastScope): Promise<string[]> {
-  const sql = scope === "global-subscribers"
-    ? `SELECT chat_id FROM telegram_subscribers
-        WHERE global_alert_dews = 1
-           OR global_alert_depeg = 1
-           OR global_alert_safety = 1
-           OR global_alert_launch = 1
-        ORDER BY chat_id`
-    : scope === "deliverable-watchers"
-      ? `SELECT s.chat_id
-           FROM telegram_subscribers s
-          WHERE s.global_alert_dews = 1
-             OR s.global_alert_depeg = 1
-             OR s.global_alert_safety = 1
-             OR s.global_alert_launch = 1
-             OR EXISTS (
-               SELECT 1 FROM telegram_subscriptions ts
-                WHERE ts.chat_id = s.chat_id
-                  AND (ts.alert_dews = 1 OR ts.alert_depeg = 1 OR ts.alert_safety = 1 OR ts.alert_launch = 1)
-             )
-             OR EXISTS (
-               SELECT 1 FROM telegram_preset_subscriptions ps
-                WHERE ps.chat_id = s.chat_id
-                  AND (ps.alert_dews = 1 OR ps.alert_depeg = 1 OR ps.alert_safety = 1)
-             )
-          ORDER BY s.chat_id`
-    : `SELECT chat_id FROM telegram_subscribers ORDER BY chat_id`;
-  const rows = await db.prepare(sql).all<{ chat_id: string }>();
-  return (rows.results ?? []).map((row) => row.chat_id);
+function preflightTelegramHtml(html: string): { ok: true } | { ok: false; error: string; position: number } {
+  const stack: Array<{ tag: string; position: number }> = [];
+  const tagPattern = /<[^>]*>/g;
+  for (const match of html.matchAll(tagPattern)) {
+    const raw = match[0];
+    const position = match.index ?? 0;
+    if (/^<!--/.test(raw) || /^<!\[CDATA\[/i.test(raw) || /^<!DOCTYPE/i.test(raw)) {
+      return { ok: false, error: "Comments, CDATA, and doctypes are not supported by Telegram HTML", position };
+    }
+    const parsed = raw.match(/^<\/?\s*([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>$/);
+    if (!parsed) return { ok: false, error: "Malformed HTML tag", position };
+    const closing = /^<\//.test(raw);
+    const tag = parsed[1].toLowerCase();
+    const attrs = parsed[2] ?? "";
+    const selfClosing = /\/\s*>$/.test(raw);
+    if (!TELEGRAM_HTML_ALLOWED_TAGS.has(tag)) {
+      return { ok: false, error: `Unsupported Telegram HTML tag <${tag}>`, position };
+    }
+    if (attrs.trim().length > 0 && !selfClosing) {
+      if (tag === "a") {
+        const allowed = attrs.trim().match(/^href=(?:"[^"]+"|'[^']+')$/i);
+        if (!allowed) return { ok: false, error: "Only href is allowed on Telegram <a> tags", position };
+      } else if (tag === "blockquote") {
+        const allowed = attrs.trim() === "expandable";
+        if (!allowed) return { ok: false, error: "Only expandable is allowed on Telegram <blockquote> tags", position };
+      } else {
+        return { ok: false, error: `Attributes are not allowed on Telegram <${tag}> tags`, position };
+      }
+    }
+    if (selfClosing && !TELEGRAM_HTML_VOID_TAGS.has(tag)) {
+      return { ok: false, error: `Telegram HTML tag <${tag}> must be closed explicitly`, position };
+    }
+    if (closing) {
+      const last = stack.pop();
+      if (!last || last.tag !== tag) {
+        return { ok: false, error: `Unbalanced closing tag </${tag}>`, position };
+      }
+    } else if (!selfClosing) {
+      stack.push({ tag, position });
+    }
+  }
+  if (stack.length > 0) {
+    const last = stack[stack.length - 1];
+    return { ok: false, error: `Unclosed Telegram HTML tag <${last.tag}>`, position: last.position };
+  }
+
+  const badEntity = html.match(/&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)/);
+  if (badEntity?.index != null) {
+    return { ok: false, error: "Malformed or unsupported HTML entity", position: badEntity.index };
+  }
+  return { ok: true };
 }
 
 function buildDeliveryEstimate(currentPendingActive: number, targetMessageCount: number) {
@@ -114,8 +154,36 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
     const parsed = await parseBody(request);
     if (parsed instanceof Response) return parsed;
     const { messageHtml, scope, dryRun } = parsed;
+    const htmlPreflight = preflightTelegramHtml(messageHtml);
+    if (!htmlPreflight.ok) {
+      await logAdminAction(
+        db,
+        {
+          action: "admin-telegram-broadcast",
+          target: scope,
+          result: "error",
+          httpStatus: 422,
+          details: {
+            scope,
+            dryRun,
+            messageLength: messageHtml.length,
+            rejectedReason: "html-preflight",
+            htmlError: htmlPreflight.error,
+            htmlErrorPosition: htmlPreflight.position,
+          },
+        },
+        request,
+      );
+      return adminJsonResponse(
+        {
+          error: htmlPreflight.error,
+          position: htmlPreflight.position,
+        },
+        { status: 422 },
+      );
+    }
 
-    const chatIds = await loadTargetChatIds(db, scope);
+    const chatIds = await loadBroadcastTargetChatIds(db, scope);
     const chunks = splitMessage(messageHtml);
     const targetMessageCount = chatIds.length * chunks.length;
     const nowSec = Math.floor(Date.now() / 1000);
@@ -149,6 +217,7 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
           targetMessageCount,
           pendingCapacity,
           deliveryEstimate,
+          htmlPreflight: "ok",
           sample: chatIds.slice(0, SAMPLE_SIZE),
         },
         { status: 200 },

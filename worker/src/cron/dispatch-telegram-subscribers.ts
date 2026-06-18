@@ -1,7 +1,7 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { buildInClause, chunkArray } from "../lib/db";
 import { logTelegramEvent } from "../lib/telegram-log";
-import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
+import { listTelegramPresets, resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
 import { toErrorMessage } from "../lib/error-utils";
@@ -13,7 +13,7 @@ const ALERT_COLUMN_BY_TYPE = {
   launch: "alert_launch",
 } as const;
 
-const GLOBAL_ALERT_COLUMN_BY_TYPE = {
+export const GLOBAL_ALERT_COLUMN_BY_TYPE = {
   dews: "global_alert_dews",
   depeg: "global_alert_depeg",
   safety: "global_alert_safety",
@@ -231,6 +231,30 @@ export async function loadPresetSubscriberRowsBatch(
   if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid preset alert subscription column for ${type}`);
   }
+  const wantedIds = new Set(stablecoinIds);
+  const allPresetIds = listTelegramPresets().map((definition) => definition.id);
+  const resolved = await resolveTelegramPresetTargets(db, allPresetIds);
+  if (resolved.kind !== "ok") {
+    logTelegramEvent({
+      level: "warn",
+      message: "dynamic preset resolution failed",
+      action: "preset-resolution",
+      module: "dispatch-telegram-subscribers",
+      failureKind: "resolution-failed",
+      alertType: type,
+      reason: resolved.reason,
+      presetIds: allPresetIds,
+      presetCount: allPresetIds.length,
+      requestedStablecoinCount: stablecoinIds.length,
+    });
+    return { kind: "resolution-failed" };
+  }
+  const matchingPresets = resolved.presets.filter((preset) =>
+    preset.stablecoinIds.some((stablecoinId) => wantedIds.has(stablecoinId)),
+  );
+  if (matchingPresets.length === 0) return { kind: "ok", rows: new Map() };
+  const matchingPresetIds = matchingPresets.map((preset) => preset.definition.id);
+  const presetInClause = buildInClause(matchingPresetIds);
   let result: {
     results?: Array<{
       chat_id: string;
@@ -257,11 +281,12 @@ export async function loadPresetSubscriberRowsBatch(
                 u.quiet_hours_end_utc,
                 u.timezone
            FROM telegram_preset_subscriptions p
-           JOIN telegram_subscribers u ON u.chat_id = p.chat_id
+          JOIN telegram_subscribers u ON u.chat_id = p.chat_id
           WHERE p.${alertColumn} = 1
+            AND p.preset_id IN (${presetInClause.sql})
             AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
       )
-      .bind(nowSec)
+      .bind(...presetInClause.binds, nowSec)
       .all<{
         chat_id: string;
         preset_id: TelegramPresetId;
@@ -289,26 +314,7 @@ export async function loadPresetSubscriberRowsBatch(
   const rows = result.results ?? [];
   if (rows.length === 0) return { kind: "ok", rows: new Map() };
 
-  const presetIds = Array.from(new Set(rows.map((row) => row.preset_id)));
-  const resolved = await resolveTelegramPresetTargets(db, presetIds);
-  if (resolved.kind !== "ok") {
-    logTelegramEvent({
-      level: "warn",
-      message: "dynamic preset resolution failed",
-      action: "preset-resolution",
-      module: "dispatch-telegram-subscribers",
-      failureKind: "resolution-failed",
-      alertType: type,
-      reason: resolved.reason,
-      presetIds,
-      presetCount: presetIds.length,
-      subscriberRowCount: rows.length,
-      requestedStablecoinCount: stablecoinIds.length,
-    });
-    return { kind: "resolution-failed" };
-  }
   const idsByPreset = new Map(resolved.presets.map((preset) => [preset.definition.id, new Set(preset.stablecoinIds)]));
-  const wantedIds = new Set(stablecoinIds);
   const map = new Map<string, SubscriberRow[]>();
   for (const row of rows) {
     const presetIdsForRow = idsByPreset.get(row.preset_id);
@@ -332,4 +338,41 @@ export async function loadPresetSubscriberRowsBatch(
     }
   }
   return { kind: "ok", rows: map };
+}
+
+export type TelegramBroadcastScope = "all" | "deliverable-watchers" | "global-subscribers";
+
+export async function loadBroadcastTargetChatIds(
+  db: D1Database,
+  scope: TelegramBroadcastScope,
+): Promise<string[]> {
+  const globalPredicate = Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE)
+    .map((column) => `s.${column} = 1`)
+    .join(" OR ");
+  const globalSubscriberPredicate = Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE)
+    .map((column) => `${column} = 1`)
+    .join(" OR ");
+
+  const sql = scope === "global-subscribers"
+    ? `SELECT chat_id FROM telegram_subscribers
+        WHERE ${globalSubscriberPredicate}
+        ORDER BY chat_id`
+    : scope === "deliverable-watchers"
+      ? `SELECT s.chat_id
+           FROM telegram_subscribers s
+          WHERE ${globalPredicate}
+             OR EXISTS (
+               SELECT 1 FROM telegram_subscriptions ts
+                WHERE ts.chat_id = s.chat_id
+                  AND (ts.alert_dews = 1 OR ts.alert_depeg = 1 OR ts.alert_safety = 1 OR ts.alert_launch = 1)
+             )
+             OR EXISTS (
+               SELECT 1 FROM telegram_preset_subscriptions ps
+                WHERE ps.chat_id = s.chat_id
+                  AND (ps.alert_dews = 1 OR ps.alert_depeg = 1 OR ps.alert_safety = 1)
+             )
+          ORDER BY s.chat_id`
+      : `SELECT chat_id FROM telegram_subscribers ORDER BY chat_id`;
+  const rows = await db.prepare(sql).all<{ chat_id: string }>();
+  return (rows.results ?? []).map((row) => row.chat_id);
 }

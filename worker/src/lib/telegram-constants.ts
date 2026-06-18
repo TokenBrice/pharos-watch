@@ -136,6 +136,23 @@ export const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
 /** Minimum interval between processed-updates retention prune passes. */
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC = 6 * 60 * 60;
 
+// ---------- Webhook ingress tuning ----------
+
+/**
+ * Cache TTL for the per-chat welcome-on-add idempotency marker. Telegram can
+ * deliver `my_chat_member` repeatedly for the same chat, so we suppress the
+ * welcome message for 24h once sent.
+ */
+export const TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC = 24 * 60 * 60;
+
+/** Generous per-chat cap across commands, callbacks, and pending text replies. */
+export const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;
+export const CHAT_COMMAND_FLOOD_LIMIT = 20;
+export const GROUP_CHAT_COMMAND_FLOOD_LIMIT = CHAT_COMMAND_FLOOD_LIMIT * 4;
+
+/** Cooldown for expensive group-admin diagnostic lookups. */
+export const GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC = 20;
+
 // ---------- Bulk subscribe/unsubscribe confirmation gate ----------
 
 /**

@@ -95,11 +95,11 @@ describe("runFiveMinuteTelegramSlot", () => {
     });
     vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => {
       order.push("dispatch");
-      return { status: "ok", itemCount: 1 };
+      return { itemCount: 1, metadata: "{}" };
     });
     vi.mocked(runTelegramDegradationWatchdog).mockImplementation(async () => {
       order.push("watchdog");
-      return { status: "ok", itemCount: 0 };
+      return { itemCount: 0, metadata: "{}" };
     });
     vi.mocked(cleanExpiredDisambiguations).mockImplementation(async () => {
       order.push("cleanup");
@@ -107,6 +107,7 @@ describe("runFiveMinuteTelegramSlot", () => {
     });
     vi.mocked(publishTelegramPulseSnapshot).mockImplementation(async () => {
       order.push("pulse");
+      return {} as Awaited<ReturnType<typeof publishTelegramPulseSnapshot>>;
     });
 
     const runtime = buildRuntime();
