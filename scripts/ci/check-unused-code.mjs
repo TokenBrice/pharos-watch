@@ -44,7 +44,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/cron/dews/source-state/hydration.ts::DEWS_STALE_DEX_LIQUIDITY_SEC",
   "worker/src/cron/dews/source-state/hydration.ts::DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC",
   "worker/src/cron/dews/source-state/legacy-bridge.ts::getNumber",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/onchain-supply.ts::CURATED_ONCHAIN_SUPPLY_CONTRACTS",
   "worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts::buildSupplementalAsset",
   "worker/src/cron/yield-sync/cache.ts::YieldRankingsPublishedCutoffResult",
   "worker/src/cron/yield-sync/cache.ts::ParsedYieldSupplementalSourcesCache",
@@ -57,6 +56,7 @@ const EXPORT_ALLOWLIST = new Set([
   // the canonical field allowlist; the validator reads the array at runtime
   // outside the TS import graph the static scan walks.
   "shared/types/stablecoin-client-meta.ts::STABLECOIN_CLIENT_META_FIELDS",
+  "shared/types/stablecoin-client-meta.ts::GENIUS_CLIENT_PROFILE_FIELDS",
   "shared/lib/api-endpoints/index.ts::buildQueryPath",
   "shared/lib/api-endpoints/index.ts::getStrictContractPaths",
   "shared/lib/api-endpoints/index.ts::DynamicAdminEndpointMatch",

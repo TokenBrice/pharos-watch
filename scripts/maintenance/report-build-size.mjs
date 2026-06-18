@@ -38,8 +38,9 @@ const DEFAULT_BUDGETS = {
   // mobile critical path again without constraining long-form docs pages.
   // The homepage table moved directly under the KPI band (1f76d3c36), which
   // grew the above-the-fold critical-CSS block and table shell to ~319 KiB
-  // optimized. Ceiling raised to keep ~4% headroom without losing signal.
-  homepageHtmlBytes: 340_000,
+  // optimized. The June 2026 Mini App/Telegram release stack pushed the
+  // optimized homepage to ~342 KiB; keep roughly 2% headroom without losing signal.
+  homepageHtmlBytes: 350_000,
   // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
   // Safety Score v8.12 exposes bridge-route and oracle-risk report-card fields,
   // pushing the generated API reference helper to ~1.31 MB. Keep this tight so
@@ -57,8 +58,10 @@ const DEFAULT_BUDGETS = {
   // and the registry field-drop (P1-4 partial) landed: measured ~681 KB gz
   // per detail page. The code-health table/chart refactor stack shifted the
   // representative detail route to ~802 KiB gz. Keep this narrow so future
-  // shared chunk growth still has to be ratcheted deliberately.
-  representativeDetailEagerJsGzipBytes: 825_000,
+  // shared chunk growth still has to be ratcheted deliberately. The June 2026
+  // client-registry/methodology-version expansion measured ~866 KiB per detail
+  // route; keep a narrow post-ratchet ceiling.
+  representativeDetailEagerJsGzipBytes: 905_000,
 };
 
 const BUDGET_ENV = {
