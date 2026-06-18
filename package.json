@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:worker": "cd worker && npx tsc --noEmit",
     "audit:deps": "npm audit --audit-level=high --omit=dev",
+    "audit:mint-authority-review": "tsx scripts/maintenance/generate-mint-authority-review-audit.ts",
     "test": "vitest run",
     "test:profile": "node scripts/maintenance/profile-vitest.mjs",
     "test:critical-contracts": "node scripts/maintenance/run-critical-contracts.mjs",

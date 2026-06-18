@@ -270,6 +270,9 @@ describe("buildReportCardsSnapshot", () => {
     expect(snapshot.methodology).toHaveProperty("thresholds");
     expect(Array.isArray(snapshot.dependencyGraph.edges)).toBe(true);
     expect(typeof snapshot.updatedAt).toBe("number");
+    const card = snapshot.cards.find((entry) => entry.id === "usdt-tether");
+    expect(card?.rawInputs).toHaveProperty("mintAuthorityScore");
+    expect(typeof card?.rawInputs.mintAuthorityScore).toBe("number");
   });
 
   it("uses live-derived dependencies consistently in raw inputs and dependency graph", async () => {
