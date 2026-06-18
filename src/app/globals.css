@@ -415,30 +415,20 @@
     );
     --mini-card: var(--telegram-section-bg, var(--mini-panel));
     --mini-control: color-mix(in oklab, var(--mini-card) 88%, var(--mini-text) 12%);
-    --mini-control-hover: color-mix(in oklab, var(--mini-card) 78%, var(--mini-text) 22%);
     --mini-accent: var(--telegram-accent-text, var(--telegram-button, var(--brand-accent)));
-    --mini-accent-readable: var(--mini-text);
     --mini-accent-fill: color-mix(in oklab, var(--mini-accent) 12%, transparent);
     --mini-accent-border: color-mix(in oklab, var(--mini-accent) 34%, transparent);
     --background: var(--mini-bg);
     --foreground: var(--mini-text);
     --card: var(--mini-card);
     --card-foreground: var(--mini-text);
-    --popover: var(--mini-card);
-    --popover-foreground: var(--mini-text);
     --primary: var(--telegram-button, var(--mini-accent));
-    --primary-foreground: var(--telegram-button-text, var(--text-inverse));
-    --secondary: var(--mini-control);
-    --secondary-foreground: var(--mini-text);
     --muted: var(--mini-control);
     --muted-foreground: var(
       --telegram-subtitle-text,
       var(--telegram-hint, color-mix(in oklab, var(--mini-text) 70%, var(--mini-bg)))
     );
-    --accent: var(--mini-control-hover);
-    --accent-foreground: var(--mini-text);
     --border: color-mix(in oklab, var(--mini-text) 18%, transparent);
-    --input: color-mix(in oklab, var(--mini-text) 22%, transparent);
     --ring: var(--mini-accent);
   }
   @media (prefers-color-scheme: dark) {
@@ -451,7 +441,7 @@
   .pharos-mini-app .mini-selected {
     border-color: var(--mini-accent-border);
     background-color: var(--mini-accent-fill);
-    color: var(--mini-accent-readable);
+    color: var(--mini-text);
   }
   .pharos-mini-app .mini-dot-on {
     background-color: var(--mini-accent);
