@@ -130,6 +130,12 @@ function buildConfirmKeyboard(): InlineKeyboardMarkup {
   };
 }
 
+function buildTickerPromptKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [[{ text: "Cancel", callback_data: "setup:cancel" }]],
+  };
+}
+
 function buildForceReplyKeyboard(): ForceReplyMarkup {
   return {
     force_reply: true,
@@ -426,12 +432,7 @@ export async function handleSetupTarget(
     await sendSetupReply(
       context,
       "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
-      { replyMarkup: buildForceReplyKeyboard() },
-    );
-    await sendSetupReply(
-      context,
-      "Need to stop?",
-      { replyMarkup: { inline_keyboard: [[{ text: "Cancel", callback_data: "setup:cancel" }]] } },
+      { replyMarkup: buildTickerPromptKeyboard() },
     );
     return { text: "Type a ticker." };
   }

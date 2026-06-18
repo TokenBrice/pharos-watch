@@ -173,6 +173,9 @@ const CANONICAL_COMMAND_KEYS: Record<string, string> = {
   "/market": "/brief",
 };
 
+const SETUP_SLASH_TICKER_REPLY_PATTERN = /^\/[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+const SETUP_TICKER_COMMAND_ESCAPES = new Set(["/cancel", "/start"]);
+
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
   async (
@@ -523,10 +526,13 @@ async function handleSetupPendingBeforeDispatch(args: {
 }): Promise<PendingFlowResult> {
   const { db, botToken, chatId, actorUserId, username, text, pendingRow, parsedCommand, reply } = args;
   const setupState = parseSetupState(pendingRow.action_payload, pendingRow.initiator_user_id ?? null);
-  if (setupState && setupState.step === "awaiting-ticker" && !parsedCommand) {
+  const setupTickerInput = setupState?.step === "awaiting-ticker"
+    ? normalizeSetupTickerInput(text, parsedCommand)
+    : null;
+  if (setupState && setupState.step === "awaiting-ticker" && setupTickerInput != null) {
     await handleSetupTickerInput(
       { db, botToken, chatId, actorUserId, username },
-      text,
+      setupTickerInput,
       setupState,
     );
     return "finished";
@@ -549,6 +555,17 @@ async function handleSetupPendingBeforeDispatch(args: {
     }
   }
   return "continue";
+}
+
+function normalizeSetupTickerInput(
+  text: string,
+  parsedCommand: ParsedTelegramCommand | null,
+): string | null {
+  if (!parsedCommand) return text;
+  if (SETUP_TICKER_COMMAND_ESCAPES.has(parsedCommand.command)) return null;
+  const trimmed = text.trim();
+  if (!SETUP_SLASH_TICKER_REPLY_PATTERN.test(trimmed)) return null;
+  return trimmed.slice(1);
 }
 
 async function handlePendingActionBeforeDispatch(args: {

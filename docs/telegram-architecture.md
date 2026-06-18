@@ -99,7 +99,7 @@ the audited welcome reply successfully, Ingress stamps the
 **Owned files.**
 - `worker/src/api/telegram-webhook-callbacks.ts`
 - `worker/src/api/webhook-callbacks/` (`index.ts` owns the handler registry; per-action files own action implementation)
-- `worker/src/api/telegram-webhook-setup.ts` (setup wizard state machine — invoked by both Callback routing for `setup:*` taps and by Ingress for `awaiting-ticker` text input)
+- `worker/src/api/telegram-webhook-setup.ts` (setup wizard state machine — invoked by both Callback routing for `setup:*` taps and by Ingress for `awaiting-ticker` text input, including slash-prefixed `/TICKER` replies)
 - `worker/src/api/telegram-webhook-settings.ts`, `telegram-webhook-settings-render.ts`, `telegram-webhook-settings-mutations.ts`, `telegram-webhook-settings-shared.ts` (settings inline keyboard sub-system)
 
 **Allowed inbound dependencies.** Ingress only (`handleCallbackQuery` is called from `handleTelegramWebhook`).

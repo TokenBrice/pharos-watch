@@ -279,10 +279,10 @@ the send succeeded.
 - `setup:branch:recommended` — confirms `dews,depeg` alerts for the `usd-top25` preset.
 - `setup:branch:custom` — toggles alert types (`setup:type-toggle:<type>`), then `setup:next` to pick a target (`setup:target:<preset|all|type>`), then `setup:confirm`.
 - `setup:branch:skip` — clears wizard state and returns a slim command-reference reply with a `/help` affordance for users who prefer typing commands.
-- `setup:target:type` — opens a `force_reply` prompt so the user can type a ticker; the next inbound message is resolved via `resolveTicker` and lands on the confirm step.
+- `setup:target:type` — opens a ticker prompt with an inline Cancel button; the next inbound message is resolved via `resolveTicker` and lands on the confirm step. Slash-prefixed single-token replies such as `/USDC` are treated as ticker input while `/cancel` and `/start` remain command escapes.
 - `setup:cancel` — clears the wizard state for the user who started it.
 
-Wizard state is persisted as a row in `telegram_pending_disambiguation` with `action_type = "setup-step"` and an `action_payload` JSON of `{ step, alertTypes, target }`. TTL is 5 min, shared with the disambiguation cleanup cron. When wizard state is active and a fresh slash command arrives, the wizard row is cleared so the command runs unmodified.
+Wizard state is persisted as a row in `telegram_pending_disambiguation` with `action_type = "setup-step"` and an `action_payload` JSON of `{ step, alertTypes, target }`. TTL is 5 min, shared with the disambiguation cleanup cron. When wizard state is active and a fresh slash command arrives outside the awaiting-ticker `/TICKER` case, the wizard row is cleared so the command runs unmodified.
 
 ### Supported Commands
 

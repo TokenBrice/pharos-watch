@@ -1619,6 +1619,30 @@ describe("handleTelegramWebhook", () => {
     expect(payload).toContain("USDC");
   });
 
+  it("setup-step awaiting-ticker treats slash-prefixed ticker replies as ticker input", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: makeSetupPendingRow({
+          step: "awaiting-ticker",
+          alertTypes: ["dews"],
+          target: null,
+        }),
+      },
+    ]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/USDC"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    const persist = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+    expect(persist.length).toBeGreaterThan(0);
+    const payload = String(persist[persist.length - 1].binds[2] ?? "");
+    expect(payload).toContain("\"step\":\"confirm-custom\"");
+    expect(payload).toContain("\"kind\":\"ticker\"");
+    expect(payload).toContain("USDC");
+    expect(history.some((entry) => entry.binds.includes("unknown_command"))).toBe(false);
+  });
+
   it("setup-step awaiting-ticker keeps an ambiguous force-reply selection in the ticker prompt", async () => {
     const ambiguous = resolveTicker("USDF");
     if (ambiguous.status !== "ambiguous") {
@@ -1694,7 +1718,7 @@ describe("handleTelegramWebhook", () => {
     expect(buttons).toContainEqual({ text: "Next →", callback_data: "setup:next" });
   });
 
-  it("setup:target:type opens the force-reply ticker prompt with an inline cancel affordance", async () => {
+  it("setup:target:type opens one ticker prompt with an inline cancel affordance", async () => {
     const db = mockD1([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
@@ -1729,13 +1753,12 @@ describe("handleTelegramWebhook", () => {
     expect(payload.step).toBe("awaiting-ticker");
     expect(payload.alertTypes).toEqual(["dews", "launch"]);
 
-    const forceReplyBody = sentMessageBody(0);
-    expect(forceReplyBody.text).toContain("Reply with a ticker");
-    expect((forceReplyBody.reply_markup as { force_reply?: boolean } | undefined)?.force_reply).toBe(true);
-
-    const cancelBody = sentMessageBody(1);
-    expect(cancelBody.text).toContain("Need to stop?");
-    expect(inlineButtons(cancelBody)).toContainEqual({ text: "Cancel", callback_data: "setup:cancel" });
+    const sendCalls = fetchSpy.mock.calls.filter((call) => String(call[0]).includes("sendMessage"));
+    expect(sendCalls).toHaveLength(1);
+    const promptBody = sentMessageBody();
+    expect(promptBody.text).toContain("Reply with a ticker");
+    expect((promptBody.reply_markup as { force_reply?: boolean } | undefined)?.force_reply).toBeUndefined();
+    expect(inlineButtons(promptBody)).toContainEqual({ text: "Cancel", callback_data: "setup:cancel" });
   });
 
   it("setup:branch:skip sends a slim command reference instead of the full start surface", async () => {
