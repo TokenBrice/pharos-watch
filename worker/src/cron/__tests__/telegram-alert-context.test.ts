@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   loadPublishedReportCardsSnapshot: vi.fn(),
   loadStablecoinsCache: vi.fn(),
   logTelegramEvent: vi.fn(),
+  getCache: vi.fn(),
+  getMintBurnConfigsForStablecoin: vi.fn(),
 }));
 
 vi.mock("../../lib/report-cards-snapshot-cache", () => ({
@@ -20,11 +22,43 @@ vi.mock("../../lib/telegram-log", () => ({
   logTelegramEvent: mocks.logTelegramEvent,
 }));
 
+vi.mock("../../lib/db-cache", () => ({
+  getCache: mocks.getCache,
+}));
+
+vi.mock("../../lib/mint-burn-contracts", () => ({
+  getMintBurnConfigsForStablecoin: mocks.getMintBurnConfigsForStablecoin,
+}));
+
 describe("buildAlertContextLines", () => {
   beforeEach(() => {
     mocks.loadPublishedReportCardsSnapshot.mockResolvedValue({ kind: "ok", payload: { cards: [] } });
     mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", payload: { peggedAssets: [] } });
     mocks.logTelegramEvent.mockReset();
+    mocks.getMintBurnConfigsForStablecoin.mockReset().mockReturnValue([]);
+    mocks.getCache.mockReset().mockResolvedValue(null);
+  });
+
+  it("appends a fresh net mint/burn flow segment only for mint-burn-tracked coins", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mocks.getMintBurnConfigsForStablecoin.mockImplementation((id: string) =>
+      id === "usdc-circle" ? [{ stablecoinId: id }] : [],
+    );
+    mocks.getCache.mockImplementation(async (_db: unknown, key: string) =>
+      typeof key === "string" && key.includes("usdc-circle")
+        ? { value: JSON.stringify({ netFlowUsd: 12_300_000, updatedAt: nowSec }), updatedAt: nowSec }
+        : null,
+    );
+    const db = {
+      prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
+    } as unknown as D1Database;
+
+    const context = await buildAlertContextLines(db, ["usdc-circle", "dai-makerdao"]);
+
+    expect(context.get("usdc-circle")).toContain("Flow24h +$12");
+    expect(context.get("dai-makerdao") ?? "").not.toContain("Flow24h");
+    // The untracked coin never triggers a flow cache read (bounded to the tracked subset).
+    expect(mocks.getCache).toHaveBeenCalledTimes(1);
   });
 
   it("chunks liquidity context reads to stay under the D1 bind limit", async () => {

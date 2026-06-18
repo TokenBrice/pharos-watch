@@ -10,7 +10,7 @@ import type {
   TelegramPresetId,
 } from "../lib/telegram-presets";
 import { isQuietHoursActive } from "../cron/telegram-quiet-hours";
-import { formatTelegramCompactUsd } from "./telegram-format";
+import { formatTelegramCompactUsd, formatTelegramSignedCompactUsd } from "./telegram-format";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
@@ -503,6 +503,9 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const yieldLine = s.yield
     ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${s.yield.source}${s.yield.pharosYieldScore != null ? `, PYS ${Math.round(s.yield.pharosYieldScore)}` : ""}`
     : null;
+  const flowSigned = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
+  const flowLine =
+    s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)})` : null;
   const lines = [
     `<b>${escapeHtml(symbol)}</b>`,
     priceLine,
@@ -512,6 +515,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     depegLine,
     liquidityLine,
     yieldLine,
+    flowLine,
     `<a href="https://pharos.watch/stablecoin/${s.stablecoinId}">View on Pharos</a>`,
   ].filter((line): line is string => Boolean(line));
   return lines.join("\n");

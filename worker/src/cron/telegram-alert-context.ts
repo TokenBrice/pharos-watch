@@ -6,10 +6,22 @@ import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-c
 import { buildInClause, chunkArray } from "../lib/db";
 import { toErrorMessage } from "../lib/error-utils";
 import { logTelegramEvent } from "../lib/telegram-log";
+import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
+import { perCoinFlowCacheKey } from "../api/mint-burn-flows-shared";
+import { getCache } from "../lib/db-cache";
+import { safeJsonParse } from "../lib/api-cache-read";
+
+/** 24h mint/burn flow older than this is omitted from the terse alert Context line. */
+const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
 
 function formatUsdCompact(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "n/a";
   return formatCompactUsdShort(value);
+}
+
+function formatSignedUsdCompact(value: number): string {
+  const compact = formatCompactUsdShort(Math.abs(value));
+  return value > 0 ? `+${compact}` : value < 0 ? `-${compact}` : compact;
 }
 
 export async function buildAlertContextLines(
@@ -18,11 +30,13 @@ export async function buildAlertContextLines(
 ): Promise<Map<string, string>> {
   const uniqueIds = Array.from(new Set(stablecoinIds));
   if (uniqueIds.length === 0) return new Map();
+  const nowSec = Math.floor(Date.now() / 1000);
 
-  const [snapshot, stablecoinsResult, liquidityResult] = await Promise.all([
+  const [snapshot, stablecoinsResult, liquidityResult, flowResult] = await Promise.all([
     loadPublishedReportCardsSnapshot(db).catch(() => null),
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
     loadLiquidityRows(db, uniqueIds),
+    loadFlowRows(db, uniqueIds, nowSec),
   ]);
 
   const cards = new Map((snapshot?.kind === "ok" ? snapshot.payload.cards : []).map((card) => [card.id, card]));
@@ -45,6 +59,8 @@ export async function buildAlertContextLines(
     if (liq) parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);
     const supply = supplies.get(id);
     if (supply != null) parts.push(`Supply ${formatUsdCompact(supply)}`);
+    const flow = flowResult.get(id);
+    if (flow && flow.netFlowUsd !== 0) parts.push(`Flow24h ${formatSignedUsdCompact(flow.netFlowUsd)}`);
     if (parts.length > 0) out.set(id, `Context: ${parts.join(" · ")}`);
   }
 
@@ -88,4 +104,49 @@ async function loadLiquidityRows(
     row.stablecoin_id,
     { score: row.liquidity_score, tvl: row.total_tvl_usd },
   ]));
+}
+
+/**
+ * Reads cached 24h net mint/burn flow for the mint-burn-tracked subset of the requested ids
+ * (no recompute) as one bounded Promise.all. Stale/missing/malformed entries are omitted so the
+ * Context line only carries fresh, meaningful flow. D1 cache reads are not subject to the
+ * 6-connection outbound fetch pool, and the set is bounded to tracked coins.
+ */
+async function loadFlowRows(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+  nowSec: number,
+): Promise<Map<string, { netFlowUsd: number; updatedAt: number }>> {
+  const trackedIds = Array.from(new Set(stablecoinIds)).filter(
+    (id) => getMintBurnConfigsForStablecoin(id).length > 0,
+  );
+  if (trackedIds.length === 0) return new Map();
+
+  const entries = await Promise.all(
+    trackedIds.map(async (id) => {
+      try {
+        const cached = await getCache(db, perCoinFlowCacheKey(id, 24));
+        if (!cached) return null;
+        const parsed = safeJsonParse<{ netFlowUsd?: unknown; updatedAt?: unknown } | null>(
+          cached.value,
+          null,
+          "telegram-context-flow",
+        );
+        if (!parsed || typeof parsed.netFlowUsd !== "number" || !Number.isFinite(parsed.netFlowUsd)) {
+          return null;
+        }
+        const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : cached.updatedAt;
+        if (nowSec - updatedAt > MINT_BURN_FLOW_STALE_SEC) return null;
+        return { id, netFlowUsd: parsed.netFlowUsd, updatedAt };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  const out = new Map<string, { netFlowUsd: number; updatedAt: number }>();
+  for (const entry of entries) {
+    if (entry) out.set(entry.id, { netFlowUsd: entry.netFlowUsd, updatedAt: entry.updatedAt });
+  }
+  return out;
 }

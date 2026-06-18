@@ -57,6 +57,7 @@ const statusFixture: StatusForCoin = {
   safety: { grade: "A", score: 82, recordedAt: 1_700_000_000 },
   liquidity: { score: 91, totalTvlUsd: 450_000_000, updatedAt: 1_700_000_000 },
   yield: null,
+  flow: null,
   depeg: { status: "stable" },
 };
 

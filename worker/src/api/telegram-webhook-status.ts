@@ -1,6 +1,13 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
+import { perCoinFlowCacheKey } from "./mint-burn-flows-shared";
+import { getCache } from "../lib/db-cache";
+import { safeJsonParse } from "../lib/api-cache-read";
+
+/** 24h mint/burn flow older than this is "stale": shown on /status with age, omitted from the terse alert Context line. */
+const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
 
 /**
  * Data loader for the `/status <ticker>` command.
@@ -35,6 +42,7 @@ export interface StatusForCoin {
     pharosYieldScore: number | null;
     updatedAt: number;
   } | null;
+  flow: { netFlowUsd: number; updatedAt: number; stale: boolean } | null;
   depeg:
     | { status: "stable" }
     | {
@@ -50,7 +58,9 @@ export async function loadStatusForCoin(
   db: D1Database,
   stablecoinId: string,
 ): Promise<StatusForCoin> {
-  const [dewsRow, safetyRow, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache] = await Promise.all([
+  const nowSec = Math.floor(Date.now() / 1000);
+  const isMintBurnTracked = getMintBurnConfigsForStablecoin(stablecoinId).length > 0;
+  const [dewsRow, safetyRow, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] = await Promise.all([
     db
       .prepare(
         "SELECT band, score, computed_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1",
@@ -105,7 +115,23 @@ export async function loadStatusForCoin(
         updated_at: number;
       }>(),
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
+    isMintBurnTracked
+      ? getCache(db, perCoinFlowCacheKey(stablecoinId, 24)).catch(() => null)
+      : Promise.resolve(null),
   ]);
+
+  let flow: StatusForCoin["flow"] = null;
+  if (flowCache) {
+    const parsed = safeJsonParse<{ netFlowUsd?: unknown; updatedAt?: unknown } | null>(
+      flowCache.value,
+      null,
+      "telegram-status-flow",
+    );
+    if (parsed && typeof parsed.netFlowUsd === "number" && Number.isFinite(parsed.netFlowUsd)) {
+      const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : flowCache.updatedAt;
+      flow = { netFlowUsd: parsed.netFlowUsd, updatedAt, stale: nowSec - updatedAt > MINT_BURN_FLOW_STALE_SEC };
+    }
+  }
 
   let supplyUsd: number | null = null;
   let stablecoinsUpdatedAt: number | null = null;
@@ -143,6 +169,7 @@ export async function loadStatusForCoin(
           updatedAt: yieldRow.updated_at,
         }
       : null,
+    flow,
     depeg: depegRow
       ? {
           status: "active",
