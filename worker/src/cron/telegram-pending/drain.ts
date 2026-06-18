@@ -43,7 +43,7 @@ import {
 } from "./types";
 import { logTelegramEvent } from "../../lib/telegram-log";
 
-const PENDING_CLAIM_TTL_SEC = 15 * 60;
+const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
 const GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
 

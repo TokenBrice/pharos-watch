@@ -551,7 +551,7 @@ to `telegram_pending_alerts` in D1 as pre-split HTML chunks. Each subsequent dis
 drains up to 25% of its budget from the pending queue before processing fresh events,
 ensuring eventual delivery.
 
-The pending drain is claim-based. The dispatcher first selects due, unexpired rows with no active claim or an expired claim, stamps `processing_owner`, `processing_started_at`, and `processing_expires_at`, then re-selects only rows owned by that invocation before sending. Retry and snooze deferrals clear the claim; terminal sends delete the row in D1-safe chunks of 90 IDs; unfinished rows are released when a global rate limit or abort stops the run before all claimed rows are attempted. This prevents overlapping drains from sending the same row and lets expired claims recover on a later run.
+The pending drain is claim-based. The dispatcher first selects due, unexpired rows with no active claim or an expired claim, stamps `processing_owner`, `processing_started_at`, and `processing_expires_at`, then re-selects only rows owned by that invocation before sending. Retry and snooze deferrals clear the claim; terminal sends delete the row in D1-safe chunks of 90 IDs; unfinished rows are released when a global rate limit or abort stops the run before all claimed rows are attempted. Claims expire after 10 minutes, so rows held by a crashed invocation recover after roughly two 5-minute dispatch intervals. This prevents overlapping drains from sending the same row and lets expired claims recover on a later run.
 
 Risk pending alerts have a 1-hour TTL (`PENDING_TTL_SEC = 3600`). Launch and admin
 broadcast rows use a 30-minute TTL because they are lower-priority during contention.

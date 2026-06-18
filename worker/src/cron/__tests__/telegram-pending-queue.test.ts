@@ -714,6 +714,33 @@ describe("drainPendingQueue", () => {
     expect(deleteCall!.binds).toContain(10);
   });
 
+  it("claims pending rows for two dispatch intervals", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 11, chat_id: "100", message_html: "<b>Sent</b>", disable_notification: 0, created_at: now - 30, attempts: 0 },
+        ],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    await drainPendingQueue(db, "bot-token", 10);
+
+    const claimUpdate = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE telegram_pending_alerts") &&
+      entry.sql.includes("SET processing_owner = ?")
+    );
+    expect(claimUpdate?.binds[1]).toBe(now);
+    expect(claimUpdate?.binds[2]).toBe(now + 10 * 60);
+  });
+
   it("chunks 101 successful pending deletes below the D1 bind limit", async () => {
     mockSendToChat.mockResolvedValue({
       ok: true, blocked: false, retryable: false, permanentFailure: false,
