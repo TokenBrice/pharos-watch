@@ -53,9 +53,12 @@
   },
   "genius": {
     "applicability": "unclear",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Ondo Global Markets (BVI) Limited",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
     "redemptionPolicyPresent": true,
@@ -94,23 +97,27 @@
         "accessedAt": "2026-06-07"
       }
     ],
-    "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule (Bulletin 2026-3, Feb 2026) and Federal Register 2026-04089",
         "Ondo Global Markets issuer disclosures and trust/transparency documentation",
         "RWA.xyz USDon asset page (confirms Non-U.S. Investor only, BVI FSC regulation)",
         "Web search for any Ondo Finance GENIUS Act authorization, PPSI application, or foreign exception filing — none found",
-        "No OCC, FDIC, Federal Reserve, or FinCEN public record of Ondo Global Markets as a permitted or foreign payment stablecoin issuer"
+        "No OCC, FDIC, Federal Reserve, or FinCEN public record of Ondo Global Markets as a permitted or foreign payment stablecoin issuer",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "USDon is issued by a BVI SPV under Regulation S for non-U.S. investors only; no GENIUS Act authorization, PPSI application, or foreign exception status found in any public regulatory record or issuer disclosure as of 2026-06-07.",
+      "summary": "USDon is issued by a BVI SPV under Regulation S for non-U.S. investors only; no GENIUS Act authorization, PPSI application, or foreign exception status found in any public regulatory record or issuer disclosure as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {
@@ -159,7 +166,10 @@
         "name": "LayerZero",
         "slug": "layerzero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": ["Lock & Mint", "Burn & Mint"]
+        "bridgeTypes": [
+          "Lock & Mint",
+          "Burn & Mint"
+        ]
       }
     ],
     "sources": [

@@ -48,10 +48,10 @@
     "applicabilityBasis": {
       "summary": "USDO is a rebasing yield-bearing stablecoin: it distributes yield as additional tokens to holders daily. The GENIUS Act defines payment stablecoin to exclude instruments that pay interest or yield (Sec. 4(a)(11)) and prohibits PPSI issuers from paying any yield. USDOs core design is therefore incompatible with the payment stablecoin definition. Additionally, OpenEden explicitly geo-blocks US persons and states the token may not be offered or sold in the US, removing it further from GENIUS Act scope."
     },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
     "issuerEntity": "OpenEden Digital (OED)",
     "issuerDomicile": "Bermuda",
-    "issuerPathway": "not-applicable",
-    "authorizationStatus": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
@@ -215,7 +215,9 @@
         "source": "docs",
         "name": "Chainlink CCIP",
         "url": "https://docs.chain.link/ccip",
-        "bridgeTypes": ["burnAndMint"],
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
         "note": "USDO is listed in the Chainlink CCIP token directory."
       }
     ],

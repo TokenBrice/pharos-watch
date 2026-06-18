@@ -113,6 +113,11 @@ The headline `authorizationStatus`. **When uncertain between two statuses, pick 
 
 `primaryFederalRegulator` and `stateRegulator` qualify the pathway when known.
 
+During rulemaking, avoid using `issuerPathway` for a merely theoretical route.
+Use `unknown` unless public evidence supports the issuer's current or announced
+GENIUS route. If product copy needs to show a likely future route, add a
+separate future-looking field rather than overloading `issuerPathway`.
+
 ---
 
 ## Foreign exception posture
@@ -137,15 +142,20 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 Map token → legal issuer entity → public posture. This mapping is manual and not cleanly API-able; treat it like the `reserve-research` / `mica-research` editorial workflows.
 
-`GeniusReference.sourceKind`, in descending authority for authorization claims:
+`GeniusReference.sourceKind`, in descending authority for U.S. authorization claims:
 
 1. `federal-register` — Federal Register notices/rules.
 2. `federal-regulator` — OCC / Federal Reserve / FDIC / NCUA / FinCEN / OFAC / Treasury releases and bulletins.
 3. `state-regulator` — state banking/financial regulator sources.
-4. `issuer-filing` — issuer filings/registrations.
-5. `issuer-disclosure` — issuer whitepapers, GENIUS-pathway statements, transparency pages.
-6. `auditor-report` — third-party reserve attestations.
-7. `news` — reputable reporting (weakest; never sufficient alone for an official status).
+4. `foreign-regulator` — non-U.S. regulator materials. These can support foreign licensing context but do **not** satisfy U.S. GENIUS approval/application rules.
+5. `statute` — enacted statutory text such as Congress.gov Public Law materials.
+6. `regulator-directory` — regulator-maintained public directories or registries that identify licensed entities without being a token-specific GENIUS approval.
+7. `issuer-filing` — issuer filings/registrations.
+8. `issuer-disclosure` — issuer whitepapers, GENIUS-pathway statements, transparency pages, and issuer-operated reserve dashboards.
+9. `auditor-report` — third-party accountant/auditor reserve attestations or assurance reports, not issuer dashboards.
+10. `news` — reputable reporting (weakest; never sufficient alone for an official status).
+
+Only `federal-register`, `federal-regulator`, and `state-regulator` satisfy the schema's regulator-grade source requirement for official U.S. GENIUS approval/application statuses. `foreign-regulator`, `statute`, and `regulator-directory` are useful evidence, but they are not substitutes for a token-specific U.S. approval, pending application, or registered foreign-issuer exception.
 
 Always include `sourceDate` / `accessedAt` where available so the review is dated.
 

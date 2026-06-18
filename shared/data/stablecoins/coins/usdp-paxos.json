@@ -65,7 +65,8 @@
     "reserveDisclosureUrl": "https://www.paxos.com/usdp-transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Paxos converted its NYDFS limited purpose trust charter to an OCC national trust bank charter on December 12, 2025 (conditional approval). This positions Paxos on the federal-qualified-nonbank pathway under GENIUS. No PPSI application framework exists yet (still in proposed-rule stage as of 2026-06-07); no PPSI approval has been granted to any issuer. USDP continues to be Paxos-issued and covered by federal OCC oversight but has no GENIUS PPSI authorization.",
+    "latestReportDate": "2026-04-30",
+    "notes": "Paxos converted its NYDFS limited purpose trust charter to an OCC national trust bank charter on December 12, 2025 (conditional approval). This positions Paxos on the federal-qualified-nonbank pathway under GENIUS. No PPSI application framework exists yet (still in proposed-rule stage as of 2026-06-18); no PPSI approval has been granted to any issuer. USDP continues to be Paxos-issued and covered by federal OCC oversight but has no GENIUS PPSI authorization.",
     "references": [
       {
         "label": "OCC Conditional Approval — Paxos Trust Company Charter Conversion (December 2025)",
@@ -104,14 +105,21 @@
         "OCC conditional approval documents for Paxos national trust charter",
         "Paxos OCC and national trust charter materials",
         "Paxos USDP transparency and terms",
-        "Federal Register OCC GENIUS Act NPRM (2026-04089)"
+        "Federal Register OCC GENIUS Act NPRM (2026-04089)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official PPSI application source was located for USDP. OCC conditional trust charter approval (December 2025) is a charter action, not a PPSI authorization under GENIUS.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "non-compliant",

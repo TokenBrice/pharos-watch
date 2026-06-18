@@ -44,10 +44,13 @@
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "USD.AI Foundation",
     "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/proof-of-reserves",
     "redemptionPolicyPresent": true,
@@ -72,7 +75,7 @@
       {
         "label": "USD.AI proof of reserves",
         "url": "https://docs.usd.ai/app-guide/proof-of-reserves",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "USD.AI Foundation and CHIP announcement",
@@ -80,22 +83,26 @@
         "sourceKind": "issuer-disclosure"
       }
     ],
-    "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
         "Issuer disclosures and token documentation",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "USD.AI Foundation announcement confirming Cayman Islands domicile"
+        "USD.AI Foundation announcement confirming Cayman Islands domicile",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No public GENIUS approval, official application, or foreign registration source was located for USDai; USD.AI Foundation confirmed as Cayman Islands DAO steward with no U.S. regulatory presence.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

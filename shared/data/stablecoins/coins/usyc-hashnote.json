@@ -67,12 +67,19 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "USYC represents shares of the Hashnote International Short Duration Fund Ltd., a Cayman Islands mutual fund investing in short-term U.S. Treasuries and reverse repos, administered by Circle International Bermuda Limited. The GENIUS Act defines payment stablecoins as fixed-value instruments redeemable at a predetermined fixed amount; USYC accrues yield through NAV appreciation and is therefore not a payment stablecoin. The SEC/CFTC March 2026 Joint Interpretive Release (Release Nos. 33-11412 and 34-105020) classifies tokenized fund shares in the digital-securities bucket, consistent with existing Howey analysis. Shares are restricted to non-U.S. persons under Regulation S.",
+      "summary": "USYC represents shares of the Hashnote International Short Duration Fund Ltd., a Cayman Islands mutual fund administered by Circle International Bermuda Limited. It is a yield-bearing tokenized fund share with NAV exposure rather than a fixed-value payment stablecoin, so it is treated as an excluded security for GENIUS tracking.",
       "references": [
         {
-          "label": "Astraea Counsel — Tokenized Treasury Funds: Securities Compliance 2026",
-          "url": "https://astraea.law/insights/tokenized-treasury-funds-securities-compliance-2026",
-          "sourceKind": "news"
+          "label": "Circle USYC",
+          "url": "https://www.circle.com/usyc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-18"
+        },
+        {
+          "label": "USYC Docs — Introduction",
+          "url": "https://usyc.docs.hashnote.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-18"
         }
       ]
     },
@@ -98,7 +105,7 @@
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

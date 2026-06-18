@@ -184,7 +184,7 @@
         {
           "label": "GENIUS Act statutory text (S.1582)",
           "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-          "sourceKind": "federal-register"
+          "sourceKind": "statute"
         },
         {
           "label": "Treasury state-regime comparability NPRM (FR 2026-06489)",
@@ -224,7 +224,7 @@
       {
         "label": "RWA.xyz USD0 asset page",
         "url": "https://app.rwa.xyz/assets/USD0",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "Usual DAO governance — UIP-15 protocol ownership",
@@ -237,14 +237,21 @@
         "OCC GENIUS Act proposed rule and public releases",
         "Issuer disclosures and token documentation (usual.money/docs)",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "Web search for Usual/USD0 + GENIUS Act compliance announcements (June 2026)"
+        "Web search for Usual/USD0 + GENIUS Act compliance announcements (June 2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "USD0 is DAO-issued and redeemable against RWA collateral; re-verification confirms no public GENIUS authorization, state-qualified approval, official application, or foreign registration source was located as of 2026-06-07.",
+      "summary": "USD0 is DAO-issued and redeemable against RWA collateral; re-verification confirms no public GENIUS authorization, state-qualified approval, official application, or foreign registration source was located as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "non-compliant",

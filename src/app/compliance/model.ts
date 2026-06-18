@@ -8,6 +8,9 @@ import {
 import type {
   GeniusApplicability,
   GeniusAuthorizationStatus,
+  GeniusDaspOfferSaleStatus,
+  GeniusEnforcementStatus,
+  GeniusForeignExceptionStatus,
   GeniusIssuerPathway,
   GeniusPrimaryFederalRegulator,
   MicaProfile,
@@ -50,10 +53,22 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   licensingRegulator?: string;
   primaryFederalRegulator?: GeniusPrimaryFederalRegulator;
   stateRegulator?: string;
+  foreignExceptionStatus?: GeniusForeignExceptionStatus;
+  enforcementStatus?: GeniusEnforcementStatus;
+  daspOfferSaleStatus?: GeniusDaspOfferSaleStatus;
   hasAnyDisclosure: boolean;
+  reserveDisclosurePresent: boolean;
   reserveDisclosureUrl?: string;
   redemptionPolicyPresent: boolean;
+  monthlyAttestationPresent: boolean;
   latestReportDate?: string;
+  notes?: string;
+  applicabilitySummary?: string;
+  foreignExceptionSummary?: string;
+  negativeEvidenceSummary?: string;
+  negativeEvidenceSourcesChecked: string[];
+  reviewer?: string;
+  reviewedAt?: string;
   references: StablecoinLink[];
 }
 
@@ -194,14 +209,48 @@ function buildGeniusRow(
     licensingRegulator: genius.licensingRegulator,
     primaryFederalRegulator: genius.primaryFederalRegulator,
     stateRegulator: genius.stateRegulator,
+    foreignExceptionStatus: genius.foreignExceptionStatus,
+    enforcementStatus: genius.enforcementStatus,
+    daspOfferSaleStatus: genius.daspOfferSaleStatus,
     hasAnyDisclosure: Boolean(
-      genius.reserveDisclosureUrl || genius.redemptionPolicyPresent || genius.latestReportDate,
+      genius.reserveDisclosurePresent ||
+        genius.reserveDisclosureUrl ||
+        genius.redemptionPolicyPresent ||
+        genius.monthlyAttestationPresent ||
+        genius.latestReportDate,
     ),
+    reserveDisclosurePresent: genius.reserveDisclosurePresent ?? false,
     reserveDisclosureUrl: genius.reserveDisclosureUrl,
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
+    monthlyAttestationPresent: genius.monthlyAttestationPresent ?? false,
     latestReportDate: genius.latestReportDate,
-    references: genius.references ?? [],
+    notes: genius.notes,
+    applicabilitySummary: genius.applicabilityBasis?.summary,
+    foreignExceptionSummary: genius.foreignExceptionEvidence?.summary,
+    negativeEvidenceSummary: genius.negativeEvidenceReview?.summary,
+    negativeEvidenceSourcesChecked: genius.negativeEvidenceReview?.sourcesChecked ?? [],
+    reviewer: genius.reviewer,
+    reviewedAt: genius.reviewedAt,
+    references: collectGeniusReferences(genius),
   };
+}
+
+function collectGeniusReferences(genius: GeniusClientProfile): StablecoinLink[] {
+  const references = [
+    ...(genius.references ?? []),
+    ...(genius.applicabilityBasis?.references ?? []),
+    ...(genius.foreignExceptionEvidence?.references ?? []),
+    ...(genius.negativeEvidenceReview?.references ?? []),
+  ];
+  const seen = new Set<string>();
+  const deduped: StablecoinLink[] = [];
+  for (const reference of references) {
+    const key = `${reference.label}:${reference.url}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push({ label: reference.label, url: reference.url });
+  }
+  return deduped;
 }
 
 function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: ComplianceRow[]; geniusEffective: boolean } {

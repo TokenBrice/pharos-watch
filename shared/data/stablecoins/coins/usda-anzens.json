@@ -78,18 +78,25 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (2026-06-07)",
-        "Anzens USDA website and terms (2026-06-07)",
+        "OCC GENIUS Act rulemaking bulletin and public releases (2026-06-18)",
+        "Anzens USDA website and terms (2026-06-18)",
         "Anzens FinCEN MSB and state no-objection-letter disclosures",
         "EMURGO partner announcements and press releases",
-        "Web searches for Anzens GENIUS Act, PPSI application, or authorization (2026-06-07)"
+        "Web searches for Anzens GENIUS Act, PPSI application, or authorization (2026-06-18)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDA/Anzens Inc. Re-verified June 2026 with no change in status.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

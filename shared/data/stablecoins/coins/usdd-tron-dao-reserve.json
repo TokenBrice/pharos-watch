@@ -158,14 +158,21 @@
         "Chapman & Cutler GENIUS Act Rulemaking Tracker (accessed Jun 7, 2026)",
         "USDD issuer pages (usdd.io, docs.usdd.io, legacy-docs.usdd.io)",
         "Federal Register GENIUS Act implementation documents",
-        "OCC conditional trust-charter approvals list (does not include USDD issuer)"
+        "OCC conditional trust-charter approvals list (does not include USDD issuer)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No GENIUS PPSI approval, official application, state-qualified approval, or registered/comparability-determined foreign-issuer exception was found for USDD or its issuer TRON DAO Reserve. No Treasury determination of comparable foreign regulation has been made for any jurisdiction as of this review date. The GENIUS Act approval framework itself remains in proposed-rulemaking phase.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

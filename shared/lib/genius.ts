@@ -1,6 +1,9 @@
 import type {
   GeniusApplicability,
   GeniusAuthorizationStatus,
+  GeniusDaspOfferSaleStatus,
+  GeniusEnforcementStatus,
+  GeniusForeignExceptionStatus,
   GeniusIssuerPathway,
 } from "../types/core";
 import type { BadgeStyle } from "./classification";
@@ -95,4 +98,28 @@ export const GENIUS_ISSUER_PATHWAY_LABELS: Record<GeniusIssuerPathway, string> =
   "foreign-registered": "Foreign registered issuer",
   unknown: "Pathway unresolved",
   "not-applicable": "Not applicable",
+};
+
+export const GENIUS_FOREIGN_EXCEPTION_STATUS_LABELS: Record<GeniusForeignExceptionStatus, string> = {
+  "registered-exception": "Registered exception",
+  "comparability-determined": "Comparable regime determined",
+  "registration-pending": "Registration pending",
+  "not-qualified": "Not qualified",
+  "not-applicable": "Not applicable",
+  unknown: "Unknown",
+};
+
+export const GENIUS_ENFORCEMENT_STATUS_LABELS: Record<GeniusEnforcementStatus, string> = {
+  "no-public-action-found": "No public action found",
+  "warning-or-notice": "Warning or notice",
+  "prohibited-or-revoked": "Prohibited or revoked",
+  unknown: "Unknown",
+};
+
+export const GENIUS_DASP_OFFER_SALE_STATUS_LABELS: Record<GeniusDaspOfferSaleStatus, string> = {
+  "not-yet-restricted": "Not yet restricted",
+  restricted: "Restricted",
+  "foreign-lawful-order-condition-active": "Foreign lawful order condition active",
+  "not-applicable": "Not applicable",
+  unknown: "Unknown",
 };

@@ -78,13 +78,13 @@
     "issuerDomicile": "Netherlands",
     "licensingRegulator": "DNB; MiCA electronic money institution",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.quantoz.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "USDQ is a Dutch MiCA EMT, but no public GENIUS foreign-issuer registration or U.S. permitted-issuer status was located. The GENIUS Act foreign-exception framework remains in proposed-rules phase as of 2026-06-07; no foreign exception registry or comparability determination has been established.",
+    "notes": "USDQ is a Dutch MiCA EMT, but no public GENIUS foreign-issuer registration or U.S. permitted-issuer status was located. The GENIUS Act foreign-exception framework remains in proposed-rules phase as of 2026-06-18; no foreign exception registry or comparability determination has been established.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -107,14 +107,21 @@
         "OCC GENIUS Act proposed rule and public releases",
         "Issuer disclosures and token documentation",
         "Web search for Quantoz Payments GENIUS Act foreign issuer registration 2026",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "DNB/MiCA issuer evidence and Quantoz reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDQ. The GENIUS Act foreign exception framework rules remain in proposed-rules phase as of 2026-06-07.",
+      "summary": "DNB/MiCA issuer evidence and Quantoz reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDQ. The GENIUS Act foreign exception framework rules remain in proposed-rules phase as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "authorized",

@@ -47,6 +47,9 @@
   },
   "genius": {
     "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "USTB is a Section 3(c)(7) private investment fund offering tokenized shares in a short-duration U.S. Treasury fund; it meets the definition of a security under federal securities laws and is expressly excluded from the GENIUS Act definition of a payment stablecoin (which excludes any asset that otherwise qualifies as a security under the Securities Act of 1933, the Securities Exchange Act of 1934, the Investment Company Act of 1940, or the Investment Advisers Act of 1940). USTB is not marketed or used as a payment instrument; its token represents a fund share that accretes at NAV."
+    },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
     "issuerEntity": "Superstate Trust (d/b/a Superstate Short Duration U.S. Government Securities Fund; pending rename to Invesco Short-Duration U.S. Government Securities Fund upon Invesco takeover, expected mid-2026)",
@@ -58,15 +61,12 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "applicabilityBasis": {
-      "summary": "USTB is a Section 3(c)(7) private investment fund offering tokenized shares in a short-duration U.S. Treasury fund; it meets the definition of a security under federal securities laws and is expressly excluded from the GENIUS Act definition of a payment stablecoin (which excludes any asset that otherwise qualifies as a security under the Securities Act of 1933, the Securities Exchange Act of 1934, the Investment Company Act of 1940, or the Investment Advisers Act of 1940). USTB is not marketed or used as a payment instrument; its token represents a fund share that accretes at NAV."
-    },
     "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco is taking over management (announced March 2026, expected mid-2026 close); the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization — this would not change the excluded-security classification.",
     "references": [
       {
         "label": "GENIUS Act S.1582 text — payment stablecoin definition (excludes securities)",
         "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-        "sourceKind": "federal-register"
+        "sourceKind": "statute"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -90,7 +90,7 @@
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

@@ -52,12 +52,12 @@
     "issuerDomicile": "Malta",
     "licensingRegulator": "MFSA; MiCA electronic money institution",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.stablr.com/proof-of-reserve",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "notes": "StablR publishes reserve visibility and quarterly independent reviews, not a monthly public attestation cadence. The May 24 2026 multisig exploit caused a MiCA backing breach and MFSA settlement penalty (Ref: 2026-19, June 2 2026) — a MiCA/DORA matter with no U.S. GENIUS Act implications. No PPSI approval, state-qualified status, official application, or foreign exception found.",
     "references": [
       {
@@ -91,14 +91,21 @@
         "OCC GENIUS Act proposed rule and public releases",
         "Issuer disclosures and token documentation",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "MFSA settlement notice Ref: 2026-19 (June 2 2026)"
+        "MFSA settlement notice Ref: 2026-19 (June 2 2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "MFSA/MiCA issuer evidence and StablR reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDR. The May 2026 exploit and MFSA settlement are MiCA/DORA matters with no U.S. GENIUS Act implications.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "authorized",

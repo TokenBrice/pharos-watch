@@ -67,7 +67,7 @@
     "reserveDisclosureUrl": "https://brale.xyz/stablecoins/USDGLO",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
+    "latestReportDate": "2026-05-31",
     "references": [
       {
         "label": "Brale USDGLO",
@@ -90,15 +90,22 @@
         "OCC GENIUS Act rulemaking bulletin and public releases",
         "Brale USDGLO reserve, terms, and disclosure pages",
         "state money-transmitter public licensing context",
-        "Brale blog (brale.xyz/blog) — no GENIUS Act / PPSI filing announcements found as of 2026-06-07",
-        "Web searches for Brale PPSI authorization, OCC charter, and GENIUS Act intent — no public filing or announced intent found"
+        "Brale blog (brale.xyz/blog) — no GENIUS Act / PPSI filing announcements found as of 2026-06-18",
+        "Web searches for Brale PPSI authorization, OCC charter, and GENIUS Act intent — no public filing or announced intent found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDGLO. Brale operates as a FinCEN-registered MSB with state money-transmitter licenses; no OCC charter application or PPSI announcement found as of 2026-06-07.",
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDGLO. Brale operates as a FinCEN-registered MSB with state money-transmitter licenses; no OCC charter application or PPSI announcement found as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

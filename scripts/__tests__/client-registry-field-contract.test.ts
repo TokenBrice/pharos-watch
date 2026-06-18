@@ -162,7 +162,7 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("2026-05-24");
   });
 
-  it("projects only displayed GENIUS fields and excludes review evidence", () => {
+  it("projects public GENIUS posture fields and nested review evidence", () => {
     const coin = {
       id: "genius-usd",
       name: "GENIUS USD",
@@ -185,6 +185,16 @@ describe("client registry field contract", () => {
         primaryFederalRegulator: "OCC",
         stateRegulator: "NYDFS",
         foreignExceptionStatus: "not-applicable",
+        foreignExceptionEvidence: {
+          summary: "Foreign exception posture is not applicable for a domestic issuer.",
+          references: [
+            {
+              label: "Foreign exception source",
+              url: "https://example.com/foreign-exception",
+              sourceKind: "federal-regulator",
+            },
+          ],
+        },
         enforcementStatus: "no-public-action-found",
         daspOfferSaleStatus: "not-yet-restricted",
         reserveDisclosurePresent: true,
@@ -192,6 +202,7 @@ describe("client registry field contract", () => {
         redemptionPolicyPresent: true,
         monthlyAttestationPresent: true,
         latestReportDate: "2026-05-01",
+        notes: "Rendered compliance note.",
         references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
         negativeEvidenceReview: {
           sourcesChecked: ["OCC public releases"],
@@ -209,26 +220,45 @@ describe("client registry field contract", () => {
     expect(projectGeniusProfile(null)).toBeNull();
     expect(projected.genius).toEqual({
       applicability: "apparent-payment-stablecoin",
+      applicabilityBasis: {
+        summary: "Long applicability basis stays server-side.",
+      },
       authorizationStatus: "no-public-authorization-found",
       issuerPathway: "unknown",
       issuerEntity: "Fixture Issuer",
       issuerDomicile: "United States",
       licensingRegulator: "OCC",
+      primaryFederalRegulator: "OCC",
       stateRegulator: "NYDFS",
+      foreignExceptionStatus: "not-applicable",
+      foreignExceptionEvidence: {
+        summary: "Foreign exception posture is not applicable for a domestic issuer.",
+        references: [
+          {
+            label: "Foreign exception source",
+            url: "https://example.com/foreign-exception",
+            sourceKind: "federal-regulator",
+          },
+        ],
+      },
+      enforcementStatus: "no-public-action-found",
+      daspOfferSaleStatus: "not-yet-restricted",
+      reserveDisclosurePresent: true,
       reserveDisclosureUrl: "https://example.com/reserves",
       redemptionPolicyPresent: true,
-      references: [{ label: "Disclosure", url: "https://example.com/genius" }],
+      monthlyAttestationPresent: true,
+      latestReportDate: "2026-05-01",
+      notes: "Rendered compliance note.",
+      references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
+      negativeEvidenceReview: {
+        sourcesChecked: ["OCC public releases"],
+        summary: "Long negative evidence review stays server-side.",
+        reviewer: "pharos",
+        reviewedAt: "2026-05-27",
+      },
+      reviewer: "pharos",
+      reviewedAt: "2026-05-27",
     });
-    expect(JSON.stringify(projected)).not.toContain("Long applicability basis");
-    expect(JSON.stringify(projected)).not.toContain("Long negative evidence");
-    expect(JSON.stringify(projected)).not.toContain("Rendered compliance note");
-    expect(JSON.stringify(projected)).not.toContain("reserveDisclosurePresent");
-    expect(JSON.stringify(projected)).not.toContain("monthlyAttestationPresent");
-    expect(JSON.stringify(projected)).not.toContain("foreignExceptionStatus");
-    expect(JSON.stringify(projected)).not.toContain("primaryFederalRegulator");
-    expect(JSON.stringify(projected)).not.toContain("2026-05-01");
-    expect(JSON.stringify(projected)).not.toContain("issuer-disclosure");
-    expect(JSON.stringify(projected)).not.toContain("2026-05-27");
   });
 
   it("returns no mint-authority summary when the source profile is absent", () => {

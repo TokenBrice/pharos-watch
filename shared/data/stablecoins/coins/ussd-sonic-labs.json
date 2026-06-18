@@ -57,7 +57,7 @@
     "reserveDisclosureUrl": "https://facts.frax.finance/frxusd/balance-sheet",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Sonic Labs publicly markets USSD as 'fully compatible with the GENIUS Act' and has established Sonic USA LLC (Delaware) for U.S. regulatory engagement. No PPSI application, OCC/FDIC/Federal Reserve filing, or state-qualified authorization has been found. The GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals granted to any issuer as of 2026-06-07. Foreign exception status updated to not-applicable as the issuer is U.S.-domiciled.",
+    "notes": "Sonic Labs publicly markets USSD as 'fully compatible with the GENIUS Act' and has established Sonic USA LLC (Delaware) for U.S. regulatory engagement. No PPSI application, OCC/FDIC/Federal Reserve filing, or state-qualified authorization has been found. The GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals granted to any issuer as of 2026-06-18. Foreign exception status updated to not-applicable as the issuer is U.S.-domiciled.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -87,14 +87,21 @@
         "Sonic Labs USSD docs (docs.soniclabs.com/sonic/ussd)",
         "Sonic Labs blog (blog.soniclabs.com — CLARITY Act post)",
         "Web search: Sonic Labs USSD GENIUS Act compliance 2026",
-        "Web search: Sonic Labs USSD PPSI OCC federal regulator authorization 2026"
+        "Web search: Sonic Labs USSD PPSI OCC federal regulator authorization 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific PPSI approval, state-qualified approval, official GENIUS Act application filing, or comparable foreign-issuer exception was located for USSD or Sonic Labs / Sonic USA LLC in any federal or state regulatory database. Sonic Labs' GENIUS compatibility claims are issuer marketing, not regulatory disclosures.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

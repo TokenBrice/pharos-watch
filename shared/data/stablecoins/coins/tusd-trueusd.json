@@ -99,14 +99,21 @@
         "TrueUSD transparency page and white paper materials",
         "Public foreign payment stablecoin issuer exception materials (Treasury NPRM FR 2026-06489)",
         "FinCEN/OFAC enforcement pages — no Techteryx-specific action found",
-        "CoinDesk reporting on Dubai worldwide asset freeze (Oct 2025) — civil litigation, not U.S. enforcement"
+        "CoinDesk reporting on Dubai worldwide asset freeze (Oct 2025) — civil litigation, not U.S. enforcement",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD/Techteryx. SEC action against prior operators TrueCoin/TrustToken (settled Sep 2024) supports a warning/notice posture for TUSD reserve representations but does not constitute a Techteryx prohibited/revoked action. No FinCEN or OFAC action against Techteryx found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-13"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-13"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "non-compliant",

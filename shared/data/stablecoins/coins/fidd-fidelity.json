@@ -63,6 +63,7 @@
     "reserveDisclosureUrl": "https://www.fidelitydigitalassets.com/stablecoin",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
     "notes": "Fidelity Digital Assets received a conditional OCC national trust bank charter approval on December 12, 2025 (conversion from NY state trust company). This is a trust-charter conditional approval under existing OCC chartering authority — it is not a PPSI approval under the GENIUS Act, which remains in proposed-rules rulemaking. No PPSI application framework exists yet and no issuer has received PPSI status. FIDD launched publicly on February 4, 2026; Fidelity positions FIDD as aligning with GENIUS Act reserve standards but has not announced a formal PPSI application.",
     "references": [
       {
@@ -104,14 +105,21 @@
         "OCC Bulletin 2026-3 GENIUS Act NPRM (Feb 25, 2026) — PPSI application framework still in proposed rules",
         "OCC national trust bank materials and rulemaking tracker",
         "Fidelity Digital Assets stablecoin and FIDD terms pages",
-        "Fidelity FIDD launch press release (Feb 4, 2026)"
+        "Fidelity FIDD launch press release (Feb 4, 2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No PPSI approval, state-qualified approval, or official PPSI application found for FIDD. The OCC conditional trust charter (Dec 12, 2025) confirms issuer pathway but is explicitly not a PPSI approval. No PPSI application framework exists; rulemaking is at NPRM stage.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

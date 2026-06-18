@@ -48,7 +48,7 @@
       "summary": "RLUSD is a U.S. dollar payment stablecoin issued through Ripple's NYDFS-chartered subsidiary with 1:1 redemption and monthly reserve attestations."
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "state-qualified",
+    "issuerPathway": "unknown",
     "issuerEntity": "Standard Custody & Trust Company, LLC",
     "issuerDomicile": "United States",
     "licensingRegulator": "NYDFS (current issuer charter); OCC conditional national trust bank charter pending (Ripple National Trust Bank)",
@@ -61,7 +61,8 @@
     "reserveDisclosureUrl": "https://ripple.com/solutions/stablecoin/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "RLUSD is issued by Standard Custody & Trust Company, LLC (SCTC), a NYDFS-chartered limited purpose trust company. Ripple also received a conditional OCC approval (December 12, 2025) to establish Ripple National Trust Bank (RNTB) as a de novo national trust bank to manage RLUSD reserves — this is an OCC trust bank charter under existing authority, not a GENIUS Act PPSI approval. Ripple's stated GENIUS compliance pathway is NYDFS state equivalency (SCTC). No PPSI application or approval exists as of 2026-06-07; the GENIUS Act rulemaking remains at the NPRM stage.",
+    "latestReportDate": "2026-04-30",
+    "notes": "RLUSD is issued by Standard Custody & Trust Company, LLC (SCTC), a NYDFS-chartered limited purpose trust company. Ripple also received a conditional OCC approval (December 12, 2025) to establish Ripple National Trust Bank (RNTB) as a de novo national trust bank to manage RLUSD reserves — this is an OCC trust bank charter under existing authority, not a GENIUS Act PPSI approval. Ripple's stated GENIUS compliance pathway is NYDFS state equivalency (SCTC). No PPSI application or approval exists as of 2026-06-18; the GENIUS Act rulemaking remains at the NPRM stage.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -100,14 +101,21 @@
         "Ripple national trust bank and OCC materials",
         "NYDFS virtual-currency and stablecoin materials",
         "Ripple RLUSD transparency pages",
-        "GENIUS Act PPSI rulemaking tracker (Chapman & Cutler)"
+        "GENIUS Act PPSI rulemaking tracker (Chapman & Cutler)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No GENIUS Act PPSI application, state-qualified PPSI approval, or official PPSI filing was located for RLUSD or Standard Custody & Trust Company. OCC December 2025 conditional approval is a trust bank charter under existing OCC authority, not a PPSI approval under the GENIUS Act.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "non-compliant",

@@ -66,7 +66,7 @@
     "reserveDisclosureUrl": "https://www.audd.digital/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-05-01",
+    "latestReportDate": "2026-05-31",
     "notes": "AUDD is a foreign non-USD payment stablecoin with some US presence (Coinbase Wallet custody; not tradable on Coinbase for US-based users). No GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration found. Foreign exception framework still under proposed rulemaking (Treasury NPRM FR 2026-06489). Monthly William Buck attestations confirmed through May 2026.",
     "references": [
       {
@@ -106,14 +106,21 @@
         "Treasury NPRM on state-regime comparability (FR 2026-06489)",
         "AUDD issuer website (audd.digital) — no mention of GENIUS Act or US registration",
         "Coinbase AUDD pages — trading restricted for US users, custody only",
-        "Web search for AUDC/AUDD GENIUS foreign exception or US registration — no results"
+        "Web search for AUDC/AUDD GENIUS foreign exception or US registration — no results",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No token-specific public US GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for AUDD. Foreign exception registration framework remains in proposed-rulemaking phase as of 2026-06-07.",
+      "summary": "No token-specific public US GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for AUDD. Foreign exception registration framework remains in proposed-rulemaking phase as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

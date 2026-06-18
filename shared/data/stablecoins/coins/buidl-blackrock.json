@@ -42,7 +42,11 @@
   },
   "genius": {
     "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
     "issuerEntity": "BlackRock / Securitize",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
     "notes": "BUIDL is treated here as outside GENIUS payment-stablecoin tracking because it is a tokenized fund rather than a payment stablecoin.",
     "references": [
       {
@@ -51,10 +55,6 @@
         "sourceKind": "issuer-disclosure"
       }
     ],
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-06-07"
   },

@@ -80,14 +80,21 @@
         "CFX Labs homepage (cfx.to) — NMLS and MSB registrations confirmed, no PPSI application or GENIUS pathway mentioned",
         "CFX documentation (docs.cfx.to, formerly docs.moveusd.com) — no reserve disclosure page or GENIUS Act filing found",
         "CFX July 2025 'GENIUS-ready' press release — marketing language only, no formal authorization intent",
-        "FDIC and FinCEN GENIUS Act NPRM public releases — no CFX Labs application listed"
+        "FDIC and FinCEN GENIUS Act NPRM public releases — no CFX Labs application listed",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for MOVEUSD. CFX's 'GENIUS-ready' marketing claim describes architectural alignment, not a regulatory pathway.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

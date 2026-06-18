@@ -50,7 +50,7 @@
         {
           "label": "GENIUS Act statutory text (S.1582, 119th Congress)",
           "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-          "sourceKind": "federal-register"
+          "sourceKind": "statute"
         },
         {
           "label": "Cadwalader: Operation and Structure of the GENIUS Act on Payment Stablecoins",
@@ -93,7 +93,7 @@
       {
         "label": "Ethena transparency dashboard",
         "url": "https://app.ethena.fi/dashboards/transparency",
-        "sourceKind": "auditor-report",
+        "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       },
       {
@@ -111,14 +111,21 @@
         "Federal Register GENIUS Act implementation (2025-09-19)",
         "Ethena USDe documentation and transparency dashboard",
         "Cadwalader law firm memo on GENIUS Act payment stablecoin definition",
-        "CoinDesk reporting on Ethena/Anchorage USDtb GENIUS-compliant issuance"
+        "CoinDesk reporting on Ethena/Anchorage USDtb GENIUS-compliant issuance",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for USDe. Ethena's GENIUS-compliant activity is limited to USDtb (a separate product issued via Pallas BVI Ltd / Anchorage Digital Bank). No enforcement actions found. GENIUS Act not yet effective.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

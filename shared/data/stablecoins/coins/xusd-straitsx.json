@@ -58,7 +58,8 @@
     "reserveDisclosureUrl": "https://www.straitsx.com/xusd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception. Under the GENIUS Act, StraitsX would need to register with the OCC as a foreign payment stablecoin issuer (FPSI) to offer XUSD to U.S. persons. No such application has been filed or announced as of 2026-06-07. StraitsX's own blog positions XUSD as B2B/Asia-focused; no US-market authorisation is claimed.",
+    "latestReportDate": "2026-04-30",
+    "notes": "StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception. Under the GENIUS Act, StraitsX would need to register with the OCC as a foreign payment stablecoin issuer (FPSI) to offer XUSD to U.S. persons. No such application has been filed or announced as of 2026-06-18. StraitsX's own blog positions XUSD as B2B/Asia-focused; no US-market authorisation is claimed.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -86,14 +87,21 @@
         "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "https://www.straitsx.com/xusd",
         "https://www.straitsx.com/blog-post/usdt-vs-usdc-vs-xusd",
-        "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the-issuance-of-stablecoins-by-entities-subject-to-the-jurisdiction-of-the-office-of-the-comptroller-of-the-currency"
+        "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the-issuance-of-stablecoins-by-entities-subject-to-the-jurisdiction-of-the-office-of-the-comptroller-of-the-currency",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "MAS licensing and XUSD reserve disclosures confirmed, but no token-specific U.S. GENIUS approval, OCC foreign-issuer registration, or FPSI application was found for StraitsX or XUSD across OCC bulletins, Federal Register NPRMs, and StraitsX's own public disclosures.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "non-compliant",

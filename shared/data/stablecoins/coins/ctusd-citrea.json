@@ -83,7 +83,7 @@
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MoonPay positions ctUSD as 'designed to align with the forthcoming GENIUS Act guidelines' (Citrea launch blog, Jan 2026) and MoonPay VP Harrison described GENIUS as a regulatory 'permission slip' at Consensus Miami 2026 (May 8, 2026). No token-specific PPSI application, state-qualified approval, or OCC/FDIC filing was found as of 2026-06-07. The application framework remains in NPRM stage. MoonPay holds a NYDFS Limited Purpose Trust Charter (2025) and MTLs in 49 states, which could support a state-qualified or federal-qualified-nonbank pathway under GENIUS, but no pathway has been publicly declared.",
+    "notes": "MoonPay positions ctUSD as 'designed to align with the forthcoming GENIUS Act guidelines' (Citrea launch blog, Jan 2026) and MoonPay VP Harrison described GENIUS as a regulatory 'permission slip' at Consensus Miami 2026 (May 8, 2026). No token-specific PPSI application, state-qualified approval, or OCC/FDIC filing was found as of 2026-06-18. The application framework remains in NPRM stage. MoonPay holds a NYDFS Limited Purpose Trust Charter (2025) and MTLs in 49 states, which could support a state-qualified or federal-qualified-nonbank pathway under GENIUS, but no pathway has been publicly declared.",
     "references": [
       {
         "label": "MoonPay stablecoin issuance",
@@ -127,14 +127,21 @@
         "M0 reserve dashboard",
         "CoinDesk Consensus Miami 2026 coverage (May 8, 2026) — MoonPay VP describes GENIUS as 'permission slip', no authorization announced",
         "MoonPay April 2026 Virtual Accounts press release — confirms NYDFS Trust Charter, no GENIUS application mentioned",
-        "Federal Register search for MoonPay PPSI filings — none found"
+        "Federal Register search for MoonPay PPSI filings — none found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application filing was located for ctUSD or MoonPay USA LLC. MoonPay's public posture as of June 2026 is intent-signaling only, with no regulator-grade authorization source found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

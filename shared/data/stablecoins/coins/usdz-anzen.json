@@ -80,7 +80,7 @@
       {
         "label": "Anzen transparency",
         "url": "https://rwa.anzen.finance/transparency",
-        "sourceKind": "auditor-report",
+        "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       }
     ],
@@ -89,14 +89,21 @@
         "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
         "Anzen Terms of Service (anzen.finance/terms) — entity confirmed as Anzen Group Ltd, BVI; explicitly states not registered with any regulatory body in any jurisdiction",
         "Anzen docs and website — no GENIUS PPSI application, state-qualified, or foreign-issuer exception disclosure found",
-        "Web search: no news or regulator source linking Anzen/USDz to any GENIUS authorization pathway"
+        "Web search: no news or regulator source linking Anzen/USDz to any GENIUS authorization pathway",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDz. Anzen Group Ltd's own ToS states it holds no regulatory registration anywhere.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

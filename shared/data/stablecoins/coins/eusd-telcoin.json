@@ -43,7 +43,7 @@
       "summary": "eUSD is a bank-issued U.S. dollar payment stablecoin with KYC-gated mint and redemption through Telcoin Digital Asset Bank."
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "state-qualified",
+    "issuerPathway": "unknown",
     "issuerEntity": "Telcoin, Inc. d/b/a Telcoin Digital Asset Bank",
     "issuerDomicile": "United States",
     "stateRegulator": "Nebraska Department of Banking and Finance",
@@ -54,7 +54,7 @@
     "reserveDisclosureUrl": "https://bank.telco.in/eUSD",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository Institution charter (signed November 12, 2025) under the Nebraska Financial Innovation Act. The company has publicly committed to publishing monthly reserve attestations from an external auditor, but no published attestation reports were found as of 2026-06-07. News sources characterize eUSD as operating in alignment with the GENIUS Act, but no direct issuer statement announces a GENIUS PPSI application, and no state-regime comparability determination has been made for Nebraska under the GENIUS Act Treasury NPRM. The Nebraska DADI charter is a state banking authorization, not a GENIUS Act PPSI authorization. Retaining no-public-authorization-found as the conservative and accurate status.",
+    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository Institution charter (signed November 12, 2025) under the Nebraska Financial Innovation Act. The company has publicly committed to publishing monthly reserve attestations from an external auditor, but no published attestation reports were found as of 2026-06-18. News sources characterize eUSD as operating in alignment with the GENIUS Act, but no direct issuer statement announces a GENIUS PPSI application, and no state-regime comparability determination has been made for Nebraska under the GENIUS Act Treasury NPRM. The Nebraska DADI charter is a state banking authorization, not a GENIUS Act PPSI authorization. Retaining no-public-authorization-found as the conservative and accurate status.",
     "references": [
       {
         "label": "Telcoin eUSD reserve disclosure page",
@@ -93,17 +93,24 @@
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin (Bulletin 2026-3, February 25, 2026) — no Telcoin/eUSD PPSI approval found",
         "Nebraska Department of Banking and Finance / Governor's office charter documentation (November 12, 2025) — confirms state DADI charter, not GENIUS PPSI approval",
-        "Telcoin eUSD page (bank.telco.in/eUSD, accessed 2026-06-07) — no GENIUS PPSI application or approval disclosed",
-        "Telcoin Digital Cash page (telco.in/en/digital-cash, accessed 2026-06-07) — no GENIUS Act application or PPSI status announced",
-        "Treasury state-regime comparability NPRM (FR 2026-06489) — no Nebraska DADI regime certified as substantially similar under GENIUS Act as of 2026-06-07",
-        "Federal Register and OCC/FDIC/FinCEN GENIUS Act NPRMs — no issuer-specific PPSI approvals granted to any entity as of 2026-06-07"
+        "Telcoin eUSD page (bank.telco.in/eUSD, accessed 2026-06-18) — no GENIUS PPSI application or approval disclosed",
+        "Telcoin Digital Cash page (telco.in/en/digital-cash, accessed 2026-06-18) — no GENIUS Act application or PPSI status announced",
+        "Treasury state-regime comparability NPRM (FR 2026-06489) — no Nebraska DADI regime certified as substantially similar under GENIUS Act as of 2026-06-18",
+        "Federal Register and OCC/FDIC/FinCEN GENIUS Act NPRMs — no issuer-specific PPSI approvals granted to any entity as of 2026-06-18",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No GENIUS Act PPSI approval, official application, or state-qualified GENIUS authorization was found for Telcoin Digital Asset Bank or eUSD. The Nebraska DADI charter (November 2025) is a state banking authorization under the Nebraska Financial Innovation Act, not a GENIUS Act authorization. The GENIUS Act state-regime comparability process (Treasury NPRM FR 2026-06489) has not designated Nebraska as a substantially similar regime. No GENIUS Act PPSI approvals have been granted to any issuer as of June 7, 2026.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

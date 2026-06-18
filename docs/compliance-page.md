@@ -22,6 +22,14 @@ Compliance metadata is static editorial metadata bundled through the client regi
 
 No Worker endpoint, D1 table, cron job, API hook, or `next.config.ts` redirect is required.
 
+The GENIUS client projection includes the public posture fields shown on the page:
+applicability basis, regulator fields, foreign-exception posture, enforcement
+posture, DASP offer/sale posture, reserve/redemption/monthly-attestation flags,
+latest report date, reviewer metadata, notes, and negative-evidence review
+summary. The page source column aggregates top-level references plus nested
+references from applicability, foreign-exception, and negative-evidence blocks so
+rows with nested-only evidence still render citations.
+
 ## Page Contract
 
 `/compliance/` is statically exported and included in the sitemap. It uses `createClientFeaturePage()` and reads `CLIENT_TRACKED_STABLECOINS`.
@@ -38,6 +46,12 @@ Default view is `regime=all`. For legacy MiCA links, the client infers `regime=m
 
 The main authorization table excludes frozen and pre-launch assets. MiCA rows can enter the main table when the coin is active and has `mica` metadata. GENIUS rows enter the main table only when the regime is effective (`GENIUS_REGIME_STATE.rulemakingPhase === "effective"`) and the coin is not pre-launch; pre-launch coins and all non-frozen coins while the regime is not yet effective remain in the separate "Implementation Watch" section (frozen coins are excluded from both the main table and Implementation Watch).
 
+Tables show the GENIUS reserve-disclosure column whenever the displayed rows
+include GENIUS entries, including the default `regime=all` Implementation Watch.
+GENIUS rows also render enforcement, DASP, foreign-exception, monthly
+attestation, latest report date, reviewer, reviewed date, notes, and
+negative-evidence summary in compact table cells/details.
+
 ## GENIUS Modeling
 
 **`docs/genius-tracker.md` is the source of truth** for the `genius` schema, applicability/status criteria, sourcing requirements, and legal framing — the companion to `docs/mica-tracker.md`. Read it before editing `genius` metadata.
@@ -51,7 +65,7 @@ GENIUS should not be modeled as one broad "compliant" label. The `GeniusProfile`
 - foreign exception posture;
 - enforcement posture;
 - digital asset service provider offer/sale posture;
-- reserve and redemption disclosure presence;
+- reserve, redemption, and monthly-attestation disclosure presence;
 - dated reviewer metadata and source references.
 
 Use `authorizationStatus: "issuer-announced-intent"` only for issuer/partner statements that do not have regulator-sourced approval or application evidence. Official approval/application statuses require regulator or Federal Register references. `no-public-authorization-found` requires a dated negative-evidence review.

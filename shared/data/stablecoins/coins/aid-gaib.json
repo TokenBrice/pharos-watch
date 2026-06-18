@@ -62,7 +62,8 @@
     "reserveDisclosureUrl": "https://aid.gaib.ai/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-07 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published.",
+    "latestReportDate": "2026-05-31",
+    "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-18 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act NPRM",
@@ -93,14 +94,21 @@
         "Treasury state-regime comparability NPRM (FR 2026-06489)",
         "GAIB AID product documentation and blog",
         "GAIB transparency page (aid.gaib.ai/transparency)",
-        "Web search for GAIB GENIUS Act authorization, PPSI filings, and Singapore comparability determination"
+        "Web search for GAIB GENIUS Act authorization, PPSI filings, and Singapore comparability determination",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No PPSI approval, state-qualified approval, official application, registered foreign-exception, or Singapore comparability determination was found for GAIB or AID. The foreign-exception framework is still being built through NPRMs; no state has been certified as substantially similar and no third-country comparability determination has been issued by Treasury as of 2026-06-07.",
+      "summary": "No PPSI approval, state-qualified approval, official application, registered foreign-exception, or Singapore comparability determination was found for GAIB or AID. The foreign-exception framework is still being built through NPRMs; no state has been certified as substantially similar and no third-country comparability determination has been issued by Treasury as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {
@@ -293,7 +301,9 @@
         "name": "Arbitrum One",
         "slug": "arbitrum",
         "url": "https://l2beat.com/scaling/projects/arbitrum",
-        "bridgeTypes": ["canonical-rollup-bridge"]
+        "bridgeTypes": [
+          "canonical-rollup-bridge"
+        ]
       }
     ],
     "sources": [

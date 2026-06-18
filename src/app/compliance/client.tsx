@@ -25,6 +25,9 @@ import {
   GENIUS_APPLICABILITY_LABELS,
   GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES,
   GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS,
+  GENIUS_DASP_OFFER_SALE_STATUS_LABELS,
+  GENIUS_ENFORCEMENT_STATUS_LABELS,
+  GENIUS_FOREIGN_EXCEPTION_STATUS_LABELS,
   GENIUS_ISSUER_PATHWAY_LABELS,
 } from "@shared/lib/genius";
 import {
@@ -52,6 +55,10 @@ import {
 } from "./model";
 
 const COMPLIANCE_TEXT_CELL_CLASS = "whitespace-normal break-words align-top leading-snug";
+
+function hasGeniusRows(rows: readonly ComplianceRow[]): boolean {
+  return rows.some((row) => row.regime === "genius");
+}
 
 function normalizePegFilter(value: string): PegCurrency | "all" {
   return value === "all" || value in PEG_METADATA ? (value as PegCurrency | "all") : "all";
@@ -283,7 +290,7 @@ export function ComplianceClient() {
                 tableId="compliance-authorization"
                 testId="compliance-authorization-table"
                 ariaLabel="Compliance authorization table"
-                showReserveDisclosure={regimeFilter === "genius"}
+                showReserveDisclosure={hasGeniusRows(rows)}
               />
             )}
           </div>
@@ -313,7 +320,7 @@ export function ComplianceClient() {
                   tableId="compliance-genius-watch"
                   testId="compliance-genius-watch-table"
                   ariaLabel="GENIUS implementation watch table"
-                  showReserveDisclosure={regimeFilter === "genius"}
+                  showReserveDisclosure={hasGeniusRows(watchRows)}
                 />
               )}
             </div>
@@ -435,6 +442,7 @@ function ComplianceTableRow({
       ) : null}
       <TableCell className="w-[300px] whitespace-normal text-right align-top">
         <SourceLinks references={row.references} />
+        {row.regime === "genius" ? <GeniusReviewDetails row={row} /> : null}
       </TableCell>
     </TableRow>
   );
@@ -455,12 +463,24 @@ function MicaStatusCell({ row }: { row: Extract<ComplianceRow, { regime: "mica" 
 function GeniusStatusCell({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
   const status = GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[row.status];
   return (
-    <span
-      title={GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[row.status]}
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${status.cls}`}
-    >
-      {status.label}
-    </span>
+    <div className="space-y-1">
+      <span
+        title={GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[row.status]}
+        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${status.cls}`}
+      >
+        {status.label}
+      </span>
+      {row.enforcementStatus ? (
+        <span className="block text-xs text-muted-foreground">
+          Enforcement: {GENIUS_ENFORCEMENT_STATUS_LABELS[row.enforcementStatus]}
+        </span>
+      ) : null}
+      {row.daspOfferSaleStatus ? (
+        <span className="block text-xs text-muted-foreground">
+          DASP: {GENIUS_DASP_OFFER_SALE_STATUS_LABELS[row.daspOfferSaleStatus]}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -501,6 +521,11 @@ function GeniusPathwayCell({ row }: { row: Extract<ComplianceRow, { regime: "gen
     <span className="text-sm">
       {GENIUS_ISSUER_PATHWAY_LABELS[row.issuerPathway]}
       <span className="block text-xs text-muted-foreground">{GENIUS_APPLICABILITY_LABELS[row.applicability]}</span>
+      {row.foreignExceptionStatus ? (
+        <span className="block text-xs text-muted-foreground">
+          Foreign exception: {GENIUS_FOREIGN_EXCEPTION_STATUS_LABELS[row.foreignExceptionStatus]}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -531,9 +556,12 @@ function GeniusReserveCell({ row }: { row: Extract<ComplianceRow, { regime: "gen
   if (!row.hasAnyDisclosure) return <EmptyCell />;
   const content = (
     <>
-      Disclosure
+      {row.reserveDisclosurePresent ? "Reserve disclosure" : "Disclosure"}
       {row.latestReportDate ? <span className="block text-xs text-muted-foreground">{row.latestReportDate}</span> : null}
       {row.redemptionPolicyPresent ? <span className="block text-xs text-muted-foreground">Redemption policy</span> : null}
+      {row.monthlyAttestationPresent ? (
+        <span className="block text-xs text-muted-foreground">Monthly attestation</span>
+      ) : null}
     </>
   );
   if (!row.reserveDisclosureUrl) return <span className="text-sm">{content}</span>;
@@ -546,6 +574,47 @@ function GeniusReserveCell({ row }: { row: Extract<ComplianceRow, { regime: "gen
     >
       {content}
     </a>
+  );
+}
+
+function GeniusReviewDetails({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
+  const hasReviewDetails = Boolean(
+    row.notes ||
+      row.applicabilitySummary ||
+      row.foreignExceptionSummary ||
+      row.negativeEvidenceSummary ||
+      row.negativeEvidenceSourcesChecked.length > 0 ||
+      row.reviewer ||
+      row.reviewedAt,
+  );
+  if (!hasReviewDetails) return null;
+
+  return (
+    <details className="ml-auto mt-2 max-w-[300px] rounded border border-border/60 bg-muted/20 px-2 py-1 text-left text-xs text-muted-foreground">
+      <summary className="cursor-pointer select-none text-right font-medium text-foreground">Review details</summary>
+      <div className="mt-2 space-y-2">
+        {row.reviewedAt || row.reviewer ? (
+          <p>
+            Reviewed{row.reviewedAt ? ` ${row.reviewedAt}` : ""}
+            {row.reviewer ? ` by ${row.reviewer}` : ""}
+          </p>
+        ) : null}
+        {row.applicabilitySummary ? <p>{row.applicabilitySummary}</p> : null}
+        {row.foreignExceptionSummary ? <p>{row.foreignExceptionSummary}</p> : null}
+        {row.negativeEvidenceSummary ? <p>{row.negativeEvidenceSummary}</p> : null}
+        {row.notes ? <p>{row.notes}</p> : null}
+        {row.negativeEvidenceSourcesChecked.length > 0 ? (
+          <div className="space-y-1">
+            <p className="font-medium text-foreground">Sources checked</p>
+            <ul className="list-inside list-disc space-y-0.5">
+              {row.negativeEvidenceSourcesChecked.slice(0, 5).map((source) => (
+                <li key={source}>{source}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </details>
   );
 }
 

@@ -90,14 +90,21 @@
         "Metallicus newsroom (metallicus.com/news) — no PPSI or authorization announcement",
         "XPR Network Metal Dollar help article",
         "Metallicus Q2 2025 quarterly report CDN search — no XMD-specific GENIUS filing mentioned",
-        "Web search: Metallicus GENIUS Act PPSI license 2025–2026 — no results linking Metallicus to PPSI application"
+        "Web search: Metallicus GENIUS Act PPSI license 2025–2026 — no results linking Metallicus to PPSI application",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for XMD. Metallicus shows GENIUS awareness but no public authorization posture.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {

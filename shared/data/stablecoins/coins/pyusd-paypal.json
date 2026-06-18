@@ -64,6 +64,7 @@
     "reserveDisclosureUrl": "https://www.paxos.com/pyusd-transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
     "notes": "On December 12, 2025, the OCC granted Paxos Trust Company conditional approval to convert from its NYDFS limited purpose trust charter to a national trust bank charter (OCC NR-2025-125). This is a conditional trust-charter conversion, not a PPSI approval under the GENIUS Act (whose application framework remains in proposed-rules rulemaking). Paxos publicly announced PYUSD will align with GENIUS Act requirements as rules are finalized. The authorizationStatus remains issuer-announced-intent because no PPSI approval framework or application process yet exists. The OCC rulemaking (Bulletin 2026-3) is also scrutinizing PayPal's 4% PYUSD reward program as a potential indirect interest payment prohibited under GENIUS.",
     "references": [
       {
@@ -102,14 +103,21 @@
         "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
         "Paxos OCC national trust charter conversion press release (Dec 12, 2025)",
         "Paxos PYUSD transparency and terms",
-        "PayPal PYUSD issuer disclosures"
+        "PayPal PYUSD issuer disclosures",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "Paxos received OCC conditional trust-charter approval Dec 2025, but no PPSI approval exists – the GENIUS Act PPSI application framework remains in proposed-rules rulemaking as of June 7, 2026.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "non-compliant",

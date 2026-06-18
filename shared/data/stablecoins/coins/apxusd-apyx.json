@@ -77,7 +77,7 @@
       {
         "label": "Apyx transparency",
         "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
@@ -86,14 +86,21 @@
         "Apyx product, terms, and transparency pages",
         "Apyx Terms of Service (confirmed BVI jurisdiction, US persons blocked, no regulatory licensing disclosed)",
         "ValueTheMarkets article on apxUSD challenges (June 2026) — no regulatory filings or GENIUS Act references",
-        "Web searches for Apyx/Preference Capital regulatory filings, OCC/FinCEN databases — no results"
+        "Web searches for Apyx/Preference Capital regulatory filings, OCC/FinCEN databases — no results",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception found. Apyx ToS confirms BVI domicile and blocks US persons; no GENIUS Act reference in any issuer document.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

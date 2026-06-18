@@ -81,7 +81,7 @@
       {
         "label": "GENIUS Act enacted text (Public Law 119-27)",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "sourceKind": "federal-register"
+        "sourceKind": "statute"
       },
       {
         "label": "YLDS website — confirms GENIUS Act yield exemption",
@@ -90,7 +90,7 @@
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

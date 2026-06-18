@@ -49,10 +49,13 @@
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Startale Group",
     "issuerDomicile": "Singapore",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://usd.startale.com/",
     "redemptionPolicyPresent": true,
@@ -76,7 +79,7 @@
       },
       {
         "label": "M0 extensions documentation",
-        "url": "https://docs.m0.org/raw/protocol/extensions.md",
+        "url": "https://docs.m0.org/home/technical-documentations/extensions/",
         "sourceKind": "issuer-disclosure"
       },
       {
@@ -85,22 +88,26 @@
         "sourceKind": "issuer-disclosure"
       }
     ],
-    "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
         "Issuer disclosures and token documentation (usd.startale.com, startale.com/en/blog/usdsc-faq)",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "Web search for Startale USDSC GENIUS Act authorization June 2026"
+        "Web search for Startale USDSC GENIUS Act authorization June 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "Startale and M0 issuer materials were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDSC. Startale Group remains Singapore-domiciled with no announced U.S. regulatory authorization intent.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

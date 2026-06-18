@@ -59,7 +59,8 @@
     "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Anchorage Digital Bank N.A. holds an OCC national trust bank charter (granted 2021) and is an uninsured national trust bank — not FDIC-insured and not an IDI subsidiary. Under the GENIUS Act, the federal-qualified-nonbank pathway covers uninsured national banks chartered by the OCC approved to issue payment stablecoins; this is the correct pathway for Anchorage. Anchorage has publicly announced intent to qualify as a PPSI and submitted comment letters to the OCC on the GENIUS Act NPRM, but no PPSI approval or formal application has been submitted — the approval framework is still in proposed-rules rulemaking as of 2026-06-07 (GENIUS Act effective Jan 18, 2027 or 120 days after final rules). No token-specific public OCC GENIUS approval found for USDGO.",
+    "latestReportDate": "2026-04-30",
+    "notes": "Anchorage Digital Bank N.A. holds an OCC national trust bank charter (granted 2021) and is an uninsured national trust bank — not FDIC-insured and not an IDI subsidiary. Under the GENIUS Act, the federal-qualified-nonbank pathway covers uninsured national banks chartered by the OCC approved to issue payment stablecoins; this is the correct pathway for Anchorage. Anchorage has publicly announced intent to qualify as a PPSI and submitted comment letters to the OCC on the GENIUS Act NPRM, but no PPSI approval or formal application has been submitted — the approval framework is still in proposed-rules rulemaking as of 2026-06-18 (GENIUS Act effective Jan 18, 2027 or 120 days after final rules). No token-specific public OCC GENIUS approval found for USDGO.",
     "references": [
       {
         "label": "OCC: Anchorage national trust bank charter",
@@ -96,14 +97,21 @@
         "OCC Anchorage Digital Bank public charter materials",
         "USDGO issuer metadata and reserve attestation pages",
         "Anchorage Digital Bank insights and platform pages (June 2026)",
-        "OCC Federal Register NPRM for GENIUS Act implementation"
+        "OCC Federal Register NPRM for GENIUS Act implementation",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No token-specific public OCC GENIUS PPSI approval, official application, or registration was located for USDGO. Anchorage has publicly announced intent and submitted GENIUS Act comment letters, but the PPSI approval framework is still in proposed-rules rulemaking as of 2026-06-07.",
+      "summary": "No token-specific public OCC GENIUS PPSI approval, official application, or registration was located for USDGO. Anchorage has publicly announced intent and submitted GENIUS Act comment letters, but the PPSI approval framework is still in proposed-rules rulemaking as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

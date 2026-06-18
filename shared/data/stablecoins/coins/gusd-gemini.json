@@ -65,13 +65,13 @@
     "reserveDisclosureUrl": "https://www.gemini.com/dollar",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-03-31",
+    "latestReportDate": "2026-04-30",
     "notes": "GUSD is NYDFS-approved/greenlisted as a New York virtual currency stablecoin, but no GENIUS PPSI approval, state-qualified GENIUS approval, official application, or issuer-announced GENIUS pathway was found.",
     "references": [
       {
         "label": "NYDFS virtual currency business activity",
         "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
-        "sourceKind": "state-regulator"
+        "sourceKind": "regulator-directory"
       },
       {
         "label": "Gemini Dollar page",
@@ -92,14 +92,21 @@
         "Federal Register GENIUS notices",
         "NYDFS Gemini and GUSD materials",
         "Gemini Dollar disclosures",
-        "Web search for Gemini GENIUS Act issuer intent 2026"
+        "Web search for Gemini GENIUS Act issuer intent 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, official application, or foreign exception source was located for GUSD. Gemini disclosures focus on NYDFS standing and reserve reporting; no formal GENIUS pathway announcement found as of 2026-06-13.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-13"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-13"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "non-compliant",

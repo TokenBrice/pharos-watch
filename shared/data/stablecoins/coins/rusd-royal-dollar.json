@@ -67,7 +67,7 @@
     "reserveDisclosureUrl": "https://book.royalcc.world/books/RUSD_Whitepaper/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "RUSD has issuer-style stablecoin disclosures, but no public GENIUS approval or foreign-issuer exception source was found. RIB Group Holdings Ltd / RIB Digital operates from Hong Kong/UK; no OCC, FDIC, Federal Reserve, or state regulatory filing identified. The foreign-issuer exception framework itself remains in proposed-rules phase as of 2026-06-07 with no registered exceptions granted to any issuer.",
+    "notes": "RUSD has issuer-style stablecoin disclosures, but no public GENIUS approval or foreign-issuer exception source was found. RIB Group Holdings Ltd / RIB Digital operates from Hong Kong/UK; no OCC, FDIC, Federal Reserve, or state regulatory filing identified. The foreign-issuer exception framework itself remains in proposed-rules phase as of 2026-06-18 with no registered exceptions granted to any issuer.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -101,14 +101,21 @@
         "Royal RUSD page and whitepaper (rcoins.digital, book.royalcc.world)",
         "RIBG Digital stablecoins website (ribg.digital)",
         "Web search: RIB Digital Holdings GENIUS Act foreign payment stablecoin issuer registration 2026",
-        "Web search: Royal Coins RUSD US regulatory status 2026"
+        "Web search: Royal Coins RUSD US regulatory status 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for RUSD. The foreign-issuer exception registration framework remains in proposed rulemaking with no exceptions granted to any issuer as of 2026-06-07.",
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for RUSD. The foreign-issuer exception registration framework remains in proposed rulemaking with no exceptions granted to any issuer as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

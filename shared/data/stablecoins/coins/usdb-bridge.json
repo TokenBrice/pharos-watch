@@ -82,14 +82,21 @@
         "bridge.xyz blog — OCC conditional approval announcement",
         "Bridge stablecoins FAQ (apidocs.bridge.xyz)",
         "Stripe Open Issuance blog — GENIUS-ready compliance positioning",
-        "Federal Register GENIUS Act tracker (Chapman & Cutler, accessed 2026-06-07)"
+        "Federal Register GENIUS Act tracker (Chapman & Cutler, accessed 2026-06-18)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act application found for Bridge or USDB. Bridge holds a conditional OCC trust bank charter (not a PPSI grant) and self-describes as GENIUS-ready. GENIUS Act rulemaking remains at proposed-rules stage with no approvals granted to any issuer as of 2026-06-07.",
+      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act application found for Bridge or USDB. Bridge holds a conditional OCC trust bank charter (not a PPSI grant) and self-describes as GENIUS-ready. GENIUS Act rulemaking remains at proposed-rules stage with no approvals granted to any issuer as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

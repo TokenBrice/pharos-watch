@@ -68,6 +68,27 @@ describe("Compliance model", () => {
     expect(watchRows.some((row) => row.id === "eusd-telcoin")).toBe(true);
   });
 
+  it("projects GENIUS disclosure, regulator, review, and nested source fields", () => {
+    const { watchRows } = buildComplianceViewModel({
+      regime: "genius",
+      status: "all",
+      tokenType: "all",
+      peg: "all",
+      search: "",
+    });
+
+    const usdh = watchRows.find((row) => row.id === "usdh-native-markets" && row.regime === "genius");
+    expect(usdh?.primaryFederalRegulator).toBe("OCC");
+    expect(usdh?.latestReportDate).toBe("2026-04-30");
+    expect(usdh?.monthlyAttestationPresent).toBe(true);
+
+    const cusd = watchRows.find((row) => row.id === "cusd-celo" && row.regime === "genius");
+    expect(cusd?.foreignExceptionStatus).toBe("unknown");
+    expect(cusd?.negativeEvidenceSummary).toContain("Mento Labs");
+    expect(cusd?.negativeEvidenceSourcesChecked.length).toBeGreaterThan(0);
+    expect(cusd?.references.some((reference) => reference.url.includes("registercheck.de"))).toBe(true);
+  });
+
   it("normalizes unknown URL filter values to all", () => {
     expect(normalizeComplianceRegimeFilter("bogus")).toBe("all");
     expect(normalizeComplianceStatusFilter("bogus")).toBe("all");

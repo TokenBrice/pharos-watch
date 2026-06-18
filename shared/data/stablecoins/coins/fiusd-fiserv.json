@@ -34,7 +34,7 @@
       "summary": "FIUSD is a pre-launch fully reserved USD-backed stablecoin platform from Fiserv designed for financial-institution and payment-system use. Fiserv acts as infrastructure provider; participating banks are the actual stablecoin issuers under the IDI-subsidiary pathway."
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "idi-subsidiary",
+    "issuerPathway": "unknown",
     "issuerEntity": "Fiserv, Inc. (platform/infrastructure provider); participating bank clients as IDI-subsidiary issuers",
     "issuerDomicile": "United States",
     "foreignExceptionStatus": "not-applicable",
@@ -73,14 +73,21 @@
         "Fiserv FIUSD product and investor-relations disclosures",
         "Fiserv stablecoin pilot materials",
         "Payments Dive coverage of July 2026 launch confirmation",
-        "Fiserv Q1 2026 earnings call transcript (May 5, 2026)"
+        "Fiserv Q1 2026 earnings call transcript (May 5, 2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for FIUSD or for any of its participating bank issuers. The PPSI application framework remains under proposed rulemaking as of June 2026.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "blacklistabilityReview": {
     "reviewedStatus": false,

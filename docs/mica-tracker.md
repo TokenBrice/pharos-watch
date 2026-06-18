@@ -117,7 +117,7 @@ Editorial assignment rules. Each non-`out-of-scope` status should carry at least
 | `pending` | Application filed with a competent authority; decision outstanding. | Issuer disclosure + authority filing |
 | `transitional` | Offered/traded on EU venues under a member-state CASP grandfathering window (no issuer authorization yet). | National transitional-regime notices |
 | `non-compliant` | In EU scope but no authorization and no transitional cover; delisted or restricted on EU venues. | Exchange delisting notices, issuer statements |
-| `out-of-scope` | Not offered to the public or admitted to trading in the EU. | Default for non-EU-marketed coins |
+| `out-of-scope` | Not offered to the public or admitted to trading in the EU, or reviewed legal/source evidence indicates the token is outside EMT/ART issuer authorization requirements (for example, no identifiable issuer for Titles II-IV). | Default for non-EU-marketed coins; sourced issuer-scope analysis for edge cases |
 
 Leave `mica` **undefined** for coins not yet assessed — the page distinguishes "not assessed" (no row / muted) from `out-of-scope` (explicitly reviewed). This bounds the backfill: only researched coins assert a status.
 

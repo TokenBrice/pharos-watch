@@ -112,7 +112,7 @@
         {
           "label": "GENIUS Act Public Law 119-27 — payment stablecoin definition and securities exclusion",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-          "sourceKind": "federal-register",
+          "sourceKind": "statute",
           "accessedAt": "2026-06-07"
         },
         {
@@ -140,7 +140,7 @@
       {
         "label": "GENIUS Act Public Law 119-27 — payment stablecoin definition and securities exclusion",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "sourceKind": "federal-register",
+        "sourceKind": "statute",
         "accessedAt": "2026-06-07"
       },
       {
@@ -171,7 +171,7 @@
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

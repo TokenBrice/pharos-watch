@@ -219,7 +219,9 @@
         "name": "LayerZero",
         "slug": "layerzero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": ["burnAndMint"]
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [

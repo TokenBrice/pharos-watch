@@ -74,14 +74,21 @@
       "sourcesChecked": [
         "OCC GENIUS NPRM and reporting-form notices",
         "Bank of North Dakota Roughrider materials",
-        "Fiserv Roughrider and FIUSD materials"
+        "Fiserv Roughrider and FIUSD materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or final issuer-pathway source was located for Roughrider Coin.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-13"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-13"
+    "reviewedAt": "2026-06-18"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

@@ -268,10 +268,10 @@
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "foreign-registered",
+    "issuerPathway": "unknown",
     "issuerEntity": "Mento Labs GmbH",
     "issuerDomicile": "Germany",
-    "foreignExceptionStatus": "not-applicable",
+    "foreignExceptionStatus": "unknown",
     "foreignExceptionEvidence": {
       "summary": "No foreign-issuer registration or comparability determination has been sought by Mento Labs GmbH. The issuer has made no public statements about pursuing GENIUS Act compliance or OCC foreign-issuer registration. GENIUS foreign-issuer rules remain in proposed-rules phase as of June 2026."
     },
@@ -281,6 +281,7 @@
     "reserveDisclosureUrl": "https://reserve.mento.org/",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
+    "notes": "The shortlisting rationale cited a named US-nexus issuer (Mento Labs) but this is factually incorrect — Mento Labs GmbH is domiciled in Berlin, Germany. USDm meets the functional definition of a payment stablecoin (USD-peg, reserve-backed, designed for payments) but the issuer is a foreign entity with no US regulatory engagement. The GENIUS Act foreign-issuer pathway could theoretically apply when the framework is effective, but no steps toward compliance have been taken. Conservative status: no-public-authorization-found. Note: top-level reviewer and reviewedAt added to satisfy schema required fields.",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "https://www.registercheck.de/companies/mento-labs-gmbh",
@@ -288,11 +289,18 @@
         "https://docs.mento.org/mento-v3/dive-deeper/the-reserve",
         "https://forum.mento.org/t/mento-stablecoin-rebranding-and-strategic-evolution/98",
         "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "https://www.coingecko.com/en/coins/celo-dollar"
+        "https://www.coingecko.com/en/coins/celo-dollar",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "Searched Federal Register, OCC bulletins (2026-3), FinCEN, and Treasury rulemaking trackers — no mention of Mento Labs or USDm in any GENIUS Act context. Mento Labs GmbH is a German entity with no US subsidiary, no OCC filing, no GENIUS Act compliance announcement. Protocol is DAO-governed; market cap approximately $14M; primary user base is Africa and emerging markets via MiniPay. No geo-restriction on US access but no US-targeted regulatory posture.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07",
+      "reviewedAt": "2026-06-18",
       "references": [
         {
           "label": "OCC GENIUS Act NPRM (Bulletin 2026-3) — no Mento mention",
@@ -306,9 +314,8 @@
         }
       ]
     },
-    "notes": "The shortlisting rationale cited a named US-nexus issuer (Mento Labs) but this is factually incorrect — Mento Labs GmbH is domiciled in Berlin, Germany. USDm meets the functional definition of a payment stablecoin (USD-peg, reserve-backed, designed for payments) but the issuer is a foreign entity with no US regulatory engagement. The GENIUS Act foreign-issuer pathway could theoretically apply when the framework is effective, but no steps toward compliance have been taken. Conservative status: no-public-authorization-found. Note: top-level reviewer and reviewedAt added to satisfy schema required fields.",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "launchDate": "2020-04-22"
 }

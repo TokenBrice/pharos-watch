@@ -85,14 +85,21 @@
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases",
         "Reserve Protocol documentation and app disclosures",
-        "Web search for Reserve Protocol / eUSD GENIUS Act compliance 2026"
+        "Web search for Reserve Protocol / eUSD GENIUS Act compliance 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eUSD. No GENIUS approvals have been granted to any issuer as of 2026-06-07; rulemaking remains at NPRM stage.",
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eUSD. No GENIUS approvals have been granted to any issuer as of 2026-06-18; rulemaking remains at NPRM stage.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

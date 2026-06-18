@@ -40,7 +40,7 @@
       "summary": "Telcoin lists eMXN as a live Digital Cash stablecoin issued under a Nebraska-chartered Digital Asset Depository Bank, positioning it as a 1:1 MXN-backed payment instrument."
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "state-qualified",
+    "issuerPathway": "unknown",
     "issuerEntity": "Telcoin, Inc. / Telcoin Digital Asset Bank",
     "issuerDomicile": "United States",
     "stateRegulator": "Nebraska Department of Banking and Finance",
@@ -99,14 +99,21 @@
         "Telcoin Magazine substack article on GENIUS Act alignment",
         "Nebraska Governor press release on Digital Asset Bank charter",
         "Nebraska Department of Banking and Finance public records via search",
-        "No Telcoin PPSI filing, OCC application, or state-qualified GENIUS approval found"
+        "No Telcoin PPSI filing, OCC application, or state-qualified GENIUS approval found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for eMXN or Telcoin. The Nebraska charter is a state-law instrument and no state has been certified as substantially similar under GENIUS as of June 2026. Telcoin publicly frames its Nebraska charter as GENIUS-aligned but has not filed a formal GENIUS PPSI application; the application framework itself remains in proposed rulemaking.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

@@ -167,7 +167,7 @@
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "M0 Foundation is a Swiss-domiciled protocol layer and governance entity — not itself a US-formed PPSI candidate. Actual M token minting is performed by separately permissioned Minter entities (MXON, Anchorage Digital, Bridge/Stripe, MoonPay, etc.), which may individually seek GENIUS Act status. No PPSI application, state-qualified approval, or foreign-issuer exception has been publicly announced for M0 Foundation or the base M token. Rulemaking remains at NPRM stage as of 2026-06-07.",
+    "notes": "M0 Foundation is a Swiss-domiciled protocol layer and governance entity — not itself a US-formed PPSI candidate. Actual M token minting is performed by separately permissioned Minter entities (MXON, Anchorage Digital, Bridge/Stripe, MoonPay, etc.), which may individually seek GENIUS Act status. No PPSI application, state-qualified approval, or foreign-issuer exception has been publicly announced for M0 Foundation or the base M token. Rulemaking remains at NPRM stage as of 2026-06-18.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -187,7 +187,7 @@
       {
         "label": "M0 dashboard",
         "url": "https://dashboard.m0.org/",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "Anchorage Digital partners with M0 on US stablecoin issuance stack",
@@ -206,14 +206,21 @@
         "M0 docs, website, and reserve dashboard",
         "GENIUS Act Federal Register NPRMs (OCC, FDIC, FinCEN/OFAC, Treasury)",
         "Web search: M0 Foundation GENIUS Act PPSI application 2026",
-        "Web search: M0 protocol US regulatory status issuer 2026"
+        "Web search: M0 protocol US regulatory status issuer 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for M0 Foundation or the M token. M0 Foundation is Swiss-domiciled and acts as a protocol/governance layer, not as a US-formed PPSI. Permissioned Minters (Anchorage, Bridge, etc.) are the actual token issuers and may seek individual GENIUS Act authorization, but no such public filing was found as of 2026-06-07.",
+      "summary": "No PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for M0 Foundation or the M token. M0 Foundation is Swiss-domiciled and acts as a protocol/governance layer, not as a US-formed PPSI. Permissioned Minters (Anchorage, Bridge, etc.) are the actual token issuers and may seek individual GENIUS Act authorization, but no such public filing was found as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

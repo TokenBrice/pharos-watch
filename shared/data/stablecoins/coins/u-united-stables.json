@@ -44,6 +44,8 @@
     "issuerEntity": "United Stables Limited",
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.u.tech/",
     "redemptionPolicyPresent": true,
@@ -73,16 +75,21 @@
         "OCC GENIUS Act proposed rule and public releases",
         "United Stables website (u.tech) regulatory disclosure — issuer explicitly states no GENIUS Act authorization obtained",
         "United Stables terms page regulatory disclosure",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "United Stables' own site carries an explicit disclosure that $U has not obtained registration, authorization, or licensing under the GENIUS Act of 2025; no public GENIUS approval, application, or foreign registration source was located on re-verification 2026-06-07.",
+      "summary": "United Stables' own site carries an explicit disclosure that $U has not obtained registration, authorization, or licensing under the GENIUS Act of 2025; no public GENIUS approval, application, or foreign registration source was located on re-verification 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

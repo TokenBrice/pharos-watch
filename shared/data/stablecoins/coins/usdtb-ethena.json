@@ -62,7 +62,8 @@
     "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Anchorage Digital Bank N.A. is an OCC-chartered uninsured national trust bank — not a deposit-taking IDI, not a state entity. Under the GENIUS Act's taxonomy, this places it in the federal-qualified nonbank issuer (FQPSI) pathway supervised by the OCC. In its comment letter to the OCC's GENIUS Act NPRM (2026), Anchorage stated it 'expects to become a permitted payment stablecoin issuer (PPSI) pursuant to the GENIUS Act, once effective' — forward-looking intent, not a current approval. No PPSI approvals have been granted to any issuer as of 2026-06-07; the PPSI approval framework remains in proposed-rules phase (OCC NPRM issued Feb 2026, final rules not yet published). issuerPathway corrected from unknown to federal-qualified-nonbank based on Anchorage's OCC national trust bank charter.",
+    "latestReportDate": "2026-04-30",
+    "notes": "Anchorage Digital Bank N.A. is an OCC-chartered uninsured national trust bank — not a deposit-taking IDI, not a state entity. Under the GENIUS Act's taxonomy, this places it in the federal-qualified nonbank issuer (FQPSI) pathway supervised by the OCC. In its comment letter to the OCC's GENIUS Act NPRM (2026), Anchorage stated it 'expects to become a permitted payment stablecoin issuer (PPSI) pursuant to the GENIUS Act, once effective' — forward-looking intent, not a current approval. No PPSI approvals have been granted to any issuer as of 2026-06-18; the PPSI approval framework remains in proposed-rules phase (OCC NPRM issued Feb 2026, final rules not yet published). issuerPathway corrected from unknown to federal-qualified-nonbank based on Anchorage's OCC national trust bank charter.",
     "references": [
       {
         "label": "OCC: Anchorage Digital Bank national trust bank charter approval (2021)",
@@ -91,14 +92,21 @@
         "OCC GENIUS Act rulemaking bulletins and public releases (NPRMs through May 2026)",
         "OCC Anchorage Digital Bank public charter materials (nr-occ-2021-6)",
         "Anchorage Digital Bank comment letter on OCC GENIUS Act NPRM",
-        "USDtb issuer documentation and reserve attestation pages"
+        "USDtb issuer documentation and reserve attestation pages",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No PPSI approval, PPSI application, or official authorization found for USDtb or Anchorage Digital Bank under the GENIUS Act; the PPSI approval framework remains in proposed-rules phase as of 2026-06-07. Anchorage's own comment letter describes anticipated future PPSI status, not current approval.",
+      "summary": "No PPSI approval, PPSI application, or official authorization found for USDtb or Anchorage Digital Bank under the GENIUS Act; the PPSI approval framework remains in proposed-rules phase as of 2026-06-18. Anchorage's own comment letter describes anticipated future PPSI status, not current approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

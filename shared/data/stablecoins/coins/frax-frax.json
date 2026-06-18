@@ -36,10 +36,13 @@
   },
   "genius": {
     "applicability": "unclear",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Frax DAO",
     "issuerDomicile": "United States",
     "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
@@ -56,21 +59,25 @@
         "sourceKind": "issuer-disclosure"
       }
     ],
-    "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
         "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "Frax governance describes legacy FRAX as AMO-driven and not compatible with GENIUS/STABLE-style payment-stablecoin architecture; no public GENIUS authorization or application source was located.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-18"
     },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

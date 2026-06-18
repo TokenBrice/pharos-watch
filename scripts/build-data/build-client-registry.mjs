@@ -42,15 +42,28 @@ const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
 const GENIUS_FIELD = "genius";
 const GENIUS_CLIENT_FIELDS = [
   "applicability",
+  "applicabilityBasis",
   "authorizationStatus",
   "issuerPathway",
   "issuerEntity",
   "issuerDomicile",
   "licensingRegulator",
+  "primaryFederalRegulator",
   "stateRegulator",
+  "foreignExceptionStatus",
+  "foreignExceptionEvidence",
+  "enforcementStatus",
+  "daspOfferSaleStatus",
+  "reserveDisclosurePresent",
   "reserveDisclosureUrl",
   "redemptionPolicyPresent",
+  "monthlyAttestationPresent",
+  "latestReportDate",
+  "notes",
   "references",
+  "negativeEvidenceReview",
+  "reviewer",
+  "reviewedAt",
 ];
 
 /**
@@ -164,8 +177,63 @@ export function projectGeniusProfile(profile) {
   const projected = {};
   for (const field of GENIUS_CLIENT_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(profile, field)) {
-      projected[field] = field === "references" ? projectLinks(profile[field]) : profile[field];
+      projected[field] = projectGeniusField(field, profile[field]);
     }
+  }
+  return projected;
+}
+
+function projectGeniusField(field, value) {
+  if (field === "references") {
+    return projectLinks(value);
+  }
+  if (field === "applicabilityBasis" || field === "foreignExceptionEvidence") {
+    return projectGeniusEvidence(value);
+  }
+  if (field === "negativeEvidenceReview") {
+    return projectGeniusNegativeEvidenceReview(value);
+  }
+  return value;
+}
+
+function projectGeniusEvidence(value) {
+  if (!isPlainObject(value) || typeof value.summary !== "string") {
+    return undefined;
+  }
+
+  const projected = { summary: value.summary };
+  const references = projectLinks(value.references);
+  if (references && references.length > 0) {
+    projected.references = references;
+  }
+  return projected;
+}
+
+function projectGeniusNegativeEvidenceReview(value) {
+  if (!isPlainObject(value) || typeof value.summary !== "string") {
+    return undefined;
+  }
+
+  const sourcesChecked = Array.isArray(value.sourcesChecked)
+    ? value.sourcesChecked.filter((source) => typeof source === "string" && source.length > 0)
+    : [];
+  if (sourcesChecked.length === 0) {
+    return undefined;
+  }
+
+  const projected = {
+    sourcesChecked,
+    summary: value.summary,
+  };
+  if (typeof value.reviewer === "string") {
+    projected.reviewer = value.reviewer;
+  }
+  if (typeof value.reviewedAt === "string") {
+    projected.reviewedAt = value.reviewedAt;
+  }
+  const references = projectLinks(value.references);
+  if (references && references.length > 0) {
+    projected.references = references;
   }
   return projected;
 }
@@ -183,7 +251,20 @@ function projectLinks(links) {
     .filter(isPlainObject)
     .map((link) => {
       const { label, url } = link;
-      return typeof label === "string" && typeof url === "string" ? { label, url } : null;
+      if (typeof label !== "string" || typeof url !== "string") {
+        return null;
+      }
+      const projected = { label, url };
+      if (typeof link.sourceKind === "string") {
+        projected.sourceKind = link.sourceKind;
+      }
+      if (typeof link.sourceDate === "string") {
+        projected.sourceDate = link.sourceDate;
+      }
+      if (typeof link.accessedAt === "string") {
+        projected.accessedAt = link.accessedAt;
+      }
+      return projected;
     })
     .filter((link) => link !== null);
 }
@@ -264,15 +345,15 @@ export function projectMintAuthoritySummary(coin) {
             return null;
           }
           // Cross-coin surfaces only score and classify: control labels stay on the
-          // detail-page projection, and `canRaiseCap: "unknown"` is scoring-neutral,
-          // so neither ships in this payload.
+          // detail-page projection, while cap mutability must remain available for
+          // the Mint Authority bounds component.
           const controlSummary = { authorityType, directMintAbility };
           if (typeof threshold === "number" && Number.isFinite(threshold)) controlSummary.threshold = threshold;
           if (typeof signerCount === "number" && Number.isFinite(signerCount)) controlSummary.signerCount = signerCount;
           if (typeof timelockDelaySec === "number" && Number.isFinite(timelockDelaySec)) {
             controlSummary.timelockDelaySec = timelockDelaySec;
           }
-          if (canRaiseCap === true || canRaiseCap === false) {
+          if (canRaiseCap === true || canRaiseCap === false || canRaiseCap === "unknown") {
             controlSummary.canRaiseCap = canRaiseCap;
           }
           if (typeof modulesOrGuardsStatus === "string") {

@@ -76,6 +76,7 @@ type GeniusSourceProfile = NonNullable<StablecoinMeta["genius"]>;
 export type GeniusClientProfile = Pick<
   GeniusSourceProfile,
   | "applicability"
+  | "applicabilityBasis"
   | "authorizationStatus"
   | "issuerPathway"
   | "issuerEntity"
@@ -83,11 +84,18 @@ export type GeniusClientProfile = Pick<
   | "licensingRegulator"
   | "primaryFederalRegulator"
   | "stateRegulator"
+  | "foreignExceptionStatus"
+  | "foreignExceptionEvidence"
+  | "enforcementStatus"
+  | "daspOfferSaleStatus"
   | "reserveDisclosurePresent"
   | "reserveDisclosureUrl"
   | "redemptionPolicyPresent"
+  | "monthlyAttestationPresent"
   | "latestReportDate"
+  | "notes"
   | "references"
+  | "negativeEvidenceReview"
   | "reviewer"
   | "reviewedAt"
 >;
@@ -104,9 +112,8 @@ export type GeniusClientProfile = Pick<
  * classification, compliance-table display, and portfolio exposure. Stablecoin
  * detail pages add page-specific full mint-authority summaries outside this
  * global registry so coverage growth does not inflate every route's client
- * chunk. GENIUS compliance evidence is also projected to displayed fields only;
- * notes, reviewer metadata, source kinds, and full negative-evidence reviews
- * remain in the source JSON/server registry.
+ * chunk. GENIUS compliance evidence is projected only for public table/detail
+ * display; source JSON remains the canonical editorial record.
  *
  * Build pipeline: `scripts/build-data/build-client-registry.mjs` projects
  * `coins.generated.json` to a slim JSON consumed by

@@ -91,14 +91,21 @@
         "OCC GENIUS Act rulemaking bulletin and public releases",
         "OCC SoFi Bank approval and charter materials",
         "SoFiUSD product and investor-relations pages",
-        "Web search for SoFi PPSI application filings June 2026"
+        "Web search for SoFi PPSI application filings June 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for SOFID as of 2026-06-07. GENIUS Act is law (enacted July 2025) but implementing regulations remain in proposed-rules phase; no PPSI applications have been accepted yet. SoFi Bank N.A. is an OCC-supervised IDI and under GENIUS would issue via a subsidiary; no such subsidiary PPSI application was found.",
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for SOFID as of 2026-06-18. GENIUS Act is law (enacted July 2025) but implementing regulations remain in proposed-rules phase; no PPSI applications have been accepted yet. SoFi Bank N.A. is an OCC-supervised IDI and under GENIUS would issue via a subsidiary; no such subsidiary PPSI application was found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

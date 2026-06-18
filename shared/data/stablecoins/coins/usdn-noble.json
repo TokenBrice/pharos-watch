@@ -204,7 +204,7 @@
       {
         "label": "GENIUS Act text S.1582 – payment stablecoin definition and yield prohibition",
         "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-        "sourceKind": "federal-register",
+        "sourceKind": "statute",
         "accessedAt": "2026-06-07"
       },
       {
@@ -222,12 +222,12 @@
       {
         "label": "M0 dashboard – reserve transparency",
         "url": "https://dashboard.m0.org/",
-        "sourceKind": "auditor-report",
+        "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

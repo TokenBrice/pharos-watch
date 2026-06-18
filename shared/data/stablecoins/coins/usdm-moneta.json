@@ -42,11 +42,14 @@
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Moneta Digital LLC / Norwegian Block Exchange AS",
     "issuerDomicile": "United States / Norway",
     "licensingRegulator": "FinCEN MSB #31000327040139; Finanstilsynet / NBX EEA issuance",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
     "redemptionPolicyPresent": true,
@@ -71,25 +74,29 @@
       {
         "label": "Charli3 USDM reserve feed",
         "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure"
       }
     ],
-    "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
         "Moneta Digital LLC issuer disclosures (moneta.global) - FinCEN MSB only, no PPSI claim",
         "ESMA EMTWP.csv (re-checked Jun 2026)",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "Moneta Digital LLC is a FinCEN-registered MSB (#31000327040139) and NBX holds a Norwegian EMI license; no token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for USDM. No PPSI approvals have been granted to any issuer as of Jun 2026.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "mica": {
     "status": "pending",
@@ -115,7 +122,7 @@
         "url": "https://www.finanstilsynet.no/nyhetsarkiv/nyheter/2025/lov-om-kryptoeiendeler-kryptoeiendelsloven-og-lov-om-endringer-i-hvitvaskingsloven-tfr-ii-trer-i/"
       },
       {
-        "label": "ESMA interim MiCA EMT register (EMTWP.csv, re-checked Jun 2026) - NBX/USDM not listed",
+        "label": "ESMA interim MiCA EMT issuer register — NBX/USDM not listed; page latest update 2026-06-12, checked 2026-06-18",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]

@@ -40,7 +40,7 @@
       "summary": "BILS is a regulator-approved shekel stablecoin designed for 1:1 NIS redemption from segregated Israeli reserves."
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "foreign-registered",
+    "issuerPathway": "unknown",
     "issuerEntity": "Bits of Gold",
     "issuerDomicile": "Israel",
     "licensingRegulator": "Capital Market, Insurance and Savings Authority",
@@ -70,14 +70,21 @@
       "sourcesChecked": [
         "OCC GENIUS NPRM and reporting-form notices",
         "Treasury foreign-comparability materials",
-        "Bits of Gold BILS launch and approval coverage"
+        "Bits of Gold BILS launch and approval coverage",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for BILS or Bits of Gold.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-13"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-13"
+    "reviewedAt": "2026-06-18"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

@@ -54,10 +54,10 @@
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "foreign-registered",
+    "issuerPathway": "unknown",
     "issuerEntity": "WEMIX PTE. LTD.",
     "issuerDomicile": "Singapore",
-    "foreignExceptionStatus": "not-applicable",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": false,
@@ -69,14 +69,21 @@
         "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
         "https://www.sgpbusiness.com/company/Wemix-Pte-Ltd",
         "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
-        "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "Checked WEMIX official news (no GENIUS engagement found), Singapore corporate registry sources confirming entity identity (UEN 201903432D, formerly WEMADE TREE PTE. LTD.), OCC GENIUS NPRM and Federal Register (no mention of WEMIX or its issuer entity), and web searches for WEMIX + GENIUS Act or US payment stablecoin compliance (no results found). The token is being wound down and the issuer has made no public statements about US stablecoin regulation compliance.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

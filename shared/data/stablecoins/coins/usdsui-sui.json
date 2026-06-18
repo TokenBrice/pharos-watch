@@ -62,7 +62,8 @@
     "issuerPathway": "federal-qualified-nonbank",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "licensingRegulator": "OCC (conditional national trust bank charter, Feb 2026); FinCEN / state money transmitter regulators",
+    "primaryFederalRegulator": "OCC",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -70,7 +71,7 @@
     "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge received conditional OCC approval (Feb 12, 2026) to organize Bridge National Trust Bank, NA — an uninsured national trust bank, which maps to the 'federal-qualified-nonbank' PPSI pathway under the OCC's GENIUS Act NPRM. Bridge publicly states its compliance framework 'already positions Bridge to be GENIUS ready.' This is a trust-charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act (which remains in proposed-rules phase). No PPSI approvals exist as of 2026-06-07.",
+    "notes": "Bridge received conditional OCC approval (Feb 12, 2026) to organize Bridge National Trust Bank, NA — an uninsured national trust bank, which maps to the 'federal-qualified-nonbank' PPSI pathway under the OCC's GENIUS Act NPRM. Bridge publicly states its compliance framework 'already positions Bridge to be GENIUS ready.' This is a trust-charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act (which remains in proposed-rules phase). No PPSI approvals exist as of 2026-06-18.",
     "references": [
       {
         "label": "Sui Dollar launch",
@@ -93,6 +94,13 @@
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-02-12",
         "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC Corporate Decision #1365 — Bridge Ventures LLC conditional national trust bank charter",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-12",
+        "accessedAt": "2026-06-18"
       }
     ],
     "negativeEvidenceReview": {
@@ -101,14 +109,21 @@
         "OCC conditional charter approval for Bridge National Trust Bank, NA (Feb 12, 2026)",
         "Sui Dollar launch materials",
         "Bridge Open Issuance documentation and legal terms",
-        "Bridge OCC approval blog post"
+        "Bridge OCC approval blog post",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act PPSI application has been publicly filed or approved for Bridge or USDsui. Bridge's OCC conditional charter approval is a trust-charter action under existing OCC authority, not a GENIUS Act PPSI authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

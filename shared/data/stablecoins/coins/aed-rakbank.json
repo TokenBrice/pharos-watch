@@ -40,7 +40,7 @@
       "summary": "AED-RAKBANK is a pre-launch dirham-backed payment token planned for 1:1 AED redemption under CBUAE oversight."
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "foreign-registered",
+    "issuerPathway": "unknown",
     "issuerEntity": "The National Bank of Ras Al Khaimah P.S.C. (RAKBank)",
     "issuerDomicile": "United Arab Emirates",
     "licensingRegulator": "Central Bank of the UAE",
@@ -70,14 +70,21 @@
       "sourcesChecked": [
         "OCC GENIUS NPRM and reporting-form notices",
         "Treasury foreign-comparability materials",
-        "RAKBank AED stablecoin announcement and public materials"
+        "RAKBank AED stablecoin announcement and public materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for AED-RAKBANK or RAKBank.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-13"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-13"
+    "reviewedAt": "2026-06-18"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

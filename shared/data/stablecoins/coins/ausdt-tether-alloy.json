@@ -64,24 +64,24 @@
     "notes": "aUSDT is treated here as outside GENIUS payment-stablecoin tracking because it is a gold-overcollateralized CDP tethered asset (75% max MTV) rather than an issuer-redeemable payment stablecoin. The GENIUS Act definition requires the issuer to be obligated to redeem at a fixed monetary value backed by permitted reserves; gold (XAUT) is not a permitted reserve asset under GENIUS. Issued by Moon Gold El Salvador, S.A. de C.V. and Moon Gold NA, S.A. de C.V. (Tether subsidiaries), registered with El Salvador's CNAD (EME-0001, EME-0002).",
     "references": [
       {
-        "label": "Alloy aUSDT vault docs",
-        "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults/ausdmnt.md",
+        "label": "Alloy by Tether vault docs",
+        "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults",
         "sourceKind": "issuer-disclosure"
       },
       {
         "label": "Alloy tethered assets",
-        "url": "https://docs.alloy.tether.to/get-started/tethered-assets.md",
+        "url": "https://docs.alloy.tether.to/get-started/tethered-assets",
         "sourceKind": "issuer-disclosure"
       },
       {
         "label": "CNAD Moon Gold El Salvador registration",
         "url": "https://cnad.gob.sv/assets-providers/moon-gold-el-salvador-s-a-de-c-v/",
-        "sourceKind": "state-regulator",
+        "sourceKind": "foreign-regulator",
         "accessedAt": "2026-06-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

@@ -113,11 +113,18 @@
         "dTRINITY dUSD documentation",
         "dTRINITY Restricted Regions page (docs.dtrinity.org)",
         "dTRINITY website legal entity disclosure (dtrinity.org)",
-        "Singapore ACRA company registry (sg.ltddir.com) — Trinity Foundation Ltd. UEN 202414739E confirmed live"
+        "Singapore ACRA company registry (sg.ltddir.com) — Trinity Foundation Ltd. UEN 202414739E confirmed live",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for dUSD; Trinity Foundation Ltd. (Singapore, ACRA UEN 202414739E) is the legal entity and has no identified US regulatory pathway.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07",
+      "reviewedAt": "2026-06-18",
       "references": [
         {
           "label": "dTRINITY Restricted Regions",
@@ -132,7 +139,7 @@
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

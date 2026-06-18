@@ -75,7 +75,7 @@
       {
         "label": "USDKG transparency page",
         "url": "https://www.usdkg.com/transparency",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "USDKG blog: Building for regulated markets in 2026",
@@ -99,14 +99,21 @@
         "Federal Register GENIUS Act NPRMs (OCC 2026-04089, FinCEN/OFAC 2026-06963)",
         "OFAC sanctions list and FinCEN enforcement search for USDKG/Gold Dollar/OJSC Virtual Asset Issuer",
         "OSL HK listing announcement and press coverage (May 2026)",
-        "Web search for USDKG + GENIUS Act / foreign exception / US regulatory action"
+        "Web search for USDKG + GENIUS Act / foreign exception / US regulatory action",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
       "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, registered foreign-issuer exception, or enforcement action was located for USDKG, Gold Dollar, or OJSC Virtual Asset Issuer. The issuer operates entirely under Kyrgyz Republic licensing with no known U.S. regulatory presence.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {

@@ -66,7 +66,8 @@
     "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Agora filed its OCC national trust bank charter application on April 20, 2026 (received by OCC; public portion available as PDF on OCC licensing page), pursuing the federal-qualified-nonbank pathway under GENIUS Act. CEO Nick van Eck confirmed in April 2026 that the OCC trust charter is Agora's intended GENIUS Act onshore PPSI pathway. No PPSI approval has been granted — GENIUS Act rulemaking is still in proposed-rules phase as of 2026-06-07. No registered foreign-issuer exception found. Application status: under review (not approved).",
+    "latestReportDate": "2026-04-30",
+    "notes": "Agora filed its OCC national trust bank charter application on April 20, 2026 (received by OCC; public portion available as PDF on OCC licensing page), pursuing the federal-qualified-nonbank pathway under GENIUS Act. CEO Nick van Eck confirmed in April 2026 that the OCC trust charter is Agora's intended GENIUS Act onshore PPSI pathway. No PPSI approval has been granted — GENIUS Act rulemaking is still in proposed-rules phase as of 2026-06-18. No registered foreign-issuer exception found. Application status: under review (not approved).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -107,14 +108,21 @@
         "Agora AUSD transparency and OCC charter application disclosures",
         "Bermuda BMA digital asset licensing context",
         "PYMNTS and American Banker coverage of Agora OCC application",
-        "ChainCatcher Agora CEO interview on GENIUS Act pathway"
+        "ChainCatcher Agora CEO interview on GENIUS Act pathway",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "Agora's OCC national trust bank charter application (received 2026-04-20) is under review with no approval granted. No GENIUS Act PPSI approval, state-qualified approval, or registered foreign-issuer exception was found for AUSD. GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals issued to any issuer as of 2026-06-07.",
+      "summary": "Agora's OCC national trust bank charter application (received 2026-04-20) is under review with no approval granted. No GENIUS Act PPSI approval, state-qualified approval, or registered foreign-issuer exception was found for AUSD. GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals issued to any issuer as of 2026-06-18.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-18"
   },
   "contracts": [
     {
@@ -292,7 +300,9 @@
         "source": "docs",
         "name": "Wormhole NTT",
         "url": "https://wormhole.com/blog/agora-selects-wormhole-as-core-interoperability-solution-for-ausd-stablecoin",
-        "bridgeTypes": ["burnAndMint"],
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
         "note": "Agora selected Wormhole NTT to unify AUSD liquidity across chains."
       }
     ],
