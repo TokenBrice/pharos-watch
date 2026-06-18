@@ -92,7 +92,7 @@ Score = 100 - severity - breadth + trend
 - PSI compute moved to chained 15-minute cron after stablecoins sync
 - Added chronic-depeg depreciation:
   - 30-day grace
-  - linear decay over 120 days
+- linear decay until asset age 120 days after the 30-day grace
   - 25% floor
 - Deduplicated active depegs per coin (worst current bps + earliest start age)
 

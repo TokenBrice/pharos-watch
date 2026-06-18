@@ -48,7 +48,7 @@ All remaining flags are code-ready according to [feature-flags.md](./feature-fla
 2. `CHART_ANNOTATIONS` — verify dashed lines around March 2023 on USDC's market-cap chart.
 3. `BLACKLIST_BANNER` + `MOBILE_STICKY_SUMMARY` — after real-device QA on iOS Safari + Android Chrome.
 
-`HERO_VERDICT` is already default-on. Keep a repo Variable set to `false` only during rollback.
+`HERO_VERDICT`, `DEPEG_RESOLVER`, and `DEPEG_RESOLVER_REVIEWER` are already default-on. Keep repo Variables set to `false` only during rollback.
 
 ## Triggering a deploy
 
@@ -104,5 +104,5 @@ If you previously set `NEXT_PUBLIC_PHAROS_*` in the Cloudflare Pages **Environme
 - **Confusing repo Variables with repo Secrets.** These are non-sensitive (`true`/`false`); Variables is the right surface. Secrets get masked and complicate debugging.
 - **Setting at the *environment* level instead of repo level.** GitHub also supports per-environment variables (e.g. `production`); `pages-release.yml` doesn't currently use a GH environment, so put them at the **repo** level. If you later add a GH environment, mirror the variables there.
 - **Forgetting to trigger a deploy.** Pages won't re-build on a Variable change alone.
-- **Setting value to `True`/`TRUE`/`yes`/`1`.** Default-off flags read `=== "true"` (lowercase string). Anything else evaluates to `false`. Hero Verdict reads `!== "false"`, so only lowercase `false` disables it.
+- **Setting value to `True`/`TRUE`/`yes`/`1`.** Default-off flags read `=== "true"` (lowercase string). Anything else evaluates to `false`. Hero Verdict, Depeg Resolver, and Depeg Resolver Reviewer read `!== "false"`, so only lowercase `false` disables them.
 - **Caching.** Cloudflare CDN can serve cached chunks for ~minutes after a deploy. Hard-reload or wait.

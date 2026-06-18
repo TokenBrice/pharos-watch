@@ -58,6 +58,12 @@ What must be true before turning each flag on in production:
 - [x] ≥10 historical annotations seeded across top 4 coins (USDC / USDT / DAI / USDe). Coverage gate enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
 - [ ] Named owner + cadence for ongoing curation. **Current: not yet named — single biggest atrophy risk for the annotation layer.**
 
+### `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`
+
+- [x] Runtime DDR snapshot API and `/depeg/` module are wired behind the default-on flag.
+- [x] Emergency rollback path is `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER=false`.
+- [ ] Keep at least one current production snapshot available after launch; when absent or stale, the module should degrade to its documented empty/stale state rather than blocking the page.
+
 ### `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER`
 
 - [x] Runtime-neutral DDRR review logic and schemas validate stored DDR assessments against later `depeg_events`.

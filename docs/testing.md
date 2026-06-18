@@ -15,6 +15,8 @@ npm run lint
 npm run lint:typed
 npm run typecheck
 npm run typecheck:worker
+npm run test:a11y
+npm run test:a11y:hydrated
 npm run test:merge-gate
 npm run test:merge-gate:discover
 ```
@@ -59,7 +61,7 @@ CI shape:
 4. `npm run test:merge-gate` mirrors the deploy-impact validate contract locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install.
 5. `npm run test:merge-gate:discover` mirrors the same local command plan for large failure-discovery passes. It keeps prebuild and independent postbuild lanes running after failures, skips smoke by default, and is diagnostic only; the final release check remains `npm run test:merge-gate`.
 
-Telegram load protection has two local shapes: `npm run check:telegram-load` is the blocking SLO guard, while direct `npx tsx scripts/ci/check-telegram-load.ts` is the advisory query-plan report. The merge gate adds the advisory report for Telegram dispatch, pending-queue, admin broadcast, Telegram constants, load-guard workflow/script, and Worker migration changes, and full deploy fallback includes it unconditionally.
+Telegram load protection has two local shapes: `npm run check:telegram-load` is the blocking SLO/CPU guard, while direct `npx tsx scripts/ci/check-telegram-load.ts` is the advisory query-plan report. Both shapes print the same per-invocation CPU model used by the budget-before-format dispatcher path. The merge gate adds the advisory report for Telegram dispatch, pending-queue, admin broadcast, Telegram constants, load-guard workflow/script, and Worker migration changes, and full deploy fallback includes it unconditionally.
 
 `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the `test:noncritical` complement.
 
@@ -69,6 +71,7 @@ Selected specialized checks:
 - Provider fetch resilience changes: `npm run check:provider-resilience` verifies the external-provider registry, required timeout/body/circuit/test markers, and raw Worker `fetch(...)` coverage.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Static export SEO: `npm run seo:check`; live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch`.
+- Static export accessibility: `npm run test:a11y` scans the bare static export, while `npm run test:a11y:hydrated` reuses the API-backed static-export smoke server so axe sees hydrated product data.
 - GSC exports: `npm run analyze:gsc-coverage -- <path>` and `npm run analyze:gsc-performance -- <path>` are offline triage helpers.
 - Optional render-budget probe: `node scripts/maintenance/audit-seo-render-budget.mjs --url https://pharos.watch`.
 

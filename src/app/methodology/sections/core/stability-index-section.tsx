@@ -182,7 +182,7 @@ export function StabilityIndexMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full
-                      weight for 30 days, then decay linearly to a 25% floor over 120 days.
+                      weight for 30 days, then decay linearly to a 25% floor by asset age 120 days.
                     </li>
                   </ul>
                   <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">

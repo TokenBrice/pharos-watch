@@ -219,13 +219,13 @@ Current DEWS readers, Telegram alert snapshots, smoothing inputs, and PSI stress
 ```text
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.07" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.091" },
     ...
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "6.07", "versionLabel": "...", "currentVersion": "6.07", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.091", "versionLabel": "...", "currentVersion": "6.091", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -237,13 +237,13 @@ Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs r
 
 ```text
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.07" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.091" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "6.07" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "6.091" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "6.07", "versionLabel": "...", "currentVersion": "6.07", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.091", "versionLabel": "...", "currentVersion": "6.091", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
