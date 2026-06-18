@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { parseChainlinkLatestRoundData } from "../../../lib/chainlink-round-data";
+import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../../lib/evm-selectors";
 import {
   adaptChainlinkNavResponse,
   parseOndoPriceData,
@@ -18,6 +19,22 @@ vi.mock("../helpers", async (importOriginal) => {
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
 const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
 const TOKEN_ADDRESS = "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b";
+
+function encodeUint256Word(value: bigint): string {
+  return value.toString(16).padStart(64, "0");
+}
+
+function encodeLatestRoundData(args: {
+  roundId: bigint;
+  answer: bigint;
+  startedAt: bigint;
+  updatedAt: bigint;
+  answeredInRound: bigint;
+}): `0x${string}` {
+  return `0x${encodeUint256Word(args.roundId)}${encodeUint256Word(args.answer)}${
+    encodeUint256Word(args.startedAt)
+  }${encodeUint256Word(args.updatedAt)}${encodeUint256Word(args.answeredInRound)}`;
+}
 
 describe("adaptChainlinkNavResponse", () => {
   const params: ChainlinkNavParams = {
@@ -138,9 +155,57 @@ describe("parseOndoPriceData", () => {
   });
 });
 
-describe("fetchChainlinkNavCore Ondo methods", () => {
+describe("fetchChainlinkNavCore", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("throws when standard Chainlink NAV round data exceeds the configured freshness window", async () => {
+    const helpers = await import("../helpers");
+    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
+    const updatedAt = 1_781_083_007;
+    const maxOracleAgeSec = 604_800;
+    const staleRoundData = encodeLatestRoundData({
+      roundId: 44n,
+      answer: 106_766_689n,
+      startedAt: BigInt(updatedAt),
+      updatedAt: BigInt(updatedAt),
+      answeredInRound: 44n,
+    });
+
+    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
+      if (opts.contract === ORACLE_ADDRESS && opts.data === DECIMALS_SELECTOR) return 8n;
+      if (opts.contract === TOKEN_ADDRESS && opts.data === DECIMALS_SELECTOR) return 18n;
+      if (opts.contract === TOKEN_ADDRESS && opts.data === TOTAL_SUPPLY_SELECTOR) return 1_000_000_000_000_000_000n;
+      return null;
+    });
+    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
+      if (opts.contract === ORACLE_ADDRESS && opts.data === LATEST_ROUND_DATA_SELECTOR) return staleRoundData;
+      return null;
+    });
+
+    const config = {
+      adapter: "chainlink-nav" as const,
+      version: 1,
+      semantics: "single-asset" as const,
+      inputs: {
+        primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
+      },
+      params: {
+        oracleAddress: ORACLE_ADDRESS,
+        tokenAddress: TOKEN_ADDRESS,
+        assetLabel: "Re7-managed DeFi yield strategy NAV",
+        assetRisk: "high" as const,
+        maxOracleAgeSec,
+      },
+    };
+
+    await expect(fetchChainlinkNavCore(
+      {} as never,
+      config as never,
+      new AbortController().signal,
+      { nowSec: updatedAt + maxOracleAgeSec + 1 },
+    )).rejects.toThrow(`chainlink-nav: oracle data is stale (${maxOracleAgeSec + 1}s > ${maxOracleAgeSec}s)`);
   });
 
   it("reads getPriceData directly and marks freshness verified", async () => {

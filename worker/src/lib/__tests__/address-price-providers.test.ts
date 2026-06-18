@@ -5,6 +5,7 @@ import {
   resolveEnabledAddressPriceProviders,
   resolveFallbackChain,
 } from "../address-price-providers";
+import { runBirdeyeAddressProvider } from "../address-price-providers/birdeye";
 import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
 import { emptyProviderResult } from "../address-price-providers/shared";
@@ -169,6 +170,44 @@ describe("address price providers", () => {
         chain: "solana",
         providerChainId: "solana",
         address: "So11111111111111111111111111111111111111112",
+      },
+    ]);
+  });
+
+  it("treats Birdeye missing-price payloads as coverage misses instead of provider failures", async () => {
+    const target = makeDexScreenerTarget(0, {
+      chain: "solana",
+      providerChainId: "solana",
+      address: "So11111111111111111111111111111111111111112",
+    });
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ success: true, data: null }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runBirdeyeAddressProvider(
+      [target],
+      { birdeyeApiKey: "test-key" },
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(result.attemptedRequests).toBe(1);
+    expect(result.successfulRequests).toBe(1);
+    expect(result.quotes).toEqual([]);
+    expect(result.rejectedTargets).toEqual({ "missing-quote": 1 });
+    expect(result.diagnostics).toMatchObject([
+      {
+        source: "birdeye-address",
+        status: 200,
+        ok: true,
+        success: true,
+        responseRowCount: 0,
+        matchedCount: 0,
+        rejectionReasonCounts: { "missing-quote": 1 },
       },
     ]);
   });

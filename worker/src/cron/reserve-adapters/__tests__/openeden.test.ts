@@ -153,6 +153,7 @@ describe("fetchOpenEdenUsdoReserves", () => {
     buildBrowserHeaders("https://openeden.com", "https://openeden.com/usdo/transparency"),
   )}`;
   const neutralCacheKey = `json-get:${url}:8000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
+  const defaultCacheKey = `json-get:${url}:8000:null`;
   const payload = {
     date: "2026-03-25T08:00:17.600Z",
     usdoAmount: 100,
@@ -206,10 +207,28 @@ describe("fetchOpenEdenUsdoReserves", () => {
     expect(result.slices.length).toBeGreaterThan(0);
   });
 
+  it("falls back to default adapter headers when both OpenEden header identities fail", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    cache.set(browserCacheKey, Promise.reject(new Error("browser headers rejected")));
+    cache.set(neutralCacheKey, Promise.reject(new Error("neutral headers rejected")));
+    cache.set(defaultCacheKey, Promise.resolve(payload));
+
+    const result = await fetchOpenEdenUsdoReserves(
+      coin,
+      makeConfig(),
+      new AbortController().signal,
+      { requestCache: cache } as never,
+    );
+
+    expect(result.metadata?.reserveRatio).toBe(1);
+    expect(result.slices.length).toBeGreaterThan(0);
+  });
+
   it("labels fetch failures with the adapter and fetch identity", async () => {
     const cache = new Map<string, Promise<unknown>>();
     cache.set(browserCacheKey, Promise.reject(new Error(`Fetch failed for ${url}`)));
     cache.set(neutralCacheKey, Promise.reject(new Error(`Fetch failed for ${url}`)));
+    cache.set(defaultCacheKey, Promise.reject(new Error(`Fetch failed for ${url}`)));
 
     await expect(fetchOpenEdenUsdoReserves(
       coin,
@@ -217,7 +236,7 @@ describe("fetchOpenEdenUsdoReserves", () => {
       new AbortController().signal,
       { requestCache: cache } as never,
     )).rejects.toThrow(
-      `openeden-usdo reserve composition fetch failed: browser fetch failed: Fetch failed for ${url}; neutral fetch failed: Fetch failed for ${url}`,
+      `openeden-usdo reserve composition fetch failed: browser fetch failed: Fetch failed for ${url}; neutral fetch failed: Fetch failed for ${url}; default fetch failed: Fetch failed for ${url}`,
     );
   });
 

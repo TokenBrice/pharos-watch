@@ -22,6 +22,12 @@ import {
 const BIRDEYE_ADDRESS_MAX_REQUESTS = 10;
 const BIRDEYE_REQUEST_SPACING_MS = 1_000;
 
+function isBirdeyeMissingPricePayload(json: unknown): json is Record<string, unknown> {
+  if (!isRecord(json)) return false;
+  if ("data" in json && json.data == null) return true;
+  return json.success === false && typeof json.message === "string";
+}
+
 export async function runBirdeyeAddressProvider(
   targets: AddressPriceTarget[],
   config: AddressPriceProviderRuntimeConfig,
@@ -89,6 +95,13 @@ export async function runBirdeyeAddressProvider(
       diagnostic.responseRowCount = 1;
       diagnostic.matchedCount = quotes.length - matchedCountBefore;
       diagnostic.success = true;
+      successfulRequests += 1;
+    } else if (isBirdeyeMissingPricePayload(json)) {
+      incrementReason(rejectedTargets, "missing-quote");
+      diagnostic.responseRowCount = 0;
+      diagnostic.matchedCount = 0;
+      diagnostic.success = true;
+      diagnostic.rejectionReasonCounts = { "missing-quote": 1 };
       successfulRequests += 1;
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Birdeye price data object");

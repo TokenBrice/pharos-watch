@@ -20,7 +20,7 @@
     "url": "https://midas.app/transparency",
     "provider": "Midas transparency dashboard and issuer disclosures",
     "attestorTier": "self",
-    "cadence": "daily-nav"
+    "cadence": "weekly"
   },
   "links": [
     {
@@ -132,6 +132,9 @@
       "url": "https://midas.app/mre7yield",
       "label": "Midas mRe7YIELD NAV"
     },
+    "scoring": {
+      "maxSourceAgeSec": 604800
+    },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
@@ -144,7 +147,7 @@
       "tokenAddress": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
       "assetLabel": "Re7-managed DeFi yield strategy NAV",
       "assetRisk": "high",
-      "maxOracleAgeSec": 604800
+      "maxOracleAgeSec": 1209600
     }
   },
   "mintAuthority": {

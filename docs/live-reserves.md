@@ -553,7 +553,7 @@ Chainlink PoR note:
 
 `yamato` reads CJPY reserve state directly from Yamato's `getStates()` contract path and values ETH collateral with the configured Yamato price-feed `getPrice()` call. The latest-state on-chain read uses `freshnessMode = "not-applicable"` and publishes protocol collateral ratio and threshold metadata for the reserve detail view.
 
-Business-day NAV feeds can set `maxOracleAgeSec` when their oracle is expected to pause through weekends or market holidays; `ousg-ondo-finance` and `mtbill-midas` use a 4-day window so normal Friday-to-Monday NAV cadence does not trip their reserve circuit breakers.
+Business-day NAV feeds can set `maxOracleAgeSec` when their oracle is expected to pause through weekends or market holidays; `ousg-ondo-finance` and `mtbill-midas` use a 4-day window so normal Friday-to-Monday NAV cadence does not trip their reserve circuit breakers. Weekly strategy NAV feeds can also set a wider oracle-read grace window while pairing it with `scoring.maxSourceAgeSec`; for example, `mre7yield-midas` accepts up to 14-day Chainlink NAV reads at the adapter layer but degrades snapshots older than 7 days before they can enter score-grade live collateral.
 
 Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:
 

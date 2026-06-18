@@ -190,9 +190,21 @@ async function fetchOpenEdenReserveComposition(
       );
     } catch (fallbackError) {
       if (signal.aborted || deadline.aborted) throw fallbackError;
-      throw new Error(
-        `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${toErrorMessage(fallbackError)}`,
-      );
+      try {
+        return await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
+          url,
+          attemptSignal,
+          OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
+          ctx,
+        );
+      } catch (defaultError) {
+        if (signal.aborted || deadline.aborted) throw defaultError;
+        throw new Error(
+          `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${
+            toErrorMessage(fallbackError)
+          }; default fetch failed: ${toErrorMessage(defaultError)}`,
+        );
+      }
     }
   }
 }
