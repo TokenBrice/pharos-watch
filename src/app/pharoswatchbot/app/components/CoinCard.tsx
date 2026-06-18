@@ -72,6 +72,7 @@ export interface CoinCardProps {
 export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOpenInsight, webApp, nowSec, highlighted }: CoinCardProps) {
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled;
+  const launchOnly = coin.alertTypes.launch && !showTune;
   const coinSnoozeActive = coin.snoozeUntilTs != null && coin.snoozeUntilTs > nowSec;
   const handleOpenLink = (url: string) => {
     webApp?.openLink?.(url);
@@ -219,6 +220,10 @@ export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOp
             ) : null}
           </div>
         </details>
+      ) : launchOnly ? (
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          Launch: on/off only. No tuning.
+        </p>
       ) : null}
     </article>
   );

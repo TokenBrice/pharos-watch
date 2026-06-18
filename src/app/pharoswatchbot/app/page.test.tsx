@@ -412,6 +412,27 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
+  it("explains launch-only subscriptions without showing tune controls", async () => {
+    const launchOnlyState: TelegramMiniAppState = {
+      ...baseState,
+      subscriptions: [
+        {
+          ...baseState.subscriptions[0],
+          alertTypes: { dews: false, depeg: false, safety: false, launch: true },
+        },
+      ],
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => launchOnlyState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+
+    expect(screen.getByText("Launch: on/off only. No tuning.")).toBeTruthy();
+    expect(screen.queryByText("Tune USDC")).toBeNull();
+  });
+
   it("clears per-coin snooze with the right durationToken", async () => {
     const coinSnoozed: TelegramMiniAppState = {
       ...baseState,
