@@ -1,3 +1,5 @@
+import { RECOMMENDED_SETUP_COMMAND } from "./telegram-route-constants";
+
 const TELEGRAM_HOW_TO_STEPS = [
   {
     position: 1,
@@ -7,7 +9,7 @@ const TELEGRAM_HOW_TO_STEPS = [
   {
     position: 2,
     name: "Subscribe and tune",
-    text: "Subscribe and tune with commands like /subscribe dews,depeg USDT,USDC, /presets, /set USDT dews WARNING, and /mute 22-07.",
+    text: `Subscribe and tune with commands like ${RECOMMENDED_SETUP_COMMAND}, /presets, /set USDT dews WARNING, and /mute 22-07.`,
   },
   {
     position: 3,
