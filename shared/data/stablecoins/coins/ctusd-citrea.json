@@ -181,6 +181,12 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing ctUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+        "routeChecks": {
+          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
+          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -211,6 +217,12 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
+        "routeChecks": {
+          "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+          "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply.",
+          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+          "pausersAdminsUpgraders": "Citrea SwapFacility route is documented through M0 extension infrastructure; this review did not independently read a Citrea proxy-admin slot."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [

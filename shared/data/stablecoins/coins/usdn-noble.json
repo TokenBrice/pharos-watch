@@ -32,6 +32,12 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing Noble USDN depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+        "routeChecks": {
+          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
+          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -62,6 +68,12 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "M0 deployments list the Noble Portal on Ethereum for Noble movement; base supply remains governed by the Ethereum MinterGateway.",
+        "routeChecks": {
+          "lockboxOrEscrow": "Noble USDN movement uses M0 Portal infrastructure; base M supply remains governed by the Ethereum MinterGateway.",
+          "trustedPeerOrRemote": "Local bridge review identifies the M0/Noble route but does not enumerate live remote peer configuration.",
+          "caps": "Portal capacity is treated as bounded by the M0 base supply and portal route, not by an immutable token-level cap.",
+          "pausersAdminsUpgraders": "Noble Portal owner is reviewed as a Safe v1.4.1 2/2 with no modules or guard."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [

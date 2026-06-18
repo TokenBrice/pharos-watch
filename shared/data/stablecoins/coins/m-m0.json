@@ -46,6 +46,12 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "MToken.mint is callable only by the MinterGateway; MinterGateway issuance depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
+        "routeChecks": {
+          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
+          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -80,6 +86,12 @@
         "authorityType": "bridge",
         "directMintAbility": "cap-limited",
         "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
+        "routeChecks": {
+          "lockboxOrEscrow": "Solana M is a spoke deployment bridged from Ethereum M; base supply remains governed by the Ethereum MinterGateway.",
+          "trustedPeerOrRemote": "The SPL mint authority is a 1-of-2 SPL multisig whose signers are off-curve PDAs controlled by M0 portal/allied programs.",
+          "caps": "Effective Solana mint capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+          "pausersAdminsUpgraders": "M0 Solana programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW; extension authorities point to the same EOA where checked."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [

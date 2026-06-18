@@ -12936,6 +12936,12 @@
           "capDescription": "Base M issuance backing ctUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -12966,6 +12972,12 @@
           "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+            "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+            "pausersAdminsUpgraders": "Citrea SwapFacility route is documented through M0 extension infrastructure; this review did not independently read a Citrea proxy-admin slot.",
+            "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -36616,6 +36628,12 @@
           "capDescription": "MToken.mint is callable only by the MinterGateway; MinterGateway issuance depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -36650,6 +36668,12 @@
           "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "Solana M is a spoke deployment bridged from Ethereum M; base supply remains governed by the Ethereum MinterGateway.",
+            "trustedPeerOrRemote": "The SPL mint authority is a 1-of-2 SPL multisig whose signers are off-curve PDAs controlled by M0 portal/allied programs.",
+            "caps": "Effective Solana mint capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+            "pausersAdminsUpgraders": "M0 Solana programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW; extension authorities point to the same EOA where checked."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -41243,6 +41267,12 @@
           "capDescription": "Base M issuance backing MUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -41273,6 +41303,12 @@
           "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+            "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+            "pausersAdminsUpgraders": "Ethereum SwapFacility is a TransparentUpgradeableProxy controlled by ProxyAdmin -> TimelockController with a 3-day delay and Gnosis Safe proposer.",
+            "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -41299,6 +41335,12 @@
           "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+            "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+            "pausersAdminsUpgraders": "Linea SwapFacility is treated as the same proxy-admin pattern by deployment convention; the Linea-specific proxy admin slot was not independently read.",
+            "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -63089,6 +63131,12 @@
           "capDescription": "Base M issuance backing USDat depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -63119,6 +63167,12 @@
           "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+            "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+            "pausersAdminsUpgraders": "SwapFacility is reviewed as the same ProxyAdmin -> TimelockController governance pattern as verified MUSD.",
+            "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -67415,6 +67469,12 @@
           "capDescription": "Base M issuance backing USDK depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -67445,6 +67505,12 @@
           "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; official Solana docs did not expose a USDK-specific mint-authority address.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "USDK is a Solana extension of M0 M; base M supply remains governed by the Ethereum MinterGateway.",
+            "trustedPeerOrRemote": "M0 Solana Portal program is confirmed executable, but token-specific remote-peer config was not independently enumerated.",
+            "caps": "Effective Solana extension capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+            "pausersAdminsUpgraders": "Solana program upgrade authority is 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW where checked."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -67466,6 +67532,11 @@
           "directMintAbility": "direct",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "trustedPeerOrRemote": "USDK mint authority is an off-curve PDA derived from the M0 extension program with seeds=[\"mint_authority\"].",
+            "caps": "No immutable token-level mint cap was observed; effective capacity depends on the extension program, portal route, and underlying M supply.",
+            "pausersAdminsUpgraders": "Extension program upgrade authority is 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW; extension authorities point to the same EOA where checked."
+          },
           "sources": [
             {
               "label": "USDK Solana token",
@@ -68628,6 +68699,12 @@
           "capDescription": "Base M issuance backing Noble USDN depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -68658,6 +68735,12 @@
           "capDescription": "M0 deployments list the Noble Portal on Ethereum for Noble movement; base supply remains governed by the Ethereum MinterGateway.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "Noble USDN movement uses M0 Portal infrastructure; base M supply remains governed by the Ethereum MinterGateway.",
+            "trustedPeerOrRemote": "Local bridge review identifies the M0/Noble route but does not enumerate live remote peer configuration.",
+            "caps": "Portal capacity is treated as bounded by the M0 base supply and portal route, not by an immutable token-level cap.",
+            "pausersAdminsUpgraders": "Noble Portal owner is reviewed as a Safe v1.4.1 2/2 with no modules or guard."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -69034,6 +69117,12 @@
           "capDescription": "Base M issuance backing USDnr depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -69064,6 +69153,12 @@
           "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+            "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+            "pausersAdminsUpgraders": "Ethereum SwapFacility is a TransparentUpgradeableProxy controlled by ProxyAdmin -> TimelockController with a 3-day delay; Fluent has no known M0 SwapFacility deployment in this review.",
+            "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -72312,6 +72407,12 @@
           "capDescription": "Base M issuance backing USDSC depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -72342,6 +72443,12 @@
           "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+            "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+            "pausersAdminsUpgraders": "Soneium SwapFacility proxy owner is reviewed as a 2-of-3 EOA multisig; MinterGateway base supply remains under M0 governance.",
+            "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -84731,6 +84838,12 @@
           "capDescription": "Base M issuance backing XO Cash depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+            "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+            "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance.",
+            "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -84761,6 +84874,12 @@
           "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; base M supply is governed by Ethereum MinterGateway.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "lockboxOrEscrow": "XO Cash is a Solana extension of M0 M; base M supply remains governed by the Ethereum MinterGateway.",
+            "trustedPeerOrRemote": "M0 Solana Portal program is confirmed executable, but token-specific remote-peer config was not independently enumerated.",
+            "caps": "Effective Solana extension capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+            "pausersAdminsUpgraders": "Solana portal/program administration remains under the M0 program-upgrade authority reviewed for this token."
+          },
           "sources": [
             {
               "label": "M0 deployments",
@@ -84782,6 +84901,11 @@
           "directMintAbility": "direct",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
+          "routeChecks": {
+            "trustedPeerOrRemote": "XO mint authority is an off-curve PDA derived from the M0 XO extension program with seeds=[\"mint_authority\"].",
+            "caps": "No immutable token-level mint cap was observed; effective capacity depends on the extension program, portal route, and underlying M supply.",
+            "pausersAdminsUpgraders": "Extension program upgrade authority is the shared M0 Solana EOA; XO extension authorities point to a MoonPay-funded System account where checked."
+          },
           "sources": [
             {
               "label": "XO Solana token",

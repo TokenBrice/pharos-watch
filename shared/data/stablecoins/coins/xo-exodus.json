@@ -149,6 +149,12 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing XO Cash depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+        "routeChecks": {
+          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
+          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -179,6 +185,12 @@
         "authorityType": "bridge",
         "directMintAbility": "cap-limited",
         "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; base M supply is governed by Ethereum MinterGateway.",
+        "routeChecks": {
+          "lockboxOrEscrow": "XO Cash is a Solana extension of M0 M; base M supply remains governed by the Ethereum MinterGateway.",
+          "trustedPeerOrRemote": "M0 Solana Portal program is confirmed executable, but token-specific remote-peer config was not independently enumerated.",
+          "caps": "Effective Solana extension capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+          "pausersAdminsUpgraders": "Solana portal/program administration remains under the M0 program-upgrade authority reviewed for this token."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -200,6 +212,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "routeChecks": {
+          "trustedPeerOrRemote": "XO mint authority is an off-curve PDA derived from the M0 XO extension program with seeds=[\"mint_authority\"].",
+          "caps": "No immutable token-level mint cap was observed; effective capacity depends on the extension program, portal route, and underlying M supply.",
+          "pausersAdminsUpgraders": "Extension program upgrade authority is the shared M0 Solana EOA; XO extension authorities point to a MoonPay-funded System account where checked."
+        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
