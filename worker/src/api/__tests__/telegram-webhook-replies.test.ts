@@ -32,11 +32,12 @@ describe("sendAuditedTelegramReply", () => {
     const db = mockD1();
     const longReply = `${"terminal failure chunk ".repeat(260)}done`;
 
-    await sendAuditedTelegramReply(db, "12345", longReply, "bot-token", {
+    const result = await sendAuditedTelegramReply(db, "12345", longReply, "bot-token", {
       actionDetail: "terminal-test",
     });
 
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ ok: false, errorClass: "bad_request" });
     const replyFailures = db
       .getHistory()
       .filter((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));

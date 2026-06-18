@@ -44,7 +44,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 1. Ingress
 
-**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, the ingress flood cap, group-admin gate, and per-command cooldown. The flood cap covers commands, callback taps, and pending text replies; private chats use a 20-action / 60 s chat key, while group/supergroup chats use a 20-action / 60 s `(chat_id, actor_user_id)` key plus a higher best-effort chat-wide ceiling. The first-exceed notice is advisory because concurrent deliveries can drop or duplicate it. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
+**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, the ingress flood cap, group-admin gate, and per-command cooldown. The pending gate lets read-only/helpful commands such as `/sample` pass through and lets same-initiator destructive commands such as `/forget` clear stale pending state before running. The flood cap covers commands, callback taps, and pending text replies; private chats use a 20-action / 60 s chat key, while group/supergroup chats use a 20-action / 60 s `(chat_id, actor_user_id)` key plus a higher best-effort chat-wide ceiling. The first-exceed notice is advisory because concurrent deliveries can drop or duplicate it. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)
@@ -60,6 +60,10 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 - Read alert snapshots or build subscriber queries — that is Dispatch.
 - Write subscription state directly — go through State / persistence helpers.
 - Reorganize the `COMMAND_HANDLERS` table without adding/removing a command. The two switch statements were intentionally collapsed in P1-M1; do not re-expand.
+
+Group welcome idempotency is part of this seam: when a bot-added `my_chat_member`
+transition sends the audited welcome reply successfully, Ingress stamps the
+`telegram:group-welcome:<chat_id>` cache marker directly from that send result.
 
 > Note on `telegram-webhook-shared.ts`: it contains `TelegramWebhookUpdate`, `PendingAction`, `ConfirmBulkPayload`, etc. — types crossing the Ingress / Action-handler boundary. Treat it as a contract file; widening it is fine, restructuring it is a seam change.
 

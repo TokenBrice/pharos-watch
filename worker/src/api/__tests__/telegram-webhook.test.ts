@@ -295,20 +295,11 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("welcomes a group when my_chat_member reports the bot was added", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
         rows: [],
         first: null,
-      },
-      {
-        match: "FROM telegram_chat_delivery_diagnostics",
-        rows: [{
-          last_successful_delivery_at: null,
-          last_successful_reply_at: nowSec + 1,
-          recent_failure_class: null,
-        }],
       },
     ]);
 
@@ -329,6 +320,7 @@ describe("handleTelegramWebhook", () => {
     const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
     expect(cacheWrite).toBeDefined();
     expect(cacheWrite!.binds[0]).toBe("telegram:group-welcome:-123");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
   });
 
   it("does not cache group welcome idempotency when Telegram send fails", async () => {
@@ -338,14 +330,6 @@ describe("handleTelegramWebhook", () => {
         match: "FROM cache WHERE key = ?",
         rows: [],
         first: null,
-      },
-      {
-        match: "FROM telegram_chat_delivery_diagnostics",
-        rows: [{
-          last_successful_delivery_at: null,
-          last_successful_reply_at: null,
-          recent_failure_class: "blocked",
-        }],
       },
     ]);
 
@@ -359,6 +343,7 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
   });
 
   it("suppresses duplicate group welcomes while the idempotency cache is fresh", async () => {
@@ -2901,6 +2886,73 @@ describe("handleTelegramWebhook", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
     expect(sentMessageBody().text).toContain("Only the user who started this pending selection can complete it");
+  });
+
+  it("allows /sample to run while a pending selection remains active", async () => {
+    const ambiguous = resolveTicker("USDF");
+    if (ambiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF to be ambiguous for sample passthrough test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/sample"), "test-secret", "bot-token");
+
+    expect(sentMessageBody().text).toContain("This was a sample alert");
+    expect(sentMessageBody().text).not.toContain("pending selection");
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+  });
+
+  it("clears a same-initiator pending selection before running /forget", async () => {
+    const ambiguous = resolveTicker("USDF");
+    if (ambiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF to be ambiguous for forget clear-and-run test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/forget"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    const forgetInsert = history.find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_pending_disambiguation") &&
+      entry.binds.includes("forget-confirm"),
+    );
+    expect(forgetInsert).toBeDefined();
+    expect(sentMessageBody().text).toContain("permanently delete your Pharos subscriber data");
   });
 
   it("counts group pending-selection replies against the actor flood cap", async () => {

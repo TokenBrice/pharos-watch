@@ -43,7 +43,6 @@ import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands
 import { executePendingDisambiguationSelection } from "./telegram-webhook-disambiguation-selection";
 import { isGroupAdminActor, isGroupChatType, validateTelegramWebhookSecret } from "./telegram-webhook-auth";
 import {
-  loadTelegramChatHealthDiagnostics,
   recordTelegramUsageEvent,
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
@@ -82,6 +81,7 @@ const PENDING_CLEAR_AND_RUN_COMMANDS = new Set([
   "/unsubscribe",
   "/set",
   "/settings",
+  "/forget",
   "/mute",
   "/unmutehours",
   "/unsnooze",
@@ -95,6 +95,7 @@ const PENDING_CLEAR_AND_RUN_COMMANDS = new Set([
 const PENDING_PASSTHROUGH_COMMANDS = new Set([
   "/presets",
   "/help",
+  "/sample",
   "/list",
   "/status",
   "/brief",
@@ -1229,8 +1230,7 @@ async function handleMyChatMember(
   }
 
   const adderMention = formatAdderMention(payload.from);
-  const sendStartedAt = unixNow();
-  await sendAuditedTelegramReply(
+  const welcomeSend = await sendAuditedTelegramReply(
     db,
     chatIdStr,
     buildGroupWelcomeMessage(adderMention),
@@ -1240,12 +1240,7 @@ async function handleMyChatMember(
       replyMarkup: buildGroupWelcomeReplyMarkup(),
     },
   );
-  const diagnostics = await loadTelegramChatHealthDiagnostics(db, chatIdStr);
-  if (
-    diagnostics?.lastSuccessfulReplyAt != null &&
-    diagnostics.lastSuccessfulReplyAt >= sendStartedAt &&
-    diagnostics.recentFailureClass == null
-  ) {
+  if (welcomeSend.ok) {
     await setCache(db, cacheKey, "1");
   }
 }

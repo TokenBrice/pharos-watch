@@ -241,6 +241,11 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 
 In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands and commands addressed to the public channel handle are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available; unrelated group text from other users is ignored. Pending text replies are counted by the same ingress flood cap as commands and callbacks.
 
+While a pending selection is active, `/sample` remains available without
+clearing the pending row. `/forget` clears the pending row for the initiating
+user before showing its destructive-data confirmation prompt, so stale
+disambiguation cannot mask account deletion.
+
 ### Group Admin Gating
 
 `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The `tz:<zone>` callback handler enforces the same admin check before persisting.
@@ -256,6 +261,10 @@ best-effort chat-wide ceiling as a secondary abuse guard. Private chats use the
 chat ID alone. Cooldown rows are acquired before heavy command or Mini App work;
 handler throws and transient Mini App 5xx-style failures release the cooldown
 row best-effort, while validation and permission denials keep the cooldown.
+
+Group welcome idempotency is stamped only when the audited welcome reply reports
+success; the webhook does not perform a second diagnostics read to infer whether
+the send succeeded.
 
 ### Setup Wizard
 
@@ -380,7 +389,7 @@ Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `T
 - Unknown tickers return a contextual error, with a prefix-based suggestion when available.
 - Unknown preset aliases are reported through the same contextual error path, with `/presets` suggested as the discovery surface.
 - `/cancel` clears a pending selection.
-- `/help`, `/list`, `/presets`, `/status`, `/health`, and `/start` are not trapped behind pending disambiguation. New mutating commands clear a pending selection only when they come from the same initiating user.
+- `/help`, `/sample`, `/list`, `/presets`, `/status`, `/health`, and `/start` are not trapped behind pending disambiguation. `/forget` clears a pending selection only when it comes from the same initiating user, then runs its confirmation prompt. New mutating commands clear a pending selection only when they come from the same initiating user.
 
 ### Update Deduplication
 

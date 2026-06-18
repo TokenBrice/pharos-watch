@@ -10,6 +10,11 @@ export interface AuditedTelegramReplyOptions extends SendToChatOpts {
   actionDetail?: string;
 }
 
+export interface AuditedTelegramReplyResult {
+  ok: boolean;
+  errorClass: string | null;
+}
+
 /**
  * Shared send helper for user-visible webhook replies. Command replies update
  * reply diagnostics only; alert delivery diagnostics are owned by the delivery
@@ -21,7 +26,7 @@ export async function sendAuditedTelegramReply(
   message: string,
   botToken: string,
   options: AuditedTelegramReplyOptions = {},
-): Promise<void> {
+): Promise<AuditedTelegramReplyResult> {
   const {
     actionDetail = "reply",
     replyMarkup,
@@ -58,4 +63,5 @@ export async function sendAuditedTelegramReply(
     }
   }
   await recordTelegramReplyOutcome(db, { chatId, ok, errorClass });
+  return { ok, errorClass };
 }
