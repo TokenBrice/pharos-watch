@@ -286,6 +286,7 @@ export async function mergeStagedPools(
     qualityMultiplier: number;
     orderbookMetadata: CgTickerOrderbookMetadata | null;
     identity: ReturnType<typeof buildPoolIdentity>;
+    confidence: number;
   }> = [];
 
   for (const row of rows) {
@@ -327,6 +328,8 @@ export async function mergeStagedPools(
       feeTierBps: stagedPool.feeTier,
       isStable: stagedPool.isStable,
     });
+    const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
+    const confidence = stagedPoolConfidence(ageHours);
     stagedEntries.push({
       stagedPool,
       dexId: profile.dexId,
@@ -334,17 +337,18 @@ export async function mergeStagedPools(
       qualityMultiplier: profile.qualityMultiplier,
       orderbookMetadata,
       identity,
+      confidence,
     });
   }
-  const stagedIdentityCounts = countPoolIdentityKeys(stagedEntries.map((entry) => entry.identity));
+  const stagedIdentityCounts = countPoolIdentityKeys(
+    stagedEntries.filter((entry) => entry.confidence > 0).map((entry) => entry.identity),
+  );
 
   for (const entry of stagedEntries) {
-    const { stagedPool, dexId, poolType, qualityMultiplier, orderbookMetadata, identity } = entry;
+    const { stagedPool, dexId, poolType, qualityMultiplier, orderbookMetadata, identity, confidence } = entry;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
 
     // Compute confidence and adjusted TVL early — needed for price observation gate
-    const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
-    const confidence = stagedPoolConfidence(ageHours);
     if (confidence === 0) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "stale_confidence_zero", stagedPool, { threshold: 24 });
