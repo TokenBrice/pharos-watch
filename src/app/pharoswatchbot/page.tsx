@@ -136,7 +136,7 @@ const RECOMMENDED_SETUPS = [
   {
     title: "Research desk setup",
     command: "/subscribe safety mcap-ge-1b",
-    description: "Safety-grade downgrades with reason lines, on coins above $1B mcap. Material moves without per-ticker work.",
+    description: "All safety-grade changes with reason lines, on coins above $1B mcap.",
     icon: ShieldCheck,
   },
   {
