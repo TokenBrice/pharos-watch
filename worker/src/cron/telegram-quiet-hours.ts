@@ -1,3 +1,32 @@
+import { logTelegramEvent } from "../lib/telegram-log";
+
+const QUIET_HOURS_TZ_FALLBACK_LOG_WINDOW_MS = 60 * 60 * 1000;
+
+// Intentional per-isolate cache to avoid logging the same broken timezone on
+// every quiet-hours evaluation while still surfacing novel fallback zones.
+const quietHoursTzFallbackLastLoggedAt = new Map<string, number>();
+
+function logQuietHoursTimezoneFallback(timezone: string): void {
+  const nowMs = Date.now();
+  const lastLoggedAt = quietHoursTzFallbackLastLoggedAt.get(timezone);
+  if (lastLoggedAt != null && nowMs - lastLoggedAt < QUIET_HOURS_TZ_FALLBACK_LOG_WINDOW_MS) {
+    return;
+  }
+  quietHoursTzFallbackLastLoggedAt.set(timezone, nowMs);
+  logTelegramEvent({
+    level: "warn",
+    message: "quiet-hours timezone fallback to UTC",
+    action: "quiet-hours-timezone-fallback",
+    timezone,
+    quietHoursTzFallback: true,
+  });
+}
+
+/** @internal Exported for tests only. */
+export function resetQuietHoursFallbackTelemetryForTests(): void {
+  quietHoursTzFallbackLastLoggedAt.clear();
+}
+
 /**
  * Returns the current hour (0–23, h23 cycle) in the given IANA timezone.
  * Returns `null` if the zone is not recognized by the runtime ICU tables;
@@ -53,6 +82,9 @@ export function isQuietHoursActive(
   let hourLocal: number;
   if (timezone) {
     const resolved = resolveLocalHour(nowSec, timezone);
+    if (resolved == null) {
+      logQuietHoursTimezoneFallback(timezone);
+    }
     hourLocal = resolved ?? Math.floor((nowSec % 86_400) / 3600);
   } else {
     hourLocal = Math.floor((nowSec % 86_400) / 3600);

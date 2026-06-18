@@ -4,9 +4,15 @@ import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambigua
 import {
   isQuietHoursActive,
   isValidIanaTimezone,
+  resetQuietHoursFallbackTelemetryForTests,
 } from "../telegram-quiet-hours";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
+
+afterEach(() => {
+  resetQuietHoursFallbackTelemetryForTests();
+  vi.restoreAllMocks();
+});
 
 describe("isQuietHoursActive", () => {
   it("returns false when disabled or invalid", () => {
@@ -43,10 +49,31 @@ describe("isQuietHoursActive", () => {
   });
 
   it("falls back to UTC when the timezone is rejected by ICU", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     // 2026-01-15 12:00:00 UTC. Bogus zone -> falls back to UTC, so hour=12.
     const noonUtcWinter = Date.UTC(2026, 0, 15, 12, 0, 0) / 1000;
     expect(isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Olympus_Mons")).toBe(true);
     expect(isQuietHoursActive(noonUtcWinter, true, 13, 14, "Mars/Olympus_Mons")).toBe(false);
+  });
+
+  it("logs timezone fallback once per zone within the rate-limit window", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const noonUtcWinter = Date.UTC(2026, 0, 15, 12, 0, 0) / 1000;
+
+    isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Olympus_Mons");
+    isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Olympus_Mons");
+    isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Valles_Marineris");
+
+    expect(warn).toHaveBeenCalledTimes(2);
+    const firstRecord = JSON.parse(String(warn.mock.calls[0][0])) as Record<string, unknown>;
+    expect(firstRecord).toMatchObject({
+      scope: "telegram",
+      level: "warn",
+      message: "quiet-hours timezone fallback to UTC",
+      action: "quiet-hours-timezone-fallback",
+      timezone: "Mars/Olympus_Mons",
+      quietHoursTzFallback: true,
+    });
   });
 });
 
