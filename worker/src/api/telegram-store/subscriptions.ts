@@ -11,6 +11,115 @@ import {
   type UpsertSubscriberInput,
 } from "./subscribers";
 
+export type DewsMinBandValue = "ALERT" | "WARNING" | "DANGER" | null;
+export type SafetyModeValue = "all" | "downgrade-only" | "upgrade-only" | null;
+export type DepegWorseningStepValue = 100 | 250 | 500 | null;
+
+export interface BuiltSubscriptionUpsert {
+  sql: string;
+  binds: unknown[];
+}
+
+function bindSubscriptionUpsert(db: D1Database, upsert: BuiltSubscriptionUpsert): D1PreparedStatement {
+  return db.prepare(upsert.sql).bind(...upsert.binds);
+}
+
+export function buildDewsUpsert(
+  chatId: string,
+  stablecoinId: string,
+  enabled: boolean,
+  minBand: DewsMinBandValue,
+): BuiltSubscriptionUpsert {
+  return {
+    sql: `
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band
+      )
+      VALUES (?, ?, ?, 0, 0, ?)
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_dews = excluded.alert_dews,
+        dews_min_band = excluded.dews_min_band
+    `,
+    binds: [chatId, stablecoinId, enabled ? 1 : 0, minBand],
+  };
+}
+
+export function buildSafetyUpsert(
+  chatId: string,
+  stablecoinId: string,
+  enabled: boolean,
+  mode: SafetyModeValue,
+): BuiltSubscriptionUpsert {
+  return {
+    sql: `
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, safety_mode
+      )
+      VALUES (?, ?, 0, 0, ?, ?)
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_safety = excluded.alert_safety,
+        safety_mode = excluded.safety_mode
+    `,
+    binds: [chatId, stablecoinId, enabled ? 1 : 0, mode],
+  };
+}
+
+export function buildDepegUpsert(
+  chatId: string,
+  stablecoinId: string,
+  enabled: boolean,
+): BuiltSubscriptionUpsert {
+  return {
+    sql: `
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+      )
+      VALUES (?, ?, 0, ?, 0, NULL)
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_depeg = excluded.alert_depeg,
+        depeg_worsening_bps_step = CASE WHEN excluded.alert_depeg = 0 THEN NULL ELSE telegram_subscriptions.depeg_worsening_bps_step END
+    `,
+    binds: [chatId, stablecoinId, enabled ? 1 : 0],
+  };
+}
+
+export function buildDepegStepUpsert(
+  chatId: string,
+  stablecoinId: string,
+  step: DepegWorseningStepValue,
+): BuiltSubscriptionUpsert {
+  return {
+    sql: `
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+      )
+      VALUES (?, ?, 0, 1, 0, ?)
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_depeg = 1,
+        depeg_worsening_bps_step = excluded.depeg_worsening_bps_step
+    `,
+    binds: [chatId, stablecoinId, step],
+  };
+}
+
+export function buildLaunchUpsert(
+  chatId: string,
+  stablecoinId: string,
+  enabled: boolean,
+): BuiltSubscriptionUpsert {
+  return {
+    sql: `
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch
+      )
+      VALUES (?, ?, 0, 0, 0, ?)
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_launch = excluded.alert_launch
+    `,
+    binds: [chatId, stablecoinId, enabled ? 1 : 0],
+  };
+}
+
 export async function loadSubscriptionRowsByChat(
   db: D1Database,
   chatId: string,
@@ -143,68 +252,34 @@ export async function applySettingToSubscriptions(
   for (const coin of coins) {
     switch (command.setting) {
       case "dews":
-        statements.push(
-          db.prepare(`
-            INSERT INTO telegram_subscriptions (
-              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band
-            )
-            VALUES (?, ?, ?, 0, 0, ?)
-            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-              alert_dews = excluded.alert_dews,
-              dews_min_band = excluded.dews_min_band
-          `).bind(chatId, coin.id, command.enabled ? 1 : 0, command.minBand),
-        );
+        statements.push(bindSubscriptionUpsert(
+          db,
+          buildDewsUpsert(chatId, coin.id, command.enabled, command.minBand),
+        ));
         break;
       case "safety":
-        statements.push(
-          db.prepare(`
-            INSERT INTO telegram_subscriptions (
-              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, safety_mode
-            )
-            VALUES (?, ?, 0, 0, ?, ?)
-            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-              alert_safety = excluded.alert_safety,
-              safety_mode = excluded.safety_mode
-          `).bind(chatId, coin.id, command.enabled ? 1 : 0, command.mode),
-        );
+        statements.push(bindSubscriptionUpsert(
+          db,
+          buildSafetyUpsert(chatId, coin.id, command.enabled, command.mode),
+        ));
         break;
       case "launch":
-        statements.push(
-          db.prepare(`
-            INSERT INTO telegram_subscriptions (
-              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch
-            )
-            VALUES (?, ?, 0, 0, 0, ?)
-            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-              alert_launch = excluded.alert_launch
-          `).bind(chatId, coin.id, command.enabled ? 1 : 0),
-        );
+        statements.push(bindSubscriptionUpsert(
+          db,
+          buildLaunchUpsert(chatId, coin.id, command.enabled),
+        ));
         break;
       case "depeg":
-        statements.push(
-          db.prepare(`
-            INSERT INTO telegram_subscriptions (
-              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
-            )
-            VALUES (?, ?, 0, ?, 0, NULL)
-            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-              alert_depeg = excluded.alert_depeg,
-              depeg_worsening_bps_step = CASE WHEN excluded.alert_depeg = 0 THEN NULL ELSE telegram_subscriptions.depeg_worsening_bps_step END
-          `).bind(chatId, coin.id, command.enabled ? 1 : 0),
-        );
+        statements.push(bindSubscriptionUpsert(
+          db,
+          buildDepegUpsert(chatId, coin.id, command.enabled),
+        ));
         break;
       case "depeg-step":
-        statements.push(
-          db.prepare(`
-            INSERT INTO telegram_subscriptions (
-              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
-            )
-            VALUES (?, ?, 0, 1, 0, ?)
-            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-              alert_depeg = 1,
-              depeg_worsening_bps_step = excluded.depeg_worsening_bps_step
-          `).bind(chatId, coin.id, command.step),
-        );
+        statements.push(bindSubscriptionUpsert(
+          db,
+          buildDepegStepUpsert(chatId, coin.id, command.step),
+        ));
         break;
     }
   }

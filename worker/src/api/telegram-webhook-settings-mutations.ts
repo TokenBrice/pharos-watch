@@ -18,10 +18,16 @@ import {
 } from "./telegram-webhook-settings-shared";
 import { batchExecute } from "../lib/db";
 import {
+  buildDepegStepUpsert,
+  buildDepegUpsert,
+  buildDewsUpsert,
+  buildLaunchUpsert,
+  buildSafetyUpsert,
   loadSubscriberByChat,
   prepareUpsertSubscriberRow,
   unixNow,
   upsertSubscriberRow,
+  type BuiltSubscriptionUpsert,
 } from "./telegram-webhook-store";
 
 export async function toggleGlobalAlert(
@@ -141,7 +147,7 @@ function prepareDepegSetting(
   if (value === "0") {
     return {
       description: "Depeg off.",
-      statements: prepareDepegStep(db, chatId, username, coinId, null),
+      statements: prepareDepeg(db, chatId, username, coinId, false),
     };
   }
   const step = Number(value);
@@ -182,17 +188,7 @@ function prepareDews(
       nowSec: now,
       perCoinAlertBumps: payload.enabled ? { dews: 1 } : undefined,
     }),
-    db
-      .prepare(`
-        INSERT INTO telegram_subscriptions (
-          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band
-        )
-        VALUES (?, ?, ?, 0, 0, ?)
-        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-          alert_dews = excluded.alert_dews,
-          dews_min_band = excluded.dews_min_band
-      `)
-      .bind(chatId, coinId, payload.enabled ? 1 : 0, payload.minBand),
+    prepareSubscriptionUpsert(db, buildDewsUpsert(chatId, coinId, payload.enabled, payload.minBand)),
   ];
 }
 
@@ -211,17 +207,26 @@ function prepareSafety(
       nowSec: now,
       perCoinAlertBumps: payload.enabled ? { safety: 1 } : undefined,
     }),
-    db
-      .prepare(`
-        INSERT INTO telegram_subscriptions (
-          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, safety_mode
-        )
-        VALUES (?, ?, 0, 0, ?, ?)
-        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-          alert_safety = excluded.alert_safety,
-          safety_mode = excluded.safety_mode
-      `)
-      .bind(chatId, coinId, payload.enabled ? 1 : 0, payload.mode),
+    prepareSubscriptionUpsert(db, buildSafetyUpsert(chatId, coinId, payload.enabled, payload.mode)),
+  ];
+}
+
+function prepareDepeg(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coinId: string,
+  enabled: boolean,
+): D1PreparedStatement[] {
+  const now = unixNow();
+  return [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps: enabled ? { depeg: 1 } : undefined,
+    }),
+    prepareSubscriptionUpsert(db, buildDepegUpsert(chatId, coinId, enabled)),
   ];
 }
 
@@ -232,45 +237,16 @@ function prepareDepegStep(
   coinId: string,
   step: 100 | 250 | 500 | null,
 ): D1PreparedStatement[] {
-  const enabled = step != null;
   const now = unixNow();
   const statements = [
     prepareUpsertSubscriberRow(db, {
       chatId,
       username,
       nowSec: now,
-      perCoinAlertBumps: enabled ? { depeg: 1 } : undefined,
+      perCoinAlertBumps: { depeg: 1 },
     }),
   ];
-  if (enabled) {
-    statements.push(
-      db
-        .prepare(`
-          INSERT INTO telegram_subscriptions (
-            chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
-          )
-          VALUES (?, ?, 0, 1, 0, ?)
-          ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-            alert_depeg = 1,
-            depeg_worsening_bps_step = excluded.depeg_worsening_bps_step
-        `)
-        .bind(chatId, coinId, step),
-    );
-    return statements;
-  }
-  statements.push(
-    db
-      .prepare(`
-        INSERT INTO telegram_subscriptions (
-          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
-        )
-        VALUES (?, ?, 0, 0, 0, NULL)
-        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-          alert_depeg = 0,
-          depeg_worsening_bps_step = NULL
-      `)
-      .bind(chatId, coinId),
-  );
+  statements.push(prepareSubscriptionUpsert(db, buildDepegStepUpsert(chatId, coinId, step)));
   return statements;
 }
 
@@ -289,15 +265,13 @@ function prepareLaunch(
       nowSec: now,
       perCoinAlertBumps: enabled ? { launch: 1 } : undefined,
     }),
-    db
-      .prepare(`
-        INSERT INTO telegram_subscriptions (
-          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch
-        )
-        VALUES (?, ?, 0, 0, 0, ?)
-        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-          alert_launch = excluded.alert_launch
-      `)
-      .bind(chatId, coinId, enabled ? 1 : 0),
+    prepareSubscriptionUpsert(db, buildLaunchUpsert(chatId, coinId, enabled)),
   ];
+}
+
+function prepareSubscriptionUpsert(
+  db: D1Database,
+  upsert: BuiltSubscriptionUpsert,
+): D1PreparedStatement {
+  return db.prepare(upsert.sql).bind(...upsert.binds);
 }

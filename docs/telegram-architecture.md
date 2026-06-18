@@ -109,6 +109,7 @@ the audited welcome reply successfully, Ingress stamps the
 **Must NOT.**
 - Bypass the `CALLBACK_ACTIONS` allowlist when adding a new callback prefix. Any new prefix is a seam-relevant change — add it to the allowlist *and* to the registered keyboard builders in one commit.
 - Duplicate write logic that exists in `telegram-webhook-store.ts`. The per-action files in `webhook-callbacks/` route their writes through helpers (`snooze.ts` via `setSubscriberSnooze`; `depegstep.ts` / `safetydown.ts` via `prepareCoinSettingStatements`); there are no inline `INSERT … ON CONFLICT` writes left in the callbacks layer. New mutations go through `telegram-webhook-store.ts`.
+- Render inline `telegram_subscriptions` upserts for settings callbacks. Per-coin setting writes use the State-owned builders in `telegram-store/subscriptions.ts` so `/set` and `/settings` keep the same override semantics.
 - Take a hard dependency on a specific *Action handler* implementation — when a callback needs to re-run a command, prefer the same `build*Message` helper the command uses rather than calling `handle*` from `webhook-commands/`.
 
 ---
@@ -198,6 +199,8 @@ the audited welcome reply successfully, Ingress stamps the
 
 **Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload, the setup-wizard state, and expired-row cleanup), the processed-update idempotency claim, the command-cooldown gate and best-effort cooldown release for transient/throwing handlers, group-to-supergroup chat-ID migration merges, and the chat-delivery diagnostics.
 
+Per-coin subscription writes have two deliberate modes: subscribe-style follows bump alert flags with `MAX(...)`, while settings-style overrides replace exactly one setting. Settings-style depeg writes share one rule: `depeg on` preserves an existing worsening step, `depeg off` clears it, and `depeg-step <bps>` enables depeg while setting that step. `/subscribe ... depeg-step off` is still a follow with depeg enabled and no worsening-step threshold.
+
 **Owned files.**
 - `worker/src/api/telegram-webhook-store.ts` (compatibility barrel re-exporting `telegram-store/*`) and `worker/src/api/telegram-store/*` (the topic-specific SQL builders: `subscribers`, `subscriptions`, `disambiguation`, `snooze`, `presets`, `forget`, `processed-updates`). The import contract — per-coin/preset write SQL belongs in `telegram-webhook-store` — still holds via the barrel.
 - `worker/src/lib/telegram-chat-member.ts` (cached chat-admin read policy; Bot API HTTP goes through Outbound transport)
@@ -215,7 +218,7 @@ the audited welcome reply successfully, Ingress stamps the
   - `telegram_usage_daily` — privacy-preserving aggregates (Action handlers + Dispatch)
   - `telegram_watcher_lifecycle_daily` — daily lifecycle snapshots
   - `telegram_chat_delivery_diagnostics` — per-chat diagnostics (Outbound + Dispatch)
-- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:safety-source-cache`, `telegram:global-send-backoff-until`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, `telegram:processed-updates:prune:last-run`, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
+- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:safety-source-cache`, `telegram:global-send-backoff-until`, chat-scoped `telegram:command-cooldown:<chat_id>:*`, `telegram:command-flood:<chat_id>*`, `telegram:chat-member:<chat_id>:<user_id>`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, `telegram:re-engagement-warned:<chat_id>`, `telegram:processed-updates:prune:last-run`, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
 
 **Allowed inbound dependencies.** Every other seam may read/write through these helpers.
 

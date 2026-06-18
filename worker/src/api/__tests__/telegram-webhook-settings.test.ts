@@ -491,9 +491,10 @@ describe("handleSettingsCallback — per-coin", () => {
       .getHistory()
       .find((h) =>
         /INSERT INTO telegram_subscriptions/.test(h.sql) &&
-        /alert_depeg = 0/.test(h.sql),
+        /depeg_worsening_bps_step = CASE WHEN excluded\.alert_depeg = 0 THEN NULL/.test(h.sql),
       );
     expect(insert).toBeDefined();
+    expect(insert!.binds[2]).toBe(0);
   });
 
   it("settings:c:<id>:lc:1 enables launch for the coin", async () => {
