@@ -31,7 +31,7 @@ export const TelegramMiniAppStateSchema: ZodType<TelegramMiniAppState> = z.objec
     chatType: z.string().nullable(),
     startParam: z.string().nullable().optional(),
     canMutate: z.boolean(),
-    mutationBlockReason: z.enum(["not-private", "stale-auth", "missing-write-access"]).nullable(),
+    mutationBlockReason: z.enum(["not-private", "stale-auth"]).nullable(),
   }).passthrough(),
   subscriber: z.object({
     exists: z.boolean(),

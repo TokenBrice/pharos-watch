@@ -13,7 +13,7 @@ export interface TelegramMiniAppState {
     chatType: string | null;
     startParam?: string | null;
     canMutate: boolean;
-    mutationBlockReason: "not-private" | "stale-auth" | "missing-write-access" | null;
+    mutationBlockReason: "not-private" | "stale-auth" | null;
   };
   subscriber: {
     exists: boolean;
