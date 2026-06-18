@@ -334,6 +334,86 @@ describe("mergeStagedPools", () => {
     ]);
   });
 
+  it("does not let stale zero-confidence rows make fresh duplicate fingerprints ambiguous", async () => {
+    const now = 1710000000;
+    const stalePoolAddress = "0x0000000000000000000000000000000000000999";
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${newPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "gecko_terminal",
+        chain: "ethereum",
+        protocol: "pancakeswap",
+        dex_id: "pancakeswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 100000,
+        volume_24h: 50000,
+        quality_multiplier: 0.5,
+        pool_type: "gt-concentrated",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 100000,
+        refreshed_at: now,
+      },
+      {
+        pool_id: `ethereum:${stalePoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "gecko_terminal",
+        chain: "ethereum",
+        protocol: "pancakeswap",
+        dex_id: "pancakeswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 100000,
+        volume_24h: 50000,
+        quality_multiplier: 0.5,
+        pool_type: "gt-concentrated",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 100000,
+        refreshed_at: now - 86400 - 30,
+      },
+    ]);
+    const metrics = new Map();
+    const knownPoolIndex = makeKnownPoolIndex([
+      `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
+    ]);
+
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, now);
+
+    expect(result.skippedCount).toBe(2);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
+    expect(metrics.size).toBe(0);
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "duplicate_unique_derived_identity",
+        protocol: "pancakeswap",
+        chain: "ethereum",
+        count: 1,
+        conflict: "derived_unique",
+      },
+      {
+        reason: "stale_confidence_zero",
+        protocol: "pancakeswap",
+        chain: "ethereum",
+        count: 1,
+        threshold: 24,
+      },
+    ]);
+  });
+
   it("skips one staged exact-pool-id pool that uniquely matches an identity-poor DL row", async () => {
     const now = 1710000000;
     const uniswapV4PoolAddress = "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893";
