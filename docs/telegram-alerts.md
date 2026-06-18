@@ -368,6 +368,8 @@ Additional alert controls:
 
 `launch` alerts have no additional per-coin tuning beyond on/off subscription state, and can now be toggled through `/set <ticker> launch on|off` and `/set all launch on|off`.
 
+Quiet-hours windows must have different start and end hours. Use `/unmutehours`, alert toggles, or unsubscribes for all-day silence rather than encoding `0-0`.
+
 Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair, and a per-coin `off` suppresses matching preset/global fan-out for that coin and alert type.
 
 Global all-stablecoin safety follows are intentionally narrower than per-coin safety follows. The current product tier is:
@@ -377,7 +379,7 @@ Global all-stablecoin safety follows are intentionally narrower than per-coin sa
 
 This policy applies only to the global `safety all` tier. Explicit per-coin safety follows still honor the coin's configured `safety_mode`.
 
-Global all-stablecoin depeg follows can also carry a severity threshold through `/set all depeg-step 100|250|500`. A configured value gates fresh depeg and resolution notifications below that peak deviation and also controls worsening follow-up milestones. A value of `off` clears the threshold while leaving global depeg alerts enabled. Preset subscriptions can set the same per-coin threshold in one command, for example `/subscribe usd-top-50 depeg-step 250`.
+Global all-stablecoin depeg follows can also carry a severity threshold through `/set all depeg-step 100|250|500`. A configured value gates fresh depeg and resolution notifications below that peak deviation and also controls worsening follow-up milestones. The current model intentionally couples the severity floor and worsening cadence; they cannot be tuned independently. A value of `off` clears the threshold while leaving global depeg alerts enabled. Preset subscriptions can set the same per-coin threshold in one command, for example `/subscribe usd-top-50 depeg-step 250`.
 
 ### Ticker Resolution
 
@@ -430,19 +432,21 @@ Each dispatch run loads:
 
 When `alert:dews-alertable-snapshot` is absent (for example, immediately after deploy), the dispatcher rebuilds it from the raw DEWS snapshot so the rollout does not require a noisy cold start.
 
-DEWS, depeg, and safety snapshots older than `24 hours` are treated as stale and are reseeded before any alerts are sent. Launch promotions use a separate best-effort `alert:launch-snapshot` read later in the run; a missing or malformed launch snapshot falls back to an empty prior set and does not trigger the stale-snapshot seed gate.
+DEWS and depeg dispatch snapshots older than `24 hours` are treated as stale and are reseeded before any DEWS/depeg alerts are sent. Launch promotions use a separate best-effort `alert:launch-snapshot` read later in the run; a missing or malformed launch snapshot falls back to an empty prior set and does not trigger the stale-snapshot seed gate.
 
 The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals. Legacy rows without `explain` remain valid; malformed or future-version `explain` payloads are dropped at parse time without dropping the row.
 
 ### First-Run / Stale-Snapshot Behavior
 
-If the raw DEWS/depeg/safety snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
+If the raw DEWS/depeg snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
 
-1. Current DEWS/depeg/safety state is written back to the snapshot cache keys, along with the current launch snapshot for later best-effort launch promotion checks.
+1. Current DEWS/depeg state is written back to the snapshot cache keys, along with the current launch snapshot for later best-effort launch promotion checks.
 2. No subscriber messages are sent for that run.
 3. The cron returns metadata with `snapshotSeeded: true`.
 
 This prevents a cold start from blasting subscribers with every current condition as if it were a new event.
+
+Safety-grade fan-out has its own source-cache freshness gate and seeds `alert:safety-snapshot` separately when the prior safety snapshot is absent, unparsable, or stale.
 
 ### Eventless Fast Path
 

@@ -405,7 +405,10 @@ export function parseQuietHours(args: string): { startHourUtc: number; endHourUt
     endHourUtc > 23 ||
     startHourUtc === endHourUtc
   ) {
-    return { error: "Quiet hours must be two different whole hours between 0 and 23." };
+    return {
+      error:
+        "Quiet hours must be two different whole hours between 0 and 23. For all-day silence, turn alert toggles off or unsubscribe instead.",
+    };
   }
 
   return { startHourUtc, endHourUtc };

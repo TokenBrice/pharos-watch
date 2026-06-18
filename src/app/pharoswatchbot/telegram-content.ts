@@ -164,7 +164,7 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/mute <start>-<end>",
         description:
-          "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone — UTC if none is set. Notifications are silenced; messages still deliver.",
+          "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone — UTC if none is set. Notifications are silenced; messages still deliver. Use alert toggles or unsubscribes for all-day silence.",
         example: "/mute 22-07",
       },
       {
@@ -294,7 +294,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "How do I silence Telegram notifications during certain hours?",
     answer:
-      "Use /mute <start>-<end> with integer hours (0–23). For example, /mute 22-07 silences alerts between 10pm and 7am. Quiet hours are interpreted in the chat's /timezone — set it once with /timezone Europe/Paris (or any IANA zone) and /mute will use it; without /timezone, hours fall back to UTC. Use /unmutehours to disable quiet hours.",
+      "Use /mute <start>-<end> with integer hours (0–23). For example, /mute 22-07 silences alerts between 10pm and 7am. Quiet hours are interpreted in the chat's /timezone — set it once with /timezone Europe/Paris (or any IANA zone) and /mute will use it; without /timezone, hours fall back to UTC. Use /unmutehours to disable quiet hours. Use alert toggles or unsubscribes for all-day silence.",
   },
   {
     question: "Is there a Mini App or do I have to type commands?",

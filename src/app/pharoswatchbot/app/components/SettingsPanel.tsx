@@ -114,7 +114,11 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
           Disable quiet hours
         </MiniButton>
       </div>
-      {sameHours ? <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">Start and end must differ.</p> : null}
+      {sameHours ? (
+        <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+          Start and end must differ. For all-day silence, turn alert toggles off or unsubscribe instead.
+        </p>
+      ) : null}
       <p className="pharos-meta mt-3">Times use {timezoneLabel}. Change timezone below.</p>
     </section>
   );
