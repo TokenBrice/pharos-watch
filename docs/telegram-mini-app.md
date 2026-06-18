@@ -62,6 +62,8 @@ Recognized payloads:
 
 Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. In practice every payload we emit stays well under 64. No spaces, lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is no longer in the Mini App catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`.
 
+The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. The schema literals in `worker/src/api/telegram-mini-app-schemas.ts` and `src/app/pharoswatchbot/app/types.ts` must be edited in lockstep if that default changes; broader preset follows use the separate `follow-preset` mutation.
+
 ## Seam Rules
 
 The Mini App is its own seam in the Telegram architecture; full definition and `Must NOT` rules are at [`telegram-architecture.md` § 9. Mini App surface](./telegram-architecture.md#9-mini-app-surface).
