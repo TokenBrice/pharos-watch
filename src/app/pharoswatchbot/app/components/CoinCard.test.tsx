@@ -49,6 +49,11 @@ describe("CoinCard source chip (C74)", () => {
     expect(screen.getByText("Per-coin")).toBeTruthy();
   });
 
+  it("renders a Per-coin chip when only Reserve is enabled", () => {
+    renderCard({ coin: makeCoin({ reserve: true }) });
+    expect(screen.getByText("Per-coin")).toBeTruthy();
+  });
+
   it("renders a Muted override chip for an all-off row that suppresses a global default", () => {
     const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
     renderCard({ coin: makeCoin({}), globalAlerts: global });
@@ -58,5 +63,20 @@ describe("CoinCard source chip (C74)", () => {
   it("renders an All-stablecoins chip when nothing covers the coin", () => {
     renderCard({ coin: makeCoin({}) });
     expect(screen.getByText("All-stablecoins")).toBeTruthy();
+  });
+
+  it("keeps long symbol/source-chip rows wrappable on narrow webviews", () => {
+    renderCard({
+      coin: {
+        ...makeCoin({}),
+        symbol: "SUPERLONGSTABLECOINSYMBOL",
+        name: "A coin with a long display name",
+      },
+    });
+
+    const symbol = screen.getByText("SUPERLONGSTABLECOINSYMBOL");
+    expect(symbol.className).toContain("truncate");
+    expect(symbol.parentElement?.className).toContain("flex-wrap");
+    expect(screen.getByText("All-stablecoins").className).toContain("truncate");
   });
 });

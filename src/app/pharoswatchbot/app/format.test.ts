@@ -62,4 +62,14 @@ describe("computeEffectiveSource", () => {
     const result = computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ dews: true })]);
     expect(result.launch).toBe("global");
   });
+
+  it("classifies Reserve-only rows as per-coin", () => {
+    const result = computeEffectiveSource(makeCoin({ reserve: true }), NO_GLOBAL, []);
+    expect(result.reserve).toBe("per-coin");
+  });
+
+  it("ignores presets for the reserve type (presets do not cover reserve)", () => {
+    const result = computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ dews: true, depeg: true, safety: true })]);
+    expect(result.reserve).toBe("global");
+  });
 });

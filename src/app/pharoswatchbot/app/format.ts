@@ -3,7 +3,8 @@ import type { FollowedPreset, SubscribedCoin, TelegramAlertType, TelegramMiniApp
 /** Effective alert source for a single alert type, per the per-coin > preset > all-stablecoins precedence. */
 export type EffectiveAlertSource = "per-coin" | "preset" | "global" | "off-override";
 
-const ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
+const ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch", "reserve"];
+const PRESET_ALERT_TYPES = new Set<TelegramAlertType>(["dews", "depeg", "safety"]);
 
 /**
  * Pure C74 display helper: classify each alert type's effective source for a followed coin,
@@ -22,7 +23,7 @@ export function computeEffectiveSource(
   presets: readonly FollowedPreset[],
 ): Record<TelegramAlertType, EffectiveAlertSource> {
   const presetCovers = (type: TelegramAlertType): boolean =>
-    type !== "launch" && presets.some((preset) => Boolean(preset.alertTypes[type as "dews" | "depeg" | "safety"]));
+    PRESET_ALERT_TYPES.has(type) && presets.some((preset) => Boolean(preset.alertTypes[type as "dews" | "depeg" | "safety"]));
 
   const result = {} as Record<TelegramAlertType, EffectiveAlertSource>;
   for (const type of ALERT_TYPES) {

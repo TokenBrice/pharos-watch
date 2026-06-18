@@ -188,6 +188,7 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
   // flow: the first tap reveals a distinct Confirm/Cancel row so an incidental
   // focus change (no longer wired to onBlur) can never fire the deletion.
   const [forgetArmed, setForgetArmed] = useState(false);
+  const [unsubscribeArmed, setUnsubscribeArmed] = useState(false);
   const requiresArming = !hasShowConfirm;
 
   return (
@@ -195,9 +196,40 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
       <h2 className="text-sm font-semibold text-foreground">Danger zone</h2>
       <p className="mt-1 text-xs text-muted-foreground">These actions can&apos;t be undone.</p>
       <div className="mt-3 grid gap-2">
-        <MiniButton variant="danger" disabled={!canMutate || isMutating} onClick={onUnsubscribeAll}>
-          Unsubscribe from all
-        </MiniButton>
+        {requiresArming && unsubscribeArmed ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={!canMutate || isMutating}
+              aria-label="Confirm unsubscribe from all alerts"
+              onClick={() => {
+                setUnsubscribeArmed(false);
+                onUnsubscribeAll();
+              }}
+              className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-600/80 bg-red-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Confirm unsubscribe
+            </button>
+            <MiniButton variant="secondary" disabled={!canMutate || isMutating} onClick={() => setUnsubscribeArmed(false)}>
+              Cancel
+            </MiniButton>
+          </div>
+        ) : (
+          <MiniButton
+            variant="danger"
+            disabled={!canMutate || isMutating}
+            onClick={() => {
+              if (requiresArming) {
+                setForgetArmed(false);
+                setUnsubscribeArmed(true);
+                return;
+              }
+              onUnsubscribeAll();
+            }}
+          >
+            Unsubscribe from all
+          </MiniButton>
+        )}
         {requiresArming && forgetArmed ? (
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -220,6 +252,7 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
             aria-label="Delete all my data"
             onClick={() => {
               if (requiresArming) {
+                setUnsubscribeArmed(false);
                 setForgetArmed(true);
                 return;
               }

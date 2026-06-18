@@ -367,7 +367,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     // Presets aren't joined to subscribed coins in the current state payload, so we
     // always show the confirm sheet when the Telegram bridge exposes one (T-48).
     const confirmFn = webApp?.showConfirm;
-    confirmThenFire(confirmFn, `Unfollow ${preset.label}?`, () => {
+    confirmThenFire(confirmFn, `Unfollow ${preset.label}? This also removes explicit coin rows covered by this preset.`, () => {
       void performMutation({ kind: "unfollow-preset", presetId: preset.id });
     });
   }, [performMutation, webApp?.showConfirm]);

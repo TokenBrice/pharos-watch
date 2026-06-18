@@ -331,6 +331,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
     { label: "Depeg chats", value: alertTypeChats?.depeg, shareTotal: data.activeWatchers },
     { label: "Safety chats", value: alertTypeChats?.safety, shareTotal: data.activeWatchers },
     { label: "Launch chats", value: alertTypeChats?.launch, shareTotal: data.activeWatchers },
+    { label: "Reserve chats", value: alertTypeChats?.reserve, shareTotal: data.activeWatchers },
     { label: "All five families", value: alertTypeChats?.allTypes, shareTotal: data.activeWatchers },
   ].filter(isPulseStat);
   const deliveryStats = [

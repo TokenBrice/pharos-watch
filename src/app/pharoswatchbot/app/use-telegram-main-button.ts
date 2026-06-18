@@ -35,12 +35,13 @@ export type UseTelegramMainButtonArgs = {
   text: string | null;
   handler: (() => void) | null;
   visible?: boolean;
+  active?: boolean;
   color?: string;
   textColor?: string;
 };
 
 export function useTelegramMainButton(args: UseTelegramMainButtonArgs): void {
-  const { webApp, text, handler, visible, color, textColor } = args;
+  const { webApp, text, handler, visible, active, color, textColor } = args;
   const attachedHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -54,23 +55,26 @@ export function useTelegramMainButton(args: UseTelegramMainButtonArgs): void {
     }
 
     const resolvedVisible = visible ?? (text != null && handler != null);
+    const resolvedActive = active ?? true;
 
-    if (resolvedVisible && handler && text) {
+    if (resolvedVisible && text) {
       const buttonColor = color ?? webApp?.themeParams?.button_color;
       mb.setParams?.({
         text,
         is_visible: true,
-        is_active: true,
+        is_active: resolvedActive,
         ...(buttonColor ? { color: buttonColor } : {}),
         ...(textColor ? { text_color: textColor } : {}),
       });
-      mb.onClick?.(handler);
+      if (resolvedActive && handler) {
+        mb.onClick?.(handler);
+        attachedHandlerRef.current = handler;
+      }
       mb.show?.();
-      attachedHandlerRef.current = handler;
-      const localHandler = handler;
+      const localHandler = resolvedActive && handler ? handler : null;
       return () => {
-        mb.offClick?.(localHandler);
-        if (attachedHandlerRef.current === localHandler) {
+        if (localHandler) mb.offClick?.(localHandler);
+        if (localHandler && attachedHandlerRef.current === localHandler) {
           attachedHandlerRef.current = null;
         }
         mb.hide?.();
@@ -78,5 +82,5 @@ export function useTelegramMainButton(args: UseTelegramMainButtonArgs): void {
     }
     mb.hide?.();
     return undefined;
-  }, [webApp, text, handler, visible, color, textColor]);
+  }, [webApp, text, handler, visible, active, color, textColor]);
 }

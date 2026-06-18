@@ -5,7 +5,7 @@ import { RefreshCw, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
-import type { CoinInsightTarget, TelegramAlertType, TelegramMiniAppState } from "./types";
+import type { CoinInsightTarget, TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
@@ -73,6 +73,7 @@ export function PharosWatchBotMiniAppClient() {
   // tracks the session fetch + the "missing launch data" terminal error after the bridge resolves.
   const [status, setStatus] = useState<"preview" | "loading" | "ready" | "error">("loading");
   const lastHiddenAtRef = useRef<number | null>(null);
+  const mainButtonInFlightRef = useRef(false);
   const hasInitialisedFromStartParamRef = useRef(false);
   // Forward-ref to `loadSession` so the mutations hook can call back for stale-auth recovery
   // even though `loadSession` is defined later (it depends on the hook's `setMessage`).
@@ -120,6 +121,7 @@ export function PharosWatchBotMiniAppClient() {
     pendingUndo,
     homeScreenStatus,
     mutate,
+    performMutation,
     remove: handleRemoveCoin,
     undoRemove: handleUndoRemove,
     addToHomeScreen: handleAddToHomeScreen,
@@ -257,7 +259,8 @@ export function PharosWatchBotMiniAppClient() {
     // Defer one tick so the highlighted-row re-render commits before scroll.
     const scrollTimer = setTimeout(() => {
       const node = typeof document === "undefined" ? null : document.getElementById(`coin-row-${targetId}`);
-      node?.scrollIntoView({ block: "center", behavior: "smooth" });
+      const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      node?.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
     }, 0);
     const clearTimer = setTimeout(() => {
       setHighlightedCoinId((current) => (current === targetId ? null : current));
@@ -271,19 +274,35 @@ export function PharosWatchBotMiniAppClient() {
   // MainButton — derive `text` and `handler` from the current view/state and
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
+  const canMutate = Boolean(initData && state?.viewer.canMutate);
+  const runMainButtonMutation = useCallback((operation: TelegramMiniAppOperation) => {
+    if (!canMutate || isMutating || mainButtonInFlightRef.current) return;
+    mainButtonInFlightRef.current = true;
+    void performMutation(operation).finally(() => {
+      mainButtonInFlightRef.current = false;
+    });
+  }, [canMutate, isMutating, performMutation]);
+
   const { text: mainButtonText, handler: mainButtonHandler } = useMemo<{ text: string | null; handler: (() => void) | null }>(() => {
+    if (!canMutate || isMutating) return { text: null, handler: null };
     if (view === "home") {
       if (optimisticState && !optimisticState.subscriber.exists) {
-        return { text: "Use recommended setup", handler: () => mutate(RECOMMENDED_OPERATION) };
+        return { text: "Use recommended setup", handler: () => runMainButtonMutation(RECOMMENDED_OPERATION) };
       }
       if (optimisticState?.subscriber.snoozeUntilTs != null) {
         const label = isPausedSentinel(optimisticState.subscriber.snoozeUntilTs) ? "Resume alerts" : "Clear snooze";
-        return { text: label, handler: () => mutate({ kind: "clear-snooze" }) };
+        return { text: label, handler: () => runMainButtonMutation({ kind: "clear-snooze" }) };
       }
     }
     return { text: null, handler: null };
-  }, [mutate, optimisticState, view]);
-  useTelegramMainButton({ webApp, text: mainButtonText, handler: mainButtonHandler });
+  }, [canMutate, isMutating, optimisticState, runMainButtonMutation, view]);
+  useTelegramMainButton({
+    webApp,
+    text: mainButtonText,
+    handler: mainButtonHandler,
+    visible: Boolean(mainButtonText && mainButtonHandler && canMutate && !isMutating),
+    active: canMutate && !isMutating,
+  });
 
   if (status === "preview") return <PreviewState previewName={previewName} />;
   if (forgottenView) return <ForgottenView onClose={handleClose} />;
@@ -291,7 +310,6 @@ export function PharosWatchBotMiniAppClient() {
   const heading = state?.viewer.username
     ? `@${state.viewer.username}`
     : state?.viewer.firstName ?? "PharosWatchBot";
-  const canMutate = Boolean(initData && state?.viewer.canMutate);
   const showStaleAuthBanner = optimisticState?.viewer.mutationBlockReason === "stale-auth";
   const nowSec = Math.floor(Date.now() / 1000);
 

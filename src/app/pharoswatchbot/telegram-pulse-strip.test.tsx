@@ -157,10 +157,12 @@ describe("TelegramPulseBoard", () => {
     expect(within(pulseDetails).getByText("Depeg chats")).toBeTruthy();
     expect(within(pulseDetails).getByText("Safety chats")).toBeTruthy();
     expect(within(pulseDetails).getByText("Launch chats")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Reserve chats")).toBeTruthy();
     expect(within(pulseDetails).getByText("All five families")).toBeTruthy();
     expect(within(pulseDetails).getByText("Delivery controls")).toBeTruthy();
     expect(within(pulseDetails).getByText("Quiet-hours chats")).toBeTruthy();
     expect(within(pulseDetails).getByText("1,701")).toBeTruthy();
+    expect(within(pulseDetails).getByText("1,104")).toBeTruthy();
     expect(within(pulseDetails).getByText("42")).toBeTruthy();
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();

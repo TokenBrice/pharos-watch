@@ -225,6 +225,37 @@ describe("PharosWatchBotMiniAppPage", () => {
     }
   });
 
+  it("uses instant deep-link scroll when reduced motion is requested", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coin_usdc-circle", user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    const originalMatchMedia = window.matchMedia;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    try {
+      render(<PharosWatchBotMiniAppPage />);
+
+      await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+      expect(scrollIntoView.mock.calls.at(-1)?.[0]).toEqual({ block: "center", behavior: "auto" });
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it("renders and scrolls a catalog launch target that is not yet followed", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coin_usdt-tether", user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
@@ -613,10 +644,59 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(showConfirm).toHaveBeenCalledTimes(1);
+    expect(showConfirm.mock.calls[0]?.[0]).toMatch(/clears every coin, preset, and global toggle/i);
     expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "unsubscribe-all" } }),
     }));
+  });
+
+  it("arms unsubscribe-all into an explicit Confirm/Cancel row when showConfirm is absent", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Unsubscribe from all" }));
+    expect(screen.getByRole("button", { name: "Confirm unsubscribe from all alerts" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Unsubscribe from all" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Unsubscribe from all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm unsubscribe from all alerts" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "unsubscribe-all" } }),
+    }));
+  });
+
+  it("warns that unfollowing a preset also removes covered coin rows", async () => {
+    const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(false));
+    const state: TelegramMiniAppState = {
+      ...baseState,
+      presets: [{ id: "usd-top25", label: "USD Top 25", alertTypes: { dews: true, depeg: true, safety: false }, depegStepBps: 250 }],
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), showConfirm } };
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => state });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "presets" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unfollow USD Top 25" }));
+
+    expect(showConfirm).toHaveBeenCalledTimes(1);
+    expect(showConfirm.mock.calls[0]?.[0]).toMatch(/also removes explicit coin rows covered by this preset/i);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("requires two-step confirmation for forget-me and shows the terminal screen", async () => {
@@ -913,6 +993,67 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(live.length).toBeLessThanOrEqual(1);
     // Each attached handler should appear at most once in onClickHandlers (no double-attach).
     expect(new Set(onClickHandlers).size).toBe(onClickHandlers.length);
+  });
+
+  it("hides the native MainButton for read-only sessions", async () => {
+    const mainButton = {
+      show: vi.fn(),
+      hide: vi.fn(),
+      setParams: vi.fn(),
+      onClick: vi.fn(),
+      offClick: vi.fn(),
+    };
+    const readOnlyState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+      subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), MainButton: mainButton } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => readOnlyState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+
+    expect(mainButton.onClick).not.toHaveBeenCalled();
+    expect(mainButton.show).not.toHaveBeenCalled();
+    expect(mainButton.hide).toHaveBeenCalled();
+  });
+
+  it("guards duplicate native MainButton clicks while the mutation is in flight", async () => {
+    const onClickHandlers: Array<() => void> = [];
+    const mainButton = {
+      show: vi.fn(),
+      hide: vi.fn(),
+      setParams: vi.fn(),
+      onClick: vi.fn((handler: () => void) => { onClickHandlers.push(handler); }),
+      offClick: vi.fn(),
+    };
+    const noSubscriberState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null },
+    };
+    let resolveMutation: ((value: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void) | null = null;
+    const mutationResponse = new Promise<{ ok: true; json: () => Promise<TelegramMiniAppState> }>((resolve) => {
+      resolveMutation = resolve;
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => noSubscriberState })
+      .mockReturnValueOnce(mutationResponse);
+    vi.stubGlobal("fetch", fetchMock);
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, MainButton: mainButton } };
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    await waitFor(() => expect(onClickHandlers.length).toBe(1));
+
+    act(() => {
+      onClickHandlers[0]?.();
+      onClickHandlers[0]?.();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    resolveMutation?.({ ok: true, json: async () => baseState });
+    await waitFor(() => expect(screen.getByText("Recommended setup applied.")).toBeTruthy());
   });
 
 });
