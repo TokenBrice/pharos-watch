@@ -117,13 +117,28 @@ export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemov
     ? catalogById.get(targetCoinId) ?? null
     : null;
   const shouldShowTargetCard = Boolean(targetCoinId && !subscribed.has(targetCoinId));
-  const results = useMemo(() => {
+  const search = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return state.catalog.searchableCoins
-      .filter((coin) => coin.symbol.toLowerCase().includes(q) || coin.name.toLowerCase().includes(q) || coin.stablecoinId.includes(q))
-      .slice(0, 8);
+    if (q.length < 2) return { results: [], total: 0 };
+    const matches = state.catalog.searchableCoins
+      .map((coin) => {
+        const symbol = coin.symbol.toLowerCase();
+        const name = coin.name.toLowerCase();
+        const id = coin.stablecoinId.toLowerCase();
+        const rank = symbol === q
+          ? 0
+          : symbol.startsWith(q) || name.startsWith(q) || id.startsWith(q)
+            ? 1
+            : symbol.includes(q) || name.includes(q) || id.includes(q)
+              ? 2
+              : null;
+        return rank == null ? null : { coin, rank };
+      })
+      .filter((match): match is { coin: (typeof state.catalog.searchableCoins)[number]; rank: number } => match != null)
+      .sort((a, b) => a.rank - b.rank || a.coin.symbol.localeCompare(b.coin.symbol));
+    return { results: matches.slice(0, 8).map((match) => match.coin), total: matches.length };
   }, [query, state.catalog.searchableCoins]);
+  const { results, total: resultTotal } = search;
   const suggestions = useMemo(
     () =>
       SUGGESTED_SEARCH_IDS.map((id) => catalogById.get(id)).filter(
@@ -171,31 +186,38 @@ export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemov
           <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">No matches. Try a symbol like USDT or a name like Frax.</p>
         ) : null}
         {results.length > 0 ? (
-          <div className="mt-3 grid gap-2" aria-live="polite">
-            {results.map((coin) => {
-              const following = subscribed.has(coin.stablecoinId);
-              return (
-                <div key={coin.stablecoinId} className="flex items-center justify-between gap-3 rounded-xl border border-border/65 bg-background/55 p-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">{coin.symbol}</p>
-                    <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
+          <>
+            {resultTotal > results.length ? (
+              <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
+                Showing first {results.length} of {resultTotal}
+              </p>
+            ) : null}
+            <div className="mt-3 grid gap-2" aria-live="polite">
+              {results.map((coin) => {
+                const following = subscribed.has(coin.stablecoinId);
+                return (
+                  <div key={coin.stablecoinId} className="flex items-center justify-between gap-3 rounded-xl border border-border/65 bg-background/55 p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{coin.symbol}</p>
+                      <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
+                    </div>
+                    {following ? (
+                      <span className="shrink-0 rounded-md border border-border/55 bg-muted/30 px-2 py-1 text-[11px] font-semibold text-muted-foreground">Following</span>
+                    ) : (
+                      <MiniButton
+                        ariaLabel={`Follow ${coin.symbol}`}
+                        variant="secondary"
+                        disabled={!canMutate || isMutating}
+                        onClick={() => onMutate({ kind: "set-coin", stablecoinId: coin.stablecoinId, patch: { alertTypes: { dews: true, depeg: true } } })}
+                      >
+                        Follow
+                      </MiniButton>
+                    )}
                   </div>
-                  {following ? (
-                    <span className="shrink-0 rounded-md border border-border/55 bg-muted/30 px-2 py-1 text-[11px] font-semibold text-muted-foreground">Following</span>
-                  ) : (
-                    <MiniButton
-                      ariaLabel={`Follow ${coin.symbol}`}
-                      variant="secondary"
-                      disabled={!canMutate || isMutating}
-                      onClick={() => onMutate({ kind: "set-coin", stablecoinId: coin.stablecoinId, patch: { alertTypes: { dews: true, depeg: true } } })}
-                    >
-                      Follow
-                    </MiniButton>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         ) : null}
       </section>
 

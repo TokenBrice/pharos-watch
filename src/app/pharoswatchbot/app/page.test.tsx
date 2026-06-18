@@ -433,6 +433,36 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByText("Tune USDC")).toBeNull();
   });
 
+  it("orders exact search matches first and announces truncated results", async () => {
+    const searchState: TelegramMiniAppState = {
+      ...baseState,
+      catalog: {
+        ...baseState.catalog,
+        searchableCoins: [
+          { stablecoinId: "prefix-1", symbol: "USDT1", name: "USDT One", peg: "USD" },
+          { stablecoinId: "prefix-2", symbol: "USDT2", name: "USDT Two", peg: "USD" },
+          { stablecoinId: "prefix-3", symbol: "USDT3", name: "USDT Three", peg: "USD" },
+          { stablecoinId: "prefix-4", symbol: "USDT4", name: "USDT Four", peg: "USD" },
+          { stablecoinId: "prefix-5", symbol: "USDT5", name: "USDT Five", peg: "USD" },
+          { stablecoinId: "usdt-tether", symbol: "USDT", name: "Tether", peg: "USD" },
+          { stablecoinId: "prefix-6", symbol: "USDT6", name: "USDT Six", peg: "USD" },
+          { stablecoinId: "prefix-7", symbol: "USDT7", name: "USDT Seven", peg: "USD" },
+          { stablecoinId: "prefix-8", symbol: "USDT8", name: "USDT Eight", peg: "USD" },
+        ],
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => searchState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+    fireEvent.change(screen.getByLabelText("Search stablecoins"), { target: { value: "USDT" } });
+
+    expect(screen.getByText("Showing first 8 of 9")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /^Follow / })[0]?.getAttribute("aria-label")).toBe("Follow USDT");
+  });
+
   it("clears per-coin snooze with the right durationToken", async () => {
     const coinSnoozed: TelegramMiniAppState = {
       ...baseState,
