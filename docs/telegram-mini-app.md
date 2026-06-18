@@ -70,6 +70,8 @@ Per-coin `set-coin` patches treat a non-null `depegStepBps` as an enabling opera
 
 The `subscriptions[]` state projection includes rows with at least one enabled alert family, plus snooze-only rows. All-disabled rows with no per-coin snooze are hidden so old clear/disable writes do not appear as active watchlist coins.
 
+The reserve-drift family (C123) is exposed as an untunable per-coin and global on/off toggle, like launch. `set-coin` patches carry an optional `reserve: boolean`, the global toggle uses `set-global` with `alertType: "reserve"`, and a coin whose only enabled families are untunable (launch and/or reserve) renders the C115 "on/off only. No tuning." line in `CoinCard`. There is no per-coin tuning surface for reserve.
+
 ## Seam Rules
 
 The Mini App is its own seam in the Telegram architecture; full definition and `Must NOT` rules are at [`telegram-architecture.md` § 9. Mini App surface](./telegram-architecture.md#9-mini-app-surface).

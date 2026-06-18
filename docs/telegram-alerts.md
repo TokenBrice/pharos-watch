@@ -107,12 +107,12 @@ The public chart labels snapshot-backed history as daily lifecycle snapshots. Du
 
 ## D1 Schema
 
-The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. The baseline includes the core tables and legacy alert/global fields through `global_alert_safety`; launch-alert columns are added by `worker/migrations/0072_telegram_launch_alerts.sql`, chat-level `alert_snooze_until_ts` is added by `worker/migrations/0098_telegram_alert_snooze.sql`, pending-selection ownership is added by `worker/migrations/0107_telegram_pending_initiator.sql`, global depeg step defaults are added by `worker/migrations/0109_telegram_global_depeg_step.sql`, pending retry metadata is added by `worker/migrations/0111_telegram_pending_alert_retry_metadata.sql`, persistent dynamic preset follows are added by `worker/migrations/0114_telegram_dynamic_presets.sql`, subscriber block-count fields are added by `worker/migrations/0116_telegram_subscriber_block_count.sql`, subscriber timezone is added by `worker/migrations/0118_telegram_subscriber_timezone.sql`, per-coin `alert_snooze_until_ts` is added by `worker/migrations/0119_telegram_subscription_snooze.sql`, pending priority/dead-letter/job manifests are added by `worker/migrations/0121_telegram_alert_jobs.sql`, processed-update idempotency is added by `worker/migrations/0122_telegram_processed_updates.sql`, usage/lifecycle diagnostics are added by `worker/migrations/0123_telegram_usage_analytics.sql`, pending-delivery claim metadata plus pending/reconciliation indexes are added by `worker/migrations/0124_telegram_delivery_claims_and_retention.sql`, and inactive-subscriber/alert-job retention indexes are added by `worker/migrations/0155_telegram_retention_indexes.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage.
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. The baseline includes the core tables and legacy alert/global fields through `global_alert_safety`; launch-alert columns are added by `worker/migrations/0072_telegram_launch_alerts.sql`, chat-level `alert_snooze_until_ts` is added by `worker/migrations/0098_telegram_alert_snooze.sql`, pending-selection ownership is added by `worker/migrations/0107_telegram_pending_initiator.sql`, global depeg step defaults are added by `worker/migrations/0109_telegram_global_depeg_step.sql`, pending retry metadata is added by `worker/migrations/0111_telegram_pending_alert_retry_metadata.sql`, persistent dynamic preset follows are added by `worker/migrations/0114_telegram_dynamic_presets.sql`, subscriber block-count fields are added by `worker/migrations/0116_telegram_subscriber_block_count.sql`, subscriber timezone is added by `worker/migrations/0118_telegram_subscriber_timezone.sql`, per-coin `alert_snooze_until_ts` is added by `worker/migrations/0119_telegram_subscription_snooze.sql`, pending priority/dead-letter/job manifests are added by `worker/migrations/0121_telegram_alert_jobs.sql`, processed-update idempotency is added by `worker/migrations/0122_telegram_processed_updates.sql`, usage/lifecycle diagnostics are added by `worker/migrations/0123_telegram_usage_analytics.sql`, pending-delivery claim metadata plus pending/reconciliation indexes are added by `worker/migrations/0124_telegram_delivery_claims_and_retention.sql`, inactive-subscriber/alert-job retention indexes are added by `worker/migrations/0155_telegram_retention_indexes.sql`, and reserve-drift alert columns (`alert_reserve`, `global_alert_reserve` on `telegram_subscribers`, `alert_reserve` on `telegram_subscriptions`) plus the partial `global_alert_reserve` index are added by `worker/migrations/0156_telegram_reserve_alerts.sql` and `worker/migrations/0157_telegram_global_alert_reserve_index.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage.
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
-| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `global_depeg_worsening_bps_step`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `timezone`, `alert_snooze_until_ts`, `consecutive_block_count`, `consecutive_block_first_at`, `created_at`, `last_active_at` |
-| `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step`, `alert_snooze_until_ts` |
+| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `global_alert_reserve`, `global_depeg_worsening_bps_step`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `timezone`, `alert_snooze_until_ts`, `consecutive_block_count`, `consecutive_block_first_at`, `created_at`, `last_active_at` |
+| `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `alert_reserve`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step`, `alert_snooze_until_ts` |
 | `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch/list time | composite PK `chat_id, preset_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `depeg_worsening_bps_step`, `created_at`, `updated_at` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at`, `initiator_user_id` |
 | `telegram_pending_alerts` | Overflow and retry delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts`, `not_before_at`, `last_error_class`, `retry_after_sec`, `updated_at`, `dedupe_key`, `chunk_index`, `priority`, `source_type`, `alert_type`, `expires_at`, `processing_owner`, `processing_started_at`, `processing_expires_at` |
@@ -123,7 +123,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 | `telegram_watcher_lifecycle_daily` | Daily active-watcher snapshots for stable public pulse history | `day`, `snapshot_at`, `active_watchers`, `new_watchers`, `churned_watchers`, `reactivated_watchers`, `explicit_coin_follows`, `preset_implied_coin_follows`, `active_preset_followers`, alert-type opt-ins, quiet-hours and pending-delivery counts |
 | `telegram_chat_delivery_diagnostics` | Per-chat delivery diagnostics used by `/health` | `chat_id`, `last_successful_delivery_at`, `last_successful_reply_at`, `last_delivery_attempt_at`, `recent_failure_class`, `updated_at` |
 
-`worker/migrations/0117_telegram_global_alert_indexes.sql` adds partial indexes on each `telegram_subscribers.global_alert_*` flag (DEWS, depeg, safety, launch) plus `telegram_pending_alerts(chat_id)` so the dispatcher's global-subscriber fan-out queries and the pending drain JOIN avoid full scans.
+`worker/migrations/0117_telegram_global_alert_indexes.sql` adds partial indexes on each `telegram_subscribers.global_alert_*` flag (DEWS, depeg, safety, launch) plus `telegram_pending_alerts(chat_id)` so the dispatcher's global-subscriber fan-out queries and the pending drain JOIN avoid full scans. `worker/migrations/0157_telegram_global_alert_reserve_index.sql` adds the matching partial index for `global_alert_reserve`.
 
 `/unsubscribe all` clears per-coin subscriptions, preset follows, and all-stablecoin alert flags, which stops alerts for that chat. It does not immediately erase the `telegram_subscribers` row, processed-update idempotency rows, delivery diagnostics, or historical aggregate counters needed for abuse prevention, retry safety, and operations.
 
@@ -225,7 +225,7 @@ Current actions:
 - `setup:*` for setup wizard steps
 - `tz:<IANA zone>` for timezone quick picks
 - `settings:home` / `settings:home:<page>` — re-render the chat-level settings view and page through per-coin settings buttons
-- `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch` — toggle global alert flag
+- `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch | reserve` — toggle global alert flag
 - `settings:q:<1|0>` — enable (22-07 in the chat's configured timezone, UTC when unset) or disable quiet hours
 - `settings:sc` — clear an active snooze
 - `settings:o:<stablecoinId>` — open the per-coin settings view (no mutation)
@@ -234,6 +234,7 @@ Current actions:
   - `sm:a|d|u|0` — Safety mode `all`, `downgrade-only`, `upgrade-only`, or off
   - `ds:100|250|500|0` — Depeg severity gate and worsening step in bps, or off (also clears `alert_depeg` for the coin)
   - `lc:1|0` — Launch on/off
+  - `rs:1|0` — Reserve drift on/off
 
 Settings callbacks edit the message in place via `editMessageText`. The chat-level settings keyboard includes paginated `settings:o:<stablecoinId>` buttons for explicitly subscribed coins, so users can open per-coin settings without typing `/settings <ticker>`. If the edit fails (e.g. the message is too old or content is unchanged) the handler falls back to a fresh `sendMessage` so the user still sees the new state.
 
@@ -316,10 +317,10 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/unsubscribe all` | Clears all per-coin subscriptions, disables every current alert flag including launch, and clears the global depeg worsening step (always gated; see below) |
 
 Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm ] [ Cancel ]` keyboard when the resolved coin set exceeds 10 coins or the literal `all` token is used. The deferred command is stored in `telegram_pending_disambiguation` with `action_type = 'confirm-bulk'` and inherits the standard 5-minute TTL. Tapping Confirm executes the original command; Cancel (or `/cancel`) clears the pending state without side effects. Confirmation is initiator-locked: only the user who started the bulk command may complete or cancel it.
-| `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, or depeg severity and worsening step. Private success replies include a per-coin Mini App tuning button. |
-| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg severity and worsening-step threshold. Private success replies include a Mini App watchlist button. |
-| `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
-| `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
+| `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, reserve-drift on/off, or depeg severity and worsening step. Private success replies include a per-coin Mini App tuning button. |
+| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`, `reserve`) or sets the global depeg severity and worsening-step threshold. Private success replies include a Mini App watchlist button. |
+| `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch / reserve. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
+| `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), launch on/off, and reserve-drift on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
 | `/mute <start>-<end>` | Enables quiet hours interpreted in the chat's `/timezone` (defaults to UTC; messages still deliver, notifications are silenced) |
 | `/pause` | Pauses **all** alert delivery indefinitely by writing the far-future sentinel `alert_snooze_until_ts = 4102444800` (2100-01-01 UTC) through the existing chat-level snooze path, so the dispatcher's snooze filter skips the chat with no routing change. `/pause off` (or `/pause resume`) clears it; `/unsnooze` and the `/settings` Clear-snooze button also resume. `/pause <duration>` (`1h`, `4h`, `24h`) sets an ordinary timed snooze, not the sentinel. A paused chat renders distinctly as "Paused" (not a multi-thousand-day countdown) in `/list`, `/health`, and `/settings`, and the Home keyboard shows a single Resume button. Private replies include a Mini App snooze button. |
 | `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone. Private no-argument replies also include common-zone buttons and a Mini App quiet-hours button; group no-argument replies are read-only and omit the keyboard. Unset chats use UTC, the historical behavior. |
@@ -353,6 +354,7 @@ Telegram only delivers `?start=` deep links in private chats, but the dispatcher
 - `depeg`
 - `safety`
 - `launch`
+- `reserve` — opt-in per-coin reserve-drift alert (C123). Fires once when a live-reserve-tracked coin's live reserve mix newly diverges from its curated profile beyond the shared `delta > 15` threshold (`isReserveDriftThresholdExceeded`), reusing the four-hourly `checkCollateralDrift` set. Transition-gated (entering-drift only) and advisory; it does not feed the Safety Score or report card.
 
 ### Preset Watchlists
 
@@ -367,6 +369,7 @@ Preset watchlists are persistent dynamic follows on top of the existing per-coin
 - `/list` shows both dynamic preset rows and explicit coin rows
 - Preset DEWS follows use the default `ALERT` floor, and preset safety follows use the default all-changes mode, matching per-coin rows without custom tuning. Preset-level DEWS/safety tuning does not exist yet.
 - `launch` does not accept presets; launch alerts support explicit ticker/coin-id targets and the special `all` target
+- `reserve` does not accept presets either; reserve alerts support explicit ticker/coin-id targets and the special `all` target
 - Preset resolution fails closed when the stablecoins cache is unavailable; the bot returns a temporary retry message instead of subscribing stale or incomplete cohorts
 
 Additional alert controls:
@@ -376,10 +379,12 @@ Additional alert controls:
 - `depeg_worsening_bps_step`: optional per-coin depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
 - `telegram_preset_subscriptions.depeg_worsening_bps_step`: optional dynamic preset depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
 - `global_depeg_worsening_bps_step`: optional all-stablecoin depeg severity gate and worsening follow-up step (`100`, `250`, `500`)
-- `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type, including `launch`
+- `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type, including `launch` and `reserve`
 - quiet hours: subscriber-level hour window that forces `disable_notification = true`, interpreted in the subscriber's `timezone` column (unset = UTC)
 
 `launch` alerts have no additional per-coin tuning beyond on/off subscription state, and can now be toggled through `/set <ticker> launch on|off` and `/set all launch on|off`.
+
+`reserve` alerts likewise have no per-coin tuning beyond on/off subscription state, toggled through `/set <ticker> reserve on|off`, `/set all reserve on|off`, the per-coin settings keyboard (`rs` row), or the global Reserve toggle. Reserve drift only fires for coins with live-reserve tracking; coins that fall back to curated reserves are never alerted, and a coin dropped from the drift set by a failed live fetch produces no "drift cleared" message (entering-drift only, v1). Because the producer is the four-hourly reserve slot, a newly-opened drift can be delayed up to ~4h.
 
 Quiet-hours windows must have different start and end hours. Use `/unmutehours`, alert toggles, or unsubscribes for all-day silence rather than encoding `0-0`.
 If a configured timezone cannot be resolved by the Worker runtime ICU tables, quiet-hours evaluation falls back to UTC and emits a rate-limited structured Telegram warning keyed by the zone (`quietHoursTzFallback`).
@@ -445,10 +450,14 @@ Each dispatch run loads:
   - `alert:dews-alertable-snapshot`
   - `alert:depeg-snapshot`
   - `alert:safety-snapshot`
+  - `alert:reserve-snapshot` — the current drift id-set, written by the four-hourly reserve slot (`hourly-live-reserves.ts` after `checkCollateralDrift`), read read-only by dispatch
+  - `alert:reserve-dispatched-snapshot` — the dispatch-owned baseline of the drift id-set the dispatcher last acted on; written by `writeSnapshots` at the end of each run
 
 When `alert:dews-alertable-snapshot` is absent (for example, immediately after deploy), the dispatcher rebuilds it from the raw DEWS snapshot so the rollout does not require a noisy cold start.
 
 DEWS and depeg dispatch snapshots older than `24 hours` are treated as stale and are reseeded before any DEWS/depeg alerts are sent. Launch promotions use a separate best-effort `alert:launch-snapshot` read later in the run; a missing or malformed launch snapshot falls back to an empty prior set and does not trigger the stale-snapshot seed gate.
+
+Reserve-drift transitions diff the producer's current drift set (`alert:reserve-snapshot`) against the dispatch baseline (`alert:reserve-dispatched-snapshot`). The producer (four-hourly reserve slot) is the only writer of the current set, so the dispatch trigger never opens reserve-adapter connections. A seed run (stale dews/depeg, or no parseable baseline) preserves the prior baseline so a drift opening during the seed window fires on the next healthy run, and a first run with no baseline treats the current producer set as the baseline so already-drifting coins do not alert.
 
 The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals. Legacy rows without `explain` remain valid; malformed or future-version `explain` payloads are dropped at parse time without dropping the row.
 
@@ -485,6 +494,7 @@ If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `r
 - Safety-grade changes by comparing the previous `alert:safety-snapshot` against the live safety source cache written by `publish-report-card-cache`
 - Safety-grade changes are emitted only when the live safety source cache is generation-valid; fallback-to-history no longer rewrites the alert snapshot as if it were a valid live source
 - Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
+- Reserve-drift transitions by comparing the producer's current drift id-set (`alert:reserve-snapshot`) to the dispatch baseline (`alert:reserve-dispatched-snapshot`); only coins newly entering drift fire (entering-drift only)
 - Methodology-version-only safety regrades are suppressed from user alerts
 
 Safety-grade alerts attach a `Reason:` blockquote instead of the generic `Context:` blockquote used by DEWS/depeg alerts. The reason builder compares the previous and current optional `explain` snapshots and ranks scoring-stage movements before weighted dimension deltas: newly binding or tighter active-depeg caps, new no-liquidity penalties, new or tighter variant-parent caps, then the largest dimension movement matching the overall grade direction. When no valid `explain` data is available, the alert falls back to score or grade movement and appends the generic live context after `Now:`. Blacklist/freeze metadata remains display-only under the current methodology and is not used as a causal reason.
@@ -512,12 +522,14 @@ Per-coin rows check the corresponding boolean on `telegram_subscriptions`:
 - `alert_depeg`
 - `alert_safety`
 - `alert_launch`
+- `alert_reserve`
 
 Global all-stablecoin follows use the matching `telegram_subscribers` flags:
 
 - `global_alert_dews`
 - `global_alert_depeg`
 - `global_alert_safety`
+- `global_alert_reserve`
 - `global_alert_launch`
 
 Filtering is subscription-aware:
@@ -793,6 +805,8 @@ Subscriber alert messages no longer carry a top-level `Pharos Alerts` header —
 | `🟠` | DEWS `WARNING` | DEWS band transition lines |
 | `🔴` | DEWS `DANGER` | DEWS band transition lines |
 | `✦` | Launch promotion | Newly tracked stablecoin lines |
+
+The reserve-drift family (C123) ships **glyph-less**: a `Reserve Drift` section with a bold-symbol line and no data-tied glyph. Per the rule above, adding a reserve glyph requires a separate review.
 
 Subscriber alert messages end with a `View on Pharos` link. Telegram digest posts end with `Read on Pharos →`, even when cemetery or tracking appendices are present.
 
