@@ -260,7 +260,6 @@ function mockAnthropicStreamResponse(text: string): Response {
 }
 
 const commitTelegramAppendices = vi.fn(async () => undefined);
-const rollbackTelegramAppendices = vi.fn(async () => undefined);
 
 function makeBaseTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -399,7 +398,6 @@ describe("generateDailyDigest", () => {
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
     vi.mocked(postDigestToTelegram).mockReset().mockResolvedValue(undefined);
     commitTelegramAppendices.mockReset().mockResolvedValue(undefined);
-    rollbackTelegramAppendices.mockReset().mockResolvedValue(undefined);
     vi.mocked(prepareTelegramDigestAppendices).mockReset().mockResolvedValue({
       appendixHtml: null,
       metadata: {
@@ -415,7 +413,6 @@ describe("generateDailyDigest", () => {
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
-      rollbackSuccess: rollbackTelegramAppendices,
     });
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
@@ -1067,7 +1064,6 @@ describe("generateDailyDigest", () => {
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
-      rollbackSuccess: rollbackTelegramAppendices,
     });
 
     const db = mockD1(makeBaseTables());
@@ -1110,7 +1106,6 @@ describe("generateDailyDigest", () => {
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
-      rollbackSuccess: rollbackTelegramAppendices,
     });
 
     const markerKey = "daily-digest:telegram-sent:2026-03-06";
@@ -1155,7 +1150,6 @@ describe("generateDailyDigest", () => {
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
-      rollbackSuccess: rollbackTelegramAppendices,
     });
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
 
