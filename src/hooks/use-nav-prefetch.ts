@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
-import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
+import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 import { createApiPollingQueryOptionsWithMeta } from "@/hooks/use-api-query";
 import type { SchemaLike } from "@/lib/schema-like";
 
@@ -19,7 +19,7 @@ interface RoutePrefetchDescriptor {
 
 type RoutePrefetchDescriptorFactory = () => RoutePrefetchDescriptor;
 
-const reg = FRONTEND_API_QUERY_RUNTIME_REGISTRY;
+const reg = FRONTEND_API_QUERY_REGISTRY;
 
 const ROUTE_PREFETCH_DESCRIPTORS = {
   "/screener/": [

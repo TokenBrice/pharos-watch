@@ -34,6 +34,7 @@ describe("query option builders", () => {
 
   it("builds canonical supply-history options", async () => {
     const options = supplyHistoryQueryOptions("usdc-circle");
+    const descriptor = FRONTEND_API_QUERY_REGISTRY.supplyHistory("usdc-circle");
 
     expect(options.queryKey).toEqual(["supply-history", "usdc-circle", 1825]);
     expect(options.staleTime).toBe(24 * 60 * 60 * 1000);
@@ -43,7 +44,7 @@ describe("query option builders", () => {
     await options.queryFn?.();
     expect(apiFetchMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
-      undefined,
+      descriptor.schema,
       undefined,
       undefined,
     );
@@ -51,13 +52,14 @@ describe("query option builders", () => {
 
   it("builds extended supply-history options when a chart requests long-range overlays", async () => {
     const options = supplyHistoryQueryOptions("usdc-circle", 5000);
+    const descriptor = FRONTEND_API_QUERY_REGISTRY.supplyHistory("usdc-circle", 5000);
 
     expect(options.queryKey).toEqual(["supply-history", "usdc-circle", 5000]);
 
     await options.queryFn?.();
     expect(apiFetchMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=5000",
-      undefined,
+      descriptor.schema,
       undefined,
       undefined,
     );
@@ -65,6 +67,7 @@ describe("query option builders", () => {
 
   it("builds canonical mint/burn per-coin options", async () => {
     const options = mintBurnFlowsCoinQueryOptions("usdc-circle", 168);
+    const descriptor = FRONTEND_API_QUERY_REGISTRY.mintBurnFlowsCoin("usdc-circle", 168);
 
     expect(options.queryKey).toEqual(["mint-burn-flows", "usdc-circle", 168]);
     expect(options.staleTime).toBe(30 * 60 * 1000);
@@ -74,7 +77,7 @@ describe("query option builders", () => {
     await options.queryFn?.();
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/mint-burn-flows?stablecoin=usdc-circle&hours=168",
-      undefined,
+      descriptor.schema,
       undefined,
       3600,
       undefined,
@@ -84,6 +87,7 @@ describe("query option builders", () => {
   it("keeps history prefetch builders aligned with their consuming hooks", async () => {
     const dexOptions = dexLiquidityHistoryQueryOptions("usdc-circle", 90);
     const safetyOptions = safetyScoreHistoryQueryOptions("usdc-circle", 3650);
+    const safetyDescriptor = FRONTEND_API_QUERY_REGISTRY.safetyScoreHistory("usdc-circle", 3650);
 
     expect(dexOptions.queryKey).toEqual(["dex-liquidity-history", "usdc-circle", 90]);
     expect(dexOptions.staleTime).toBe(24 * 60 * 60 * 1000);
@@ -97,7 +101,7 @@ describe("query option builders", () => {
     await safetyOptions.queryFn?.();
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/safety-score-history?stablecoin=usdc-circle&days=3650",
-      undefined,
+      safetyDescriptor.schema,
       undefined,
       24 * 60 * 60,
       undefined,
@@ -116,7 +120,7 @@ describe("query option builders", () => {
 
     expect(apiFetchMock).toHaveBeenLastCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
-      undefined,
+      FRONTEND_API_QUERY_REGISTRY.supplyHistory("usdc-circle").schema,
       { signal: controller.signal },
       undefined,
     );
