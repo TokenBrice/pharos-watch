@@ -591,6 +591,8 @@ Retry and deferral metadata lives on the pending rows:
 
 The `dedupe_key` is hashed from the **pre-split canonical message body**, the chunk index, and the `TELEGRAM_SPLIT_VERSION` constant (`worker/src/lib/telegram-alerts.ts`). Hashing the canonical body — not the post-split chunk HTML — keeps the key stable when `splitMessage` is refactored, so in-flight pending rows survive unrelated code changes. Bump `TELEGRAM_SPLIT_VERSION` whenever the splitting algorithm changes in a way that should deterministically invalidate older queued chunks.
 
+When Telegram migrates a group to a supergroup, `migrateTelegramChatId` rewrites the chat-id prefix embedded in pending `dedupe_key` values and alert-job `pending_dedupe_key` values after moving `chat_id`. Pending rows whose rewritten key collides with an already-present new-chat row are deleted so the queue keeps one deliverable copy.
+
 Rate-limit isolation is per-chat unless the response is classified as bot-wide.
 A chat-scoped 429 stamps `not_before_at` on the affected chat's pending row and
 short-circuits later same-chat rows/chunks in the current run; other chats continue to

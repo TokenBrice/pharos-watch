@@ -478,6 +478,26 @@ describe("handleTelegramWebhook", () => {
       entry.binds[1] === "-123",
     )).toBe(true);
     expect(history.some((entry) =>
+      entry.sql.includes("UPDATE OR IGNORE telegram_pending_alerts") &&
+      entry.sql.includes("SET dedupe_key = ? || substr(dedupe_key, length(?) + 1)") &&
+      entry.binds.slice(0, 3).join("|") === "-100123|-123|-100123",
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM telegram_pending_alerts") &&
+      entry.sql.includes("substr(dedupe_key, 1, length(?))") &&
+      entry.binds.slice(0, 2).join("|") === "-100123|-123",
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("UPDATE telegram_alert_job_targets") &&
+      entry.sql.includes("SET pending_dedupe_key = ? || substr(pending_dedupe_key, length(?) + 1)") &&
+      entry.binds.slice(0, 3).join("|") === "-100123|-123|-100123",
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("UPDATE OR IGNORE telegram_alert_job_targets") &&
+      entry.sql.includes("SET target_key = ? || substr(target_key, length(?) + 1)") &&
+      entry.binds.slice(0, 3).join("|") === "-100123|-123|-100123",
+    )).toBe(true);
+    expect(history.some((entry) =>
       entry.sql.includes("INSERT INTO cache") &&
       entry.binds[0] === "telegram:group-welcome:-100123" &&
       entry.binds[1] === "telegram:group-welcome:-123",

@@ -229,6 +229,86 @@ function buildMigrationStatement(
   return db.prepare(sql);
 }
 
+function dedupePrefixPredicate(column: string): string {
+  return `${column} IS NOT NULL
+        AND substr(${column}, 1, length(?)) = ?
+        AND substr(${column}, length(?) + 1, 1) = ':'`;
+}
+
+function bindDedupePrefixRewrite(
+  statement: D1PreparedStatement,
+  oldChatId: string,
+  newChatId: string,
+): D1PreparedStatement {
+  return statement.bind(
+    newChatId,
+    oldChatId,
+    newChatId,
+    oldChatId,
+    oldChatId,
+    oldChatId,
+  );
+}
+
+function bindDedupePrefixCleanup(
+  statement: D1PreparedStatement,
+  oldChatId: string,
+  newChatId: string,
+): D1PreparedStatement {
+  return statement.bind(newChatId, oldChatId, oldChatId, oldChatId);
+}
+
+function preparePendingDedupeMigrationStatements(
+  db: D1Database,
+  oldChatId: string,
+  newChatId: string,
+): D1PreparedStatement[] {
+  const pendingPredicate = dedupePrefixPredicate("dedupe_key");
+  const targetDedupePredicate = dedupePrefixPredicate("pending_dedupe_key");
+  const targetKeyPredicate = dedupePrefixPredicate("target_key");
+  return [
+    bindDedupePrefixRewrite(
+      db.prepare(`
+        UPDATE OR IGNORE telegram_pending_alerts
+           SET dedupe_key = ? || substr(dedupe_key, length(?) + 1)
+         WHERE chat_id = ?
+           AND ${pendingPredicate}
+      `),
+      oldChatId,
+      newChatId,
+    ),
+    bindDedupePrefixCleanup(
+      db.prepare(`
+        DELETE FROM telegram_pending_alerts
+         WHERE chat_id = ?
+           AND ${pendingPredicate}
+      `),
+      oldChatId,
+      newChatId,
+    ),
+    bindDedupePrefixRewrite(
+      db.prepare(`
+        UPDATE telegram_alert_job_targets
+           SET pending_dedupe_key = ? || substr(pending_dedupe_key, length(?) + 1)
+         WHERE chat_id = ?
+           AND ${targetDedupePredicate}
+      `),
+      oldChatId,
+      newChatId,
+    ),
+    bindDedupePrefixRewrite(
+      db.prepare(`
+        UPDATE OR IGNORE telegram_alert_job_targets
+           SET target_key = ? || substr(target_key, length(?) + 1)
+         WHERE chat_id = ?
+           AND ${targetKeyPredicate}
+      `),
+      oldChatId,
+      newChatId,
+    ),
+  ];
+}
+
 /**
  * Merge Telegram group state after Telegram upgrades a group to a supergroup.
  * Telegram emits both `migrate_to_chat_id` and `migrate_from_chat_id` service
@@ -345,6 +425,7 @@ export async function migrateTelegramChatId(
     ),
     db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("UPDATE telegram_alert_job_targets SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    ...preparePendingDedupeMigrationStatements(db, oldChatId, newChatId),
     db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("UPDATE telegram_processed_updates SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(oldChatId),
