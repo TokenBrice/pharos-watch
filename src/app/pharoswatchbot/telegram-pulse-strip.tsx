@@ -229,7 +229,7 @@ export function TelegramPulseStrip() {
       <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
       <span className="text-muted-foreground">
         <span className="font-semibold text-foreground font-mono">{formatCount(data.coinSubscriptions)}</span> alert
-        follows
+        links (incl. presets)
       </span>
       <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
       <span className="text-muted-foreground">

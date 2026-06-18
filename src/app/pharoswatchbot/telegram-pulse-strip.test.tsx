@@ -86,6 +86,7 @@ describe("TelegramPulseStrip", () => {
     expect(screen.getByText("1,842")).toBeTruthy();
     expect(screen.getByText(/estimated capacity/i)).toBeTruthy();
     expect(screen.getByText("5,621")).toBeTruthy();
+    expect(screen.getByText(/alert links \(incl\. presets\)/i)).toBeTruthy();
     expect(screen.getByText(/updated every 5m/i)).toBeTruthy();
     expect(screen.getByText(/USDT, USDC, USDe/)).toBeTruthy();
   });
