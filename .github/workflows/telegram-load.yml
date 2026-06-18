@@ -1,6 +1,15 @@
 name: Telegram Load Guard
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/telegram-load.yml"
+      - "scripts/ci/check-telegram-load.ts"
+      - "worker/migrations/**"
+      - "worker/src/cron/dispatch-telegram-*.ts"
+      - "worker/src/cron/telegram-pending/**"
+      - "worker/src/api/admin-telegram-broadcast.ts"
+      - "worker/src/lib/telegram-constants.ts"
   schedule:
     - cron: "45 6 * * 1"
   workflow_dispatch:

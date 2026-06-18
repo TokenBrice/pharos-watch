@@ -703,11 +703,11 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
          FROM telegram_preset_subscriptions p
          JOIN telegram_subscribers u ON u.chat_id = p.chat_id
         WHERE p.alert_depeg = 1
+          AND p.preset_id IN (?, ?)
           AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
-      binds: [1_800_000_000],
-      requiredDetails: ["sqlite_autoindex_telegram_subscribers_1"],
-      allowedFullScanTables: ["p"],
-      note: "Current preset fan-out filters by alert flag and scans preset rows; this is acceptable at current scale but should be revisited if preset followers become large.",
+      binds: ["usd-top25", "mcap-ge-1b", 1_800_000_000],
+      requiredDetails: ["idx_telegram_preset_subscriptions_preset", "sqlite_autoindex_telegram_subscribers_1"],
+      note: "Preset fan-out resolves preset definitions before querying and restricts subscriber rows to matching preset ids.",
     },
     {
       id: "fanout-per-coin-snooze",

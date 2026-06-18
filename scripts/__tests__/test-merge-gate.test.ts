@@ -35,6 +35,8 @@ import {
   runMergeGateDiscovery,
 } from "../maintenance/run-merge-gate-discovery.mjs";
 
+const TELEGRAM_LOAD_ADVISORY_COMMAND = "npx tsx scripts/ci/check-telegram-load.ts";
+
 describe("buildCommandPlan", () => {
   it("skips the merge gate when no deploy surfaces changed", () => {
     expect(buildCommandPlan(["docs/testing.md", "docs/process/notes.md"])).toEqual([]);
@@ -55,6 +57,15 @@ describe("buildCommandPlan", () => {
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
+    ]);
+  });
+
+  it("adds the Telegram advisory load guard for Telegram dispatch changes", () => {
+    expect(buildCommandPlan(["worker/src/cron/dispatch-telegram-alerts.ts"]).map((item) => item.cmd)).toEqual([
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+      ...WORKER_VALIDATE_COMMANDS,
+      TELEGRAM_LOAD_ADVISORY_COMMAND,
     ]);
   });
 
@@ -81,6 +92,7 @@ describe("buildCommandPlan", () => {
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
+      TELEGRAM_LOAD_ADVISORY_COMMAND,
     ]);
   });
 
@@ -97,6 +109,7 @@ describe("buildCommandPlan", () => {
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
+      TELEGRAM_LOAD_ADVISORY_COMMAND,
     ]);
   });
 
@@ -711,6 +724,7 @@ describe("opt-in smoke wiring", () => {
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
+      TELEGRAM_LOAD_ADVISORY_COMMAND,
       ...PAGES_SMOKE_VALIDATE_COMMANDS,
       ...WORKER_SMOKE_VALIDATE_COMMANDS,
     ]);

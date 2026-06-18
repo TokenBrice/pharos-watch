@@ -28,6 +28,7 @@ const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";
 const PRODUCTION_PUBLIC_ENV_KEYS = new Set(["NEXT_PUBLIC_GA_ID"]);
 const PRODUCTION_PUBLIC_ENV_PREFIXES = ["NEXT_PUBLIC_PHAROS_"];
+const TELEGRAM_LOAD_ADVISORY_COMMAND = "npx tsx scripts/ci/check-telegram-load.ts";
 
 export function normalizePath(path) {
   return normalizeRepoPath(path);
@@ -40,6 +41,19 @@ function addCommand(plan, cmd, reason) {
     return;
   }
   plan.push({ cmd, reasons: [reason] });
+}
+
+function hasTelegramLoadGuardImpact(changedFiles) {
+  return changedFiles.some((file) =>
+    file === "scripts/ci/check-telegram-load.ts" ||
+    file === ".github/workflows/telegram-load.yml" ||
+    file === "scripts/maintenance/test-merge-gate.mjs" ||
+    file.startsWith("worker/migrations/") ||
+    file.startsWith("worker/src/cron/dispatch-telegram-") ||
+    file.startsWith("worker/src/cron/telegram-pending/") ||
+    file.startsWith("worker/src/api/admin-telegram-broadcast") ||
+    file === "worker/src/lib/telegram-constants.ts",
+  );
 }
 
 export function buildCommandPlan(changedFiles, { pagesSmoke = false, workerSmoke = false } = {}) {
@@ -69,6 +83,14 @@ export function buildCommandPlan(changedFiles, { pagesSmoke = false, workerSmoke
     for (const cmd of WORKER_VALIDATE_COMMANDS) {
       addCommand(plan, cmd, "Worker-impacting files changed");
     }
+  }
+
+  if (hasTelegramLoadGuardImpact(changedFiles)) {
+    addCommand(
+      plan,
+      TELEGRAM_LOAD_ADVISORY_COMMAND,
+      "Telegram dispatch, pending queue, broadcast, or migration files changed; run advisory load/query-plan guard",
+    );
   }
 
   if (pagesSmoke && pagesChanged) {
@@ -107,6 +129,8 @@ export function buildFullCommandPlan(
   for (const cmd of WORKER_VALIDATE_COMMANDS) {
     addCommand(plan, cmd, reason);
   }
+
+  addCommand(plan, TELEGRAM_LOAD_ADVISORY_COMMAND, "Full deploy fallback requested; include Telegram advisory load/query-plan guard");
 
   if (pagesSmoke) {
     for (const cmd of PAGES_SMOKE_VALIDATE_COMMANDS) {
