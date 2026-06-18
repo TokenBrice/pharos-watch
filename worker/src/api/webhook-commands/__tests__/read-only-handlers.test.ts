@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
 import type { StatusForCoin } from "../../telegram-webhook-status";
 import {
@@ -13,7 +14,7 @@ import { handleBrief } from "../brief";
 import { handleCoverage } from "../coverage";
 import { handleHelp } from "../help";
 import { handlePresets } from "../presets";
-import { handleSample } from "../sample";
+import { handleSample, SAMPLE_COIN_ID } from "../sample";
 import { handleStatus } from "../status";
 import { handleTop } from "../top";
 import { handleWhy } from "../why";
@@ -141,6 +142,10 @@ describe("read-only webhook command handlers", () => {
     expect(groupCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Preset Watchlists"));
     expect(groupCtx.replyToChat).toHaveBeenCalledWith("Only available in private chats.");
     expectNoD1Mutation(groupCtx.db);
+  });
+
+  it("/sample fixture coin stays registered", () => {
+    expect(TRACKED_META_BY_ID.get(SAMPLE_COIN_ID)?.symbol).toBe("USDC");
   });
 
   it("/status resolves a coin, sends the discovery keyboard, and does not mutate state", async () => {
