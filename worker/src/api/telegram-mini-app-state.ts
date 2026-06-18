@@ -79,6 +79,15 @@ function alertTypes(row: {
   };
 }
 
+function shouldProjectSubscription(row: SubscriptionRow): boolean {
+  const alerts = alertTypes(row);
+  return alerts.dews ||
+    alerts.depeg ||
+    alerts.safety ||
+    alerts.launch ||
+    row.alert_snooze_until_ts != null;
+}
+
 function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition, "id" | "label" | "description"> {
   const definition = listTelegramPresets().find((preset) => preset.id === row.preset_id);
   return {
@@ -183,7 +192,7 @@ export async function loadTelegramMiniAppState(
       },
       snoozeUntilTs: subscriber?.alert_snooze_until_ts ?? null,
     },
-    subscriptions: (subscriptions.results ?? []).map((row) => {
+    subscriptions: (subscriptions.results ?? []).filter(shouldProjectSubscription).map((row) => {
       const meta = coinMeta(row.stablecoin_id);
       return {
         stablecoinId: row.stablecoin_id,

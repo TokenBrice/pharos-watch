@@ -154,6 +154,28 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
   });
 
+  it("hides all-disabled subscription rows but keeps snooze-only rows", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([
+      ...stateReadTables({
+        subscriptions: [
+          { stablecoin_id: "usdt-tether", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null },
+          { stablecoin_id: "usdc-circle", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: NOW_SEC + 3600 },
+          { stablecoin_id: "eurc-circle", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: "ALERT", safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null },
+        ],
+      }),
+    ]);
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+    const body = await response.json() as {
+      subscriptions: Array<{ stablecoinId: string; snoozeUntilTs: number | null }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.subscriptions.map((row) => row.stablecoinId)).toEqual(["usdc-circle", "eurc-circle"]);
+    expect(body.subscriptions[0]).toMatchObject({ stablecoinId: "usdc-circle", snoozeUntilTs: NOW_SEC + 3600 });
+  });
+
   it("accepts Telegram session initData with the Ed25519 signature field", async () => {
     const initData = await signedInitData({
       auth_date: String(NOW_SEC - 60),
@@ -598,6 +620,27 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "alert_launch = excluded.alert_launch", ["42", "usdc-circle", 1])).toBe(true);
     expect(batchSizes).toHaveLength(1);
     expect(batchSizes[0]).toBeGreaterThan(1);
+  });
+
+  it("does not return a watchlist coin after disabling its last alert", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables({
+      subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null }],
+    }));
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: {
+        kind: "set-coin",
+        stablecoinId: "usdc-circle",
+        patch: { alertTypes: { depeg: false } },
+      },
+    }), BOT_TOKEN);
+    const body = await response.json() as { subscriptions: Array<{ stablecoinId: string }> };
+
+    expect(response.status).toBe(200);
+    expect(historyHas(db, "alert_depeg = 0", ["42", "usdc-circle"])).toBe(true);
+    expect(body.subscriptions).toEqual([]);
   });
 
   it("removes explicit coin subscriptions", async () => {

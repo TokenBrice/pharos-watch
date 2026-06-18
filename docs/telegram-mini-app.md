@@ -64,6 +64,8 @@ Payload constraints: the frontend `?startapp=` parser accepts up to 512 characte
 
 The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. The schema literals in `worker/src/api/telegram-mini-app-schemas.ts` and `src/app/pharoswatchbot/app/types.ts` must be edited in lockstep if that default changes; broader preset follows use the separate `follow-preset` mutation.
 
+The `subscriptions[]` state projection includes rows with at least one enabled alert family, plus snooze-only rows. All-disabled rows with no per-coin snooze are hidden so old clear/disable writes do not appear as active watchlist coins.
+
 ## Seam Rules
 
 The Mini App is its own seam in the Telegram architecture; full definition and `Must NOT` rules are at [`telegram-architecture.md` § 9. Mini App surface](./telegram-architecture.md#9-mini-app-surface).
