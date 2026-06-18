@@ -31,13 +31,17 @@ export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin):
   return escapeHtml(lines.join("\n"));
 }
 
-export function buildStatusAmbiguousMessage(ticker: string, candidates: ResolvedCoin[]): string {
+export function buildStatusAmbiguousMessage(
+  ticker: string,
+  candidates: ResolvedCoin[],
+  commandName = "/status",
+): string {
   return escapeHtml([
     `"${ticker}" matches ${candidates.length} coins:`,
     ...candidates.map((coin) => `- ${coin.symbol} — ${coin.name} (${coin.id})`),
     "",
-    "Re-run /status with the exact Pharos coin id, e.g.:",
-    `/status ${candidates[0]?.id ?? "<coin-id>"}`,
+    `Re-run ${commandName} with the exact Pharos coin id, e.g.:`,
+    `${commandName} ${candidates[0]?.id ?? "<coin-id>"}`,
   ].join("\n"));
 }
 

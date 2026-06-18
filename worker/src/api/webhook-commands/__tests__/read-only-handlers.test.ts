@@ -190,6 +190,17 @@ describe("read-only webhook command handlers", () => {
     expectNoD1Mutation(ambiguousCtx.db);
   });
 
+  it("/why ambiguous ticker guidance keeps the invoking command", async () => {
+    const ctx = makeContext();
+
+    await handleWhy(ctx, "USDF");
+
+    expect(ctx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Re-run /why"));
+    expect(ctx.replyToChat).toHaveBeenCalledWith(expect.not.stringContaining("Re-run /status"));
+    expect(buildWhyMessage).not.toHaveBeenCalled();
+    expectNoD1Mutation(ctx.db);
+  });
+
   it("/brief and /top relay read-only builder output through plain replies", async () => {
     vi.mocked(buildBriefMessage).mockResolvedValue("<b>Brief</b>");
     vi.mocked(buildTopMessage).mockResolvedValue("Top active depegs\n1. USDC");

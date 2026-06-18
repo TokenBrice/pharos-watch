@@ -26,7 +26,7 @@ export async function resolveSingleStatusTarget(
     return null;
   }
   if (resolution.status === "ambiguous") {
-    await ctx.replyToChat(buildStatusAmbiguousMessage(trimmed, resolution.matches));
+    await ctx.replyToChat(buildStatusAmbiguousMessage(trimmed, resolution.matches, commandName));
     return null;
   }
   return resolution.matches[0] ?? null;
