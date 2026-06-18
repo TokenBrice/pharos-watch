@@ -735,6 +735,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/helpers/gsc-zip.ts` - writeStoredZip
 - `scripts/__tests__/lighthouse-static-export.test.ts`
 - `scripts/__tests__/merge-gate-parallel-mode.test.ts`
+- `scripts/__tests__/mint-authority-review-audit.test.ts`
 - `scripts/__tests__/oracle-risk-coverage.test.ts`
 - `scripts/__tests__/parse-version-upload.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
@@ -743,5 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/rollback-pages-deployment.test.ts`
 - `scripts/__tests__/seo-sitemap.test.ts`
 - `scripts/__tests__/serve-static-export.test.ts`
-- `scripts/__tests__/setup-workspace-cache.test.ts`
-- ... 197 more files omitted; use `rg --files scripts` for the full list.
+- ... 200 more files omitted; use `rg --files scripts` for the full list.
