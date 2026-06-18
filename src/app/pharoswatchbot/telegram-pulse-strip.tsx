@@ -340,7 +340,6 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
     { label: "Sessions today", value: data.miniAppSessionsToday },
     { label: "Mutations today", value: data.miniAppMutationsToday },
     { label: "Denied today", value: data.miniAppDeniedToday },
-    { label: "Replay-protected today", value: data.miniAppReplayClaimsToday },
     {
       label: "Open → first mutation (P50)",
       value: data.miniAppOpenToFirstMutationP50Sec,

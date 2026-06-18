@@ -252,8 +252,9 @@ const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class
 // - successful mutations are tagged with the per-operation `mini_app_*` event
 //   type returned by `mutationEventType`, plus the generic `mini_app_mutation`
 //   fallback for unmapped operations;
-// - denied mutations always use `mini_app_mutation_denied`; replay protection
-//   sets `failure_class = 'replayed-auth'`.
+// - denied mutations always use `mini_app_mutation_denied`;
+// - the replay aggregate is reserved for a future producer and intentionally
+//   omitted from the public pulse UI until such a producer exists.
 const TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES = [
   "mini_app_mutation",
   "mini_app_recommended_setup",

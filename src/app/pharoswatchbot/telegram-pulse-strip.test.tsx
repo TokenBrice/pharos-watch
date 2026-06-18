@@ -178,6 +178,32 @@ describe("TelegramPulseBoard", () => {
     expect(screen.queryByText(/120% used/i)).toBeNull();
   });
 
+  it("does not surface replay-protected Mini App counts without a producer", () => {
+    mockUseTelegramPulse.mockReturnValue({
+      data: {
+        ...pulse,
+        miniAppDeniedToday: 1,
+        miniAppMutationsToday: 1,
+        miniAppReplayClaimsToday: 1,
+        miniAppSessionsToday: 2,
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useTelegramPulse>);
+
+    render(<TelegramPulseBoard />);
+
+    const summary = screen.getByText("More information").closest("summary") as HTMLElement;
+    fireEvent.click(summary);
+
+    const pulseDetails = screen.getByLabelText("Additional Telegram pulse details");
+    expect(within(pulseDetails).getByText("Mini App today")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Sessions today")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Mutations today")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Denied today")).toBeTruthy();
+    expect(within(pulseDetails).queryByText("Replay-protected today")).toBeNull();
+  });
+
   it("keeps the lifecycle placeholder only when no history points are available", () => {
     mockUseTelegramPulse.mockReturnValue({
       data: {
