@@ -36,35 +36,11 @@ const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
 const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
+const GENIUS_CLIENT_FIELDS_EXPORT = "GENIUS_CLIENT_PROFILE_FIELDS";
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
 const GENIUS_FIELD = "genius";
-const GENIUS_CLIENT_FIELDS = [
-  "applicability",
-  "applicabilityBasis",
-  "authorizationStatus",
-  "issuerPathway",
-  "issuerEntity",
-  "issuerDomicile",
-  "licensingRegulator",
-  "primaryFederalRegulator",
-  "stateRegulator",
-  "foreignExceptionStatus",
-  "foreignExceptionEvidence",
-  "enforcementStatus",
-  "daspOfferSaleStatus",
-  "reserveDisclosurePresent",
-  "reserveDisclosureUrl",
-  "redemptionPolicyPresent",
-  "monthlyAttestationPresent",
-  "latestReportDate",
-  "notes",
-  "references",
-  "negativeEvidenceReview",
-  "reviewer",
-  "reviewedAt",
-];
 
 /**
  * Read the canonical field allowlist from `shared/types/stablecoin-client-meta.ts`.
@@ -72,7 +48,7 @@ const GENIUS_CLIENT_FIELDS = [
  * byte-identical while keeping TypeScript consumers and this generator on one
  * contract.
  */
-export function readCanonicalClientFields(sourcePath = CLIENT_META_TS_ABS) {
+function readStringLiteralArrayExport(exportName, sourcePath = CLIENT_META_TS_ABS) {
   const sourceText = readFileSync(sourcePath, "utf8");
   const sourceFile = ts.createSourceFile(sourcePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   let fields = null;
@@ -95,19 +71,19 @@ export function readCanonicalClientFields(sourcePath = CLIENT_META_TS_ABS) {
     }
     if (ts.isVariableStatement(node)) {
       for (const declaration of node.declarationList.declarations) {
-        if (!ts.isIdentifier(declaration.name) || declaration.name.text !== CLIENT_FIELDS_EXPORT) {
+        if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportName) {
           continue;
         }
         if (!declaration.initializer) {
-          throw new Error(`[client-registry] ${CLIENT_FIELDS_EXPORT} has no initializer`);
+          throw new Error(`[client-registry] ${exportName} has no initializer`);
         }
         const initializer = unwrapExpression(declaration.initializer);
         if (!ts.isArrayLiteralExpression(initializer)) {
-          throw new Error(`[client-registry] ${CLIENT_FIELDS_EXPORT} must be an array literal`);
+          throw new Error(`[client-registry] ${exportName} must be an array literal`);
         }
         fields = initializer.elements.map((element, index) => {
           if (!ts.isStringLiteralLike(element)) {
-            throw new Error(`[client-registry] ${CLIENT_FIELDS_EXPORT}[${index}] must be a string literal`);
+            throw new Error(`[client-registry] ${exportName}[${index}] must be a string literal`);
           }
           return element.text;
         });
@@ -120,17 +96,27 @@ export function readCanonicalClientFields(sourcePath = CLIENT_META_TS_ABS) {
   visit(sourceFile);
 
   if (!fields || fields.length === 0) {
-    throw new Error(`[client-registry] Could not find ${CLIENT_FIELDS_EXPORT} in ${CLIENT_META_TS_REL}`);
+    throw new Error(`[client-registry] Could not find ${exportName} in ${CLIENT_META_TS_REL}`);
   }
 
   return fields;
 }
 
-export function projectCoin(coin, clientFields) {
+export function readCanonicalClientFields(sourcePath = CLIENT_META_TS_ABS) {
+  return readStringLiteralArrayExport(CLIENT_FIELDS_EXPORT, sourcePath);
+}
+
+export function readGeniusClientFields(sourcePath = CLIENT_META_TS_ABS) {
+  return readStringLiteralArrayExport(GENIUS_CLIENT_FIELDS_EXPORT, sourcePath);
+}
+
+const DEFAULT_GENIUS_CLIENT_FIELDS = readGeniusClientFields();
+
+export function projectCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
   const slim = {};
   for (const field of clientFields) {
     if (Object.prototype.hasOwnProperty.call(coin, field)) {
-      slim[field] = field === GENIUS_FIELD ? projectGeniusProfile(coin[field]) : coin[field];
+      slim[field] = field === GENIUS_FIELD ? projectGeniusProfile(coin[field], geniusClientFields) : coin[field];
     }
   }
   const blacklistStatus = projectBlacklistStatus(coin);
@@ -166,7 +152,7 @@ export function projectBlacklistStatus(coin) {
   return undefined;
 }
 
-export function projectGeniusProfile(profile) {
+export function projectGeniusProfile(profile, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
   if (profile === null) {
     return null;
   }
@@ -175,7 +161,7 @@ export function projectGeniusProfile(profile) {
   }
 
   const projected = {};
-  for (const field of GENIUS_CLIENT_FIELDS) {
+  for (const field of geniusClientFields) {
     if (Object.prototype.hasOwnProperty.call(profile, field)) {
       projected[field] = projectGeniusField(field, profile[field]);
     }
@@ -375,7 +361,7 @@ export function projectMintAuthoritySummary(coin) {
   return summary;
 }
 
-export function validateProjection(slim, sourceCoin, index, clientFields) {
+export function validateProjection(slim, sourceCoin, index, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
   if (typeof slim.id !== "string" || slim.id.length === 0) {
     throw new Error(`[client-registry] entry ${index}: invalid or missing id`);
   }
@@ -401,7 +387,9 @@ export function validateProjection(slim, sourceCoin, index, clientFields) {
   // source value. Catches generator bugs that silently mutate values.
   for (const field of clientFields) {
     if (Object.prototype.hasOwnProperty.call(slim, field)) {
-      const sourceValue = field === GENIUS_FIELD ? projectGeniusProfile(sourceCoin[field]) : sourceCoin[field];
+      const sourceValue = field === GENIUS_FIELD
+        ? projectGeniusProfile(sourceCoin[field], geniusClientFields)
+        : sourceCoin[field];
       const slimValue = slim[field];
       if (JSON.stringify(sourceValue) !== JSON.stringify(slimValue)) {
         throw new Error(
@@ -412,7 +400,11 @@ export function validateProjection(slim, sourceCoin, index, clientFields) {
   }
 }
 
-export function buildClientRegistryOutput({ sourceJsonPath = SOURCE_JSON_ABS, clientFields = readCanonicalClientFields() } = {}) {
+export function buildClientRegistryOutput({
+  sourceJsonPath = SOURCE_JSON_ABS,
+  clientFields = readCanonicalClientFields(),
+  geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS,
+} = {}) {
   const rawJson = readFileSync(sourceJsonPath, "utf8");
   const parsed = JSON.parse(rawJson);
 
@@ -421,8 +413,8 @@ export function buildClientRegistryOutput({ sourceJsonPath = SOURCE_JSON_ABS, cl
   }
 
   const slimCoins = parsed.map((coin, index) => {
-    const slim = projectCoin(coin, clientFields);
-    validateProjection(slim, coin, index, clientFields);
+    const slim = projectCoin(coin, clientFields, geniusClientFields);
+    validateProjection(slim, coin, index, clientFields, geniusClientFields);
     return slim;
   });
 

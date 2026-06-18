@@ -75,31 +75,35 @@ export interface MintAuthorityCoverageSummary {
 type BlacklistClientStatus = NonNullable<StablecoinMeta["blacklistabilityReview"]>["reviewedStatus"];
 type GeniusSourceProfile = NonNullable<StablecoinMeta["genius"]>;
 
+export const GENIUS_CLIENT_PROFILE_FIELDS = [
+  "applicability",
+  "applicabilityBasis",
+  "authorizationStatus",
+  "issuerPathway",
+  "issuerEntity",
+  "issuerDomicile",
+  "licensingRegulator",
+  "primaryFederalRegulator",
+  "stateRegulator",
+  "foreignExceptionStatus",
+  "foreignExceptionEvidence",
+  "enforcementStatus",
+  "daspOfferSaleStatus",
+  "reserveDisclosurePresent",
+  "reserveDisclosureUrl",
+  "redemptionPolicyPresent",
+  "monthlyAttestationPresent",
+  "latestReportDate",
+  "notes",
+  "references",
+  "negativeEvidenceReview",
+  "reviewer",
+  "reviewedAt",
+] as const satisfies ReadonlyArray<keyof GeniusSourceProfile>;
+
 export type GeniusClientProfile = Pick<
   GeniusSourceProfile,
-  | "applicability"
-  | "applicabilityBasis"
-  | "authorizationStatus"
-  | "issuerPathway"
-  | "issuerEntity"
-  | "issuerDomicile"
-  | "licensingRegulator"
-  | "primaryFederalRegulator"
-  | "stateRegulator"
-  | "foreignExceptionStatus"
-  | "foreignExceptionEvidence"
-  | "enforcementStatus"
-  | "daspOfferSaleStatus"
-  | "reserveDisclosurePresent"
-  | "reserveDisclosureUrl"
-  | "redemptionPolicyPresent"
-  | "monthlyAttestationPresent"
-  | "latestReportDate"
-  | "notes"
-  | "references"
-  | "negativeEvidenceReview"
-  | "reviewer"
-  | "reviewedAt"
+  (typeof GENIUS_CLIENT_PROFILE_FIELDS)[number]
 >;
 
 /**

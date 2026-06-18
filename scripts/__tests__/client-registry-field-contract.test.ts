@@ -6,14 +6,22 @@ import {
   projectGeniusProfile,
   projectMintAuthoritySummary,
   readCanonicalClientFields,
+  readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
 import { computeMintAuthorityScore, stablecoinToMintAuthorityScoringInput } from "../../shared/lib/mint-authority-scoring";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import { STABLECOIN_CLIENT_META_FIELDS } from "../../shared/types/stablecoin-client-meta";
+import {
+  GENIUS_CLIENT_PROFILE_FIELDS,
+  STABLECOIN_CLIENT_META_FIELDS,
+} from "../../shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
   it("reads the canonical ordered field list from the shared TypeScript contract", () => {
     expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);
+  });
+
+  it("reads the GENIUS client field list from the shared TypeScript contract", () => {
+    expect(readGeniusClientFields()).toEqual([...GENIUS_CLIENT_PROFILE_FIELDS]);
   });
 
   it("projects client registry fields in canonical order", () => {
