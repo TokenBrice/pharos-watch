@@ -202,3 +202,21 @@ export const BULK_CONFIRM_PREVIEW_LIMIT = 5;
 
 /** Page size for the /list `[ Manage ]` keyboard. */
 export const MANAGE_PAGE_SIZE = 5;
+
+// ---------- C128: burst-aware summary / delta mode ----------
+
+/**
+ * A global-follow chat matching at least this many DISTINCT coins in a single
+ * dispatch run (with global as the dominant match source) collapses to one
+ * burst-summary chunk instead of a multi-coin message. Default is effectively
+ * OFF — lower it only after observing `burstCollapsedChats` in dispatch
+ * metadata, per the C128 rollout note (ship high, then tighten).
+ */
+export const BURST_EVENT_THRESHOLD = 1_000_000;
+
+/**
+ * How long a per-chat burst marker stays live. While live, a bursting chat
+ * receives only coins not already summarized (delta-only); the TTL is anchored
+ * to the first burst entry, not refreshed, so normal delivery resumes after it.
+ */
+export const BURST_MARKER_TTL_SEC = 1800;

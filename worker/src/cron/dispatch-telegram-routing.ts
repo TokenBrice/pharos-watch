@@ -15,7 +15,11 @@ import {
 } from "./telegram-pending";
 import { throwIfAborted } from "../lib/abort";
 import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
-import { TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE } from "../lib/telegram-constants";
+import {
+  BURST_EVENT_THRESHOLD,
+  BURST_MARKER_TTL_SEC,
+  TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
+} from "../lib/telegram-constants";
 import type {
   PerAlertTypeDelivery,
   PerAlertTypeDeliveryStats,
@@ -80,6 +84,9 @@ export interface AlertsByChatEntry {
   quietHoursStartUtc: number | null;
   quietHoursEndUtc: number | null;
   timezone: string | null;
+  /** C128: per-run match-event counts by source, used to detect global-dominant bursts. */
+  specificCount: number;
+  globalCount: number;
 }
 
 export interface RoutedSubscriberAlert {
@@ -128,11 +135,14 @@ function addAlertToChat<T>(
   sub: SubscriberRow,
   append: AlertAppender<T>,
   event: T,
+  viaGlobal: boolean,
 ): void {
   const existing = alertsByChat.get(sub.chat_id);
   if (existing) {
     existing.lastActiveAt = Math.max(existing.lastActiveAt, sub.last_active_at);
     append(existing.alerts).push(event);
+    if (viaGlobal) existing.globalCount += 1;
+    else existing.specificCount += 1;
     return;
   }
 
@@ -145,6 +155,8 @@ function addAlertToChat<T>(
     quietHoursStartUtc: sub.quiet_hours_start_utc ?? null,
     quietHoursEndUtc: sub.quiet_hours_end_utc ?? null,
     timezone: sub.timezone ?? null,
+    specificCount: viaGlobal ? 0 : 1,
+    globalCount: viaGlobal ? 1 : 0,
   });
 }
 
@@ -176,7 +188,7 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
       if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
-      addAlertToChat(alertsByChat, sub, append, event);
+      addAlertToChat(alertsByChat, sub, append, event, false);
     }
 
     for (const sub of globalSubscribers) {
@@ -184,9 +196,90 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
       if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
-      addAlertToChat(alertsByChat, sub, append, event);
+      addAlertToChat(alertsByChat, sub, append, event, true);
     }
   }
+}
+
+export interface BurstMarker {
+  /** Unix seconds when the chat first entered burst mode; the TTL anchors here. */
+  enteredAt: number;
+  /** Coin ids already summarized for this chat while the marker is live. */
+  coinIds: string[];
+}
+export type BurstMarkerMap = Record<string, BurstMarker>;
+
+function collectEntryStablecoinIds(alerts: ConsolidatedAlerts): string[] {
+  const ids = new Set<string>();
+  for (const e of alerts.dews) ids.add(e.stablecoinId);
+  for (const e of alerts.depegTriggered) ids.add(e.stablecoinId);
+  for (const e of alerts.depegResolved) ids.add(e.stablecoinId);
+  for (const e of alerts.depegWorsening) ids.add(e.stablecoinId);
+  for (const e of alerts.safety) ids.add(e.stablecoinId);
+  for (const e of alerts.launch) ids.add(e.stablecoinId);
+  for (const e of alerts.reserve ?? []) ids.add(e.stablecoinId);
+  return [...ids];
+}
+
+/**
+ * C128: collapse global-dominant burst chats into a single summary chunk BEFORE
+ * the expensive formatting pass (hence the C102 dependency). Mutates
+ * `alertsByChat` in place — a qualifying chat's alerts are replaced with a burst
+ * summary covering only NEW (delta) coins vs its live marker; a chat whose coin
+ * set is already fully summarized within the live window is removed (suppressed).
+ * Returns the next marker map (expired markers pruned) plus counters. With the
+ * default threshold this is a no-op, so normal delivery is unchanged until the
+ * threshold is deliberately lowered.
+ */
+export function collapseBurstChats(
+  alertsByChat: Map<string, AlertsByChatEntry>,
+  markers: BurstMarkerMap,
+  nowSec: number,
+  threshold: number = BURST_EVENT_THRESHOLD,
+  ttlSec: number = BURST_MARKER_TTL_SEC,
+): { markers: BurstMarkerMap; collapsedChats: number; deltaSuppressed: number } {
+  const liveMarkers: BurstMarkerMap = {};
+  for (const [chatId, marker] of Object.entries(markers)) {
+    if (
+      marker &&
+      typeof marker.enteredAt === "number" &&
+      Array.isArray(marker.coinIds) &&
+      nowSec - marker.enteredAt < ttlSec
+    ) {
+      liveMarkers[chatId] = { enteredAt: marker.enteredAt, coinIds: marker.coinIds };
+    }
+  }
+
+  const nextMarkers: BurstMarkerMap = { ...liveMarkers };
+  let collapsedChats = 0;
+  let deltaSuppressed = 0;
+
+  for (const [chatId, entry] of alertsByChat) {
+    const ids = collectEntryStablecoinIds(entry.alerts);
+    const globalDominant = entry.globalCount > entry.specificCount;
+    if (!globalDominant || ids.length < threshold) continue;
+
+    const marker = liveMarkers[chatId];
+    const alreadySeen = new Set(marker?.coinIds ?? []);
+    const deltaIds = ids.filter((id) => !alreadySeen.has(id));
+    if (deltaIds.length === 0) {
+      // Whole set already summarized within the live window: send nothing, and do
+      // NOT refresh enteredAt (the TTL is anchored to the first burst entry).
+      alertsByChat.delete(chatId);
+      deltaSuppressed += 1;
+      continue;
+    }
+
+    const dominantFamily = dominantAlertType(entry.alerts);
+    entry.alerts = { ...emptyAlerts(), burst: { coinCount: deltaIds.length, dominantFamily } };
+    collapsedChats += 1;
+    nextMarkers[chatId] = {
+      enteredAt: marker?.enteredAt ?? nowSec,
+      coinIds: marker ? [...new Set([...marker.coinIds, ...deltaIds])] : ids,
+    };
+  }
+
+  return { markers: nextMarkers, collapsedChats, deltaSuppressed };
 }
 
 /**
@@ -204,6 +297,7 @@ export interface PlannedSubscriberAlert {
 
 /** Total alert lines queued for one chat (cheap; no formatting). */
 function countChatAlerts(alerts: ConsolidatedAlerts): number {
+  if (alerts.burst) return 1;
   return (
     alerts.dews.length +
     alerts.depegTriggered.length +

@@ -324,7 +324,9 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.subscribersNotified).toBe(0);
     expect(metadata.safetyAlertSourceState).toBe("missing");
     expect(metadata.safetyAlertsSuppressed).toBe(true);
-    expect(mockSetCache).toHaveBeenCalledTimes(5);
+    // 6 writes: dews, dewsAlertable, depeg, launch, reserveDispatched (C123) snapshots
+    // (safety is suppressed when the live source is missing) + the preset-failure reset.
+    expect(mockSetCache).toHaveBeenCalledTimes(6);
     expect(mockSetCache).toHaveBeenCalledWith(db, "telegram:preset-query-failure-count", "0");
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });

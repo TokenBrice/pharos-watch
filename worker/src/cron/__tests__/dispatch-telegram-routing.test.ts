@@ -7,6 +7,7 @@ import type {
 } from "../../lib/telegram-alerts";
 import {
   buildSubscriberQueue,
+  collapseBurstChats,
   expandSubscriberChunks,
   routeAlertEvents,
   splitFreshQueue,
@@ -79,6 +80,8 @@ function alertsEntry(overrides: Partial<AlertsByChatEntry>): AlertsByChatEntry {
     quietHoursStartUtc: null,
     quietHoursEndUtc: null,
     timezone: null,
+    specificCount: 0,
+    globalCount: 0,
     ...overrides,
   };
 }
@@ -273,5 +276,71 @@ describe("dispatch telegram routing helpers", () => {
       url: "https://pharos.watch/stablecoin/usdc-circle",
     });
     expect(privateSecond.linkPreviewOptions).toBeUndefined();
+  });
+});
+
+describe("collapseBurstChats (C128)", () => {
+  const burstAlerts = (ids: string[]): ConsolidatedAlerts => ({
+    dews: ids.map((id) => ({ stablecoinId: id }) as unknown as DewsChange),
+    depegTriggered: [],
+    depegResolved: [],
+    depegWorsening: [],
+    safety: [],
+    launch: [],
+    reserve: [],
+  });
+  const entry = (alerts: ConsolidatedAlerts, globalCount: number, specificCount = 0): AlertsByChatEntry =>
+    alertsEntry({ alerts, globalCount, specificCount });
+
+  it("collapses a global-dominant chat over the threshold into one burst summary", () => {
+    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
+    const out = collapseBurstChats(map, {}, 1000, 2, 1800);
+    expect(out.collapsedChats).toBe(1);
+    expect(map.get("100")?.alerts.burst?.coinCount).toBe(3);
+    expect(out.markers["100"]?.coinIds.slice().sort()).toEqual(["a", "b", "c"]);
+  });
+
+  it("does not collapse when explicit subscriptions dominate", () => {
+    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 0, 3)]]);
+    const out = collapseBurstChats(map, {}, 1000, 2, 1800);
+    expect(out.collapsedChats).toBe(0);
+    expect(map.get("100")?.alerts.burst).toBeUndefined();
+  });
+
+  it("sends only the delta on a later run and suppresses when nothing is new", () => {
+    const run1 = new Map([["100", entry(burstAlerts(["a", "b"]), 2)]]);
+    const out1 = collapseBurstChats(run1, {}, 1000, 2, 1800);
+    expect(run1.get("100")?.alerts.burst?.coinCount).toBe(2);
+
+    const run2 = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
+    const out2 = collapseBurstChats(run2, out1.markers, 1100, 2, 1800);
+    expect(run2.get("100")?.alerts.burst?.coinCount).toBe(1);
+    // TTL is anchored to the first burst entry, not refreshed on the delta run.
+    expect(out2.markers["100"]?.enteredAt).toBe(out1.markers["100"]?.enteredAt);
+
+    const run3 = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
+    const out3 = collapseBurstChats(run3, out2.markers, 1200, 2, 1800);
+    expect(run3.has("100")).toBe(false);
+    expect(out3.deltaSuppressed).toBe(1);
+  });
+
+  it("expires the marker after the TTL and treats the run as a fresh burst", () => {
+    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
+    const out = collapseBurstChats(
+      map,
+      { "100": { enteredAt: 1000, coinIds: ["a", "b", "c"] } },
+      1000 + 1801,
+      2,
+      1800,
+    );
+    expect(map.get("100")?.alerts.burst?.coinCount).toBe(3);
+    expect(out.markers["100"]?.enteredAt).toBe(1000 + 1801);
+  });
+
+  it("is a no-op at the default (very high) threshold", () => {
+    const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
+    const out = collapseBurstChats(map, {}, 1000);
+    expect(out.collapsedChats).toBe(0);
+    expect(map.get("100")?.alerts.burst).toBeUndefined();
   });
 });

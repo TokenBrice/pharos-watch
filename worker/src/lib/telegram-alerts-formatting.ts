@@ -204,6 +204,13 @@ export function formatReserveLine(e: ReserveAlert): string {
   return `<b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} live reserve mix has drifted from its curated profile`;
 }
 
+export interface BurstSummaryAlert {
+  /** Number of NEW (delta) coins summarized in this chunk. */
+  coinCount: number;
+  /** Dominant alert family across the collapsed set, used in the summary copy. */
+  dominantFamily: string;
+}
+
 export interface ConsolidatedAlerts {
   dews: DewsChange[];
   depegTriggered: DepegAlertPayload[];
@@ -212,10 +219,23 @@ export interface ConsolidatedAlerts {
   safety: SafetyChange[];
   launch: LaunchAlert[];
   reserve?: ReserveAlert[];
+  /** C128: when set, this chat's per-run alerts collapsed into one burst summary. */
+  burst?: BurstSummaryAlert | null;
+}
+
+/** C128: render a collapsed market-wide burst as a single summary line + watchlist deep link. */
+export function formatBurstSummaryLine(burst: BurstSummaryAlert): string {
+  const coins = burst.coinCount === 1 ? "1 followed coin" : `${burst.coinCount} followed coins`;
+  return (
+    `<b>Market-wide activity</b>\n${coins} you follow triggered ${burst.dominantFamily} ` +
+    "alerts this cycle. Open your watchlist to review.\n\n" +
+    '<a href="https://t.me/PharosWatchBot?startapp=watchlist">Open your watchlist</a>'
+  );
 }
 
 /** Build a consolidated HTML message for one subscriber. */
 export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
+  if (alerts.burst) return formatBurstSummaryLine(alerts.burst);
   const sections: string[] = [];
   const depegWorsening = alerts.depegWorsening ?? [];
 
@@ -290,6 +310,7 @@ export interface RankedAlertCoin {
  * Pure (no IO). Ties preserve first-seen order so the output is stable.
  */
 export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
+  if (alerts.burst) return [];
   const byId = new Map<string, RankedAlertCoin>();
 
   const consider = (stablecoinId: string, symbol: string, severity: number) => {
@@ -323,6 +344,7 @@ export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
 }
 
 export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string | null {
+  if (alerts.burst) return null;
   const ids = [
     ...alerts.dews.map((e) => e.stablecoinId),
     ...alerts.depegTriggered.map((e) => e.stablecoinId),
@@ -350,6 +372,10 @@ export function buildAlertReplyMarkup(
   chunkIndex: number,
   options: AlertReplyMarkupOptions = {},
 ) {
+  // C128: a burst-summary chunk carries its watchlist CTA inline in the message
+  // body (a t.me deep link valid in any chat); attach only the chat-level snooze
+  // row so a user can mute the storm without a per-coin keyboard.
+  if (alerts.burst) return SNOOZE_REPLY_MARKUP;
   const stablecoinId = chunkIndex === 0 ? getSingleAlertStablecoinId(alerts) : null;
   const privateChat = options.privateChat === true;
   if (!stablecoinId) {

@@ -26,6 +26,10 @@ export interface DispatchCapacityMetadata {
   fanoutQueryMs: number;
   fanoutBuildMs: number;
   fanoutTotalMs: number;
+  /** C128: chats whose multi-coin set collapsed to a single burst-summary chunk this run. */
+  burstCollapsedChats?: number;
+  /** C128: bursting chats fully suppressed this run because their coin set was already summarized. */
+  burstDeltaSuppressed?: number;
 }
 
 export type DispatchResult = TelegramDispatchCronResult & DispatchCapacityMetadata;

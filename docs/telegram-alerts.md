@@ -511,6 +511,12 @@ The separate `alert:dews-alertable-snapshot` cache key prevents duplicate same-b
 
 The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/lib/telegram-alerts.ts`.
 
+### Burst Summary Mode (C128)
+
+During sustained market-wide storms a global-follow chat can match a large number of coins in one run. `collapseBurstChats` (in `dispatch-telegram-routing.ts`) runs after routing but BEFORE the C102 format pass: when a chat matches at least `BURST_EVENT_THRESHOLD` distinct coins with **global** as the dominant match source (`globalCount > specificCount`), its consolidated alerts are replaced with a single burst-summary chunk (`Market-wide activity — N followed coins … Open your watchlist`, with a `t.me/PharosWatchBot?startapp=watchlist` deep link and the chat-level snooze row). Running before formatting means the collapse also bounds CPU, hence the C102 dependency. Chats where explicit per-coin subscriptions dominate are never summarized.
+
+A per-chat marker is persisted as one JSON blob in `cache["telegram:burst-markers"]` (`chatId → { enteredAt, coinIds }`). While the marker is live the chat receives only coins not already summarized (delta-only); an empty delta suppresses the run entirely. The TTL (`BURST_MARKER_TTL_SEC`, default 1800s) is anchored to the first burst entry and not refreshed, so normal per-coin delivery resumes after it. Quiet hours and snooze still apply (the summary defers/suppresses through the same path). `BURST_EVENT_THRESHOLD` ships effectively OFF (very high) and is lowered only after observing `burstCollapsedChats`/`burstDeltaSuppressed` in dispatch metadata.
+
 ### Subscriber Filtering
 
 Subscribers are selected from two sources:

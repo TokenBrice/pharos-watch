@@ -25,11 +25,13 @@ import {
   TELEGRAM_PENDING_PRIORITY,
 } from "./telegram-pending";
 import {
+  collapseBurstChats,
   formatPlannedSubscribers,
   planSubscriberQueue,
   routeAlertEvents,
   selectChatsToFormat,
   type AlertsByChatEntry,
+  type BurstMarkerMap,
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
 import {
@@ -538,6 +540,21 @@ async function executeFullFanoutPath({
     perCoinExplicitlyOffMaps.reserve,
   );
 
+  // C128: collapse global-dominant burst chats into a single summary BEFORE the
+  // expensive formatting pass (so the collapse also bounds CPU — the C102 dep).
+  // No-op at the default BURST_EVENT_THRESHOLD; markers persist after delivery.
+  const burstMarkersCached = await getCache(db, "telegram:burst-markers");
+  let burstMarkers: BurstMarkerMap = {};
+  if (burstMarkersCached) {
+    try {
+      const parsed = JSON.parse(burstMarkersCached.value) as unknown;
+      if (parsed && typeof parsed === "object") burstMarkers = parsed as BurstMarkerMap;
+    } catch {
+      burstMarkers = {};
+    }
+  }
+  const burstOutcome = collapseBurstChats(alertsByChat, burstMarkers, nowSec);
+
   // C102: cap and sort candidate chats by recency BEFORE the expensive
   // `formatConsolidatedMessage` pass. The pending drain (below) can only shrink
   // the real fresh budget, so the upper-bound format budget is the full per-run
@@ -665,6 +682,15 @@ async function executeFullFanoutPath({
   await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
 
   await writeSnapshots(db, currentSnapshots);
+  // Persist burst markers only when there is something to track — avoids a
+  // needless cache write every 5-minute run; expired entries self-prune on read.
+  if (
+    burstOutcome.collapsedChats > 0 ||
+    burstOutcome.deltaSuppressed > 0 ||
+    Object.keys(burstOutcome.markers).length > 0
+  ) {
+    await setCache(db, "telegram:burst-markers", JSON.stringify(burstOutcome.markers));
+  }
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
   const pendingQueueChanged =
     drainResult.sent > 0 ||
@@ -697,6 +723,8 @@ async function executeFullFanoutPath({
     blockedUsersCleanupFailed,
     cappedAtLimit,
     snapshotSeeded: false,
+    burstCollapsedChats: burstOutcome.collapsedChats,
+    burstDeltaSuppressed: burstOutcome.deltaSuppressed,
     pendingAttempted: drainResult.attempted,
     pendingDrained: drainResult.sent,
     pendingSent: drainResult.sent,
