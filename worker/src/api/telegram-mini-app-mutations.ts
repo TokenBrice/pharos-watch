@@ -240,7 +240,7 @@ export function mutationActionDetail(operation: TelegramMiniAppOperation): strin
   if (operation.kind === "set-quiet-hours") return "quiet_hours";
   if (operation.kind === "set-snooze") return "chat";
   if (operation.kind === "set-coin-snooze") return "coin";
-  if (operation.kind === "set-timezone") return "mini_app";
-  if (operation.kind === "unsubscribe-all") return "mini_app_all";
+  if (operation.kind === "set-timezone") return "timezone";
+  if (operation.kind === "unsubscribe-all") return "all";
   return operation.kind;
 }

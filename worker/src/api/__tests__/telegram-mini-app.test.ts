@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 
 const { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } = await import("../telegram-mini-app");
+const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
 
 const BOT_TOKEN = "123456:test-token";
 const NOW_SEC = 1_800_000_000;
@@ -506,6 +507,11 @@ describe("handleTelegramMiniAppSession", () => {
 });
 
 describe("handleTelegramMiniAppMutation", () => {
+  it("uses semantic action details for timezone and unsubscribe-all mutations", () => {
+    expect(mutationActionDetail({ kind: "set-timezone", timezone: "Europe/Paris" })).toBe("timezone");
+    expect(mutationActionDetail({ kind: "unsubscribe-all" })).toBe("all");
+  });
+
   it("applies global alert mutations", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables({
