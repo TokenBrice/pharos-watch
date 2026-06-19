@@ -819,7 +819,7 @@ export function getL2BeatSafetyScoreAudit(chainId: string): L2BeatSafetyScoreAud
   const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
   const stage: L2BeatStage = snapshot.stage;
   const chainEnvironmentScore = computeL2BeatChainEnvironmentScore(snapshot);
-  const stageSupportsStage1Tier = stage === "Stage 1" || stage === "Stage 2";
+  const stageSupportsStage1Tier = L2BEAT_STAGE_SCORES[stage] >= L2BEAT_STAGE_SCORES["Stage 1"];
   const suggestedChainTier: ChainTier | null = stageSupportsStage1Tier ? "stage1-l2" : null;
   const notes = [
     stageSupportsStage1Tier
