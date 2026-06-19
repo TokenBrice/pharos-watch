@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { YieldMarketStatus, YieldSourceRisk, YieldTrancheSide } from "@shared/types/yield";
 import { USER_AGENT } from "../../lib/constants";
@@ -65,10 +66,6 @@ interface RoycoExploreResponse {
 interface RoycoTrackedAsset {
   stablecoinId: string;
   symbol: string;
-}
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function stablecoinContracts(meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">) {

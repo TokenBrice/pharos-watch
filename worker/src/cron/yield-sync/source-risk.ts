@@ -15,11 +15,9 @@ export {
   YIELD_RISK_CONFIG_PROTOCOLS,
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
 } from "@shared/lib/yield-source-risk-registry";
+import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function inferDeploymentPlace(source: EvaluatedYieldSource): YieldDeploymentPlace | null {
   if (source.dataSource === "rate-derived") return "rate-derived";

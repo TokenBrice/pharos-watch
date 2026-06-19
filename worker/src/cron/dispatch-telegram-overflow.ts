@@ -1,3 +1,4 @@
+import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { getCache, setCache } from "../lib/db-cache";
 import {
   TELEGRAM_ALERT_TTL_SEC,
@@ -32,10 +33,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isTelegramAlertType(value: unknown): value is PlannedSubscriberAlert["alertType"] {
   return value === "depeg" || value === "dews" || value === "safety" || value === "launch" || value === "reserve";
-}
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {

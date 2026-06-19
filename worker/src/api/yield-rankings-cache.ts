@@ -8,6 +8,7 @@ import {
   type YieldRankingsResponse,
 } from "@shared/types/yield";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
 import { derivePysNullReason } from "../cron/yield-helpers";
@@ -28,10 +29,6 @@ import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function positiveInteger(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;

@@ -13,6 +13,7 @@ import type {
   YieldPublicDecisionAlternative,
   YieldPublicDecisionLedger,
 } from "@shared/types/yield";
+import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { getConfidencePriority } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation";
 
@@ -21,10 +22,6 @@ const THINNER_RATIO = 5;
 const STALE_RATIO = 2;
 const REWARDS_ONLY_SHARE = 0.5;
 const SMALLER_TVL_RATIO = 5;
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function deriveRejectionReasonCode(
   selected: EvaluatedYieldSource,
