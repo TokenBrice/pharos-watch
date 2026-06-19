@@ -1,8 +1,8 @@
 import type { GovernanceType, StablecoinData } from "../types";
+import { isFiniteNumber } from "./type-guards";
 
 /** Safely coerce to number, treating null/undefined/NaN/Infinity as 0 */
-const safeNum = (v: number | null | undefined): number =>
-  typeof v === "number" && Number.isFinite(v) ? v : 0;
+const safeNum = (v: number | null | undefined): number => isFiniteNumber(v) ? v : 0;
 
 type PegBucketRecord = Record<string, number> | null | undefined;
 
@@ -15,7 +15,7 @@ export function sumPegBuckets(obj: PegBucketRecord): number {
 /** Return true when at least one peg bucket has an explicit finite numeric value, including zero. */
 function hasAnyBucket(obj: PegBucketRecord): boolean {
   if (!obj) return false;
-  return Object.values(obj).some((v) => typeof v === "number" && Number.isFinite(v));
+  return Object.values(obj).some((v) => isFiniteNumber(v));
 }
 
 /**
