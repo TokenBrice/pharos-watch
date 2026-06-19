@@ -26,8 +26,18 @@ const GLOBAL_ALERT_COLUMN_BY_TYPE = {
   launch: "global_alert_launch",
   reserve: "global_alert_reserve",
 } as const;
+
+const ALERT_OVERRIDE_COLUMN_BY_TYPE = {
+  dews: "alert_dews_override",
+  depeg: "alert_depeg_override",
+  safety: "alert_safety_override",
+  launch: "alert_launch_override",
+  reserve: "alert_reserve_override",
+} as const;
+
 const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
 const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE));
+const VALID_ALERT_OVERRIDE_COLUMNS = new Set(Object.values(ALERT_OVERRIDE_COLUMN_BY_TYPE));
 
 type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal"> & { stablecoin_id: string };
 
@@ -172,9 +182,11 @@ export async function loadPerCoinSnoozeMap(
 
 /**
  * Load per-coin rows where a chat has explicitly disabled this alert type.
- * The routing pass applies this map after direct/preset rows are merged, so a
- * local off row suppresses both preset and global fan-out for the same
- * (stablecoin, chat, alert type) tuple.
+ * Alert flags are binary, so default zeroes from partial subscribe writes are
+ * not enough to prove intent; only settings-style writes mark the matching
+ * override column. The routing pass applies this map after direct/preset rows
+ * are merged, so a local off row suppresses both preset and global fan-out for
+ * the same (stablecoin, chat, alert type) tuple.
  */
 export async function loadPerCoinExplicitlyOffMap(
   db: D1Database,
@@ -185,19 +197,21 @@ export async function loadPerCoinExplicitlyOffMap(
   const unique = Array.from(new Set(stablecoinIds));
   if (unique.length === 0) return map;
   const alertColumn = ALERT_COLUMN_BY_TYPE[type];
-  if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
+  const overrideColumn = ALERT_OVERRIDE_COLUMN_BY_TYPE[type];
+  if (!VALID_ALERT_COLUMNS.has(alertColumn) || !VALID_ALERT_OVERRIDE_COLUMNS.has(overrideColumn)) {
     throw new Error(`Invalid alert subscription column for ${type}`);
   }
   for (const idChunk of chunkArray(unique)) {
     const inClause = buildInClause(idChunk);
     const result = await db
       .prepare(
-        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
-        // against the hardcoded allowlist above before interpolation.
+        // SAFETY: alertColumn/overrideColumn come from hardcoded maps and are
+        // validated against hardcoded allowlists above before interpolation.
         `SELECT stablecoin_id, chat_id
            FROM telegram_subscriptions
           WHERE stablecoin_id IN (${inClause.sql})
-            AND ${alertColumn} = 0`,
+            AND ${alertColumn} = 0
+            AND ${overrideColumn} = 1`,
       )
       .bind(...inClause.binds)
       .all<{ stablecoin_id: string; chat_id: string }>();

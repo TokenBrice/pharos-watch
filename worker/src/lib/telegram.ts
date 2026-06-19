@@ -150,6 +150,8 @@ export interface SendToChatResult {
   rateLimitScope?: "chat" | "global";
 }
 
+const GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
+
 function inferRateLimitScope(responseBody: string): "chat" | "global" {
   const lower = responseBody.toLowerCase();
   if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
@@ -450,7 +452,8 @@ export async function sendBatch(
     const globalRateLimitedResult = batchResults.find(
       (r) => r.errorClass === "rate_limit" && r.rateLimitScope === "global",
     );
-    if (!globalRateLimitedResult) {
+    let escalatedGlobalRateLimitedResult = globalRateLimitedResult;
+    if (!escalatedGlobalRateLimitedResult) {
       for (const result of batchResults) {
         if (result.attempted === false) continue;
         if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
@@ -458,13 +461,23 @@ export async function sendBatch(
           chatRateLimitedUntil.set(result.chatId, result.retryAfterSec);
         }
       }
+      if (distinctRateLimitedChats.size >= GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
+        escalatedGlobalRateLimitedResult = batchResults.find(
+          (r) => r.errorClass === "rate_limit" && r.rateLimitScope !== "global" && r.attempted !== false,
+        );
+        for (const result of batchResults) {
+          if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
+            result.rateLimitScope = "global";
+          }
+        }
+      }
     }
-    if (globalRateLimitedResult) {
+    if (escalatedGlobalRateLimitedResult) {
       for (const skippedMessage of messages.slice(i + batchSize)) {
         results.push(buildUnsentRetryResult(
           skippedMessage,
           "rate_limit",
-          globalRateLimitedResult.retryAfterSec,
+          escalatedGlobalRateLimitedResult.retryAfterSec,
           "global",
         ));
       }

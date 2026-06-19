@@ -64,4 +64,21 @@ describe("per-coin subscription setting builders", () => {
     expect(fromSettings.binds).toEqual(fromSet.binds);
     expect(fromSet.binds).toEqual(["42", COIN.id, 250]);
   });
+
+  it("marks settings-style off writes as explicit overrides", async () => {
+    const dewsOff = await setCommandPath({ ticker: "USDC", setting: "dews", enabled: false, minBand: null });
+    expect(normalizeSql(dewsOff.sql)).toContain("alert_dews_override = 1");
+
+    const depegOff = await setCommandPath({ ticker: "USDC", setting: "depeg", enabled: false });
+    expect(normalizeSql(depegOff.sql)).toContain("alert_depeg_override = 1");
+
+    const safetyOff = await setCommandPath({ ticker: "USDC", setting: "safety", enabled: false, mode: null });
+    expect(normalizeSql(safetyOff.sql)).toContain("alert_safety_override = 1");
+
+    const launchOff = await setCommandPath({ ticker: "USDC", setting: "launch", enabled: false });
+    expect(normalizeSql(launchOff.sql)).toContain("alert_launch_override = 1");
+
+    const reserveOff = await setCommandPath({ ticker: "USDC", setting: "reserve", enabled: false });
+    expect(normalizeSql(reserveOff.sql)).toContain("alert_reserve_override = 1");
+  });
 });
