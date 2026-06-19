@@ -177,11 +177,13 @@ export async function syncYieldSupplemental(
     startSec,
     signal,
   );
-  const familyCacheResults: Record<SupplementalSourceFamilyKey, "published" | "skipped-newer" | "empty"> =
-    Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((key) => [key, "empty"])) as Record<
-      SupplementalSourceFamilyKey,
-      "published" | "skipped-newer" | "empty"
-    >;
+  const familyCacheResults: Record<
+    SupplementalSourceFamilyKey,
+    "published" | "skipped-newer" | "empty" | "empty-skipped"
+  > = Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((key) => [key, "empty"])) as Record<
+    SupplementalSourceFamilyKey,
+    "published" | "skipped-newer" | "empty" | "empty-skipped"
+  >;
 
   for (const family of familyResults) {
     if (family.status !== "ok") continue;
@@ -199,6 +201,10 @@ export async function syncYieldSupplemental(
       },
     });
     const { candidates: dedupedFamilyCandidates } = dedupeCandidates(family.candidates);
+    if (dedupedFamilyCandidates.length === 0) {
+      familyCacheResults[family.key] = "empty-skipped";
+      continue;
+    }
     const familyCacheResult = await setCacheIfNewer(
       db,
       getYieldSupplementalFamilyCacheKey(family.key),

@@ -97,7 +97,6 @@ import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import {
   loadSupplementalSourceFamilies,
   SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
-  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "../yield-sync/supplemental-source-families";
 
 async function flushMicrotasks() {
@@ -222,7 +221,7 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.missingTargetCount).toBe(0);
   });
 
-  it("publishes fresh empty cache rows for successful zero-candidate families", async () => {
+  it("skips empty family cache rows to preserve previous non-empty caches", async () => {
     vi.mocked(fetchBeefySources).mockResolvedValue([
       {
         symbol: "USDC",
@@ -247,23 +246,24 @@ describe("syncYieldSupplemental", () => {
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 
-    for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
-      expect(
-        vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === `yield:supplemental-sources:v1:${family}`),
-      ).toBe(true);
-    }
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:beefy"),
+    ).toBe(true);
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:morpho"),
+    ).toBe(false);
 
-    const morphoCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) =>
-      call[1] === "yield:supplemental-sources:v1:morpho"
+    const beefyCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) =>
+      call[1] === "yield:supplemental-sources:v1:beefy"
     );
-    const morphoPayload = JSON.parse(String(morphoCall?.[2])) as { sourceCount: number; data: unknown[] };
-    expect(morphoPayload.sourceCount).toBe(0);
-    expect(morphoPayload.data).toEqual([]);
+    const beefyPayload = JSON.parse(String(beefyCall?.[2])) as { sourceCount: number; data: unknown[] };
+    expect(beefyPayload.sourceCount).toBe(1);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty">;
+      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-skipped">;
     };
-    expect(metadata.familyCacheResults?.morpho).toBe("published");
+    expect(metadata.familyCacheResults?.beefy).toBe("published");
+    expect(metadata.familyCacheResults?.morpho).toBe("empty-skipped");
   });
 
   it("keeps same-asset Aave markets on different chains when per-target results are available", async () => {
