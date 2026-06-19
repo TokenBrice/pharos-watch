@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
+  getEndpointDefinitionByKey,
   getSiteDataAccess,
   getPublicApiAccess,
   getProbePaths,
@@ -623,5 +624,32 @@ describe("api endpoint registry", () => {
 
   it("keeps smoke endpoint assertions aligned with strict contract paths", () => {
     expect(() => assertPathCoverage(STRICT_CONTRACT_PATHS_LIST, ENDPOINT_ASSERTIONS)).not.toThrow();
+  });
+
+  it("keeps dynamic descriptor access and dependency fields aligned with static definitions", () => {
+    // These 5 endpoints appear in both DYNAMIC_ENDPOINT_DESCRIPTORS and ENDPOINT_DEFINITIONS.
+    // Assert that access and dependency fields are kept in sync so a silent drift cannot occur.
+    const overlappingKeys = [
+      "stablecoin-detail",
+      "stablecoin-summary",
+      "stablecoin-reserves",
+      "snapshot-day",
+      "snapshot-coin",
+    ] as const;
+
+    for (const key of overlappingKeys) {
+      const dynamic = DYNAMIC_ENDPOINT_DESCRIPTORS.find((d) => d.key === key);
+      const staticDef = getEndpointDefinitionByKey(key);
+      expect(dynamic, `dynamic descriptor missing for ${key}`).toBeDefined();
+      expect(staticDef, `static definition missing for ${key}`).toBeDefined();
+      if (!dynamic || !staticDef) continue;
+
+      expect(dynamic.publicApiAccess, `publicApiAccess mismatch for ${key}`).toBe(staticDef.publicApiAccess);
+      expect(dynamic.siteDataAccess, `siteDataAccess mismatch for ${key}`).toBe(staticDef.siteDataAccess);
+      expect(dynamic.adminRequired, `adminRequired mismatch for ${key}`).toBe(staticDef.adminRequired);
+      expect([...dynamic.routeDependencies].sort(), `routeDependencies mismatch for ${key}`).toEqual(
+        [...(staticDef.routeDependencies ?? [])].sort(),
+      );
+    }
   });
 });
