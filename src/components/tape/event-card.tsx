@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback } from "react";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import {
   Activity,
   ArrowLeftRight,
@@ -465,24 +466,14 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
   // for non-coin events (methodology, lifecycle without coin) the title is the
   // primary descriptive content and we surface it as the body line.
   const summaryLine = event.summary && event.summary.length > 0 ? event.summary : (!coinId ? event.title : "");
-  const [copied, setCopied] = useState(false);
-  const copyResetTimer = useRef<ReturnType<typeof setTimeout>>(null);
-
-  useEffect(() => () => {
-    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-  }, []);
+  const { copied, copy } = useCopyToClipboard();
 
   const handleCopyPermalink = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof window === "undefined" || !navigator.clipboard) return;
     const permalink = `${window.location.origin}/timeline/?event=${encodeURIComponent(event.id)}`;
-    void navigator.clipboard.writeText(permalink).then(() => {
-      setCopied(true);
-      if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-      copyResetTimer.current = setTimeout(() => setCopied(false), 1500);
-    });
-  }, [event.id]);
+    void copy(permalink);
+  }, [copy, event.id]);
 
   const severityGlyph = SEVERITY_GLYPH[event.severity];
   const typeSlug = event.type.toLowerCase();

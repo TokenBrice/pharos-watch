@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
 import { TablePagination } from "@/components/table-pagination";
@@ -69,28 +70,15 @@ function LeaderboardHeading({
   sortKey: YieldTableSortKey;
   sortDirection: "asc" | "desc";
 }) {
-  const [copied, setCopied] = useState(false);
-  const copyResetTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const { copied, copy } = useCopyToClipboard();
   const sortLabel = SORT_KEY_LABELS[sortKey] ?? sortKey;
   const arrow = sortDirection === "asc" ? "↑" : "↓";
   const appended = summary.comparisonLabel ? `, ${summary.comparisonLabel} rows` : "";
   const sentence = `Showing ${summary.visibleCount} of ${summary.totalCount} rows · sorted by ${sortLabel}${arrow}${appended}`;
 
-  useEffect(() => () => {
-    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-  }, []);
-
   const handleCopy = useCallback(async () => {
-    if (typeof window === "undefined" || !navigator?.clipboard?.writeText) return;
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-      copyResetTimer.current = setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // WHY: clipboard API can throw in non-secure contexts; degrade silently.
-    }
-  }, []);
+    await copy(window.location.href);
+  }, [copy]);
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
