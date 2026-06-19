@@ -5,11 +5,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  SECTION_DIVIDER_CLASS,
+  SECTION_SCROLL_MT,
+} from "@/components/stablecoin-detail/section-title-class";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { getCoinOverride } from "@/components/stablecoin-detail/mechanism-diagrams/coin-overrides";
 import type { MechanismDiagramOptions } from "@/components/stablecoin-detail/mechanism-diagrams/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel, getInfrastructureSummary } from "@shared/lib/infrastructure";
 import { formatAddress } from "@shared/lib/format";
@@ -323,7 +328,7 @@ export function KeyInfoCard({
         {hasDescription && (
           <div
             id="mechanism"
-            className="grid scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2 lg:scroll-mt-6"
+            className={cn("grid gap-x-6 gap-y-3 sm:grid-cols-2", SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}
           >
             {meta.collateral && (
               <div>
@@ -370,7 +375,7 @@ export function KeyInfoCard({
         )}
 
         {infrastructureSummaries.length > 0 && (
-          <div className="border-t border-border/40 pt-3 sm:pt-4 space-y-3">
+          <div className={cn(SECTION_DIVIDER_CLASS, "space-y-3")}>
             <p className="pharos-kicker mb-1.5">
               Infrastructure
             </p>
@@ -390,10 +395,10 @@ export function KeyInfoCard({
 
         {/* Proof of Reserves + Jurisdiction (2-col on desktop) */}
         {!isDecentralized && (
-          <div className="grid gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2">
+          <div className={cn("grid gap-x-6 gap-y-3 sm:grid-cols-2", SECTION_DIVIDER_CLASS)}>
             <div
               id="attestation"
-              className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+              className={SECTION_SCROLL_MT}
             >
               <p className="pharos-kicker mb-1.5">
                 Proof of Reserves
@@ -419,7 +424,7 @@ export function KeyInfoCard({
 
             <div
               id="jurisdiction"
-              className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+              className={SECTION_SCROLL_MT}
             >
               <p className="pharos-kicker mb-1.5">
                 Jurisdiction
@@ -457,7 +462,7 @@ export function KeyInfoCard({
 
         {/* Launch date — proof line for the hero passport's "Issued" field */}
         {launchDateDisplay && (
-          <div className="border-t border-border/40 pt-3 sm:pt-4">
+          <div className={SECTION_DIVIDER_CLASS}>
             <p className="pharos-kicker mb-1.5">Launched</p>
             <p className="text-sm font-medium">{launchDateDisplay}</p>
           </div>
@@ -467,7 +472,7 @@ export function KeyInfoCard({
         {hasContracts && (
           <div
             id="contracts"
-            className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] border-t border-border/40 pt-3 sm:pt-4 lg:scroll-mt-6"
+            className={cn(SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}
           >
             <p className="pharos-kicker mb-1.5">
               Contract Deployments
@@ -543,25 +548,13 @@ export function KeyInfoCard({
 }
 
 /* Copy→Check crossfade with the success ring, shared by the mobile and desktop
- * contract rows. Size strings are static literals per branch (Tailwind purge). */
-function ContractCopyIcons({ copied, size }: { copied: boolean; size: "sm" | "md" }) {
-  if (size === "md") {
-    return (
-      <>
-        <Copy className={`pharos-copy-icon absolute h-4 w-4 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
-        <Check
-          className={`pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
-          aria-hidden="true"
-        />
-        {copied ? <span className="pharos-copy-ring" aria-hidden="true" /> : null}
-      </>
-    );
-  }
+ * contract rows. Callers pass a static iconClass literal (Tailwind purge). */
+function ContractCopyIcons({ copied, iconClass }: { copied: boolean; iconClass: string }) {
   return (
     <>
-      <Copy className={`pharos-copy-icon absolute h-3.5 w-3.5 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
+      <Copy className={`pharos-copy-icon absolute ${iconClass} ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
       <Check
-        className={`pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
+        className={`pharos-copy-icon absolute ${iconClass} text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
         aria-hidden="true"
       />
       {copied ? <span className="pharos-copy-ring" aria-hidden="true" /> : null}
@@ -605,7 +598,7 @@ function ContractDetailRow({
           aria-label={`Copy ${chainName} contract address`}
         >
           <span className="relative inline-flex h-4 w-4 items-center justify-center">
-            <ContractCopyIcons copied={copied} size="md" />
+            <ContractCopyIcons copied={copied} iconClass="h-4 w-4" />
           </span>
         </button>
       </div>
@@ -669,7 +662,7 @@ function ContractLabeledRow({
         title="Copy address"
         aria-label={`Copy ${chainName} contract address`}
       >
-        <ContractCopyIcons copied={copied} size="sm" />
+        <ContractCopyIcons copied={copied} iconClass="h-3.5 w-3.5" />
       </button>
       {explorerUrl ? (
         <a

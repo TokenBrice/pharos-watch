@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
@@ -43,7 +44,7 @@ export function RedemptionBackstopCard({
   return (
     <Card
       id="redemption"
-      className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+      className={SECTION_SCROLL_MT}
     >
       <CardHeader className="pb-3">
         <DetailSectionTitle>

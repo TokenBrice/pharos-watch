@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { BlacklistDetailStats } from "./blacklist-detail-stats";
 import { BlacklistDetailChart } from "./blacklist-detail-chart";
@@ -37,7 +38,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
   return (
     <section
       id="blacklist"
-      className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+      className={SECTION_SCROLL_MT}
     >
       <Card className="p-4">
         <div className="mb-3">

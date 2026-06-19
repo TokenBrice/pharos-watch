@@ -16,6 +16,7 @@ import type {
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import type { MintAuthorityDecentralizationDragViewModel } from "@/lib/stablecoin-detail-view-model";
 import { cn } from "@/lib/utils";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 
 const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
   minimized: "bg-[var(--brand-accent)]",
@@ -183,7 +184,7 @@ export function MintAuthoritySection({
   return (
     <Card
       id="mint-authority"
-      className="rounded-xl scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+      className={cn("rounded-xl", SECTION_SCROLL_MT)}
     >
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
