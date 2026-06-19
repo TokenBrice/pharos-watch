@@ -378,7 +378,7 @@ describe("site-data proxy", () => {
     ).toBe(true);
   });
 
-  it("denies the events endpoint from the site-data lane", async () => {
+  it("proxies the events endpoint through the site-data lane for public UI reads", async () => {
     const fetchSpy = vi.fn(
       async () =>
         new Response(JSON.stringify({ events: [] }), {
@@ -399,8 +399,13 @@ describe("site-data proxy", () => {
       params: { path: "events" },
     });
 
-    expect(response.status).toBe(404);
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ events: [] });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [upstreamUrl, init] = fetchSpy.mock.calls[0] ?? [];
+    expect(upstreamUrl).toBe("https://site-api.pharos.watch/api/events?limit=1");
+    expect((init as RequestInit).headers).toBeInstanceOf(Headers);
+    expect(((init as RequestInit).headers as Headers).get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
   });
 
   it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {

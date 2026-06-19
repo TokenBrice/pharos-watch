@@ -287,7 +287,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.events(),
     strictContract: true,
     probeGroup: "public",
-    siteDataAccess: "denied",
   }),
   publicGet({
     key: "usds-status",

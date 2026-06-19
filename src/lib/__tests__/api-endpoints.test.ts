@@ -445,7 +445,7 @@ describe("api endpoint registry", () => {
     expect(isProtectedPublicApiPath("/api/telegram-pulse")).toBe(true);
     expect(getSiteDataAccess("/api/stablecoins")).toBe("allowed");
     expect(getSiteDataAccess("/api/public-status-history")).toBe("allowed");
-    expect(getSiteDataAccess("/api/events")).toBe("denied");
+    expect(getSiteDataAccess("/api/events")).toBe("allowed");
     expect(getSiteDataAccess("/api/telegram-pulse")).toBe("allowed");
     expect(getSiteDataAccess("/api/api-key-requests")).toBe("denied");
     expect(getSiteDataAccess("/api/api-key-requests/verify")).toBe("denied");
@@ -457,7 +457,7 @@ describe("api endpoint registry", () => {
     expect(isSiteDataAllowedPath("/api/stablecoin/usdt-tether")).toBe(true);
     expect(isSiteDataAllowedPath("/api/stablecoin-summary/usdt-tether")).toBe(true);
     expect(isSiteDataAllowedPath("/api/public-status-history")).toBe(true);
-    expect(isSiteDataAllowedPath("/api/events")).toBe(false);
+    expect(isSiteDataAllowedPath("/api/events")).toBe(true);
     expect(isSiteDataAllowedPath("/api/telegram-pulse")).toBe(true);
     expect(isSiteDataAllowedPath("/api/status")).toBe(false);
   });
