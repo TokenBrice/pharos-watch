@@ -76,6 +76,9 @@ export function makeAdminRoute<TContext extends AdminRouteContext>(
     );
 }
 
+// Note: `endpoint` is an operational identifier used in error logs;
+// `action` is the persisted idempotency key. Direct callers pass distinct values;
+// admin-routes.ts passes the same key for both as a deliberate default.
 export function makeIdempotentAdminRoute<TContext extends AdminRouteContext>(
   endpoint: string,
   action: string,
