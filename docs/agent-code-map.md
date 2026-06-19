@@ -719,6 +719,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/client-registry-field-contract.test.ts`
 - `scripts/__tests__/command-runner.test.ts`
 - `scripts/__tests__/coverage-audit-cli.test.ts`
+- `scripts/__tests__/csv-helpers.test.ts`
 - `scripts/__tests__/date-helpers.test.ts`
 - `scripts/__tests__/doc-sync.test.ts`
 - `scripts/__tests__/fixtures/sql-safety/scripts/safe-root-script.ts` - safeRootScriptValueInterpolation
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
 - `scripts/__tests__/remote-d1.test.ts`
-- `scripts/__tests__/rollback-pages-deployment.test.ts`
-- ... 204 more files omitted; use `rg --files scripts` for the full list.
+- ... 205 more files omitted; use `rg --files scripts` for the full list.

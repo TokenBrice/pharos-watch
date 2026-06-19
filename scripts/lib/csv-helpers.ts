@@ -12,8 +12,16 @@ export interface CsvColumn<T> {
   accessor: (row: T) => string | number | null;
 }
 
+const SPREADSHEET_FORMULA_PREFIX = /^[\t\r\n ]*[=+\-@]/;
+
+function neutralizeSpreadsheetFormula(value: string): string {
+  return SPREADSHEET_FORMULA_PREFIX.test(value) ? `'${value}` : value;
+}
+
 export function escapeCsvField(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
-  const str = String(value);
-  return str.includes(",") || str.includes('"') || str.includes("\n") ? `"${str.replace(/"/g, '""')}"` : str;
+  const str = typeof value === "string" ? neutralizeSpreadsheetFormula(value) : String(value);
+  return str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")
+    ? `"${str.replace(/"/g, '""')}"`
+    : str;
 }
