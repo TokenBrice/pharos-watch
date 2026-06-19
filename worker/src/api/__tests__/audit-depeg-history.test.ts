@@ -200,7 +200,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       {
-        match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events WHERE id NOT IN",
+        match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE",
         rows: [],
       },
       {
@@ -253,7 +253,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
-      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at", rows },
+      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
       {
         match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date",
         rows: [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1_000_000_000 }],
@@ -348,7 +348,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
-      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at", rows },
+      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
       {
         match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date",
         rows: [{ stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 50_000_000 }],
@@ -631,7 +631,7 @@ describe("handleAuditDepegHistory method safety", () => {
     };
     const db = mockD1([
       { match: "INSERT INTO depeg_event_provenance", rows: [] },
-      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at", rows: [event] },
+      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows: [event] },
     ]) as MockD1Database;
 
     const result = await auditEvents(db, {

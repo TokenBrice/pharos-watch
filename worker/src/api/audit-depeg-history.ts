@@ -533,16 +533,19 @@ async function loadRemainingDepegEvents(
   db: D1Database,
   excludedIds: readonly number[] = [],
 ): Promise<PsiDepegEventRow[]> {
-  const baseSql = "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events";
+  const baseSql =
+    "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance";
+  const auditEligibleWhere =
+    "(provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN ('false_positive', 'disputed'))";
   const orderBy = " ORDER BY started_at";
   if (excludedIds.length === 0) {
-    const rows = await db.prepare(`${baseSql}${orderBy}`).all<PsiDepegEventRow>();
+    const rows = await db.prepare(`${baseSql} WHERE ${auditEligibleWhere}${orderBy}`).all<PsiDepegEventRow>();
     return rows.results ?? [];
   }
 
   const idClause = buildInClause(excludedIds);
   const rows = await db
-    .prepare(`${baseSql} WHERE id NOT IN (${idClause.sql})${orderBy}`)
+    .prepare(`${baseSql} WHERE ${auditEligibleWhere} AND id NOT IN (${idClause.sql})${orderBy}`)
     .bind(...idClause.binds)
     .all<PsiDepegEventRow>();
   return rows.results ?? [];
@@ -1084,6 +1087,7 @@ export async function auditEvents(
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "no_data", nowSec));
           invalidatingProvenanceEventIds.push(event.id);
+          addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
         }
         result.auditedEvents.push(toAuditedEvent(event, "no_data", { cgMaxBps: null }));
         continue;
@@ -1118,6 +1122,7 @@ export async function auditEvents(
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "disputed", nowSec));
           invalidatingProvenanceEventIds.push(event.id);
+          addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
         }
         result.auditedEvents.push(toAuditedEvent(event, "disputed", {
           cgMaxBps: maxCgBps,
@@ -1130,6 +1135,7 @@ export async function auditEvents(
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "false_positive", nowSec));
           invalidatingProvenanceEventIds.push(event.id);
+          addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
         }
         result.auditedEvents.push(toAuditedEvent(event, "false_positive", {
           cgMaxBps: maxCgBps,

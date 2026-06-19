@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 
 const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   STABLECOINS_MOCK: [
@@ -76,7 +76,7 @@ vi.mock("../db", async (importOriginal) => {
 });
 
 import { derivePegAnalyticsSnapshot } from "../peg-analytics";
-import { coinTrackingStart } from "@shared/lib/peg-score";
+import { coinTrackingStart, computePegScore } from "@shared/lib/peg-score";
 import { getFirstSeenDates } from "../db";
 
 describe("derivePegAnalyticsSnapshot", () => {
@@ -86,6 +86,7 @@ describe("derivePegAnalyticsSnapshot", () => {
     vi.mocked(getFirstSeenDates).mockResolvedValue(new Map<string, number>());
     vi.mocked(getFirstSeenDates).mockClear();
     vi.mocked(coinTrackingStart).mockClear();
+    vi.mocked(computePegScore).mockClear();
     db = mockD1([
       {
         match: "depeg_events",
@@ -124,6 +125,51 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(snapshot.pegDataById.has("usdc-circle")).toBe(false); // nav token excluded by default
     expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBe(100);
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(false);
+  });
+
+  it("loads depeg provenance so audited false positives are excluded from scoring", async () => {
+    db = mockD1([
+      {
+        match: "depeg_events_with_provenance",
+        rows: [
+          {
+            id: 123,
+            stablecoin_id: "usdt-tether",
+            symbol: "AAA",
+            peg_type: "peggedUSD",
+            started_at: 1_700_000_000,
+            ended_at: 1_700_003_600,
+            direction: "below",
+            peak_deviation_bps: -500,
+            source: "live",
+            provenance_audit_verdict: "false_positive",
+            provenance_confidence_tier: "medium",
+          },
+        ],
+      },
+    ]);
+
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "AAA",
+          name: "AAA Stable",
+          pegType: "peggedUSD",
+          price: 1,
+          circulating: { peggedUSD: 2_000_000 },
+        } as never,
+      ],
+      methodologyAsOf: 1_700_000_000,
+    });
+
+    expect((db as MockD1Database).getHistory()[0]?.sql).toContain("FROM depeg_events_with_provenance");
+    expect(snapshot.allEvents[0]?.provenance?.auditVerdict).toBe("false_positive");
+    expect(vi.mocked(computePegScore)).toHaveBeenCalledWith(
+      [expect.objectContaining({ provenance: expect.objectContaining({ auditVerdict: "false_positive" }) })],
+      expect.any(Number),
+      expect.any(Number),
+    );
   });
 
   it("includes NAV tokens as peg-ineligible rows when requested", async () => {
