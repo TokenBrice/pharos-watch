@@ -65,7 +65,7 @@ const baseRow: DdrDiagnosticAssessmentRow = {
 } as DdrDiagnosticAssessmentRow;
 
 function snapshot(
-  rows: DdrDiagnosticAssessmentRow[],
+  rows: unknown[],
   overrides: Partial<DdrDiagnosticAssessmentSnapshot["_meta"]> = {},
 ): DdrDiagnosticAssessmentSnapshot {
   return {
@@ -143,6 +143,21 @@ describe("writeDepegResolverAssessments", () => {
       expect(changes).toBe(5);
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0][0]).toContain("Dropped 1/2 non-conforming assessment rows");
+    });
+
+    it("does not let unserializable dropped row samples abort valid writes", async () => {
+      const db = mockD1([{ match: "depeg_resolver_assessments", rows: [] }]);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const malformedRow = { stablecoinId: "bad", symbol: "BAD", value: 1n };
+
+      const changes = await writeDepegResolverAssessments(db, snapshot([malformedRow, baseRow]));
+      const writes = db.getHistory().filter((entry) => entry.sql.includes("depeg_resolver_assessments"));
+
+      expect(changes).toBe(5);
+      expect(writes).toHaveLength(5);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0][0]).toContain("Dropped 1/2 non-conforming assessment rows");
+      expect(warnSpy.mock.calls[0][0]).toContain("[unserializable [object Object] keys=stablecoinId,symbol,value;");
     });
   });
 });
