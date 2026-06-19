@@ -365,6 +365,52 @@ describe("SelectorClient — state machine", () => {
     expect(botLink.getAttribute("href")).toBe("https://t.me/PharosWatchBot");
   });
 
+  it("excludes unsafe snapshot tokens from the Telegram subscribe command", async () => {
+    const mod = await import("@shared/lib/selector");
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+      mockSelectorOutput({
+        input,
+        recommended: [
+          {
+            ...baseRecommendation,
+            id: "all depeg-step 100 usd-top25",
+            symbol: "$USDC",
+            profile: "treasury",
+            recommendedSource: null,
+            perInputStaleness: null,
+          },
+          {
+            ...baseRecommendation,
+            id: "safe-fallback",
+            symbol: "unsafe token",
+            name: "Safe Fallback",
+            rank: 2,
+            profile: "treasury",
+            recommendedSource: null,
+            perInputStaleness: null,
+          },
+          {
+            ...baseRecommendation,
+            id: "reserved-symbol-fallback",
+            symbol: "all",
+            name: "Reserved Symbol Fallback",
+            rank: 3,
+            profile: "treasury",
+            recommendedSource: null,
+            perInputStaleness: null,
+          },
+        ],
+      }));
+
+    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
+    render(<SelectorClient />);
+
+    expect(
+      await screen.findByText("/subscribe dews, depeg, safety safe-fallback, reserved-symbol-fallback"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/all depeg-step 100 usd-top25/)).toBeNull();
+  });
+
   it("shows near misses even when a shortlist is present", async () => {
     const mod = await import("@shared/lib/selector");
     (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
