@@ -4,6 +4,16 @@ import type { YieldVenueRiskScores } from "./yield-scoring";
 
 export const YIELD_RISK_CONFIG_REVIEW_CADENCE = "monthly-yield-coverage-audit";
 
+// Shared scores for both Yearn venue slugs (yearn, yearn-finance).
+// Edit this constant to update both entries simultaneously.
+const YEARN_VENUE_SCORES: YieldVenueRiskScores = {
+  audits: 2,
+  centralization: 2,
+  fundsManagement: 2,
+  liquidity: 2,
+  operational: 2,
+};
+
 // Shared scores for all Morpho venue slugs (morpho, morpho-v1, morpho-blue).
 // Edit this constant to update all three entries simultaneously.
 const MORPHO_VENUE_SCORES: YieldVenueRiskScores = {
@@ -105,7 +115,7 @@ export function venueRiskWeightedOf(entry: YieldRiskConfigEntry): number {
 
 /** Coarse tier derived from a reviewed config entry's weighted score. */
 export function venueRiskTierOf(entry: YieldRiskConfigEntry): YieldVenueRiskTier {
-  return deriveVenueRiskTier(computeVenueRiskWeighted(entry.scores));
+  return deriveVenueRiskTier(venueRiskWeightedOf(entry));
 }
 
 export const YIELD_RISK_CONFIG = {
@@ -187,7 +197,7 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   yearn: {
-    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    scores: YEARN_VENUE_SCORES,
     confidence: "verified",
     rationale:
       "Yearn is a mature strategy-vault venue with long production history and repeated audits; vault strategy risk remains, but the reviewed stablecoin vault surface is operationally established.",
@@ -200,7 +210,7 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "yearn-finance": {
-    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    scores: YEARN_VENUE_SCORES,
     confidence: "verified",
     rationale:
       "Yearn Finance maps to the same mature strategy-vault family as Yearn; stablecoin vault risk is reviewed as low after accounting for its production history, audit cadence, and vault-level accounting.",
