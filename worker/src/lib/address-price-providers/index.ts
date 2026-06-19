@@ -14,6 +14,7 @@ import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagno
 import {
   buildBlockedProviderDiagnostic,
   buildNoCandidatesDiagnostic,
+  buildPricingProviderDiagnostic,
 } from "../pricing-provider-lifecycle";
 import { runAlchemyAddressProvider } from "./alchemy";
 import { runBirdeyeAddressProvider } from "./birdeye";
@@ -350,18 +351,16 @@ export async function collectAddressPriceProviderQuotes(params: {
 
     if (Date.now() >= deadlineMs) {
       providerOutcomes.set(provider, "neutral");
-      diagnostics.push({
+      diagnostics.push(buildPricingProviderDiagnostic({
         source: provider as PricingProviderDiagnosticSource,
         stage: "primary",
         endpoint: provider,
-        status: null,
-        ok: false,
-        success: false,
         candidateCount: targets.length,
+      }, {
         errorClass: "timeout",
         errorMessage: "Address provider group budget exhausted",
         rejectionReasonCounts: { timeout: 1 },
-      });
+      }));
       continue;
     }
 
