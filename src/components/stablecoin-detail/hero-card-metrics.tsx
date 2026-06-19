@@ -191,6 +191,18 @@ export function HeroTertiaryMetrics({
   );
 }
 
+/** Renders a signal value span with the standard data-unavailable aria/sr-only pair. */
+function SignalValue({ value, className }: { value: string; className: string }) {
+  return (
+    <>
+      <span className={className} aria-hidden={value === "—" ? "true" : undefined}>
+        {value}
+      </span>
+      {value === "—" && <span className="sr-only">data unavailable</span>}
+    </>
+  );
+}
+
 export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
   const [hero, ...rest] = items;
   return (
@@ -204,15 +216,12 @@ export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
           <span className="pharos-kicker">
             {hero.label}
           </span>
-          <span
+          <SignalValue
+            value={hero.primary}
             className={`font-mono font-black leading-none tracking-tight ${
               hero.primary.length > 2 ? "text-4xl" : "text-5xl"
             }`}
-            aria-hidden={hero.primary === "—" ? "true" : undefined}
-          >
-            {hero.primary}
-          </span>
-          {hero.primary === "—" && <span className="sr-only">data unavailable</span>}
+          />
           {hero.secondary ? (
             <span className="font-mono text-xs text-muted-foreground">{hero.secondary}</span>
           ) : null}
@@ -228,13 +237,10 @@ export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
             {item.label}
           </span>
           <span className="flex items-baseline gap-1.5">
-            <span
+            <SignalValue
+              value={item.primary}
               className={`font-mono tabular-nums text-sm font-semibold ${item.colorClass}`}
-              aria-hidden={item.primary === "—" ? "true" : undefined}
-            >
-              {item.primary}
-            </span>
-            {item.primary === "—" && <span className="sr-only">data unavailable</span>}
+            />
             {item.secondary ? (
               <span className="font-mono text-[10px] text-muted-foreground">{item.secondary}</span>
             ) : null}
