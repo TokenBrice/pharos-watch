@@ -257,7 +257,8 @@ export function projectDewsDeescalated(
  * otherwise re-fetch the same snapshot window and prior-band lookups).
  *
  * Both per-variant cursors (`dews.escalated` / `dews.deescalated`) are advanced
- * together so persisted watermarks stay valid and the single-variant exports
+ * monotonically so persisted watermarks stay valid even if one cursor was
+ * already ahead while the older cursor catches up. The single-variant exports
  * (used by the backfill admin endpoint and tests) remain interchangeable.
  */
 export async function projectDewsBandTransitions(
@@ -294,8 +295,8 @@ export async function projectDewsBandTransitions(
   if (!dryRun) {
     if (events.length > 0) await insertTapeEvents(db, events);
     if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, "dews.escalated", maxCursor);
-      await setProjectorWatermark(db, "dews.deescalated", maxCursor);
+      await setProjectorWatermark(db, "dews.escalated", Math.max(escWatermark, maxCursor));
+      await setProjectorWatermark(db, "dews.deescalated", Math.max(deescWatermark, maxCursor));
     }
   }
   return { projected: events.length, advanced: dryRun ? null : maxCursor };
