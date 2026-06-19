@@ -1,4 +1,5 @@
 import { batchExecute } from "../lib/db";
+import { SUPPLY_HISTORY_UPSERT_SQL } from "../lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { formatIsoDate } from "@shared/lib/format";
@@ -11,6 +12,8 @@ import { startOfUtcDaySec } from "../lib/time-constants";
 
 const CACHE_MAX_AGE_SEC = 1200;
 const CACHE_DEGRADED_AGE_SEC = 600;
+/** Minimum fraction of tracked coins that must have valid data; below this the snapshot is blocked. */
+const MIN_SNAPSHOT_COVERAGE_FRACTION = 0.8;
 
 interface SnapshotSupplyOptions {
   minStablecoinsCacheUpdatedAtSec?: number | null;
@@ -103,15 +106,13 @@ export async function snapshotSupply(
 
     stmts.push(
       db
-        .prepare(
-          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)"
-        )
+        .prepare(SUPPLY_HISTORY_UPSERT_SQL)
         .bind(asset.id, snapshotDate, circulatingUsd, price)
     );
   }
 
   const expectedCount = trackedIds.size;
-  if (stmts.length < expectedCount * 0.8) {
+  if (stmts.length < expectedCount * MIN_SNAPSHOT_COVERAGE_FRACTION) {
     console.warn(`[snapshot-supply] Only ${stmts.length}/${expectedCount} coins have valid data — possible upstream issue`);
     return {
       status: "degraded",

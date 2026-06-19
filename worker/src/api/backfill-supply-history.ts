@@ -1,3 +1,4 @@
+import { SUPPLY_HISTORY_UPSERT_SQL } from "../lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sumPegBuckets } from "@shared/lib/supply";
@@ -39,8 +40,6 @@ import {
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_BACKFILL_WINDOW_DAYS = 30;
 const MAX_BACKFILL_WINDOW_DAYS = 90;
-const SUPPLY_HISTORY_UPSERT_SQL =
-  "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)";
 const HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS = new Set([
   "autousd-auto-finance",
   "eearn-ember",
@@ -492,6 +491,13 @@ async function backfillHistoricalTotalSupply(
   let supplyMisses = 0;
   let priceMisses = 0;
 
+  const rpcOptions = {
+    chainRpcs: options.chainRpcs,
+    extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
+    timeoutMs: 15_000,
+    signal: options.signal,
+  };
+
   for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
     throwIfAborted(options.signal);
     if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
@@ -507,12 +513,7 @@ async function backfillHistoricalTotalSupply(
       contract.chain,
       targetTimestamp,
       blockSearchCache,
-      {
-        chainRpcs: options.chainRpcs,
-        extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
-        timeoutMs: 15_000,
-        signal: options.signal,
-      },
+      rpcOptions,
     );
     if (blockNumber == null) {
       blockMisses += 1;
@@ -524,12 +525,7 @@ async function backfillHistoricalTotalSupply(
       contract.address,
       TOTAL_SUPPLY_SELECTOR,
       blockNumber,
-      {
-        chainRpcs: options.chainRpcs,
-        extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
-        timeoutMs: 15_000,
-        signal: options.signal,
-      },
+      rpcOptions,
     );
     if (raw == null || raw <= 0n) {
       supplyMisses += 1;
