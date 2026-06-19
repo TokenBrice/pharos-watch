@@ -243,6 +243,32 @@ describe("useFreezeWatchPageController", () => {
     expect(result.current.rangeEnd).toBe(0);
   });
 
+  it("removes stale chainId alias when updating the chain filter", () => {
+    currentSearch = "?chainId=ethereum&page=2";
+    const { result, rerender } = renderHook(() => useFreezeWatchPageController());
+
+    expect(result.current.chainFilter).toBe("ethereum");
+
+    act(() => {
+      result.current.handleChainChange("all");
+    });
+
+    let nextParams = new URLSearchParams(currentSearch);
+    expect(nextParams.get("chain")).toBeNull();
+    expect(nextParams.get("chainId")).toBeNull();
+    expect(nextParams.get("page")).toBeNull();
+
+    currentSearch = "?chainId=ethereum";
+    rerender();
+    act(() => {
+      result.current.handleChainChange("tron");
+    });
+
+    nextParams = new URLSearchParams(currentSearch);
+    expect(nextParams.get("chain")).toBe("tron");
+    expect(nextParams.get("chainId")).toBeNull();
+  });
+
   it("resets page to 1 when applying a new filter", () => {
     currentSearch = "?page=3";
     const { result } = renderHook(() => useFreezeWatchPageController());

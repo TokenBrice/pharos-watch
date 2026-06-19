@@ -157,6 +157,7 @@ export function useFreezeWatchPageController() {
         if (next.stablecoinFilter !== "all") params.set("stablecoin", next.stablecoinFilter);
         else params.delete("stablecoin");
 
+        params.delete("chainId");
         if (next.chainFilter !== "all") params.set("chain", next.chainFilter);
         else params.delete("chain");
 
