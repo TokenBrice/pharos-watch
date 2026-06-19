@@ -64,7 +64,7 @@ export interface PegScoreResult {
   pegPct: number;
   /** Severity component (0-100) */
   severityScore: number;
-  /** Deviation spread penalty (0-15) — stddev of peak deviations across events */
+  /** Deviation spread penalty (0-15) — stddev of severity-weighted peak deviations across events */
   spreadPenalty: number;
   /** Total depeg events */
   eventCount: number;
@@ -129,7 +129,8 @@ export function computePegScore(
   const now = nowSec ?? Math.floor(Date.now() / 1000);
 
   // Determine tracking window start
-  const earliestEvent = events.length > 0
+  // Only compute earliestEvent when trackingStartSec is absent (all production callers supply it).
+  const earliestEvent = trackingStartSec == null && events.length > 0
     ? events.reduce((m, e) => Math.min(m, e.startedAt), Infinity)
     : null;
   const startSec = trackingStartSec ?? earliestEvent;
