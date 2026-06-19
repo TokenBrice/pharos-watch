@@ -366,6 +366,81 @@ describe("hard-block hook outputs", () => {
     expect(output).toEqual({ continue: true });
   });
 
+  it("blocks deploy commands appended after apply_patch heredocs", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "apply_patch <<'PATCH'",
+          "*** Begin Patch",
+          "*** Update File: docs/example.md",
+          "@@",
+          "+Do not run `wrangler deploy`; use the release workflow.",
+          "*** End Patch",
+          "PATCH",
+          "npx --no-install wrangler pages deploy out",
+        ].join("\n"),
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("Raw production deploy commands");
+  });
+
+  it("blocks remote D1 mutations appended after apply_patch heredocs", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "apply_patch <<'PATCH'",
+          "*** Begin Patch",
+          "*** Update File: docs/example.md",
+          "@@",
+          "+Mention wrangler d1 execute stablecoin-db --remote without executing it.",
+          "*** End Patch",
+          "PATCH",
+          "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
+        ].join("\n"),
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("Remote D1 mutation commands");
+  });
+
+  it("blocks protected redirection writes appended after apply_patch heredocs", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "apply_patch <<'PATCH'",
+          "*** Begin Patch",
+          "*** Update File: docs/example.md",
+          "@@",
+          "+Document .env.local without writing it.",
+          "*** End Patch",
+          "PATCH",
+          "echo TOKEN=value > .env.local",
+        ].join("\n"),
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("environment files");
+  });
+
   it("still blocks protected paths when patch payloads arrive as commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
