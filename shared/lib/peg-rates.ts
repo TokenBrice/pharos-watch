@@ -1,4 +1,5 @@
 import type { PegAssetBase, StablecoinMeta } from "../types";
+import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { medianOf } from "./peg-utils";
 import { sumPegBuckets } from "./supply";
 
@@ -17,9 +18,6 @@ export interface PegRatesResult {
   counts: Record<string, number>;
 }
 
-function normalizePegType(pegType: string | undefined): string | undefined {
-  return pegType === "peggedBRL" ? "peggedREAL" : pegType;
-}
 
 /**
  * Derive peg reference rates from the DefiLlama data itself.
@@ -44,7 +42,7 @@ export function derivePegRates(
   const groups: Record<string, number[]> = {};
 
   for (const a of assets) {
-    const peg = normalizePegType(a.pegType);
+    const peg = a.pegType ? normalizeLegacyPegType(a.pegType) : undefined;
     let price = a.price;
     if (!peg || price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
 

@@ -60,6 +60,11 @@ export const FX_RATE_BOUNDS: Record<string, [min: number, max: number]> = {
   peggedGOLD: [500, 10000],
 };
 
+/** Normalize the legacy "peggedBRL" alias to "peggedREAL" used by DefiLlama. */
+export function normalizeLegacyPegType(pegType: string): string {
+  return pegType === "peggedBRL" ? "peggedREAL" : pegType;
+}
+
 export function normalizePegTypeFromCurrency(pegCurrency: string | undefined): string | undefined {
   if (!pegCurrency || pegCurrency === "VAR" || pegCurrency === "OTHER") {
     return undefined;

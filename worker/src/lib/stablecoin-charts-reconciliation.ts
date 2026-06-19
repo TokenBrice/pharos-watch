@@ -1,4 +1,4 @@
-import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
+import { normalizeLegacyPegType, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinChartPoint, StablecoinData } from "@shared/types";
 
@@ -13,10 +13,6 @@ interface SupplyHistoryChartRow {
   circulating_usd: number;
 }
 
-function normalizeChartPegType(pegType: string): string {
-  if (pegType === "peggedBRL") return "peggedREAL";
-  return pegType;
-}
 
 function pegTypeFromCurrency(pegCurrency: string): string | null {
   // VAR/OTHER have no canonical peg-type key; the shared helper returns
@@ -46,7 +42,7 @@ export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartC
 
 function addBucketValue(target: Record<string, number>, pegType: string, value: number): void {
   if (!Number.isFinite(value) || value === 0) return;
-  const normalized = normalizeChartPegType(pegType);
+  const normalized = normalizeLegacyPegType(pegType);
   target[normalized] = (target[normalized] ?? 0) + value;
 }
 
