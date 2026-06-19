@@ -1,5 +1,6 @@
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { D1_BATCH_SIZE } from "../../lib/constants";
 import { buildInClause } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
@@ -107,7 +108,10 @@ async function fetchLatestKnownRepairRows(
     );
   }
 
-  const results = await db.batch(statements);
+  const results: D1Result[] = [];
+  for (let i = 0; i < statements.length; i += D1_BATCH_SIZE) {
+    results.push(...await db.batch(statements.slice(i, i + D1_BATCH_SIZE)));
+  }
   return results
     .map((result) => (result as { results?: BlacklistRow[] }).results?.[0])
     .filter((row): row is BlacklistRow => row != null && row.suppression_reason == null);
