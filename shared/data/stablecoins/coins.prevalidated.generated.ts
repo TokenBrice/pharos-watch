@@ -5,7 +5,8 @@
 //
 // This module mirrors coins.generated.json as a typed snapshot so the
 // Worker / Next.js runtime can trust the checked artifact without bundling
-// the full Zod registry validator into browser-facing chunks.
+// the full Zod registry validator into browser-facing chunks. The generator
+// runs the authoritative stablecoin-data validation before emitting.
 
 import type { StablecoinMeta } from "../../types";
 import coinsGenerated from "./coins.generated.json";
@@ -13,8 +14,8 @@ import coinsGenerated from "./coins.generated.json";
 // FNV-1a 32-bit fingerprint of `coins.generated.json` at generation time: 4000b6f7.
 
 /**
- * Pre-validated stablecoin metas, exposed in source order. The generator
- * runs alongside `npm run check:stablecoin-data`, which performs the
+ * Pre-validated stablecoin metas, exposed in source order. The snapshot
+ * is emitted only after `npm run check:stablecoin-data` performs the
  * authoritative Zod + invariant validation.
  */
 export const STABLECOIN_META_ASSETS_PREVALIDATED: readonly StablecoinMeta[] =
