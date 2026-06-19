@@ -10,6 +10,7 @@ import type {
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
 import { joinReportCardDetail } from "./report-card-detail";
+import { roundScore } from "./math";
 import {
   CHAIN_TIER_LABEL,
   CHAIN_TIER_SCORE,
@@ -31,11 +32,11 @@ export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): 
   const totalPct = reserves.reduce((sum, reserve) => sum + reserve.pct, 0);
   if (totalPct === 0) return 0;
   const weighted = reserves.reduce((sum, reserve) => sum + reserve.pct * (RESERVE_QUALITY_SCORE[reserve.risk] ?? 0), 0);
-  return Math.round(weighted / totalPct);
+  return roundScore(weighted / totalPct);
 }
 
 export function chainInfraScore(tier: ChainTier, model: DeploymentModel): number {
-  return Math.round(CHAIN_TIER_SCORE[tier] * DEPLOYMENT_MULT[model]);
+  return roundScore(CHAIN_TIER_SCORE[tier] * DEPLOYMENT_MULT[model]);
 }
 
 export function chainInfraLabel(tier: ChainTier, model: DeploymentModel): string {
@@ -77,7 +78,7 @@ export function scoreResilience(
     ? collateralScoreLabel(collateralScore)
     : COLLATERAL_QUALITY_LABEL[factors.collateralQuality];
 
-  const score = Math.round((collateralScore + custodyScore) / 2);
+  const score = roundScore((collateralScore + custodyScore) / 2);
   const detailItems: ReportCardDetailItem[] = [
     { label: "Collateral", value: collateralLabel, detail: `${collateralScore}` },
     { label: "Custody", value: CUSTODY_MODEL_LABEL[factors.custodyModel], detail: `${custodyScore}` },
