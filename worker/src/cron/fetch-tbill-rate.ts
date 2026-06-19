@@ -40,10 +40,6 @@ import {
 } from "./yield-sync/benchmarks";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_MS } from "@shared/lib/time-constants";
-import {
-  ETHERFUSE_CETES_BENCHMARK_SOURCE,
-  fetchEtherfuseCetesIssuance,
-} from "./yield-sync/etherfuse-cetes";
 import { loadRiskFreeRateRegistry } from "./yield-sync/sources-riskfree";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 import type { Env } from "../lib/env";
@@ -468,13 +464,24 @@ function buildResolvedBenchmark(params: {
     isFallback: params.isFallback ?? false,
     fallbackMode: params.fallbackMode ?? null,
   });
+  const marketFields = params.isFallback
+    ? {
+      lastMarketRate: null,
+      lastMarketRecordDate: null,
+      lastMarketFetchedAt: null,
+      lastMarketSource: null,
+    }
+    : {
+      lastMarketRate: params.rate,
+      lastMarketRecordDate: params.recordDate,
+      lastMarketFetchedAt: params.fetchedAt,
+      lastMarketSource: params.source,
+    };
+
   return {
     ...resolved,
     isProxy: params.isProxy ?? resolved.isProxy,
-    lastMarketRate: params.rate,
-    lastMarketRecordDate: params.recordDate,
-    lastMarketFetchedAt: params.fetchedAt,
-    lastMarketSource: params.source,
+    ...marketFields,
   };
 }
 
@@ -1113,35 +1120,6 @@ async function resolveMxnBenchmarkProvider(params: {
   }
 
   const baseFallbackMode = token ? "banxico-cetes-failed" : "banxico-token-missing";
-  const etherfuseIssuance = await fetchEtherfuseCetesIssuance({
-    signal,
-    timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS,
-    retries: BENCHMARK_FETCH_MAX_RETRIES,
-  });
-
-  if (etherfuseIssuance && isValidBenchmarkRate(etherfuseIssuance.apyPercent)) {
-    const fallbackMode = `${baseFallbackMode}-etherfuse-stablebond`;
-    const parsed = {
-      rate: etherfuseIssuance.apyPercent,
-      recordDate: etherfuseIssuance.recordDate,
-    };
-    return {
-      key: "MXN",
-      parsed,
-      meta: buildResolvedBenchmark({
-        key: "MXN",
-        rate: parsed.rate,
-        recordDate: parsed.recordDate,
-        fetchedAt,
-        source: ETHERFUSE_CETES_BENCHMARK_SOURCE,
-        isFallback: true,
-        fallbackMode,
-        isProxy: true,
-      }),
-      failureMode: fallbackMode,
-    };
-  }
-
   const meta = buildRetainedBenchmark(previous.MXN, baseFallbackMode);
   return {
     key: "MXN",
