@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { ChevronDown, Info } from "lucide-react";
 import Link from "next/link";
 import {
@@ -52,6 +53,35 @@ const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "missing-inputs": "Required inputs missing for scoring.",
 };
 
+function ModeConditionalTooltip({
+  mode,
+  tooltip,
+  ariaLabel,
+  tooltipMaxWidth = "max-w-[220px]",
+  children,
+}: {
+  mode: PysBreakdownMode;
+  tooltip: string;
+  ariaLabel: string;
+  tooltipMaxWidth?: string;
+  children: React.ReactElement<{ className?: string; "aria-label"?: string; title?: string }>;
+}) {
+  if (mode === "popover") {
+    return React.cloneElement(children, { "aria-label": ariaLabel, title: tooltip });
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {React.cloneElement(children, {
+          className: cn(children.props.className, "cursor-help"),
+          "aria-label": ariaLabel,
+        })}
+      </TooltipTrigger>
+      <TooltipContent className={cn(tooltipMaxWidth, "text-[11px]")}>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function NullPysScore({
   mode,
   toneClass,
@@ -68,27 +98,17 @@ function NullPysScore({
     return <span className={dashClass}>{"—"}</span>;
   }
 
-  const ariaLabel = `Pharos Yield Score unavailable: ${reasonText}`;
-
   // WHY: popover mode already renders inside a Tooltip from the parent (e.g. leaderboard row);
   // nesting another Tooltip would be invalid. Expose the reason through aria-label/title instead.
-  if (mode === "popover") {
-    return (
-      <span className={dashClass} aria-label={ariaLabel} title={reasonText}>
-        {"—"}
-      </span>
-    );
-  }
-
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={cn(dashClass, "cursor-help")} aria-label={ariaLabel}>
-          {"—"}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-[260px] text-[11px]">{reasonText}</TooltipContent>
-    </Tooltip>
+    <ModeConditionalTooltip
+      mode={mode}
+      tooltip={reasonText}
+      ariaLabel={`Pharos Yield Score unavailable: ${reasonText}`}
+      tooltipMaxWidth="max-w-[260px]"
+    >
+      <span className={dashClass}>{"—"}</span>
+    </ModeConditionalTooltip>
   );
 }
 
@@ -178,24 +198,11 @@ function ClampBadge({
   toneClass: string;
   ariaLabel: string;
 }) {
-  // WHY: mirror NullPysScore's pattern — popover mode is already nested in a tooltip,
-  // so use `title` there and a real Tooltip in inline mode.
-  if (mode === "popover") {
-    return (
-      <span className={toneClass} title={tooltip} aria-label={ariaLabel}>
-        {label}
-      </span>
-    );
-  }
+  // WHY: popover mode is already nested in a tooltip; use ModeConditionalTooltip.
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={cn(toneClass, "cursor-help")} aria-label={ariaLabel}>
-          {label}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-[220px] text-[11px]">{tooltip}</TooltipContent>
-    </Tooltip>
+    <ModeConditionalTooltip mode={mode} tooltip={tooltip} ariaLabel={ariaLabel}>
+      <span className={toneClass}>{label}</span>
+    </ModeConditionalTooltip>
   );
 }
 
