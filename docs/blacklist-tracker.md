@@ -44,7 +44,7 @@ Observed event history stays in the event ledger. Event counts are observed supp
 - **Function:** `syncBlacklist(opts: SyncBlacklistOptions)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
 - **Caller contract:** the 6-hourly handler passes `db`, provider keys, `chainRpcs`, optional abort signal, and cron progress hooks via `SyncBlacklistOptions`
-- **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, providerCircuitSkips, etherscanCircuitSkips, tronGridCircuitSkips, apiErrorClasses, runtimeBudgetReached, subrequestBudgetReached, runtimeBudgetMs, enrichAttempted, enrichSucceeded, enrichFailed, currentBalanceCacheUpdated, currentBalanceCacheDeleted, currentBalanceCacheFailed, tronLedgerUpdated, producerGapMetricSnapshots, producerSummarySnapshot, producerSnapshotSkipped, producerSnapshotError, budgetUsed, budgetLimit } }`
+- **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, providerCircuitSkips, etherscanCircuitSkips, tronGridCircuitSkips, apiErrorClasses, runtimeBudgetReached, subrequestBudgetReached, runtimeBudgetMs, runtimeBudgetSkippedOkThreshold, runtimeBudgetSkippedWithinTolerance, incompleteRuntimeConfigs, enrichAttempted, enrichSucceeded, enrichFailed, currentBalanceCacheUpdated, currentBalanceCacheDeleted, currentBalanceCacheFailed, tronLedgerUpdated, producerGapMetricSnapshots, producerSummarySnapshot, producerSnapshotSkipped, producerSnapshotError, producerSnapshotWindowMs, producerSnapshotWindowUnavailable, budgetUsed, budgetLimit } }`
 
 `itemCount` now reflects the number of rows actually inserted into `blacklist_events`. `metadata.eventsFetched` tracks fetched/parsed rows before `INSERT OR IGNORE` deduplication, which is useful when diagnosing repeated rescans.
 
@@ -92,7 +92,7 @@ Observed event history stays in the event ledger. Event counts are observed supp
 | TronGrid  | 3 requests/second |
 
 **Budget:** 900 subrequests per cron cycle, shared across all configs + backfill.
-**Runtime guard:** 7-minute in-app budget with a 60-second per-config start buffer, so the job exits cleanly before the outer 12-minute cron timeout enforced in `worker/src/lib/cron-lease.ts`.
+**Runtime guard:** 10-minute in-app budget with a 60-second per-config start buffer, so the job exits cleanly before the outer 12-minute cron timeout enforced in `worker/src/lib/cron-lease.ts`.
 
 ---
 
@@ -678,7 +678,7 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
    - RPC-log chains scan in bounded windows per run (provider-aware for Alchemy vs public fallback) so successful empty windows still advance the cursor
    - Tron: fetch events from `lastTimestamp` via TronGrid `/contracts/{addr}/events`
    - Parse events into `BlacklistRow` objects
-   - If the runtime guard is nearly exhausted, the cron stops before starting another config and defers the remainder to the next cycle
+   - If the runtime guard is nearly exhausted, the cron stops before starting another config and defers the remainder to the next cycle. A small skipped tail within the current bounded threshold (15% of configs, capped at 10 contracts) is reported in metadata but does not degrade the run by itself, which lets producer snapshots refresh when the scan otherwise completed cleanly.
 
 3. **Balance enrichment** (in-memory, before DB insertion)
    - Enrich parsed rows with balances BEFORE inserting into D1

@@ -25,6 +25,16 @@ type ProcessedRows = {
 
 type SyncBlacklistStatus = "ok" | "degraded" | "error";
 
+type SyncBlacklistRuntimeBudgetContext = {
+  contractsSkipped?: number;
+  totalConfigs?: number;
+  incompleteRuntimeConfigs?: number;
+  subrequestBudgetHit?: boolean;
+};
+
+const RUNTIME_SKIPPED_OK_MAX_CONTRACTS = 10;
+const RUNTIME_SKIPPED_OK_RATIO = 0.15;
+
 export type SyncBlacklistApiErrorConfig = {
   configKey: string;
   stablecoin: string;
@@ -128,14 +138,29 @@ export async function applyTronLedgerMirrorPass(
   }
 }
 
+export function getRuntimeBudgetSkippedOkThreshold(totalConfigs = CONTRACT_CONFIGS.length): number {
+  if (totalConfigs <= 0) return 0;
+  return Math.max(1, Math.min(RUNTIME_SKIPPED_OK_MAX_CONTRACTS, Math.ceil(totalConfigs * RUNTIME_SKIPPED_OK_RATIO)));
+}
+
 export function deriveSyncBlacklistStatus(
   apiErrors: number,
   runtimeBudgetHit: boolean,
+  runtimeBudgetContext: SyncBlacklistRuntimeBudgetContext = {},
 ): SyncBlacklistStatus {
   const degradedThreshold = Math.max(1, Math.ceil(CONTRACT_CONFIGS.length * 0.25));
   const errorThreshold = Math.ceil(CONTRACT_CONFIGS.length / 2);
+  const contractsSkipped = Math.max(0, runtimeBudgetContext.contractsSkipped ?? 0);
+  const totalConfigs = Math.max(0, runtimeBudgetContext.totalConfigs ?? CONTRACT_CONFIGS.length);
+  const incompleteRuntimeConfigs = Math.max(0, runtimeBudgetContext.incompleteRuntimeConfigs ?? 0);
+  const skippedThreshold = getRuntimeBudgetSkippedOkThreshold(totalConfigs);
+  const materialRuntimeBudgetHit = runtimeBudgetHit && (
+    runtimeBudgetContext.subrequestBudgetHit === true ||
+    incompleteRuntimeConfigs > 0 ||
+    contractsSkipped > skippedThreshold
+  );
 
   if (apiErrors > errorThreshold) return "error";
-  if (apiErrors > degradedThreshold || runtimeBudgetHit) return "degraded";
+  if (apiErrors > degradedThreshold || materialRuntimeBudgetHit) return "degraded";
   return "ok";
 }

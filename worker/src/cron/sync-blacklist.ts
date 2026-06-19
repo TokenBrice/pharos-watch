@@ -28,6 +28,7 @@ import {
 import {
   applyTronLedgerMirrorPass,
   deriveSyncBlacklistStatus,
+  getRuntimeBudgetSkippedOkThreshold,
   loadBlacklistConfigStates,
   recordApiErrorConfig,
   recordProcessedRows,
@@ -38,6 +39,7 @@ import { toErrorMessage } from "../lib/error-utils";
 const EVM_SCANNED_TO_LATEST = 99999999;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
 const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
+const BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS = 10_000;
 
 type SyncBlacklistResult = {
   itemCount: number;
@@ -247,6 +249,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
   let producerSnapshotError: string | null = null;
+  let incompleteRuntimeConfigs = 0;
   const counters = {
     totalInsertedRows: 0,
     enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
@@ -395,6 +398,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
 
         if (result.incomplete) {
           runtimeBudgetHit ||= !result.apiError;
+          if (!result.apiError) incompleteRuntimeConfigs++;
           console.warn(
             `[sync-blacklist] Incomplete scan for ${config.stablecoin} on ${config.chain.chainName}, keeping sync at ts ${lastBlock}`,
           );
@@ -426,6 +430,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
 
         if (result.incomplete) {
           runtimeBudgetHit ||= !result.apiError;
+          if (!result.apiError) incompleteRuntimeConfigs++;
           if (result.apiError) {
             apiErrors++;
             recordApiErrorConfig(
@@ -489,15 +494,30 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
 
   // Tolerate up to 25% of configs failing (transient upstream timeouts) before
   // marking the run degraded.  More than 50% is a full error.
-  const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit);
+  const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
+  const runtimeBudgetSkippedOkThreshold = getRuntimeBudgetSkippedOkThreshold(configStates.length);
+  const runtimeBudgetSkippedWithinTolerance =
+    runtimeBudgetHit &&
+    contractsSkipped > 0 &&
+    incompleteRuntimeConfigs === 0 &&
+    !subrequestBudgetReached &&
+    contractsSkipped <= runtimeBudgetSkippedOkThreshold;
+  const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
+    contractsSkipped,
+    totalConfigs: configStates.length,
+    incompleteRuntimeConfigs,
+    subrequestBudgetHit: subrequestBudgetReached,
+  });
   const status: SyncBlacklistResult["status"] =
     derivedStatus === "ok" && providerCircuitSkips > 0 ? "degraded" : derivedStatus;
+  const producerSnapshotWindowUnavailable =
+    Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= runBudget.deadlineMs;
 
   if (
     status !== "ok" ||
     blacklistRuntimeBudgetReached(runBudget) ||
-    blacklistSubrequestBudgetReached(runBudget) ||
-    blacklistShouldStopBeforeNextConfig(runBudget)
+    subrequestBudgetReached ||
+    producerSnapshotWindowUnavailable
   ) {
     producerSnapshotSkipped = true;
   } else {
@@ -552,8 +572,11 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       tronGridCircuitSkips,
       apiErrorClasses,
       runtimeBudgetReached: runtimeBudgetHit,
-      subrequestBudgetReached: blacklistSubrequestBudgetReached(runBudget),
+      subrequestBudgetReached,
       runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
+      runtimeBudgetSkippedOkThreshold,
+      runtimeBudgetSkippedWithinTolerance,
+      incompleteRuntimeConfigs,
       enrichAttempted: counters.enrichCounters.attempted,
       enrichSucceeded: counters.enrichCounters.succeeded,
       enrichFailed: counters.enrichCounters.failed,
@@ -565,6 +588,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       producerSummarySnapshot,
       producerSnapshotSkipped,
       producerSnapshotError,
+      producerSnapshotWindowMs: BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS,
+      producerSnapshotWindowUnavailable,
     })),
   };
 }
