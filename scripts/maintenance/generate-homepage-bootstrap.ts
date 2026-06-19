@@ -36,6 +36,8 @@ const registry = FRONTEND_API_QUERY_REGISTRY;
 // burning the homepage HTML budget in the production Pages release.
 const MAX_HOMEPAGE_BOOTSTRAP_BYTES = 5_000;
 const MAX_HOMEPAGE_BOOTSTRAP_QUERY_BYTES = 5_000;
+const TRUSTED_API_KEY_ORIGINS = new Set(["https://api.pharos.watch"]);
+
 const HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS = [
   { id: "stablecoins", descriptor: registry.stablecoins },
   { id: "pegSummary", descriptor: registry.pegSummary },
@@ -61,7 +63,40 @@ function resolveApiBase(): string | null {
   return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
 }
 
-function fetchHeaders(): Record<string, string> {
+function apiBaseOrigin(apiBase: string): string | null {
+  try {
+    return new URL(apiBase).origin;
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeSource(apiBase: string): string | null {
+  return apiBaseOrigin(apiBase);
+}
+
+function hasConfiguredApiKey(): boolean {
+  return GENERATOR_API_KEY_ENV_NAMES.some((name) => Boolean(process.env[name]?.trim()));
+}
+
+function assertSafeApiKeyDestination(apiBase: string): void {
+  if (!hasConfiguredApiKey()) return;
+
+  const origin = apiBaseOrigin(apiBase);
+  if (!origin || !TRUSTED_API_KEY_ORIGINS.has(origin)) {
+    fail(
+      `refusing to send homepage bootstrap API key to untrusted origin ${origin ?? apiBase}; ` +
+        `expected one of ${Array.from(TRUSTED_API_KEY_ORIGINS).join(", ")}`,
+    );
+  }
+}
+
+function fetchHeaders(apiBase: string): Record<string, string> {
+  const origin = apiBaseOrigin(apiBase);
+  if (!origin || !TRUSTED_API_KEY_ORIGINS.has(origin)) {
+    return { Accept: "application/json" };
+  }
+
   return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
 }
 
@@ -163,7 +198,7 @@ async function fetchBootstrapQuery(
 ): Promise<HomepageBootstrapQuery | null> {
   const url = `${apiBase}${path}`;
   try {
-    const response = await fetch(url, { headers: fetchHeaders() });
+    const response = await fetch(url, { headers: fetchHeaders(apiBase) });
     if (!response.ok) {
       console.warn(`[generate-homepage-bootstrap] ${path} -> HTTP ${response.status}`);
       return null;
@@ -217,7 +252,7 @@ async function generatePayload(apiBase: string): Promise<HomepageBootstrapPayloa
   return {
     version: HOMEPAGE_BOOTSTRAP_VERSION,
     generatedAt: Date.now(),
-    source: apiBase,
+    source: sanitizeSource(apiBase),
     queries,
   };
 }
@@ -252,6 +287,8 @@ async function main(): Promise<void> {
     console.log("[generate-homepage-bootstrap] wrote empty bootstrap payload");
     return;
   }
+
+  assertSafeApiKeyDestination(apiBase);
 
   const generated = await generatePayload(apiBase);
   if (Object.keys(generated.queries).length === 0) {
