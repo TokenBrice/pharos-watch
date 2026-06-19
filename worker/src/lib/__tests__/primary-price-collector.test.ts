@@ -267,6 +267,37 @@ describe("buildPrimarySourceCandidates", () => {
     ]);
   });
 
+  it("records invalid-price telemetry for mapped fresh DEX protocol candidates", () => {
+    const collected = makeCollected({
+      protocolSources: [
+        {
+          protocol: "balancer",
+          price: Number.NaN,
+          tvl: 500_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+      ],
+    });
+
+    const { sources, dexCandidateTelemetry, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
+      { id: "dusd-test", symbol: "DUSD" },
+      collected,
+      { nowSec: 1_700_000_030 },
+    );
+
+    expect(sources).toEqual([]);
+    expect(priceSourceConfidenceProfile).toBeNull();
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        sourceKey: "balancer-dex",
+        price: null,
+        status: "excluded",
+        reason: "invalid_price",
+      },
+    ]);
+  });
+
   it("profiles aggregate-only DEX promotion without counting it as an active protocol lane", () => {
     const collected = makeCollected({
       dexAggregateQuote: {
