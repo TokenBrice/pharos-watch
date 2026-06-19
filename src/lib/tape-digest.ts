@@ -124,19 +124,22 @@ function severityForBand(band: string): number {
 function yieldSummary(events: readonly TapeEvent[]): string {
   let warnings = 0;
   let drops = 0;
-  let worstDrop = 0;
+  let worstDropMagnitude = 0;
   for (const e of events) {
     if (e.type === "yield.warning_emitted") warnings += 1;
     else if (e.type === "yield.pys_dropped") {
       drops += 1;
       const delta = e.payload?.delta;
-      if (typeof delta === "number" && delta < worstDrop) worstDrop = delta;
+      if (typeof delta === "number") {
+        const dropMagnitude = Math.abs(delta);
+        if (dropMagnitude > worstDropMagnitude) worstDropMagnitude = dropMagnitude;
+      }
     }
   }
   const parts: string[] = [];
   if (warnings > 0) parts.push(`${warnings} warning${warnings === 1 ? "" : "s"}`);
   if (drops > 0) parts.push(`${drops} PYS drop${drops === 1 ? "" : "s"}`);
-  if (worstDrop < 0) parts.push(`worst ${Math.round(worstDrop)} pts`);
+  if (worstDropMagnitude > 0) parts.push(`worst -${Math.round(worstDropMagnitude)} pts`);
   const tickers = formatTopTickers(events);
   return [parts.join(" · "), tickers].filter(Boolean).join(" · ");
 }
