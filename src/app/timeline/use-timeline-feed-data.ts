@@ -12,10 +12,7 @@ interface UseTimelineFeedDataArgs {
   nowMs: number;
 }
 export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTimelineFeedDataArgs) {
-  const events = useEvents(
-    queryParams,
-    { maxAutoPages: 10 },
-  );
+  const events = useEvents(queryParams, { autoLoadAll: false });
 
   const {
     data: { events: rawEvents },

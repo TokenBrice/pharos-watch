@@ -25,14 +25,14 @@ type LatestEventsResult = {
   meta: null;
 };
 
-const useEventsMock = vi.fn<() => UseEventsResult>();
+const useEventsMock = vi.fn<(...args: Parameters<typeof import("@/hooks/use-events").useEvents>) => UseEventsResult>();
 const useLatestEventsMock = vi.fn<() => LatestEventsResult>();
 
 vi.mock("@/hooks/use-events", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/use-events")>("@/hooks/use-events");
   return {
     ...actual,
-    useEvents: () => useEventsMock(),
+    useEvents: (...args: Parameters<typeof actual.useEvents>) => useEventsMock(...args),
     useLatestEvents: () => useLatestEventsMock(),
   };
 });
@@ -108,6 +108,17 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
 }
 
 describe("TimelineClient", () => {
+  it("keeps timeline pagination manual on initial page load", () => {
+    mockEvents([]);
+
+    render(<TimelineClient />);
+
+    expect(useEventsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ severityFloor: "notice" }),
+      { autoLoadAll: false },
+    );
+  });
+
   it("renders the empty state when there are no events", () => {
     mockEvents([]);
     render(<TimelineClient />);
