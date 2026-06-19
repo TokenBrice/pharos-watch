@@ -216,22 +216,30 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     .filter((entry) => entry.resolutionState === "impaired")
     .map((entry) => entry.stablecoinId);
   const availabilityDegradedCount = availabilityDegradedIds.length;
+  const missingFromCache = configuredIds.filter((stablecoinId) => !stablecoinAssetById.has(stablecoinId));
+  const cacheAbsentConfiguredCount = missingFromCache.length;
+  const activeConfiguredCount = Math.max(0, configuredIds.length - cacheAbsentConfiguredCount);
   const criticalUnresolvedCount = snapshots.filter(
     (entry) =>
       entry.resolutionState !== "resolved" &&
       entry.resolutionState !== "missing-capacity" &&
-      entry.resolutionState !== "impaired",
+      entry.resolutionState !== "impaired" &&
+      entry.resolutionState !== "missing-cache",
   ).length;
-  const missingFromCache = configuredIds.filter((stablecoinId) => !stablecoinAssetById.has(stablecoinId));
-  const coverageRatio = configuredIds.length > 0 ? resolvedCount / configuredIds.length : 1;
-  const allowedMissingCapacityCount = getAllowedMissingCapacityCount(configuredIds.length);
+  const coverageDenominator = activeConfiguredCount > 0 ? activeConfiguredCount : configuredIds.length;
+  const coverageRatio = coverageDenominator > 0 ? resolvedCount / coverageDenominator : 1;
+  const allowedMissingCapacityCount = getAllowedMissingCapacityCount(activeConfiguredCount);
   const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
-  const hasBlockingUnresolved = failedIds.length > 0 || missingFromCache.length > 0 || criticalUnresolvedCount > 0;
-  const hasDegradedSyncSignal = hasBlockingUnresolved || !missingCapacityWithinTolerance || liquidityStale;
+  const hasNoActiveConfiguredRows = configuredIds.length > 0 && activeConfiguredCount === 0;
+  const hasBlockingUnresolved = failedIds.length > 0 || criticalUnresolvedCount > 0;
+  const hasDegradedSyncSignal =
+    hasBlockingUnresolved || !missingCapacityWithinTolerance || liquidityStale || hasNoActiveConfiguredRows;
   const runMetadata: Record<string, unknown> = {
     synced: snapshots.length,
     failed: failedIds.length,
     configured: configuredIds.length,
+    activeConfigured: activeConfiguredCount,
+    cacheAbsentConfigured: cacheAbsentConfiguredCount,
     resolved: resolvedCount,
     unresolved: unresolvedCount,
     unresolvedMissingCapacity: missingCapacityCount,
@@ -292,7 +300,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   // active depegs), not sync failures: they are excluded from
   // criticalUnresolvedCount above and never degrade run status on their own.
   const status: CronResult["status"] =
-    resolvedCount === 0 && (hasBlockingUnresolved || hasZeroResolvedCapacityFailure)
+    resolvedCount === 0 && (hasBlockingUnresolved || hasZeroResolvedCapacityFailure || hasNoActiveConfiguredRows)
       ? "error"
       : hasDegradedSyncSignal || hasPostWriteDegradation
         ? "degraded"

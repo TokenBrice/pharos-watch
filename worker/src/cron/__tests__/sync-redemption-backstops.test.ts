@@ -509,7 +509,7 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.availabilityDegradedIdsTruncated).toBe(true);
   });
 
-  it("still snapshots configured ids that are missing from the stablecoins cache", async () => {
+  it("snapshots configured ids that are absent from the active stablecoins cache without degrading", async () => {
     loadStablecoinsCacheMock.mockResolvedValue({
       kind: "ok",
       updatedAt: Math.floor(Date.now() / 1000),
@@ -554,7 +554,7 @@ describe("syncRedemptionBackstops", () => {
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(1);
     expect(buildRedemptionBackstopEntryMock).toHaveBeenCalledWith(
@@ -582,6 +582,30 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.synced).toBe(2);
     expect(metadata.resolved).toBe(1);
     expect(metadata.unresolved).toBe(1);
+    expect(metadata.unresolvedCritical).toBe(0);
+    expect(metadata.activeConfigured).toBe(1);
+    expect(metadata.cacheAbsentConfigured).toBe(1);
+    expect(metadata.coverageRatio).toBe(1);
+    expect(metadata.missingFromCache).toEqual(["iusd-infinifi"]);
+  });
+
+  it("errors when every configured route is absent from the active stablecoins cache", async () => {
+    configuredIdsMock = ["iusd-infinifi"];
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: Math.floor(Date.now() / 1000),
+      payload: {
+        peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })],
+      },
+    });
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("error");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.activeConfigured).toBe(0);
+    expect(metadata.cacheAbsentConfigured).toBe(1);
     expect(metadata.missingFromCache).toEqual(["iusd-infinifi"]);
   });
 
