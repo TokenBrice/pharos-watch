@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { MonoYAxis, TimeXAxis, ChartLegendChip } from "@/components/chart-primitives/axes";
+import { ScreenReaderDataTable } from "@/components/chart-primitives/data-table";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
 export interface FlowSeries {
@@ -80,6 +81,25 @@ export function FlowComparisonChart({
             </ChartLegendChip>
           ))}
         </div>
+        <ScreenReaderDataTable
+          data={mergedData}
+          columns={[
+            { id: "ts", label: "Date", format: (row) => formatChartDate(row["ts"] as number, hours <= 24 ? "with-time" : "short") },
+            ...series.map((s) => ({
+              id: s.id,
+              label: s.label,
+              format: (row: Record<string, number>) => {
+                const v = row[s.id];
+                return v != null ? `${v >= 0 ? "+" : ""}${formatCurrency(v, 1)}` : "—";
+              },
+            })),
+          ]}
+          caption={(rows, truncated, total) =>
+            truncated
+              ? `Net flow comparison — most recent ${rows.length} of ${total} data points`
+              : `Net flow comparison — ${total} data points`
+          }
+        />
         <ResponsiveContainer width="100%" height={200}>
           <LineChart
             data={mergedData}
