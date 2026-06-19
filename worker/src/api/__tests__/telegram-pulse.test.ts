@@ -124,104 +124,51 @@ describe("handleTelegramPulse", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers s"))).toBe(true);
   });
 
-  it("rebuilds a fresh one-point snapshot cache to expose full bootstrap fallback history", async () => {
+  it("serves a fresh one-point snapshot cache without live aggregate reads", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
+    const cachedPulse = {
+      activeWatchers: 519,
+      coinSubscriptions: 3080,
+      explicitCoinSubscriptions: 3080,
+      presetImpliedCoinSubscriptions: 0,
+      activePresetFollowers: 43,
+      newWatchersToday: 305,
+      churnedWatchersToday: 0,
+      reactivatedWatchersToday: 0,
+      historySource: "snapshot",
+      topCoins: ["USDC"],
+      watcherHistory: [
+        {
+          date: "2026-05-13",
+          timestamp: 1_778_630_400_000,
+          snapshotAt: 1_778_680_000,
+          newWatchers: 305,
+          activeWatchers: 519,
+          churnedWatchers: 0,
+          reactivatedWatchers: 0,
+        },
+      ],
+      alertTypeChats: { dews: 216, depeg: 479, safety: 86, launch: 9, reserve: 0, allTypes: 5 },
+      quietHoursEnabledChats: 6,
+      pendingDeliveries: 0,
+      currentSnapshotAt: 1_778_681_248,
+      lifecycleHistoryUpdatedAt: 1_778_680_000,
+      lifecycleHistoryEverySeconds: 900,
+      quality: { status: "complete", unavailableFields: [] },
+      privacy: { exactActiveWatchers: true, lowCardinalityThreshold: 5, suppressedFields: [] },
+      updatedAt: nowSec,
+      updatedEverySeconds: 300,
+    };
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
         rows: [
           {
             key: "telegram:pulse:snapshot",
-            value: JSON.stringify({
-              activeWatchers: 519,
-              coinSubscriptions: 3080,
-              explicitCoinSubscriptions: 3080,
-              presetImpliedCoinSubscriptions: 0,
-              activePresetFollowers: 43,
-              newWatchersToday: 305,
-              churnedWatchersToday: 0,
-              reactivatedWatchersToday: 0,
-              historySource: "snapshot",
-              topCoins: ["USDC"],
-              watcherHistory: [
-                {
-                  date: "2026-05-13",
-                  timestamp: 1_778_630_400_000,
-                  snapshotAt: 1_778_680_000,
-                  newWatchers: 305,
-                  activeWatchers: 519,
-                  churnedWatchers: 0,
-                  reactivatedWatchers: 0,
-                },
-              ],
-              alertTypeChats: { dews: 216, depeg: 479, safety: 86, launch: 9, reserve: 0, allTypes: 5 },
-              quietHoursEnabledChats: 6,
-              pendingDeliveries: 0,
-              currentSnapshotAt: 1_778_681_248,
-              lifecycleHistoryUpdatedAt: 1_778_680_000,
-              lifecycleHistoryEverySeconds: 900,
-              quality: { status: "complete", unavailableFields: [] },
-              privacy: { exactActiveWatchers: true, lowCardinalityThreshold: 5, suppressedFields: [] },
-              updatedAt: nowSec,
-              updatedEverySeconds: 300,
-            }),
+            value: JSON.stringify(cachedPulse),
             updated_at: nowSec,
           },
         ],
-      },
-      {
-        match: "FROM telegram_watcher_lifecycle_daily",
-        rows: [
-          {
-            day: "2026-05-13",
-            snapshot_at: 1_778_680_000,
-            active_watchers: 519,
-            new_watchers: 305,
-            churned_watchers: 0,
-            reactivated_watchers: 0,
-          },
-        ],
-      },
-      {
-        match: "GROUP BY day",
-        rows: [
-          { day: "2026-05-11", day_ts: 1_778_457_600, new_watchers: 214 },
-          { day: "2026-05-13", day_ts: 1_778_630_400, new_watchers: 305 },
-        ],
-      },
-      {
-        match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 519,
-          new_watchers: 305,
-          explicit_coin_follows: 3080,
-          active_preset_followers: 43,
-          active_dews_opt_ins: 216,
-          active_depeg_opt_ins: 479,
-          active_safety_opt_ins: 86,
-          active_launch_opt_ins: 9,
-          active_all_types_opt_ins: 5,
-          quiet_hours_enabled_chats: 6,
-        },
-        rows: [],
-      },
-      {
-        match: "ORDER BY day DESC",
-        first: null,
-        rows: [],
-      },
-      {
-        match: "FROM telegram_preset_subscriptions",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [{ stablecoin_id: "usdc-circle", subscribers: 479 }],
-      },
-      {
-        match: "FROM telegram_pending_alerts",
-        first: { pending_count: 0 },
-        rows: [],
       },
     ]);
 
@@ -231,10 +178,12 @@ describe("handleTelegramPulse", () => {
       watcherHistory: Array<{ date: string; activeWatchers: number }>;
     };
 
-    expect(body.historySource).toBe("live-fallback");
-    expect(body.watcherHistory.map((point) => point.date)).toEqual(["2026-05-11", "2026-05-13"]);
-    expect(body.watcherHistory[body.watcherHistory.length - 1]?.activeWatchers).toBe(519);
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers s"))).toBe(true);
+    expect(response.status).toBe(200);
+    expect(body.historySource).toBe("snapshot");
+    expect(body.watcherHistory.map((point) => point.date)).toEqual(["2026-05-13"]);
+    expect(body.watcherHistory[0]?.activeWatchers).toBe(519);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers s"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_watcher_lifecycle_daily"))).toBe(false);
   });
 
   it("returns launch-aware public pulse metrics from active subscription rows", async () => {
