@@ -12,7 +12,6 @@ import type {
   DailyDigestResponse,
   HealthResponse,
   PegSummaryResponse,
-  StabilityIndexResponse,
 } from "@shared/types";
 
 export interface LightApiQueryOptions {
@@ -41,10 +40,6 @@ export function useLightApiQuery<T>(
 
 export function useSidebarPegSummarySignal() {
   return useLightApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_REGISTRY.pegSummary);
-}
-
-export function useSidebarStabilityIndexSignal() {
-  return useLightApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_REGISTRY.stabilityIndex);
 }
 
 export function useSidebarBlacklistSignal(enabled: boolean) {

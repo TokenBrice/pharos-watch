@@ -244,7 +244,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/components/command-palette-model.ts::stablecoinProminenceBonus",
   "src/components/table/table-label.ts::withFallbackTableAriaLabel",
   "src/components/table/table-label.ts::hasTableCaptionChild",
-  "src/hooks/use-sidebar-nav-signal-data.ts::useSidebarStabilityIndexSignal",
   "src/lib/alt-peg-packing.ts::DEFAULT_COLLISION_ITERATIONS",
   "src/lib/api-key-request-admin-view-model.ts::REQUEST_RISK_FLAG_SCORE",
   "src/lib/api.ts::normalizeApiDependencyMeta",
