@@ -4,7 +4,6 @@ import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from
 import {
   computePysComponents,
   computePysRewardShare,
-  computeVenueRiskWeighted,
   derivePysSourceRiskPenalty,
   deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
@@ -24,7 +23,7 @@ import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
-import { inferVenueProtocol, resolveDependencyConcentration, resolveReviewedYieldRiskConfig } from "./source-risk";
+import { inferVenueProtocol, resolveDependencyConcentration, resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
@@ -327,7 +326,7 @@ function evaluateYieldSourceGroup(
       sourceRisk?.venueProtocol ?? y.project ?? inferVenueProtocol(y),
     );
     const reviewedVenueRiskWeighted = reviewedRiskConfig
-      ? computeVenueRiskWeighted(reviewedRiskConfig.scores)
+      ? venueRiskWeightedOf(reviewedRiskConfig)
       : null;
     const resolvedVenueRiskWeighted = sourceRisk?.venueRiskWeighted ?? reviewedVenueRiskWeighted;
     const resolvedVenueRiskTier =
