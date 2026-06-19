@@ -735,6 +735,27 @@ describe("handleCallbackQuery", () => {
       expect(lastAckBody().text).toBe("Cancelled.");
     });
 
+    it("setup:cancel does not clear unrelated pending rows when no active wizard exists", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromForget({ action_type: "confirm-bulk", initiator_user_id: "999" }),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-cancel-unrelated",
+        data: "setup:cancel",
+        from: { id: 7, username: "member" },
+        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      });
+
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
+      expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("sendMessage"))).toBe(false);
+      expect(lastAckBody().text).toBe("Setup expired. Send /start to begin again.");
+    });
+
     it("setup:branch:recommended from a non-initiator user is refused", async () => {
       const db = mockD1([
         {
