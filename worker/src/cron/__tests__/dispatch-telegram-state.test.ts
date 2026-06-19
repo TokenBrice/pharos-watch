@@ -70,13 +70,20 @@ describe("loadDewsRows", () => {
     )).toBe(true);
   });
 
-  it("skips the legacy stress_signals query when latest rows are fresh", async () => {
+  it("preserves legacy-only rows when latest rows are fresh but partial", async () => {
     const latestRow = {
       stablecoin_id: "usdc-circle",
       score: 8,
       band: "CALM",
       signals_json: signalsJson,
       computed_at: completedDewsAt,
+    };
+    const legacyOnlyRow = {
+      stablecoin_id: "usdt-tether",
+      score: 13,
+      band: "WATCH",
+      signals_json: signalsJson,
+      computed_at: completedDewsAt - 30,
     };
     const db = mockD1([
       {
@@ -90,14 +97,19 @@ describe("loadDewsRows", () => {
         matchBinds: [completedDewsAt],
         rows: [latestRow],
       },
+      {
+        match: "pharos:telegram-dispatch:dews-legacy",
+        matchBinds: [completedDewsAt],
+        rows: [legacyOnlyRow],
+      },
     ]);
 
     const rows = await loadDewsRows(db, nowSec);
 
-    expect(rows).toEqual([latestRow]);
+    expect(rows).toEqual([legacyOnlyRow, latestRow]);
     const history = db.getHistory();
     expect(history.some((entry) =>
       entry.sql.includes("pharos:telegram-dispatch:dews-legacy")
-    )).toBe(false);
+    )).toBe(true);
   });
 });
