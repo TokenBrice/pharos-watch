@@ -17,6 +17,7 @@ import { runBoundedQueue } from "./shared/bounded-queue";
  *       `telegram_preset_subscriptions`
  *       `telegram_pending_alerts`
  *       `telegram_pending_disambiguation`
+ *   - no `global_alert_*` flags are enabled on `telegram_subscribers`
  *
  * Cap at `MAX_DELETIONS_PER_RUN` per invocation so a large backlog cannot
  * push the daily-0300 slot past D1's per-statement budget. The cleanup is
@@ -68,6 +69,11 @@ async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: numb
           AND ps.chat_id IS NULL
           AND pa.chat_id IS NULL
           AND pd.chat_id IS NULL
+          AND s.global_alert_dews = 0
+          AND s.global_alert_depeg = 0
+          AND s.global_alert_safety = 0
+          AND s.global_alert_launch = 0
+          AND s.global_alert_reserve = 0
         ORDER BY s.last_active_at ASC
         LIMIT ?`,
     )

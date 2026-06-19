@@ -39,6 +39,11 @@ beforeEach(() => {
 interface SubscriberRow {
   chat_id: string;
   last_active_at: number;
+  global_alert_dews?: number;
+  global_alert_depeg?: number;
+  global_alert_safety?: number;
+  global_alert_launch?: number;
+  global_alert_reserve?: number;
 }
 
 interface ChildRow {
@@ -214,8 +219,14 @@ function createStubDb(state: StubState): D1Database {
             || state.presets.some((r) => r.chat_id === chatId)
             || state.pendingAlerts.some((r) => r.chat_id === chatId)
             || state.pendingDisambig.some((r) => r.chat_id === chatId);
+          const hasGlobalAlert = (sub: SubscriberRow) =>
+            sub.global_alert_dews === 1
+            || sub.global_alert_depeg === 1
+            || sub.global_alert_safety === 1
+            || sub.global_alert_launch === 1
+            || sub.global_alert_reserve === 1;
           const eligible = state.subscribers
-            .filter((sub) => sub.last_active_at < cutoffSec && !hasChild(sub.chat_id))
+            .filter((sub) => sub.last_active_at < cutoffSec && !hasChild(sub.chat_id) && !hasGlobalAlert(sub))
             .sort((a, b) => a.last_active_at - b.last_active_at)
             .slice(0, limit)
             .map((row) => ({ chat_id: row.chat_id }));
@@ -315,6 +326,51 @@ describe("runTelegramInactiveCleanup", () => {
       "has-pending-disambig",
       "has-preset",
       "has-sub",
+    ]);
+  });
+
+  it("preserves inactive subscribers that only have global alert flags", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    state.subscribers.push(
+      {
+        chat_id: "global-dews",
+        last_active_at: now - INACTIVE_RETENTION_SEC - 1,
+        global_alert_dews: 1,
+      },
+      {
+        chat_id: "global-depeg",
+        last_active_at: now - INACTIVE_RETENTION_SEC - 1,
+        global_alert_depeg: 1,
+      },
+      {
+        chat_id: "global-safety",
+        last_active_at: now - INACTIVE_RETENTION_SEC - 1,
+        global_alert_safety: 1,
+      },
+      {
+        chat_id: "global-launch",
+        last_active_at: now - INACTIVE_RETENTION_SEC - 1,
+        global_alert_launch: 1,
+      },
+      {
+        chat_id: "global-reserve",
+        last_active_at: now - INACTIVE_RETENTION_SEC - 1,
+        global_alert_reserve: 1,
+      },
+      { chat_id: "eligible", last_active_at: now - INACTIVE_RETENTION_SEC - 1 },
+    );
+    const db = createStubDb(state);
+
+    const result = await runTelegramInactiveCleanup(db);
+
+    expect(result.itemCount).toBe(1);
+    expect(state.subscribers.map((row) => row.chat_id).sort()).toEqual([
+      "global-depeg",
+      "global-dews",
+      "global-launch",
+      "global-reserve",
+      "global-safety",
     ]);
   });
 
