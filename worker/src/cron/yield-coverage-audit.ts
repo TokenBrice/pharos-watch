@@ -377,7 +377,7 @@ function buildSuggestedLendingAllowlistConfig(project: string): ProtocolRecommen
     targetFile: "worker/src/cron/yield-config-lending-protocols.ts",
     exportName: "LENDING_PROTOCOLS",
     anchor: ALLOWLIST_AUDIT_QUEUE_ANCHOR,
-    snippet: `  "${project}": { label: ${JSON.stringify(inferProtocolLabel(project))} },`,
+    snippet: `  ${JSON.stringify(project)}: { label: ${JSON.stringify(inferProtocolLabel(project))} },`,
     notes: [
       "Verify the display label before promoting.",
       "Keep the protocol near the audit-queue comment anchor for the current round.",

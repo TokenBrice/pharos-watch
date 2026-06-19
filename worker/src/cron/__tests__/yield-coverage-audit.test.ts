@@ -24,6 +24,14 @@ afterEach(() => {
   mockFetchEvmUint256AtBlock.mockReset();
 });
 
+function inferExpectedProtocolLabel(project: string): string {
+  return project
+    .split(/[-_.]+/u)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
 describe("buildProtocolCategoryLookupFromCachePayload", () => {
   it("parses raw cached DeFiLlama protocol payloads by normalized slug", () => {
     const lookup = buildProtocolCategoryLookupFromCachePayload({
@@ -233,6 +241,45 @@ describe("identifyCoverageGaps", () => {
     expect(gaps.lendingAllowlistRecommendations).not.toContainEqual(
       expect.objectContaining({ project: "morpho-blue" }),
     );
+  });
+
+  it("escapes provider slugs in suggested lending allowlist snippets", () => {
+    const maliciousProject = 'evil"\n  __pwned__: (() => { throw new Error("injected"); })(),\n  "tail';
+    const dlPools: DlPool[] = [
+      {
+        pool: "evil-usdc",
+        chain: "Ethereum",
+        project: maliciousProject,
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyReward: null,
+        apyMean30d: 4,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: null,
+      },
+    ];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      new Set(),
+      new Map([[maliciousProject.trim().toLowerCase(), "Lending"]]),
+    );
+
+    expect(gaps.lendingAllowlistRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: maliciousProject,
+        suggestedConfig: expect.objectContaining({
+          snippet: `  ${JSON.stringify(maliciousProject)}: { label: ${JSON.stringify(
+            inferExpectedProtocolLabel(maliciousProject),
+          )} },`,
+        }),
+      }),
+    );
+    expect(gaps.lendingAllowlistRecommendations[0]?.suggestedConfig?.snippet).toMatch(/^  "evil\\"/u);
   });
 
   it("drives lending allowlist recommendations from the high-TVL queue and category gate", () => {
