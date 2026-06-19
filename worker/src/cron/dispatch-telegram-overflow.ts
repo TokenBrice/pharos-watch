@@ -115,6 +115,36 @@ export async function readOverflowPlanBacklog(
   }
 }
 
+export async function pruneOverflowPlanBacklogForChat(
+  db: D1Database,
+  chatId: string,
+  nowSec: number,
+): Promise<void> {
+  const cached = await getCache(db, OVERFLOW_PLAN_CACHE_KEY);
+  if (!cached) return;
+  try {
+    const parsed = JSON.parse(cached.value) as unknown;
+    if (!isRecord(parsed) || parsed.version !== OVERFLOW_PLAN_CACHE_VERSION || !Array.isArray(parsed.plans)) {
+      return;
+    }
+    const remainingPlans = parsed.plans
+      .map((plan) => normalizeCachedOverflowPlan(plan, nowSec))
+      .filter((plan): plan is OverflowPlannedSubscriberAlert => plan != null && plan.chatId !== chatId);
+    if (remainingPlans.length === parsed.plans.length) return;
+    await setCache(
+      db,
+      OVERFLOW_PLAN_CACHE_KEY,
+      JSON.stringify({
+        version: OVERFLOW_PLAN_CACHE_VERSION,
+        writtenAt: nowSec,
+        plans: remainingPlans,
+      }),
+    );
+  } catch {
+    return;
+  }
+}
+
 function withOverflowPlanExpiry(plan: PlannedSubscriberAlert, nowSec: number): OverflowPlannedSubscriberAlert {
   const existingExpiresAt = finiteNumber((plan as OverflowPlannedSubscriberAlert).expiresAt);
   return {

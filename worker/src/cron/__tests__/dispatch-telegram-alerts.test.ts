@@ -66,6 +66,7 @@ vi.mock("../../lib/telegram-alerts", async (importOriginal) => {
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
 const { deliverTelegramSubscriberQueue } = await import("../dispatch-telegram-delivery");
+const { pruneOverflowPlanBacklogForChat } = await import("../dispatch-telegram-overflow");
 const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending");
 const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE } = await import(
   "../../lib/telegram-constants"
@@ -485,6 +486,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "GROUP BY chat_id", rows: [] },
+      { match: "SELECT s.chat_id", rows: [{ chat_id: overflowPlan.chatId, dews_active: 1 }] },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "UPDATE telegram_alert_job_targets", rows: [] },
     ]);
@@ -514,6 +516,64 @@ describe("dispatchTelegramAlerts", () => {
       plans: unknown[];
     };
     expect(overflowBacklog.plans).toHaveLength(0);
+  });
+
+  it("prunes forgotten chats from the stored overflow plan backlog", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const forgottenPlan = makeDewsOverflowPlan(now, "chat-forgotten");
+    const keptPlan = makeDewsOverflowPlan(now, "chat-kept");
+
+    mockGetCache.mockResolvedValue({
+      value: JSON.stringify({
+        version: 1,
+        writtenAt: now - 60,
+        plans: [
+          { ...forgottenPlan, expiresAt: now + 3600 },
+          { ...keptPlan, expiresAt: now + 3600 },
+        ],
+      }),
+      updatedAt: now - 60,
+    });
+
+    await pruneOverflowPlanBacklogForChat(mockD1([]), "chat-forgotten", now);
+
+    const overflowBacklogWrite = mockSetCache.mock.calls.find((call) =>
+      call[1] === "telegram:dispatch-overflow-plan"
+    );
+    expect(overflowBacklogWrite).toBeDefined();
+    const overflowBacklog = JSON.parse(String(overflowBacklogWrite?.[2])) as {
+      plans: Array<{ chatId: string }>;
+    };
+    expect(overflowBacklog.plans.map((plan) => plan.chatId)).toEqual(["chat-kept"]);
+  });
+
+  it("does not enqueue cached overflow plans for chats without active subscriptions", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const overflowPlan = makeDewsOverflowPlan(now, "chat-forgotten");
+
+    const db = mockD1([
+      { match: "SELECT s.chat_id", rows: [] },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+    ]);
+
+    const result = await deliverTelegramSubscriberQueue({
+      db,
+      subscriberQueue: [],
+      overflowPlanned: [overflowPlan],
+      overflowFormatBudget: 1,
+      botToken: "bot-token",
+      drainResult: emptyDrainResult(),
+      maxMessagesPerRun: 10,
+      nowSec: now,
+      chatsInBackoff: new Map(),
+      globalBackoffUntil: null,
+      dispatchStartedAtMs: Date.now(),
+    });
+
+    expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
+    expect(result.pendingEnqueued).toBe(0);
+    expect(result.remainingOverflowPlanned).toEqual([]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
   });
 
   it("still drains due pending rows during an otherwise eventless run", async () => {

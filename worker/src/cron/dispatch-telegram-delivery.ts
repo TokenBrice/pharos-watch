@@ -88,6 +88,82 @@ function selectOverflowPlansToFormat(
   return { toFormat, remaining };
 }
 
+function overflowSubscriberPlanKey(plan: PlannedSubscriberAlert): string {
+  return `${plan.chatId}\0${plan.alertType}`;
+}
+
+type ActiveOverflowSubscriberRow = {
+  chat_id: string;
+  dews_active: number | null;
+  depeg_active: number | null;
+  safety_active: number | null;
+  launch_active: number | null;
+  reserve_active: number | null;
+};
+
+async function loadActiveOverflowSubscriberPlanKeys(
+  db: D1Database,
+  plans: readonly PlannedSubscriberAlert[],
+): Promise<Set<string>> {
+  const chatIds = Array.from(new Set(plans.map((plan) => plan.chatId)));
+  const activePlanKeys = new Set<string>();
+  if (chatIds.length === 0) return activePlanKeys;
+  for (const chatIdChunk of chunkArray(chatIds)) {
+    const inClause = buildInClause(chatIdChunk);
+    const rows = await db
+      .prepare(
+        `SELECT s.chat_id,
+                CASE WHEN s.global_alert_dews = 1 OR EXISTS (
+                  SELECT 1 FROM telegram_subscriptions sub
+                   WHERE sub.chat_id = s.chat_id AND sub.alert_dews = 1
+                ) OR EXISTS (
+                  SELECT 1 FROM telegram_preset_subscriptions preset
+                   WHERE preset.chat_id = s.chat_id AND preset.alert_dews = 1
+                ) THEN 1 ELSE 0 END AS dews_active,
+                CASE WHEN s.global_alert_depeg = 1 OR EXISTS (
+                  SELECT 1 FROM telegram_subscriptions sub
+                   WHERE sub.chat_id = s.chat_id AND sub.alert_depeg = 1
+                ) OR EXISTS (
+                  SELECT 1 FROM telegram_preset_subscriptions preset
+                   WHERE preset.chat_id = s.chat_id AND preset.alert_depeg = 1
+                ) THEN 1 ELSE 0 END AS depeg_active,
+                CASE WHEN s.global_alert_safety = 1 OR EXISTS (
+                  SELECT 1 FROM telegram_subscriptions sub
+                   WHERE sub.chat_id = s.chat_id AND sub.alert_safety = 1
+                ) OR EXISTS (
+                  SELECT 1 FROM telegram_preset_subscriptions preset
+                   WHERE preset.chat_id = s.chat_id AND preset.alert_safety = 1
+                ) THEN 1 ELSE 0 END AS safety_active,
+                CASE WHEN s.global_alert_launch = 1 OR EXISTS (
+                  SELECT 1 FROM telegram_subscriptions sub
+                   WHERE sub.chat_id = s.chat_id AND sub.alert_launch = 1
+                ) OR EXISTS (
+                  SELECT 1 FROM telegram_preset_subscriptions preset
+                   WHERE preset.chat_id = s.chat_id AND preset.alert_launch = 1
+                ) THEN 1 ELSE 0 END AS launch_active,
+                CASE WHEN s.global_alert_reserve = 1 OR EXISTS (
+                  SELECT 1 FROM telegram_subscriptions sub
+                   WHERE sub.chat_id = s.chat_id AND sub.alert_reserve = 1
+                ) OR EXISTS (
+                  SELECT 1 FROM telegram_preset_subscriptions preset
+                   WHERE preset.chat_id = s.chat_id AND preset.alert_reserve = 1
+                ) THEN 1 ELSE 0 END AS reserve_active
+           FROM telegram_subscribers s
+          WHERE s.chat_id IN (${inClause.sql})`,
+      )
+      .bind(...inClause.binds)
+      .all<ActiveOverflowSubscriberRow>();
+    for (const row of rows.results ?? []) {
+      if (row.dews_active === 1) activePlanKeys.add(`${row.chat_id}\0dews`);
+      if (row.depeg_active === 1) activePlanKeys.add(`${row.chat_id}\0depeg`);
+      if (row.safety_active === 1) activePlanKeys.add(`${row.chat_id}\0safety`);
+      if (row.launch_active === 1) activePlanKeys.add(`${row.chat_id}\0launch`);
+      if (row.reserve_active === 1) activePlanKeys.add(`${row.chat_id}\0reserve`);
+    }
+  }
+  return activePlanKeys;
+}
+
 async function loadExistingPendingAttempts(
   db: D1Database,
   messages: readonly BatchMessage[],
@@ -253,8 +329,10 @@ export async function deliverTelegramSubscriberQueue({
     remaining: remainingOverflowPlanned,
   } = selectOverflowPlansToFormat(overflowPlanned, overflowFormatBudget);
   let overflowTailMessageCount = 0;
+  const activeOverflowPlanKeys = await loadActiveOverflowSubscriberPlanKeys(db, overflowPlansToFormat);
   for (const overflowPlan of overflowPlansToFormat) {
     throwIfAborted(signal);
+    if (!activeOverflowPlanKeys.has(overflowSubscriberPlanKey(overflowPlan))) continue;
     const overflow = formatPlannedSubscriber(overflowPlan, resolveDisableNotification);
     if (blockedChats.has(overflow.chatId)) continue;
     const overflowTailMessages = filterTerminalMessages(expandSubscriberChunks([overflow], blockedChats));
