@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
-import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
+import { MobileMetricPill, MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
@@ -457,20 +457,20 @@ export function YieldMobileCard({
         <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
-        <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
+        <MobileMetricPill>
           TVL <span className="font-mono tabular-nums text-foreground">{tvlLabel}</span>
-        </span>
+        </MobileMetricPill>
         {stabilityPct !== null ? (
-          <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
+          <MobileMetricPill>
             Stability <span className="font-mono tabular-nums text-foreground">{stabilityPct}%</span>
-          </span>
+          </MobileMetricPill>
         ) : null}
         {freshness ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className={`cursor-help rounded-full border border-border/60 bg-background/55 px-2 py-1 ${freshness.textClassName}`}>
+              <MobileMetricPill className={`cursor-help ${freshness.textClassName}`}>
                 Updated {freshness.relativeText}
-              </span>
+              </MobileMetricPill>
             </TooltipTrigger>
             <TooltipContent className="text-[11px]">
               Source observed {freshness.relativeText} ({freshness.tier})

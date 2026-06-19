@@ -344,15 +344,9 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         ) : (
           <span className="rounded-full border border-border/60 px-2 py-1">Grade —</span>
         )}
-        <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
-          Peg <ScoreValue value={row.pegScore} />
-        </span>
-        <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
-          DEWS <ScoreValue value={row.dewsScore} />
-        </span>
-        <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
-          Liq <ScoreValue value={row.liquidityScore} />
-        </span>
+        <MobileMetricPill>Peg <ScoreValue value={row.pegScore} /></MobileMetricPill>
+        <MobileMetricPill>DEWS <ScoreValue value={row.dewsScore} /></MobileMetricPill>
+        <MobileMetricPill>Liq <ScoreValue value={row.liquidityScore} /></MobileMetricPill>
         <MintAuthorityScoreBadge row={row} />
       </div>
 

@@ -4,6 +4,22 @@ import type { ReactNode } from "react";
 
 type SortDirection = "asc" | "desc";
 
+/** Compact metric pill used in mobile card rows. Accepts an optional className
+ *  for color overrides (e.g. freshness text colour) — pass static literals. */
+export function MobileMetricPill({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span className={`rounded-full border border-border/60 bg-background/55 px-2 py-1${className ? ` ${className}` : ""}`}>
+      {children}
+    </span>
+  );
+}
+
 /** Card shell wrapping mobile sort controls. Keeps the repeated
  *  rounded-xl border border-border/70 bg-card/80 px-3 py-3 in one place. */
 export function MobileSortPanel({ kicker, children }: { kicker: string; children: ReactNode }) {
