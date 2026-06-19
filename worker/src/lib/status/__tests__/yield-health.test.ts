@@ -495,6 +495,38 @@ describe("loadYieldHealthSummary", () => {
     });
   });
 
+  it("rejects fresh non-object ranking cache payloads as missing rankings", async () => {
+    for (const value of ["[]", "0", "true", JSON.stringify("text")]) {
+      const summary = await loadYieldHealthSummary(
+        makeDb([
+          {
+            key: "yield-rankings",
+            updated_at: NOW - 60,
+            value,
+          },
+          {
+            key: "yield:supplemental-sources:v1:morpho",
+            updated_at: NOW - 60,
+            value: "[]",
+          },
+          {
+            key: "yield-coverage-audit",
+            updated_at: NOW - 60,
+            value: "true",
+          },
+        ]),
+        NOW,
+        { "sync-yield-data": cron() },
+      );
+
+      expect(summary.rankingStatus).toBe("stale");
+      expect(summary.statusImpact).toBe("public-critical");
+      expect(summary.rankingCount).toBeNull();
+      expect(summary.supplemental.families?.morpho?.sourceCount).toBeNull();
+      expect(summary.coverageAudit.manifestMissingCount).toBeNull();
+    }
+  });
+
   it("keeps sparse non-ranking signals as admin watch and marks missing rankings public critical", async () => {
     const summary = await loadYieldHealthSummary(makeDb([]), NOW, { "sync-yield-data": cron("error") });
 
