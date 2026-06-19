@@ -8,6 +8,7 @@ import {
 } from "@shared/types/status";
 import { getCache, setCache } from "../lib/db-cache";
 import {
+  coerceCount,
   computeTelegramCurrentLifecycleSnapshot,
   loadTelegramLifecycleHistory,
   loadTelegramTopFollowedCoins,
@@ -67,11 +68,6 @@ const ACTIVE_PRESET_COUNTS_SQL = `SELECT chat_id,
         ) AS active_preset_count
    FROM telegram_preset_subscriptions
   GROUP BY chat_id`;
-
-function coerceCount(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
 
 function shouldSuppressLowCardinality(value: number): boolean {
   return value > 0 && value < PUBLIC_LOW_CARDINALITY_THRESHOLD;
@@ -180,7 +176,7 @@ async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatch
   let cumulativeWatchers = 0;
   return (historyRows.results ?? [])
     .map((row) => {
-      const newWatchers = Math.max(0, coerceCount(row.new_watchers));
+      const newWatchers = coerceCount(row.new_watchers);
       cumulativeWatchers += newWatchers;
       return {
         date: row.day ?? "",

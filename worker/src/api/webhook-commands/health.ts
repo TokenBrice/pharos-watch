@@ -1,7 +1,7 @@
 import { escapeHtml } from "../../lib/telegram";
 import { isPausedSentinel } from "../../lib/telegram-constants";
 import { formatTelegramAge } from "../../lib/telegram-format-age";
-import { loadTelegramChatHealthDiagnostics } from "../../lib/telegram-usage-analytics";
+import { coerceCount, loadTelegramChatHealthDiagnostics } from "../../lib/telegram-usage-analytics";
 import { isQuietHoursActive } from "../../cron/telegram-quiet-hours";
 import {
   buildMiniAppOnlyKeyboard,
@@ -25,11 +25,6 @@ interface RecentPendingFailureRow {
 
 interface ExplicitActiveCountRow {
   active_count: number | string | null;
-}
-
-function coerceCount(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value ?? 0);
-  return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
 }
 
 function formatAge(ts: number | null, nowSec: number): string {

@@ -173,12 +173,12 @@ const ACTIVE_WATCHER_CONDITION = `s.global_alert_dews = 1
   OR COALESCE(sub.active_sub_count, 0) > 0
   OR COALESCE(preset.active_preset_count, 0) > 0`;
 
-function coerceCount(value: unknown): number {
+export function coerceCount(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value ?? 0);
   return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
 }
 
-function coerceNullableTimestamp(value: unknown): number | null {
+export function coerceNullableTimestamp(value: unknown): number | null {
   if (value == null) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;

@@ -1,7 +1,10 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { TelegramBotStats } from "@shared/types/status";
+import { formatIsoDate } from "@shared/lib/format";
 import { toErrorMessage } from "../error-utils";
 import {
+  coerceCount,
+  coerceNullableTimestamp,
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
   type TelegramCurrentLifecycleSnapshot,
@@ -285,17 +288,6 @@ const TELEGRAM_MINI_APP_DAILY_AGGREGATE_SQL = `SELECT
   SUM(CASE WHEN event_type = 'mini_app_mutation_denied' AND failure_class = 'replayed-auth' THEN count ELSE 0 END) AS mini_app_replay_claimed
 FROM telegram_usage_daily
 WHERE day = ?`;
-function coerceCount(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function coerceNullableTimestamp(value: unknown): number | null {
-  if (value == null) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function roundMetric(value: unknown, digits = 2): number {
   const parsed = Number(value ?? 0);
   if (!Number.isFinite(parsed)) return 0;
@@ -359,7 +351,7 @@ async function loadTelegramRetryErrorClasses(db: D1Database): Promise<TelegramBo
 }
 
 export function utcDayFromUnixSeconds(nowSec: number): string {
-  return new Date(nowSec * 1000).toISOString().slice(0, 10);
+  return formatIsoDate(nowSec);
 }
 
 export async function loadTelegramMiniAppDailyAggregate(
