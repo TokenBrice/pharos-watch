@@ -1,4 +1,5 @@
 import {
+  hasTerminalEvidence,
   reviewDepegResolverAssessments,
   reviewDdrrV2Rows,
   summarizeDdrrRows,
@@ -603,7 +604,7 @@ function assessmentFromNoCall(
 
 function sourceEventState(actual: DdrrActualEvent | null): DdrrV2CoverageInput["sourceEventState"] {
   if (!actual) return "missing";
-  if (actual.terminalObserved === true || isTerminalStablecoinStatus(actual.stablecoinStatus)) return "terminal";
+  if (hasTerminalEvidence(actual)) return "terminal";
   if (actual.endedAt != null && actual.recoveryPrice != null) return "recovered";
   if (actual.endedAt != null) return "orphan_closed";
   return "active";
@@ -629,8 +630,7 @@ function hasTerminalBeforeEligibility(actual: DdrrActualEvent | null, eligibleAt
 }
 
 function hasTerminalStatusOrEvidence(actual: DdrrActualEvent | null): boolean {
-  if (!actual) return false;
-  return actual.terminalObserved === true || isTerminalStablecoinStatus(actual.stablecoinStatus);
+  return actual != null && hasTerminalEvidence(actual);
 }
 
 function terminalEvidenceSourceDate(actual: DdrrActualEvent | null): string | null {
