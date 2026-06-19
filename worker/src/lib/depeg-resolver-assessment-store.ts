@@ -139,6 +139,25 @@ function checkpointsForAge(ageSec: number): DdrAssessmentCheckpoint[] {
   return checkpoints;
 }
 
+function formatNonConformingAssessmentSample(row: unknown): string {
+  try {
+    return JSON.stringify(row);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    try {
+      if (row != null && typeof row === "object") {
+        const allKeys = Object.keys(row);
+        const keys = allKeys.slice(0, 10);
+        const suffix = allKeys.length > keys.length ? ",…" : "";
+        return `[unserializable ${Object.prototype.toString.call(row)} keys=${keys.join(",")}${suffix}; ${errorMessage}]`;
+      }
+    } catch {
+      // Fall through to the generic formatter when even object introspection is unsafe.
+    }
+    return `[unserializable ${typeof row}; ${errorMessage}]`;
+  }
+}
+
 function isDiagnosticAssessmentRow(row: unknown): row is DdrDiagnosticAssessmentRow {
   if (!row || typeof row !== "object") return false;
   const candidate = row as Partial<DdrDiagnosticAssessmentRow>;
@@ -291,7 +310,7 @@ export async function writeDepegResolverAssessments(
     const droppedCount = snapshot.rows.length - diagnosticRows.length;
     const sampleRow = snapshot.rows.find((row) => !isDiagnosticAssessmentRow(row));
     console.warn(
-      `[ddr-assessment-store] Dropped ${droppedCount}/${snapshot.rows.length} non-conforming assessment rows (failed isDiagnosticAssessmentRow); sample shape: ${JSON.stringify(sampleRow)}`,
+      `[ddr-assessment-store] Dropped ${droppedCount}/${snapshot.rows.length} non-conforming assessment rows (failed isDiagnosticAssessmentRow); sample shape: ${formatNonConformingAssessmentSample(sampleRow)}`,
     );
   }
   if (diagnosticRows.length === 0) return 0;
