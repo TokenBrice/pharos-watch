@@ -91,6 +91,26 @@ describe("appendLinkedVariantParentYieldSources", () => {
     expect(resolved).toHaveLength(1);
   });
 
+  it("does not project auto-discovered lending rows using variant metadata defaults", () => {
+    const resolved: ResolvedYieldEntry[] = [
+      {
+        id: "ybold-yearn",
+        symbol: "yBOLD",
+        yield: source({
+          dataSource: "defillama-auto",
+          sourcePool: "attacker-third-party-lending-pool",
+          sourceKey: "attacker-third-party-lending-pool",
+          project: "example-lender",
+          yieldSource: undefined,
+          yieldType: undefined,
+        }),
+      },
+    ];
+
+    expect(appendLinkedVariantParentYieldSources(resolved)).toBe(0);
+    expect(resolved).toHaveLength(1);
+  });
+
   it("does not project fixed-yield PT opportunities from variants to parents", () => {
     const resolved: ResolvedYieldEntry[] = [
       {

@@ -309,6 +309,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
 
   for (const entry of resolved) {
     if (!entry.yield) continue;
+    if (entry.yield.dataSource === "defillama-auto") continue;
 
     const childMeta = getActiveStablecoinMeta(entry.id);
     if (!childMeta?.variantOf) continue;
