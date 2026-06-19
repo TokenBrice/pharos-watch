@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { TableCell, TableRow } from "@/components/table";
 import { DataTableEmptyRow, DataTableLoadingRows, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
-import { MobileSortPills } from "@/components/mobile-sort-pills";
+import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -154,12 +154,9 @@ export function BlacklistTable({
   return (
     <TooltipProvider delayDuration={220}>
       <div className="space-y-3 md:hidden">
-        <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
+        <MobileSortPanel kicker="Event Cards">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="pharos-kicker">Event Cards</p>
-              <p className="text-xs text-muted-foreground">Sorted by {sortKey} {sortDirection === "asc" ? "ascending" : "descending"}.</p>
-            </div>
+            <p className="text-xs text-muted-foreground">Sorted by {sortKey} {sortDirection === "asc" ? "ascending" : "descending"}.</p>
             <Button
               variant="outline"
               size="sm"
@@ -179,7 +176,7 @@ export function BlacklistTable({
             ariaLabel="Sort freeze events"
             className="mt-3 flex flex-wrap gap-2"
           />
-        </div>
+        </MobileSortPanel>
         {events.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground">
             No freeze events match your filters.

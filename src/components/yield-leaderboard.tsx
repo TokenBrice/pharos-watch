@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
-import { MobileSortPills } from "@/components/mobile-sort-pills";
+import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
 import { TablePagination } from "@/components/table-pagination";
@@ -206,8 +206,7 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
         />
       ) : null}
       <div className="space-y-3 md:hidden">
-        <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-          <p className="pharos-kicker mb-2">Sort Leaderboard</p>
+        <MobileSortPanel kicker="Sort Leaderboard">
           <MobileSortPills
             options={MOBILE_SORT_OPTIONS}
             sortKey={sortKey}
@@ -215,7 +214,7 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
             onSort={toggleSort}
             ariaLabel="Sort yield leaderboard"
           />
-        </div>
+        </MobileSortPanel>
 
         {sorted.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground">

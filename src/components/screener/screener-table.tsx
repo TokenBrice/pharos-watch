@@ -8,7 +8,7 @@ import {
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
-import { MobileSortPills } from "@/components/mobile-sort-pills";
+import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
 import { TableCell, TableRow } from "@/components/table";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -172,8 +172,7 @@ export function ScreenerTable({
   if (isMobileLayout) {
     return (
       <div className="space-y-3">
-        <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-          <p className="pharos-kicker mb-2">Sort Results</p>
+        <MobileSortPanel kicker="Sort Results">
           <MobileSortPills
             options={MOBILE_SORT_OPTIONS}
             sortKey={sort.sortKey}
@@ -181,7 +180,7 @@ export function ScreenerTable({
             onSort={sort.toggleSort}
             ariaLabel="Sort screener results"
           />
-        </div>
+        </MobileSortPanel>
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }, (_, index) => (
@@ -248,14 +247,13 @@ export function ScreenerTable({
 function ScreenerLayoutPending() {
   return (
     <div data-testid="stablecoin-screener-layout-pending" className="space-y-3">
-      <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-        <p className="pharos-kicker mb-2">Sort Results</p>
+      <MobileSortPanel kicker="Sort Results">
         <div className="flex flex-wrap gap-2" aria-hidden="true">
           {MOBILE_SORT_OPTIONS.map((option) => (
             <span key={option.key} className="h-8 w-16 animate-pulse rounded-full bg-muted/40" />
           ))}
         </div>
-      </div>
+      </MobileSortPanel>
       <div className="space-y-3">
         {Array.from({ length: 5 }, (_, index) => (
           <div key={index} className="pharos-card-shell h-28 animate-pulse rounded-xl bg-muted/20" />
