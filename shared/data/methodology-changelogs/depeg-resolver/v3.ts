@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.02",
+    title: "Close-gap Tail Grouping and Superseded Alias Review",
+    date: "2026-06-19",
+    effectiveAt: 1781827200,
+    summary:
+      "DDR incident grouping now treats live reopens inside the documented close-gap merge window as the same canonical incident even when the original start is days old, and DDRR follows superseded duplicate aliases to the current source event.",
+    impact: [
+      "Sealed live tails can be adopted when they reopen within 6 hours of the prior current source event closing",
+      "Duplicate sealed incidents can be superseded through append-only errata and lineage while downstream reads resolve to the canonical incident key",
+      "DDRR evaluates repaired canonical predictions against the effective current source event instead of scoring an older closed fragment as recovered",
+      "The APXUSD June 2026 duplicate prediction is invalidated and treated as an alias of the unresolved June 2 incident",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.01",
     title: "Live Context Input Wiring",
     date: "2026-06-06",

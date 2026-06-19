@@ -129,6 +129,8 @@ function mapStoreIncident(row: StoreDdrCanonicalIncident): DdrCanonicalIncident 
     eligibleAt: row.eligibleAt,
     policyUniverseIncluded: row.policyUniverseIncluded,
     rolloutActiveAtEnablement: row.rolloutActiveAtEnablement,
+    incidentState: row.incidentState,
+    supersededByIncidentKey: row.supersededByIncidentKey,
     confirmedAt: row.confirmedAt,
     lockState: row.lockState,
   };

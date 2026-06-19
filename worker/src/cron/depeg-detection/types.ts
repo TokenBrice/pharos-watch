@@ -16,6 +16,7 @@ export interface DexPoolChallenger {
   protocol: string;
   chain: string;
   observedAt?: number;
+  sourceFamily?: string;
 }
 
 export interface HydratedDepegDetection {

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.092",
+    title: "Pool-challenged recoveries keep active depegs open",
+    date: "2026-06-19",
+    effectiveAt: 1781827200,
+    summary:
+      "Live depeg detection now rejects an in-band primary recovery print when qualifying individual DEX pool challengers still show the existing depeg direction.",
+    impact: [
+      "A single high-TVL pool (>= $5M) or at least two independent protocol/source-family pool groups can veto primary-price recovery closure",
+      "This covers cases where aggregate off-chain prices briefly print near peg while a large venue remains materially depegged",
+      "Small single-pool disagreements remain advisory and do not block authoritative primary recovery by themselves",
+      "The change hardens long-running incidents such as the APXUSD June 2026 underpeg against transient near-$1 blips",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.091",
     title: "DEX-contradicted recoveries keep active depegs open",
     date: "2026-06-16",

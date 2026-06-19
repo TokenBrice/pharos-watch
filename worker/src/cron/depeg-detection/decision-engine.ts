@@ -9,10 +9,13 @@ import {
   DEPEG_EXTREME_MOVE_BPS,
   DEPEG_SECONDARY_THRESHOLD_RATIO,
   getDepegThresholdBps,
+  POOL_CHALLENGE_CONFIRM_MIN,
+  POOL_CHALLENGE_HIGH_TVL_USD,
 } from "../../lib/constants";
 import {
   buildPendingReason,
   countDexProtocolCorroborations,
+  dexPoolIndependentGroupKey,
   isExtremeMovePending,
   type DepegRow,
   type DexPriceRow,
@@ -59,6 +62,9 @@ interface DecisionContext {
   dexExistingDirectionProtocolCount: number;
   dexRecoveryProtocolCount: number;
   dexRecoveryChallenged: boolean;
+  poolRecoveryVeto: boolean;
+  poolRecoveryVetoGroupCount: number;
+  poolRecoveryVetoHighTvl: boolean;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
   dexSupportsSecondaryBarDirection: boolean;
@@ -111,6 +117,35 @@ function hasRecoveryChallenge(
     const signal = deriveDepegSignal(pool.price, pegRef);
     return signal != null && signalCrossesThreshold(signal, threshold) && signal.direction === depegDirection;
   });
+}
+
+function derivePoolRecoveryVeto(params: {
+  challengers: DexPoolChallenger[] | undefined;
+  pegRef: number;
+  threshold: number;
+  depegDirection: DepegDirection;
+}): { veto: boolean; groupCount: number; highTvl: boolean } {
+  const groups = new Set<string>();
+  let highTvl = false;
+  for (const pool of params.challengers ?? []) {
+    const signal = deriveDepegSignal(pool.price, params.pegRef);
+    if (
+      signal == null ||
+      !signalCrossesThreshold(signal, params.threshold) ||
+      signal.direction !== params.depegDirection
+    ) {
+      continue;
+    }
+    groups.add(dexPoolIndependentGroupKey(pool));
+    if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
+      highTvl = true;
+    }
+  }
+  return {
+    veto: highTvl || groups.size >= POOL_CHALLENGE_CONFIRM_MIN,
+    groupCount: groups.size,
+    highTvl,
+  };
 }
 
 function buildLiveEventCommand(
@@ -192,6 +227,9 @@ interface DexEvidence {
   dexExistingDirectionProtocolCount: number;
   dexRecoveryProtocolCount: number;
   dexRecoveryChallenged: boolean;
+  poolRecoveryVeto: boolean;
+  poolRecoveryVetoGroupCount: number;
+  poolRecoveryVetoHighTvl: boolean;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
   dexSupportsSecondaryBarDirection: boolean;
@@ -230,6 +268,12 @@ function deriveDexEvidence(params: {
   const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "recover");
   const recoveryVetoDirection: DepegDirection = existingDirection;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
+  const poolRecoveryVetoEvidence = derivePoolRecoveryVeto({
+    challengers: input.challengerPools,
+    pegRef,
+    threshold,
+    depegDirection: recoveryVetoDirection,
+  });
   const dexSupportsDirection =
     dexSignal != null &&
     signalCrossesThreshold(dexSignal, threshold) &&
@@ -256,6 +300,9 @@ function deriveDexEvidence(params: {
     dexExistingDirectionProtocolCount,
     dexRecoveryProtocolCount,
     dexRecoveryChallenged,
+    poolRecoveryVeto: poolRecoveryVetoEvidence.veto,
+    poolRecoveryVetoGroupCount: poolRecoveryVetoEvidence.groupCount,
+    poolRecoveryVetoHighTvl: poolRecoveryVetoEvidence.highTvl,
     dexSupportsDirection,
     dexSupportsExistingDirection,
     dexSupportsSecondaryBarDirection,
@@ -334,6 +381,9 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     dexExistingDirectionProtocolCount,
     dexRecoveryProtocolCount,
     dexRecoveryChallenged,
+    poolRecoveryVeto,
+    poolRecoveryVetoGroupCount,
+    poolRecoveryVetoHighTvl,
     dexSupportsDirection,
     dexSupportsExistingDirection,
     dexSupportsSecondaryBarDirection,
@@ -380,6 +430,9 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       dexExistingDirectionProtocolCount,
       dexRecoveryProtocolCount,
       dexRecoveryChallenged,
+      poolRecoveryVeto,
+      poolRecoveryVetoGroupCount,
+      poolRecoveryVetoHighTvl,
       dexSupportsDirection,
       dexSupportsExistingDirection,
       dexSupportsSecondaryBarDirection,
@@ -620,6 +673,9 @@ function decideRecovery(
     dexExistingDirectionProtocolCount,
     dexRecoveryProtocolCount,
     dexRecoveryChallenged,
+    poolRecoveryVeto,
+    poolRecoveryVetoGroupCount,
+    poolRecoveryVetoHighTvl,
     dexSupportsExistingDirection,
     dexSupportsRecovery,
   } = ctx;
@@ -627,7 +683,11 @@ function decideRecovery(
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
 
-  if (primarySupportsRecovery && !(isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection)) {
+  if (
+    primarySupportsRecovery &&
+    !(isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) &&
+    !poolRecoveryVeto
+  ) {
     // Price recovered - close the event.
     commands.push({
       type: "close-event",
@@ -652,6 +712,13 @@ function decideRecovery(
         `[depeg] Kept ${asset.symbol} open despite primary recovery: ` +
         `primary recovery is contradicted by ${dexExistingDirectionProtocolCount} ` +
         `DEX protocol group(s) still showing the ${existing.direction} depeg`,
+      ));
+    } else if (poolRecoveryVeto) {
+      diagnostics.push(withDiagnostic(
+        "warn",
+        `[depeg] Kept ${asset.symbol} open despite primary recovery: ` +
+        `pool challengers still show the ${existing.direction} depeg ` +
+        `(groups=${poolRecoveryVetoGroupCount}, highTvl=${poolRecoveryVetoHighTvl})`,
       ));
     } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
       diagnostics.push(withDiagnostic(

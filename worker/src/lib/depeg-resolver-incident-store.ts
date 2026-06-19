@@ -46,6 +46,7 @@ export type DdrLockAuditAction =
 
 // Unix ts for 2100-01-01T00:00:00Z; far-future sentinel = effectively non-expiring.
 const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
+const DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC = 6 * 3600;
 const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
 const AUTOMATED_SEALED_TAIL_LINK_NOTE = "sealed incident live tail linked through automated repair authorization";
 const AUTOMATED_SEALED_TAIL_CURRENT_REASON = "sealed incident live tail adopted as current source event";
@@ -451,10 +452,45 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
     },
   );
 
+  const supersededRows = rows.filter((row) =>
+    row.event_id != null &&
+    row.incident_state === "superseded" &&
+    row.superseded_by_incident_key != null,
+  );
+  const supersedingByKey = supersededRows.length > 0
+    ? new Map(
+        (await loadCanonicalIncidents(db, {
+          incidentKeys: supersededRows.map((row) => row.superseded_by_incident_key!),
+          policyDelaySec,
+        })).map((incident) => [incident.incidentKey, incident]),
+      )
+    : new Map<string, DdrCanonicalIncident>();
+
   for (const row of rows) {
-    if (row.event_id != null) linked.set(row.event_id, mapIncidentRow(row, policyDelaySec));
+    if (row.event_id == null) continue;
+    const incident = mapIncidentRow(row, policyDelaySec);
+    const superseding = row.superseded_by_incident_key
+      ? supersedingByKey.get(row.superseded_by_incident_key)
+      : undefined;
+    if (row.incident_state === "superseded" && superseding) {
+      linked.set(row.event_id, {
+        ...superseding,
+        eventId: row.event_id,
+        relation: row.relation,
+        currentEventId: incident.currentEventId,
+        currentStartedAt: incident.currentStartedAt,
+        startedAt: superseding.firstStartedAt,
+        eligibleAt: supersedingEligibleAt(superseding, policyDelaySec),
+      });
+      continue;
+    }
+    linked.set(row.event_id, incident);
   }
   return linked;
+}
+
+function supersedingEligibleAt(incident: DdrCanonicalIncident, policyDelaySec: number): number {
+  return incident.firstStartedAt + policyDelaySec;
 }
 
 async function insertNewIncident(
@@ -546,14 +582,39 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
        WHERE i.stablecoin_id = ?
          AND i.peg_currency = ?
          AND i.direction = ?
-         AND ABS(i.current_started_at - ?) <= ?
+         AND i.incident_state = 'active'
+         AND (
+           ABS(i.current_started_at - ?) <= ?
+           OR EXISTS (
+             SELECT 1
+             FROM depeg_events current_event
+             WHERE current_event.id = i.current_event_id
+               AND current_event.ended_at IS NOT NULL
+               AND ? >= current_event.ended_at
+               AND ? - current_event.ended_at <= ?
+           )
+         )
          AND NOT EXISTS (
            SELECT 1
            FROM depeg_resolver_incident_event_links l
            WHERE l.incident_key = i.incident_key
              AND l.event_id = ?
          )
-       ORDER BY ABS(i.current_started_at - ?) ASC, i.created_at ASC
+       ORDER BY
+         CASE
+           WHEN EXISTS (
+             SELECT 1
+             FROM depeg_events current_event
+             WHERE current_event.id = i.current_event_id
+               AND current_event.ended_at IS NOT NULL
+               AND ? >= current_event.ended_at
+               AND ? - current_event.ended_at <= ?
+           )
+             THEN 0
+           ELSE 1
+         END ASC,
+         ABS(i.current_started_at - ?) ASC,
+         i.created_at ASC
        LIMIT 1`,
     )
     .bind(
@@ -562,7 +623,13 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
       event.direction,
       event.startedAt,
       policyDelaySec,
+      event.startedAt,
+      event.startedAt,
+      DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
       event.eventId,
+      event.startedAt,
+      event.startedAt,
+      DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
       event.startedAt,
     )
     .first<IncidentRow>();

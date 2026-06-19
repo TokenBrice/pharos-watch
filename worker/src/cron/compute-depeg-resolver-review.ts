@@ -783,12 +783,33 @@ function failedPublicationCoverageRow(
   };
 }
 
+function buildEffectiveIncidentByKey(incidents: readonly DdrCanonicalIncident[]): Map<string, DdrCanonicalIncident> {
+  const byKey = new Map(incidents.map((incident) => [incident.incidentKey, incident]));
+  const effective = new Map(byKey);
+
+  for (const alias of incidents) {
+    if (alias.incidentState !== "superseded" || !alias.supersededByIncidentKey) continue;
+    const canonical = byKey.get(alias.supersededByIncidentKey);
+    if (!canonical || canonical.incidentState === "superseded") continue;
+    const existing = effective.get(canonical.incidentKey) ?? canonical;
+    if (alias.startedAt <= existing.startedAt && alias.currentEventId <= existing.currentEventId) continue;
+    effective.set(canonical.incidentKey, {
+      ...canonical,
+      eventId: alias.currentEventId,
+      currentEventId: alias.currentEventId,
+    });
+  }
+
+  return effective;
+}
+
 async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2ReviewSource): Promise<DdrrResponse> {
   const incidentsByKey = new Map(source.incidents.map((incident) => [incident.incidentKey, incident]));
+  const effectiveIncidentByKey = buildEffectiveIncidentByKey(source.incidents);
   const firstPublication = firstPublicationByPredictionId(source.firstPublication);
   const errataByPredictionId = latestErrataByPredictionId(source.errata);
   const actualEventsById = await loadActualEventsByEventIds(db, [
-    ...source.incidents.map((incident) => incident.currentEventId),
+    ...[...effectiveIncidentByKey.values()].map((incident) => incident.currentEventId),
     ...source.sealedPublicPredictions.map((prediction) => prediction.eventId),
   ]);
 
@@ -799,12 +820,12 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
   const sealedIncidentKeys = new Set<string>();
 
   for (const sealed of source.sealedPublicPredictions) {
-    const incident = incidentsByKey.get(sealed.incidentKey);
+    const incident = effectiveIncidentByKey.get(sealed.incidentKey) ?? incidentsByKey.get(sealed.incidentKey);
     if (!incident) continue;
     sealedIncidentKeys.add(incident.incidentKey);
     const publicPredictionId = publicPredictionIdOf(sealed);
     const publication = firstPublication.get(publicPredictionId) ?? null;
-    const actual = actualEventsById.get(sealed.eventId) ?? null;
+    const actual = actualEventsById.get(incident.currentEventId) ?? actualEventsById.get(sealed.eventId) ?? null;
     const errata = errataByPredictionId.get(publicPredictionId);
 
     if (publication == null) {
@@ -859,8 +880,14 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
   }
 
   for (const incident of source.incidents) {
+    if (incident.incidentState === "superseded") continue;
     if (sealedIncidentKeys.has(incident.incidentKey)) continue;
-    coverageRows.push(coverageRowForIncident(incident, actualEventsById.get(incident.currentEventId) ?? null, source.nowSec));
+    const effectiveIncident = effectiveIncidentByKey.get(incident.incidentKey) ?? incident;
+    coverageRows.push(coverageRowForIncident(
+      effectiveIncident,
+      actualEventsById.get(effectiveIncident.currentEventId) ?? null,
+      source.nowSec,
+    ));
   }
 
   const { rows, summary } = reviewDdrrV2Rows({

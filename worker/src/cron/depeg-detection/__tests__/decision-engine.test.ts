@@ -251,4 +251,110 @@ describe("decideDepegAsset", () => {
       },
     ]);
   });
+
+  it("keeps an existing event open when a high-TVL pool challenger contradicts primary recovery", () => {
+    const decision = decideDepegAsset({
+      now: 1_780_630_000,
+      asset: makeAsset({
+        id: "apxusd-apyx",
+        symbol: "apxUSD",
+        price: 1.0006461557,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"],
+        priceUpdatedAt: 1_780_629_940,
+        circulating: { ethereum: 353_000_000 },
+      }),
+      meta: {
+        ...usdMeta,
+        id: "apxusd-apyx",
+        name: "apxUSD",
+        symbol: "apxUSD",
+        geckoId: "apxusd",
+      },
+      existing: makeExistingEvent({
+        id: 90089,
+        stablecoin_id: "apxusd-apyx",
+        symbol: "apxUSD",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -1059,
+        started_at: 1_780_437_028,
+        start_price: 0.9892624763,
+        peak_price: 0.8938719491,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      challengerPools: [
+        {
+          price: 0.952866583,
+          tvlUsd: 52_000_000,
+          protocol: "curve",
+          chain: "ethereum",
+          sourceFamily: "geckoterminal",
+        },
+      ],
+    });
+
+    expect(decision.trackedCoinId).toBe("apxusd-apyx");
+    expect(decision.seenEventIds).toEqual([90089]);
+    expect(decision.commands).toHaveLength(0);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept apxUSD open despite primary recovery: pool challengers still show the below depeg (groups=1, highTvl=true)",
+      },
+    ]);
+  });
+
+  it("allows authoritative primary recovery when only one small pool challenger disagrees", () => {
+    const decision = decideDepegAsset({
+      now: 1_780_630_000,
+      asset: makeAsset({
+        price: 1.0006,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"],
+        priceUpdatedAt: 1_780_629_940,
+        circulating: { ethereum: 353_000_000 },
+      }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        id: 42,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -250,
+        started_at: 1_780_600_000,
+        start_price: 0.98,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      challengerPools: [
+        {
+          price: 0.985,
+          tvlUsd: 250_000,
+          protocol: "curve",
+          chain: "ethereum",
+          sourceFamily: "geckoterminal",
+        },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 42,
+        endedAt: 1_780_630_000,
+        recoveryPrice: 1.0006,
+        recoveryPriceMode: "bind",
+      },
+    ]);
+  });
 });

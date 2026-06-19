@@ -1,8 +1,19 @@
 # Depeg Duration Resolver Methodology — Version Timeline
 
-Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.01`.
+Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.02`.
 
 Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
+
+---
+
+## v3.02 — Close-gap Tail Grouping and Superseded Alias Review (June 19, 2026)
+
+DDR incident grouping now treats live reopens inside the documented close-gap merge window as the same canonical incident even when the original start is days old, and DDRR follows superseded duplicate aliases to the current source event.
+
+- **Close-gap grouping.** A live same-coin/same-peg/same-direction tail reopening within 6 hours of the prior current source event closing can be adopted into the sealed canonical incident through the repair-authorization ledger.
+- **Superseded aliases.** Duplicate sealed incidents can be invalidated with append-only errata, marked `superseded`, and resolved by downstream readers to the canonical incident key.
+- **Review outcome repair.** DDRR evaluates canonical predictions against the effective current source event instead of scoring an older closed fragment as recovered.
+- **APXUSD repair.** The accidental APXUSD June 2026 duplicate prediction is invalidated and treated as an alias of the unresolved June 2 incident.
 
 ---
 

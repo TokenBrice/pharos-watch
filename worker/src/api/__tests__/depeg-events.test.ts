@@ -133,7 +133,7 @@ describe("handleDepegEvents", () => {
     const db = mockD1([
       {
         match: "FROM depeg_resolver_incidents incidents",
-        matchBinds: ["apxusd-apyx"],
+        matchBinds: ["apxusd-apyx", "apxusd-apyx"],
         rows: [
           {
             current_event_id: 90089,

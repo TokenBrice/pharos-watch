@@ -68,6 +68,8 @@ export interface DdrCanonicalIncident {
   eligibleAt: number;
   policyUniverseIncluded: boolean;
   rolloutActiveAtEnablement?: boolean;
+  incidentState?: "active" | "merged" | "superseded" | "split_source";
+  supersededByIncidentKey?: string | null;
   confirmedAt?: number | null;
   lockState?: DdrPredictionLockState | null;
 }

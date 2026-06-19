@@ -3,8 +3,8 @@
   "groups": [
     {
       "key": "(unclassified)",
-      "totalBytes": 4659659,
-      "chunkCount": 149
+      "totalBytes": 4729618,
+      "chunkCount": 150
     },
     {
       "key": "recharts-component",
@@ -13,27 +13,27 @@
     },
     {
       "key": "error-boundary",
-      "totalBytes": 1395408,
+      "totalBytes": 1467313,
       "chunkCount": 20
     },
     {
       "key": "methodology-version",
-      "totalBytes": 1282901,
-      "chunkCount": 20
+      "totalBytes": 1280670,
+      "chunkCount": 18
     },
     {
       "key": "stablecoin-client-registry",
-      "totalBytes": 878275,
+      "totalBytes": 878815,
       "chunkCount": 1
     },
     {
       "key": "next-framework",
-      "totalBytes": 452817,
+      "totalBytes": 443046,
       "chunkCount": 4
     },
     {
       "key": "market-data-chart",
-      "totalBytes": 314448,
+      "totalBytes": 312467,
       "chunkCount": 3
     },
     {
@@ -48,17 +48,17 @@
     },
     {
       "key": "recharts-component+stablecoin-registry-zod",
-      "totalBytes": 134816,
+      "totalBytes": 134404,
       "chunkCount": 1
     },
     {
       "key": "stablecoin-registry-zod",
-      "totalBytes": 37736,
+      "totalBytes": 37904,
       "chunkCount": 1
     },
     {
       "key": "pre-launch-shell",
-      "totalBytes": 28084,
+      "totalBytes": 28007,
       "chunkCount": 1
     },
     {

@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.091`
+- **Current methodology version:** `v6.092`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -30,6 +30,8 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEX_FRESHNESS_SEC` | 2100 (35 min) | DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | 1,000,000 | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 | `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Minimum protocol-level DEX corroborations required before aggregate DEX rows can directly suppress or resolve live depeg state |
+| `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery or confirm a pending depeg |
+| `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Single-pool TVL threshold that can veto a primary recovery or confirm a pending depeg without a second pool group |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
 
@@ -188,6 +190,7 @@ Whenever a row is written to `depeg_pending`, the worker now upserts directional
 
 - If a supported direct native-peg quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
 - If a fresh trusted aggregate DEX row still crosses the depeg threshold in the existing event direction, with at least 2 protocol-level DEX groups corroborating that direction: keep the event open and ignore the primary recovery print
+- If qualifying individual pool challengers still cross the threshold in the existing event direction — either one pool with at least $5M TVL or at least 2 independent protocol/source-family groups — keep the event open and ignore the primary recovery print
 - Close immediately when the primary price is authoritative, or when a fresh non-cached multi-source primary cluster is already back inside threshold
 - If the remaining primary input is ambiguous, close only when a trusted aggregate DEX row also shows recovery, at least 2 protocol-level DEX groups are also back inside threshold, and no qualifying challenger pool still shows the old depeg direction
 - Otherwise keep the event open rather than letting cached/low-confidence prices silently resolve it

@@ -11,7 +11,12 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./constants";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
-import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
+import { type DepegRow } from "./depeg-helpers";
+import {
+  EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
+  loadActiveIncidentProjections,
+  rowToPublicDepegEvent,
+} from "./depeg-event-projection";
 import { deriveDepegSignal } from "./depeg-signals";
 import { getFirstSeenDates } from "./db";
 
@@ -66,20 +71,27 @@ export async function derivePegAnalyticsSnapshot(
   const nowSec = Math.floor(Date.now() / 1000);
   const fourYearsAgoSec = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
-  const [eventsResult, firstSeenMap] = await Promise.all([
-    db.prepare(
-      `SELECT /* pharos:peg-analytics:recent-depeg-events */
-         * FROM depeg_events_with_provenance WHERE started_at > ? ORDER BY started_at DESC`,
-    )
-      .bind(fourYearsAgoSec)
-      .all<DepegRow>(),
+  const [activeIncidentProjectionLoad, firstSeenMap] = await Promise.all([
+    loadActiveIncidentProjections(db, null),
     getFirstSeenDates(
       db,
       buildPriceFirstSeenObservations(options.peggedAssets, options.methodologyAsOf),
     ),
   ]);
 
-  const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
+  const activeIncidentCondition = activeIncidentProjectionLoad.available
+    ? ` AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`
+    : "";
+  const eventsResult = await db.prepare(
+    `SELECT /* pharos:peg-analytics:recent-depeg-events */
+       * FROM depeg_events_with_provenance WHERE started_at > ?${activeIncidentCondition} ORDER BY started_at DESC`,
+  )
+    .bind(fourYearsAgoSec)
+    .all<DepegRow>();
+
+  const allEvents = (eventsResult.results ?? []).map((row) =>
+    rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections),
+  );
   const eventsByCoin = new Map<string, DepegEvent[]>();
   for (const event of allEvents) {
     const list = eventsByCoin.get(event.stablecoinId) ?? [];

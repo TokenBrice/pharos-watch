@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.091` (2026-02-18 -> 2026-06-16).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.092` (2026-02-18 -> 2026-06-19).
+
+---
+
+## v6.092 — Pool-challenged recoveries keep active depegs open (Jun 19, 2026)
+
+Live depeg detection now rejects an in-band primary recovery print when qualifying individual DEX pool challengers still show the existing depeg direction.
+
+- A single high-TVL pool (`>= $5M`) or at least two independent protocol/source-family pool groups can veto primary-price recovery closure
+- This covers cases where aggregate off-chain prices briefly print near peg while a large venue remains materially depegged
+- Small single-pool disagreements remain advisory and do not block authoritative primary recovery by themselves
+- The change hardens long-running incidents such as the APXUSD June 2026 underpeg against transient near-$1 blips
 
 ---
 

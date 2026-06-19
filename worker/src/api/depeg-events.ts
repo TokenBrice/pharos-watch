@@ -1,4 +1,4 @@
-import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
+import { type DepegRow } from "../lib/depeg-helpers";
 import {
   withErrorHandler,
   resolveOrReject,
@@ -13,6 +13,11 @@ import {
   type PendingDepegRow,
 } from "../lib/depeg-pending";
 import { isMissingTableError } from "../lib/db";
+import {
+  EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
+  loadActiveIncidentProjections,
+  rowToPublicDepegEvent,
+} from "../lib/depeg-event-projection";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -27,17 +32,6 @@ import { toErrorMessage } from "../lib/error-utils";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
-const EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL = `
-  id NOT IN (
-    SELECT links.event_id
-      FROM depeg_resolver_incident_event_links links
-      JOIN depeg_resolver_incidents incidents
-        ON incidents.incident_key = links.incident_key
-     WHERE incidents.incident_state = 'active'
-       AND links.event_id != incidents.current_event_id
-  )
-`;
-
 interface DexAvailabilityRow {
   stablecoin_id: string;
   source_pool_count: number | null;
@@ -49,24 +43,6 @@ interface PoolAvailabilityRow {
   stablecoin_id: string;
   snapshot_at: number | null;
   has_rows: number | null;
-}
-
-interface ActiveIncidentProjectionRow {
-  current_event_id: number | null;
-  first_started_at: number | null;
-  first_start_price: number | null;
-  first_peg_reference: number | null;
-}
-
-interface ActiveIncidentProjection {
-  startedAt: number;
-  startPrice: number | null;
-  pegReference: number | null;
-}
-
-interface ActiveIncidentProjectionLoad {
-  projections: Map<number, ActiveIncidentProjection>;
-  available: boolean;
 }
 
 function isFreshTimestamp(timestamp: number | null | undefined, nowSec: number, maxAgeSec: number): boolean {
@@ -134,81 +110,6 @@ async function loadPoolAvailability(
   }
 }
 
-function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [number, ActiveIncidentProjection] | null {
-  if (
-    typeof row.current_event_id !== "number" ||
-    !Number.isFinite(row.current_event_id) ||
-    typeof row.first_started_at !== "number" ||
-    !Number.isFinite(row.first_started_at) ||
-    row.first_started_at <= 0
-  ) {
-    return null;
-  }
-
-  return [
-    row.current_event_id,
-    {
-      startedAt: row.first_started_at,
-      startPrice:
-        typeof row.first_start_price === "number" && Number.isFinite(row.first_start_price)
-          ? row.first_start_price
-          : null,
-      pegReference:
-        typeof row.first_peg_reference === "number" && Number.isFinite(row.first_peg_reference)
-          ? row.first_peg_reference
-          : null,
-    },
-  ];
-}
-
-async function loadActiveIncidentProjections(
-  db: D1Database,
-  stablecoinId: string | null,
-): Promise<ActiveIncidentProjectionLoad> {
-  try {
-    const stablecoinFilter = stablecoinId ? " AND current_event.stablecoin_id = ?" : "";
-    const stmt = db.prepare(
-      `SELECT /* pharos:depeg-events:active-incident-projections */
-          incidents.current_event_id,
-          incidents.first_started_at,
-          first_event.start_price AS first_start_price,
-          first_event.peg_reference AS first_peg_reference
-         FROM depeg_resolver_incidents incidents
-         JOIN depeg_events first_event
-           ON first_event.id = incidents.first_event_id
-         JOIN depeg_events current_event
-           ON current_event.id = incidents.current_event_id
-        WHERE incidents.incident_state = 'active'
-          AND incidents.current_event_id != incidents.first_event_id${stablecoinFilter}`,
-    );
-    const result = stablecoinId
-      ? await stmt.bind(stablecoinId).all<ActiveIncidentProjectionRow>()
-      : await stmt.all<ActiveIncidentProjectionRow>();
-    const projections = new Map<number, ActiveIncidentProjection>();
-    for (const row of result.results ?? []) {
-      const normalized = normalizeActiveIncidentProjection(row);
-      if (normalized) projections.set(normalized[0], normalized[1]);
-    }
-    return { projections, available: true };
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      console.error("[depeg-events] Unexpected error loading active incident projections:", msg);
-    }
-    return { projections: new Map(), available: false };
-  }
-}
-
-function rowToPublicDepegEvent(row: DepegRow, projections: Map<number, ActiveIncidentProjection>) {
-  const projection = projections.get(row.id);
-  if (!projection) return rowToDepegEvent(row);
-  return rowToDepegEvent({
-    ...row,
-    started_at: projection.startedAt,
-    start_price: projection.startPrice ?? row.start_price,
-    peg_reference: projection.pegReference ?? row.peg_reference,
-  });
-}
 
 function buildConfirmationCategories(
   stablecoinId: string,
@@ -315,7 +216,7 @@ export const handleDepegEvents = withErrorHandler(
       conditions.push(EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL);
     }
 
-    return buildPaginatedEventResponse<DepegRow, ReturnType<typeof rowToDepegEvent>>(db, {
+    return buildPaginatedEventResponse<DepegRow, ReturnType<typeof rowToPublicDepegEvent>>(db, {
       tableName: "depeg_events_with_provenance",
       orderBy: "started_at DESC, id DESC",
       queryComment: "pharos:depeg-events",

@@ -11,7 +11,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.01`
+- **Current methodology version:** `v3.02`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
@@ -131,7 +131,7 @@ Stage 2 is computed only when Stage 1 is `recovery_likely` or `at_risk`. For `re
 
 Stage 2 is an empirical **landmark survival** estimate over the clean corpus of *recovered* incidents.
 
-1. **Incident grouping + quarantine.** Event fragments for the same coin and direction are collapsed into incidents (reopens within 6h merged; 6–24h reopens flagged). Training inclusion is **not** verdict-gated — the depeg provenance side-table is unpopulated in production, so audit-verdict filtering would drop 100% of the corpus. Quality instead comes from incident grouping, a minimum-severity/duration floor that drops microstructure noise, and quarantine of flappy high-frequency coins (the rule that catches susd-synthetix, gusd-gemini, dola, and similar high-count flappers).
+1. **Incident grouping + quarantine.** Event fragments for the same coin and direction are collapsed into incidents (reopens within 6h of the prior source event closing are merged even when the original incident start is days old; 6–24h reopens are flagged). Training inclusion is **not** verdict-gated — the depeg provenance side-table is unpopulated in production, so audit-verdict filtering would drop 100% of the corpus. Quality instead comes from incident grouping, a minimum-severity/duration floor that drops microstructure noise, and quarantine of flappy high-frequency coins (the rule that catches susd-synthetix, gusd-gemini, dola, and similar high-count flappers).
 
 2. **Stratification, most-dependable-first.** A dependable wide band beats a precise band built on three incidents. The MVP strata, in order of how readily they are dropped:
    - **direction** (`above` vs `below`) — overpeg and underpeg resolve on different clocks and are never pooled.
@@ -201,7 +201,7 @@ Both stages are precomputed by a cron writer hooked into the existing `sync-stab
 
 The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, `public-contract.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer seals first-publication manifests through `worker/src/cron/depeg-resolver/publication.ts`, projects public rows through `worker/src/cron/depeg-resolver/public-projection.ts`, and the cache-backed `GET /api/depeg-resolver` handler degrades to a `200` with empty rows when the cache is missing, and serves stale rows with warnings. Pre-publication rows never expose verdicts or duration bands; frozen rows expose anchored predictions plus immutable trigger/readiness metadata and live overlay facts.
 
-The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with shared schemas in `shared/types/depeg-resolver-review.ts`. The worker snapshot builder lives in `worker/src/cron/compute-depeg-resolver-review.ts`; its public cache helper and endpoint are `worker/src/lib/depeg-resolver-review-snapshot-cache.ts` and `worker/src/api/depeg-resolver-review.ts`.
+The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with shared schemas in `shared/types/depeg-resolver-review.ts`. The worker snapshot builder lives in `worker/src/cron/compute-depeg-resolver-review.ts`; its public cache helper and endpoint are `worker/src/lib/depeg-resolver-review-snapshot-cache.ts` and `worker/src/api/depeg-resolver-review.ts`. When an accidental duplicate incident is superseded by a canonical incident, DDRR follows the superseded alias to the effective current source event before classifying the canonical prediction outcome.
 
 ## Key Files
 

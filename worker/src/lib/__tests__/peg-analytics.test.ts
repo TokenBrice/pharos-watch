@@ -166,7 +166,10 @@ describe("derivePegAnalyticsSnapshot", () => {
       methodologyAsOf: 1_700_000_000,
     });
 
-    expect((db as MockD1Database).getHistory()[0]?.sql).toContain("FROM depeg_events_with_provenance");
+    const eventHistoryQuery = (db as MockD1Database)
+      .getHistory()
+      .find((entry) => entry.sql.includes("FROM depeg_events_with_provenance"));
+    expect(eventHistoryQuery?.sql).toContain("FROM depeg_events_with_provenance");
     expect(snapshot.allEvents[0]?.provenance?.auditVerdict).toBe("false_positive");
     expect(vi.mocked(computePegScore)).toHaveBeenCalledWith(
       [expect.objectContaining({ provenance: expect.objectContaining({ auditVerdict: "false_positive" }) })],
