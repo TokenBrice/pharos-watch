@@ -6,6 +6,8 @@ import { throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
+const ALCHEMY_RPC_TIMEOUT_MS = 30_000;
+
 // --- Types ---
 
 export interface AlchemyLogEntry {
@@ -89,7 +91,7 @@ async function jsonRpcCall<T>(
   params: unknown[],
   signal?: AbortSignal,
 ): Promise<JsonRpcCallResult<T>> {
-  const timeout = AbortSignal.timeout(30_000);
+  const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(alchemyUrl, {
@@ -203,7 +205,7 @@ export async function getAlchemyTransactionContextBatch(
     },
   ];
 
-  const timeout = AbortSignal.timeout(30_000);
+  const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(alchemyUrl, {
@@ -475,7 +477,7 @@ export async function resolveBlockTimestamps(
     }));
 
     try {
-      const timeout = AbortSignal.timeout(30_000);
+      const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
       const res = await fetch(alchemyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
