@@ -80,7 +80,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   {
     key: "og-image",
     pattern: /^\/api\/og\//,
-    methods: ["GET", "HEAD"],
+    methods: ["GET"],
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
     adminRequired: false,
