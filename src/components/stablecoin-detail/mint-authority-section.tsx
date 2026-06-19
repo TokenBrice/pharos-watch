@@ -14,6 +14,7 @@ import type {
   MintAuthorityDetailViewModel,
   MintAuthorityPostureTone,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import type { MintAuthorityDecentralizationDragViewModel } from "@/lib/stablecoin-detail-view-model";
 import { cn } from "@/lib/utils";
 
 const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
@@ -161,11 +162,6 @@ function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScor
       </div>
     </ScoringBreakdownDisclosure>
   );
-}
-
-export interface MintAuthorityDecentralizationDragViewModel {
-  value: string;
-  detail?: string | null;
 }
 
 export function MintAuthoritySection({
