@@ -387,7 +387,7 @@ async function handleTelegramMessageUpdate(args: {
     const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
     const isSetupPending =
       Boolean(pendingRow && pendingNotExpired && pendingRow.action_type === SETUP_PENDING_ACTION_TYPE);
-    let ingressFloodApplied = false;
+    let priorFloodCheckPassed = false;
 
     if (pendingRow && pendingNotExpired) {
       const floodAllowed = await enforceIngressFlood(db, {
@@ -399,7 +399,7 @@ async function handleTelegramMessageUpdate(args: {
         noticeMessage: "Too many Telegram actions at once — please slow down for a minute.",
         reply,
       });
-      ingressFloodApplied = floodAllowed;
+      priorFloodCheckPassed = floodAllowed;
       if (!floodAllowed) return finishOk();
     }
 
@@ -446,7 +446,7 @@ async function handleTelegramMessageUpdate(args: {
       commandContext,
       reply,
       replyWithMarkup,
-      skipFlood: ingressFloodApplied,
+      skipFlood: priorFloodCheckPassed,
     });
     return finishOk();
   } catch (err) {
@@ -839,7 +839,7 @@ function callbackMutatesChatState(data: string): boolean {
 function resolveCommandCooldownSec(command: string, args: string): number | null {
   const cooldownSec = COMMAND_COOLDOWNS_SEC[command];
   if (cooldownSec == null) return null;
-  if ((command === "/top" || command === "/why" || command === "/coverage") && !args.trim()) {
+  if ((command === "/top" || command === "/why" || command === "/coverage" || command === "/status") && !args.trim()) {
     return null;
   }
   return cooldownSec;

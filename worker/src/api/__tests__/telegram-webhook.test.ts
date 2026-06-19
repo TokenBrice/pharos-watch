@@ -4,7 +4,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { handleTelegramWebhook } = await import("../telegram-webhook");
+const { handleTelegramWebhook, TELEGRAM_GROUP_ADMIN_GATING } = await import("../telegram-webhook");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
 const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
 const { resetTelegramInvalidSecretLogStateForTests } = await import("../../lib/telegram-log");
@@ -1557,6 +1557,19 @@ describe("handleTelegramWebhook", () => {
     expect(history.some((entry) => entry.sql.includes("FROM depeg_events"))).toBe(false);
   });
 
+  it("does not consume the /status cooldown when called with no args (usage reply)", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+
+    // Two consecutive no-arg /status calls — neither should store a cooldown entry.
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/status"), "test-secret", "bot-token");
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/status"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(
+      history.some((entry) => entry.binds.some((bind) => String(bind).includes("telegram:command-cooldown:123:/status"))),
+    ).toBe(false);
+  });
+
   it("handles direct /why and /coverage commands", async () => {
     const db = mockD1([
       { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
@@ -2307,6 +2320,55 @@ describe("handleTelegramWebhook", () => {
     expect(latestSendMessageBody().text).toMatch(/Only group admins/i);
     expect(db.getHistory().some((entry) => entry.binds.includes("telegram:chat-member:-123:7"))).toBe(false);
     expect(db.getHistory().some((entry) => /INSERT INTO telegram_subscribers|UPDATE telegram_subscribers/i.test(entry.sql))).toBe(false);
+  });
+
+  it("soft gating mode warns a non-admin but still executes the gated mutation", async () => {
+    const original = TELEGRAM_GROUP_ADMIN_GATING.mode;
+    TELEGRAM_GROUP_ADMIN_GATING.mode = "soft";
+    try {
+      const db = mockD1([
+        { match: "telegram_pending_disambiguation", rows: [] },
+        { match: "FROM cache WHERE key = ?", rows: [], first: null },
+        { match: "FROM telegram_subscribers", rows: [], first: null },
+      ]);
+      fetchSpy.mockImplementation(async (url) => {
+        if (String(url).includes("getChatMember")) {
+          return new Response(
+            JSON.stringify({ ok: true, result: { user: { id: 7, first_name: "member" }, status: "member" } }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      });
+
+      await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(-123, "/subscribe@PharosWatchBot dews USDC", "test-secret", {
+          chatType: "supergroup",
+          fromId: 7,
+        }),
+        "test-secret",
+        "bot-token",
+      );
+
+      // Command should proceed (subscriber row written), not be denied.
+      expect(
+        db.getHistory().some((entry) => /INSERT INTO telegram_subscribers/i.test(entry.sql)),
+      ).toBe(true);
+      // A group_admin_denial usage event with outcome 'warned' should be recorded.
+      const usageRow = db
+        .getHistory()
+        .find(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+            entry.binds[1] === "group_admin_denial" &&
+            entry.binds[3] === "/subscribe",
+        );
+      expect(usageRow).toBeDefined();
+      expect(usageRow!.binds[4]).toBe("warned");
+    } finally {
+      TELEGRAM_GROUP_ADMIN_GATING.mode = original;
+    }
   });
 
   it("splits long /list replies into Telegram-safe chunks", async () => {
