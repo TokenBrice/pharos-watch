@@ -32,7 +32,8 @@ export type StablecoinsCacheFailureReason =
   | "legacy-array-not-allowed"
   | "legacy-array-payload"
   | "filtered-malformed-entries"
-  | "published-contract-invalid";
+  | "published-contract-invalid"
+  | "cache-read-failed";
 
 export interface StablecoinsCacheLoadOk {
   kind: "ok";
