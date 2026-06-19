@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CHAIN_META,
   getActiveChainIds,
+  getChainResilienceTier,
   resolveChainId,
 } from "@shared/lib/chains";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -72,6 +73,12 @@ describe("resolveChainId", () => {
     expect(resolveChainId("ZKsync Era")).toBe("zksync");
     expect(resolveChainId("Abcore")).toBe("abcore");
     expect(resolveChainId("edgeX L1")).toBe("edgechain");
+  });
+});
+
+describe("getChainResilienceTier", () => {
+  it("treats BEVM as a tier-3 chain", () => {
+    expect(getChainResilienceTier("bevm")).toBe(3);
   });
 });
 
