@@ -92,7 +92,7 @@ async function degradedPublicSnapshotFromCache(input: {
       live: {
         ...row.live,
         stale: true,
-        degradedReason: row.live.degradedReason ?? input.reason,
+        degradedReason: input.reason,
       },
     })),
   };
