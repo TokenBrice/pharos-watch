@@ -272,6 +272,105 @@ describe("computeAndStoreStabilityIndex", () => {
     ).toBe(false);
   });
 
+  it("returns degraded when any latest DEWS row is stale", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const staleComputedAt = nowSec - CRON_INTERVALS["compute-dews"] * 2 - 1;
+    const freshComputedAt = nowSec - 60;
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: {
+        peggedAssets: [
+          {
+            id: "usdt-tether",
+            name: "Tether USD",
+            symbol: "USDT",
+            geckoId: "tether",
+            pegType: "peggedUSD",
+            pegMechanism: "fiat-backed",
+            price: 1,
+            priceSource: "defillama",
+            priceConfidence: "high",
+            priceUpdatedAt: nowSec,
+            priceObservedAt: nowSec,
+            priceObservedAtMode: "upstream",
+            priceSyncedAt: nowSec,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "defillama",
+            circulating: { peggedUSD: 100_000_000 },
+            circulatingPrevDay: { peggedUSD: 99_000_000 },
+            circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            circulatingPrevMonth: { peggedUSD: 97_000_000 },
+            chainCirculating: {},
+            chains: [],
+          },
+          {
+            id: "usdc-circle",
+            name: "USD Coin",
+            symbol: "USDC",
+            geckoId: "usd-coin",
+            pegType: "peggedUSD",
+            pegMechanism: "fiat-backed",
+            price: 1,
+            priceSource: "defillama",
+            priceConfidence: "high",
+            priceUpdatedAt: nowSec,
+            priceObservedAt: nowSec,
+            priceObservedAtMode: "upstream",
+            priceSyncedAt: nowSec,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "defillama",
+            circulating: { peggedUSD: 200_000_000 },
+            circulatingPrevDay: { peggedUSD: 199_000_000 },
+            circulatingPrevWeek: { peggedUSD: 198_000_000 },
+            circulatingPrevMonth: { peggedUSD: 197_000_000 },
+            chainCirculating: {},
+            chains: [],
+          },
+        ],
+      },
+      updatedAt: nowSec,
+    });
+    const db = makeDb({
+      dewsRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 72,
+          band: "WARNING",
+          computed_at: staleComputedAt,
+        },
+        {
+          stablecoin_id: "usdc-circle",
+          score: 12,
+          band: "NORMAL",
+          computed_at: freshComputedAt,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string;
+      dewsUnavailable: boolean;
+      dewsFailureReason: string | null;
+      dewsLatestComputedAt: number | null;
+      dewsRowsRead: number;
+    };
+    expect(metadata.fallbackMode).toBe("dews-unavailable");
+    expect(metadata.dewsUnavailable).toBe(true);
+    expect(metadata.dewsFailureReason).toContain("usdt-tether");
+    expect(metadata.dewsFailureReason).toContain("stale");
+    expect(metadata.dewsLatestComputedAt).toBe(freshComputedAt);
+    expect(metadata.dewsRowsRead).toBe(2);
+    expect(
+      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
+    ).toBe(false);
+  });
+
   it("bounds the no-publication-pointer fallback scan to a recent window", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const fallbackWindowSec = CRON_INTERVALS["compute-dews"] * 4;
