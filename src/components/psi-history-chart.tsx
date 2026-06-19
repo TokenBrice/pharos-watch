@@ -10,7 +10,7 @@ import { ChartShellSkeleton, ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
 import { trackEvent } from "@/lib/analytics";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
@@ -104,7 +104,7 @@ export function ScoreChart({
       ) : null}
       <CardContent className={showHeader ? undefined : "px-4 pt-4 pb-2"}>
         {(() => {
-          const chartHeight = showHeader ? "h-[250px] sm:h-[350px]" : "h-[250px] sm:h-[336px]";
+          const chartHeight = showHeader ? CHART_HEIGHT : "h-[250px] sm:h-[336px]";
           return filteredData.length > 0 ? (
           <div ref={chartRef}>
             <div className={showHeader ? "mb-4 flex flex-wrap gap-4" : "mb-3 flex flex-wrap gap-4"}>
