@@ -140,7 +140,7 @@ export type StablecoinDetailStaleQuery = {
   meta: ApiMeta | null;
 };
 
-export type MarketSnapshot = {
+type MarketSnapshot = {
   mcap: number;
   supply: number | null;
   prevDay: number | null;
@@ -150,7 +150,7 @@ export type MarketSnapshot = {
   earliestTrackingDate: number | null;
 };
 
-export type PegPriceSnapshot = {
+type PegPriceSnapshot = {
   pegRef: number;
   deviationBps: number;
   gaugeDeviationBps: number;
@@ -161,7 +161,7 @@ export type PegPriceSnapshot = {
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
 };
 
-export type FeatureAvailabilitySnapshot = {
+type FeatureAvailabilitySnapshot = {
   yieldRanking: YieldRanking | null;
   hasYieldSection: boolean;
   stressSignal: StressSignalEntry | null;
@@ -823,7 +823,7 @@ export function buildStablecoinDetailViewModel({
     };
   }
 
-  const coinData = listData?.peggedAssets?.find((candidate) => candidate.id === id);
+  const coinData = listData.peggedAssets?.find((candidate) => candidate.id === id);
   if (!coinData) {
     return { status: "not-found", handleRetryAll };
   }
