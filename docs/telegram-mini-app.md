@@ -80,7 +80,7 @@ The load-bearing rules:
 
 - Do not duplicate per-coin or preset write SQL outside the existing State / persistence helpers. If a callback-shaped helper is too narrow, extract the shared D1 mutation into `worker/src/api/telegram-webhook-store.ts` (or the matching settings-mutation layer) and have both callbacks and Mini App call it.
 - Do not mutate group, supergroup, or channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist. Direct-link `chat_type="sender"` launches are the user's *private* alert context, not a group surface.
-- Do not write user-scoped analytics or cooldown rows before signed `initData` validation succeeds. Aggregate abuse/validation counters for body-too-large, malformed JSON, and schema-denied requests are the sole pre-auth exception and must not include Telegram user or chat identifiers.
+- Do not write analytics, aggregate counters, or cooldown rows before signed `initData` validation succeeds. Body-too-large, malformed JSON, and schema-denied requests must fail without D1 writes because the Mini App endpoints are public API-key-exempt surfaces.
 - Do not accept mutation auth older than the 5-minute mutation window.
 - Do not use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
 
@@ -114,7 +114,7 @@ Freshness windows:
 
 Mutation auth is bounded by the short freshness window plus per-user mutation cooldowns. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits.
 
-Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, user-scoped analytics, or cooldown writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies. Body-cap, JSON-parse, and schema failures can increment aggregate abuse/validation counters before auth; those counters intentionally carry no user or chat identity.
+Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, analytics, or cooldown writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies. Body-cap, JSON-parse, and schema failures intentionally perform no D1 writes before auth so unauthenticated clients cannot amplify writes or pollute usage counters.
 
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 

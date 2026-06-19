@@ -326,10 +326,9 @@ describe("handleTelegramMiniAppSession", () => {
     expect(deniedRows[0].binds).toContain("rate_limited");
   });
 
-  it("emits mini_app_session_invalid with body-too-large on oversized session bodies", async () => {
-    // P1.3: 413 body-cap rejections fire BEFORE HMAC validation, but
-    // `recordTelegramUsageEvent` aggregates only on event_type / source /
-    // outcome / failure_class, so we can still surface the abuse signal.
+  it("does not emit analytics for oversized pre-auth session bodies", async () => {
+    // Body-cap rejections fire before HMAC validation and must not write
+    // unauthenticated analytics rows on the public Mini App endpoint.
     const db = mockD1();
     const req = new Request("https://api.pharos.watch/api/telegram-mini-app/session", {
       method: "POST",
@@ -340,14 +339,7 @@ describe("handleTelegramMiniAppSession", () => {
     const response = await handleTelegramMiniAppSession(db, req, BOT_TOKEN);
 
     expect(response.status).toBe(413);
-    const deniedRows = db
-      .getHistory()
-      .filter((entry) =>
-        entry.sql.includes("INSERT INTO telegram_usage_daily")
-        && entry.binds.includes("mini_app_session_invalid"),
-      );
-    expect(deniedRows).toHaveLength(1);
-    expect(deniedRows[0].binds).toContain("body-too-large");
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects oversized session bodies with 413 before parsing JSON", async () => {
@@ -362,9 +354,23 @@ describe("handleTelegramMiniAppSession", () => {
 
     expect(response.status).toBe(413);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    // P1.3: a single analytics row is the only side effect — no state SELECT,
-    // no cooldown INSERT, no HMAC validation.
-    expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
+    // No state SELECT, cooldown INSERT, HMAC validation, or analytics write fires pre-auth.
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("rejects malformed session JSON without pre-auth analytics writes", async () => {
+    const db = mockD1();
+    const req = new Request("https://api.pharos.watch/api/telegram-mini-app/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+
+    const response = await handleTelegramMiniAppSession(db, req, BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: "validation-error" });
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects oversized streamed session bodies without relying on Content-Length", async () => {
@@ -379,8 +385,8 @@ describe("handleTelegramMiniAppSession", () => {
 
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({ code: "body-too-large" });
-    // P1.3: single analytics row only — no state SELECT or cooldown INSERT.
-    expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
+    // No state SELECT, cooldown INSERT, HMAC validation, or analytics write fires pre-auth.
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects lying-small Content-Length session streams through the bounded reader", async () => {
@@ -399,15 +405,7 @@ describe("handleTelegramMiniAppSession", () => {
 
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({ code: "body-too-large" });
-    const deniedRows = db
-      .getHistory()
-      .filter((entry) =>
-        entry.sql.includes("INSERT INTO telegram_usage_daily")
-        && entry.binds.includes("mini_app_session_invalid"),
-      );
-    expect(deniedRows).toHaveLength(1);
-    expect(deniedRows[0].binds).toContain("body-too-large");
-    expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects malformed hash with 401 without HMAC compute", async () => {
@@ -432,9 +430,8 @@ describe("handleTelegramMiniAppSession", () => {
     const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData: padded }), BOT_TOKEN);
 
     expect(response.status).toBe(400);
-    // P1.3: schema-validation failures emit a single analytics row; no other
-    // SQL fires before HMAC compute.
-    expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
+    // Schema-validation failures happen before HMAC and must not write analytics.
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects an unsigned start_param body override", async () => {
@@ -963,17 +960,8 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(413);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    // P1.3: emits mini_app_mutation_denied with body-too-large failure class.
-    const deniedRows = db
-      .getHistory()
-      .filter((entry) =>
-        entry.sql.includes("INSERT INTO telegram_usage_daily")
-        && entry.binds.includes("mini_app_mutation_denied"),
-      );
-    expect(deniedRows).toHaveLength(1);
-    expect(deniedRows[0].binds).toContain("body-too-large");
-    // Single analytics row only — no state SELECT or cooldown INSERT.
-    expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
+    // No state SELECT, cooldown INSERT, HMAC validation, or analytics write fires pre-auth.
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects oversized streamed mutation bodies without relying on Content-Length", async () => {
@@ -988,8 +976,8 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({ code: "body-too-large" });
-    // P1.3: streamed body-too-large also emits the abuse-signal row.
-    expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
+    // Streamed body-cap failures are also pre-auth and must not write analytics.
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects strict-schema violations on mutation payloads", async () => {
@@ -1002,6 +990,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(400);
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects empty set-coin patches", async () => {
