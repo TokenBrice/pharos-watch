@@ -4,23 +4,17 @@
  * in shared/lib and src/lib. Catches post-merge conflicts from
  * parallel worktree development.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { relative } from "node:path";
+import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const DIRS = ["shared/lib", "src/lib", "worker/src/lib"];
-const EXT_RE = /\.(ts|tsx)$/;
 const EXPORT_RE = /^export\s+(?:const|let|function|class|type|interface|enum)\s+(\w+)/gm;
 
 let errors = 0;
 
-function scanDir(dir) {
-  let entries;
-  try { entries = readdirSync(dir); } catch { return; }
-  for (const entry of entries) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) { scanDir(full); continue; }
-    if (!EXT_RE.test(entry)) continue;
-
+for (const dir of DIRS) {
+  for (const full of collectSourceFiles(dir, { extensions: new Set([".ts", ".tsx"]) })) {
     const content = readFileSync(full, "utf-8");
     const seen = new Map();
     let match;
@@ -37,8 +31,6 @@ function scanDir(dir) {
     }
   }
 }
-
-for (const dir of DIRS) scanDir(dir);
 
 if (errors > 0) {
   console.error(`\n${errors} duplicate export(s) found.`);
