@@ -25,10 +25,8 @@ const RESERVOIR_BROWSER_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON
 const RESERVOIR_NEUTRAL_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
 
 describe("adaptReservoirReserves", () => {
-  it("declares the reviewed latest-state balance-sheet API as not-applicable-only freshness", () => {
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation.allowedFreshnessModes).toEqual([
-      "not-applicable",
-    ]);
+  it("declares the timestamp-less balance-sheet API as unverified freshness", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation.allowedFreshnessModes).toContain("unverified");
   });
 
   it("groups live balance-sheet assets into reserve slices", () => {
@@ -174,7 +172,7 @@ describe("adaptReservoirReserves", () => {
     expect(slices).toHaveLength(3);
   });
 
-  it("emits reviewed not-applicable freshness with same-run-api redemption telemetry", async () => {
+  it("emits unverified freshness for timestamp-less protocol API telemetry", async () => {
     const result = await fetchReservoirReserves(
       { id: "r" } as never,
       {
@@ -192,10 +190,10 @@ describe("adaptReservoirReserves", () => {
     );
 
     expect(result.metadata).toMatchObject({
-      freshnessMode: "not-applicable",
+      freshnessMode: "unverified",
       details: {
         freshnessSource: "protocol-balance-sheet-api",
-        freshnessReason: expect.stringContaining("live contract state"),
+        freshnessReason: expect.stringContaining("not independently freshness-verified"),
       },
       totalAssetsUsd: 100,
       totalLiabilitiesUsd: 95,
@@ -203,10 +201,10 @@ describe("adaptReservoirReserves", () => {
       collateralizationRatio: 100 / 95,
       redemption: { routeStatus: "unknown", routeStatusSource: "protocol-api" },
     });
-    // No timestamped disclosure exists; the latest-state read must not invent one.
+    // No timestamped disclosure exists; the adapter must not invent score-grade freshness.
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.metadata?.redemption).toMatchObject({
-      freshnessKind: "same-run-api",
+      freshnessKind: "unverified",
     });
   });
 
