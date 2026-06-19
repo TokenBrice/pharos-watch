@@ -14,6 +14,7 @@ import {
 } from "../lib/live-reserves-store";
 import {
   CONFIGURED_COINS,
+  CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
   type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
 import {
@@ -199,7 +200,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     artifactCleanup = await cleanupStaleLiveReserveArtifacts(
       args.db,
       CONFIGURED_COINS.map((coin) => coin.id),
-      args.breakerKeys,
+      CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
     );
   } catch (error) {
     artifactCleanupWarnings.push(
