@@ -207,6 +207,56 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
   { id: "flags", label: "Flags", className: "text-center" },
 ] as const;
 
+interface StablecoinTableHeaderSortProps {
+  sortKey: StablecoinTableSortKey;
+  sortDirection: "asc" | "desc";
+  toggleSort: (key: StablecoinTableSortKey) => void;
+  getAriaSortValue: (columnKey: string) => "ascending" | "descending" | "none";
+  showHeaderMethodologyHints: boolean;
+}
+
+interface StablecoinTableHeaderProps {
+  showPinnedControls: boolean;
+  isVisible: (id: ColumnId) => boolean;
+  /** When omitted the header renders in loading/static mode (plain TableHead, rowIntent="static"). */
+  sort?: StablecoinTableHeaderSortProps;
+  sticky?: boolean;
+}
+
+function StablecoinTableHeader({ showPinnedControls, isVisible, sort, sticky }: StablecoinTableHeaderProps) {
+  return (
+    <TableHeader className={sticky ? "sticky top-0 z-10 bg-muted" : "bg-muted"}>
+      <TableRow rowIntent={sort ? undefined : "static"}>
+        {showPinnedControls ? (
+          <TableHead scope="col" className="w-[44px] text-center xl:w-[36px]">
+            <span className="sr-only">Starred</span>
+          </TableHead>
+        ) : null}
+        {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) =>
+          sort && column.sortKey ? (
+            <SortableTableHead
+              key={column.id}
+              sortKey={column.sortKey}
+              currentSortKey={sort.sortKey}
+              sortDirection={sort.sortDirection}
+              label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
+              toggleSort={sort.toggleSort}
+              getAriaSortValue={sort.getAriaSortValue}
+              adornment={sort.showHeaderMethodologyHints ? column.headerAdornment : undefined}
+              className={column.className}
+              title={column.title}
+            />
+          ) : (
+            <TableHead key={column.id} scope="col" className={column.className} title={column.title}>
+              {column.label}
+            </TableHead>
+          ),
+        )}
+      </TableRow>
+    </TableHeader>
+  );
+}
+
 interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
@@ -454,20 +504,7 @@ export function StablecoinTable({
         }}
       >
         <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
-        <TableHeader className="bg-muted">
-          <TableRow rowIntent="static">
-            {showPinnedControls ? (
-              <TableHead scope="col" className="w-[44px] text-center xl:w-[36px]">
-                <span className="sr-only">Starred</span>
-              </TableHead>
-            ) : null}
-            {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) => (
-              <TableHead key={column.id} scope="col" className={column.className} title={column.title}>
-                {column.label}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
+        <StablecoinTableHeader showPinnedControls={showPinnedControls} isVisible={isVisible} />
         <TableBody>
           <TableSkeletonRows columns={skeletonColumns} rowCount={SKELETON_ROWS.length} />
         </TableBody>
@@ -528,35 +565,12 @@ export function StablecoinTable({
       ) : null}
     >
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
-          <TableHeader className="sticky top-0 z-10 bg-muted">
-            <TableRow>
-              {showPinnedControls && (
-                <TableHead scope="col" className="w-[44px] text-center xl:w-[36px]">
-                  <span className="sr-only">Starred</span>
-                </TableHead>
-              )}
-              {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) =>
-                column.sortKey ? (
-                  <SortableTableHead
-                    key={column.id}
-                    sortKey={column.sortKey}
-                    currentSortKey={sortKey}
-                    sortDirection={sortDirection}
-                    label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
-                    toggleSort={toggleSort}
-                    getAriaSortValue={getAriaSortValue}
-                    adornment={showHeaderMethodologyHints ? column.headerAdornment : undefined}
-                    className={column.className}
-                    title={column.title}
-                  />
-                ) : (
-                  <TableHead key={column.id} scope="col" className={column.className} title={column.title}>
-                    {column.label}
-                  </TableHead>
-                ),
-              )}
-            </TableRow>
-          </TableHeader>
+          <StablecoinTableHeader
+            showPinnedControls={showPinnedControls}
+            isVisible={isVisible}
+            sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue, showHeaderMethodologyHints }}
+            sticky
+          />
           <TableBody>
             {paddingTop > 0 && (
               <tr>
