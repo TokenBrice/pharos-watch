@@ -235,12 +235,28 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       .first<{ net_flow: number | null }>(),
     db
       .prepare(
-        `SELECT
-          (SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1) as current_price,
-          (SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL AND snapshot_date <= ? ORDER BY snapshot_date DESC LIMIT 1) as prev_day_price`,
+        `WITH current_snapshot AS (
+          SELECT price, snapshot_date
+          FROM supply_history
+          WHERE stablecoin_id = ? AND price IS NOT NULL
+          ORDER BY snapshot_date DESC
+          LIMIT 1
+        )
+        SELECT
+          current_snapshot.price as current_price,
+          (
+            SELECT price
+            FROM supply_history
+            WHERE stablecoin_id = ?
+              AND price IS NOT NULL
+              AND snapshot_date <= current_snapshot.snapshot_date - ?
+            ORDER BY snapshot_date DESC
+            LIMIT 1
+          ) as prev_day_price
+        FROM current_snapshot`,
       )
-      .bind(id, id, Math.floor(Date.now() / 1000) - DAY_SECONDS)
-      .first<{ current_price: number; prev_day_price: number }>(),
+      .bind(id, id, DAY_SECONDS)
+      .first<{ current_price: number; prev_day_price: number | null }>(),
   ]);
 
   if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {

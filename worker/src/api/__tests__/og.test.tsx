@@ -154,6 +154,39 @@ describe("stablecoin OG card data", () => {
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
       expect(data.pegScore).toBe(99);
     });
+
+    it("anchors 24h price change to the latest snapshot instead of wall-clock time", async () => {
+      const db = mockD1([
+        {
+          match: "cache",
+          rows: [
+            {
+              key: "stablecoins",
+              value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT" })] }),
+              updated_at: nowSec,
+            },
+            {
+              key: "peg-analytics",
+              value: JSON.stringify({ computedAtSec: nowSec, pegData: [{ id: "usdt-tether", pegScore: 99 }] }),
+              updated_at: nowSec,
+            },
+          ],
+        },
+        { match: "dex_liquidity", rows: [] },
+        { match: "stress_signals", rows: [] },
+        { match: "current_snapshot", rows: [], first: { current_price: 1.02, prev_day_price: 0.99 } },
+        { match: "supply_history", rows: [{ price: 1.02 }, { price: 0.99 }] },
+        { match: "depeg_events", rows: [] },
+        { match: "mint_burn_hourly", rows: [] },
+      ]);
+
+      const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(data.change24h).toBeCloseTo(3.0303, 4);
+      const priceQuery = db.getHistory().find((entry) => entry.sql.includes("current_snapshot"));
+      expect(priceQuery?.binds).toEqual(["usdt-tether", "usdt-tether", 86_400]);
+      expect(priceQuery?.sql).toContain("snapshot_date <= current_snapshot.snapshot_date - ?");
+    });
   });
 
   it("renders variant context when provided", () => {
