@@ -124,7 +124,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
 
   const body = {
     gauge: {
-      score: gaugeScore, band: gaugeBand?.label ?? null, intensitySemantics: "signed-v2",
+      score: gaugeScore, band: gaugeBand, intensitySemantics: "signed-v2",
       flightToQuality: ftq.active, flightIntensity: ftq.intensity, classificationSource,
       trackedCoins: coins.length, trackedMcapUsd,
     },

@@ -391,7 +391,7 @@ export async function collectMintBurnFlows(
 
       return {
         gaugeScore,
-        gaugeBand: getGaugeBand(gaugeScore).label,
+        gaugeBand: getGaugeBand(gaugeScore),
         flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
         topPressure,
         topChains,

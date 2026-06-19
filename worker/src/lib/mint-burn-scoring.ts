@@ -65,24 +65,28 @@ export function computeFlowIntensity(
 // Gauge bands
 // ---------------------------------------------------------------------------
 
+/** Exhaustive union of gauge-band labels returned by {@link getGaugeBand}. */
+export type GaugeBand = "CRISIS" | "STRESS" | "CAUTIOUS" | "NEUTRAL" | "HEALTHY" | "CONFIDENT" | "SURGE";
+
 /**
- * Return the label for the band that contains `score`.
+ * Return the band label for the band that contains `score`.
  * Boundary convention: each band is [min, max).  The last band includes 100.
+ *
+ * NaN/out-of-range returns "NEUTRAL" as a sentinel — intrinsic to the design
+ * and documented here; callers do not need to handle it separately.
  */
-export function getGaugeBand(
-  score: number
-): { label: string } {
+export function getGaugeBand(score: number): GaugeBand {
   // Score-visible [min, max) assignments; boundary tests pin these labels.
   // Out-of-range/NaN sentinel (distinct from the real [-10,10) NEUTRAL band below);
   // unreachable for mcap-weighted intensity inputs, which are already clamped to [-100,100].
-  if (Number.isNaN(score) || score < -100) return { label: "NEUTRAL" };
-  if (score < -70) return { label: "CRISIS" };
-  if (score < -40) return { label: "STRESS" };
-  if (score < -10) return { label: "CAUTIOUS" };
-  if (score < 10) return { label: "NEUTRAL" };
-  if (score < 40) return { label: "HEALTHY" };
-  if (score < 70) return { label: "CONFIDENT" };
-  return { label: "SURGE" };
+  if (Number.isNaN(score) || score < -100) return "NEUTRAL";
+  if (score < -70) return "CRISIS";
+  if (score < -40) return "STRESS";
+  if (score < -10) return "CAUTIOUS";
+  if (score < 10) return "NEUTRAL";
+  if (score < 40) return "HEALTHY";
+  if (score < 70) return "CONFIDENT";
+  return "SURGE";
 }
 
 // ---------------------------------------------------------------------------

@@ -145,33 +145,33 @@ describe("computeFlowIntensity", () => {
 
 describe("getGaugeBand", () => {
   it("returns CRISIS for -100 to -70", () => {
-    expect(getGaugeBand(-80).label).toBe("CRISIS");
+    expect(getGaugeBand(-80)).toBe("CRISIS");
   });
   it("returns NEUTRAL for -10 to 10", () => {
-    expect(getGaugeBand(0).label).toBe("NEUTRAL");
+    expect(getGaugeBand(0)).toBe("NEUTRAL");
   });
   it("returns SURGE for 70-100", () => {
-    expect(getGaugeBand(95).label).toBe("SURGE");
+    expect(getGaugeBand(95)).toBe("SURGE");
   });
 
   it("pins inclusive lower-bound gauge assignments", () => {
-    expect(getGaugeBand(-100).label).toBe("CRISIS");
-    expect(getGaugeBand(-70).label).toBe("STRESS");
-    expect(getGaugeBand(-40).label).toBe("CAUTIOUS");
-    expect(getGaugeBand(-10).label).toBe("NEUTRAL");
-    expect(getGaugeBand(10).label).toBe("HEALTHY");
-    expect(getGaugeBand(40).label).toBe("CONFIDENT");
-    expect(getGaugeBand(70).label).toBe("SURGE");
-    expect(getGaugeBand(100).label).toBe("SURGE");
+    expect(getGaugeBand(-100)).toBe("CRISIS");
+    expect(getGaugeBand(-70)).toBe("STRESS");
+    expect(getGaugeBand(-40)).toBe("CAUTIOUS");
+    expect(getGaugeBand(-10)).toBe("NEUTRAL");
+    expect(getGaugeBand(10)).toBe("HEALTHY");
+    expect(getGaugeBand(40)).toBe("CONFIDENT");
+    expect(getGaugeBand(70)).toBe("SURGE");
+    expect(getGaugeBand(100)).toBe("SURGE");
   });
 
   it("pins exclusive upper-bound gauge assignments", () => {
-    expect(getGaugeBand(-70.000001).label).toBe("CRISIS");
-    expect(getGaugeBand(-40.000001).label).toBe("STRESS");
-    expect(getGaugeBand(-10.000001).label).toBe("CAUTIOUS");
-    expect(getGaugeBand(9.999999).label).toBe("NEUTRAL");
-    expect(getGaugeBand(39.999999).label).toBe("HEALTHY");
-    expect(getGaugeBand(69.999999).label).toBe("CONFIDENT");
+    expect(getGaugeBand(-70.000001)).toBe("CRISIS");
+    expect(getGaugeBand(-40.000001)).toBe("STRESS");
+    expect(getGaugeBand(-10.000001)).toBe("CAUTIOUS");
+    expect(getGaugeBand(9.999999)).toBe("NEUTRAL");
+    expect(getGaugeBand(39.999999)).toBe("HEALTHY");
+    expect(getGaugeBand(69.999999)).toBe("CONFIDENT");
   });
 });
 
