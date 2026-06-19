@@ -176,6 +176,7 @@ export const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>>
   codex: 3,         // new payment-focused L1
   edgechain: 3,     // exchange-adjacent financial chain
   stable: 3,        // new USDT-focused chain
+  bevm: 3,          // newer BTC-aligned L2
 
   // Everything else defaults to tier 2 via getChainResilienceTier()
 };
