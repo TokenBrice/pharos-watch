@@ -60,11 +60,12 @@ export function YieldClient() {
     [searchParams],
   );
   const viewModel = useMemo<YieldViewModel>(
-    () => buildYieldViewModel(rankings, urlParams, {
-      benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
-      fallbackBenchmark: data?.provenance?.benchmark ?? null,
-      watchlistIds: watchlist.idSet,
-    }),
+    () =>
+      buildYieldViewModel(rankings, urlParams, {
+        benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
+        fallbackBenchmark: data?.provenance?.benchmark ?? null,
+        watchlistIds: watchlist.idSet,
+      }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
   );
   const visibleRows = viewModel.visibleRows;
@@ -76,10 +77,11 @@ export function YieldClient() {
   }, []);
 
   const sourceBoardModel = useMemo(
-    () => buildYieldSourceBoardModel(visibleRows, {
-      benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
-      fallbackBenchmark: data?.provenance?.benchmark ?? null,
-    }),
+    () =>
+      buildYieldSourceBoardModel(visibleRows, {
+        benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
+        fallbackBenchmark: data?.provenance?.benchmark ?? null,
+      }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, visibleRows],
   );
 
@@ -89,8 +91,13 @@ export function YieldClient() {
   const currencyCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const option of viewModel.options.peg) {
-      if (option.value === "all" || option.value === "non-usd"
-        || option.value === "aud-cad" || option.value === "other") continue;
+      if (
+        option.value === "all" ||
+        option.value === "non-usd" ||
+        option.value === "aud-cad" ||
+        option.value === "other"
+      )
+        continue;
       counts[option.value] = option.count;
     }
     return counts;
@@ -107,9 +114,12 @@ export function YieldClient() {
     });
   }, [replaceParams, viewModel.invalidParamKeys, viewModel.normalizedParams]);
 
-  const handleFilterChange = useCallback((key: string, value: string) => {
-    setParam(key, value);
-  }, [setParam]);
+  const handleFilterChange = useCallback(
+    (key: string, value: string) => {
+      setParam(key, value);
+    },
+    [setParam],
+  );
 
   const handleClearFilters = useCallback(() => {
     replaceParams((params) => {
@@ -205,9 +215,7 @@ export function YieldClient() {
             >
               <p className="font-medium">{warning.message}</p>
               {warning.reasons && warning.reasons.length > 0 ? (
-                <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">
-                  {warning.reasons.join(", ")}
-                </p>
+                <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">{warning.reasons.join(", ")}</p>
               ) : null}
             </div>
           ))}
@@ -230,9 +238,15 @@ export function YieldClient() {
                 >
                   <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Top yield this week</h3>
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[exhibitTiles.topYield.id]} name={exhibitTiles.topYield.name} size={20} />
+                    <StablecoinLogo
+                      src={logos?.[exhibitTiles.topYield.id]}
+                      name={exhibitTiles.topYield.name}
+                      size={20}
+                    />
                     <span className="font-semibold text-foreground">{exhibitTiles.topYield.symbol}</span>
-                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{exhibitTiles.topYield.name}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+                      {exhibitTiles.topYield.name}
+                    </span>
                   </div>
                   <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
                     {formatPercent(exhibitTiles.topYield.apy30d)}
@@ -254,9 +268,15 @@ export function YieldClient() {
                 >
                   <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Most stable A+ yield</h3>
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[exhibitTiles.mostStable.id]} name={exhibitTiles.mostStable.name} size={20} />
+                    <StablecoinLogo
+                      src={logos?.[exhibitTiles.mostStable.id]}
+                      name={exhibitTiles.mostStable.name}
+                      size={20}
+                    />
                     <span className="font-semibold text-foreground">{exhibitTiles.mostStable.symbol}</span>
-                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{exhibitTiles.mostStable.safetyGrade}</span>
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      {exhibitTiles.mostStable.safetyGrade}
+                    </span>
                   </div>
                   <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
                     {formatPercent(exhibitTiles.mostStable.apy30d)}
@@ -276,9 +296,15 @@ export function YieldClient() {
                 >
                   <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Largest market</h3>
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[exhibitTiles.largestMarket.id]} name={exhibitTiles.largestMarket.name} size={20} />
+                    <StablecoinLogo
+                      src={logos?.[exhibitTiles.largestMarket.id]}
+                      name={exhibitTiles.largestMarket.name}
+                      size={20}
+                    />
                     <span className="font-semibold text-foreground">{exhibitTiles.largestMarket.symbol}</span>
-                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{exhibitTiles.largestMarket.name}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+                      {exhibitTiles.largestMarket.name}
+                    </span>
                   </div>
                   <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
                     {formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)} TVL
@@ -351,9 +377,7 @@ export function YieldClient() {
                     <button
                       key={suggestion.filterKey}
                       type="button"
-                      onClick={() =>
-                        handleFilterChange(suggestion.filterKey, suggestion.targetValue ?? "all")
-                      }
+                      onClick={() => handleFilterChange(suggestion.filterKey, suggestion.targetValue ?? "all")}
                       className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                     >
                       <span>{suggestion.label}</span>
@@ -370,6 +394,7 @@ export function YieldClient() {
             <>
               <ReferenceRatesStrip
                 benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
+                fallbackBenchmark={data.provenance?.benchmark ?? null}
                 poolInputMeta={data.provenance?.dlPools ?? null}
                 safetySnapshot={data.provenance?.safetySnapshot ?? null}
                 currencyCounts={currencyCounts}
