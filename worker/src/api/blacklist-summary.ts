@@ -156,113 +156,6 @@ function isDestroySnapshot(snapshot: BlacklistCurrentBalanceSnapshot): boolean {
   return sourceCategory(snapshot.source) === "destroy";
 }
 
-function computeActiveSummaryStatsFromCurrentBalances(
-  currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
-): ReturnType<typeof computeBlacklistActiveSummaryStats> {
-  let activeAddressCount = 0;
-  let activeFrozenTotal = 0;
-  let activeAmountGapCount = 0;
-
-  for (const snapshot of currentBalances.values()) {
-    activeAddressCount++;
-    if (isDestroySnapshot(snapshot)) continue;
-    if (snapshot.amountUsd == null) {
-      activeAmountGapCount++;
-      continue;
-    }
-    activeFrozenTotal += snapshot.amountUsd;
-  }
-
-  return { activeAddressCount, activeFrozenTotal, activeAmountGapCount };
-}
-
-function buildSyntheticBlacklistEvent(row: {
-  id?: string | null;
-  stablecoin: string;
-  chain_id: string;
-  chain_name?: string | null;
-  address: string;
-  timestamp: number | null;
-  config_key?: string | null;
-  contract_address?: string | null;
-}): BlacklistEvent | null {
-  if (row.timestamp == null) return null;
-  return {
-    id: row.id ?? `${row.stablecoin}:${row.chain_id}:${row.address}:${row.timestamp}`,
-    stablecoin: row.stablecoin as BlacklistStablecoin,
-    chainId: row.chain_id,
-    chainName: row.chain_name ?? row.chain_id,
-    eventType: "blacklist",
-    address: row.address,
-    amountNative: null,
-    amountUsdAtEvent: null,
-    amountSource: "unavailable",
-    amountStatus: "recoverable_pending",
-    txHash: "",
-    blockNumber: 0,
-    timestamp: row.timestamp,
-    methodologyVersion: "",
-    contractAddress: row.contract_address ?? null,
-    configKey: row.config_key ?? null,
-    eventSignature: null,
-    eventTopic0: null,
-    suppressionReason: null,
-    explorerTxUrl: "",
-    explorerAddressUrl: "",
-  };
-}
-
-async function queryLatestBlacklistEventsForCurrentBalances(
-  db: D1Database,
-  currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
-): Promise<BlacklistEvent[]> {
-  if (currentBalances.size === 0) return [];
-
-  const result = await db
-    .prepare(
-      `/* blacklist-summary-latest-event-type-by-balance latest_event_type_by_balance */
-       SELECT
-         b.id,
-         b.stablecoin,
-         b.chain_id,
-         b.address,
-         b.config_key,
-         b.contract_address,
-         MAX(e.timestamp) AS timestamp
-       FROM blacklist_current_balances b
-       LEFT JOIN blacklist_events e
-         ON e.stablecoin = b.stablecoin
-        AND e.chain_id = b.chain_id
-        AND LOWER(e.address) = LOWER(b.address)
-        AND e.event_type = 'blacklist'
-        AND e.suppression_reason IS NULL
-        AND (
-          (b.config_key IS NOT NULL AND e.config_key = b.config_key)
-          OR (b.config_key IS NULL AND b.contract_address IS NOT NULL AND LOWER(e.contract_address) = LOWER(b.contract_address))
-          OR (b.config_key IS NULL AND b.contract_address IS NULL)
-          OR (e.config_key IS NULL AND e.contract_address IS NULL)
-        )
-       GROUP BY b.id, b.stablecoin, b.chain_id, b.address, b.config_key, b.contract_address`,
-    )
-    .all<{
-      id: string | null;
-      stablecoin: string;
-      chain_id: string;
-      chain_name?: string | null;
-      event_type?: string | null;
-      address: string;
-      timestamp: number | null;
-      config_key: string | null;
-      contract_address: string | null;
-    }>();
-
-  return (result.results ?? []).flatMap((row) => {
-    if (row.event_type != null && row.event_type !== "blacklist") return [];
-    const event = buildSyntheticBlacklistEvent(row);
-    return event ? [event] : [];
-  });
-}
-
 async function queryLatestEventTypeHistory(db: D1Database): Promise<BlacklistEvent[]> {
   const activeHistoryResult = await db
     .prepare(
@@ -416,45 +309,31 @@ interface ActiveBlacklistRecords {
 }
 
 /**
- * Resolve the active freeze records from either the legacy event-derived path
- * (used when no current-balance snapshots exist) or the current-balance
- * snapshot path. The legacy-vs-snapshot decision is made once here so the four
- * derived outputs cannot drift between branches.
+ * Resolve active freeze records from event history for net blacklist state.
+ * Current-balance rows are retained freeze-ledger snapshots, including after
+ * releases, so they are only used to hydrate amounts for event-derived active
+ * records and must not define the active address set.
  */
 async function resolveActiveBlacklistRecords(
   db: D1Database,
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
 ): Promise<ActiveBlacklistRecords> {
-  const useLegacyEventPath = currentBalances.size === 0;
+  const activeHistory = await queryLatestEventTypeHistory(db);
+  const latestByAddr = deriveLatestByIdentity(activeHistory);
+  const activeRecordEvents = activeHistory.length > 0 ? activeHistory : latestByAddr;
+  const activeRecords = buildBlacklistActiveRecords(activeRecordEvents, currentBalances);
+  const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
+  const frozenAddresses = activeRecords.filter((record) => record.destroyedAt == null).length;
 
   const perCoinFrozenAddressCount = Object.fromEntries(
     BLACKLIST_STABLECOINS.map((s) => [s, 0]),
   ) as Record<BlacklistStablecoin, number>;
-
-  if (useLegacyEventPath) {
-    const activeHistory = await queryLatestEventTypeHistory(db);
-    const latestByAddr = deriveLatestByIdentity(activeHistory);
-    const activeRecordEvents = activeHistory.length > 0 ? activeHistory : latestByAddr;
-    const frozenAddresses = latestByAddr.filter((e) => e.eventType === "blacklist").length;
-    for (const row of latestByAddr) {
-      if (row.eventType !== "blacklist") continue;
-      if (!isBlacklistStablecoin(row.stablecoin)) continue;
-      perCoinFrozenAddressCount[row.stablecoin] += 1;
-    }
-    const activeStats = computeBlacklistActiveSummaryStats(
-      buildBlacklistActiveRecords(activeRecordEvents, currentBalances),
-    );
-    return { activeRecordEvents, frozenAddresses, perCoinFrozenAddressCount, activeStats };
+  for (const record of activeRecords) {
+    if (record.destroyedAt != null) continue;
+    if (!isBlacklistStablecoin(record.stablecoin)) continue;
+    perCoinFrozenAddressCount[record.stablecoin] += 1;
   }
 
-  const activeRecordEvents = await queryLatestBlacklistEventsForCurrentBalances(db, currentBalances);
-  const frozenAddresses = [...currentBalances.values()].filter((snapshot) => !isDestroySnapshot(snapshot)).length;
-  for (const snapshot of currentBalances.values()) {
-    if (isDestroySnapshot(snapshot)) continue;
-    if (!isBlacklistStablecoin(snapshot.stablecoin)) continue;
-    perCoinFrozenAddressCount[snapshot.stablecoin] += 1;
-  }
-  const activeStats = computeActiveSummaryStatsFromCurrentBalances(currentBalances);
   return { activeRecordEvents, frozenAddresses, perCoinFrozenAddressCount, activeStats };
 }
 
