@@ -64,9 +64,10 @@ function YieldSourceSheetBody({
   const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null : null;
   const freshness = classifyYieldSourceFreshness(ranking.sourceRisk?.sourceAgeSeconds ?? null);
   const hasAlternateSelected = selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
-  const deepDiveHref = hasAlternateSelected
-    ? `${buildStablecoinUrl(ranking.id)}yield/?sources=${encodeURIComponent(selectedSourceKey!)}`
-    : `${buildStablecoinUrl(ranking.id)}yield/`;
+  const deepDiveSearch = hasAlternateSelected
+    ? new URLSearchParams({ sources: selectedSourceKey }).toString()
+    : "";
+  const deepDiveHref = `${buildStablecoinUrl(ranking.id)}yield/${deepDiveSearch ? `?${deepDiveSearch}` : ""}`;
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);

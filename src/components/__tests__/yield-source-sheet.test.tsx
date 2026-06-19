@@ -298,6 +298,24 @@ describe("YieldSourceSheet", () => {
     expect(deepDive.getAttribute("href")).toMatch(/^\/stablecoin\/usdc\/yield\/?\?sources=alt-usdc$/);
   });
 
+  it("normalizes malformed unicode source keys in the deep-dive link", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={makeRanking("usdc", "best-usdc", "\uD800")}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
+    const deepDive = screen.getByRole("link", { name: /Deep dive yield/i });
+    expect(deepDive.getAttribute("href")).toMatch(/^\/stablecoin\/usdc\/yield\/?\?sources=%EF%BF%BD$/);
+  });
+
   it("keeps the existing View full dossier link to the main detail page", () => {
     const onOpenChange = vi.fn();
     render(
