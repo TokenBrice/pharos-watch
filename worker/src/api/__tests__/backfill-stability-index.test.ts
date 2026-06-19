@@ -514,6 +514,78 @@ describe("handleBackfillStabilityIndex", () => {
     expect(res.status).toBe(409);
   });
 
+  it("renews the advisory lease while a non-dry-run backfill is still running", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const start = nowSec - 86400;
+    let renewCalls = 0;
+    let batchCalls = 0;
+    let releaseBatch: (() => void) | undefined;
+    const holdBatch = new Promise<void>((resolve) => {
+      releaseBatch = resolve;
+    });
+    const db = makeDb({
+      earliest: start,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: start,
+          ended_at: null,
+        },
+      ],
+      supplyRows: [
+        { stablecoin_id: "usdt-tether", snapshot_date: start - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
+        { stablecoin_id: "usdt-tether", snapshot_date: start, circulating_usd: 100_000_000, price: 0.998 },
+      ],
+    });
+
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      const stmt = origPrepare(sql);
+      if (sql.includes("UPDATE cron_leases")) {
+        const bind = stmt.bind.bind(stmt);
+        return {
+          ...stmt,
+          bind: (...args: unknown[]) => {
+            const bound = bind(...args);
+            return {
+              ...bound,
+              run: async () => {
+                renewCalls++;
+                return { success: true, meta: { changes: 1 } };
+              },
+            };
+          },
+        } as typeof stmt;
+      }
+      return stmt;
+    }) as typeof db.prepare;
+
+    const origBatch = db.batch.bind(db);
+    db.batch = (async (stmts: D1PreparedStatement[]) => {
+      batchCalls++;
+      if (batchCalls === 2) {
+        await holdBatch;
+      }
+      return origBatch(stmts);
+    }) as typeof db.batch;
+
+    const pending = handleBackfillStabilityIndex(
+      db,
+      true,
+      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
+    );
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(renewCalls).toBeGreaterThanOrEqual(1);
+
+    releaseBatch?.();
+    const res = await pending;
+
+    expect(res.status).toBe(200);
+  });
+
   it("rejects invalid day parameters", async () => {
     const res = await handleBackfillStabilityIndex(
       makeDb({ earliest: 1 }),
