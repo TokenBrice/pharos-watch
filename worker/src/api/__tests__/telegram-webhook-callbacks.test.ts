@@ -821,7 +821,17 @@ describe("handleCallbackQuery", () => {
       expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"))).toBe(true);
       expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_preset_subscriptions"))).toBe(true);
       expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_alerts"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_alert_job_targets"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_alert_dead_letters"))).toBe(true);
       expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"))).toBe(false);
+      expect(sendAuditedTelegramReply).toHaveBeenCalledWith(
+        db,
+        "123",
+        "Your subscriber data has been deleted. Use /start to begin again.",
+        "fake-token",
+        { actionDetail: "callback_forget", recordReplyOutcome: false },
+      );
       expect(lastSentMessageBody().text).toContain("subscriber data has been deleted");
       expect(lastAckBody().text).toBe("Deleted.");
     });

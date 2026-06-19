@@ -43,6 +43,8 @@ export async function forgetSubscriber(db: D1Database, chatId: string): Promise<
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
     ...prepareDeleteTelegramChatCacheStatements(db, chatId),

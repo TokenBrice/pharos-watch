@@ -1202,6 +1202,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?", ["42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?", ["42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM telegram_pending_alerts WHERE chat_id = ?", ["42"])).toBe(true);
+    expect(historyHas(db, "DELETE FROM telegram_alert_job_targets WHERE chat_id = ?", ["42"])).toBe(true);
+    expect(historyHas(db, "DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?", ["42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?", ["42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM telegram_subscribers WHERE chat_id = ?", ["42"])).toBe(true);
     // processed_updates intentionally retained for idempotency.

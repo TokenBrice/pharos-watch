@@ -122,7 +122,7 @@ async function handleForgetConfirmCallback(
     chatId,
     "Your subscriber data has been deleted. Use /start to begin again.",
     botToken,
-    { actionDetail: "callback_forget" },
+    { actionDetail: "callback_forget", recordReplyOutcome: false },
   );
   await answerCallbackQuery(cb.id, botToken, { text: "Deleted." });
 }
