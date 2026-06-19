@@ -196,7 +196,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     statusImpact: "critical",
-    maxConnections: 3, // Secondary FX races three mirrors; metals run at <=2 and overlays are sequential.
+    maxConnections: 3, // Secondary FX races three mirrors; Chainlink feed pipelines are also bounded at three.
     connectionGroup: "quarter-hourly-chain",
   },
   {

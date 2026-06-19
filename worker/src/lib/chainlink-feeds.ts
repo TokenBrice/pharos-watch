@@ -55,6 +55,7 @@ export interface ChainlinkReferenceQuoteSnapshot {
 
 const FAILING_RUNS_WARN_THRESHOLD = 3;
 const ABI_UINT256_WORD_HEX = /^[0-9a-fA-F]{64}$/;
+const CHAINLINK_REFERENCE_FEED_MAX_CONCURRENCY = 3;
 
 // Verified against official Chainlink feed pages on 2026-03-19.
 export const CHAINLINK_REFERENCE_FEEDS: readonly ChainlinkReferenceFeed[] = [
@@ -195,6 +196,31 @@ interface SingleFeedResult {
   quote: ChainlinkReferenceQuote | null;
 }
 
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex++;
+      results[index] = await mapper(items[index]);
+    }
+  }
+
+  const workerCount = Math.min(Math.max(1, Math.floor(concurrency)), items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 async function fetchSingleFeedQuote(
   feed: ChainlinkReferenceFeed,
   nowSec: number,
@@ -292,10 +318,10 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   const perFeedOutcomes: Record<string, ChainlinkFeedOutcome> = {};
 
   throwIfAborted(signal);
-  const results = await Promise.all(
-    CHAINLINK_REFERENCE_FEEDS.map((feed) =>
-      fetchSingleFeedQuote(feed, nowSec, signal, chainRpcs, drpcApiKey, etherscanApiKey),
-    ),
+  const results = await mapWithConcurrency(
+    CHAINLINK_REFERENCE_FEEDS,
+    CHAINLINK_REFERENCE_FEED_MAX_CONCURRENCY,
+    (feed) => fetchSingleFeedQuote(feed, nowSec, signal, chainRpcs, drpcApiKey, etherscanApiKey),
   );
 
   CHAINLINK_REFERENCE_FEEDS.forEach((feed, index) => {
