@@ -1,6 +1,21 @@
 import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { LearnPageShell } from "../_shared/learn-page-shell";
 
+interface VisibleCaseStudyBreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+export function buildCaseStudyVisibleBreadcrumbs(finalLabel?: string): readonly VisibleCaseStudyBreadcrumbItem[] {
+  return [
+    { label: "Dashboard", href: "/" },
+    { label: "Learn", href: "/learn/" },
+    ...(finalLabel
+      ? [{ label: "Case Studies", href: "/learn/case-studies/" }, { label: finalLabel }]
+      : [{ label: "Case Studies" }]),
+  ];
+}
+
 interface CaseStudyPageShellProps {
   /** Drives the BreadcrumbList JSON-LD (site-relative urls). */
   breadcrumbItems: BreadcrumbItem[];
@@ -23,19 +38,7 @@ export function CaseStudyPageShell({
   return (
     <LearnPageShell
       breadcrumbItems={breadcrumbItems}
-      visibleBreadcrumbs={[
-        { label: "Dashboard", href: "/" },
-        { label: "Learn", href: "/learn/" },
-        ...(finalLabel
-          ? [
-              { label: "Case Studies", href: "/learn/case-studies/" },
-              { label: finalLabel },
-            ]
-          : [
-              { label: "Learn", href: "/learn/" },
-              { label: "Case Studies" },
-            ]),
-      ]}
+      visibleBreadcrumbs={buildCaseStudyVisibleBreadcrumbs(finalLabel)}
       title={title}
       subtitle={subtitle}
       leadParagraphs={leadParagraphs}
