@@ -8,6 +8,7 @@ import { splitMessage } from "../lib/telegram-alerts";
 
 export interface AuditedTelegramReplyOptions extends SendToChatOpts {
   actionDetail?: string;
+  recordReplyOutcome?: boolean;
 }
 
 export interface AuditedTelegramReplyResult {
@@ -29,6 +30,7 @@ export async function sendAuditedTelegramReply(
 ): Promise<AuditedTelegramReplyResult> {
   const {
     actionDetail = "reply",
+    recordReplyOutcome = true,
     replyMarkup,
     ...sendOptions
   } = options;
@@ -62,6 +64,8 @@ export async function sendAuditedTelegramReply(
       if (result.errorClass === "rate_limit" || !result.retryable) break;
     }
   }
-  await recordTelegramReplyOutcome(db, { chatId, ok, errorClass });
+  if (recordReplyOutcome) {
+    await recordTelegramReplyOutcome(db, { chatId, ok, errorClass });
+  }
   return { ok, errorClass };
 }

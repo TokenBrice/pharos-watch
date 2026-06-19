@@ -179,6 +179,9 @@ describe("forgetSubscriber", () => {
       )
       VALUES (?, ?, ?, ?)
     `).run(chatId, "alice", 100, 200);
+    sqlite.prepare("INSERT INTO telegram_alert_job_targets (job_id, target_key, chat_id, pending_dedupe_key) VALUES (?, ?, ?, ?)")
+      .run("job-1", "target-1", chatId, "pending-1");
+    sqlite.prepare("INSERT INTO telegram_alert_dead_letters (chat_id) VALUES (?)").run(chatId);
     const deletedCacheKeys = [
       `telegram:command-flood:${chatId}`,
       `telegram:command-flood:${chatId}:actor:99`,
@@ -211,6 +214,10 @@ describe("forgetSubscriber", () => {
     await forgetSubscriber(db, chatId);
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters WHERE chat_id = ?").get(chatId))
       .toEqual({ count: 0 });
     for (const key of deletedCacheKeys) {
       expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
