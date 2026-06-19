@@ -94,6 +94,45 @@ describe("digestByDay (back-compat)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// class summaries
+// ---------------------------------------------------------------------------
+
+describe("yield class summary", () => {
+  it("reports the worst PYS drop from projector-style positive deltas", () => {
+    const events = sortDesc([
+      makeEvent(NOW_MS - 1, "yield.warning_emitted", { coinId: "usdt" }),
+      makeEvent(NOW_MS - 2, "yield.pys_dropped", {
+        coinId: "usdt",
+        payload: { delta: 12 },
+      }),
+      makeEvent(NOW_MS - 3, "yield.pys_dropped", {
+        coinId: "usdt",
+        payload: { delta: 25 },
+      }),
+    ]);
+
+    const [today] = digestByDay(events, NOW_MS);
+    const yieldClass = today!.classes.find((c) => c.classSlug === "yield")!;
+
+    expect(yieldClass.summary).toBe("1 warning · 2 PYS drops · worst -25 pts · usdt ×3");
+  });
+
+  it("keeps rendering legacy signed negative PYS deltas as drops", () => {
+    const events = sortDesc([
+      makeEvent(NOW_MS - 1, "yield.pys_dropped", {
+        coinId: "usdt",
+        payload: { delta: -18 },
+      }),
+    ]);
+
+    const [today] = digestByDay(events, NOW_MS);
+    const yieldClass = today!.classes.find((c) => c.classSlug === "yield")!;
+
+    expect(yieldClass.summary).toBe("1 PYS drop · worst -18 pts · usdt");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // digestPage parity with digestByDay
 // ---------------------------------------------------------------------------
 
