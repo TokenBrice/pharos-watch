@@ -33,7 +33,7 @@ export interface PharosUrn {
 const URN_PREFIX = "urn:pharos:";
 
 const ID_ALPHABET = /^[a-z0-9-]+$/;
-const QUALIFIER_ALPHABET = /^[a-z0-9.\-]+$/;
+const QUALIFIER_ALPHABET = /^[a-z0-9.-]+$/;
 const ALPHANUMERIC = /^[a-z0-9]$/;
 
 function isValidSegment(value: string, alphabet: RegExp): boolean {
