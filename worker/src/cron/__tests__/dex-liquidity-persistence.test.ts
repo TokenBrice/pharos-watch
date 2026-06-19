@@ -102,6 +102,7 @@ function makeDb(options: {
 function makeFullScoreResult(overrides: Partial<FullScoreResult> = {}): FullScoreResult {
   return {
     tvl: 1,
+    effectiveTvl: 1,
     vol24h: 1,
     score: 1,
     hhi: 0.1,

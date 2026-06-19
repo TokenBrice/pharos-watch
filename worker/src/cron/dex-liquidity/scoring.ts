@@ -200,6 +200,7 @@ export async function computeStablecoinScores(
 
     results.set(id, {
       tvl: m.totalTvlUsd,
+      effectiveTvl: m.effectiveTvl,
       vol24h: m.totalVolume24hUsd,
       score,
       hhi: Math.round(rebuilt.hhi * 10000) / 10000,

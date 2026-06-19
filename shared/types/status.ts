@@ -565,6 +565,8 @@ export interface LiquidityHealth {
   previousGlobalTvl: number | null;
   currentTop10CoveredTvl: number | null;
   previousTop10CoveredTvl: number | null;
+  currentTop10GuardTvl: number | null;
+  previousTop10GuardTvl: number | null;
   failedSources: string[];
   nearCoverageGuard: boolean;
   nearValueGuard: boolean;

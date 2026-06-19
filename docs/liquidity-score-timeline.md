@@ -1,6 +1,14 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.82` (2026-02-19 -> 2026-06-19).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.83` (2026-02-19 -> 2026-06-19).
+
+---
+
+## v5.83 - Top-asset recovery guard quality baseline (June 19, 2026)
+
+- The top-asset coverage guard discounts previously published rows whose raw TVL was dominated by near-zero effective liquidity before deciding whether a recovery run must fail hard
+- Raw top-10 covered TVL remains visible in cron metadata; the guard now also records quality-adjusted top-10 guard TVL for near/hard threshold decisions
+- True top-asset coverage collapses still fail hard when the previous baseline had meaningful effective liquidity
 
 ---
 

@@ -30,6 +30,12 @@ type ValueBaselineSelection = {
   ignoredPersistedGlobalTvl: number | null;
 };
 
+type TopCoverageRow = {
+  stablecoin_id: string;
+  total_tvl_usd: number;
+  effective_tvl_usd?: number | null;
+};
+
 type CoverageClasses = {
   primary: number;
   mixed: number;
@@ -37,6 +43,9 @@ type CoverageClasses = {
   legacy: number;
   unobserved: number;
 };
+
+const MAJOR_COVERAGE_GUARD_RAW_TVL_MIN_USD = 100_000_000;
+const MAJOR_COVERAGE_GUARD_MIN_EFFECTIVE_RATIO = 0.02;
 
 function parseDexLiquidityCronMetadata(metadata: string | null): DexLiquidityCronMetadata | null {
   if (!metadata) return null;
@@ -63,6 +72,25 @@ function emptyCoverageClasses(): CoverageClasses {
 
 function isFinitePositive(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function isFiniteNonNegative(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function computeMajorCoverageGuardTvl(totalTvl: number, effectiveTvl: number | null | undefined): number {
+  if (!isFinitePositive(totalTvl)) return 0;
+  if (!isFiniteNonNegative(effectiveTvl)) return totalTvl;
+
+  const effectiveRatio = totalTvl > 0 ? effectiveTvl / totalTvl : 1;
+  if (
+    totalTvl >= MAJOR_COVERAGE_GUARD_RAW_TVL_MIN_USD &&
+    effectiveRatio < MAJOR_COVERAGE_GUARD_MIN_EFFECTIVE_RATIO
+  ) {
+    return effectiveTvl;
+  }
+
+  return totalTvl;
 }
 
 function hasCriticalDlSourceFailure(metadata: DexLiquidityCronMetadata): boolean {
@@ -184,6 +212,8 @@ export interface DexLiquidityPostScoreAnalysis {
   ignoredPersistedGlobalTvl: number | null;
   currentTop10CoveredTvl: number;
   previousTop10CoveredTvl: number;
+  currentTop10GuardTvl: number;
+  previousTop10GuardTvl: number;
   nearCoverageGuard: boolean;
   nearValueGuard: boolean;
   hardValueGuard: boolean;
@@ -206,6 +236,8 @@ export interface DexLiquidityPostScoreAnalysis {
     nearValueGuard: boolean;
     currentTop10CoveredTvl: number;
     previousTop10CoveredTvl: number;
+    currentTop10GuardTvl: number;
+    previousTop10GuardTvl: number;
     nearMajorCoverageGuard: boolean;
     currentCoverageClasses: CoverageClasses;
     previousCoverageClasses: CoverageClasses;
@@ -310,7 +342,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }),
     params.db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd
+        `SELECT stablecoin_id, total_tvl_usd, effective_tvl_usd
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
            AND liquidity_score IS NOT NULL
@@ -318,10 +350,10 @@ export async function analyzeDexLiquidityPostScoring(params: {
          ORDER BY total_tvl_usd DESC
          LIMIT 10`,
       )
-      .all<{ stablecoin_id: string; total_tvl_usd: number }>()
+      .all<TopCoverageRow>()
       .catch((e) => {
         console.warn("[dex-liquidity] Failed to read previous top coverage:", e);
-        return { results: [] as Array<{ stablecoin_id: string; total_tvl_usd: number }> };
+        return { results: [] as TopCoverageRow[] };
       }),
     params.db
       .prepare(
@@ -398,12 +430,20 @@ export async function analyzeDexLiquidityPostScoring(params: {
     (sum, row) => sum + (params.scoreResults.get(row.stablecoin_id)?.tvl ?? 0),
     0,
   );
+  const previousTop10GuardTvl = (previousTopCoverageRows.results ?? []).reduce(
+    (sum, row) => sum + computeMajorCoverageGuardTvl(row.total_tvl_usd, row.effective_tvl_usd),
+    0,
+  );
+  const currentTop10GuardTvl = (previousTopCoverageRows.results ?? []).reduce((sum, row) => {
+    const current = params.scoreResults.get(row.stablecoin_id);
+    return sum + (current ? computeMajorCoverageGuardTvl(current.tvl, current.effectiveTvl) : 0);
+  }, 0);
   const nearMajorCoverageGuard =
-    previousTop10CoveredTvl >= 5_000_000 && currentTop10CoveredTvl < previousTop10CoveredTvl * 0.85;
+    previousTop10GuardTvl >= 5_000_000 && currentTop10GuardTvl < previousTop10GuardTvl * 0.85;
   const hardMajorCoverageGuard =
     valueBaseline.ignoredPersistedGlobalTvl == null &&
-    previousTop10CoveredTvl >= 5_000_000 &&
-    currentTop10CoveredTvl < previousTop10CoveredTvl * 0.6;
+    previousTop10GuardTvl >= 5_000_000 &&
+    currentTop10GuardTvl < previousTop10GuardTvl * 0.6;
 
   const currentCoverageClasses: CoverageClasses = {
     ...emptyCoverageClasses(),
@@ -558,6 +598,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
     ignoredPersistedGlobalTvl: valueBaseline.ignoredPersistedGlobalTvl,
     currentTop10CoveredTvl,
     previousTop10CoveredTvl,
+    currentTop10GuardTvl,
+    previousTop10GuardTvl,
     nearCoverageGuard,
     nearValueGuard,
     hardValueGuard,
@@ -580,6 +622,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
       nearValueGuard,
       currentTop10CoveredTvl,
       previousTop10CoveredTvl,
+      currentTop10GuardTvl,
+      previousTop10GuardTvl,
       nearMajorCoverageGuard,
       currentCoverageClasses,
       previousCoverageClasses,

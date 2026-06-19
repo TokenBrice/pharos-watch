@@ -237,6 +237,7 @@ export interface UniV3Lookups {
 
 export interface ScoreResult {
   tvl: number;
+  effectiveTvl: number;
   vol24h: number;
   score: number;
 }

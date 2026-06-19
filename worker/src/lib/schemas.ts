@@ -121,6 +121,8 @@ export const DexLiquidityCronMetadataSchema = z.object({
       ignoredPersistedGlobalTvl: z.number().nullable().optional(),
       currentTop10CoveredTvl: z.number().optional(),
       previousTop10CoveredTvl: z.number().optional(),
+      currentTop10GuardTvl: z.number().optional(),
+      previousTop10GuardTvl: z.number().optional(),
       priceObservationCoins: z.number().optional(),
       weakCoverageCoins: z.number().optional(),
       coverageRecoveredCoins: z.number().optional(),

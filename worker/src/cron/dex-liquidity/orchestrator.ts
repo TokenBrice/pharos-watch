@@ -621,7 +621,9 @@ async function scoreDexLiquidityPoolState(
   }
   if (!hasCriticalSourceFailure && analysis.hardMajorCoverageGuard) {
     throw new Error(
-      `[dex-liquidity] major coverage guard tripped: currentTop10CoveredTvl=${Math.round(analysis.currentTop10CoveredTvl)}, ` +
+      `[dex-liquidity] major coverage guard tripped: currentTop10GuardTvl=${Math.round(analysis.currentTop10GuardTvl)}, ` +
+        `previousTop10GuardTvl=${Math.round(analysis.previousTop10GuardTvl)}, ` +
+        `currentTop10CoveredTvl=${Math.round(analysis.currentTop10CoveredTvl)}, ` +
         `previousTop10CoveredTvl=${Math.round(analysis.previousTop10CoveredTvl)}`,
     );
   }

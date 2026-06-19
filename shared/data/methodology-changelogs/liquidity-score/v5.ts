@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.83",
+    title: "Top-asset recovery guard quality baseline",
+    date: "2026-06-19",
+    effectiveAt: 1781899200,
+    summary:
+      "The top-asset coverage guard now discounts previously published rows whose raw TVL was dominated by near-zero effective liquidity before deciding whether a recovery run must fail hard.",
+    impact: [
+      "Large malformed rows removed by the retained-pool anti-poisoning gate no longer strand the public dataset behind an inflated raw-TVl baseline",
+      "The raw top-10 covered TVL remains in cron metadata, while the guard uses an additional quality-adjusted top-10 guard TVL for near/hard threshold decisions",
+      "True top-asset coverage collapses still fail hard when the previous baseline had meaningful effective liquidity",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.82",
     title: "Large zero-volume pool retention hardening",
     date: "2026-06-19",

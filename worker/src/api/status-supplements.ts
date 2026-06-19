@@ -297,6 +297,8 @@ export async function loadStatusSupplements(
         previousGlobalTvl: sourceCoverage.previousGlobalTvl != null ? Number(sourceCoverage.previousGlobalTvl) : null,
         currentTop10CoveredTvl: sourceCoverage.currentTop10CoveredTvl != null ? Number(sourceCoverage.currentTop10CoveredTvl) : null,
         previousTop10CoveredTvl: sourceCoverage.previousTop10CoveredTvl != null ? Number(sourceCoverage.previousTop10CoveredTvl) : null,
+        currentTop10GuardTvl: sourceCoverage.currentTop10GuardTvl != null ? Number(sourceCoverage.currentTop10GuardTvl) : null,
+        previousTop10GuardTvl: sourceCoverage.previousTop10GuardTvl != null ? Number(sourceCoverage.previousTop10GuardTvl) : null,
         failedSources: Array.isArray(metadata?.failedSources) ? metadata.failedSources.filter((v): v is string => typeof v === "string") : [],
         nearCoverageGuard: Boolean(sourceCoverage.nearCoverageGuard),
         nearValueGuard: Boolean(sourceCoverage.nearValueGuard),

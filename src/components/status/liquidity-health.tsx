@@ -79,11 +79,19 @@ export function LiquidityHealthCard({
             }
           />
           <StatTile
-            label="Top 10 Covered TVL"
-            value={health.currentTop10CoveredTvl != null ? formatCurrency(health.currentTop10CoveredTvl) : "—"}
+            label="Top 10 Guard TVL"
+            value={
+              health.currentTop10GuardTvl != null
+                ? formatCurrency(health.currentTop10GuardTvl)
+                : health.currentTop10CoveredTvl != null
+                  ? formatCurrency(health.currentTop10CoveredTvl)
+                  : "—"
+            }
             subtext={
-              health.previousTop10CoveredTvl != null
-                ? `prev ${formatCurrency(health.previousTop10CoveredTvl)}`
+              health.previousTop10GuardTvl != null
+                ? `prev ${formatCurrency(health.previousTop10GuardTvl)}`
+                : health.previousTop10CoveredTvl != null
+                  ? `prev ${formatCurrency(health.previousTop10CoveredTvl)}`
                 : undefined
             }
           />
@@ -109,9 +117,11 @@ export function LiquidityHealthCard({
           </span>
           <span className={guardTone(health.nearMajorCoverageGuard)}>
             Major guard: {health.nearMajorCoverageGuard
-              ? `${health.currentTop10CoveredTvl != null ? formatCurrency(health.currentTop10CoveredTvl) : "?"}/${health.previousTop10CoveredTvl != null ? formatCurrency(health.previousTop10CoveredTvl) : "?"} (<85%)`
-              : health.currentTop10CoveredTvl != null && health.previousTop10CoveredTvl != null
-                ? `${formatCurrency(health.currentTop10CoveredTvl)}/${formatCurrency(health.previousTop10CoveredTvl)}`
+              ? `${health.currentTop10GuardTvl != null ? formatCurrency(health.currentTop10GuardTvl) : health.currentTop10CoveredTvl != null ? formatCurrency(health.currentTop10CoveredTvl) : "?"}/${health.previousTop10GuardTvl != null ? formatCurrency(health.previousTop10GuardTvl) : health.previousTop10CoveredTvl != null ? formatCurrency(health.previousTop10CoveredTvl) : "?"} (<85%)`
+              : health.currentTop10GuardTvl != null && health.previousTop10GuardTvl != null
+                ? `${formatCurrency(health.currentTop10GuardTvl)}/${formatCurrency(health.previousTop10GuardTvl)}`
+                : health.currentTop10CoveredTvl != null && health.previousTop10CoveredTvl != null
+                  ? `${formatCurrency(health.currentTop10CoveredTvl)}/${formatCurrency(health.previousTop10CoveredTvl)}`
                 : "no data"}
           </span>
         </div>
