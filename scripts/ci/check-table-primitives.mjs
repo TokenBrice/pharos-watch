@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
-import { extname, isAbsolute, posix, relative, sep } from "node:path";
+import { existsSync } from "node:fs";
+import { isAbsolute, posix, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
+import { getScriptKind, parseSourceFile } from "../lib/ts-ast.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
 const DEFAULT_ROOTS = ["src"];
@@ -87,22 +88,6 @@ function collectExistingSourceFiles(roots, cwd, excludedDirs = DEFAULT_EXCLUDED_
     }));
   }
   return files.sort((a, b) => normalizePathForReport(a, cwd).localeCompare(normalizePathForReport(b, cwd)));
-}
-
-function getScriptKind(file) {
-  const extension = extname(file);
-  if (extension === ".tsx") return ts.ScriptKind.TSX;
-  if (extension === ".jsx") return ts.ScriptKind.JSX;
-  if (extension === ".js") return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
-}
-
-function parseSourceFile(file) {
-  const source = readFileSync(file, "utf8");
-  return {
-    source,
-    sourceFile: ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, getScriptKind(file)),
-  };
 }
 
 function getLine(sourceFile, node) {

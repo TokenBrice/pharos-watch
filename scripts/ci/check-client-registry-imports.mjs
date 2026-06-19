@@ -4,6 +4,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { collectSourceFiles } from "../lib/source-files.mjs";
+import { getScriptKind } from "../lib/ts-ast.mjs";
 
 const ROOT = process.cwd();
 const SOURCE_ROOT = "src";
@@ -23,12 +24,6 @@ function hasUseClientDirective(source) {
 
 function toRel(absPath) {
   return relative(ROOT, absPath).replaceAll("\\", "/");
-}
-
-function getScriptKind(path) {
-  if (path.endsWith(".tsx") || path.endsWith(".jsx")) return ts.ScriptKind.TSX;
-  if (path.endsWith(".js")) return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
 }
 
 function resolveSourceImport(fromFile, specifier) {

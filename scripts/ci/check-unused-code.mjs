@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { readFileSync, statSync } from "node:fs";
-import { extname, dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
+import { getScriptKind } from "../lib/ts-ast.mjs";
 
 const ROOT = process.cwd();
 const AUDIT_ALLOWLIST = !process.argv.includes("--skip-allowlist-audit");
@@ -597,14 +598,6 @@ function isRootEntrypoint(relPath) {
 
 function isTestFile(relPath) {
   return relPath.includes("/__tests__/") || /\.test\.[^/]+$/.test(relPath) || /\.spec\.[^/]+$/.test(relPath);
-}
-
-function getScriptKind(file) {
-  const extension = extname(file);
-  if (extension === ".tsx") return ts.ScriptKind.TSX;
-  if (extension === ".ts" || extension === ".mts") return ts.ScriptKind.TS;
-  if (extension === ".mjs") return ts.ScriptKind.JS;
-  return ts.ScriptKind.JS;
 }
 
 function visit(node, callback) {

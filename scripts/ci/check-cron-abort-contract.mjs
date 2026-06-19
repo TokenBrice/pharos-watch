@@ -5,6 +5,7 @@ import { dirname, extname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const DEFAULT_ROOTS = ["worker/src/handlers/scheduled", "worker/src/cron"];
 const WAIVER_FILE = "scripts/lib/cron-abort-contract-waivers.json";
@@ -65,15 +66,6 @@ function resolveLocalImport(fromFile, specifier) {
     return candidate;
   }
   return null;
-}
-
-function parseSourceFile(file) {
-  const source = readFileSync(file, "utf8");
-  const scriptKind = extname(file) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  return {
-    source,
-    sourceFile: ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, scriptKind),
-  };
 }
 
 function collectImportSpecifiers(sourceFile) {
