@@ -8,7 +8,7 @@ import {
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
-import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
+import { MobileMetricPill, MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
 import { TableCell, TableRow } from "@/components/table";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useIsMobile } from "@/hooks/use-is-mobile";
