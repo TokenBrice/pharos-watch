@@ -312,7 +312,7 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
     `Safety: ${status.safety ? `${status.safety.grade}${status.safety.score != null ? ` (${status.safety.score})` : ""}` : "missing"}`,
     `Active depeg: ${status.depeg.status === "active" ? "yes" : "no"}`,
     `DEX liquidity: ${status.liquidity ? `score ${status.liquidity.score ?? "NR"}, TVL ${formatTelegramCompactUsd(status.liquidity.totalTvlUsd) ?? "n/a"}` : "missing"}`,
-    `Yield: ${status.yield ? `${status.yield.apy30d.toFixed(2)}% 30d at ${status.yield.source}` : "missing"}`,
+    `Yield: ${status.yield ? `${status.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(status.yield.source)}` : "missing"}`,
     `<a href="https://pharos.watch/stablecoin/${status.stablecoinId}">Open coin page</a>`,
   ];
   return lines.join("\n");
