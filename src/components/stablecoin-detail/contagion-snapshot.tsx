@@ -18,17 +18,14 @@ interface ContagionSnapshotProps {
 
 const DETAIL_NODE_LIMIT = 500;
 
-const ContagionGraph = dynamic(
-  () => import("@/components/contagion-graph").then((mod) => mod.ContagionGraph),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-[22rem] items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground">
-        Loading dependency graph...
-      </div>
-    ),
-  },
-);
+const ContagionGraph = dynamic(() => import("@/components/contagion-graph").then((mod) => mod.ContagionGraph), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[22rem] items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground">
+      Loading dependency graph...
+    </div>
+  ),
+});
 
 export function ContagionSnapshot({
   stablecoinId,
@@ -39,26 +36,25 @@ export function ContagionSnapshot({
   const { data: rc } = useReportCards();
   const { data: list } = useStablecoins();
   const { data: logos } = useLogos();
-  if (!rc?.cards || !list?.peggedAssets) return null;
-  const focus = rc.cards.find((c) => c.id === stablecoinId);
-  if (!focus) return null;
-  const edges = rc.dependencyGraph?.edges ?? [];
-  const liveCardIds = new Set(rc.cards.filter((c) => !c.isDefunct).map((c) => c.id));
-  const hasContagion = edges.some(
-    (e) =>
-      liveCardIds.has(e.from)
-      && liveCardIds.has(e.to)
-      && (e.from === stablecoinId || e.to === stablecoinId),
-  );
   const hasVariantCard = Boolean(variantRelationshipCard);
   const hasRightColumn = hasVariantCard || Boolean(hasCollateralUsage);
+  const focus = rc?.cards?.find((c) => c.id === stablecoinId);
+  const edges = focus ? (rc?.dependencyGraph?.edges ?? []) : [];
+  const liveCardIds = new Set(rc?.cards?.filter((c) => !c.isDefunct).map((c) => c.id) ?? []);
+  const hasContagion = Boolean(
+    focus &&
+    list?.peggedAssets &&
+    edges.some(
+      (e) => liveCardIds.has(e.from) && liveCardIds.has(e.to) && (e.from === stablecoinId || e.to === stablecoinId),
+    ),
+  );
 
   if (!hasContagion && !hasRightColumn) {
     return null;
   }
 
   const mcapMap = new Map<string, number>();
-  for (const coin of list.peggedAssets) {
+  for (const coin of list?.peggedAssets ?? []) {
     mcapMap.set(coin.id, getCirculatingRaw(coin));
   }
 
@@ -74,11 +70,7 @@ export function ContagionSnapshot({
   );
 
   const isSplit = hasContagion && hasRightColumn;
-  const layoutClass = isSplit
-    ? "grid gap-6 lg:grid-cols-2"
-    : hasContagion
-      ? undefined
-      : "mx-auto max-w-2xl";
+  const layoutClass = isSplit ? "grid gap-6 lg:grid-cols-2" : hasContagion ? undefined : "mx-auto max-w-2xl";
 
   return (
     <section className="pharos-card-shell px-4 py-4 sm:px-5 sm:py-5">
@@ -86,7 +78,7 @@ export function ContagionSnapshot({
       <div className={layoutClass}>
         {hasContagion ? (
           <ContagionGraph
-            cards={rc.cards}
+            cards={rc?.cards ?? []}
             dependencyEdges={edges}
             mcapMap={mcapMap}
             logos={logos}

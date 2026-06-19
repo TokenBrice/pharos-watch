@@ -2,17 +2,9 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  ReportCard,
-  ReportCardGrade,
-  ReportCardsResponse,
-} from "@shared/types";
+import type { ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types";
 
-const {
-  useReportCardsMock,
-  useStablecoinsMock,
-  useLogosMock,
-} = vi.hoisted(() => ({
+const { useReportCardsMock, useStablecoinsMock, useLogosMock } = vi.hoisted(() => ({
   useReportCardsMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
   useLogosMock: vi.fn(),
@@ -138,10 +130,7 @@ describe("ContagionSnapshot", () => {
   it("renders the variantRelationshipCard prop and the contagion graph chrome when edges exist", () => {
     useReportCardsMock.mockReturnValue({
       data: makeReportCardsResponse(
-        [
-          makeCard("usde-ethena", "USDe"),
-          makeCard("usdc-circle", "USDC"),
-        ],
+        [makeCard("usde-ethena", "USDe"), makeCard("usdc-circle", "USDC")],
         [{ from: "usde-ethena", to: "usdc-circle", weight: 0.8, type: "collateral" }],
       ),
     });
@@ -163,10 +152,7 @@ describe("ContagionSnapshot", () => {
   it("honors hasCollateralUsage by rendering the CollateralUsageSection", () => {
     useReportCardsMock.mockReturnValue({
       data: makeReportCardsResponse(
-        [
-          makeCard("usde-ethena", "USDe"),
-          makeCard("usdc-circle", "USDC"),
-        ],
+        [makeCard("usde-ethena", "USDe"), makeCard("usdc-circle", "USDC")],
         [{ from: "usde-ethena", to: "usdc-circle", weight: 0.8, type: "collateral" }],
       ),
     });
@@ -175,7 +161,9 @@ describe("ContagionSnapshot", () => {
       <ContagionSnapshot
         stablecoinId="usdc-circle"
         hasCollateralUsage
-        collateralUsageEntries={[{ coin: { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" }, weight: 0.8, type: "collateral" }]}
+        collateralUsageEntries={[
+          { coin: { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" }, weight: 0.8, type: "collateral" },
+        ]}
       />,
     );
 
@@ -196,5 +184,42 @@ describe("ContagionSnapshot", () => {
     useReportCardsMock.mockReturnValue({ data: undefined });
     const { container } = render(<ContagionSnapshot stablecoinId="usde-ethena" />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it("renders right-column dependency context when report cards data is missing", () => {
+    useReportCardsMock.mockReturnValue({ data: undefined });
+
+    render(
+      <ContagionSnapshot
+        stablecoinId="usde-ethena"
+        variantRelationshipCard={<div data-testid="variant-card">VARIANT</div>}
+        hasCollateralUsage
+        collateralUsageEntries={[
+          { coin: { id: "usdtb-ethena", name: "Ethena USDtb", symbol: "USDtb" }, weight: 0.6, type: "collateral" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Dependency Context")).toBeTruthy();
+    expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
+    expect(screen.getByTestId("collateral-usage-mock").textContent).toBe("collateral-usage:usdtb-ethena");
+    expect(screen.queryByTestId("contagion-graph-mock")).toBeNull();
+  });
+
+  it("renders right-column dependency context when the report-card focus entry is missing", () => {
+    useReportCardsMock.mockReturnValue({
+      data: makeReportCardsResponse([makeCard("usdc-circle", "USDC")], []),
+    });
+
+    render(
+      <ContagionSnapshot
+        stablecoinId="usde-ethena"
+        variantRelationshipCard={<div data-testid="variant-card">VARIANT</div>}
+      />,
+    );
+
+    expect(screen.getByText("Dependency Context")).toBeTruthy();
+    expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
+    expect(screen.queryByTestId("contagion-graph-mock")).toBeNull();
   });
 });
