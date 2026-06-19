@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { scoreToGrade, computeOverallGrade, applyVariantOverallCap } from "../report-cards";
+import {
+  activeDepegCapScore,
+  ACTIVE_DEPEG_CAP_F_BPS,
+  ACTIVE_DEPEG_CAP_D_BPS,
+  ACTIVE_DEPEG_CAP_F_SCORE,
+  ACTIVE_DEPEG_CAP_D_SCORE,
+} from "../report-card-active-depeg";
 
 describe("computeOverallGrade", () => {
   const makeDimension = (score: number | null) => ({
@@ -162,5 +169,36 @@ describe("applyVariantOverallCap", () => {
     expect(result.overallCapped).toBe(false);
     expect(result.score).toBeNull();
     expect(result.uncappedOverallScore).toBeNull();
+  });
+});
+
+describe("activeDepegCapScore", () => {
+  it("returns null for null input", () => {
+    expect(activeDepegCapScore(null)).toBeNull();
+  });
+
+  it("returns null for undefined input", () => {
+    expect(activeDepegCapScore(undefined)).toBeNull();
+  });
+
+  it("returns null for bps below D threshold (999 bps)", () => {
+    expect(activeDepegCapScore(999)).toBeNull();
+    expect(activeDepegCapScore(0)).toBeNull();
+  });
+
+  it("returns D cap score at exactly the D boundary", () => {
+    expect(activeDepegCapScore(ACTIVE_DEPEG_CAP_D_BPS)).toBe(ACTIVE_DEPEG_CAP_D_SCORE);
+  });
+
+  it("returns D cap score just below F threshold", () => {
+    expect(activeDepegCapScore(ACTIVE_DEPEG_CAP_F_BPS - 1)).toBe(ACTIVE_DEPEG_CAP_D_SCORE);
+  });
+
+  it("returns F cap score at exactly the F boundary", () => {
+    expect(activeDepegCapScore(ACTIVE_DEPEG_CAP_F_BPS)).toBe(ACTIVE_DEPEG_CAP_F_SCORE);
+  });
+
+  it("returns F cap score for large values above F boundary", () => {
+    expect(activeDepegCapScore(7600)).toBe(ACTIVE_DEPEG_CAP_F_SCORE);
   });
 });
