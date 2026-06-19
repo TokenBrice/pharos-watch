@@ -254,18 +254,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     chain: "ethereum",
     routeType: "direct",
   },
-  // USD0/USDC (factory-stable-ng, ~$0.6M TVL)
-  {
-    stablecoinId: "usd0-usual",
-    poolAddress: "0x14100f81e33C33Ecc7CDac70181Fb45B6E78569F",
-    inputIndex: 1,  // USDC
-    outputIndex: 0, // USD0
-    inputDecimals: 6,
-    outputDecimals: 18,
-    chain: "ethereum",
-    routeType: "direct",
-  },
-
   // ── Hop pools (paired against crvUSD or PYUSD, resolved via two-phase pricing) ──
 
   // pmUSD/crvUSD (factory-stable-ng, ~$19.4M TVL)
@@ -341,18 +329,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     outputDecimals: 18,
     chain: "ethereum",
     hop: { viaStablecoinId: "susds-sky" },
-    routeType: "trusted-wrapper",
-  },
-  // USD0/USD0++ (factory-stable-ng, ~$3.7M TVL)
-  {
-    stablecoinId: "busd0-usual",
-    poolAddress: "0x1d08E7adC263CfC70b1BaBe6dC5Bb339c16Eec52",
-    inputIndex: 0,  // USD0
-    outputIndex: 1, // bUSD0 / USD0++
-    inputDecimals: 18,
-    outputDecimals: 18,
-    chain: "ethereum",
-    hop: { viaStablecoinId: "usd0-usual" },
     routeType: "trusted-wrapper",
   },
 

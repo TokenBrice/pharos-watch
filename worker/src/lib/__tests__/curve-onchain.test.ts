@@ -53,7 +53,6 @@ describe("fetchCurveOnchainPrices", () => {
       ["fidd-fidelity", "0xE47E8Ced9D94AA43C922627782E29b41a93202AF", 1, 0, 6, 18],
       ["usdq-quantoz", "0x5a8C7623FEe10542614e492c670a67e3DfE922F8", 1, 0, 6, 6],
       ["susds-sky", "0x00836Fe54625BE242BcFA286207795405ca4fD10", 1, 0, 6, 18],
-      ["usd0-usual", "0x14100f81e33C33Ecc7CDac70181Fb45B6E78569F", 1, 0, 6, 18],
     ] as const;
 
     for (const [stablecoinId, poolAddress, inputIndex, outputIndex, inputDecimals, outputDecimals] of expectedConfigs) {
@@ -81,11 +80,6 @@ describe("fetchCurveOnchainPrices", () => {
         expect.objectContaining({
           stablecoinId: "dola-inverse-finance",
           hop: { viaStablecoinId: "susds-sky" },
-          routeType: "trusted-wrapper",
-        }),
-        expect.objectContaining({
-          stablecoinId: "busd0-usual",
-          hop: { viaStablecoinId: "usd0-usual" },
           routeType: "trusted-wrapper",
         }),
         expect.objectContaining({
