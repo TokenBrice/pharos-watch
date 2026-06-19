@@ -410,6 +410,52 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     assertAllD1MatchesUsed(db);
   });
 
+  it("does not use legacy current rows when immutable run rows are present but all malformed", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-corrupt",
+            completed_at: 1_700_000_010,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: 1_700_000_000,
+            methodology_version: "1.1",
+          },
+          {
+            run_id: "run-valid",
+            completed_at: 1_700_000_000,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_699_999_990,
+            max_updated_at: 1_699_999_990,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-corrupt"],
+        rows: [makeRealisticRow({ snapshot_run_id: "run-corrupt", score: 101 })],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-valid"],
+        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
+      },
+    ]);
+
+    const result = await loadRedemptionBackstopSnapshot(db);
+
+    expect(result.runId).toBe("run-valid");
+    expect(result.snapshotSource).toBe("run-rows");
+    expect(result.latestUpdatedAt).toBe(1_699_999_990);
+    assertAllD1MatchesUsed(db);
+  });
+
   it("serves legacy current rows scoped to the completed run when immutable run rows are empty", async () => {
     const db = mockD1Strict([
       {

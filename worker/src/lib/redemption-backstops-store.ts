@@ -451,7 +451,10 @@ async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null)
   return decodeBackstopRows(rows.results ?? [], "Failed to decode redemption backstop snapshot rows");
 }
 
-async function queryRedemptionBackstopMapFromRunRows(db: D1Database, runId: string): Promise<RedemptionBackstopMap> {
+async function queryRedemptionBackstopMapFromRunRows(
+  db: D1Database,
+  runId: string,
+): Promise<{ map: RedemptionBackstopMap; rawRowCount: number }> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
     rows = await db
@@ -471,7 +474,11 @@ async function queryRedemptionBackstopMapFromRunRows(db: D1Database, runId: stri
     });
   }
 
-  return decodeBackstopRows(rows.results ?? [], "Failed to decode immutable redemption backstop run rows");
+  const resultRows = rows.results ?? [];
+  return {
+    map: decodeBackstopRows(resultRows, "Failed to decode immutable redemption backstop run rows"),
+    rawRowCount: resultRows.length,
+  };
 }
 
 async function queryCompletedRedemptionBackstopRunMap(
@@ -479,8 +486,8 @@ async function queryCompletedRedemptionBackstopRunMap(
   runId: string,
 ): Promise<{ map: RedemptionBackstopMap; source: RedemptionSnapshotSource }> {
   try {
-    const map = await queryRedemptionBackstopMapFromRunRows(db, runId);
-    if (Object.keys(map).length > 0) {
+    const { map, rawRowCount } = await queryRedemptionBackstopMapFromRunRows(db, runId);
+    if (rawRowCount > 0) {
       return { map, source: "run-rows" };
     }
   } catch (error) {
