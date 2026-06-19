@@ -5,7 +5,7 @@ import { isAbsolute, posix, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
-import { getScriptKind, parseSourceFile } from "../lib/ts-ast.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
 const DEFAULT_ROOTS = ["src"];
