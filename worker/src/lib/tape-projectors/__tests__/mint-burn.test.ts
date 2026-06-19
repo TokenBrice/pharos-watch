@@ -93,6 +93,24 @@ describe("mint_burn projector", () => {
     expect(id1).toEqual(id2);
   });
 
+  it("expands a full batch to include all rows at the cutoff timestamp before advancing", async () => {
+    const rows = [
+      makeFlow({ id: "ethereum-0xa-0", timestamp: SEC }),
+      makeFlow({ id: "ethereum-0xb-0", timestamp: SEC }),
+      makeFlow({ id: "ethereum-0xc-0", timestamp: SEC }),
+    ];
+    const db = mockD1([
+      { match: "FROM cache WHERE key", rows: [] },
+      { match: MATCH_FETCH_FLOWS, matchBinds: [0, 10_000_000, 2], rows: rows.slice(0, 2) },
+      { match: MATCH_FETCH_FLOWS, matchBinds: [0, SEC, 10_000_000], rows },
+    ]) as MockD1Database;
+
+    const result = await projectMintBurnLargeFlows(db, { maxRows: 2 });
+
+    expect(result.advanced).toBe(SEC);
+    expect(extractInsertBindsForType(db, "mint_burn.large_mint")).toHaveLength(3);
+  });
+
   it("emits nothing on an empty source", async () => {
     const db = mockD1(withRows([])) as MockD1Database;
     await projectMintBurnLargeFlows(db);
