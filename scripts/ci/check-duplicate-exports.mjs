@@ -10,11 +10,12 @@ import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const DIRS = ["shared/lib", "src/lib", "worker/src/lib"];
 const EXPORT_RE = /^export\s+(?:const|let|function|class|type|interface|enum)\s+(\w+)/gm;
+const EXCLUDED_DIRS = new Set(["node_modules"]);
 
 let errors = 0;
 
 for (const dir of DIRS) {
-  for (const full of collectSourceFiles(dir, { extensions: new Set([".ts", ".tsx"]) })) {
+  for (const full of collectSourceFiles(dir, { extensions: new Set([".ts", ".tsx"]), excludedDirs: EXCLUDED_DIRS })) {
     const content = readFileSync(full, "utf-8");
     const seen = new Map();
     let match;

@@ -15,7 +15,6 @@ import {
   inheritFxSourceMetadata,
 } from "../lib/fx-source-metadata";
 import { toErrorMessage } from "../lib/error-utils";
-import { rethrowIfAborted } from "../lib/abort";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
 const CHAINLINK_REFERENCE_MAX_DIVERGENCE = 0.05;
@@ -802,7 +801,7 @@ export async function runOpenExchangeRatesOverlay(
       ? (realtimeApplied === realtimeFetch.rates.size ? "ok" : "partial")
       : "unavailable";
   } catch (err) {
-    rethrowIfAborted(err, signal);
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     await logCronEvent(db, {
       job: "sync-fx-rates",
       eventType: "openexchange-rates-fetch-failed",
@@ -859,7 +858,7 @@ export async function runChainlinkOverlay(
       ? (accepted === snapshot.quotes.size ? "ok" : "partial")
       : "unavailable";
   } catch (err) {
-    rethrowIfAborted(err, signal);
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     await logCronEvent(db, {
       job: "sync-fx-rates",
       eventType: "chainlink-reference-feeds-failed",

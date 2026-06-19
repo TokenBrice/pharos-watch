@@ -311,10 +311,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   ...Object.fromEntries(
     (
       [
-        ["iauon-ondo", "IAUon", "iauon", "iShares Gold Trust"],
-        ["slvon-ondo", "SLVon", "slvon", "iShares Silver Trust"],
+        ["iauon-ondo", "IAUon", "iauon", "IAU", "iShares Gold Trust"],
+        ["slvon-ondo", "SLVon", "slvon", "SLV", "iShares Silver Trust"],
       ] as const
-    ).map(([id, label, slug, fundName]) => [
+    ).map(([id, label, slug, underlyingTicker, fundName]) => [
       id,
       {
         ...issuerBase,
@@ -323,7 +323,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         executionModel: "rules-based-nav",
         outputAssetType: "nav",
         costModel: undisclosedReviewedFee(
-          `Ondo Global Markets subscriptions and redemptions follow the tokenized ${slug.toUpperCase()} economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee`,
+          `Ondo Global Markets subscriptions and redemptions follow the tokenized ${underlyingTicker} economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee`,
         ),
         docs: [
           sourceRef(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`, ["route", "capacity"]),

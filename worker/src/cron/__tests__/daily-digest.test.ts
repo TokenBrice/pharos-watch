@@ -666,7 +666,7 @@ describe("generateDailyDigest", () => {
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(db, "anthropic-key");
 
-    expect(result).toEqual({ metadata: "skipped: anthropic circuit open" });
+    expect(result).toEqual({ status: "degraded", itemCount: 0, metadata: "skipped: anthropic circuit open" });
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(postDigestToTelegram).not.toHaveBeenCalled();
     expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();

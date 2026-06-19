@@ -59,6 +59,27 @@ describe("check-cron-abort-contract", () => {
     );
   });
 
+  it("rejects slot-summary callbacks that drop the scheduled AbortSignal", () => {
+    const root = makeRoot();
+    writeFixture(root, "worker/src/handlers/scheduled/run.ts", `
+      import { runSinglePropagatingSlotJob } from "./slot-summary";
+
+      export function scheduled(runtime: ScheduledRuntimeContext) {
+        return runSinglePropagatingSlotJob(runtime, "fixture", async () => {
+          return { itemCount: 1 };
+        });
+      }
+    `);
+
+    const report = scan(root);
+
+    expect(report.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "missing-cron-signal", file: "worker/src/handlers/scheduled/run.ts" }),
+      ]),
+    );
+  });
+
   it("scans cron-reachable worker lib helpers for dropped fetch signals", () => {
     const root = makeRoot();
     writeFixture(root, "worker/src/cron/job.ts", `

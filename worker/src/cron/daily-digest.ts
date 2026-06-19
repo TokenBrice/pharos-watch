@@ -196,7 +196,7 @@ export async function generateDailyDigest(
         skipped: "anthropic-circuit-open",
       },
     });
-    return { metadata: "skipped: anthropic circuit open" };
+    return { status: "degraded", itemCount: 0, metadata: "skipped: anthropic circuit open" };
   }
   await reportDigestProgress(reportProgress, {
     stage: "llm-generation-complete",

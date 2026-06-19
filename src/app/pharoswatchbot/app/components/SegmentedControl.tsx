@@ -2,23 +2,24 @@
 
 import { cn } from "@/lib/utils";
 
-export function SegmentedControl<T>({ value, options, onChange, disabled, ariaLabel }: {
+export function SegmentedControl<T>({ value, options, onChange, disabled, ariaLabel, getOptionAriaLabel }: {
   value: T;
   options: readonly { value: T; label: string; caption?: string }[];
   onChange: (next: T) => void;
   disabled?: boolean;
   ariaLabel: string;
+  getOptionAriaLabel?: (option: { value: T; label: string; caption?: string }) => string;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label={ariaLabel}>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label={ariaLabel}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
           <button
             key={option.label}
             type="button"
-            role="radio"
-            aria-checked={selected}
+            aria-label={getOptionAriaLabel?.(option)}
+            aria-pressed={selected}
             disabled={disabled}
             onClick={() => onChange(option.value)}
             className={cn(

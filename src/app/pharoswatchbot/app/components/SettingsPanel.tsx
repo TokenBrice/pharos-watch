@@ -317,6 +317,11 @@ export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, 
               value={currentDepegStep}
               options={DEPEG_STEP_OPTIONS}
               disabled={!canMutate || isMutating}
+              getOptionAriaLabel={(option) =>
+                option.value == null
+                  ? "Set global depeg step to any depeg"
+                  : `Set global depeg step to ${option.value} bps`
+              }
               onChange={(next) => onMutate({ kind: "set-global-depeg-step", depegStepBps: next })}
             />
           </div>

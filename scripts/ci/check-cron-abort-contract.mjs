@@ -12,7 +12,7 @@ const WAIVER_FILE = "scripts/lib/cron-abort-contract-waivers.json";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs"]);
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__"]);
 const CRON_REACHABLE_LIB_ROOT = "worker/src/lib";
-const LEASED_CRON_CALLEES = new Set(["runLeasedCron", "runBestEffortScheduledJobWithOutcome"]);
+const LEASED_CRON_CALLEES = new Set(["runLeasedCron", "runBestEffortScheduledJobWithOutcome", "runSinglePropagatingSlotJob"]);
 const SIGNAL_AWARE_CALLEES = new Set([
   "batchExecute",
   "fetchWithRetry",
