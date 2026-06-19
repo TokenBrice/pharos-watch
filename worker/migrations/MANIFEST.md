@@ -99,6 +99,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0153     | `0153_status_reliability_idempotency.sql`                | Add nullable idempotency keys and partial unique indexes for retry-safe status transitions and probe runs                                        |
 | 0154     | `0154_apxusd_ddr_tail_90203_link.sql`                    | Link APXUSD tail event 90203 into the sealed June 2 DDR incident and supersede the accidental fresh incident                                    |
 | 0155     | `0155_telegram_retention_indexes.sql`                    | Add Telegram retention indexes for inactive subscriber scans and alert-job cleanup batches                                                       |
+| 0156     | `0156_telegram_per_coin_alert_override_markers.sql`       | Add per-coin Telegram alert override markers so explicit off settings do not confuse default zeroes with opt-outs                               |
 
 ## Retired Individual Migrations
 

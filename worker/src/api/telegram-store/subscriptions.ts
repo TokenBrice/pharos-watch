@@ -33,11 +33,12 @@ export function buildDewsUpsert(
   return {
     sql: `
       INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band
+        chat_id, stablecoin_id, alert_dews, alert_dews_override, alert_depeg, alert_safety, dews_min_band
       )
-      VALUES (?, ?, ?, 0, 0, ?)
+      VALUES (?, ?, ?, 1, 0, 0, ?)
       ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
         alert_dews = excluded.alert_dews,
+        alert_dews_override = 1,
         dews_min_band = excluded.dews_min_band
     `,
     binds: [chatId, stablecoinId, enabled ? 1 : 0, minBand],
@@ -53,11 +54,12 @@ export function buildSafetyUpsert(
   return {
     sql: `
       INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, safety_mode
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_safety_override, safety_mode
       )
-      VALUES (?, ?, 0, 0, ?, ?)
+      VALUES (?, ?, 0, 0, ?, 1, ?)
       ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
         alert_safety = excluded.alert_safety,
+        alert_safety_override = 1,
         safety_mode = excluded.safety_mode
     `,
     binds: [chatId, stablecoinId, enabled ? 1 : 0, mode],
@@ -72,11 +74,12 @@ export function buildDepegUpsert(
   return {
     sql: `
       INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_depeg_override, alert_safety, depeg_worsening_bps_step
       )
-      VALUES (?, ?, 0, ?, 0, NULL)
+      VALUES (?, ?, 0, ?, 1, 0, NULL)
       ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
         alert_depeg = excluded.alert_depeg,
+        alert_depeg_override = 1,
         depeg_worsening_bps_step = CASE WHEN excluded.alert_depeg = 0 THEN NULL ELSE telegram_subscriptions.depeg_worsening_bps_step END
     `,
     binds: [chatId, stablecoinId, enabled ? 1 : 0],
@@ -91,11 +94,12 @@ export function buildDepegStepUpsert(
   return {
     sql: `
       INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_depeg_override, alert_safety, depeg_worsening_bps_step
       )
-      VALUES (?, ?, 0, 1, 0, ?)
+      VALUES (?, ?, 0, 1, 1, 0, ?)
       ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
         alert_depeg = 1,
+        alert_depeg_override = 1,
         depeg_worsening_bps_step = excluded.depeg_worsening_bps_step
     `,
     binds: [chatId, stablecoinId, step],
@@ -110,11 +114,12 @@ export function buildLaunchUpsert(
   return {
     sql: `
       INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_launch_override
       )
-      VALUES (?, ?, 0, 0, 0, ?)
+      VALUES (?, ?, 0, 0, 0, ?, 1)
       ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-        alert_launch = excluded.alert_launch
+        alert_launch = excluded.alert_launch,
+        alert_launch_override = 1
     `,
     binds: [chatId, stablecoinId, enabled ? 1 : 0],
   };

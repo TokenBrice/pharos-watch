@@ -517,6 +517,7 @@ Filtering is subscription-aware:
 - Quiet hours force `disable_notification = true`
 - Chats with `alert_snooze_until_ts > now` are fully skipped for the run. The count of currently-snoozed chats (whether or not they would have received an alert this run) surfaces as `chatsWithActiveSnooze` in dispatch metadata.
 - Per-coin snoozes live on `telegram_subscriptions.alert_snooze_until_ts` (added in `worker/migrations/0119_telegram_subscription_snooze.sql`). The dispatcher filters them out at the subscriber-row SELECT and also loads a `Map<stablecoinId, Set<chatId>>` of active per-coin snoozes so the global fan-out lane suppresses the same (chat, stablecoin) pair. Per-coin snooze and chat-level snooze stack — either active suppresses fan-out.
+- Per-coin explicit off overrides use the matching `telegram_subscriptions.alert_*_override` marker columns (added in `worker/migrations/0156_telegram_per_coin_alert_override_markers.sql`) plus `alert_* = 0`. Subscribe-style partial follows still write default zeroes for unmentioned alert families, but they leave override markers unset so global/preset fan-out is not silently suppressed.
 
 When the same chat has both a global alert type and a per-coin subscription for the same alert type, the per-coin row wins. This lets coin-specific thresholds or modes override the global default, and it lets `/set <ticker> <type> off` silence that coin even when the chat follows a preset or all-stablecoin alert family.
 
