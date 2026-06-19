@@ -338,15 +338,14 @@ export interface TelegramBotStats {
   quality?: TelegramTelemetryQuality;
 }
 
-const TelegramAlertTypeChatsSchema = z.object({
-  dews: z.number(),
-  depeg: z.number(),
-  safety: z.number(),
-  launch: z.number(),
-  reserve: z.number().optional().default(0),
-  allTypes: z.number(),
-});
-export type TelegramAlertTypeChats = z.infer<typeof TelegramAlertTypeChatsSchema>;
+export interface TelegramAlertTypeChats {
+  dews: number;
+  depeg: number;
+  safety: number;
+  launch: number;
+  reserve: number;
+  allTypes: number;
+}
 
 const TelegramTelemetryQualitySchema = z.object({
   status: z.enum(["complete", "partial"]),
