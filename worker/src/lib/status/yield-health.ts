@@ -61,6 +61,12 @@ interface CacheRow {
   updated_at: number | null;
 }
 
+function safeJsonObjectParse(json: string | null | undefined, context: string): Record<string, unknown> | null {
+  const parsed = safeJsonParse<unknown>(json, null, context);
+  return parsed != null && typeof parsed === "object" && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : null;
+}
 
 function ageSeconds(now: number, updatedAt: number | null | undefined): number | null {
   return typeof updatedAt === "number" && Number.isFinite(updatedAt)
@@ -524,9 +530,8 @@ function buildSupplementalHealth(
   const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
     const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     const ageSec = ageSeconds(now, row?.updated_at);
-    const payload = safeJsonParse<Record<string, unknown> | null>(
+    const payload = safeJsonObjectParse(
       row?.value ?? null,
-      null,
       `yield-health:supplemental:${family}`,
     );
     const sourceCount = getNumber(payload?.sourceCount);
@@ -613,9 +618,8 @@ export async function loadYieldHealthSummary(
   const byKey = new Map((rows.results ?? []).map((row) => [row.key, row]));
 
   const rankingsRow = byKey.get(YIELD_RANKINGS_CACHE_KEY) ?? null;
-  const rankingsPayload = safeJsonParse<Record<string, unknown> | null>(
+  const rankingsPayload = safeJsonObjectParse(
     rankingsRow?.value ?? null,
-    null,
     `yield-health:cache:${YIELD_RANKINGS_CACHE_KEY}`,
   );
   const rankingUpdatedAt = rankingsRow?.updated_at ?? getNumber(rankingsPayload?.updatedAt);
@@ -652,9 +656,8 @@ export async function loadYieldHealthSummary(
     : benchmarkStaleness;
 
   const coverageAuditUpdatedAt = byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.updated_at ?? null;
-  const coverageAuditPayload = safeJsonParse<Record<string, unknown> | null>(
+  const coverageAuditPayload = safeJsonObjectParse(
     byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.value ?? null,
-    null,
     `yield-health:cache:${YIELD_COVERAGE_AUDIT_CACHE_KEY}`,
   );
   const coverageAuditAgeSec = ageSeconds(now, coverageAuditUpdatedAt);
