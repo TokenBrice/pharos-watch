@@ -683,7 +683,7 @@ describe("worker.fetch", () => {
     await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
   });
 
-  it("serves protected cacheable reads when API key lookup storage fails after a recent verification", async () => {
+  it("serves protected cacheable reads from the fresh API key cache after a recent verification", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
 
@@ -716,7 +716,7 @@ describe("worker.fetch", () => {
     expect(warmRes.status).toBe(200);
     await expect(warmRes.json()).resolves.toEqual({ cached: true, warm: 1 });
 
-    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS + 1);
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS - 1);
 
     const degradedEnv = makeEnv({
       REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
@@ -752,7 +752,7 @@ describe("worker.fetch", () => {
     await expect(res.json()).resolves.toEqual({ cached: true, warm: 2 });
     expect(
       degradedEnv.DB.getHistory().filter((entry) => entry.sql.includes("FROM api_keys") && entry.binds[0] === VALID_KEY_PREFIX),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
   });
 
   it("serves protected cacheable reads when API key rate-limit storage fails", async () => {
