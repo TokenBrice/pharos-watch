@@ -542,6 +542,65 @@ describe("stablecoin detail view-model builder", () => {
     });
   });
 
+  it("inherits parent mechanism archetypes for variant verdicts", () => {
+    const sourceVariant = TRACKED_META_BY_ID.get("autousd-auto-finance");
+    expect(sourceVariant).toBeDefined();
+
+    const coin = {
+      ...sourceVariant!,
+      flags: {
+        ...sourceVariant!.flags,
+        governance: "centralized" as const,
+        yieldBearing: false,
+        navToken: false,
+      },
+    };
+
+    const viewModel = buildStablecoinDetailViewModel(
+      makeBuildStablecoinDetailViewModelParams({
+        core: {
+          id: coin.id,
+          coin,
+        },
+        queries: {
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: coin.id,
+                  name: coin.name,
+                  symbol: coin.symbol,
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          reportCards: {
+            data: {
+              cards: [{ id: coin.id, overallGrade: "B", overallScore: 80, dimensions: {} }],
+              dependencyGraph: { nodes: [], edges: [] },
+            } as never,
+            dataUpdatedAt: 1,
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    expect(coin.mechanismArchetype).toBeUndefined();
+    expect(viewModel.verdict).toEqual({
+      archetype: "institutional-default",
+      label: "Institutional Default",
+    });
+  });
+
   it("wires the selected redemption backstop and stale-query state", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();

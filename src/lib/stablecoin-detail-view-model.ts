@@ -41,7 +41,7 @@ import {
 import type { ApiMeta } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { isThreatBand } from "@shared/lib/classification";
+import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
 import { deriveStablecoinVerdict, type StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
@@ -860,7 +860,7 @@ export function buildStablecoinDetailViewModel({
     reportCardGrade: reportCard?.overallGrade ?? null,
     pegScore: isNavToken ? null : pegPrice.pegScoreResult?.pegScore ?? null,
     dewsBand: stressBand,
-    mechanismArchetype: coin.mechanismArchetype,
+    mechanismArchetype: resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID) ?? undefined,
     governance: coin.flags.governance,
     yieldBearing: coin.flags.yieldBearing ?? false,
     navToken: isNavToken,
