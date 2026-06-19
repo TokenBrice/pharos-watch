@@ -333,6 +333,7 @@ export async function loadStablecoinsIntake(
   assets = mergeFrozenSnapshots(assets, FROZEN_SNAPSHOTS);
   const injected = assets.length - beforeFrozenInjection;
   if (injected > 0) {
+    normalizeChainCirculating(assets);
     console.log(`[sync-stablecoins] Injected ${injected} frozen-snapshot row(s)`);
   }
 
