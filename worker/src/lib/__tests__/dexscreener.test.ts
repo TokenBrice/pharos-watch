@@ -59,6 +59,37 @@ describe("dexscreener", () => {
     });
   });
 
+  it("bounds and cancels non-OK diagnostic body reads", async () => {
+    let bytesPulled = 0;
+    let cancelCalled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        const chunk = new TextEncoder().encode("x".repeat(512));
+        bytesPulled += chunk.byteLength;
+        controller.enqueue(chunk);
+      },
+      cancel() {
+        cancelCalled = true;
+      },
+    });
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(body, {
+        status: 500,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+
+    await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toMatchObject({
+      ok: false,
+      pairs: [],
+      status: 500,
+      contentType: "text/html",
+      error: `HTTP 500 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: ${"x".repeat(160)}`,
+    });
+    expect(bytesPulled).toBeLessThanOrEqual(2048);
+    expect(cancelCalled).toBe(true);
+  });
+
   it("keeps valid token-pool rows and drops malformed rows from mixed payloads", async () => {
     const validPair = {
       chainId: "base",

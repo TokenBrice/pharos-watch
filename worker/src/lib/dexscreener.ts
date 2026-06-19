@@ -77,11 +77,44 @@ function summarizeBody(raw: string, limit = 160): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, limit);
 }
 
+async function readBodySnippet(res: Response, maxBytes = 1024): Promise<string> {
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytesRead = 0;
+  try {
+    while (bytesRead < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      const remaining = maxBytes - bytesRead;
+      const chunk = value.byteLength > remaining ? value.slice(0, remaining) : value;
+      chunks.push(chunk);
+      bytesRead += chunk.byteLength;
+      if (value.byteLength > remaining) break;
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // Best-effort cancellation only; diagnostics should never fail the fetch path.
+    }
+  }
+  if (chunks.length === 0) return "";
+  if (chunks.length === 1) return new TextDecoder().decode(chunks[0]);
+  const buffer = new Uint8Array(bytesRead);
+  let offset = 0;
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(buffer);
+}
+
 async function describeNonOkResponse(url: string, res: Response): Promise<DsFetchPoolsResult> {
   const contentType = res.headers.get("content-type") ?? "unknown";
   let snippet = "";
   try {
-    snippet = summarizeBody(await res.text());
+    snippet = summarizeBody(await readBodySnippet(res));
   } catch {
     snippet = "";
   }
