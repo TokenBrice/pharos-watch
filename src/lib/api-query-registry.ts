@@ -1,6 +1,7 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { BlacklistResponse } from "@shared/types";
+import { ChainsResponseSchema } from "@shared/types/chains";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { TelegramPulseSchema } from "@shared/types/status";
@@ -101,6 +102,13 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     producerIntervalMs: CRON_15MIN,
     schema: StablecoinListResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+  },
+  chains: {
+    queryKey: ["chains"],
+    path: API_PATHS.chains(),
+    producerIntervalMs: CRON_15MIN,
+    schema: ChainsResponseSchema,
+    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
   },
   bluechipRatings: {
     queryKey: ["bluechip-ratings"],

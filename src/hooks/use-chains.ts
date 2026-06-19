@@ -1,26 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
-import { ChainsResponseSchema, type ChainsResponse } from "@shared/types/chains";
-import { useApiQueryWithMeta } from "./use-api-query";
+import { type ChainsResponse } from "@shared/types/chains";
+import { useRegisteredApiQueryWithMeta } from "./api-hooks";
 import { useStablecoins } from "./use-stablecoins";
-import { CRON_15MIN } from "@/lib/cron-intervals";
+import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ApiMeta } from "@/lib/api";
 
 export function useChains() {
-  return useApiQueryWithMeta<ChainsResponse>(
-    ["chains"],
-    API_PATHS.chains(),
-    CRON_15MIN,
-    {
-      schema: ChainsResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
-    },
-  );
+  return useRegisteredApiQueryWithMeta<ChainsResponse>(FRONTEND_API_QUERY_REGISTRY.chains);
 }
 
 export interface ChainStablecoin {
