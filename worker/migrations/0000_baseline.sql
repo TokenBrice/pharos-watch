@@ -776,6 +776,9 @@ CREATE TABLE IF NOT EXISTS telegram_pending_disambiguation (
   action_payload TEXT NOT NULL DEFAULT '{}'
 );
 
+CREATE INDEX IF NOT EXISTS idx_telegram_pending_disambiguation_expires_at
+  ON telegram_pending_disambiguation (expires_at);
+
 -- ---------------------------------------------------------------------------
 -- telegram_pending_alerts: Overflow delivery queue for telegram alerts
 -- ---------------------------------------------------------------------------
