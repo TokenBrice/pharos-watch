@@ -506,7 +506,14 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.cappedAtLimit).toBe(true);
     expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(1);
     expect(mockSendToChat).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(true);
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(true);
+    const activeOverflowQuery = history.find((entry) => entry.sql.includes("SELECT s.chat_id"));
+    expect(activeOverflowQuery?.sql).toContain("preset.alert_dews = 1");
+    expect(activeOverflowQuery?.sql).toContain("preset.alert_depeg = 1");
+    expect(activeOverflowQuery?.sql).toContain("preset.alert_safety = 1");
+    expect(activeOverflowQuery?.sql).not.toContain("preset.alert_launch");
+    expect(activeOverflowQuery?.sql).not.toContain("preset.alert_reserve");
 
     const overflowBacklogWrite = mockSetCache.mock.calls.find((call) =>
       call[1] === "telegram:dispatch-overflow-plan"
