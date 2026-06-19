@@ -203,7 +203,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     });
   });
 
-  it("resumes from the first deferred coin on the next run and wraps around to cover the head", async () => {
+  it("resumes from the first deferred coin on the next run without wrapping into the priority head", async () => {
     let activeRun = 1;
     let fetches = 0;
     const visitedByRun = new Map<number, string[]>();
@@ -233,11 +233,14 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     const secondRun = await syncLiveReserves(resumedDb, new AbortController().signal, {}, undefined, TIGHT_BUDGET);
     const secondMetadata = parseMetadata(secondRun?.metadata);
 
-    // The cursored run starts at the first deferred coin, then wraps so the
-    // head coins from run 1 are still covered in run 2.
+    // The cursored run starts at the first deferred coin and drains only that
+    // deferred suffix. It does not wrap into the priority head until the next
+    // clean run, so a low-priority tail resume cannot mark head coins skipped.
+    const cursorIndex = SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === firstMetadata.nextCursorStablecoinId);
     expect(visitedByRun.get(2)?.[0]).toBe(firstMetadata.nextCursorStablecoinId);
-    expect(visitedByRun.get(2)).toContain(visitedByRun.get(1)?.[0]);
-    expect(secondMetadata.synced).toBe(CONFIGURED_COIN_COUNT);
+    expect(visitedByRun.get(2)).not.toContain(visitedByRun.get(1)?.[0]);
+    expect(secondMetadata.synced).toBe(CONFIGURED_COIN_COUNT - cursorIndex);
+    expect(secondMetadata.total).toBe(CONFIGURED_COIN_COUNT - cursorIndex);
     expect(secondMetadata.deferredCoins).toBe(0);
 
     // The evidence-class ordering keeps independents at the queue head, so a
@@ -257,6 +260,47 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       && entry.binds[0] === CURSOR_CACHE_KEY
     ));
     expect(cursorDelete).toBeDefined();
+  });
+
+
+  it("does not defer the high-priority head when a resumed weak-probe tail truncates again", async () => {
+    const weakTail = [...SYNC_ORDERED_CONFIGURED_COINS].reverse().find(
+      (coin) => LIVE_RESERVE_ADAPTER_DEFINITIONS[coin.liveReservesConfig!.adapter].evidenceClass === "weak-live-probe",
+    );
+    const independentHead = SYNC_ORDERED_CONFIGURED_COINS.find(
+      (coin) => LIVE_RESERVE_ADAPTER_DEFINITIONS[coin.liveReservesConfig!.adapter].evidenceClass === "independent",
+    );
+    expect(weakTail).toBeDefined();
+    expect(independentHead).toBeDefined();
+
+    const visited: string[] = [];
+    mockAdapterRegistry(async (coin) => {
+      visited.push(coin?.id ?? "unknown");
+      nowMs += TIGHT_BUDGET.runBudgetMs;
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([cursorTable(JSON.stringify({
+      nextStablecoinId: weakTail!.id,
+      deferredCount: 1,
+      deferredAt: 1_700_000_000,
+      reason: "run-budget-exhausted",
+      runBudgetTruncationCount: 1,
+    }))]);
+
+    const result = await syncLiveReserves(db, new AbortController().signal, {}, undefined, TIGHT_BUDGET);
+    const metadata = parseMetadata(result?.metadata);
+
+    expect(visited).toEqual([weakTail!.id]);
+    expect(metadata.runBudgetTruncated).toBe(false);
+    expect(metadata.deferredCoins).toBe(0);
+
+    const deferredStateRows = db.getHistory().filter((entry) => (
+      entry.sql.includes("INSERT INTO reserve_sync_state")
+      && entry.binds.some((bind) => bind === "run-budget-exhausted")
+    ));
+    expect(deferredStateRows.some((entry) => entry.binds.includes(independentHead!.id))).toBe(false);
   });
 
   it("starts from the top of the queue when the persisted cursor JSON is malformed", async () => {
