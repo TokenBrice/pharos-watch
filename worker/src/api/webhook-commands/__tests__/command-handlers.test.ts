@@ -407,6 +407,29 @@ describe("webhook command handlers", () => {
     expectMiniAppButton(buttons, "Browse presets", "presets");
   });
 
+  it("/list loads per-coin snooze state for subscription summaries", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "FROM telegram_subscribers", rows: [], first: subscriberRow() },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [subscriptionRow({ alert_snooze_until_ts: nowSec + 2 * 3600 })],
+      },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+    ]);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChatWithMarkup });
+
+    await handleList(ctx, "");
+
+    const subscriptionSelect = db.getHistory().find((entry) =>
+      entry.sql.includes("FROM telegram_subscriptions"),
+    );
+    expect(subscriptionSelect?.sql).toContain("alert_snooze_until_ts");
+    const [message] = replyToChatWithMarkup.mock.calls[0]!;
+    expect(message).toContain("USDC (usdc-circle): DEWS · per-coin — snoozed for 2 h");
+  });
+
   it("/cancel without pending state gives recovery commands", async () => {
     const replyToChat = vi.fn().mockResolvedValue(undefined);
     const ctx = makeContext({ replyToChat });
