@@ -65,13 +65,26 @@ const loaded = await agent(
 )
 if (!loaded || !loaded.findings || !loaded.findings.length) throw new Error('findings load failed')
 
+function isAutoFixableDocFinding(f) {
+  return f.partition === 'auto-fixable' && f.finalClassification === 'doc-wrong' && typeof f.confidence === 'number' && f.confidence >= 0.7
+}
+
+const autoFixableFindings = loaded.findings.filter(isAutoFixableDocFinding)
+const heldForReview = loaded.findings.length - autoFixableFindings.length
+if (!autoFixableFindings.length) {
+  log(`No auto-fixable doc-wrong findings found; held ${heldForReview} findings for human review`)
+  return { docsProcessed: 0, totalDocs: 0, applied: 0, skipped: 0, skippedDetail: [], perDoc: [], heldForReview }
+}
+
 // Group by doc — one agent per doc so no two agents edit the same file.
 const byDoc = {}
-for (const f of loaded.findings) {
+for (const f of autoFixableFindings) {
   ;(byDoc[f.doc] ||= []).push(f)
 }
 const docs = Object.keys(byDoc).sort()
-log(`Applying ${loaded.findings.length} fixes across ${docs.length} docs (one agent per doc, disjoint files)`)
+log(
+  `Applying ${autoFixableFindings.length} auto-fixable doc-wrong fixes across ${docs.length} docs (one agent per doc, disjoint files); held ${heldForReview} findings for human review`,
+)
 
 phase('Apply')
 const SPECIAL_NOTE = {
@@ -113,7 +126,7 @@ const ok = results.filter(Boolean)
 const applied = ok.reduce((n, r) => n + (r.appliedCount || 0), 0)
 const skipped = ok.reduce((n, r) => n + (r.skippedCount || 0), 0)
 const skippedDetail = ok.flatMap((r) => (r.edits || []).filter((e) => e.status === 'skipped').map((e) => `${r.doc}:${e.docLine} — ${e.reason}`))
-log(`Applied ${applied}, skipped ${skipped} across ${ok.length}/${docs.length} docs`)
+log(`Applied ${applied}, skipped ${skipped} across ${ok.length}/${docs.length} docs; held ${heldForReview} findings for human review`)
 
 return {
   docsProcessed: ok.length,
@@ -122,4 +135,5 @@ return {
   skipped,
   skippedDetail,
   perDoc: ok.map((r) => ({ doc: r.doc, applied: r.appliedCount, skipped: r.skippedCount })),
+  heldForReview,
 }
