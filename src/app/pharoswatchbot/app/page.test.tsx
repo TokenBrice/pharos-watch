@@ -739,6 +739,58 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("confirmed remove shows undo toast and dispatches set-coin on undo click", async () => {
+    const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(true));
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, showConfirm } };
+    const stateAfterRemove: TelegramMiniAppState = { ...baseState, subscriptions: [] };
+    const stateAfterUndo: TelegramMiniAppState = { ...baseState };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => stateAfterRemove })
+      .mockResolvedValueOnce({ ok: true, json: async () => stateAfterUndo });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove USDC" }));
+
+    // Undo toast appears after successful remove.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Undo remove USDC" })).toBeTruthy());
+
+    // Clicking Undo dispatches set-coin restoring the removed coin.
+    fireEvent.click(screen.getByRole("button", { name: "Undo remove USDC" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    const undoBody = JSON.parse(fetchMock.mock.calls[2]?.[1]?.body as string);
+    expect(undoBody.operation.kind).toBe("set-coin");
+    expect(undoBody.operation.stablecoinId).toBe("usdc-circle");
+  });
+
+  it("undo toast auto-dismisses after 5 seconds", async () => {
+    const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(true));
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, showConfirm } };
+    const stateAfterRemove: TelegramMiniAppState = { ...baseState, subscriptions: [] };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => stateAfterRemove });
+    vi.stubGlobal("fetch", fetchMock);
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove USDC" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Undo remove USDC" })).toBeTruthy());
+
+    // Advance past the 5s UNDO_WINDOW_MS — toast disappears.
+    await act(async () => {
+      vi.advanceTimersByTime(5001);
+    });
+    expect(screen.queryByRole("button", { name: "Undo remove USDC" })).toBeNull();
+  });
+
   it("requestWriteAccess fires once after recommended-setup for sender chat with no prior subscriber", async () => {
     const requestWriteAccess = vi.fn();
     const isVersionAtLeast = vi.fn((v: string) => v === "6.9" || v === "8.0");
