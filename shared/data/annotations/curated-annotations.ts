@@ -1894,5 +1894,9 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
 const EMPTY: readonly ChartAnnotation[] = [];
 
 export function getCuratedAnnotations(stablecoinId: string): readonly ChartAnnotation[] {
+  if (!Object.prototype.hasOwnProperty.call(CURATED_ANNOTATIONS, stablecoinId)) {
+    return EMPTY;
+  }
+
   return CURATED_ANNOTATIONS[stablecoinId] ?? EMPTY;
 }
