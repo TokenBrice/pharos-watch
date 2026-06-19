@@ -541,6 +541,12 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).not.toContain("Warn that automated Pages rollback is disabled");
     expect(consolidatedPagesReleaseJob).toContain("Run post-publish smokes in parallel");
     expect(consolidatedPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
+    expect(consolidatedPagesReleaseJob).toContain(
+      "OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}",
+    );
+    expect(consolidatedPagesReleaseJob).toContain(
+      "OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}",
+    );
     expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
     expect(consolidatedPagesReleaseJob).not.toContain("--mode live --skip-overflow");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
