@@ -14,6 +14,7 @@
  */
 import { PROFILE_DEFINING_EXCLUSIONS } from "./exclusions";
 import { round1 } from "../math";
+import { resolveRowsById } from "./output-helpers";
 import { getLowerRankedText } from "./what-to-watch-templates";
 import type {
   ExclusionRecord,
@@ -106,7 +107,7 @@ export function selectLowerRanked(
         ]
       : profileDefining;
 
-  const resolvedRowsById: Map<string, MergedRow> = rowsById ?? new Map(allMerged.map((row) => [row.id, row]));
+  const resolvedRowsById = resolveRowsById(rowsById, allMerged);
 
   const slotACandidates: SlotACandidate[] = [];
   for (const record of excluded) {

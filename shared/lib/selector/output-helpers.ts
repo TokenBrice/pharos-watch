@@ -77,6 +77,14 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
   }
 }
 
+/** Resolve the optional rowsById param, building the map lazily from rows when absent. */
+export function resolveRowsById(
+  map: Map<string, MergedRow> | undefined,
+  rows: readonly MergedRow[],
+): Map<string, MergedRow> {
+  return map ?? new Map(rows.map((row) => [row.id, row]));
+}
+
 export function buildClosestSurvivors(
   excluded: readonly ExclusionRecord[],
   universe: readonly MergedRow[],
@@ -84,7 +92,7 @@ export function buildClosestSurvivors(
   scoreIgnoringExclusion: (row: MergedRow, input: SelectorInput) => number | null,
   rowsById?: Map<string, MergedRow>,
 ): SelectorClosestSurvivor[] {
-  const resolvedRowsById: Map<string, MergedRow> = rowsById ?? new Map(universe.map((row) => [row.id, row]));
+  const resolvedRowsById = resolveRowsById(rowsById, universe);
   const candidates: Array<SelectorClosestSurvivor & { sortScore: number }> = [];
   for (const record of excluded) {
     if (record.reason === "howey-uncertain" || record.reason === "lifecycle-non-active") continue;
