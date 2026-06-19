@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { TableCell, TableRow } from "@/components/table";
-import { DataTableLoadingRows, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { DataTableEmptyRow, DataTableLoadingRows, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -227,11 +227,9 @@ export function BlacklistTable({
             <BlacklistEventRow key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
           ))}
           {events.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={BLACKLIST_COLUMNS.length} className="text-center text-muted-foreground py-12">
-                No freeze events match your filters.
-              </TableCell>
-            </TableRow>
+            <DataTableEmptyRow colSpan={BLACKLIST_COLUMNS.length}>
+              No freeze events match your filters.
+            </DataTableEmptyRow>
           )}
         </DataTableShell>
       </div>

@@ -6,7 +6,7 @@ import {
   TableRow,
 } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { TablePagination } from "@/components/table-pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ArrowDownUp } from "lucide-react";
@@ -241,11 +241,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
           );
         })}
         {events.length === 0 && (
-          <TableRow>
-            <TableCell colSpan={FLOW_EVENT_COLUMNS.length} className="py-12 text-center text-muted-foreground">
-              No more events.
-            </TableCell>
-          </TableRow>
+          <DataTableEmptyRow colSpan={FLOW_EVENT_COLUMNS.length}>No more events.</DataTableEmptyRow>
         )}
       </DataTableShell>
     </>
