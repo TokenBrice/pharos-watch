@@ -4,6 +4,9 @@
 
 /** First-wave direct/basket/queue redemption review pass. */
 export const REVIEWED_FIRST_WAVE_AT = "2026-03-23";
+/** Alias for the first-wave date, used by direct-redemption config files to
+ *  signal that a direct-redemption route was reviewed in the first wave. */
+export const REVIEWED_DIRECT_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 /** Remediation pass that backfilled reviewed docs and dates. */
 export const REVIEWED_REMEDIATION_AT = "2026-03-30";
 /** Wrapper/queue/stablecoin-redeem expansion review wave (late April). */
