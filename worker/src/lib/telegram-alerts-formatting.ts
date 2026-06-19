@@ -263,20 +263,8 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   }
 
   const body = sections.join("\n\n");
-  const allIds = [
-    ...alerts.dews.map((e) => e.stablecoinId),
-    ...alerts.depegTriggered.map((e) => e.stablecoinId),
-    ...alerts.depegResolved.map((e) => e.stablecoinId),
-    ...depegWorsening.map((e) => e.stablecoinId),
-    ...alerts.safety.map((e) => e.stablecoinId),
-    ...alerts.launch.map((e) => e.stablecoinId),
-    ...(alerts.reserve ?? []).map((e) => e.stablecoinId),
-  ];
-  const uniqueIds = new Set(allIds);
-  const url =
-    uniqueIds.size === 1
-      ? `https://pharos.watch/stablecoin/${[...uniqueIds][0]}`
-      : "https://pharos.watch";
+  const singleId = getSingleAlertStablecoinId(alerts);
+  const url = singleId ? `https://pharos.watch/stablecoin/${singleId}` : "https://pharos.watch";
   return `${body}\n\n<a href="${url}">View on Pharos</a>`;
 }
 
