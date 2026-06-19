@@ -15,7 +15,6 @@ import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { mapWithConcurrency } from "./concurrency";
-import { parsePositiveNumber } from "./number-utils";
 import {
   endpointLabel,
   errorClassFor,
@@ -32,6 +31,21 @@ const BINANCE_TICKER_URLS = [
   "https://data-api.binance.vision/api/v3/ticker/price",
   "https://api.binance.com/api/v3/ticker/price",
 ] as const;
+
+const DECIMAL_PRICE_PATTERN = /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+function parseCexPrice(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!DECIMAL_PRICE_PATTERN.test(trimmed)) return null;
+
+  const numeric = Number(trimmed);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
 
 const BINANCE_PAIR_TO_MARKET = new Map<string, (typeof BINANCE_MARKETS)[number]>(
   BINANCE_MARKETS.map((market) => [market.pair, market]),
@@ -67,8 +81,8 @@ function midpointFromBidAsk(
   bid: string | number | null | undefined,
   ask: string | number | null | undefined,
 ): number | null {
-  const parsedBid = parsePositiveNumber(bid);
-  const parsedAsk = parsePositiveNumber(ask);
+  const parsedBid = parseCexPrice(bid);
+  const parsedAsk = parseCexPrice(ask);
   if (parsedBid == null || parsedAsk == null) {
     return null;
   }
@@ -90,7 +104,7 @@ function applyTickerRows<T>(
     if (!symbol) continue;
 
     const midpoint = midpointFromBidAsk(getBid(row), getAsk(row));
-    const lastTrade = parsePositiveNumber(getLastTrade(row));
+    const lastTrade = parseCexPrice(getLastTrade(row));
     const price = midpoint ?? lastTrade;
     if (price != null) {
       results.set(symbol, price);
@@ -191,7 +205,7 @@ async function fetchBinanceTickerUrl(
       const pendingStableQuoted: Array<{ symbol: string; quoteSymbol: string; quotePrice: number }> = [];
       for (const ticker of payload as Array<{ symbol?: string; price?: string }>) {
         const market = ticker.symbol ? BINANCE_PAIR_TO_MARKET.get(ticker.symbol) : undefined;
-        const price = parsePositiveNumber(ticker.price);
+        const price = parseCexPrice(ticker.price);
         if (!market || price == null) continue;
 
         if ("quoteSymbol" in market) {
@@ -385,7 +399,7 @@ export async function fetchCoinbasePrices(
 
         const payload = (await response.json()) as { bid?: string; ask?: string; price?: string; time?: string };
         const midpoint = midpointFromBidAsk(payload.bid, payload.ask);
-        const lastTrade = parsePositiveNumber(payload.price);
+        const lastTrade = parseCexPrice(payload.price);
         const price = midpoint ?? lastTrade;
         if (price != null) {
           const symbol = COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol;
