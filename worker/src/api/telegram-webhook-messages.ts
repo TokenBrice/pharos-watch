@@ -20,6 +20,10 @@ export { MANAGE_PAGE_SIZE };
 
 const GLOBAL_SAFETY_LABEL = "Safety (downgrades; 3-point drop when scored)";
 
+function formatDepegLabel(step: number | null | undefined): string {
+  return step != null ? `Depeg +${step}bps` : "Depeg";
+}
+
 export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
   const lines = [`Ticker or preset "${ticker}" not found.`];
   if (suggestion) {
@@ -248,11 +252,7 @@ export function describeSubscriptionSettings(
     labels.push(row.dews_min_band ? `DEWS>=${row.dews_min_band}` : "DEWS");
   }
   if (row.alert_depeg) {
-    labels.push(
-      row.depeg_worsening_bps_step != null
-        ? `Depeg +${row.depeg_worsening_bps_step}bps`
-        : "Depeg",
-    );
+    labels.push(formatDepegLabel(row.depeg_worsening_bps_step));
   }
   if (row.alert_safety) {
     if (row.safety_mode === "downgrade-only") {
@@ -292,11 +292,7 @@ function describePresetSubscriptionSettings(row: PresetSubscriptionRow): string 
   const labels: string[] = [];
   if (row.alert_dews) labels.push("DEWS");
   if (row.alert_depeg) {
-    labels.push(
-      row.depeg_worsening_bps_step != null
-        ? `Depeg +${row.depeg_worsening_bps_step}bps`
-        : "Depeg",
-    );
+    labels.push(formatDepegLabel(row.depeg_worsening_bps_step));
   }
   if (row.alert_safety) labels.push("Safety");
   return labels.join(", ") || "Muted";
@@ -310,11 +306,7 @@ export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): s
     labels.push("DEWS");
   }
   if (subscriber.global_alert_depeg) {
-    labels.push(
-      subscriber.global_depeg_worsening_bps_step != null
-        ? `Depeg +${subscriber.global_depeg_worsening_bps_step}bps`
-        : "Depeg",
-    );
+    labels.push(formatDepegLabel(subscriber.global_depeg_worsening_bps_step));
   }
   if (subscriber.global_alert_safety) {
     labels.push(GLOBAL_SAFETY_LABEL);
