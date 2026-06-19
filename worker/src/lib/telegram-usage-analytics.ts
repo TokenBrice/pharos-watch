@@ -523,6 +523,11 @@ async function upsertTelegramLifecycleSnapshot(
   db: D1Database,
   snapshot: TelegramCurrentLifecycleSnapshot,
 ): Promise<void> {
+  // NOTE: alertTypeOptIns.reserve is computed live (above) but intentionally not persisted here.
+  // The telegram_watcher_lifecycle_daily table has no active_reserve_opt_ins column (migration 0123).
+  // Persisting reserve would require a coordinated D1 migration; live counts still surface via the
+  // live aggregate query. If historical reserve retention becomes a product requirement, add the
+  // column in a migration first, then add the field to this INSERT.
   try {
     await db
       .prepare(
