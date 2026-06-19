@@ -79,6 +79,7 @@ describe("handleBackfillSupplyHistory", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockReset();
+    vi.mocked(fetchHistoricalFxRates).mockClear().mockResolvedValue({});
     vi.mocked(fetchMarketBackfillPriceSeries).mockClear().mockResolvedValue({
       prices: [{ timestamp: 1_700_000_000, price: 1.001 }],
       diagnostics: {
@@ -403,6 +404,70 @@ describe("handleBackfillSupplyHistory", () => {
       new Date(day2 * 1000).toISOString().slice(0, 10),
       expect.any(AbortSignal),
     );
+  });
+
+  it("does not clamp sparse non-USD price history outside its covered range", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const beforePriceRange = Math.floor(1_699_913_600 / 86400) * 86400;
+    const afterPriceRange = Math.floor(1_700_086_400 / 86400) * 86400;
+
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValue({
+      prices: [{ timestamp: 1_700_000_000, price: 2.5 }],
+      diagnostics: {
+        granularity: "daily",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 1,
+      },
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          price: 1,
+          tokens: [
+            {
+              date: beforePriceRange,
+              circulating: { peggedEUR: 1_000 },
+            },
+            {
+              date: afterPriceRange,
+              circulating: { peggedEUR: 2_000 },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=aeur-anchored-coins&startDay=2023-11-13&endDay=2023-11-15"),
+      true,
+      makeApiRequest("/api/backfill-supply-history?stablecoin=aeur-anchored-coins&startDay=2023-11-13&endDay=2023-11-15", {
+        adminKey: "secret",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+    };
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors).toBeUndefined();
+
+    const inserts = capturedStatements.filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(inserts).toHaveLength(0);
+    expect(fetchMarketBackfillPriceSeries).toHaveBeenCalled();
+    expect(fetchHistoricalFxRates).not.toHaveBeenCalled();
   });
 
   it("falls back to on-chain totalSupply when CoinGecko market caps are all zero", async () => {
