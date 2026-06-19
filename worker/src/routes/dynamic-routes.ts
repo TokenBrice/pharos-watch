@@ -23,17 +23,26 @@ import {
   type RouteMatch,
 } from "./shared";
 
+/** Decode a raw URI segment and resolve it to a canonical stablecoin id.
+ * Returns `{ canonicalId }` on success or a ready `Response` on failure. */
+function decodeAndResolveStablecoinId(
+  raw: string,
+  malformedMessage: string,
+): { canonicalId: string } | Response {
+  let id: string;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    return errorResponse(400, malformedMessage);
+  }
+  return resolveOrReject(id);
+}
+
 function resolveDynamicStablecoinRoute(
   match: RegExpMatchArray,
   handler: (canonicalId: string) => Promise<Response>,
 ): Promise<Response> {
-  let id: string;
-  try {
-    id = decodeURIComponent(match[1]);
-  } catch {
-    return Promise.resolve(errorResponse(400, "Malformed URI"));
-  }
-  const resolved = resolveOrReject(id);
+  const resolved = decodeAndResolveStablecoinId(match[1], "Malformed URI");
   if (resolved instanceof Response) {
     return Promise.resolve(resolved);
   }
@@ -96,16 +105,10 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
   ),
   defineDynamicRouteFromDescriptor("snapshot-day", (routeCtx, match) => handleSnapshotDay(routeCtx.db, match[1])),
   defineDynamicRouteFromDescriptor("snapshot-coin", (routeCtx, match) => {
-    let stablecoinId: string;
-    try {
-      stablecoinId = decodeURIComponent(match[2]);
-    } catch {
-      return Promise.resolve(errorResponse(400, "Malformed stablecoin id"));
-    }
     // Resolve alias ids so /api/snapshot/<date>/stablecoin/<alias> 404s
     // consistently with sibling /api/stablecoin/<id> endpoints rather
     // than misattributing the snapshot row to the wrong canonical id.
-    const resolved = resolveOrReject(stablecoinId);
+    const resolved = decodeAndResolveStablecoinId(match[2], "Malformed stablecoin id");
     if (resolved instanceof Response) {
       return Promise.resolve(resolved);
     }
