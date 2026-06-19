@@ -97,7 +97,7 @@ function insertOpenEvent(db: SqliteD1, eventId = 1): void {
     .run(eventId);
 }
 
-async function ensureIncident(db: SqliteD1, eventId = 1) {
+async function ensureIncident(db: SqliteD1, eventId = 1, nowSec = 200000) {
   const [incident] = await ensureCanonicalIncidents(
     db,
     [
@@ -114,7 +114,7 @@ async function ensureIncident(db: SqliteD1, eventId = 1) {
       },
     ],
     {
-      nowSec: 200000,
+      nowSec,
       predictionPolicyVersion: "sticky-24h-v1",
       ddrV2EffectiveAt: 90000,
       createdBy: "vitest",
@@ -376,7 +376,7 @@ describe("DDRv2 storage migrations and stores", () => {
   it("adopts nearby pre-lock events into an unsealed canonical incident", async () => {
     const db = makeSqliteD1();
     try {
-      const incident = await ensureIncident(db);
+      const incident = await ensureIncident(db, 1, 100500);
       const [nearby] = await ensureCanonicalIncidents(
         db,
         [
@@ -390,7 +390,7 @@ describe("DDRv2 storage migrations and stores", () => {
             source: "live",
           },
         ],
-        { nowSec: 201000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+        { nowSec: 101000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
       );
 
       expect(nearby?.incidentKey).toBe(incident.incidentKey);
@@ -415,6 +415,64 @@ describe("DDRv2 storage migrations and stores", () => {
         reason: "pre-lock nearby event adopted as current incident source",
         created_by: "vitest",
       });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("requires explicit repair for closed nearby pre-lock events", async () => {
+    const db = makeSqliteD1();
+    try {
+      const incident = await ensureIncident(db);
+      await expect(
+        ensureCanonicalIncidents(
+          db,
+          [
+            {
+              eventId: 2,
+              stablecoinId: "lusd-liquity",
+              pegCurrency: "USD",
+              direction: "below",
+              startedAt: 100900,
+              endedAt: 101200,
+              peakDeviationBps: -350,
+              source: "live",
+            },
+          ],
+          { nowSec: 101000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+        ),
+      ).rejects.toThrow(`Unlinked depeg event 2 overlaps nearby canonical incident ${incident.incidentKey}; explicit repair required`);
+
+      const current = db.sqlite
+        .prepare("SELECT current_event_id, current_started_at FROM depeg_resolver_incidents WHERE incident_key = ?")
+        .get(incident.incidentKey) as { current_event_id: number; current_started_at: number };
+      expect(current).toEqual({ current_event_id: 1, current_started_at: 100000 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("requires explicit repair instead of sliding an unsealed incident beyond its original lock window", async () => {
+    const db = makeSqliteD1();
+    try {
+      const incident = await ensureIncident(db);
+      await expect(
+        ensureCanonicalIncidents(
+          db,
+          [
+            {
+              eventId: 2,
+              stablecoinId: "lusd-liquity",
+              pegCurrency: "USD",
+              direction: "below",
+              startedAt: 100900,
+              peakDeviationBps: -350,
+              source: "live",
+            },
+          ],
+          { nowSec: 186400, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+        ),
+      ).rejects.toThrow(`Unlinked depeg event 2 overlaps nearby canonical incident ${incident.incidentKey}; explicit repair required`);
     } finally {
       db.close();
     }
