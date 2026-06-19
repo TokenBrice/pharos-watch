@@ -21,6 +21,7 @@ import {
   requireOnchainInput,
 } from "./helpers";
 import { ratioFromRaw } from "./slice-math";
+import { reserveDegradedWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
 
 const ADAPTER_KEY = "m0-wrapper-underlying";
@@ -273,6 +274,14 @@ export async function fetchM0WrapperUnderlyingReserves(
     message: (pct) => `M0 wrapper underlying balance covers ${pct}% of wrapper supply`,
     coverageRatio: collateralizationRatio,
   });
+  if (params.mode === "m-extension" && routeStatus === "unknown") {
+    warnings.push(
+      reserveDegradedWarning(
+        "m0-extension-route-unverified",
+        routeStatusReason ?? "Could not verify M0 SwapFacility redemption path status",
+      ),
+    );
+  }
   const sliceConfig = parseSliceConfig(params);
 
   return {
