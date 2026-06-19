@@ -265,7 +265,7 @@ describe("query polling policy", () => {
       queryFn: () => Promise<unknown>;
     };
 
-    expect(options.enabled).toBe(true);
+    expect(options.enabled).toBeUndefined();
     expect(options.retry).toBe(0);
     expect(options.staleTime).toBe(CRON_1MIN);
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
@@ -294,7 +294,7 @@ describe("query polling policy", () => {
       queryFn: () => Promise<unknown>;
     };
 
-    expect(options.enabled).toBe(true);
+    expect(options.enabled).toBeUndefined();
     expect(options.retry).toBe(0);
     expect(options.staleTime).toBe(CRON_1MIN);
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
@@ -330,6 +330,7 @@ describe("query polling policy", () => {
     expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy"]);
 
     await options.queryFn();
+
     const [publicCall, adminCall] = fetchMock.mock.calls;
     expect(publicCall[0]).toEqual(expect.stringContaining("/api/health"));
     expect((publicCall[1] as RequestInit).headers).toBeUndefined();

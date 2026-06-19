@@ -68,7 +68,7 @@ function normalizeMintBurnFlowsResponse(response: MintBurnFlowsResponse): MintBu
 export function useMintBurnFlows(hours = 24, opts?: { enabled?: boolean }) {
   const query = useRegisteredApiQueryWithMeta<MintBurnFlowsResponse>(
     FRONTEND_API_QUERY_REGISTRY.mintBurnFlows(hours),
-    { enabled: opts?.enabled ?? true },
+    { enabled: opts?.enabled },
   );
   const normalizedData = useMemo(
     () => (query.data ? normalizeMintBurnFlowsResponse(query.data) : undefined),

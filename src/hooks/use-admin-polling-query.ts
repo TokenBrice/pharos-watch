@@ -20,7 +20,7 @@ export function useAdminPollingQuery<T>(
     () => apiFetch<T>(buildAdminApiPath(typeof path === "function" ? path() : path), options?.schema),
     cronInterval,
     {
-      enabled: options?.enabled ?? true,
+      enabled: options?.enabled,
       retry: options?.retry ?? 0,
     },
   );
