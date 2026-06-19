@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supplyHistoryQueryOptions } from "./use-stablecoins";
 
-const DEBOUNCE_MS = 100;
+export const PREFETCH_DEBOUNCE_MS = 100;
 
 export function usePrefetchStablecoin() {
   const queryClient = useQueryClient();
@@ -34,7 +34,7 @@ export function usePrefetchStablecoin() {
         // liquidity, safety-score history (10y), and depeg events live
         // behind below-fold LazySections and fetch on scroll instead.
         void queryClient.prefetchQuery(supplyHistoryQueryOptions(coinId));
-      }, DEBOUNCE_MS);
+      }, PREFETCH_DEBOUNCE_MS);
     },
     [queryClient]
   );

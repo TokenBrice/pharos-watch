@@ -5,9 +5,8 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 import { createApiPollingQueryOptionsWithMeta } from "@/hooks/use-api-query";
+import { PREFETCH_DEBOUNCE_MS } from "@/hooks/use-prefetch-stablecoin";
 import type { SchemaLike } from "@/lib/schema-like";
-
-const PREFETCH_DEBOUNCE_MS = 100;
 
 interface RoutePrefetchDescriptor {
   queryKey: readonly unknown[];
