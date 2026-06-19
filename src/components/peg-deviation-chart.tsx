@@ -360,7 +360,7 @@ export function PegDeviationChart({
                   y={readout.price}
                   r={3.5}
                   fill={readout.bandSvgColor}
-                  stroke="#0b1220"
+                  stroke="var(--color-background)"
                   strokeWidth={1.5}
                   ifOverflow="extendDomain"
                 />
