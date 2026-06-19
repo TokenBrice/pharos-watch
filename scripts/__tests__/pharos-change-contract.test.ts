@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -564,35 +564,9 @@ describe("hard-block hook outputs", () => {
 });
 
 describe("repo Codex hook config", () => {
-  it("wires only the SessionStart routing context and the hard-block guards", () => {
-    const config = readFileSync(resolve(process.cwd(), ".codex/config.toml"), "utf8");
-
-    expect(config).toContain("hooks = true");
-    expect(config).not.toContain("codex_hooks");
-    expect(config).not.toContain("trusted_hash");
-    expect(config).toContain("[[hooks.SessionStart]]");
-    expect(config).toContain("--hook=session-start");
-    expect(config).toContain("[[hooks.PreToolUse]]");
-    expect(config).toContain("--hook=pre-tool-use");
-    expect(config).toContain("[[hooks.PermissionRequest]]");
-    expect(config).toContain("--hook=permission-request");
-    expect(config).toContain("[[hooks.PreToolUse.hooks]]");
-    expect(config).toContain("type = \"command\"");
-
-    expect(config).not.toContain("[[hooks.UserPromptSubmit]]");
-    expect(config).not.toContain("--hook=user-prompt-submit");
-    expect(config).not.toContain("[[hooks.PostToolUse]]");
-    expect(config).not.toContain("--hook=post-tool-use");
-    expect(config).not.toContain("[[hooks.Stop]]");
-    expect(config).not.toContain("--hook=stop");
-  });
-
-  it("uses catch-all Codex tool matchers so native tool names are covered", () => {
-    const config = readFileSync(resolve(process.cwd(), ".codex/config.toml"), "utf8");
-
-    expect(config).not.toContain('matcher = "Bash|apply_patch|Edit|MultiEdit|Write"');
-    expect(config).not.toContain('matcher = "Bash"');
-    expect(config).toContain('matcher = ".*"');
+  it("keeps Codex hook configuration user-local instead of tracked", () => {
+    expect(existsSync(resolve(process.cwd(), ".codex/config.toml"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), ".codex/hooks.json"))).toBe(false);
   });
 });
 
