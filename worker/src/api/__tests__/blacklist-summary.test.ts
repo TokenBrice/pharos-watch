@@ -298,35 +298,44 @@ describe("handleBlacklistSummary", () => {
         ],
       },
       {
-        match: "latest_event_type_by_balance",
+        match: "latest_event_type",
         rows: [
-          {
-            id: "USDC:base:0xgap",
-            stablecoin: "USDC",
-            chain_id: "base",
-            address: "0xgap",
-            timestamp: null,
-            config_key: null,
-            contract_address: null,
-          },
-          {
-            id: null,
+          makeBlacklistRow({
+            id: "USDC:ethereum:0xactive",
             stablecoin: "USDC",
             chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
             address: "0xactive",
             timestamp: 1_777_000_000,
-            config_key: null,
-            contract_address: null,
-          },
-          {
-            id: "USDT:tron:TRdestroyed",
+          }),
+          makeBlacklistRow({
+            id: "USDT:tron:TRdestroyed-blacklist",
             stablecoin: "USDT",
             chain_id: "tron",
+            chain_name: "Tron",
+            event_type: "blacklist",
+            address: "TRdestroyed",
+            timestamp: 1_777_000_000,
+          }),
+          makeBlacklistRow({
+            id: "USDT:tron:TRdestroyed-destroy",
+            stablecoin: "USDT",
+            chain_id: "tron",
+            chain_name: "Tron",
+            event_type: "destroy",
             address: "TRdestroyed",
             timestamp: 1_777_000_100,
-            config_key: null,
-            contract_address: null,
-          },
+          }),
+          makeBlacklistRow({
+            id: "USDC:polygon:0xother",
+            stablecoin: "USDC",
+            chain_id: "polygon",
+            chain_name: "Polygon",
+            event_type: "blacklist",
+            address: "0xother",
+            timestamp: 1_777_000_050,
+          }),
         ],
       },
       {
@@ -413,11 +422,11 @@ describe("handleBlacklistSummary", () => {
       freezeLedgerMeta: { statusDistribution: Record<string, number>; sourceDistribution: Record<string, number> };
     };
 
-    expect(json.stats.activeAddressCount).toBe(4);
+    expect(json.stats.activeAddressCount).toBe(3);
     expect(json.stats.activeFrozenTotal).toBe(525);
-    expect(json.stats.activeAmountGapCount).toBe(1);
-    expect(json.stats.frozenAddresses).toBe(3);
-    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(3);
+    expect(json.stats.activeAmountGapCount).toBe(0);
+    expect(json.stats.frozenAddresses).toBe(2);
+    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(2);
     expect(json.stats.perCoinFrozenAddressCount.USDT).toBe(0);
     expect(json.stats.perCoinFrozenTotal.USDC).toBe(525);
     expect(json.stats.perCoinFrozenTotal.USDT).toBe(0);
@@ -425,6 +434,85 @@ describe("handleBlacklistSummary", () => {
     expect(json.freezeLedgerMeta.statusDistribution.recoverable_pending).toBe(1);
     expect(json.freezeLedgerMeta.sourceDistribution.destroy_event).toBe(1);
     expect(json.freezeLedgerMeta.sourceDistribution.reconciled_snapshot).toBe(1);
+  });
+
+  it("does not count preserved current-balance snapshots after unblacklist events as active freezes", async () => {
+    const observedAt = 1_777_000_300;
+    const db = mockD1([
+      {
+        match: "GROUP BY stablecoin, event_type",
+        rows: [{ stablecoin: "USDC", event_type: "blacklist", n: 1, usd_sum: 100 }],
+      },
+      {
+        match: "latest_event_type",
+        rows: [
+          makeBlacklistRow({
+            id: "released-blacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            address: "0xreleased",
+            amount_usd_at_event: 100,
+            timestamp: 1_777_000_000,
+          }),
+          makeBlacklistRow({
+            id: "released-unblacklist",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "unblacklist",
+            address: "0xreleased",
+            timestamp: 1_777_000_100,
+          }),
+        ],
+      },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 2, max_ts: 1_777_000_100, recent_30d: 0, recent_24h: 0 },
+      },
+      {
+        match: "FROM blacklist_current_balances",
+        rows: [
+          {
+            id: "USDC:ethereum:0xreleased",
+            stablecoin: "USDC",
+            chain_id: "ethereum",
+            address: "0xreleased",
+            amount_native: 100,
+            amount_usd: 100,
+            source: "current_balance",
+            status: "resolved",
+            observed_at: observedAt,
+            attempt_count: 1,
+            last_attempted_at: observedAt,
+            last_error_class: null,
+          },
+        ],
+      },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: observedAt } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      stats: {
+        activeAddressCount: number;
+        activeFrozenTotal: number;
+        frozenAddresses: number;
+        trackedAddressCount: number;
+        trackedFrozenTotal: number;
+        perCoinFrozenAddressCount: Record<string, number>;
+      };
+    };
+
+    expect(json.stats.activeAddressCount).toBe(0);
+    expect(json.stats.activeFrozenTotal).toBe(0);
+    expect(json.stats.frozenAddresses).toBe(0);
+    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(0);
+    expect(json.stats.trackedAddressCount).toBe(1);
+    expect(json.stats.trackedFrozenTotal).toBe(100);
   });
 
   it("derives perCoinBlacklistCounts and preserves required stats", async () => {
@@ -902,11 +990,7 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.activeAddressCount).toBe(1);
     expect(json.stats.activeFrozenTotal).toBe(0);
     expect(json.chart[0]).toMatchObject({ quarter: "Q1 '24", total: 100 });
-    expect(
-      db.getHistory().some((entry) =>
-        entry.sql.includes("latest_event_type_by_balance")
-        && entry.sql.includes("e.config_key IS NULL AND e.contract_address IS NULL")),
-    ).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("latest_event_type_by_balance"))).toBe(false);
   });
 
   it("surfaces destroy-only coins without a freeze-ledger snapshot", async () => {
