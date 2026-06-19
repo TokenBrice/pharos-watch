@@ -297,6 +297,49 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
   });
 
+  it("uses the market data section for non-yield-bearing USD assets with supply history", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1, supply: 100 }],
+    }));
+
+    const { container } = render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    expect(container.querySelector("#chart")).toBeNull();
+    expect(screen.getAllByTestId("dynamic-detail-section").length).toBeGreaterThan(0);
+  });
+
+  it("keeps yield-bearing USD assets on the mcap chart instead of the peg chart", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const yieldBearingCoin = {
+      ...coin,
+      flags: {
+        ...coin.flags,
+        yieldBearing: true,
+        navToken: false,
+        pegCurrency: "USD" as const,
+      },
+    };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      coin: yieldBearingCoin,
+      isNavToken: false,
+      supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1.01, supply: 99 }],
+    }));
+
+    const { container } = render(
+      <StablecoinDetailClient
+        id={yieldBearingCoin.id}
+        coin={yieldBearingCoin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(yieldBearingCoin)}
+      />,
+    );
+
+    expect(container.querySelector("#chart")).toBeTruthy();
+  });
+
   it("mounts redemption backstop data in the liquidity zone", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
