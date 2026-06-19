@@ -186,7 +186,17 @@ export async function generateDailyDigest(
     },
   });
   if (digestCopy.kind === "circuit-open") {
-    throw new Error("Anthropic circuit open — skipping LLM call");
+    await reportDigestProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping daily digest because Anthropic circuit is open",
+      providerFamily: "anthropic",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        skipped: "anthropic-circuit-open",
+      },
+    });
+    return { metadata: "skipped: anthropic circuit open" };
   }
   await reportDigestProgress(reportProgress, {
     stage: "llm-generation-complete",

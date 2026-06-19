@@ -660,6 +660,18 @@ describe("generateDailyDigest", () => {
     expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
   });
 
+  it("skips generation cleanly when the Anthropic circuit is open", async () => {
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    expect(result).toEqual({ metadata: "skipped: anthropic circuit open" });
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
+  });
+
   it("skips safety summary output when safety snapshot is degraded", async () => {
     vi.mocked(computeSafetyScoresSnapshot).mockResolvedValueOnce({
       kind: "degraded",
