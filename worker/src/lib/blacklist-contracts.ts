@@ -910,7 +910,9 @@ export function getBlacklistEventByTopic(
   topicHash: string | null | undefined,
 ): BlacklistEventDef | undefined {
   if (!topicHash) return undefined;
-  return config.events.find((event) => event.topicHash.toLowerCase() === topicHash.toLowerCase());
+  // All *_TOPIC constants are already lowercase hex; only normalize the caller-supplied value.
+  const normalized = topicHash.toLowerCase();
+  return config.events.find((event) => event.topicHash === normalized);
 }
 
 export function getBlacklistEventBySignature(
