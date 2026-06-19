@@ -93,22 +93,15 @@ function hasVaryToken(value: string | null, token: string): boolean {
     .includes(token.toLowerCase());
 }
 
-function addVaryAccept(headers: Headers): void {
+function addVaryToken(headers: Headers, token: string): void {
   const existing = headers.get("Vary");
-  if (!hasVaryToken(existing, "Accept")) {
-    headers.set("Vary", existing ? `${existing}, Accept` : "Accept");
-  }
-}
-
-function addVaryAcceptEncoding(headers: Headers): void {
-  const existing = headers.get("Vary");
-  if (!hasVaryToken(existing, "Accept-Encoding")) {
-    headers.set("Vary", existing ? `${existing}, Accept-Encoding` : "Accept-Encoding");
+  if (!hasVaryToken(existing, token)) {
+    headers.set("Vary", existing ? `${existing}, ${token}` : token);
   }
 }
 
 function addNegotiationCacheHeaders(headers: Headers): void {
-  addVaryAccept(headers);
+  addVaryToken(headers, "Accept");
   headers.set("Cloudflare-CDN-Cache-Control", "no-store");
   headers.set("CDN-Cache-Control", "no-store");
 }
@@ -140,7 +133,7 @@ function withHtmlCsp(response: Response, request: Request, pathname: string): Pr
   return injectHtmlCsp(response, {
     method: request.method,
     cspOptions: { telegramMiniApp: isTelegramMiniAppPath(pathname) },
-    mutateHeaders: addVaryAcceptEncoding,
+    mutateHeaders: (headers) => addVaryToken(headers, "Accept-Encoding"),
   });
 }
 
