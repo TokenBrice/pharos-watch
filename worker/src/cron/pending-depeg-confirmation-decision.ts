@@ -84,6 +84,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       source: "live",
       confirmationSources: confirmedBy || null,
       pendingReason: pendingState.reason,
+      provenance: null,
     };
 
     console.log(

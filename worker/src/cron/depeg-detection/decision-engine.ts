@@ -137,6 +137,7 @@ function buildLiveEventCommand(
     source: "live",
     confirmationSources: null,
     pendingReason: null,
+    provenance: null,
   };
   return { type: "insert-live", event };
 }

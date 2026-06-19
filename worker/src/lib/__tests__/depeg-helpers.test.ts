@@ -220,6 +220,7 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
       source: "live",
       confirmationSources: "DEX+CEX",
       pendingReason: "large-cap",
+      provenance: null,
     });
     expect(bindCalls[0]).toContain("DEX+CEX");
     expect(bindCalls[0]).toContain("large-cap");

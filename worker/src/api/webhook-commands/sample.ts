@@ -36,6 +36,7 @@ function buildSampleAlerts(): ConsolidatedAlerts {
     depegWorsening: [],
     safety: [],
     launch: [],
+    reserve: [],
   };
 }
 
