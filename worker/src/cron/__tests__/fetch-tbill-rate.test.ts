@@ -161,7 +161,7 @@ function okExtendedBenchmarkMocks(): Record<string, Response> {
       }),
       { status: 200 },
     ),
-    "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
+    "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
     "bankofcanada.ca/valet": new Response(
       JSON.stringify({
         observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
@@ -264,7 +264,7 @@ describe("fetchTbillRate", () => {
     expect(metadata.mxnSource).toBe("banxico-cetes-28d");
     expect(metadata.mxnRate).toBe(10.45);
     expect(metadata.brlSource).toBe("bcb-selic");
-    expect(metadata.brlRate).toBe(12.75);
+    expect(metadata.brlRate).toBeCloseTo(13.638253562615565, 12);
     expect(metadata.cadSource).toBe("boc-valet-v122530");
     expect(metadata.cadRate).toBe(4.75);
     expect(metadata.rubSource).toBe("cbr-key-rate");
@@ -866,9 +866,23 @@ describe("parseEtherfuseCetesStablebondPage", () => {
 });
 
 describe("parseBcbSelicSeries", () => {
-  it("extracts the most recent SELIC observation", () => {
-    const payload = JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]);
-    expect(parseBcbSelicSeries(payload)).toEqual({ rate: 12.75, recordDate: "2026-03-26" });
+  it("annualizes the most recent daily SELIC observation", () => {
+    const payload = JSON.stringify([{ data: "18/06/2026", valor: "0.050747" }]);
+    expect(parseBcbSelicSeries(payload)).toEqual({
+      rate: 13.638253562615565,
+      recordDate: "2026-06-18",
+    });
+  });
+
+  it("skips implausible annualized SELIC observations", () => {
+    const payload = JSON.stringify([
+      { data: "17/06/2026", valor: "0.050747" },
+      { data: "18/06/2026", valor: "12.75" },
+    ]);
+    expect(parseBcbSelicSeries(payload)).toEqual({
+      rate: 13.638253562615565,
+      recordDate: "2026-06-17",
+    });
   });
 
   it("returns null when array is empty", () => {
@@ -1016,7 +1030,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
             { status: 200 },
           );
         },
-        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
+        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
         "bankofcanada.ca/valet": new Response(
           JSON.stringify({
             observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
@@ -1049,7 +1063,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     expect(metadata.jpyRate).toBe(0.1);
     expect(metadata.audRate).toBe(4.3);
     expect(metadata.mxnRate).toBe(10.45);
-    expect(metadata.brlRate).toBe(12.75);
+    expect(metadata.brlRate).toBeCloseTo(13.638253562615565, 12);
     expect(metadata.cadRate).toBe(4.75);
     expect(metadata.rubRate).toBe(14.5);
     expect(metadata.tryRate).toBe(40);
@@ -1088,7 +1102,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
           + "02-Mar-2026,4.30,,4.31\n",
           { status: 200 },
         ),
-        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
+        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
         "bankofcanada.ca/valet": new Response(
           JSON.stringify({
             observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
@@ -1188,7 +1202,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
         { status: 200 },
       ),
       "banxico.org.mx": null,
-      "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
+      "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
       "bankofcanada.ca/valet": new Response(
         JSON.stringify({
           observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],

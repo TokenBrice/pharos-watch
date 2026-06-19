@@ -55,8 +55,11 @@ describe("fetchCentrifugeVaultReserves", () => {
       if (body.params[0].data === "0x18160ddd") {
         return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
       }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000006" });
+      }
       if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+        return jsonResponse({ result: "0x00000000000000000000000000000000000000000000000000000000000f4240" });
       }
       return null;
     });
@@ -80,7 +83,9 @@ describe("fetchCentrifugeVaultReserves", () => {
       assetAddress: USDC_ASSET,
       totalAssetsRaw: "100",
       totalSupplyRaw: "100",
-      convertToAssetsRaw: "100",
+      convertToAssetsRaw: "1000000",
+      shareDecimals: 6,
+      assetDecimals: 6,
       collateralizationRatio: 1,
       details: {
         proofKind: "centrifuge-vault-total-assets",
@@ -115,7 +120,7 @@ describe("fetchCentrifugeVaultReserves", () => {
     ).rejects.toThrow(/asset\(\) returned/);
   });
 
-  it("emits degraded warning when convertToAssets diverges from totalAssets by >1%", async () => {
+  it("emits degraded warning when normalized share price diverges from 1:1 by >1%", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
       if (body.params[0].data === "0x38d52e0f") {
@@ -124,13 +129,16 @@ describe("fetchCentrifugeVaultReserves", () => {
         });
       }
       if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+        return jsonResponse({ result: "0x000000000000000000000000000000000000000000000000000000000000006e" });
       }
       if (body.params[0].data === "0x18160ddd") {
         return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
       }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000006" });
+      }
       if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: "0x000000000000000000000000000000000000000000000000000000000000006e" });
+        return jsonResponse({ result: "0x00000000000000000000000000000000000000000000000000000000000f4240" });
       }
       return null;
     });

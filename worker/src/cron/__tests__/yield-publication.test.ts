@@ -22,6 +22,7 @@ import {
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
+import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";
 
 const MIGRATIONS_DIR = path.resolve(__dirname, "../../../migrations");
 
@@ -1062,6 +1063,35 @@ describe("pruneYieldTables", () => {
 });
 
 describe("yield publication migration compatibility", () => {
+  it("retries atomic publication with legacy statements when new yield schema is absent", async () => {
+    const db = mockD1([
+      {
+        match: "pys_at_publish, safety_at_publish",
+        rows: [],
+        throwError: new Error("D1_ERROR: table yield_history has no column named pys_at_publish"),
+      },
+    ]);
+
+    const result = await publishYieldRowsAtomically(db, {
+      rankingsPayload: { stablecoins: [] },
+      startSec: 1_774_526_400,
+      generationId: "yield-1774526400",
+      yieldDataRows: [],
+      historyRows: [],
+      decisionRows: [],
+      decisionAlternativeRows: [],
+    });
+
+    expect(result).toEqual({ written: true, skippedBecauseNewer: false });
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("pys_at_publish"))).toBe(true);
+    expect(
+      history.some(
+        (entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history") && !entry.sql.includes("pys_at_publish"),
+      ),
+    ).toBe(true);
+  });
+
   it("keeps old-worker yield_data and yield_history inserts valid after the additive migration", async () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");

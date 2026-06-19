@@ -1,20 +1,22 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
+  fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
 } from "./helpers";
 import {
   ERC4626_ASSET_SELECTOR,
+  ERC4626_CONVERT_TO_ASSETS_SELECTOR,
   ERC4626_TOTAL_ASSETS_SELECTOR,
-  computeErc4626CollateralizationRatio,
   makeContractRawCaller,
 } from "./erc4626";
+import { decimalNumberFromBigInt, parseBoundedDecimals } from "./slice-math";
 
 /**
  * Centrifuge V3 / ERC-7540 vault adapter.
@@ -129,15 +131,45 @@ export async function fetchCentrifugeVaultReserves(
 
   const warnings: LiveReserveWarning[] = [];
 
-  // NAV cross-check: convertToAssets(totalSupply) vs totalAssets().
-  const navCheck = await computeErc4626CollateralizationRatio({
-    call,
-    totalAssetsRaw,
-    totalSupplyRaw,
-    warningCode: "centrifuge-vault-nav-divergence",
+  // NAV cross-check: compare the asset/share price against 1:1 after decimal normalization.
+  let collateralizationRatio: number | undefined;
+  let convertToAssetsRaw: bigint | undefined;
+  const shareDecimalsRaw = await call(DECIMALS_SELECTOR);
+  const assetDecimalsRaw = await fetchOnchainUint256({
+    contract: assetAddress,
+    data: DECIMALS_SELECTOR,
+    signal,
+    ctx: _ctx,
+    rpcMode: primaryInput.rpcMode,
+    chain: primaryInput.chain,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs: timeout,
   });
-  const { collateralizationRatio, convertToAssetsRaw } = navCheck;
-  warnings.push(...navCheck.warnings);
+  const shareDecimals = shareDecimalsRaw == null ? null : parseBoundedDecimals(BigInt(shareDecimalsRaw));
+  const assetDecimals = parseBoundedDecimals(assetDecimalsRaw);
+
+  if (totalSupplyRaw != null && totalSupplyRaw > 0n && shareDecimals != null && assetDecimals != null) {
+    const shareUnit = 10n ** BigInt(shareDecimals);
+    const convertResult = await call(`${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(shareUnit)}`);
+    if (convertResult) {
+      convertToAssetsRaw = BigInt(convertResult);
+    }
+
+    const assets = decimalNumberFromBigInt(totalAssetsRaw, assetDecimals);
+    const shares = decimalNumberFromBigInt(totalSupplyRaw, shareDecimals);
+    if (shares > 0) {
+      collateralizationRatio = assets / shares;
+      if (Number.isFinite(collateralizationRatio) && Math.abs(collateralizationRatio - 1) > 0.01) {
+        warnings.push(
+          reserveDegradedWarning(
+            "centrifuge-vault-nav-divergence",
+            `Centrifuge vault share price diverges from 1:1 by ${((collateralizationRatio - 1) * 100).toFixed(2)}%`,
+          ),
+        );
+      }
+    }
+  }
 
   return {
     slices: [
@@ -159,6 +191,8 @@ export async function fetchCentrifugeVaultReserves(
       assetAddress,
       ...(totalSupplyRaw != null ? { totalSupplyRaw: totalSupplyRaw.toString() } : {}),
       ...(convertToAssetsRaw != null ? { convertToAssetsRaw: convertToAssetsRaw.toString() } : {}),
+      ...(shareDecimals != null ? { shareDecimals } : {}),
+      ...(assetDecimals != null ? { assetDecimals } : {}),
       ...(collateralizationRatio != null && Number.isFinite(collateralizationRatio)
         ? { collateralizationRatio }
         : {}),

@@ -49,6 +49,74 @@ describe("handleYieldSourceDecisions", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
+  it("falls back when decision retention and public alternatives migrations are absent", async () => {
+    const db = mockD1([
+      {
+        match: "FROM yield_publication_generations",
+        rows: [
+          {
+            generation_id: "yield-1772000000",
+            started_at: 1_772_000_000,
+            state: "published",
+            cache_key: "yield-rankings",
+            ranking_updated_at: 1_772_000_000,
+            ranking_count: 1,
+            source_row_count: 1,
+            best_row_count: 1,
+            decision_count: 1,
+            published_at: 1_772_000_003,
+            failed_at: null,
+            failure_reason: null,
+            metadata_json: null,
+            created_at: 1_772_000_000,
+          },
+        ],
+      },
+      {
+        match: "d.retention_reason",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such column: d.retention_reason"),
+      },
+      {
+        match: "stablecoin-decisions:legacy-schema",
+        rows: [
+          {
+            generation_id: "yield-1772000000",
+            stablecoin_id: "usdc-circle",
+            selected_source_key: "defillama:best",
+            selected_confidence_tier: "curated",
+            selected_data_source: "defillama",
+            selected_apy_30d: 4.7,
+            selected_score: 82.5,
+            selected_reason: "Curated source selected",
+            previous_best_source_key: null,
+            source_switch: 0,
+            rejected_count: 0,
+            alternatives_json: "[]",
+            created_at: 1_772_000_000,
+            retention_reason: null,
+          },
+        ],
+      },
+      {
+        match: "FROM yield_source_decision_alternatives",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: yield_source_decision_alternatives"),
+      },
+    ]);
+    const { request, url } = buildRequest("?stablecoin=usdc-circle&includePublicAlternatives=1");
+
+    const response = await handleYieldSourceDecisions({ db, url, request, trustedAdmin: true });
+    const body = await response.json() as {
+      decisions: Array<{ retentionReason?: string | null; publicAlternatives?: unknown[] }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.decisions[0]?.retentionReason).toBeNull();
+    expect(body.decisions[0]?.publicAlternatives).toEqual([]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-schema"))).toBe(true);
+  });
+
   it("filters generation and decision rows by generation, state, and stablecoin", async () => {
     const db = mockD1([
       {

@@ -1,4 +1,5 @@
 import { jsonResponse, parseIntParam, parseOptionalEnumParam } from "../lib/api-utils";
+import { isMissingColumnError, isMissingTableError } from "../lib/db";
 import { makeAdminRoute, type AdminUrlRouteContext } from "../lib/route-wrappers";
 
 type GenerationState = "staged" | "published" | "failed";
@@ -181,9 +182,15 @@ async function loadStablecoinDecisions(
     includePublicAlternatives: boolean;
   },
 ) {
-  const rows = await db
-    .prepare(
-      `SELECT /* pharos:yield-source-decisions:stablecoin-decisions */
+  const decisionBinds = [
+    params.stablecoinId,
+    params.generationId,
+    params.generationId,
+    params.state,
+    params.state,
+    params.limit,
+  ] as const;
+  const decisionSql = `SELECT /* pharos:yield-source-decisions:stablecoin-decisions */
          d.generation_id, d.stablecoin_id, d.selected_source_key, d.selected_confidence_tier,
          d.selected_data_source, d.selected_apy_30d, d.selected_score, d.selected_reason,
          d.previous_best_source_key, d.source_switch, d.rejected_count, d.alternatives_json,
@@ -194,17 +201,33 @@ async function loadStablecoinDecisions(
          AND (? IS NULL OR d.generation_id = ?)
          AND (? IS NULL OR g.state = ?)
        ORDER BY g.started_at DESC, d.generation_id DESC
-       LIMIT ?`,
-    )
-    .bind(
-      params.stablecoinId,
-      params.generationId,
-      params.generationId,
-      params.state,
-      params.state,
-      params.limit,
-    )
-    .all<YieldSourceDecisionRow>();
+       LIMIT ?`;
+  let rows: D1Result<YieldSourceDecisionRow>;
+  try {
+    rows = await db
+      .prepare(decisionSql)
+      .bind(...decisionBinds)
+      .all<YieldSourceDecisionRow>();
+  } catch (error) {
+    if (!isMissingColumnError(error)) throw error;
+    rows = await db
+      .prepare(
+        `SELECT /* pharos:yield-source-decisions:stablecoin-decisions:legacy-schema */
+           d.generation_id, d.stablecoin_id, d.selected_source_key, d.selected_confidence_tier,
+           d.selected_data_source, d.selected_apy_30d, d.selected_score, d.selected_reason,
+           d.previous_best_source_key, d.source_switch, d.rejected_count, d.alternatives_json,
+           d.created_at, NULL AS retention_reason
+         FROM yield_source_decisions d
+         INNER JOIN yield_publication_generations g ON g.generation_id = d.generation_id
+         WHERE d.stablecoin_id = ?
+           AND (? IS NULL OR d.generation_id = ?)
+           AND (? IS NULL OR g.state = ?)
+         ORDER BY g.started_at DESC, d.generation_id DESC
+         LIMIT ?`,
+      )
+      .bind(...decisionBinds)
+      .all<YieldSourceDecisionRow>();
+  }
 
   const decisionRows = rows.results ?? [];
   if (decisionRows.length === 0) return [];
@@ -214,24 +237,28 @@ async function loadStablecoinDecisions(
     const generationIds = [...new Set(decisionRows.map((row) => row.generation_id))];
     if (generationIds.length > 0) {
       const placeholders = generationIds.map(() => "?").join(",");
-      const altRows = await db
-        .prepare(
-          `SELECT /* pharos:yield-source-decisions:public-alternatives */
-                  generation_id, stablecoin_id, alt_source_key, alt_yield_source,
-                  alt_apy30d_delta, rejection_reason_code, recorded_at
-           FROM yield_source_decision_alternatives
-           WHERE stablecoin_id = ? AND generation_id IN (${placeholders})
-           ORDER BY recorded_at DESC, alt_source_key ASC`,
-        )
-        .bind(params.stablecoinId, ...generationIds)
-        .all<YieldSourceDecisionAlternativeRow>();
-      const grouped = new Map<string, YieldSourceDecisionAlternativeRow[]>();
-      for (const alt of altRows.results ?? []) {
-        const list = grouped.get(alt.generation_id) ?? [];
-        list.push(alt);
-        grouped.set(alt.generation_id, list);
+      try {
+        const altRows = await db
+          .prepare(
+            `SELECT /* pharos:yield-source-decisions:public-alternatives */
+                    generation_id, stablecoin_id, alt_source_key, alt_yield_source,
+                    alt_apy30d_delta, rejection_reason_code, recorded_at
+             FROM yield_source_decision_alternatives
+             WHERE stablecoin_id = ? AND generation_id IN (${placeholders})
+             ORDER BY recorded_at DESC, alt_source_key ASC`,
+          )
+          .bind(params.stablecoinId, ...generationIds)
+          .all<YieldSourceDecisionAlternativeRow>();
+        const grouped = new Map<string, YieldSourceDecisionAlternativeRow[]>();
+        for (const alt of altRows.results ?? []) {
+          const list = grouped.get(alt.generation_id) ?? [];
+          list.push(alt);
+          grouped.set(alt.generation_id, list);
+        }
+        publicAlternativesByGeneration = grouped;
+      } catch (error) {
+        if (!isMissingTableError(error)) throw error;
       }
-      publicAlternativesByGeneration = grouped;
     }
   }
 
