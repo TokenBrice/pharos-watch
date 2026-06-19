@@ -37,7 +37,7 @@ export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 
 const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
 export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
-const StatusHealthOrUnknownSchema = z.enum(["healthy", "degraded", "stale", "unknown"]);
+const StatusHealthOrUnknownSchema = z.enum([...StatusHealthValueSchema.options, "unknown"]);
 export type StatusHealthOrUnknown = StatusHealthValue | "unknown";
 
 export const CRON_RUN_STATUS_VALUES = [
@@ -175,12 +175,14 @@ export interface StatusProbePlaneSummary {
   origins: string[];
 }
 
-export type StatusProbeComparisonReason =
-  | "in-sync"
-  | "internal-missing"
-  | "external-missing"
-  | "external-worse"
-  | "internal-worse";
+export const STATUS_PROBE_COMPARISON_REASON_VALUES = [
+  "in-sync",
+  "internal-missing",
+  "external-missing",
+  "external-worse",
+  "internal-worse",
+] as const;
+export type StatusProbeComparisonReason = (typeof STATUS_PROBE_COMPARISON_REASON_VALUES)[number];
 
 export interface StatusProbeComparison {
   hasDivergence: boolean;
@@ -191,7 +193,13 @@ export interface StatusProbeComparison {
   details: string | null;
 }
 
-export type StatusDiscrepancyReason = "in-sync" | "probe-stale" | "probe-disagrees" | "probe-missing";
+export const STATUS_DISCREPANCY_REASON_VALUES = [
+  "in-sync",
+  "probe-stale",
+  "probe-disagrees",
+  "probe-missing",
+] as const;
+export type StatusDiscrepancyReason = (typeof STATUS_DISCREPANCY_REASON_VALUES)[number];
 
 export interface StatusDiscrepancy {
   hasDivergence: boolean;
@@ -365,21 +373,6 @@ const TelegramWatcherHistoryPointSchema = z.object({
 });
 export type TelegramWatcherHistoryPoint = z.infer<typeof TelegramWatcherHistoryPointSchema>;
 
-function defaultTelegramTelemetryQuality(): TelegramTelemetryQuality {
-  return {
-    status: "complete",
-    unavailableFields: [],
-  };
-}
-
-function defaultTelegramPulsePrivacy(): TelegramPulsePrivacy {
-  return {
-    exactActiveWatchers: true,
-    lowCardinalityThreshold: 5,
-    suppressedFields: [],
-  };
-}
-
 const TelegramPulseBaseSchema = z.object({
   activeWatchers: z.number(),
   coinSubscriptions: z.number(),
@@ -414,8 +407,8 @@ export const TelegramPulseSchema = TelegramPulseBaseSchema.transform((pulse) => 
   currentSnapshotAt: pulse.currentSnapshotAt ?? pulse.updatedAt,
   lifecycleHistoryUpdatedAt: pulse.lifecycleHistoryUpdatedAt ?? null,
   lifecycleHistoryEverySeconds: pulse.lifecycleHistoryEverySeconds ?? 900,
-  quality: pulse.quality ?? defaultTelegramTelemetryQuality(),
-  privacy: pulse.privacy ?? defaultTelegramPulsePrivacy(),
+  quality: pulse.quality ?? { status: "complete" as const, unavailableFields: [] },
+  privacy: pulse.privacy ?? { exactActiveWatchers: true, lowCardinalityThreshold: 5, suppressedFields: [] },
 }));
 export type TelegramPulse = z.infer<typeof TelegramPulseSchema>;
 
@@ -992,7 +985,7 @@ const StatusProbeSummarySchema = z.object({
       severityDelta: z.number(),
       internalStatus: StatusHealthOrUnknownSchema,
       externalStatus: StatusHealthOrUnknownSchema,
-      reason: z.enum(["in-sync", "internal-missing", "external-missing", "external-worse", "internal-worse"]),
+      reason: z.enum(STATUS_PROBE_COMPARISON_REASON_VALUES),
       details: z.string().nullable(),
     })
     .nullable()
@@ -1007,7 +1000,7 @@ const StatusDiscrepancySchema = z.object({
   details: z.string().nullable(),
   probeAgeSeconds: z.number().nullable(),
   consecutiveDivergent: z.number(),
-  discrepancyReason: z.enum(["in-sync", "probe-stale", "probe-disagrees", "probe-missing"]),
+  discrepancyReason: z.enum(STATUS_DISCREPANCY_REASON_VALUES),
 });
 
 const StatusTransitionSchema = z.object({
@@ -1024,7 +1017,7 @@ const StatusTransitionSchema = z.object({
 });
 
 const StatusReserveCompositionSchema = ReserveCompositionOverviewSchema.extend({
-  status: z.enum(["healthy", "degraded", "stale"]),
+  status: StatusHealthValueSchema,
   freshCoverageRatio: z.number(),
   authoritativeFreshCoverageRatio: z.number(),
 }) satisfies z.ZodType<StatusReserveComposition>;
@@ -1154,7 +1147,7 @@ const TelegramHealthSummarySchema = z.object({
 });
 
 export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
-  status: z.enum(["healthy", "degraded", "stale"]),
+  status: StatusHealthValueSchema,
   timestamp: z.number(),
   warnings: z.array(z.string()),
   caches: z.record(z.string(), CacheStatusSchema),
