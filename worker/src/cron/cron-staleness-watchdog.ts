@@ -169,6 +169,10 @@ function readMarker(value: string | null | undefined): AlertMarker | null {
   );
 }
 
+function isFreshAge(ageSeconds: number | null, thresholdSec: number): boolean {
+  return ageSeconds != null && Number.isFinite(ageSeconds) && ageSeconds <= thresholdSec;
+}
+
 function buildFullObservation(
   laneKey: CacheFreshnessLaneKey,
   lane: CacheFreshnessLaneConfig,
@@ -185,12 +189,12 @@ function buildFullObservation(
     producerThresholdSec: thresholdSec,
     endpointThresholdSec: lane.endpointMaxAgeSec,
     availabilityThresholdSec: lane.availabilityMaxAgeSec,
-    availabilityImpacting: ageSeconds == null || ageSeconds > lane.availabilityMaxAgeSec,
+    availabilityImpacting: !isFreshAge(ageSeconds, lane.availabilityMaxAgeSec),
   };
 }
 
 function isStale(observation: CronStalenessObservation): boolean {
-  return observation.ageSeconds == null || observation.ageSeconds > observation.thresholdSec;
+  return !isFreshAge(observation.ageSeconds, observation.thresholdSec);
 }
 
 function buildObservation(
