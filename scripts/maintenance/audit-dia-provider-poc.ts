@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import type { PriceSourceDepthAudit, PriceSourceDepthRow } from "./audit-price-source-depth";
 import { ACTIVE_META_BY_ID } from "../../shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
-import { isRecord, numberValue, stringValue } from "../lib/coverage-audit-cli";
+import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 
 const DIA_ASSET_QUOTATION_BASE_URL = "https://api.diadata.org/v1/assetQuotation";
 const DEFAULT_TIMEOUT_MS = 8_000;

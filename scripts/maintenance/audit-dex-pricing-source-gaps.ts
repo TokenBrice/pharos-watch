@@ -4,7 +4,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
-import { isRecord, numberValue, stringValue, type UnknownRecord } from "../lib/coverage-audit-cli";
+import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import type { UnknownRecord } from "../lib/coverage-audit-cli";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
