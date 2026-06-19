@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { collectSourceFiles } from "../lib/source-files.mjs";
+import { splitLines } from "../lib/doc-files.mjs";
 const {
   getAllEnvBindingKeys,
   renderEnvExample,
@@ -76,10 +77,6 @@ const WRANGLER_BINDING_SECTIONS = new Map([
 
 function normalizeText(text) {
   return text.replace(/\r\n/g, "\n");
-}
-
-function splitLines(text) {
-  return normalizeText(text).split("\n");
 }
 
 function collectFiles(rootDir) {
