@@ -7,7 +7,7 @@ import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
-  reserveInfoWarning,
+  reserveDegradedWarning,
 } from "./helpers";
 import {
   ERC4626_ASSET_SELECTOR,
@@ -63,59 +63,18 @@ export async function fetchCentrifugeVaultReserves(
 
   if (!totalAssetsResult) {
     const assetAddress = assetResult ? parseEvmAddressResult(assetResult as `0x${string}`) : null;
-    const assetAddressMatchesExpected = assetAddress === expectedAssetAddress;
-    const livenessWarnings: LiveReserveWarning[] = [];
-
-    if (assetAddress == null) {
-      livenessWarnings.push(
-        reserveInfoWarning(
-          "centrifuge-vault-asset-unavailable",
-          `Centrifuge vault ${coin.id} asset() was unavailable while resolving fallback liveness`,
-        ),
-      );
-    } else if (!assetAddressMatchesExpected) {
-      livenessWarnings.push(
-        reserveInfoWarning(
-          "centrifuge-vault-asset-mismatch",
-          `Centrifuge vault ${coin.id} asset() read ${assetAddress}, expected ${expectedAssetAddress}`,
-        ),
+    if (!assetAddress) {
+      throw new Error(
+        `ERC-7540 asset() could not be read for ${coin.id}; expected ${expectedAssetAddress}`,
       );
     }
-
-    if (totalSupplyRaw == null || totalSupplyRaw <= 0n) {
-      livenessWarnings.push(
-        reserveInfoWarning(
-          "centrifuge-vault-total-assets-unavailable",
-          "Centrifuge vault totalAssets() and totalSupply() were both unavailable; scoring fallback uses configured slice coverage only.",
-        ),
+    if (assetAddress !== expectedAssetAddress) {
+      throw new Error(
+        `ERC-7540 asset() returned ${assetAddress}, expected ${expectedAssetAddress} for ${coin.id}`,
       );
-
-      return {
-        slices: [
-          {
-            name: params.slice.name,
-            pct: 100,
-            risk: params.slice.risk,
-          },
-        ],
-        ...(livenessWarnings.length > 0 ? { warnings: livenessWarnings } : {}),
-        metadata: {
-          ...notApplicableFreshnessMetadata({
-            proofKind: "centrifuge-vault-total-supply-liveness",
-            totalAssetsUnavailable: true,
-          }),
-          chain: primaryInput.chain,
-          contractAddress,
-          ...(totalSupplyRaw != null ? { totalSupplyRaw: totalSupplyRaw.toString() } : {}),
-          ...(assetAddress != null ? { assetAddress } : {}),
-          ...(assetAddress != null ? { assetAddressMatchesExpected } : {}),
-          redemption: {
-            capacityKind: "documented-eventual" as const,
-            freshnessKind: "same-run-onchain" as const,
-            routeStatus: "unknown" as const,
-          },
-        },
-      };
+    }
+    if (totalSupplyRaw == null || totalSupplyRaw <= 0n) {
+      throw new Error(`ERC-7540 totalAssets() call failed for ${coin.id}`);
     }
 
     return {
@@ -127,24 +86,26 @@ export async function fetchCentrifugeVaultReserves(
         },
       ],
       warnings: [
-        ...livenessWarnings,
-        reserveInfoWarning(
+        reserveDegradedWarning(
           "centrifuge-vault-total-assets-unavailable",
-          "Centrifuge vault totalAssets() was unavailable; validated token liveness with ERC-20 totalSupply()",
+          "Centrifuge vault totalAssets() was unavailable; validated accounting asset and token liveness with ERC-20 totalSupply()",
         ),
-      ].filter((warning): warning is LiveReserveWarning => warning != null),
+      ],
       metadata: {
         ...notApplicableFreshnessMetadata({
           proofKind: "centrifuge-vault-total-supply-liveness",
           totalAssetsUnavailable: true,
+          assetAddressMatchesExpected: true,
         }),
         chain: primaryInput.chain,
         contractAddress,
+        assetAddress,
         totalSupplyRaw: totalSupplyRaw.toString(),
         redemption: {
           capacityKind: "documented-eventual" as const,
           freshnessKind: "same-run-onchain" as const,
-          routeStatus: "unknown" as const,
+          routeStatus: "degraded" as const,
+          routeStatusSource: "onchain" as const,
         },
       },
     };

@@ -181,62 +181,72 @@ describe("fetchCentrifugeVaultReserves", () => {
     expect(result.warnings).toEqual([
       expect.objectContaining({
         code: "centrifuge-vault-total-assets-unavailable",
-        effect: "info",
+        effect: "degraded",
       }),
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       chain: "ethereum",
       contractAddress: JTRSY_VAULT,
+      assetAddress: USDC_ASSET,
       totalSupplyRaw: "1031884381315470",
       details: {
         proofKind: "centrifuge-vault-total-supply-liveness",
         totalAssetsUnavailable: true,
+        assetAddressMatchesExpected: true,
+      },
+      redemption: {
+        capacityKind: "documented-eventual",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "degraded",
+        routeStatusSource: "onchain",
       },
     });
   });
 
-  it("falls back when both totalAssets and totalSupply are unavailable", async () => {
+  it("throws when totalAssets and totalSupply are both unavailable", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
       if (body.params[0].data === "0x01e1d114" || body.params[0].data === "0x18160ddd") {
         return jsonResponse({ error: { code: 3, message: "execution reverted" } });
       }
       return null;
     });
 
-    const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
-      chainRpcs: testChainRpcs,
+    await expect(
+      fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+        chainRpcs: testChainRpcs,
+      }),
+    ).rejects.toThrow(/totalAssets\(\) call failed/);
+  });
+
+  it("throws when totalAssets is unavailable and asset() returns a different token", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000000000000000000000000000000000000000dead",
+        });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ error: { code: 3, message: "execution reverted" } });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      }
+      return null;
     });
 
-    expect(result.slices).toEqual([
-      {
-        name: "U.S. Treasury bills via Janus Henderson Anemoy fund",
-        pct: 100,
-        risk: "very-low",
-      },
-    ]);
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "centrifuge-vault-asset-unavailable",
-          effect: "info",
-        }),
-        expect.objectContaining({
-          code: "centrifuge-vault-total-assets-unavailable",
-          effect: "info",
-        }),
-      ]),
-    );
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "not-applicable",
-      chain: "ethereum",
-      contractAddress: JTRSY_VAULT,
-      details: {
-        proofKind: "centrifuge-vault-total-supply-liveness",
-        totalAssetsUnavailable: true,
-      },
-    });
+    await expect(
+      fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+        chainRpcs: testChainRpcs,
+      }),
+    ).rejects.toThrow(/asset\(\) returned/);
   });
 
   it("throws when asset() cannot be read", async () => {
