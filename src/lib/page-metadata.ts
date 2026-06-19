@@ -53,7 +53,7 @@ function trimTrailingPunctuation(text: string): string {
 function canonicalPathname(canonical: string): string | null {
   try {
     const url = new URL(canonical, SITE_ORIGIN);
-    return url.origin === new URL(SITE_ORIGIN).origin ? url.pathname : null;
+    return url.origin === SITE_ORIGIN ? url.pathname : null;
   } catch {
     return null;
   }
