@@ -1,4 +1,4 @@
-import type { KVNamespace } from "@cloudflare/workers-types";
+import type { D1Database, KVNamespace } from "@cloudflare/workers-types";
 import {
   SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES,
   SELECTOR_SNAPSHOT_TTL_SECONDS,
@@ -38,13 +38,14 @@ const SNAPSHOT_BODY_ENCODER = new TextEncoder();
  * Isolate-local state is best-effort (resets on isolate recycle, not shared
  * across colos) but bounds the realistic single-source write-spam case.
  * Legitimate use is 1-2 snapshot creations per session.
+ * The durable daily quota uses D1 conditional upsert semantics because KV
+ * read-modify-write counters are not atomic across isolates/colos.
  * Accepted residual risk and KV cost ceiling: see functions/AGENTS.md (S-062).
  */
 const POST_RATE_LIMIT_WINDOW_MS = 60_000;
 const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;
 const POST_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
 const POST_DAILY_QUOTA_MAX_PER_IP = 100;
-const POST_DAILY_QUOTA_TTL_SECONDS = 60 * 60 * 48;
 const postTimestampsByIpHash = new Map<string, number[]>();
 
 async function hashClientIp(ip: string): Promise<string> {
@@ -58,8 +59,8 @@ async function getClientIpHash(request: Request): Promise<string | null> {
   return hashClientIp(ip);
 }
 
-function dailyQuotaKey(ipHash: string, now = new Date()): string {
-  return `q:${now.toISOString().slice(0, 10)}:${ipHash}`;
+function dailyQuotaDate(now = new Date()): string {
+  return now.toISOString().slice(0, 10);
 }
 
 async function isPostRateLimited(request: Request): Promise<boolean> {
@@ -84,29 +85,36 @@ async function isPostRateLimited(request: Request): Promise<boolean> {
 
 async function consumeDailyPostQuota(env: SelectorSnapshotEnv, request: Request): Promise<Response | null> {
   const ipHash = await getClientIpHash(request);
-  if (!ipHash || !env.SELECTOR_SNAPSHOTS) return null;
+  if (!ipHash) return null;
+  if (!env.DB) return jsonError(503, "Snapshot quota store is not configured");
 
-  const key = dailyQuotaKey(ipHash);
-  let count = 0;
-  try {
-    const stored = await env.SELECTOR_SNAPSHOTS.get(key, "text");
-    count = stored === null ? 0 : Number.parseInt(stored, 10);
-  } catch (error) {
-    console.warn("[selector-snapshot] quota read failure", error);
-    return jsonError(503, "Snapshot store temporarily unavailable");
-  }
-
-  if (Number.isFinite(count) && count >= POST_DAILY_QUOTA_MAX_PER_IP) {
-    return jsonError(429, "Daily snapshot write quota exceeded", { "Retry-After": "86400" });
-  }
+  const bucketDate = dailyQuotaDate();
+  const nowSec = Math.floor(Date.now() / 1000);
 
   try {
-    await env.SELECTOR_SNAPSHOTS.put(key, String((Number.isFinite(count) ? count : 0) + 1), {
-      expirationTtl: POST_DAILY_QUOTA_TTL_SECONDS,
-    });
+    const result = await env.DB.prepare(
+      `INSERT INTO selector_snapshot_daily_quota (
+         quota_date,
+         ip_hash,
+         count,
+         first_seen_at,
+         last_seen_at
+       )
+       VALUES (?, ?, 1, ?, ?)
+       ON CONFLICT(quota_date, ip_hash) DO UPDATE SET
+         count = count + 1,
+         last_seen_at = excluded.last_seen_at
+       WHERE selector_snapshot_daily_quota.count < ?`,
+    )
+      .bind(bucketDate, ipHash, nowSec, nowSec, POST_DAILY_QUOTA_MAX_PER_IP)
+      .run();
+
+    if ((result.meta?.changes ?? 0) === 0) {
+      return jsonError(429, "Daily snapshot write quota exceeded", { "Retry-After": "86400" });
+    }
   } catch (error) {
     console.warn("[selector-snapshot] quota write failure", error);
-    return jsonError(503, "Snapshot store temporarily unavailable");
+    return jsonError(503, "Snapshot quota store temporarily unavailable");
   }
 
   return null;
@@ -114,6 +122,7 @@ async function consumeDailyPostQuota(env: SelectorSnapshotEnv, request: Request)
 
 interface SelectorSnapshotEnv {
   SELECTOR_SNAPSHOTS?: KVNamespace;
+  DB?: D1Database;
   SITE_ORIGIN?: string;
   OPS_UI_ORIGIN?: string;
 }

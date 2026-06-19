@@ -101,6 +101,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0155     | `0155_telegram_retention_indexes.sql`                    | Add Telegram retention indexes for inactive subscriber scans and alert-job cleanup batches                                                       |
 | 0156     | `0156_telegram_reserve_alerts.sql`                       | Add reserve-drift alert flags to telegram subscribers and subscriptions                                                                          |
 | 0157     | `0157_telegram_global_alert_reserve_index.sql`           | Partial index on `telegram_subscribers.global_alert_reserve` for dispatcher reserve-drift fan-out                                                 |
+| 0158     | `0158_selector_snapshot_daily_quota.sql`                | Add atomic D1 daily quota rows for unauthenticated selector-snapshot writes                                                                    |
 
 ## Retired Individual Migrations
 

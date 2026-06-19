@@ -65,7 +65,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 
 | Binding | Type | Worker | Pages ops | Pages site-data | Description |
 | --- | --- | --- | --- | --- | --- |
-| `DB` | `D1Database` | required | - | optional | Primary D1 binding for worker reads/writes; the Pages site-data lane also uses it for attribution telemetry. |
+| `DB` | `D1Database` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for site-data attribution telemetry and atomic selector-snapshot write quotas. |
 | `CORS_ORIGIN` | `string` | required | - | - | Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`. |
 | `SELF_URL` | `string` | optional | - | - | Status self-check external probe base URL. |
 | `SITE_API_SHARED_SECRET` | `string` | optional | - | required | Shared secret for Pages `/_site-data/*` -> Worker `site-api` authentication via `X-Pharos-Site-Proxy-Secret`. |
@@ -126,7 +126,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `OPS_API_SERVICE_TOKEN_SECRET` | `string` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | `string` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | `string` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
-| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries plus hashed-IP write-quota counters. |
+| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries. Hashed-IP write-quota counters live in D1 for atomic reservations. |
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---
