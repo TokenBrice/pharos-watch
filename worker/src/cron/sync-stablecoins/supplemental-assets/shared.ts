@@ -5,6 +5,7 @@ import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../../lib/response-body";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
 
@@ -36,6 +37,33 @@ function isFreshSupplementalPrice(source: SupplementalPriceResolution["source"],
   const maxTrustedAgeSec = getPricingSourceRegistryEntry(source)?.maxTrustedAgeSec ?? 15 * 60;
   const nowSec = Math.floor(Date.now() / 1000);
   return nowSec - observedAt <= maxTrustedAgeSec;
+}
+
+export function resolveLowVolumeCoinGeckoPrice(
+  cgData: CoinGeckoMcapData,
+  geckoId?: string,
+): SupplementalPriceResolution | null {
+  if (!geckoId) return null;
+
+  const cgEntry = cgData[geckoId];
+  const cgPrice = toPositiveFiniteNumber(cgEntry?.usd);
+  if (cgPrice == null) return null;
+
+  const observedAt = toPositiveFiniteNumber(cgEntry?.last_updated_at) ?? null;
+  const freshness = validatePricingSourceFreshness({
+    source: "coingecko-low-volume",
+    observedAt,
+    observedAtMode: observedAt != null ? "upstream" : "local_fetch",
+    requireObservedAt: true,
+  });
+  if (!freshness.accepted) return null;
+
+  return {
+    price: cgPrice,
+    source: "coingecko-low-volume",
+    observedAt: freshness.observedAt,
+    observedAtMode: freshness.observedAtMode,
+  };
 }
 
 export function resolveSupplementalPrice(

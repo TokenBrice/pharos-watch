@@ -9,6 +9,7 @@ import {
   fetchSupplementalPriceData,
   getSupplementalChainLabels,
   pegTypeKey,
+  resolveLowVolumeCoinGeckoPrice,
   resolveSupplementalPrice,
   toPositiveFiniteNumber,
   type CoinGeckoMcapData,
@@ -53,18 +54,8 @@ export async function fetchFiatCoinGeckoTokens(
         // `priceSource: missing`. Diagnosis pattern: detailProvider="coingecko"
         // with llamaId=null + low volume → upstream last_updated_at exceeds 15min.
         let priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
-        if (!priceResolution && meta.geckoId) {
-          const cgEntry = cgData[meta.geckoId];
-          const cgPrice = toPositiveFiniteNumber(cgEntry?.usd);
-          if (cgPrice != null) {
-            const observedAt = toPositiveFiniteNumber(cgEntry?.last_updated_at) ?? null;
-            priceResolution = {
-              price: cgPrice,
-              source: "coingecko-low-volume",
-              observedAt,
-              observedAtMode: observedAt != null ? "upstream" : "local_fetch",
-            };
-          }
+        if (!priceResolution) {
+          priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);
         }
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
         // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for

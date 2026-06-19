@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
+  resolveLowVolumeCoinGeckoPrice,
   resolveSupplementalPrice,
   selectSingleOnChainSupplyContract,
   selectSupplementalOnChainSupplyContract,
@@ -149,6 +150,53 @@ describe("resolveSupplementalPrice", () => {
       observedAt: nowSec - 60,
       observedAtMode: "upstream",
     });
+  });
+
+  it("accepts low-volume CoinGecko rows inside the relaxed freshness window", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    expect(resolveLowVolumeCoinGeckoPrice(
+      {
+        vcred: {
+          usd: 0.42,
+          usd_market_cap: 1_000_000,
+          last_updated_at: nowSec - 6 * 24 * 60 * 60,
+        },
+      },
+      "vcred",
+    )).toEqual({
+      price: 0.42,
+      source: "coingecko-low-volume",
+      observedAt: nowSec - 6 * 24 * 60 * 60,
+      observedAtMode: "upstream",
+    });
+  });
+
+  it("rejects low-volume CoinGecko rows outside the relaxed freshness window", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    expect(resolveLowVolumeCoinGeckoPrice(
+      {
+        vcred: {
+          usd: 0.42,
+          usd_market_cap: 1_000_000,
+          last_updated_at: nowSec - 8 * 24 * 60 * 60,
+        },
+      },
+      "vcred",
+    )).toBeNull();
+  });
+
+  it("rejects low-volume CoinGecko rows without upstream timestamps", () => {
+    expect(resolveLowVolumeCoinGeckoPrice(
+      {
+        vcred: {
+          usd: 0.42,
+          usd_market_cap: 1_000_000,
+        },
+      },
+      "vcred",
+    )).toBeNull();
   });
 });
 
