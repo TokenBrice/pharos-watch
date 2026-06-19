@@ -373,9 +373,13 @@ const GIT_GLOBAL_FLAG_OPTIONS = new Set([
 ]);
 const WRANGLER_GLOBAL_VALUE_OPTIONS = new Set(["-c", "--config", "-e", "--env", "--cwd"]);
 
+function commandIsRawPatchPayload(command) {
+  return String(command ?? "").trimStart().startsWith("*** Begin Patch");
+}
+
 function commandLooksLikePatchPayload(command) {
   const text = String(command ?? "").trimStart();
-  return text.startsWith("*** Begin Patch") || /^apply_patch(?:\s|$)/.test(text);
+  return commandIsRawPatchPayload(text) || /^apply_patch(?:\s|$)/.test(text);
 }
 
 function stripHereDocBodies(command) {
@@ -402,7 +406,7 @@ function stripHereDocBodies(command) {
 }
 
 function getExecutableShellText(command) {
-  if (commandLooksLikePatchPayload(command)) return "";
+  if (commandIsRawPatchPayload(command)) return "";
   return stripHereDocBodies(command);
 }
 
