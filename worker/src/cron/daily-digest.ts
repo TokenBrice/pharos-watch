@@ -298,11 +298,17 @@ export async function generateDailyDigest(
         // failure via the channel-delivery wrapper) rather than risking a
         // duplicate send on the next run. If the send itself fails, roll the
         // marker back so a genuine delivery failure can be retried.
-        await setCache(
-          db,
-          markerKey,
-          JSON.stringify({ sentAt: now, editionNumber }),
-        );
+        try {
+          await setCache(
+            db,
+            markerKey,
+            JSON.stringify({ sentAt: now, editionNumber }),
+          );
+        } catch (err) {
+          degradedReasons.push("telegram-send-marker-write");
+          console.error("[daily-digest] Failed to write Telegram send marker:", err);
+          throw err;
+        }
         try {
           await postDigestToTelegram(
             digestCopy.digestTitle,
@@ -340,6 +346,9 @@ export async function generateDailyDigest(
       return `ok${appendixSuffix}`;
     },
   });
+  if (degradedReasons.includes("telegram-send-marker-write")) {
+    throw new Error("Telegram daily digest marker write failed");
+  }
 
   const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
 

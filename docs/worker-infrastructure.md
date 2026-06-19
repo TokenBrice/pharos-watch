@@ -553,7 +553,7 @@ Safety-grade fan-out on this lane is now gated by the generation-aware live sour
 
 This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(db, anthropicApiKey, buildTwitterCreds(env), true, buildTelegramCreds(env), signal, reportProgress)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job. `npm run check:cron-connections` still models it as the budget-only `digest-trigger-poll` entry with the same one-connection peak used by the daily digest chain.
 
-Forced digest runs inherit the `daily-digest` progress stream, including preflight, input collection, Anthropic generation, persistence, and delivery stages.
+Forced digest runs inherit the `daily-digest` progress stream, including preflight, input collection, Anthropic generation, persistence, and delivery stages. Telegram digest delivery writes its idempotency marker before posting; if that marker write fails, the channel aborts before sending so a cache outage cannot create duplicate Telegram digests on the next run.
 
 ### Trigger 15: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 

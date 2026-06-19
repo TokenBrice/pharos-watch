@@ -129,7 +129,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 
 `telegram_subscribers` rows are auto-pruned after 180 days of inactivity. The `telegram-inactive-cleanup` job runs on the daily 03:00 UTC lane behind a 7-day cache guard (`cache` key `cron:telegram-inactive-cleanup:last-run`) and removes any subscriber whose `last_active_at` is older than 180 days and which has zero rows in `telegram_subscriptions`, `telegram_preset_subscriptions`, `telegram_pending_alerts`, and `telegram_pending_disambiguation`. The scan uses `idx_telegram_subscribers_last_active_at` and each eligible chat is removed via a batched cascade DELETE; the job caps at 100 deletions per run so a large backlog cannot push the daily slot past its per-statement budget. The most recent run's `item_count` in the trailing 7-day window is surfaced as `TelegramBotStats.inactiveSubscribersCleanedThisWeek`.
 
-Pending disambiguation rows expire with their command TTL. Pending alert rows leave the live queue when sent, expired, or permanently failed; dead-letter rows keep delivery-failure audit context without being a live subscription. Expired pending-alert cleanup normally writes a dead-letter copy before deleting the live row; if that dead-letter write fails, the cleanup logs an error-level bypass event and still removes the expired live row so a persistent audit-table failure cannot grow the live delivery queue without bound. Users can also issue `/forget` for an immediate two-step deletion of their subscriber data plus chat-owned cache residue (command cooldown/flood rows, chat-member/admin diagnostics, group welcome markers, re-engagement warning markers, and any cached dispatch overflow plans); `/unsubscribe all` plus inactivity pruning remains the lighter-touch alternative.
+Pending disambiguation rows expire with their command TTL. Pending alert rows leave the live queue when sent, expired, or permanently failed; dead-letter rows keep delivery-failure audit context without being a live subscription. Expired pending-alert cleanup normally writes a dead-letter copy before deleting the live row; if that dead-letter write fails, the cleanup logs an error-level bypass event and still removes the expired live row so a persistent audit-table failure cannot grow the live delivery queue without bound. Users can also issue `/forget` for an immediate two-step deletion of their subscriber data plus chat-owned cache residue (command cooldown/flood rows, chat-member/admin diagnostics, group welcome markers, re-engagement warning markers, cached dispatch overflow plans, and nested burst-summary markers); `/unsubscribe all` plus inactivity pruning remains the lighter-touch alternative.
 
 `telegram-retention-cleanup` deletes retained Telegram audit/analytics rows in ordered capped batches instead of uncapped table DELETEs. Each table pass is limited to 10,000 rows per daily 03:00 UTC run and emits `deleteBatchLimit` plus per-table `cappedAtLimit` metadata so backlog pressure is visible in cron status. Alert-job pruning uses `idx_taj_created_at` and `idx_tajt_created_at`; usage aggregates and diagnostics keep their existing retention windows but still share the same capped-delete invariant. The same capped cleanup ages out stale chat-scoped `cache` keys: command cooldown/flood, chat-member/admin, and group-welcome markers after 7 days, and re-engagement warning markers after their 30-day warning window.
 
@@ -517,7 +517,7 @@ The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `wo
 
 During sustained market-wide storms a global-follow chat can match a large number of coins in one run. `collapseBurstChats` (in `dispatch-telegram-routing.ts`) runs after routing but BEFORE the C102 format pass: when a chat matches at least `BURST_EVENT_THRESHOLD` distinct coins with **global** as the dominant match source (`globalCount > specificCount`), its consolidated alerts are replaced with a single burst-summary chunk (`Market-wide activity — N followed coins … Open your watchlist`, with a `t.me/PharosWatchBot?startapp=watchlist` deep link and the chat-level snooze row). Running before formatting means the collapse also bounds CPU, hence the C102 dependency. Chats where explicit per-coin subscriptions dominate are never summarized.
 
-A per-chat marker is persisted as one JSON blob in `cache["telegram:burst-markers"]` (`chatId → { enteredAt, coinIds }`). While the marker is live the chat receives only coins not already summarized (delta-only); an empty delta suppresses the run entirely. The TTL (`BURST_MARKER_TTL_SEC`, default 1800s) is anchored to the first burst entry and not refreshed, so normal per-coin delivery resumes after it. Quiet hours and snooze still apply (the summary defers/suppresses through the same path). `BURST_EVENT_THRESHOLD` ships effectively OFF (very high) and is lowered only after observing `burstCollapsedChats`/`burstDeltaSuppressed` in dispatch metadata.
+A per-chat marker is persisted as one JSON blob in `cache["telegram:burst-markers"]` (`chatId → { enteredAt, coinIds }`). While the marker is live the chat receives only coins not already summarized (delta-only); an empty delta suppresses the run entirely. The TTL (`BURST_MARKER_TTL_SEC`, default 1800s) is anchored to the first burst entry and not refreshed, so normal per-coin delivery resumes after it. Dispatch deletes the shared cache row when pruning leaves no live markers, and `/forget` removes the chat's nested marker entry. Quiet hours and snooze still apply (the summary defers/suppresses through the same path). `BURST_EVENT_THRESHOLD` ships effectively OFF (very high) and is lowered only after observing `burstCollapsedChats`/`burstDeltaSuppressed` in dispatch metadata.
 
 ### Subscriber Filtering
 
@@ -638,16 +638,16 @@ The `dedupe_key` is hashed from the **pre-split canonical message body**, the ch
 
 When Telegram migrates a group to a supergroup, `migrateTelegramChatId` rewrites the chat-id prefix embedded in pending `dedupe_key` values and alert-job `pending_dedupe_key` values after moving `chat_id`. Pending rows whose rewritten key collides with an already-present new-chat row are deleted so the queue keeps one deliverable copy.
 
-Rate-limit isolation is per-chat unless the response is classified as bot-wide.
+Rate-limit isolation is per-chat unless the response is explicitly classified as bot-wide.
 A chat-scoped 429 stamps `not_before_at` on the affected chat's pending row and
 short-circuits later same-chat rows/chunks in the current run; other chats continue to
-drain and to receive fresh alerts against the per-run budget. At the start of each
-fresh-send pass, the dispatcher loads `DISTINCT chat_id` for rows whose `not_before_at`
-is still in the future and routes their fresh chunks back to the queue
-(`freshDeferredPerChat` in the dispatch metadata). The queue stores Telegram's
-`retry_after` value when available; otherwise it uses a 60-second retry floor. A 429 is
-treated as global when Telegram says it is bot-wide, when an otherwise ambiguous
-`Retry-After` is at least 30 seconds, or when several distinct chats hit 429 in one run;
+drain and to receive fresh alerts against the per-run budget. Ambiguous 429 responses,
+including long `Retry-After` values or repeated 429s across several distinct chats, stay
+chat-scoped unless Telegram's response body identifies the limit as global or bot-wide.
+At the start of each fresh-send pass, the dispatcher loads `DISTINCT chat_id` for rows
+whose `not_before_at` is still in the future and routes their fresh chunks back to the
+queue (`freshDeferredPerChat` in the dispatch metadata). The queue stores Telegram's
+`retry_after` value when available; otherwise it uses a 60-second retry floor. Explicit
 global backoff leaves row-level `not_before_at` clear and stores
 `telegram:global-send-backoff-until` instead.
 

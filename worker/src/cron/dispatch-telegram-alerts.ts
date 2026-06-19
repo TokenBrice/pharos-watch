@@ -1,6 +1,6 @@
 import { throwIfAborted } from "../lib/abort";
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
-import { getCache, setCache } from "../lib/db-cache";
+import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportDigestProgress } from "./digest/progress";
 import { toErrorMessage } from "../lib/error-utils";
@@ -677,6 +677,8 @@ async function executeFullFanoutPath({
     Object.keys(burstOutcome.markers).length > 0
   ) {
     await setCache(db, "telegram:burst-markers", JSON.stringify(burstOutcome.markers));
+  } else if (burstMarkersCached) {
+    await deleteCache(db, "telegram:burst-markers");
   }
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
   const pendingQueueChanged =

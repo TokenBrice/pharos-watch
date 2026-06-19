@@ -614,7 +614,10 @@ export async function handleSetupCancel(
   context: CallbackContext,
   state: SetupWizardState | null,
 ): Promise<{ text: string }> {
-  if (state && !canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
+  if (state == null) {
+    return { text: "Setup expired. Send /start to begin again." };
+  }
+  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can cancel." };
   }
   await clearPendingDisambiguation(context.db, context.chatId);

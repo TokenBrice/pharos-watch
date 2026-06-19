@@ -1250,8 +1250,7 @@ describe("drainPendingQueue", () => {
     expect(retryUpdates.every((entry) => entry.binds[0] === Math.floor(Date.now() / 1000) + 45)).toBe(true);
   });
 
-  it("escalates repeated pending 429s across distinct chats to global backoff", async () => {
-    const now = Math.floor(Date.now() / 1000);
+  it("keeps repeated pending 429s across distinct chats chat-scoped", async () => {
     const okResult = {
       ok: true, blocked: false, retryable: false, permanentFailure: false,
       statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
@@ -1265,7 +1264,7 @@ describe("drainPendingQueue", () => {
       .mockResolvedValueOnce(rateLimitResult)
       .mockResolvedValueOnce(rateLimitResult)
       .mockResolvedValueOnce(rateLimitResult)
-      .mockResolvedValueOnce(okResult);
+      .mockResolvedValue(okResult);
 
     const rows = Array.from({ length: 5 }, (_, i) => ({
       id: i + 1, chat_id: `chat-${i}`, message_html: `msg${i}`, disable_notification: 0, created_at: 1000, attempts: 0,
@@ -1275,23 +1274,17 @@ describe("drainPendingQueue", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
       { match: "UPDATE telegram_pending_alerts\n            SET processing_owner = NULL", rows: [] },
     ]);
 
     const result = await drainPendingQueue(db, "bot-token", 20);
 
-    expect(result.attempted).toBe(4);
-    expect(result.sent).toBe(1);
+    expect(result.attempted).toBe(5);
+    expect(result.sent).toBe(2);
     expect(result.retryQueued).toBe(3);
     expect(result.rateLimited).toBe(true);
-    expect(mockSendToChat).toHaveBeenCalledTimes(4);
-    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
-    expect(cacheWrite?.binds).toEqual([
-      TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
-      String(now + 10),
-      now,
-    ]);
+    expect(mockSendToChat).toHaveBeenCalledTimes(5);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 
   it("stamps row-level backoff without setting global backoff on a chat-scoped 429", async () => {

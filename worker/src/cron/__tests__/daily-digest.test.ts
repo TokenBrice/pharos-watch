@@ -1060,6 +1060,24 @@ describe("generateDailyDigest", () => {
     expect(markerDeletes).toHaveLength(1);
   });
 
+  it("fails hard and skips Telegram delivery when the sent marker write fails", async () => {
+    const db = mockD1([
+      { match: "INSERT OR REPLACE INTO cache", rows: [], throwError: new Error("cache write down") },
+      ...makeBaseTables(),
+    ]);
+
+    await expect(generateDailyDigest(
+      db,
+      "anthropic-key",
+      null,
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    )).rejects.toThrow("Telegram daily digest marker write failed");
+
+    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
+  });
+
   it("passes digest appendices to Telegram and commits appendix state after a successful send", async () => {
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
