@@ -574,8 +574,8 @@ async function scoreDexLiquidityPoolState(
   const {
     scores: scoreResults,
     globalAgg,
-    retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>(),
-    tvlStabilityMap = new Map<string, number>(),
+    retainedPoolsByStablecoin,
+    tvlStabilityMap,
     diagnostics,
   } = await computeStablecoinScores(
     ctx.db,
@@ -714,6 +714,7 @@ async function persistDexLiquidityScoreState(
     3,
     ctx.signal,
   )) ?? { placeholderCount: 0, orphanRowsDeleted: 0, orphanCleanupFailed: false };
+  const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => {
       const retainedPools = scoreState.retainedPoolsByStablecoin.get(meta.id) ?? [];
@@ -724,7 +725,7 @@ async function persistDexLiquidityScoreState(
           Number.isFinite(pool.tvlUsd) &&
           pool.tvlUsd >= POOL_CHALLENGE_MIN_TVL,
       );
-      return [meta.id, sourceState.criticalSourceFailures.length === 0 || hasPublishedRows];
+      return [meta.id, !hasCriticalSourceFailure || hasPublishedRows];
     }),
   );
   const challengerPublication = await publishDexPriceChallengerSnapshots(ctx.db, {
