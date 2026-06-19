@@ -1,14 +1,7 @@
 "use client";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@shared/lib/format";
@@ -22,6 +15,7 @@ import type {
 
 interface ReferenceRatesStripProps {
   benchmarks?: YieldBenchmarkRegistry | null;
+  fallbackBenchmark?: YieldBenchmarkMeta | null;
   poolInputMeta?: YieldSourceInputMeta | null;
   safetySnapshot?: YieldSafetySnapshotMeta | null;
   /** Count of tracked /yield rows per currency, keyed by 3-char ISO code. */
@@ -63,9 +57,12 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   PHP: "₱",
 };
 
-function getBenchmarkRows(benchmarks: YieldBenchmarkRegistry | null | undefined): BenchmarkRow[] {
-  if (!benchmarks) return [];
-  return Object.values(benchmarks)
+function getBenchmarkRows(
+  benchmarks: YieldBenchmarkRegistry | null | undefined,
+  fallbackBenchmark: YieldBenchmarkMeta | null | undefined,
+): BenchmarkRow[] {
+  const entries = benchmarks ? Object.values(benchmarks) : fallbackBenchmark ? [fallbackBenchmark] : [];
+  return entries
     .filter((b): b is YieldBenchmarkMeta => b != null)
     .map((b) => {
       const fullLabel = getYieldBenchmarkDisplayLabel(b);
@@ -73,9 +70,7 @@ function getBenchmarkRows(benchmarks: YieldBenchmarkRegistry | null | undefined)
       // Strip the leading currency token from the display label so the
       // table's currency column carries that identification, not the
       // benchmark-name column.
-      const benchmarkLabel = fullLabel.startsWith(`${currency} `)
-        ? fullLabel.slice(currency.length + 1)
-        : fullLabel;
+      const benchmarkLabel = fullLabel.startsWith(`${currency} `) ? fullLabel.slice(currency.length + 1) : fullLabel;
       return {
         key: b.key ?? fullLabel ?? currency,
         currency,
@@ -109,16 +104,16 @@ function formatPoolInputMode(meta: YieldSourceInputMeta): string {
 
 export function ReferenceRatesStrip({
   benchmarks,
+  fallbackBenchmark,
   poolInputMeta,
   safetySnapshot,
   currencyCounts,
 }: ReferenceRatesStripProps) {
-  const rows = getBenchmarkRows(benchmarks);
+  const rows = getBenchmarkRows(benchmarks, fallbackBenchmark);
   if (rows.length === 0 && !poolInputMeta && !safetySnapshot) return null;
 
   const safetyPct = safetySnapshot ? Math.round(safetySnapshot.coverageRatio * 100) : null;
-  const poolIsStale =
-    poolInputMeta?.ageSeconds != null && poolInputMeta.ageSeconds > POOL_STALE_THRESHOLD_SECONDS;
+  const poolIsStale = poolInputMeta?.ageSeconds != null && poolInputMeta.ageSeconds > POOL_STALE_THRESHOLD_SECONDS;
   const hasFreshnessRow = !!poolInputMeta || (safetySnapshot && safetyPct !== null);
   // USD is the implicit baseline: every other currency's risk-free rate is
   // compared against it. If USD isn't in the registry, the spread column
@@ -128,22 +123,16 @@ export function ReferenceRatesStrip({
 
   return (
     <TooltipProvider>
-      <section
-        aria-labelledby="yield-reference-rates-heading"
-        className="pharos-card-shell overflow-hidden"
-      >
+      <section aria-labelledby="yield-reference-rates-heading" className="pharos-card-shell overflow-hidden">
         <div className="space-y-4 px-4 py-4 sm:px-5">
           <div className="space-y-1">
             <p className="pharos-kicker">Reference rates</p>
-            <h2
-              id="yield-reference-rates-heading"
-              className="text-lg font-semibold tracking-tight text-foreground"
-            >
+            <h2 id="yield-reference-rates-heading" className="text-lg font-semibold tracking-tight text-foreground">
               Risk-free benchmark per currency
             </h2>
             <p className="text-sm text-muted-foreground">
-              Each yield in the leaderboard is graded against the local risk-free benchmark.
-              Excess yield is the spread above this rate.
+              Each yield in the leaderboard is graded against the local risk-free benchmark. Excess yield is the spread
+              above this rate.
             </p>
           </div>
 
@@ -218,9 +207,7 @@ export function ReferenceRatesStrip({
                       >
                         {isUsd || spreadBps === null ? "—" : formatSpread(spreadBps)}
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-xs text-muted-foreground">
-                        {row.benchmarkLabel}
-                      </TableCell>
+                      <TableCell className="px-3 py-2 text-xs text-muted-foreground">{row.benchmarkLabel}</TableCell>
                       <TableCell className="py-2 pl-3 text-right font-mono text-xs tabular-nums text-muted-foreground/80">
                         {row.recordDate ?? "—"}
                       </TableCell>
@@ -234,12 +221,12 @@ export function ReferenceRatesStrip({
 
         {hasFreshnessRow ? (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground sm:px-5">
-            <span className="font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
-              Data freshness
-            </span>
+            <span className="font-medium uppercase tracking-[0.12em] text-muted-foreground/80">Data freshness</span>
             {poolInputMeta ? (
               <>
-                <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+                <span aria-hidden="true" className="text-muted-foreground/40">
+                  ·
+                </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
@@ -261,7 +248,9 @@ export function ReferenceRatesStrip({
             ) : null}
             {safetySnapshot && safetyPct !== null ? (
               <>
-                <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+                <span aria-hidden="true" className="text-muted-foreground/40">
+                  ·
+                </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
@@ -274,7 +263,7 @@ export function ReferenceRatesStrip({
                   <TooltipContent className="max-w-[260px] text-xs">
                     {safetySnapshot.kind === "ok"
                       ? "Confidence-weighted source arbitration coverage across tracked rows."
-                      : safetySnapshot.reason ?? "Safety snapshot degraded."}
+                      : (safetySnapshot.reason ?? "Safety snapshot degraded.")}
                   </TooltipContent>
                 </Tooltip>
               </>
