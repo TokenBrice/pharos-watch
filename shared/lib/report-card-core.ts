@@ -1,8 +1,6 @@
 import type { DimensionKey, ReportCardGrade } from "../types";
 import { bandFromThresholds, clampScore } from "./math";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "./safety-score-version";
 
-export const METHODOLOGY_VERSION = SAFETY_SCORE_METHODOLOGY_VERSION;
 export type ReportCardGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {

@@ -3,9 +3,9 @@ import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import {
   DIMENSION_WEIGHTS,
   GRADE_THRESHOLDS,
-  METHODOLOGY_VERSION,
   PEG_MULTIPLIER_EXPONENT,
 } from "@shared/lib/report-cards";
+import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 
 const mockBuildReportCardsSnapshot = vi.fn();
 const mockWriteReportCardCache = vi.fn();

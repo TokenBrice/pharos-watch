@@ -3,7 +3,7 @@ import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1
 import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { handleReportCards } from "../report-cards";
 import { REPORT_CARDS_SNAPSHOT_CACHE_GENERATION } from "../../lib/report-cards-snapshot-cache";
-import { METHODOLOGY_VERSION } from "@shared/lib/report-cards";
+import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 
 function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
   return {
