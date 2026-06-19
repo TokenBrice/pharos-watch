@@ -171,6 +171,25 @@ describe("stablecoin detail view-model builder", () => {
     expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
   });
 
+  it("keeps inherited mint-authority weakest-control labels on detail pages", () => {
+    const coin = TRACKED_META_BY_ID.get("steakusdt-steakhouse");
+    expect(coin).toBeDefined();
+
+    const withoutRichParent = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(coin!));
+    const withRichParent = buildMintAuthorityDetailViewModel(
+      buildStablecoinDetailClientCoin(coin!, { parentById: TRACKED_META_BY_ID }),
+    );
+
+    expect(withoutRichParent.score).toMatchObject({
+      score: 48,
+      weakestControlLabel: null,
+    });
+    expect(withRichParent.score).toMatchObject({
+      score: 48,
+      weakestControlLabel: "Ethereum USDT token owner multisig",
+    });
+  });
+
   it("projects mint-authority review gaps into the detail view model", () => {
     const viewModel = buildMintAuthorityDetailViewModel({
       mintAuthoritySummary: {

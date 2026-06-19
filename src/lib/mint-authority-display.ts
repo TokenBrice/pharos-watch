@@ -234,15 +234,17 @@ const resolveClientParent: MintAuthorityParentResolver = (id) => {
 function computeMintAuthoritySummaryScore(
   id: string | undefined,
   summary?: MintAuthorityCoverageSummary | null,
+  parentResolver: MintAuthorityParentResolver = resolveClientParent,
 ): MintAuthorityScoreResult {
-  return computeMintAuthorityScore(mintAuthoritySummaryToScoringInput(id, summary), resolveClientParent);
+  return computeMintAuthorityScore(mintAuthoritySummaryToScoringInput(id, summary), parentResolver);
 }
 
 export function resolveMintAuthorityScoreDisplay(
   id: string | undefined,
   summary?: MintAuthorityCoverageSummary | null,
+  parentResolver: MintAuthorityParentResolver = resolveClientParent,
 ): MintAuthorityScoreDisplay {
-  const result = computeMintAuthoritySummaryScore(id, summary);
+  const result = computeMintAuthoritySummaryScore(id, summary, parentResolver);
   const bandKey = result.band ?? "nr";
   const scoreLabel = result.score != null ? `${result.score}/100` : "NR";
   const compactLabel = result.score != null ? `${result.score} ${result.bandLabel}` : "NR";

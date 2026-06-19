@@ -23,6 +23,7 @@ import {
   formatEventDate,
   formatPegDeviation,
   formatNativePrice,
+  pegCurrencySymbol,
   formatPercentChange,
   formatSupply,
   formatTrackingSpanDays,
@@ -526,6 +527,20 @@ describe("formatTrackingSpanSeconds", () => {
   });
 });
 
+describe("pegCurrencySymbol", () => {
+  it("returns distinct symbols for supported non-USD fiat peg badges", () => {
+    expect(pegCurrencySymbol("KRW")).toBe("₩");
+    expect(pegCurrencySymbol("INR")).toBe("₹");
+    expect(pegCurrencySymbol("MYR")).toBe("RM");
+    expect(pegCurrencySymbol("HKD")).toBe("HK$");
+    expect(pegCurrencySymbol("VND")).toBe("₫");
+  });
+
+  it("falls back to USD for unknown peg currency values", () => {
+    expect(pegCurrencySymbol("UNKNOWN")).toBe("$");
+  });
+});
+
 describe("formatNativePrice", () => {
   it("formats USD-pegged price as USD", () => {
     expect(formatNativePrice(1.0001, "USD", 1)).toBe("$1.0001");
@@ -535,6 +550,14 @@ describe("formatNativePrice", () => {
     const result = formatNativePrice(1.10, "EUR", 1.10);
     expect(result).toContain("1.0000");
     expect(result).not.toBe("N/A");
+  });
+
+  it("formats supported non-USD fiat pegs with their native symbols", () => {
+    expect(formatNativePrice(1300, "KRW", 1300)).toBe("₩1.0000");
+    expect(formatNativePrice(83, "INR", 83)).toBe("₹1.0000");
+    expect(formatNativePrice(4.7, "MYR", 4.7)).toBe("RM1.0000");
+    expect(formatNativePrice(7.8, "HKD", 7.8)).toBe("HK$1.0000");
+    expect(formatNativePrice(25000, "VND", 25000)).toBe("₫1.0000");
   });
 
   it("returns N/A for nullish or invalid values", () => {

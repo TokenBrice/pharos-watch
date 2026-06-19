@@ -24,6 +24,7 @@ import {
   EOA_UNVERIFIED_CUSTODY_LABEL,
   type MintAuthorityCapKind,
   type MintAuthorityCapTrace,
+  type MintAuthorityParentResolver,
 } from "@shared/lib/mint-authority-scoring";
 
 export type MintAuthorityDetailStatus = "reviewed" | "not-reviewed";
@@ -107,12 +108,48 @@ export interface MintAuthorityDetailViewModel {
 
 export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, "mintAuthority"> & {
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
+  mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
 
-export function buildStablecoinDetailClientCoin(coin: StablecoinMeta): StablecoinDetailCoinMeta {
+interface BuildStablecoinDetailClientCoinOptions {
+  parentById?: ReadonlyMap<string, StablecoinMeta>;
+}
+
+function collectMintAuthorityParentSummaries(
+  summary: MintAuthorityClientSummary | null,
+  parentById: ReadonlyMap<string, StablecoinMeta> | undefined,
+): Record<string, MintAuthorityClientSummary> | undefined {
+  if (!summary?.inheritedFrom || !parentById) return undefined;
+
+  const parents: Record<string, MintAuthorityClientSummary> = {};
+  const seen = new Set<string>();
+  let inheritedFrom: string | undefined = summary.inheritedFrom;
+
+  while (inheritedFrom && !seen.has(inheritedFrom)) {
+    seen.add(inheritedFrom);
+    const parentCoin = parentById.get(inheritedFrom);
+    if (!parentCoin) break;
+    const parentSummary = projectMintAuthorityClientSummary(parentCoin);
+    if (!parentSummary) break;
+    parents[inheritedFrom] = parentSummary;
+    inheritedFrom = parentSummary.inheritedFrom;
+  }
+
+  return Object.keys(parents).length > 0 ? parents : undefined;
+}
+
+export function buildStablecoinDetailClientCoin(
+  coin: StablecoinMeta,
+  options: BuildStablecoinDetailClientCoinOptions = {},
+): StablecoinDetailCoinMeta {
   const { mintAuthority: _serverOnlyMintAuthority, ...clientCoin } = coin;
   const mintAuthoritySummary = projectMintAuthorityClientSummary(coin);
-  return mintAuthoritySummary ? { ...clientCoin, mintAuthoritySummary } : clientCoin;
+  const mintAuthorityParentSummaries = collectMintAuthorityParentSummaries(mintAuthoritySummary, options.parentById);
+  return {
+    ...clientCoin,
+    ...(mintAuthoritySummary ? { mintAuthoritySummary } : {}),
+    ...(mintAuthorityParentSummaries ? { mintAuthorityParentSummaries } : {}),
+  };
 }
 
 const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
@@ -387,6 +424,25 @@ function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel
   return incidents.sort((a, b) => b.date.localeCompare(a.date));
 }
 
+function buildMintAuthorityParentResolver(
+  parentSummaries: StablecoinDetailCoinMeta["mintAuthorityParentSummaries"],
+): MintAuthorityParentResolver | undefined {
+  if (!parentSummaries) return undefined;
+  return (id) => {
+    const parent = parentSummaries[id];
+    if (!isRecord(parent)) return null;
+    return {
+      id,
+      mintPath: parent.mintPath,
+      authorityPosture: parent.authorityPosture,
+      confidence: parent.confidence,
+      inheritedFrom: parent.inheritedFrom,
+      mintIncidents: parent.mintIncidents,
+      controls: parent.controls,
+    };
+  };
+}
+
 function buildMintAuthorityScoreViewModel(display: MintAuthorityScoreDisplay): MintAuthorityDetailScoreViewModel {
   const result = display.result;
   const components = MINT_AUTHORITY_SCORE_COMPONENT_KEYS.map((key) => {
@@ -538,7 +594,8 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     mintIncidents: readMintIncidents(candidate.mintIncidents),
     controls,
   } as MintAuthorityClientSummary;
-  const score = buildMintAuthorityScoreViewModel(resolveMintAuthorityScoreDisplay(coin.id, scoreCandidate));
+  const parentResolver = buildMintAuthorityParentResolver(coin.mintAuthorityParentSummaries);
+  const score = buildMintAuthorityScoreViewModel(resolveMintAuthorityScoreDisplay(coin.id, scoreCandidate, parentResolver));
 
   return {
     status: "reviewed",
