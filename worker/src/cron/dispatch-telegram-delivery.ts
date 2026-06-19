@@ -213,6 +213,13 @@ export async function deliverTelegramSubscriberQueue({
   const capacityOverflow = toEnqueue.filter((sub) => !deferredChats.has(sub.chatId));
   const overflowMessages = filterTerminalMessages(expandSubscriberChunks(capacityOverflow, blockedChats));
   const queuedTargetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [...targetStatusUpdates];
+  const pushQueuedStatuses = (messages: BatchMessage[]): void => {
+    queuedTargetStatusUpdates.push(...messages.map((message) => ({
+      targetKey: buildDedupeKey(message),
+      status: "queued" as const,
+      at: nowSec,
+    })));
+  };
   let deferredMessageCount = 0;
 
   // Attribute capacity-overflow enqueues to each subscriber's dominant alert
@@ -223,11 +230,7 @@ export async function deliverTelegramSubscriberQueue({
     for (const message of overflowMessages) {
       if (message.alertType) perAlertType[message.alertType].enqueued += 1;
     }
-    queuedTargetStatusUpdates.push(...overflowMessages.map((message) => ({
-      targetKey: buildDedupeKey(message),
-      status: "queued" as const,
-      at: nowSec,
-    })));
+    pushQueuedStatuses(overflowMessages);
   }
 
   for (const deferred of deferredPerChat) {
@@ -240,11 +243,7 @@ export async function deliverTelegramSubscriberQueue({
     await enqueuePendingAlerts(db, deferredMessages, nowSec, {
       notBeforeAt: chatsInBackoff.get(deferred.chatId) ?? null,
     });
-    queuedTargetStatusUpdates.push(...deferredMessages.map((message) => ({
-      targetKey: buildDedupeKey(message),
-      status: "queued" as const,
-      at: nowSec,
-    })));
+    pushQueuedStatuses(deferredMessages);
   }
 
   // C102 overflow tail: chats beyond the per-run format budget. Format only the
@@ -265,11 +264,7 @@ export async function deliverTelegramSubscriberQueue({
     await enqueuePendingAlerts(db, overflowTailMessages, nowSec, {
       notBeforeAt: chatsInBackoff.get(overflow.chatId) ?? null,
     });
-    queuedTargetStatusUpdates.push(...overflowTailMessages.map((message) => ({
-      targetKey: buildDedupeKey(message),
-      status: "queued" as const,
-      at: nowSec,
-    })));
+    pushQueuedStatuses(overflowTailMessages);
   }
 
   let globalRateLimitNotBeforeAt: number | null = null;
