@@ -111,7 +111,7 @@ export const DdrDurationSchema = z.object({
   /** Median time-to-repeg of comparable recovered incidents, seconds. */
   medianSec: z.number().nullable().optional().default(null),
   /** Interquartile band [p25, p75], seconds. */
-  iqrSec: z.tuple([z.number(), z.number()]).nullable().optional().default(null),
+  iqrSec: z.tuple([z.number().nonnegative(), z.number().nonnegative()]).nullable().optional().default(null),
   ageStatus: z.enum(DDR_AGE_STATUS_VALUES).nullable().optional().default(null),
   horizons: z.array(DdrHorizonCellSchema),
 });
