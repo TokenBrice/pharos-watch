@@ -31,6 +31,7 @@ vi.mock("@shared/lib/peg-rates", () => ({
     counts: { peggedUSD: 4, peggedEUR: 4, peggedREAL: 2 },
   }),
   getPegReference: (pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1,
+  normalizePegType: (pegType: string | undefined) => pegType,
 }));
 
 vi.mock("../../lib/native-peg-quotes", () => ({

@@ -110,6 +110,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({ rates: { peggedUSD: 1, peggedEUR: 1.08 } })),
   getPegReference: vi.fn((pegType: string) => (pegType === "peggedEUR" ? 1.08 : 1)),
+  normalizePegType: vi.fn((pegType: string | undefined) => pegType),
 }));
 
 vi.mock("../../lib/db", async (importOriginal) => {
