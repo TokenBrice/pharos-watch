@@ -10,13 +10,14 @@ import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 interface YieldCompareDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rows: readonly YieldViewModelRow[];
-  logos: Record<string, string>;
+  logos: LogoMap;
 }
 
 interface CompareColumn {
@@ -141,7 +142,7 @@ export function YieldCompareDrawer({ open, onOpenChange, rows, logos }: YieldCom
                     className="h-auto border-b border-border/60 px-2 py-2 text-left align-bottom"
                   >
                     <div className="flex items-center gap-2">
-                      <StablecoinLogo src={logos[column.id]} name={name} size={20} />
+                      <StablecoinLogo src={getLogoSrc(logos, column.id)} name={name} size={20} />
                       <span className="font-medium text-foreground">{symbol}</span>
                       <button
                         type="button"

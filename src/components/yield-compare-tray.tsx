@@ -2,11 +2,12 @@
 
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
+import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 interface YieldCompareTrayProps {
   rows: readonly YieldViewModelRow[];
-  logos: Record<string, string>;
+  logos: LogoMap;
   onOpenDrawer: () => void;
 }
 
@@ -33,7 +34,7 @@ export function YieldCompareTray({ rows, logos, onOpenDrawer }: YieldCompareTray
             return (
               <StablecoinLogo
                 key={id}
-                src={logos[id]}
+                src={getLogoSrc(logos, id)}
                 name={row?.name ?? id}
                 size={22}
               />

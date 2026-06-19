@@ -17,7 +17,11 @@ vi.mock("@/components/ui/sheet", () => ({
 }));
 
 vi.mock("@/components/stablecoin-logo", () => ({
-  StablecoinLogo: ({ name }: { name: string }) => <span data-testid="logo">{name}</span>,
+  StablecoinLogo: ({ name, src }: { name: string; src?: string }) => (
+    <span data-testid="logo" data-src={src ?? ""}>
+      {name}
+    </span>
+  ),
 }));
 
 function makeRow(overrides: Partial<YieldViewModelRow>): YieldViewModelRow {
@@ -85,6 +89,15 @@ describe("YieldCompareDrawer", () => {
 
     const placeholders = screen.getAllByText("Coin not in current view");
     expect(placeholders.length).toBeGreaterThan(0);
+  });
+
+  it("does not pass inherited logo properties as image sources", () => {
+    window.history.replaceState(null, "", "/yield/?compare=__proto__,usdc-circle");
+    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc]} logos={{}} />);
+
+    expect(screen.getAllByText("__proto__").length).toBeGreaterThan(0);
+    expect(screen.getByText("USDC")).toBeTruthy();
+    expect(screen.getAllByTestId("logo")[0].getAttribute("data-src")).toBe("");
   });
 
   it("exposes a share link mirroring the current compare ids", () => {
