@@ -53,6 +53,7 @@ const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
 const BOE_SONIA_COMPOUNDED_INDEX_SERIES_CODE = "IUDZOS2";
 const BOE_COMPOUNDED_SONIA_WINDOW_DAYS = 90;
 const BOE_COMPOUNDED_SONIA_LOOKBACK_DAYS = 140;
+const BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS = 252;
 
 function buildMetadata(fields: Record<string, unknown>): string {
   return JSON.stringify(fields);
@@ -108,6 +109,10 @@ function isValidBenchmarkRateForKey(key: YieldBenchmarkKey, rate: number): boole
 
 function isValidBenchmarkRate(rate: number): boolean {
   return isValidBenchmarkRateForKey("USD", rate);
+}
+
+function annualizeDailyPercentageRate(dailyRate: number, periodsPerYear: number): number {
+  return ((1 + dailyRate / 100) ** periodsPerYear - 1) * 100;
 }
 
 function parseFredLatest(csv: string): { recordDate: string; rate: number } | null {
@@ -749,8 +754,9 @@ export function parseBanxicoSeries(json: string): { recordDate: string; rate: nu
 
 /**
  * Parse a BCB SGS response. Shape:
- *   [{ data: "DD/MM/YYYY", valor: "12.75" }]
- * BCB returns SELIC over as a daily rate; we treat it directly as a daily APY proxy.
+ *   [{ data: "DD/MM/YYYY", valor: "0.050747" }]
+ * BCB SGS series 11 returns SELIC over as a daily percentage, so annualize it before
+ * storing the BRL benchmark alongside the other APY-compatible rates.
  */
 export function parseBcbSelicSeries(json: string): { recordDate: string; rate: number } | null {
   try {
@@ -760,10 +766,11 @@ export function parseBcbSelicSeries(json: string): { recordDate: string; rate: n
       const row = parsed[i];
       const rate = parseRate(typeof row?.valor === "string" ? row.valor : null);
       const dataRaw = typeof row?.data === "string" ? row.data : null;
-      if (!dataRaw || !isValidBenchmarkRate(rate)) continue;
+      const annualizedRate = annualizeDailyPercentageRate(rate, BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS);
+      if (!dataRaw || !isValidBenchmarkRate(annualizedRate)) continue;
       const recordDate = parseSlashDmyToIso(dataRaw);
       if (!recordDate) continue;
-      return { rate, recordDate };
+      return { rate: annualizedRate, recordDate };
     }
     return null;
   } catch {

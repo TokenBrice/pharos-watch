@@ -506,7 +506,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `GBP` | GBP 3M compounded SONIA | Bank of England IADB SONIA Compounded Index `IUDZOS2` CSV | Annualized from the trailing 90-day index change; metadata source `boe-sonia-compounded-index`, fallback mode `gbp-sonia-compounded-index-failed` |
 | `JPY` | JPY overnight call (TONA proxy) | Bank of Japan Time-Series Data Search `STRDCLUCON` | Used as a TONA-equivalent proxy |
 | `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`), then Etherfuse CETES current issuance fallback | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, Etherfuse is marked `isFallback` and `isProxy`. CETES (Etherfuse) is itself a 28d CETES tokenization, so the spread is ~0% — see "Self-reference caveat" below |
-| `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily |
+| `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily percentage annualized over 252 business days before scoring |
 | `AUD` | AUD cash-rate target | Reserve Bank of Australia F1 money-market CSV | RBA cash-rate target used as the AUD local cash hurdle |
 | `CAD` | CAD overnight repo (CORRA proxy) | Bank of Canada Valet API (series `V122530`) | Overnight repo; CORRA-equivalent |
 | `RUB` | RUB CBR key rate | Central Bank of Russia DailyInfo `KeyRateXML` SOAP feed | Native benchmark for RUB pegs; validation accepts up to 100% so high key-rate regimes are not rejected by the standard 20% ceiling |
@@ -754,7 +754,7 @@ Fetches the benchmark registry used by Yield Intelligence:
 - GBP 3M compounded SONIA from the Bank of England IADB SONIA Compounded Index `IUDZOS2`, annualized from the trailing 90-day index change (v8.28)
 - JPY call-rate proxy from Bank of Japan Time-Series Data Search `STRDCLUCON` (v8.22)
 - MXN CETES 28-day from Banxico SIE (`SF43936`), falling back to Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable (v8.15)
-- BRL SELIC overnight from BCB SGS series 11 (no auth) (v8.13)
+- BRL SELIC overnight from BCB SGS series 11 (no auth), annualized from the daily percentage over 252 business days before scoring (v8.13)
 - AUD cash-rate target from the Reserve Bank of Australia F1 money-market CSV (v8.22)
 - CAD CORRA proxy from Bank of Canada Valet `V122530` (v8.13)
 - RUB CBR key rate from the Central Bank of Russia DailyInfo `KeyRateXML` SOAP feed (v8.291)

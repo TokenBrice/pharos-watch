@@ -866,9 +866,23 @@ describe("parseEtherfuseCetesStablebondPage", () => {
 });
 
 describe("parseBcbSelicSeries", () => {
-  it("extracts the most recent SELIC observation", () => {
-    const payload = JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]);
-    expect(parseBcbSelicSeries(payload)).toEqual({ rate: 12.75, recordDate: "2026-03-26" });
+  it("annualizes the most recent daily SELIC observation", () => {
+    const payload = JSON.stringify([{ data: "18/06/2026", valor: "0.050747" }]);
+    expect(parseBcbSelicSeries(payload)).toEqual({
+      rate: 13.638253562615565,
+      recordDate: "2026-06-18",
+    });
+  });
+
+  it("skips implausible annualized SELIC observations", () => {
+    const payload = JSON.stringify([
+      { data: "17/06/2026", valor: "0.050747" },
+      { data: "18/06/2026", valor: "12.75" },
+    ]);
+    expect(parseBcbSelicSeries(payload)).toEqual({
+      rate: 13.638253562615565,
+      recordDate: "2026-06-17",
+    });
   });
 
   it("returns null when array is empty", () => {
