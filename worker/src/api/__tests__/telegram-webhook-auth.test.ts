@@ -50,6 +50,31 @@ describe("validateTelegramWebhookSecret", () => {
     warn.mockRestore();
   });
 
+  it("throttles repeated missing-secret warnings after the spike signal", async () => {
+    resetTelegramInvalidSecretLogStateForTests();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const request = new Request("https://x/api/telegram-webhook");
+
+    for (let index = 0; index < 7; index += 1) {
+      expect(await validateTelegramWebhookSecret(request, "current")).toBe("missing");
+    }
+
+    expect(warn).toHaveBeenCalledTimes(5);
+    const records = warn.mock.calls.map((call) => JSON.parse(String(call[0] ?? "{}")) as {
+      missingSecretWindowCount?: number;
+      missingSecretSpike?: boolean;
+    });
+    expect(records.map((record) => record.missingSecretWindowCount)).toEqual([1, 2, 3, 4, 5]);
+    expect(records.map((record) => record.missingSecretSpike)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+    ]);
+    warn.mockRestore();
+  });
+
   it("logs invalid secrets as a separate spike signal", async () => {
     resetTelegramInvalidSecretLogStateForTests();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

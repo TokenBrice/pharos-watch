@@ -50,6 +50,10 @@ function normalizeId(value: string | number | null | undefined): string | undefi
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function shouldEmitSecretAuthAttempt(windowCount: number): boolean {
+  return windowCount <= SECRET_AUTH_SPIKE_THRESHOLD;
+}
+
 export function logTelegramEvent(event: TelegramLogEvent): void {
   const { level, message, chatId, userId, action, ...rest } = event;
   const resolvedLevel: TelegramLogLevel = level ?? "error";
@@ -94,6 +98,7 @@ export function logTelegramInvalidSecretAttempt(
     invalidSecretWindowCount = 0;
   }
   invalidSecretWindowCount += 1;
+  if (!shouldEmitSecretAuthAttempt(invalidSecretWindowCount)) return;
 
   logTelegramEvent({
     level: "warn",
@@ -121,6 +126,7 @@ export function logTelegramMissingSecretAttempt(
     missingSecretWindowCount = 0;
   }
   missingSecretWindowCount += 1;
+  if (!shouldEmitSecretAuthAttempt(missingSecretWindowCount)) return;
 
   logTelegramEvent({
     level: "warn",
