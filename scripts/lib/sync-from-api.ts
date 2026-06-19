@@ -167,3 +167,19 @@ export function apiFetchHeaders(envNames: readonly string[]): Record<string, str
     ...(apiKey ? { "X-API-Key": apiKey } : {}),
   };
 }
+
+/**
+ * Convenience wrapper used by both generator scripts (generate-public-datasets
+ * and generate-homepage-bootstrap). Resolves from GENERATOR_API_URL_ENV_NAMES.
+ */
+export function resolveGeneratorApiBase(): string | null {
+  return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
+}
+
+/**
+ * Convenience wrapper used by both generator scripts. Builds fetch headers
+ * from GENERATOR_API_KEY_ENV_NAMES.
+ */
+export function generatorFetchHeaders(): Record<string, string> {
+  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
+}

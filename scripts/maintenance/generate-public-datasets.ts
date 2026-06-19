@@ -43,10 +43,8 @@ import { getCirculatingRaw } from "../../shared/lib/supply";
 import { parseCheckMode } from "../lib/cli.mjs";
 import { type CsvColumn, escapeCsvField } from "../lib/csv-helpers";
 import {
-  apiFetchHeaders,
-  GENERATOR_API_KEY_ENV_NAMES,
-  GENERATOR_API_URL_ENV_NAMES,
-  resolveApiBaseFromEnv,
+  generatorFetchHeaders,
+  resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -126,21 +124,13 @@ function isoDateUtc(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
 
-function resolveApiBase(): string | null {
-  return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
-}
-
 function resolveSnapshotDate(): string {
   return process.env.PUBLIC_DATASETS_DATE?.trim() || isoDateUtc(new Date());
 }
 
-function fetchHeaders(): Record<string, string> {
-  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
-}
-
 async function safeFetchJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url, { headers: fetchHeaders() });
+    const res = await fetch(url, { headers: generatorFetchHeaders() });
     if (!res.ok) {
       console.warn(`[generate-public-datasets] ${url} → HTTP ${res.status}`);
       return null;
@@ -789,7 +779,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const apiBase = resolveApiBase();
+  const apiBase = resolveGeneratorApiBase();
   let envelope: SnapshotEnvelope | null = null;
   let depegEvents: DepegEvent[] = [];
   let asOfISO = `${snapshotDate}T00:00:00.000Z`;

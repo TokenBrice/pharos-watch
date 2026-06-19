@@ -10,10 +10,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyFreshnessRatio } from "../../shared/lib/status-thresholds";
 import {
-  apiFetchHeaders,
-  GENERATOR_API_KEY_ENV_NAMES,
-  GENERATOR_API_URL_ENV_NAMES,
-  resolveApiBaseFromEnv,
+  generatorFetchHeaders,
+  resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
 import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
 import { FRONTEND_API_QUERY_REGISTRY, type FrontendApiQueryDescriptor } from "../../src/lib/api-query-registry";
@@ -57,13 +55,6 @@ function emptyPayload(): HomepageBootstrapPayload {
   };
 }
 
-function resolveApiBase(): string | null {
-  return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
-}
-
-function fetchHeaders(): Record<string, string> {
-  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
-}
 
 function parseExistingPayload(): HomepageBootstrapPayload | null {
   if (!existsSync(OUTPUT_PATH)) {
@@ -163,7 +154,7 @@ async function fetchBootstrapQuery(
 ): Promise<HomepageBootstrapQuery | null> {
   const url = `${apiBase}${path}`;
   try {
-    const response = await fetch(url, { headers: fetchHeaders() });
+    const response = await fetch(url, { headers: generatorFetchHeaders() });
     if (!response.ok) {
       console.warn(`[generate-homepage-bootstrap] ${path} -> HTTP ${response.status}`);
       return null;
@@ -241,7 +232,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const apiBase = resolveApiBase();
+  const apiBase = resolveGeneratorApiBase();
   if (!apiBase) {
     const existing = parseExistingPayload();
     if (existing) {
