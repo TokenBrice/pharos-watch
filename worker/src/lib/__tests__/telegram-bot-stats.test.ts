@@ -476,6 +476,8 @@ describe("loadTelegramMiniAppDailyAggregate", () => {
           "mini_app_forget",
           "timezone_change",
           "unsubscribe",
+          "startapp",
+          "menu_or_main_app",
           day,
         ],
         first: {
@@ -493,7 +495,7 @@ describe("loadTelegramMiniAppDailyAggregate", () => {
     const history = db.getHistory();
     const aggregateSql = history.find((entry) => entry.sql.includes("FROM telegram_usage_daily"));
     expect(aggregateSql?.sql).toContain(
-      "event_type IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "event_type IN (?, ?, ?, ?, ?, ?, ?, ?)",
     );
     expect(aggregateSql?.binds).toEqual([
       "mini_app_mutation",
@@ -506,11 +508,50 @@ describe("loadTelegramMiniAppDailyAggregate", () => {
       "mini_app_forget",
       "timezone_change",
       "unsubscribe",
+      "startapp",
+      "menu_or_main_app",
       day,
     ]);
     expect(aggregate.mutations).toBe(9);
     expect(aggregate.denied).toBe(0);
     expect(aggregate.sessions).toBe(4);
     expect(aggregate.replayClaimed).toBe(0);
+  });
+
+  it("filters shared success event types to Mini App source categories", async () => {
+    const day = "2026-05-14";
+    const db = mockD1([
+      {
+        match: "FROM telegram_usage_daily",
+        matchBinds: [
+          "mini_app_mutation",
+          "mini_app_recommended_setup",
+          "mini_app_coin_add",
+          "mini_app_coin_remove",
+          "mini_app_quiet_hours",
+          "mini_app_snooze",
+          "mini_app_coin_snooze",
+          "mini_app_forget",
+          "timezone_change",
+          "unsubscribe",
+          "startapp",
+          "menu_or_main_app",
+          day,
+        ],
+        first: {
+          mini_app_sessions: 0,
+          mini_app_mutations: 1,
+          mini_app_denied: 0,
+          mini_app_replay_claimed: 0,
+        },
+        rows: [],
+      },
+    ]);
+
+    const aggregate = await loadTelegramMiniAppDailyAggregate(db, day);
+
+    const aggregateSql = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_usage_daily"));
+    expect(aggregateSql?.sql).toContain("source_category IN (?, ?)");
+    expect(aggregate.mutations).toBe(1);
   });
 });

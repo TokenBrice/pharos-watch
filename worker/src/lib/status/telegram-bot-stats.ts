@@ -272,15 +272,40 @@ const TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES = [
   "mini_app_snooze",
   "mini_app_coin_snooze",
   "mini_app_forget",
+] as const;
+// These generic event types are also emitted by non-Mini-App bot flows, so
+// only count rows whose Mini App recorder populated a Mini App source category.
+const TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_TYPES = [
   "timezone_change",
   "unsubscribe",
+] as const;
+const TELEGRAM_MINI_APP_SOURCE_CATEGORIES = [
+  "startapp",
+  "menu_or_main_app",
 ] as const;
 const TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES
   .map(() => "?")
   .join(", ");
+const TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_TYPES
+  .map(() => "?")
+  .join(", ");
+const TELEGRAM_MINI_APP_SOURCE_CATEGORY_PLACEHOLDERS = TELEGRAM_MINI_APP_SOURCE_CATEGORIES
+  .map(() => "?")
+  .join(", ");
 const TELEGRAM_MINI_APP_DAILY_AGGREGATE_SQL = `SELECT
   SUM(CASE WHEN event_type = 'mini_app_session_valid' AND outcome = 'success' THEN count ELSE 0 END) AS mini_app_sessions,
-  SUM(CASE WHEN event_type IN (${TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS}) AND outcome = 'success' THEN count ELSE 0 END) AS mini_app_mutations,
+  SUM(
+    CASE
+      WHEN (
+        event_type IN (${TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS})
+        OR (
+          event_type IN (${TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_PLACEHOLDERS})
+          AND source_category IN (${TELEGRAM_MINI_APP_SOURCE_CATEGORY_PLACEHOLDERS})
+        )
+      )
+      AND outcome = 'success' THEN count ELSE 0
+    END
+  ) AS mini_app_mutations,
   SUM(CASE WHEN event_type = 'mini_app_mutation_denied' THEN count ELSE 0 END) AS mini_app_denied,
   SUM(CASE WHEN event_type = 'mini_app_mutation_denied' AND failure_class = 'replayed-auth' THEN count ELSE 0 END) AS mini_app_replay_claimed
 FROM telegram_usage_daily
@@ -368,7 +393,12 @@ export async function loadTelegramMiniAppDailyAggregate(
 ): Promise<TelegramMiniAppDailyAggregate> {
   const row = await db
     .prepare(TELEGRAM_MINI_APP_DAILY_AGGREGATE_SQL)
-    .bind(...TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES, day)
+    .bind(
+      ...TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES,
+      ...TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_TYPES,
+      ...TELEGRAM_MINI_APP_SOURCE_CATEGORIES,
+      day,
+    )
     .first<TelegramMiniAppDailyAggregateRow>();
   return {
     sessions: coerceCount(row?.mini_app_sessions),
