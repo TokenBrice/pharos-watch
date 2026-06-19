@@ -350,6 +350,12 @@ describe("handleYieldHistory", () => {
   });
 
   it("suppresses all tracked parent handoff source keys in source mode", async () => {
+    expect(YIELD_HISTORY_OWNERSHIP_HANDOFFS["avusd-avant"]).toEqual(expect.arrayContaining([
+      "onchain:avusd-avant",
+      "2fe112ff-95a5-4ba0-8ee3-a741e6a8f7c9",
+      "c74227a1-e738-4021-bbe1-13363815aecb",
+    ]));
+
     for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
       for (const sourceKey of sourceKeys) {
         const suppressedRow = makeYieldHistoryRow({

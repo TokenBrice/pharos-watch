@@ -39,6 +39,11 @@ export const YIELD_HISTORY_OWNERSHIP_HANDOFFS: Record<string, string[]> = {
     "5fd328af-4203-471b-bd16-1705c726d926",
     "onchain:crvusd-curve:scrvusd-current-rate",
   ],
+  "avusd-avant": [
+    buildOnChainSourceKey("avusd-avant"),
+    "2fe112ff-95a5-4ba0-8ee3-a741e6a8f7c9",
+    "c74227a1-e738-4021-bbe1-13363815aecb",
+  ],
   "dusd-dtrinity": [
     "defillama-weighted:dtrinity-sdusd",
     "78049985-79a8-4343-8618-3c27d41d5054",
