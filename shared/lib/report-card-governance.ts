@@ -205,7 +205,7 @@ function applyPenaltyBlend(
   penaltyScore: number,
   weight: number,
 ): { score: number; drag: number } {
-  const blended = Math.round(currentScore * (1 - weight) + penaltyScore * weight);
+  const blended = roundScore(currentScore * (1 - weight) + penaltyScore * weight);
   if (blended >= currentScore) return { score: currentScore, drag: 0 };
   return { score: blended, drag: blended - currentScore };
 }
@@ -287,7 +287,7 @@ export function scoreDecentralizationBreakdown(
     typeof options.wrappedAssetBlendedDecentralizationScore === "number" &&
     Number.isFinite(options.wrappedAssetBlendedDecentralizationScore)
   ) {
-    score = Math.min(score, Math.max(0, Math.round(options.wrappedAssetBlendedDecentralizationScore)));
+    score = Math.min(score, roundScore(options.wrappedAssetBlendedDecentralizationScore));
   }
 
   const governanceScore = inheritedWrapperScore ?? GOVERNANCE_QUALITY_SCORE[quality];
