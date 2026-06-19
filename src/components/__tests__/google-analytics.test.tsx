@@ -18,6 +18,7 @@ afterEach(() => {
   delete window.dataLayer;
   delete window.gtag;
   pathnameMock.mockReset();
+  window.history.replaceState(null, "", "/");
 });
 
 describe("GoogleAnalytics", () => {
@@ -57,6 +58,25 @@ describe("GoogleAnalytics", () => {
         ),
       { timeout: 2500 },
     );
+  });
+
+  it("scrubs query-string verification tokens before page_view tracking", async () => {
+    pathnameMock.mockReturnValue("/api/");
+    window.history.replaceState(null, "", "/api/?verify=legacy-secret&utm_source=email");
+
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+
+    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4));
+    const pageViewEntry = Array.from(window.dataLayer?.at(3) ?? []);
+    expect(window.location.search).toBe("?utm_source=email");
+    expect(pageViewEntry).toEqual([
+      "event",
+      "page_view",
+      expect.objectContaining({
+        page_path: "/api/?utm_source=email",
+        page_location: "http://localhost:3000/api/?utm_source=email",
+      }),
+    ]);
   });
 
   it("tracks SPA path changes after bootstrap", async () => {

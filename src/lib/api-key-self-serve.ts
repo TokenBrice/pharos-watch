@@ -104,18 +104,39 @@ function scrubHashVerificationToken(hash: string): string {
   return parseHashVerificationToken(hash) ? "" : hash;
 }
 
+function scrubQueryVerificationToken(search: string): string {
+  if (!search.includes("verify=")) return search;
+  const params = new URLSearchParams(search);
+  if (!params.has("verify")) return search;
+  params.delete("verify");
+  const next = params.toString();
+  return next ? `?${next}` : "";
+}
+
 export function readVerificationTokenFromUrl(): string | null {
   if (typeof window === "undefined") return null;
   return parseHashVerificationToken(window.location.hash);
 }
 
-export function stripVerificationTokenFromUrl(): void {
+export function stripQueryVerificationTokenFromUrl(): void {
   if (typeof window === "undefined") return;
-  const nextHash = scrubHashVerificationToken(window.location.hash);
-  if (nextHash === window.location.hash) return;
+  const nextSearch = scrubQueryVerificationToken(window.location.search);
+  if (nextSearch === window.location.search) return;
   window.history.replaceState(
     null,
     "",
-    `${window.location.pathname}${window.location.search}${nextHash}`,
+    `${window.location.pathname}${nextSearch}${window.location.hash}`,
+  );
+}
+
+export function stripVerificationTokenFromUrl(): void {
+  if (typeof window === "undefined") return;
+  const nextSearch = scrubQueryVerificationToken(window.location.search);
+  const nextHash = scrubHashVerificationToken(window.location.hash);
+  if (nextSearch === window.location.search && nextHash === window.location.hash) return;
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${nextSearch}${nextHash}`,
   );
 }
