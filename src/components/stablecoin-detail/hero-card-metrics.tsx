@@ -10,6 +10,7 @@ import {
   formatSupply,
 } from "@shared/lib/format";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { PegGauge } from "@/components/peg-gauge";
 import { MethodologyLinkBadge } from "@/components/methodology-link-badge";
 import type { MetricKey } from "@/lib/methodology-anchors";
@@ -247,24 +248,21 @@ export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
 interface HeroPriceCardProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
-  pegRef: number;
-  gaugeDeviationBps: number;
-  deviationBps: number;
-  pegReferenceUnavailable: boolean;
-  isNavToken: boolean;
-  limitedDepegCoverageNote: string | null;
+  price: HeroCardViewModel["price"];
   mobile?: boolean;
 }
 
 export function HeroPriceCard({
   coin,
   coinData,
-  pegRef,
-  gaugeDeviationBps,
-  deviationBps,
-  pegReferenceUnavailable,
-  isNavToken,
-  limitedDepegCoverageNote,
+  price: {
+    pegRef,
+    gaugeDeviationBps,
+    deviationBps,
+    pegReferenceUnavailable,
+    isNavToken,
+    limitedDepegCoverageNote,
+  },
   mobile = false,
 }: HeroPriceCardProps) {
   const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable;

@@ -130,12 +130,7 @@ export function HeroCardMobileSection({
         <HeroPriceCard
           coin={coin}
           coinData={coinData}
-          pegRef={price.pegRef}
-          gaugeDeviationBps={price.gaugeDeviationBps}
-          deviationBps={price.deviationBps}
-          pegReferenceUnavailable={price.pegReferenceUnavailable}
-          isNavToken={price.isNavToken}
-          limitedDepegCoverageNote={price.limitedDepegCoverageNote}
+          price={price}
           mobile
         />
         <HeroMarketCapCard
@@ -206,12 +201,7 @@ export function HeroCardDesktopSection({
             <HeroPriceCard
               coin={coin}
               coinData={coinData}
-              pegRef={price.pegRef}
-              gaugeDeviationBps={price.gaugeDeviationBps}
-              deviationBps={price.deviationBps}
-              pegReferenceUnavailable={price.pegReferenceUnavailable}
-              isNavToken={price.isNavToken}
-              limitedDepegCoverageNote={price.limitedDepegCoverageNote}
+              price={price}
             />
             <HeroMarketCapCard
               coin={coin}
