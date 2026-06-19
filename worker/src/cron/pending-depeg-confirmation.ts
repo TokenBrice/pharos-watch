@@ -1,6 +1,6 @@
 import type { PegAssetBase } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getPegReference, type PegRateSource } from "@shared/lib/peg-rates";
+import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
 import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
@@ -331,18 +331,19 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     openSet,
     now,
   } = input;
+  const pegType = normalizePegType(asset?.pegType);
   const refreshedPegReferenceIsAuthoritative =
     asset && meta
       ? isAuthoritativeDepegPegReference({
         pegCurrency: meta.flags.pegCurrency,
-        pegType: asset.pegType,
-        pegRateSource: asset.pegType ? pegRateSources[asset.pegType] : undefined,
-        pegRateContributorCount: asset.pegType ? pegRateCounts[asset.pegType] : undefined,
+        pegType,
+        pegRateSource: pegType ? pegRateSources[pegType] : undefined,
+        pegRateContributorCount: pegType ? pegRateCounts[pegType] : undefined,
       })
       : false;
   const refreshedPegRef =
     asset && meta && refreshedPegReferenceIsAuthoritative
-      ? getPegReference(asset.pegType, pegRates, meta.commodityOunces)
+      ? getPegReference(pegType, pegRates, meta.commodityOunces)
       : Number.NaN;
   const pegReference =
     Number.isFinite(refreshedPegRef) && refreshedPegRef > 0

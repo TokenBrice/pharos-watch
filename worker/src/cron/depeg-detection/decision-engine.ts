@@ -1,4 +1,4 @@
-import { getPegReference } from "@shared/lib/peg-rates";
+import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent } from "@shared/types/market";
@@ -295,11 +295,12 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision };
   }
 
+  const pegType = normalizePegType(asset.pegType);
   const pegReferenceIsAuthoritative = isAuthoritativeDepegPegReference({
     pegCurrency: meta.flags.pegCurrency,
-    pegType: asset.pegType,
-    pegRateSource: asset.pegType ? input.pegRateSources[asset.pegType] : undefined,
-    pegRateContributorCount: asset.pegType ? input.pegRateCounts[asset.pegType] : undefined,
+    pegType,
+    pegRateSource: pegType ? input.pegRateSources[pegType] : undefined,
+    pegRateContributorCount: pegType ? input.pegRateCounts[pegType] : undefined,
   });
   if (!pegReferenceIsAuthoritative) {
     const decision = emptyDecision(trackedCoinId);
@@ -314,7 +315,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision };
   }
 
-  const pegRef = getPegReference(asset.pegType, input.pegRates, meta.commodityOunces);
+  const pegRef = getPegReference(pegType, input.pegRates, meta.commodityOunces);
   if (!Number.isFinite(pegRef) || pegRef <= 0) {
     return { kind: "skip", decision: emptyDecision(trackedCoinId) };
   }

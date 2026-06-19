@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types";
 
 function asset(
@@ -124,11 +124,30 @@ describe("derivePegRates", () => {
     expect(result.sources.peggedEUR).toBe("fallback");
   });
 
-  it("normalizes BRL peg types to the DefiLlama peggedREAL key", () => {
+  it("keeps BRL alias maps compatible with raw peggedBRL consumers", () => {
     const result = derivePegRates([asset("brl-token", "peggedBRL", 0.18, 2_000_000)]);
 
-    expect(result.rates.peggedBRL).toBeUndefined();
     expect(result.rates.peggedREAL).toBe(0.18);
+    expect(result.rates.peggedBRL).toBe(0.18);
+    expect(result.sources.peggedBRL).toBe("median");
+    expect(result.counts.peggedBRL).toBe(1);
+  });
+
+  it("normalizes fallback rates before aliasing", () => {
+    const result = derivePegRates([], new Map(), { peggedBRL: 0.2 });
+
+    expect(result.rates.peggedREAL).toBe(0.2);
+    expect(result.rates.peggedBRL).toBe(0.2);
+    expect(result.sources.peggedBRL).toBe("fallback");
+    expect(result.counts.peggedBRL).toBe(0);
+  });
+});
+
+describe("normalizePegType", () => {
+  it("canonicalizes the legacy BRL peg alias", () => {
+    expect(normalizePegType("peggedBRL")).toBe("peggedREAL");
+    expect(normalizePegType("peggedEUR")).toBe("peggedEUR");
+    expect(normalizePegType(undefined)).toBeUndefined();
   });
 });
 
@@ -140,5 +159,9 @@ describe("getPegReference", () => {
 
   it("returns 1 for unknown peg types when no rate is available", () => {
     expect(getPegReference("peggedDOGE", {})).toBe(1);
+  });
+
+  it("uses the canonical BRL peg rate for legacy peggedBRL references", () => {
+    expect(getPegReference("peggedBRL", { peggedREAL: 0.2 })).toBe(0.2);
   });
 });
