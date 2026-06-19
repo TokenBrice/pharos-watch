@@ -60,7 +60,23 @@ function makeReportCard(): ReportCard {
 
 describe("ReportCardDetail", () => {
   afterEach(() => {
+    vi.useRealTimers();
     cleanup();
+  });
+
+  it("marks the header freshness chip stale after the report-card freshness budget", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-19T12:16:00Z"));
+
+    render(
+      <ReportCardDetail
+        card={makeReportCard()}
+        liquidityComponents={null}
+        updatedAtMs={new Date("2026-06-19T12:00:00Z").getTime()}
+      />,
+    );
+
+    expect(screen.getByRole("status", { name: /Updated at/i }).getAttribute("data-stale")).toBe("true");
   });
 
   it("keeps dimension disclosure controls separate from methodology hint buttons", () => {

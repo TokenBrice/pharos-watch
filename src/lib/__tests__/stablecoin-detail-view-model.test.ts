@@ -112,6 +112,54 @@ function makeBuildStablecoinDetailViewModelParams(
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(coin).toBeDefined();
+
+    const viewModel = buildStablecoinDetailViewModel(
+      makeBuildStablecoinDetailViewModelParams({
+        core: {
+          id: "usdt-tether",
+          coin: coin!,
+        },
+        queries: {
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "usdt-tether",
+                  name: "Tether",
+                  symbol: "USDT",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          reportCards: {
+            data: {
+              cards: [],
+              methodology: {},
+              dependencyGraph: { nodes: [], edges: [] },
+              updatedAt: 1_700_000_000,
+            } as never,
+            dataUpdatedAt: 1_800_000_000_000,
+            meta: { source: "test", updatedAt: 1_700_000_123 },
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    expect(viewModel.reportCardUpdatedAt).toBe(1_700_000_123_000);
+  });
+
   it("uses only compact mint-authority summaries for client detail presentation", () => {
     const fullCoin = TRACKED_META_BY_ID.get("usdc-circle");
     expect(fullCoin?.mintAuthority).toBeDefined();

@@ -22,7 +22,7 @@ import { parseDimensionDetail } from "@/lib/report-card-parsing";
 import { getSafetyGradeMetadata, gradeBandLabel } from "@/lib/report-card-ui";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
-import { CRON_24H } from "@/lib/cron-intervals";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 
@@ -530,7 +530,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
             <span className="flex items-center justify-between gap-2">
               <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
               {updatedAtMs != null ? (
-                <FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={CRON_24H} labelPrefix="Updated" />
+                <FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.reportCards * 1000} labelPrefix="Updated" />
               ) : null}
             </span>
           </CardTitle>
