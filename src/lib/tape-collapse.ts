@@ -25,12 +25,17 @@ export function collapseByCoinClass(events: ReadonlyArray<TapeEvent>): Collapsed
   for (const event of events) {
     const cls = eventClassSlug(event.type);
     // Events with no coin attribution (e.g., USDT freeze.blocked rows from the
-    // blacklist projector) still share a chain — group those so a single busy
-    // chain doesn't flood the strip with one row per blacklist tx.
+    // blacklist projector) still share a chain — group repeated rows without
+    // merging different freeze subtypes or stablecoin identities.
+    const stablecoin = event.payload?.stablecoin;
+    const nullCoinIdentity =
+      typeof stablecoin === "string" && stablecoin.trim()
+        ? `${event.type}:stablecoin:${stablecoin}`
+        : event.type;
     const key = event.coinId
       ? `${event.coinId}:${cls}`
       : event.chain
-        ? `chain:${event.chain}:${cls}`
+        ? `chain:${event.chain}:${nullCoinIdentity}`
         : `event:${event.id}`;
     const existingIdx = indexByKey.get(key);
     if (existingIdx != null) {
