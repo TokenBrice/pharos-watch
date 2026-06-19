@@ -59,8 +59,10 @@ yarn-error.log*
 .worktrees/
 worktrees
 
-# claude code
+# claude/codex local agent config
 .claude/settings.local.json
+/.codex/config.toml
+/.codex/hooks.json
 .playwright-cli/
 .mcp.json
 
