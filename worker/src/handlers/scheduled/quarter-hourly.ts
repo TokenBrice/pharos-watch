@@ -1,6 +1,6 @@
 /**
  * Quarter-hourly trigger (every 15 min):
- *   sync-fx-rates (2) -> sync-stablecoins (4) -> snapshots/cache refreshes (0)
+ *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots/cache refreshes (0)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier

@@ -211,6 +211,36 @@ describe("fetchChainlinkReferenceQuotes", () => {
     expect(snapshot.summary.fetchErrors).toBe(0);
   });
 
+  it("bounds parallel feed fetches to the cron connection budget", async () => {
+    let activeCalls = 0;
+    let maxActiveCalls = 0;
+
+    mockFetchJsonRpcHexAtUrl.mockImplementation(async (_url, _method, params) => {
+      activeCalls++;
+      maxActiveCalls = Math.max(maxActiveCalls, activeCalls);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      activeCalls--;
+
+      const [callObj] = params as [{ to: string; data: string }];
+      const feed = CHAINLINK_REFERENCE_FEEDS.find((candidate) => candidate.proxyAddress === callObj.to);
+      if (!feed) {
+        return null;
+      }
+      if (callObj.data === "0x313ce567") {
+        return "0x0000000000000000000000000000000000000000000000000000000000000008";
+      }
+      if (callObj.data === "0xfeaf968c") {
+        return buildLatestRoundDataHex(115_820_000n, 1_763_887_900);
+      }
+      return null;
+    });
+
+    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000);
+
+    expect(snapshot.summary.usableQuotes).toBe(CHAINLINK_REFERENCE_FEEDS.length);
+    expect(maxActiveCalls).toBeLessThanOrEqual(3);
+  });
+
   it("skips the legacy dRPC endpoint after premium and public failures", async () => {
     const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
     expect(eurFeed).toBeDefined();
