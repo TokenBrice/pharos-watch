@@ -79,4 +79,35 @@ describe("SafetyInspectionBoard", () => {
     );
     expect(liquidityButton.getAttribute("aria-pressed")).toBe("false");
   });
+
+  it("maps non-finite safety scores to the conservative critical tone", () => {
+    const nanModel: SafetyInspectionBoardModel = {
+      ...MODEL,
+      leadFinding: {
+        ...MODEL.leadFinding!,
+        averageScore: Number.NaN,
+        weightedScore: null,
+      },
+      rows: [
+        {
+          ...MODEL.rows[0],
+          averageScore: Number.NaN,
+          weightedScore: null,
+        },
+      ],
+    };
+
+    render(
+      <SafetyInspectionBoard
+        model={nanModel}
+        sortKey="liquidity"
+        sortDirection="asc"
+        onSortChange={vi.fn()}
+      />,
+    );
+
+    const liquidityButton = screen.getByRole("button", { name: "Sort report cards by weakest Liquidity first" });
+    expect(liquidityButton.textContent).toContain("Critical");
+    expect(liquidityButton.querySelector(".bg-red-500")).not.toBeNull();
+  });
 });
