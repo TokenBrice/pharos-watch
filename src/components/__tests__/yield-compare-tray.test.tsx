@@ -7,7 +7,11 @@ import { YieldCompareTray } from "@/components/yield-compare-tray";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 vi.mock("@/components/stablecoin-logo", () => ({
-  StablecoinLogo: ({ name }: { name: string }) => <span data-testid="logo">{name}</span>,
+  StablecoinLogo: ({ name, src }: { name: string; src?: string }) => (
+    <span data-testid="logo" data-src={src ?? ""}>
+      {name}
+    </span>
+  ),
 }));
 
 function makeRow(id: string, symbol: string, name: string): YieldViewModelRow {
@@ -61,6 +65,13 @@ describe("YieldCompareTray", () => {
 
     fireEvent.click(compareButton);
     expect(onOpenDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not pass inherited logo properties as image sources", () => {
+    window.history.replaceState(null, "", "/yield/?compare=__proto__");
+    render(<YieldCompareTray rows={rows} logos={{}} onOpenDrawer={vi.fn()} />);
+
+    expect(screen.getByTestId("logo").getAttribute("data-src")).toBe("");
   });
 
   it("Clear button removes all ids from the URL", () => {
