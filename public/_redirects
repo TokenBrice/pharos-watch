@@ -11,6 +11,11 @@
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
+# Stablecoin selector route was renamed to picker; preserve old snapshot links.
+/screener/selector/* /screener/picker/:splat 301
+/screener/selector/ /screener/picker/ 301
+/screener/selector /screener/picker/ 301
+
 # MiCA tracker moved to Compliance; /compliance/ is canonical.
 /mica/* /compliance/:splat 301
 /mica/ /compliance/ 301
