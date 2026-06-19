@@ -172,6 +172,26 @@ describe("buildZephyrZsdPeggedAsset", () => {
     });
   });
 
+  it("falls back to peg price for ZSD market cap when supplemental price is unreasonable", () => {
+    const asset = buildZephyrZsdPeggedAsset(
+      makeZsdMeta(),
+      { supply: 1_000, mcapPrice: 1, mcap: 1_000 },
+      {
+        price: 50_000,
+        source: "coingecko",
+        observedAt: 1_700_000_000,
+        observedAtMode: "upstream",
+      },
+      1_700_000_060,
+    );
+
+    expect(asset).toMatchObject({
+      price: 50_000,
+      priceSource: "coingecko",
+      circulating: { peggedUSD: 1_000 },
+    });
+  });
+
   it("uses Zephyr Scanner price as a fallback when the official ZSD price is reported", () => {
     const asset = buildZephyrZsdPeggedAsset(
       makeZsdMeta(),
