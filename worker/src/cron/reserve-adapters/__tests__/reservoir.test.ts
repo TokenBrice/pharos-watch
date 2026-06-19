@@ -143,6 +143,30 @@ describe("adaptReservoirReserves", () => {
     expect(unknownExposurePct).toBeCloseTo((3 / 103) * 100, 6);
   });
 
+  it("does not classify assets from non-authoritative description or icon metadata", () => {
+    const { slices, unknownAssets, unknownExposurePct, immediateRedeemableUsd } = adaptReservoirReserves({
+      assets: [
+        {
+          label: "Mystery Strategy Vault",
+          description: "opaque strategy; not USDC backed; not an AUSD market",
+          iconPath: "/icons/not-USDC-or-AUSD.svg",
+          totalBalanceValue: "100",
+        },
+      ],
+      liabilities: [],
+      totalAssets: "100",
+      totalLiabilities: "95",
+      equity: "5",
+    });
+
+    expect(slices).toEqual([
+      { name: "Unmapped reserve positions", pct: 100, risk: "high" },
+    ]);
+    expect(unknownAssets).toEqual(["Mystery Strategy Vault"]);
+    expect(unknownExposurePct).toBe(100);
+    expect(immediateRedeemableUsd).toBe(0);
+  });
+
   it("keeps source total-assets gaps explicit instead of renormalizing disclosed rows", () => {
     const { slices, unknownAssets, sourceTotalGapPct } = adaptReservoirReserves({
       ...SAMPLE_RESPONSE,
