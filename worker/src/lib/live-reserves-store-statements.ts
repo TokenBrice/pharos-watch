@@ -11,6 +11,8 @@ import {
 
 const SQLITE_NOW_MS_EXPRESSION = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 
+const serializeWarnings = (w: readonly unknown[]): string | null => (w.length > 0 ? JSON.stringify(w) : null);
+
 export function buildReserveCompositionUpsertStatement(
   db: D1Database,
   record: ReserveCompositionRecord,
@@ -33,7 +35,7 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
       record.attemptId ?? null,
       JSON.stringify(record.metadata),
       record.warningCount,
-      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      serializeWarnings(record.warnings),
       record.adapterSourceModel,
       record.adapterEvidenceClass,
     );
@@ -78,7 +80,7 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
       record.attemptId ?? null,
       JSON.stringify(record.metadata),
       record.warningCount,
-      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      serializeWarnings(record.warnings),
       record.adapterSourceModel,
       record.adapterEvidenceClass,
       record.stablecoinId,
@@ -116,7 +118,7 @@ export function buildReserveCompositionHistoryInsertStatement(
       record.attemptId ?? null,
       JSON.stringify(record.slices),
       JSON.stringify(record.metadata),
-      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      serializeWarnings(record.warnings),
       record.warningCount,
       record.adapterSourceModel,
       record.adapterEvidenceClass,
@@ -149,7 +151,7 @@ export function buildReserveSyncAttemptHistoryInsertStatement(
       record.breakerKey,
       record.attemptId ?? null,
       record.status,
-      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      serializeWarnings(record.warnings),
       record.warningCount,
       record.lastError,
       JSON.stringify(record.metadata),
@@ -257,7 +259,7 @@ export function buildReserveSyncFinalizeSuccessStatement(
       record.lastSuccessAt,
       record.lastStatus,
       record.warningCount,
-      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      serializeWarnings(record.warnings),
       record.lastError,
       JSON.stringify(record.metadata),
       record.lastAttemptId ?? null,
@@ -299,7 +301,7 @@ export function buildReserveSyncFinalizeAttemptStatement(
       record.lastAttemptedAt,
       record.lastStatus,
       record.warningCount,
-      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      serializeWarnings(record.warnings),
       record.lastError,
       JSON.stringify(record.metadata),
       record.lastAttemptId ?? null,
