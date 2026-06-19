@@ -1,10 +1,11 @@
 import type { FollowedPreset, SubscribedCoin, TelegramAlertType, TelegramMiniAppState } from "./types";
+import { PRESET_ALERT_TYPES as PRESET_ALERT_TYPES_ARRAY } from "./constants";
 
 /** Effective alert source for a single alert type, per the per-coin > preset > all-stablecoins precedence. */
 export type EffectiveAlertSource = "per-coin" | "preset" | "global" | "off-override";
 
 const ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch", "reserve"];
-const PRESET_ALERT_TYPES = new Set<TelegramAlertType>(["dews", "depeg", "safety"]);
+const PRESET_ALERT_TYPES = new Set<TelegramAlertType>(PRESET_ALERT_TYPES_ARRAY);
 
 /**
  * Pure C74 display helper: classify each alert type's effective source for a followed coin,

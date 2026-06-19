@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ALERT_LABELS } from "../constants";
+import { ALERT_LABELS, PRESET_ALERT_TYPES } from "../constants";
 import type {
   FollowedPreset,
   TelegramMiniAppOperation,
@@ -10,7 +10,6 @@ import type {
 import { MiniButton } from "./MiniButton";
 import { TogglePill } from "./TogglePill";
 
-const PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
 type PresetAlertType = (typeof PRESET_ALERT_TYPES)[number];
 type RecommendedPreset = TelegramMiniAppState["catalog"]["recommendedPresets"][number];
 
@@ -58,10 +57,7 @@ function FollowedPresetCard({ preset, canMutate, isMutating, pendingOperation, o
             loading={pendingOperation?.kind === "follow-preset" && pendingOperation.presetId === preset.id}
             ariaLabel={`${preset.label} ${ALERT_LABELS[type]}`}
             onToggle={() => {
-              const next: Partial<Record<PresetAlertType, boolean>> = {};
-              for (const t of PRESET_ALERT_TYPES) next[t] = Boolean(preset.alertTypes[t]);
-              next[type] = !preset.alertTypes[type];
-              updateAlertTypes(next);
+              updateAlertTypes({ ...preset.alertTypes, [type]: !preset.alertTypes[type] });
             }}
           />
         ))}
