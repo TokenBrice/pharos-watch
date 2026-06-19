@@ -9,7 +9,6 @@ export {
   STRICT_CONTRACT_PATHS_LIST,
   getEndpointDefinition,
   getEndpointDefinitionByKey,
-  getStrictContractPaths,
   isCacheBypassPath,
   isMutatingAdminPath,
   type DynamicAdminEndpointMatch,

@@ -12,7 +12,6 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/api-endpoints")>();
   return {
     ...actual,
-    getStrictContractPaths: () => [],
     getProbePaths: (group: "public" | "admin" | "manual") => {
       if (group === "public") return ["/api/health"];
       if (group === "admin") return ["/api/status"];

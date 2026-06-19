@@ -58,7 +58,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/types/stablecoin-client-meta.ts::STABLECOIN_CLIENT_META_FIELDS",
   "shared/types/stablecoin-client-meta.ts::GENIUS_CLIENT_PROFILE_FIELDS",
   "shared/lib/api-endpoints/index.ts::buildQueryPath",
-  "shared/lib/api-endpoints/index.ts::getStrictContractPaths",
   "shared/lib/api-endpoints/index.ts::DynamicAdminEndpointMatch",
   "shared/lib/api-endpoints/index.ts::EndpointMethodValidationError",
   "shared/lib/api-endpoints/index.ts::EndpointProbeGroup",

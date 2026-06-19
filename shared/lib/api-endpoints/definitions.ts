@@ -820,9 +820,5 @@ export function getEndpointDefinitionByKey(key: EndpointKey): EndpointDefinition
   return ENDPOINT_DEFINITION_BY_KEY.get(key);
 }
 
-export function getStrictContractPaths(): readonly string[] {
-  return STRICT_CONTRACT_PATHS;
-}
-
 /** Pre-computed strict contract paths (module-load-time). */
 export const STRICT_CONTRACT_PATHS_LIST = STRICT_CONTRACT_PATHS;
