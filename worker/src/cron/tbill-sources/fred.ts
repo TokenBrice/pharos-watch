@@ -5,7 +5,7 @@ import {
   parseRate,
 } from "./shared";
 
-export function parseFredLatest(csv: string): { recordDate: string; rate: number } | null {
+function parseFredLatest(csv: string): { recordDate: string; rate: number } | null {
   const lines = csv.split(/\r?\n/);
   for (let i = lines.length - 1; i >= 1; i--) {
     const line = lines[i]?.trim();
