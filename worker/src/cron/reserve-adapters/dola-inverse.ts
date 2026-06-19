@@ -43,6 +43,11 @@ const TRACKED_STABLECOIN_ASSETS: Partial<Record<string, { coinId: string; risk: 
   USR: { coinId: "usr-resolv", risk: "high" },
 };
 
+function getTrackedStablecoinAsset(symbol: string): { coinId: string; risk: ReserveSlice["risk"] } | undefined {
+  if (!Object.prototype.hasOwnProperty.call(TRACKED_STABLECOIN_ASSETS, symbol)) return undefined;
+  return TRACKED_STABLECOIN_ASSETS[symbol];
+}
+
 const KNOWN_ASSETS = new Set([...STABLECOIN_ASSETS, ...ETH_LST_ASSETS, ...BTC_ASSETS, ...GOVERNANCE_ASSETS]);
 
 export function bucketForAsset(symbol: string): DolaBucket {
@@ -86,7 +91,7 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
     getValue: (market) => market.totalDebt,
     getBucket: (market) => {
       const symbol = resolveBaseSymbol(market);
-      if (TRACKED_STABLECOIN_ASSETS[symbol]) return "stablecoin";
+      if (getTrackedStablecoinAsset(symbol)) return "stablecoin";
       return bucketForAsset(symbol);
     },
     isUnknown: (market) => !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
@@ -96,14 +101,14 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
     const value = market.totalDebt;
     if (!Number.isFinite(value) || value <= 0) continue;
     const symbol = resolveBaseSymbol(market);
-    if (!TRACKED_STABLECOIN_ASSETS[symbol]) continue;
+    if (!getTrackedStablecoinAsset(symbol)) continue;
     trackedStableValues.set(symbol, (trackedStableValues.get(symbol) ?? 0) + value);
   }
   const trackedStableTotal = Array.from(trackedStableValues.values()).reduce((sum, value) => sum + value, 0);
 
   const slices = slicesFromValues([
     ...Array.from(trackedStableValues, ([symbol, value]) => {
-      const config = TRACKED_STABLECOIN_ASSETS[symbol]!;
+      const config = getTrackedStablecoinAsset(symbol)!;
       return {
         name: `${symbol} collateral`,
         value,
