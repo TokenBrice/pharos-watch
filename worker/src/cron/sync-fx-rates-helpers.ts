@@ -768,18 +768,18 @@ export async function runOpenExchangeRatesOverlay(
   }
 
   try {
-    const completedAt = Math.floor(Date.now() / 1000);
+    const attemptedAt = Math.floor(Date.now() / 1000);
     const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
     if (realtimeFetch.completed) {
       await runBestEffort("fx-oxr-last-fetch-write", async () => {
-        await setCache(db, OXR_LAST_ATTEMPT_KEY, String(completedAt));
+        await setCache(db, OXR_LAST_ATTEMPT_KEY, String(attemptedAt));
       });
     }
 
     const realtimeApplied = state.applyRealtimeOverlayRates(realtimeFetch.rates);
     if (realtimeFetch.rates.size > 0) {
       await runBestEffort("fx-oxr-last-success-write", async () => {
-        await setCache(db, OXR_LAST_SUCCESS_KEY, String(completedAt));
+        await setCache(db, OXR_LAST_SUCCESS_KEY, String(attemptedAt));
       });
     }
 
