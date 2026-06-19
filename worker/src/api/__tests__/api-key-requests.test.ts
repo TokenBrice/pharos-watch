@@ -678,4 +678,63 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT reason FROM api_key_self_serve_revocations").get()).toEqual({ reason: "admin_reject" });
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
   });
+
+  it("repairs linked key revocation when retrying a partially failed reject", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+    const issued = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+    expect(issued.status).toBe(201);
+    const { request_id: requestId } = sqlite.prepare("SELECT request_id FROM api_key_requests").get() as { request_id: string };
+
+    const failRevocationDb = {
+      ...db,
+      prepare: (sql: string) => {
+        const statement = db.prepare(sql);
+        if (!sql.includes("INSERT INTO api_key_self_serve_revocations")) {
+          return statement;
+        }
+        return {
+          ...statement,
+          bind: (...values: unknown[]) => {
+            const bound = statement.bind(...values);
+            return {
+              ...bound,
+              run: async () => {
+                throw new Error("injected revocation write failure");
+              },
+            };
+          },
+        };
+      },
+    } as unknown as D1Database;
+
+    const failedReject = await handleApiKeyRequestReject(
+      failRevocationDb,
+      requestId,
+      true,
+      postRequest(`/api/api-key-requests-admin/${requestId}/reject`, {}, { "X-Pharos-Admin": "1" }),
+    );
+    expect(failedReject.status).toBe(500);
+    expect(sqlite.prepare("SELECT status FROM api_key_requests").get()).toEqual({ status: "rejected" });
+    expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_self_serve_revocations").get()).toEqual({ count: 0 });
+
+    const retry = await handleApiKeyRequestReject(
+      db,
+      requestId,
+      true,
+      postRequest(`/api/api-key-requests-admin/${requestId}/reject`, {}, { "X-Pharos-Admin": "1" }),
+    );
+
+    expect(retry.status).toBe(200);
+    expect(sqlite.prepare("SELECT status FROM api_key_requests").get()).toEqual({ status: "rejected" });
+    expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 0 });
+    expect(sqlite.prepare("SELECT reason FROM api_key_self_serve_revocations").get()).toEqual({ reason: "admin_reject" });
+    expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
+  });
 });
