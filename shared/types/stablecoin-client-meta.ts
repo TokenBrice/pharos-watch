@@ -50,27 +50,12 @@ export interface MintAuthorityClientSummary {
   unresolvedQuestions?: string[];
 }
 
-export interface MintAuthorityCoverageControlSummary {
-  /** Present only on the detail-page projection; the generated cross-coin payload omits labels. */
-  label?: string;
-  authorityType: MintAuthorityType;
-  directMintAbility: MintAuthorityDirectMintAbility;
-  threshold?: number;
-  signerCount?: number;
-  timelockDelaySec?: number;
-  canRaiseCap?: MintAuthorityControl["canRaiseCap"];
-  modulesOrGuardsStatus?: MintAuthorityControl["modulesOrGuardsStatus"];
-  keyCustodyAttestation?: MintAuthorityControl["keyCustodyAttestation"];
-}
+/** Present only on the detail-page projection; the generated cross-coin payload omits labels. */
+export type MintAuthorityCoverageControlSummary = Omit<MintAuthorityClientControlSummary, "chain" | "address" | "role" | "capDescription" | "label"> & { label?: string };
 
-export interface MintAuthorityCoverageSummary {
-  mintPath: MintAuthorityMintPath;
-  authorityPosture: MintAuthorityPosture;
-  confidence: MintAuthorityConfidence;
-  inheritedFrom?: string;
-  mintIncidents?: MintAuthorityProfile["mintIncidents"];
+export type MintAuthorityCoverageSummary = Pick<MintAuthorityClientSummary, "mintPath" | "authorityPosture" | "confidence" | "inheritedFrom" | "mintIncidents"> & {
   controls?: MintAuthorityCoverageControlSummary[];
-}
+};
 
 type BlacklistClientStatus = NonNullable<StablecoinMeta["blacklistabilityReview"]>["reviewedStatus"];
 type GeniusSourceProfile = NonNullable<StablecoinMeta["genius"]>;
