@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { buildBriefMessage, buildTopMessage } from "../telegram-webhook-insights";
+import { buildBriefMessage, buildCoverageMessage, buildTopMessage } from "../telegram-webhook-insights";
+import type { StatusForCoin } from "../telegram-webhook-status";
 
 describe("buildBriefMessage", () => {
   afterEach(() => {
@@ -156,5 +157,37 @@ describe("buildTopMessage", () => {
       "Did you mean /top safety?\nUsage: /top depeg|dews|yield|liquidity|chains|safety",
     );
     expect(db.getHistory()).toEqual([]);
+  });
+});
+
+describe("buildCoverageMessage", () => {
+  it("escapes provider-controlled yield source text", () => {
+    const status: StatusForCoin = {
+      stablecoinId: "usdc-circle",
+      priceUsd: 1,
+      priceUpdatedAt: null,
+      supplyUsd: null,
+      stablecoinsUpdatedAt: null,
+      dews: null,
+      safety: null,
+      liquidity: null,
+      yield: {
+        currentApy: 4.8,
+        apy30d: 4.2,
+        source: 'Pendle: PT-USDC <a href="https://attacker.example/phish">CLAIM</a> & <i>boost</i>',
+        pharosYieldScore: 42,
+        updatedAt: Math.floor(Date.now() / 1000),
+      },
+      flow: null,
+      depeg: { status: "stable" },
+    };
+
+    const message = buildCoverageMessage("USDC", status);
+
+    expect(message).toContain(
+      "Pendle: PT-USDC &lt;a href=&quot;https://attacker.example/phish&quot;&gt;CLAIM&lt;/a&gt; &amp; &lt;i&gt;boost&lt;/i&gt;",
+    );
+    expect(message).not.toContain('<a href="https://attacker.example/phish">');
+    expect(message).not.toContain("<i>boost</i>");
   });
 });

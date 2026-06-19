@@ -52,3 +52,26 @@ describe("buildStatusMessage 24h mint/burn flow line (C122)", () => {
     expect(msg).not.toContain("Flow 24h");
   });
 });
+
+describe("buildStatusMessage Telegram HTML escaping", () => {
+  it("escapes provider-controlled yield source text", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({
+        yield: {
+          currentApy: 4.8,
+          apy30d: 4.2,
+          source: 'Morpho: Safe Vault <a href="https://attacker.example/phish">CLAIM</a> & <b>verified</b>',
+          pharosYieldScore: 42,
+          updatedAt: Math.floor(Date.now() / 1000),
+        },
+      }),
+    );
+
+    expect(msg).toContain(
+      "Morpho: Safe Vault &lt;a href=&quot;https://attacker.example/phish&quot;&gt;CLAIM&lt;/a&gt; &amp; &lt;b&gt;verified&lt;/b&gt;",
+    );
+    expect(msg).not.toContain('<a href="https://attacker.example/phish">');
+    expect(msg).not.toContain("<b>verified</b>");
+  });
+});
