@@ -213,6 +213,44 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("treats Birdeye 200-level error payloads as provider failures", async () => {
+    const target = makeDexScreenerTarget(0, {
+      chain: "solana",
+      providerChainId: "solana",
+      address: "So11111111111111111111111111111111111111112",
+    });
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ success: false, message: "Invalid API key", data: null }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runBirdeyeAddressProvider(
+      [target],
+      { birdeyeApiKey: "test-key" },
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(result.attemptedRequests).toBe(1);
+    expect(result.successfulRequests).toBe(0);
+    expect(result.quotes).toEqual([]);
+    expect(result.rejectedTargets).toEqual({});
+    expect(result.diagnostics).toMatchObject([
+      {
+        source: "birdeye-address",
+        status: 200,
+        ok: true,
+        success: false,
+        errorClass: "invalid-shape",
+        errorMessage: "Expected Birdeye price data object",
+        rejectionReasonCounts: { "invalid-shape": 1 },
+      },
+    ]);
+  });
+
   it("redacts the Alchemy API key from retry logs while fetching with the real endpoint", async () => {
     const target = makeDexScreenerTarget(0);
     const secret = "ALCH_SECRET_123/plus+space value";
