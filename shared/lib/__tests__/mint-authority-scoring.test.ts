@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   MINT_ROUTE_SCORES,
   MINT_AUTHORITY_CAPS,
+  MINT_AUTHORITY_INCIDENT_DECAY_YEARS,
+  YEAR_MS,
   computeMintAuthorityScore,
   isMintCapableAbility,
   resolveMintAuthorityScoreBand,
@@ -376,6 +378,39 @@ describe("Mint Authority Score", () => {
         depthParent,
       ).unresolvedReason,
     ).toBe("parent-not-scoreable");
+  });
+
+  it("incident-cap decay boundaries respect MINT_AUTHORITY_INCIDENT_DECAY_YEARS + YEAR_MS", () => {
+    const NOW = Date.parse("2026-06-11T00:00:00Z");
+    const dayMs = 24 * 60 * 60 * 1000;
+    const agingMs = MINT_AUTHORITY_INCIDENT_DECAY_YEARS.aging * YEAR_MS;
+    const datedMs = MINT_AUTHORITY_INCIDENT_DECAY_YEARS.dated * YEAR_MS;
+    const makeInput = (incidentMs: number) =>
+      computeMintAuthorityScore(
+        input({
+          authorityPosture: "unbounded-or-compromised",
+          mintIncidents: [
+            {
+              date: new Date(incidentMs).toISOString().slice(0, 10),
+              summary: "Exploit.",
+              sources: [{ label: "S", url: "https://example.com/s" }],
+            },
+          ],
+        }),
+        undefined,
+        0,
+        new Set(),
+        NOW,
+      );
+
+    // Just inside the "recent" tier (< aging boundary)
+    expect(makeInput(NOW - agingMs + dayMs).score).toBe(10);
+    // Just past the "aging" boundary (>= aging, < dated)
+    expect(makeInput(NOW - agingMs - dayMs).score).toBe(15);
+    // Just inside the "dated" boundary (< dated boundary)
+    expect(makeInput(NOW - datedMs + dayMs).score).toBe(15);
+    // Just past the "dated" boundary (>= dated)
+    expect(makeInput(NOW - datedMs - dayMs).score).toBe(20);
   });
 
   it("maps score bands at the approved thresholds", () => {

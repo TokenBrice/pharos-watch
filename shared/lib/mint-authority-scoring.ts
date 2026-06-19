@@ -97,9 +97,9 @@ export const MINT_AUTHORITY_CAPS = {
 } as const;
 
 /** Incident-age decay tier boundaries (years since the most recent incident). */
-const MINT_AUTHORITY_INCIDENT_DECAY_YEARS = { aging: 2, dated: 4 } as const;
+export const MINT_AUTHORITY_INCIDENT_DECAY_YEARS = { aging: 2, dated: 4 } as const;
 
-const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
+export const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 
 /**
  * Purely time-based incident-cap decay (methodology v1.1): the cap relaxes with
@@ -151,14 +151,10 @@ export const MINT_AUTHORITY_SCORE_BANDS: Record<MintAuthorityScoreBand, { min: n
   exposed: { min: Number.NEGATIVE_INFINITY, label: "Exposed" },
 };
 
-/** Descending-min ordered table for the band walk; mirrors MINT_AUTHORITY_SCORE_BANDS. */
-const MINT_AUTHORITY_SCORE_BAND_TABLE: readonly { band: MintAuthorityScoreBand; min: number }[] = [
-  { band: "hardened", min: MINT_AUTHORITY_SCORE_BANDS.hardened.min },
-  { band: "governed", min: MINT_AUTHORITY_SCORE_BANDS.governed.min },
-  { band: "managed", min: MINT_AUTHORITY_SCORE_BANDS.managed.min },
-  { band: "concentrated", min: MINT_AUTHORITY_SCORE_BANDS.concentrated.min },
-  { band: "exposed", min: MINT_AUTHORITY_SCORE_BANDS.exposed.min },
-];
+/** Descending-min ordered table for the band walk; derived from MINT_AUTHORITY_SCORE_BANDS so the two never drift. */
+const MINT_AUTHORITY_SCORE_BAND_TABLE: readonly { band: MintAuthorityScoreBand; min: number }[] = (
+  Object.entries(MINT_AUTHORITY_SCORE_BANDS) as [MintAuthorityScoreBand, { min: number; label: string }][]
+).map(([band, { min }]) => ({ band, min })).sort((a, b) => b.min - a.min);
 
 export type MintAuthorityCapKind = "incident-cap" | "unbounded-cap" | "eoa-cap" | "confidence-cap";
 
