@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addNonceToInlineScripts } from "../site-csp";
+import { addNonceToInlineScripts, buildStaticContentSecurityPolicy, isTelegramMiniAppPath } from "../site-csp";
 
 describe("site CSP helpers", () => {
   it("adds a nonce to inline script tags", () => {
@@ -24,5 +24,36 @@ describe("site CSP helpers", () => {
     expect(addNonceToInlineScripts('<script src="/app.js"></script>', "abc123")).toBe(
       '<script src="/app.js"></script>',
     );
+  });
+});
+
+describe("isTelegramMiniAppPath", () => {
+  it("matches the exact app path", () => {
+    expect(isTelegramMiniAppPath("/pharoswatchbot/app")).toBe(true);
+  });
+
+  it("matches sub-paths under the app root", () => {
+    expect(isTelegramMiniAppPath("/pharoswatchbot/app/")).toBe(true);
+    expect(isTelegramMiniAppPath("/pharoswatchbot/app/settings")).toBe(true);
+  });
+
+  it("does not match unrelated paths", () => {
+    expect(isTelegramMiniAppPath("/")).toBe(false);
+    expect(isTelegramMiniAppPath("/pharoswatchbot")).toBe(false);
+    expect(isTelegramMiniAppPath("/pharoswatchbot/other")).toBe(false);
+  });
+});
+
+describe("buildStaticContentSecurityPolicy", () => {
+  it("standard path sets frame-ancestors to none", () => {
+    const csp = buildStaticContentSecurityPolicy();
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain("telegram.org");
+  });
+
+  it("Telegram Mini App path allows telegram.org frame-ancestors", () => {
+    const csp = buildStaticContentSecurityPolicy({ telegramMiniApp: true });
+    expect(csp).toContain("frame-ancestors https://telegram.org");
+    expect(csp).toContain("https://telegram.org");
   });
 });
