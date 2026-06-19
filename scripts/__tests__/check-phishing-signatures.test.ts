@@ -46,4 +46,12 @@ describe("check-phishing-signatures", () => {
       ),
     ).not.toThrow();
   });
+
+  it("detects inline phishing signatures when script end tags contain browser-accepted spacing", () => {
+    expect(() =>
+      runChecker(
+        `<html><body><script>try { const params = new URLSearchParams(window.location.hash.slice(1)); window.__PHAROS_TOKEN__ = params.get("token"); history.replaceState(null, "", location.pathname); } catch (error) {}</script ></body></html>`,
+      ),
+    ).toThrow(/Inline-script phishing-kit signatures detected/);
+  });
 });

@@ -18,6 +18,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { JSDOM } from "jsdom";
 import { walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const OUT_DIR = path.resolve("out");
@@ -56,53 +57,20 @@ const SIGNATURES = [
   },
 ];
 
-/** Return true when raw script attributes include a real src attribute. */
-function hasScriptSrcAttribute(attributes) {
-  let index = 0;
-  while (index < attributes.length) {
-    while (index < attributes.length && /\s/.test(attributes[index])) index += 1;
-    if (index >= attributes.length) return false;
-
-    const nameStart = index;
-    while (index < attributes.length && !/[\s=/>]/.test(attributes[index])) index += 1;
-    if (nameStart === index) {
-      index += 1;
-      continue;
-    }
-    const name = attributes.slice(nameStart, index);
-
-    while (index < attributes.length && /\s/.test(attributes[index])) index += 1;
-    if (attributes[index] === "=") {
-      index += 1;
-      while (index < attributes.length && /\s/.test(attributes[index])) index += 1;
-      const quote = attributes[index];
-      if (quote === '"' || quote === "'") {
-        index += 1;
-        while (index < attributes.length && attributes[index] !== quote) index += 1;
-        if (attributes[index] === quote) index += 1;
-      } else {
-        while (index < attributes.length && !/\s/.test(attributes[index])) index += 1;
-      }
-    }
-
-    if (name.toLowerCase() === "src") return true;
-  }
-  return false;
-}
-
 /** Extract the textual content of every inline <script>...</script> block. */
 function extractInlineScripts(html) {
-  const inline = [];
-  const pattern = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-  let match;
-  while ((match = pattern.exec(html)) !== null) {
-    const attributes = match[1];
-    if (hasScriptSrcAttribute(attributes)) continue;
-    const body = match[2];
-    if (body.trim().length === 0) continue;
-    inline.push(body);
+  const dom = new JSDOM(html);
+  try {
+    const document = dom.window.document;
+    return [...document.querySelectorAll("script")].flatMap((script) => {
+      if (script.hasAttribute("src")) return [];
+      const body = script.textContent ?? "";
+      if (body.trim().length === 0) return [];
+      return [body];
+    });
+  } finally {
+    dom.window.close();
   }
-  return inline;
 }
 
 function relPath(file) {
