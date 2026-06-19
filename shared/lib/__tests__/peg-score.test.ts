@@ -158,4 +158,67 @@ describe("computePegScore", () => {
     expect(lowConfidence.lowConfidenceEventCount).toBe(1);
     expect(lowConfidence.qualityAdjusted).toBe(true);
   });
+
+  describe("spreadPenalty (severity-weighted stddev path)", () => {
+    const start = NOW - 90 * DAY;
+
+    function makeEvent(startOffset: number, bps: number, confidence?: "low" | "high") {
+      return {
+        startedAt: NOW - startOffset * DAY,
+        endedAt: NOW - (startOffset - 1) * DAY,
+        peakDeviationBps: bps,
+        direction: "below" as const,
+        ...(confidence ? { provenance: { confidenceTier: confidence } } : {}),
+      };
+    }
+
+    it("returns spreadPenalty=0 with a single event (< 2 scored events)", () => {
+      const result = computePegScore([makeEvent(30, 400)] as never, start, NOW);
+      expect(result.spreadPenalty).toBe(0);
+    });
+
+    it("returns spreadPenalty=0 when two events have equal |bps| (zero stddev)", () => {
+      const result = computePegScore(
+        [makeEvent(40, 300), makeEvent(20, 300)] as never,
+        start,
+        NOW,
+      );
+      expect(result.spreadPenalty).toBe(0);
+    });
+
+    it("returns spreadPenalty>0 when two events have differing |bps|", () => {
+      const result = computePegScore(
+        [makeEvent(60, 100), makeEvent(30, 900)] as never,
+        start,
+        NOW,
+      );
+      expect(result.spreadPenalty).toBeGreaterThan(0);
+      expect(result.spreadPenalty).toBeLessThanOrEqual(15);
+    });
+
+    it("low-confidence half-weight changes spreadPenalty vs high-confidence same bps", () => {
+      const eventsHigh = [
+        { ...makeEvent(60, 200), provenance: { confidenceTier: "high" } },
+        { ...makeEvent(30, 800), provenance: { confidenceTier: "high" } },
+      ];
+      const eventsLow = [
+        { ...makeEvent(60, 200), provenance: { confidenceTier: "low" } },
+        { ...makeEvent(30, 800), provenance: { confidenceTier: "high" } },
+      ];
+      const high = computePegScore(eventsHigh as never, start, NOW);
+      const low = computePegScore(eventsLow as never, start, NOW);
+      // Low-confidence weight=0.5 on first event shifts the weighted mean
+      // and reduces the effective stddev compared to both at full weight.
+      expect(high.spreadPenalty).not.toBe(low.spreadPenalty);
+    });
+
+    it("caps spreadPenalty at 15 for extreme variance", () => {
+      const result = computePegScore(
+        [makeEvent(80, 1), makeEvent(40, 100_000)] as never,
+        start,
+        NOW,
+      );
+      expect(result.spreadPenalty).toBe(15);
+    });
+  });
 });
