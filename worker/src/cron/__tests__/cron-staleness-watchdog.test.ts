@@ -151,6 +151,45 @@ describe("cron staleness watchdog", () => {
     ]);
   });
 
+  it("treats malformed watched cache freshness as stale", () => {
+    const stale = evaluateCronStaleness({
+      stablecoins: { ageSeconds: Number.NaN },
+      "fx-rates": { ageSeconds: Number.POSITIVE_INFINITY },
+      "dex-liquidity": { ageSeconds: 0 },
+      "yield-data": { ageSeconds: 0 },
+      dews: { ageSeconds: 0 },
+    });
+
+    expect(stale).toEqual([
+      expect.objectContaining({
+        cacheKey: "stablecoins",
+        ageSeconds: Number.NaN,
+        availabilityImpacting: true,
+      }),
+      expect.objectContaining({
+        cacheKey: "fx-rates",
+        ageSeconds: Number.POSITIVE_INFINITY,
+        availabilityImpacting: true,
+      }),
+    ]);
+  });
+
+  it("does not recover stale markers when watched cache freshness is malformed", async () => {
+    cacheStore.set(ALERT_KEY, JSON.stringify({ firstStaleAt: 100, lastObservedAt: 100, lastAlertedAt: 100 }));
+    mockCacheStatus({ stablecoins: Number.NaN });
+
+    const result = await runCronStalenessWatchdog(fakeDb(), "https://alerts.example/webhook");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      stale: Array<{ cacheKey: string }>;
+      recovered: string[];
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.stale.map((entry) => entry.cacheKey)).toEqual(["stablecoins"]);
+    expect(metadata.recovered).toEqual([]);
+    expect(cacheStore.has(ALERT_KEY)).toBe(true);
+  });
+
   it("does not mark stale alerts delivered when the webhook send fails", async () => {
     sendAlertMock.mockResolvedValueOnce(false);
     mockCacheStatus({ stablecoins: 1_801 });
