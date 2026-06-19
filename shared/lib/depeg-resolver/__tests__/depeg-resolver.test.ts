@@ -484,6 +484,66 @@ describe("computeDuration", () => {
     expect(d.suppressed).toBe(false);
     expect(d.stratum).toBe("below · moderate+severe+catastrophic · robust · any");
   });
+
+  // weightedClosureStats — coin-capping tests
+  it("caps each coin's contribution at 1.0 so a dominant coin cannot inflate the probability", () => {
+    // "dominant" coin: 10 incidents all closing within 6h (durationSec = 6h).
+    // 4 other coins: 1 incident each, very long duration (never closes at 6h horizon).
+    // Without per-coin cap: 10/14 ≈ 0.71. With cap: 1.0/5 = 0.20.
+    const dominantIncidents: DdrIncident[] = Array.from({ length: 10 }, (_, i) => ({
+      stablecoinId: "dominant",
+      direction: "below" as const,
+      peakDeviationBps: -500,
+      depth: "moderate" as const,
+      currency: "USD" as const,
+      structural: "robust" as const,
+      startedAt: i * 1000,
+      endedAt: i * 1000 + 6 * 3600,
+      durationSec: 6 * 3600,
+      recovered: true,
+    }));
+    const otherIncidents: DdrIncident[] = Array.from({ length: 4 }, (_, i) => ({
+      stablecoinId: `other-${i}`,
+      direction: "below" as const,
+      peakDeviationBps: -500,
+      depth: "moderate" as const,
+      currency: "USD" as const,
+      structural: "robust" as const,
+      startedAt: 1_000_000 + i * 1000,
+      endedAt: 1_000_000 + i * 1000 + 30 * 86400,
+      durationSec: 30 * 86400,
+      recovered: true,
+    }));
+    const d = computeDuration(key, 0, [...dominantIncidents, ...otherIncidents], new Set());
+    // Support gate: 14 incidents, 5 unique coins — passes thin_support threshold.
+    const h6 = d.horizons.find((h) => h.horizon === "6h")!;
+    expect(h6.state).toBe("thin_support");
+    // Coin-capped probability is 1/5 = 0.20; uncapped would be ~0.71.
+    expect(h6.probability).toBeCloseTo(0.2, 1);
+  });
+
+  it("marks a horizon as not displayable when effectiveN is below the thin-support floor", () => {
+    // 4 unique coins × 4 incidents each = 16 incidents, but effectiveN = 4 < THIN_SUPPORT_MIN_EFFECTIVE_N (5).
+    // All close within 6h so there ARE closures, but the per-coin support gate should block display.
+    const incidents: DdrIncident[] = Array.from({ length: 16 }, (_, i) => ({
+      stablecoinId: `coin-${i % 4}`,
+      direction: "below" as const,
+      peakDeviationBps: -500,
+      depth: "moderate" as const,
+      currency: "USD" as const,
+      structural: "robust" as const,
+      startedAt: i * 10000,
+      endedAt: i * 10000 + 6 * 3600,
+      durationSec: 6 * 3600,
+      recovered: true,
+    }));
+    const d = computeDuration(key, 0, incidents, new Set());
+    const h6 = d.horizons.find((h) => h.horizon === "6h")!;
+    // effectiveN = 4 < 5 → cannot reach thin_support; probability must be null.
+    expect(h6.probability).toBeNull();
+    expect(h6.state).not.toBe("thin_support");
+    expect(h6.state).not.toBe("benchmarked");
+  });
 });
 
 describe("resolveDepeg orchestration", () => {
