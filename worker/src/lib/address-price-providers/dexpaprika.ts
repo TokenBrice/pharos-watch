@@ -1,8 +1,9 @@
-import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
+import type { AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import { throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  createProviderRunState,
   fetchProviderJson,
   getTokenAddressFromRecord,
   incrementReason,
@@ -19,11 +20,9 @@ export async function runDexPaprikaAddressProvider(
   signal: AbortSignal | undefined,
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
-  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
-  const quotes: AddressPriceQuote[] = [];
-  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
-  let successfulRequests = 0;
-  let attemptedRequests = 0;
+  const state = createProviderRunState();
+  const { diagnostics, quotes, rejectedTargets } = state;
+  let { successfulRequests, attemptedRequests } = state;
   const cappedTargets = Math.max(0, targets.length - DEXPAPRIKA_MAX_REQUESTS);
 
   for (const target of targets.slice(0, DEXPAPRIKA_MAX_REQUESTS)) {

@@ -4,11 +4,11 @@ import { numberValue } from "@shared/lib/type-guards";
 import type {
   AddressPriceProviderRuntimeConfig,
   AddressPriceProviderRunResult,
-  AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  createProviderRunState,
   emptyProviderResult,
   fetchProviderJson,
   incrementReason,
@@ -36,11 +36,9 @@ export async function runBirdeyeAddressProvider(
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.birdeyeApiKey?.trim();
   if (!apiKey) return emptyProviderResult("birdeye-address", targets.length, "missing-provider");
-  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
-  const quotes: AddressPriceQuote[] = [];
-  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
-  let successfulRequests = 0;
-  let attemptedRequests = 0;
+  const state = createProviderRunState();
+  const { diagnostics, quotes, rejectedTargets } = state;
+  let { successfulRequests, attemptedRequests } = state;
 
   // targets are pre-filtered to solana-only by buildAddressPriceTargetsByProvider (index.ts)
   for (const target of targets.slice(0, BIRDEYE_ADDRESS_MAX_REQUESTS)) {

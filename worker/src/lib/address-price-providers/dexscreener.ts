@@ -1,10 +1,11 @@
-import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../constants";
 import { getDsTrackedTokenPriceUsd, type DsPair } from "../dexscreener";
 import { throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import { median } from "@shared/lib/stats";
 import {
+  ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   chunk,
+  createProviderRunState,
   fetchProviderJson,
   groupTargetsByProviderChain,
   incrementReason,
@@ -52,7 +53,7 @@ function buildDexScreenerQuotes(
       if (!trackedSymbol) return false;
       if (trackedSymbol.toUpperCase() !== target.symbol.toUpperCase()) return false;
       const liquidity = pair.liquidity?.usd;
-      return typeof liquidity === "number" && Number.isFinite(liquidity) && liquidity >= DEXSCREENER_MIN_LIQUIDITY_USD;
+      return typeof liquidity === "number" && Number.isFinite(liquidity) && liquidity >= ADDRESS_PROVIDER_MIN_LIQUIDITY_USD;
     });
     const prices = usablePairs
       .map((pair) => getDsTrackedTokenPriceUsd(pair, targetAddress).priceUsd)
@@ -90,11 +91,9 @@ export async function runDexScreenerAddressProvider(
   nowSec: number,
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
-  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
-  const quotes: AddressPriceQuote[] = [];
-  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
-  let successfulRequests = 0;
-  let attemptedRequests = 0;
+  const state = createProviderRunState();
+  const { diagnostics, quotes, rejectedTargets } = state;
+  let { successfulRequests, attemptedRequests } = state;
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {

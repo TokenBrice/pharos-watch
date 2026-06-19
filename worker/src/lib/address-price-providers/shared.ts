@@ -17,6 +17,7 @@ import {
 import type {
   AddressPriceProviderKey,
   AddressPriceProviderRunResult,
+  AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
 
@@ -172,6 +173,23 @@ export function emptyProviderResult(
       rejectionReasonCounts: { [reason]: candidateCount },
     }],
     rejectedTargets: { [reason]: candidateCount },
+    successfulRequests: 0,
+    attemptedRequests: 0,
+  };
+}
+
+/** Initialize the mutable accumulators shared by every address-price provider run function. */
+export function createProviderRunState(): {
+  diagnostics: AddressPriceProviderRunResult["diagnostics"];
+  quotes: AddressPriceQuote[];
+  rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"];
+  successfulRequests: number;
+  attemptedRequests: number;
+} {
+  return {
+    diagnostics: [],
+    quotes: [],
+    rejectedTargets: {},
     successfulRequests: 0,
     attemptedRequests: 0,
   };

@@ -2,10 +2,11 @@ import { cgUrl, cgHeaders } from "../coingecko";
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
-import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
+import type { AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   chunk,
+  createProviderRunState,
   fetchProviderJson,
   groupTargetsByProviderChain,
   incrementReason,
@@ -23,11 +24,9 @@ export async function runCoingeckoOnchainAddressProvider(
   nowSec: number,
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
-  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
-  const quotes: AddressPriceQuote[] = [];
-  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
-  let successfulRequests = 0;
-  let attemptedRequests = 0;
+  const state = createProviderRunState();
+  const { diagnostics, quotes, rejectedTargets } = state;
+  let { successfulRequests, attemptedRequests } = state;
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {

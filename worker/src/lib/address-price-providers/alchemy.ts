@@ -1,13 +1,13 @@
 import type {
   AddressPriceProviderRuntimeConfig,
   AddressPriceProviderRunResult,
-  AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import {
   chunk,
+  createProviderRunState,
   emptyProviderResult,
   fetchProviderJson,
   groupTargetsByProviderChain,
@@ -36,11 +36,9 @@ export async function runAlchemyAddressProvider(
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.alchemyApiKey?.trim();
   if (!apiKey) return emptyProviderResult("alchemy-address", targets.length, "missing-provider");
-  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
-  const quotes: AddressPriceQuote[] = [];
-  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
-  let successfulRequests = 0;
-  let attemptedRequests = 0;
+  const state = createProviderRunState();
+  const { diagnostics, quotes, rejectedTargets } = state;
+  let { successfulRequests, attemptedRequests } = state;
 
   for (const batch of buildAlchemyBatches(targets)) {
     throwIfAborted(signal);

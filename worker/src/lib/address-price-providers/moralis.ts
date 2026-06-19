@@ -1,7 +1,6 @@
 import type {
   AddressPriceProviderRuntimeConfig,
   AddressPriceProviderRunResult,
-  AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
@@ -10,6 +9,7 @@ import { numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   chunk,
+  createProviderRunState,
   emptyProviderResult,
   fetchProviderJson,
   getTokenAddressFromRecord,
@@ -33,11 +33,9 @@ export async function runMoralisAddressProvider(
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.moralisApiKey?.trim();
   if (!apiKey) return emptyProviderResult("moralis-address", targets.length, "missing-provider");
-  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
-  const quotes: AddressPriceQuote[] = [];
-  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
-  let successfulRequests = 0;
-  let attemptedRequests = 0;
+  const state = createProviderRunState();
+  const { diagnostics, quotes, rejectedTargets } = state;
+  let { successfulRequests, attemptedRequests } = state;
 
   for (const [providerChainId, chainTargets] of groupTargetsByProviderChain(targets)) {
     throwIfAborted(signal);
