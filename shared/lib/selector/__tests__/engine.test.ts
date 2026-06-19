@@ -546,6 +546,66 @@ describe("runSelector — universal properties", () => {
     }
   });
 
+  it("does not use relaxed fallback for non-relaxable or input-driven exclusions", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+
+    const cases: Array<{
+      name: string;
+      input: Partial<SelectorInput>;
+      row: Partial<MergedRow>;
+      reason: string;
+    }> = [
+      {
+        name: "minimum APY floor",
+        input: { profile: "yield", minApy: 10 },
+        row: { apy30d: 1, pegScore: 95 },
+        reason: "apy-below-floor",
+      },
+      {
+        name: "decentralization requirement",
+        input: { profile: "yield", decentralization: "required" },
+        row: { governance: "centralized", canBeBlacklisted: true, pegScore: 95 },
+        reason: "decentralization-required-violation",
+      },
+      {
+        name: "on-chain custody requirement",
+        input: { profile: "yield", custodyOk: "onchain-only" },
+        row: { custodyModel: "institutional-regulated", pegScore: 95 },
+        reason: "custody-onchain-only-violation",
+      },
+      {
+        name: "yield-native-only requirement",
+        input: { profile: "yield", yieldNativeOnly: true },
+        row: { deploymentPlace: "lp", pegScore: 95 },
+        reason: "yield-native-only-violation",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const row: MergedRow = {
+        ...base!,
+        id: `fallback-blocked-${testCase.name.replaceAll(" ", "-")}`,
+        symbol: "BLK",
+        name: `Blocked ${testCase.name}`,
+        protocolSlug: `blocked-${testCase.name.replaceAll(" ", "-")}`,
+        variantOf: null,
+        ...testCase.row,
+      };
+      const out = runSelector(
+        makeInput(testCase.input),
+        { rows: new Map([[row.id, row]]) },
+        FIXTURE_DATASET,
+      );
+
+      expect(out.universe.surviving, testCase.name).toBe(0);
+      expect(out.recommended.map((rec) => rec.id), testCase.name).not.toContain(row.id);
+      expect(out.usedRelaxedFallback, testCase.name).toBe(false);
+      expect(out.relaxedReasons, testCase.name).not.toContain(testCase.reason);
+      expect(out.exclusionSummary.some((item) => item.reason === testCase.reason), testCase.name).toBe(true);
+    }
+  });
+
   it("emits authored explanation text and confidence reasons instead of raw keys", () => {
     const rows = new Map(buildFixtureData().rows);
     const base = rows.get("usds-sky");

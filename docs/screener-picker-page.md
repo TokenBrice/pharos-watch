@@ -27,7 +27,7 @@ The route shell is intentionally `noindex,follow` via route metadata and uses ca
 
 Initial selectable pegs are `USD`, `EUR`, `CHF`, and `GOLD`. This pass is limited to pegs that have enough active rows and live Safety/Peg/DEWS/liquidity/yield coverage to avoid empty Picker routes.
 
-Yield exposes the same peg set (`USD`, `EUR`, `CHF`, `GOLD`). Thin or strict combinations can use the engine's low-confidence fallback rather than returning an empty result, but rows still need required profile signals and a usable Yield source before they can be recommended.
+Yield exposes the same peg set (`USD`, `EUR`, `CHF`, `GOLD`). Thin or strict combinations can use the engine's low-confidence fallback rather than returning an empty result, but the fallback is limited to the explicitly relaxable peg-score floor. Rows still need required profile signals, a usable Yield source, and must not violate other profile or input-driven exclusions before they can be recommended.
 
 `SILVER`, `VAR`, and `OTHER` are intentionally excluded because their current live signal coverage still produces empty picker routes or needs separate reference-asset treatment. `BRL` is also held back until the `peggedREAL` alias path is audited across sync, price validation, and supplemental-asset creation.
 
