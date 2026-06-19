@@ -1,4 +1,4 @@
-import { getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
+import { API_PATHS, getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import {
@@ -6,7 +6,7 @@ import {
   isSiteDataAllowedApiPath,
   isSiteDataAllowedMethod,
 } from "@shared/lib/site-data-lane";
-import { errorResponse } from "../../lib/api-utils";
+import { errorResponse, methodNotAllowedResponse } from "../../lib/api-utils";
 import {
   authenticateApiKeyFromFreshCache,
   authenticateApiKey,
@@ -112,9 +112,7 @@ export async function evaluateAccessGate(
       return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: notFoundResponse() };
     }
     if (!isSiteDataAllowedMethod(request.method)) {
-      const response = errorResponse(405, "Method not allowed");
-      response.headers.set("Allow", SITE_DATA_ALLOWED_METHOD);
-      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response };
+      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: methodNotAllowedResponse("Method not allowed", [SITE_DATA_ALLOWED_METHOD]) };
     }
     return siteApiAllowed();
   }
@@ -128,7 +126,7 @@ export async function evaluateAccessGate(
     return siteApiAllowed();
   }
 
-  if (!url.pathname.startsWith("/api/") || url.pathname === "/api/telegram-webhook") {
+  if (!url.pathname.startsWith("/api/") || url.pathname === API_PATHS.telegramWebhook()) {
     return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
   }
 
