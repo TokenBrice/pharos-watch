@@ -11,6 +11,7 @@ import { deriveDepegSignal } from "../lib/depeg-signals";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { throwIfAborted } from "../lib/abort";
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 const DEWS_STRESS_MAX_AGE_SEC = CRON_INTERVALS["compute-dews"] * 2;
@@ -53,7 +54,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     ? ((totalMcapUsd - totalPrevWeek) / totalPrevWeek) * 100
     : 0;
 
-  if (signal?.aborted) throw signal.reason ?? new Error("stability-index aborted");
+  throwIfAborted(signal);
 
   // Active depegs — use current price to compute live deviation
   let activeDepegs: D1Result<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
@@ -262,7 +263,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     });
   }
 
-  if (signal?.aborted) throw signal.reason ?? new Error("stability-index aborted");
+  throwIfAborted(signal);
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
   if (!result) {

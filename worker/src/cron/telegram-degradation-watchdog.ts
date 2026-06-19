@@ -16,6 +16,7 @@ import {
 } from "../lib/telegram-constants";
 import { readPendingCapacitySnapshot, type PendingCapacitySnapshot } from "./telegram-pending";
 import { toErrorMessage } from "../lib/error-utils";
+import { throwIfAborted } from "../lib/abort";
 
 /**
  * Telegram dispatch degradation watchdog. Reads fresh signals after each
@@ -364,9 +365,7 @@ export async function runTelegramDegradationWatchdog(
   signal?: AbortSignal,
   options: TelegramDegradationWatchdogOptions = {},
 ): Promise<CronResult> {
-  if (signal?.aborted) {
-    throw signal.reason ?? new Error("telegram-degradation-watchdog aborted");
-  }
+  throwIfAborted(signal);
 
   const nowSec = Math.floor(Date.now() / 1000);
 

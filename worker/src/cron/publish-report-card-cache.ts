@@ -8,20 +8,17 @@ import { writeReportCardCache } from "../lib/report-card-cache";
 import { writePublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { throwIfAborted } from "../lib/abort";
 
 export async function publishReportCardCache(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<CronResult> {
-  if (signal?.aborted) {
-    throw signal.reason ?? new Error("publish-report-card-cache aborted");
-  }
+  throwIfAborted(signal);
 
   const snapshot = await buildReportCardsSnapshot(db, { publishPegAnalytics: true });
 
-  if (signal?.aborted) {
-    throw signal.reason ?? new Error("publish-report-card-cache aborted");
-  }
+  throwIfAborted(signal);
 
   const writableCards = snapshot.cards.filter((card) => !FROZEN_IDS.has(card.id));
   await writePublishedReportCardsSnapshot(db, snapshot);

@@ -1,6 +1,7 @@
 import type { DdrCoinStructural } from "@shared/lib/depeg-resolver";
 import { bytesToHex } from "../../lib/hash";
 import { toErrorMessage } from "../../lib/error-utils";
+import { throwIfAborted } from "../../lib/abort";
 import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
@@ -15,8 +16,8 @@ import type {
 } from "../depeg-resolver-v2-contracts";
 import type { DdrEventDbRow } from "./types";
 
-export function abortIf(signal: AbortSignal | undefined, label: string): void {
-  if (signal?.aborted) throw signal.reason ?? new Error(`${label} aborted`);
+export function abortIf(signal: AbortSignal | undefined, _label: string): void {
+  throwIfAborted(signal);
 }
 
 function pegCurrencyFromPegType(pegType: string): string {

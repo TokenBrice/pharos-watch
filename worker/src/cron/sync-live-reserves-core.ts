@@ -4,6 +4,7 @@ import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
 import { toErrorMessage } from "../lib/error-utils";
+import { throwIfAborted } from "../lib/abort";
 import {
   buildReserveSyncStateRecord,
   breakerKeyForConfig,
@@ -60,9 +61,7 @@ export async function syncReserveCoin(args: {
   previousState: ReserveSyncStateRecord | null;
   d1FinalizeTimeoutMs: number;
 }): Promise<ReserveCoinSyncResult> {
-  if (args.signal.aborted) {
-    throw args.signal.reason ?? new Error("sync-live-reserves aborted");
-  }
+  throwIfAborted(args.signal);
 
   const { db, coin, adapter, runAdapter, breakerCanFetch, previousState } = args;
   const config = coin.liveReservesConfig!;

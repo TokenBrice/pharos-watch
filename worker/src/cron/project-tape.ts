@@ -40,6 +40,7 @@ import { projectMintBurnLargeFlows } from "../lib/tape-projectors/mint-burn";
 import { projectDewsBandTransitions } from "../lib/tape-projectors/dews";
 import { projectYieldWarningEmitted, projectYieldPysDropped } from "../lib/tape-projectors/yield";
 import type { Projector } from "../lib/tape-projectors/types";
+import { throwIfAborted } from "../lib/abort";
 
 export interface ProjectTapeJob {
   name: string;
@@ -104,7 +105,7 @@ export async function projectTape(
   // stability-index.
   for (let index = 0; index < TAPE_PROJECTOR_JOBS.length; index++) {
     const job = TAPE_PROJECTOR_JOBS[index]!;
-    if (signal?.aborted) throw signal.reason ?? new Error("project-tape aborted");
+    throwIfAborted(signal);
     await publishProgress("projecting-class", job.name, index);
     try {
       const result = await job.run(db);
