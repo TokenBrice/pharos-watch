@@ -18,6 +18,21 @@ const DEFAULT_FORM_FACTOR = "mobile";
 // probe; the pinned npx package makes the runtime-download tradeoff explicit.
 const LIGHTHOUSE_PACKAGE = process.env.LIGHTHOUSE_PACKAGE?.trim() || "lighthouse@13.3.0";
 const ENV_FILE = path.resolve(".env.local");
+const LIGHTHOUSE_CHILD_ENV_ALLOWLIST = [
+  "CHROME_PATH",
+  "CI",
+  "HOME",
+  "LOCALAPPDATA",
+  "PATH",
+  "PATHEXT",
+  "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "USERPROFILE",
+  "XDG_CACHE_HOME",
+];
 const VALID_FORM_FACTORS = new Set(["mobile", "desktop"]);
 const VALID_THROTTLING_METHODS = new Set(["devtools", "simulate", "provided"]);
 
@@ -126,10 +141,19 @@ async function waitForReady(url) {
   throw new Error(`Static export server did not become ready at ${url}`);
 }
 
+export function createLighthouseChildEnv(sourceEnv = process.env) {
+  const env = {};
+  for (const key of LIGHTHOUSE_CHILD_ENV_ALLOWLIST) {
+    const value = sourceEnv[key];
+    if (value) env[key] = value;
+  }
+  return env;
+}
+
 function runCommand(command, args) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
-      env: process.env,
+      env: createLighthouseChildEnv(),
       stdio: "inherit",
     });
     child.on("close", (code) => resolve(code ?? 1));
