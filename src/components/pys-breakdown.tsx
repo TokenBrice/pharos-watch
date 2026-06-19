@@ -39,9 +39,8 @@ export interface PysBreakdownProps {
   safetyScore: number | null;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
   pysNullReason?: YieldPysNullReason | null;
-  // WHY: Callers may not yet pass scalingFactor; deltas are computed against
-  // scaling=1 in that case, which is the conservative approximation.
-  scalingFactor?: number;
+  // WHY: neutralize-and-rescore deltas must use the same scale as the published PYS.
+  scalingFactor: number;
   sourceRiskScore?: number | null;
 }
 
@@ -226,7 +225,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
   const consistencyPct = Math.round(sustainabilityMult * 100);
   const benchmarkRefLabel = benchmarkLabel ?? "benchmark";
 
-  const effectiveScalingFactor = typeof scalingFactor === "number" && scalingFactor > 0 ? scalingFactor : 1;
+  const effectiveScalingFactor = scalingFactor;
   const apyVarianceScore = Math.max(0, Math.min(1, 1 - sustainabilityMult));
   const benchmarkRate = benchmarkSpread === null ? null : apy30d - benchmarkSpread;
   const neutralizeComponents: NeutralizeInput = {

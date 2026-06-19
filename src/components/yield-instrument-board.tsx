@@ -195,6 +195,7 @@ interface YieldInstrumentRowProps {
   logo?: string;
   riskFreeRate: number;
   medianApy: number;
+  scalingFactor: number;
   expanded: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
@@ -210,6 +211,7 @@ function YieldInstrumentRowBase({
   logo,
   riskFreeRate,
   medianApy,
+  scalingFactor,
   expanded,
   isCompared,
   compareDisabled,
@@ -223,15 +225,17 @@ function YieldInstrumentRowBase({
   const pysColor = getPysColor(row.pharosYieldScore);
   const labels = formatYieldRowLabels(row);
   const breakdown = useMemo(
-    () =>
-      computePysBreakdown(
+    () => ({
+      ...computePysBreakdown(
         row.apy30d,
         safetyScore,
         row.yieldStability,
         row.benchmarkRate,
         row.sourceRisk?.sourceRiskPenalty ?? null,
       ),
-    [row.apy30d, row.benchmarkRate, row.sourceRisk?.sourceRiskPenalty, row.yieldStability, safetyScore],
+      scalingFactor,
+    }),
+    [row.apy30d, row.benchmarkRate, row.sourceRisk?.sourceRiskPenalty, row.yieldStability, safetyScore, scalingFactor],
   );
   const confidenceTier = row.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
@@ -507,6 +511,7 @@ interface YieldInstrumentBoardProps {
   logos: Record<string, string>;
   riskFreeRate: number;
   medianApy: number;
+  scalingFactor: number;
   pageStartIndex: number;
   sortKey: YieldTableSortKey;
   sortDirection: "asc" | "desc";
@@ -530,6 +535,7 @@ export function YieldInstrumentBoard({
   logos,
   riskFreeRate,
   medianApy,
+  scalingFactor,
   pageStartIndex,
   sortKey,
   sortDirection,
@@ -617,6 +623,7 @@ export function YieldInstrumentBoard({
               logo={logos[row.id]}
               riskFreeRate={riskFreeRate}
               medianApy={medianApy}
+              scalingFactor={scalingFactor}
               expanded={expandedId === row.id}
               isCompared={compareHas(row.id)}
               compareDisabled={!compareHas(row.id) && !compareCanAdd}

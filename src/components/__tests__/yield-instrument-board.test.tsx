@@ -83,6 +83,7 @@ function renderBoard(
         logos={{}}
         riskFreeRate={3.5}
         medianApy={4}
+        scalingFactor={1}
         pageStartIndex={0}
         sortKey="pys"
         sortDirection="desc"
@@ -203,6 +204,7 @@ describe("YieldInstrumentBoard", () => {
           logos={{}}
           riskFreeRate={3.5}
           medianApy={4}
+          scalingFactor={1}
           pageStartIndex={0}
           sortKey="pys"
           sortDirection="desc"

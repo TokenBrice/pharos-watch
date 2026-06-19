@@ -32,6 +32,7 @@ function baseProps(overrides: Partial<PysBreakdownProps> = {}): PysBreakdownProp
     grade: "A",
     safetyScore: 90,
     sourceRiskDrivers: [],
+    scalingFactor: 1,
     ...overrides,
   };
 }

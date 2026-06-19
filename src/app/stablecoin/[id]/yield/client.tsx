@@ -69,11 +69,13 @@ function StablecoinYieldDetailHeader({
   logoSrc,
   ranking,
   sourceRiskDrivers,
+  scalingFactor,
 }: {
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
   ranking: YieldRanking | null;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
+  scalingFactor: number | null;
 }) {
   const pysBreakdown = ranking
     ? computePysBreakdown(
@@ -112,7 +114,7 @@ function StablecoinYieldDetailHeader({
           </div>
         </div>
 
-        {ranking && pysBreakdown ? (
+        {ranking && pysBreakdown && scalingFactor !== null ? (
           <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Pharos Yield Score
@@ -133,6 +135,7 @@ function StablecoinYieldDetailHeader({
               grade={ranking.safetyGrade}
               safetyScore={ranking.safetyScore}
               sourceRiskDrivers={sourceRiskDrivers}
+              scalingFactor={scalingFactor}
             />
           </div>
         ) : null}
@@ -269,7 +272,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
         <Skeleton className="h-[420px] w-full rounded-xl" />
         <Skeleton className="h-[260px] w-full rounded-xl" />
       </div>
@@ -280,7 +283,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
         <QueryErrorNotice
           error={rankingsQuery.error instanceof Error ? rankingsQuery.error : null}
           hasData={false}
@@ -293,7 +296,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
         <EmptyStateCard
           title="Pre-launch — no yield data yet"
           message={`${staticCoin.name} is in pre-launch tracking. Yield history will appear here once the stablecoin is live and the cron has observed source data.`}
@@ -311,7 +314,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
         <EmptyStateCard title="No yield data available" message={reason} />
       </div>
     );
@@ -334,6 +337,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         logoSrc={logoSrc}
         ranking={ranking}
         sourceRiskDrivers={sourceExplorer?.sourceRiskDrivers ?? []}
+        scalingFactor={rankingsQuery.data?.scalingFactor ?? null}
       />
 
       {apyChangeAttribution ? (

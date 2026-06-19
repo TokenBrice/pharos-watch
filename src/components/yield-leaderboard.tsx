@@ -152,11 +152,20 @@ interface YieldLeaderboardProps {
   logos: Record<string, string>;
   riskFreeRate: number;
   medianApy: number;
+  scalingFactor: number;
   emptyMessage?: string;
   filterSummary?: YieldLeaderboardFilterSummary;
 }
 
-export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMessage, filterSummary }: YieldLeaderboardProps) {
+export function YieldLeaderboard({
+  rows,
+  logos,
+  riskFreeRate,
+  medianApy,
+  scalingFactor,
+  emptyMessage,
+  filterSummary,
+}: YieldLeaderboardProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
   const [compareDrawerOpen, setCompareDrawerOpen] = useState(false);
@@ -266,6 +275,7 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
           logos={logos}
           riskFreeRate={riskFreeRate}
           medianApy={medianApy}
+          scalingFactor={scalingFactor}
           pageStartIndex={pageStartIndex}
           sortKey={sortKey}
           sortDirection={sortDirection}
