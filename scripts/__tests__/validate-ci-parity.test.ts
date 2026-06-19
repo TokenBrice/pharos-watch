@@ -583,6 +583,8 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
     expect(pagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
+    expect(pagesReleaseJob).toContain("fetch-depth: 0");
+    expect(pagesReleaseJob).toContain("git-history-derived sitemap/docs metadata");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expectTextInOrder(pagesReleaseJob, [
