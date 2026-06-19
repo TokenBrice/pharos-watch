@@ -394,8 +394,6 @@ export const PEG_METADATA = {
   },
 } as const satisfies Record<PegCurrency, PegMetadata>;
 
-export type PegCurrencyFilterTag = (typeof PEG_METADATA)[PegCurrency]["filterTag"];
-
 export function mapPegMetadata<T>(select: (metadata: PegMetadata) => T): Record<PegCurrency, T> {
   return Object.fromEntries(Object.entries(PEG_METADATA).map(([peg, metadata]) => [peg, select(metadata)])) as Record<
     PegCurrency,
@@ -408,10 +406,6 @@ export const PEG_LABELS = mapPegMetadata((metadata) => metadata.label);
 
 /** Labels without article, for metadata and keywords. */
 export const PEG_LABELS_SHORT = mapPegMetadata((metadata) => metadata.shortLabel);
-
-export const PEG_FILTER_TAG_LABELS = Object.fromEntries(
-  Object.values(PEG_METADATA).map((metadata) => [metadata.filterTag, metadata.filterLabel]),
-) as Record<PegCurrencyFilterTag, string>;
 
 // Curated to high-volume pegs only; add a peg here when its stablecoin market cap
 // is large enough to warrant a dedicated UI filter (e.g. multi-billion USD) or
