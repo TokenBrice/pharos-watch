@@ -1,4 +1,5 @@
-import type { CronResult } from "../../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import type { ScheduledRuntimeContext } from "./context";
 
 export type ScheduledSlotJobOutcome = "ok" | "degraded" | "error" | "skipped";
 
@@ -97,6 +98,23 @@ export function buildScheduledSlotSummary(
     budgetOnlyJobs: options.budgetOnlyJobs ?? 0,
     jobs: [...jobs],
   };
+}
+
+/**
+ * Runs a single leased cron job and returns a one-job slot summary.
+ *
+ * NOTE: errors propagate to the caller (event marked failed). This is
+ * intentional — unlike runSingleScheduledJob which swallows errors into a
+ * 'thrown' summary, these slots want the Cloudflare event itself to be marked
+ * failed on unhandled rejection.
+ */
+export async function runSinglePropagatingSlotJob(
+  runtime: ScheduledRuntimeContext,
+  job: string,
+  fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
+): Promise<ScheduledSlotSummary> {
+  const result = await runtime.runLeasedCron(job, fn);
+  return buildScheduledSlotSummary([summarizeCronResult(job, result)]);
 }
 
 export function mergeScheduledSlotSummaries(
