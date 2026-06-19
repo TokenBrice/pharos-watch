@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.17",
+      title: "High-TVL DEX outlier isolation",
+      date: "2026-06-19",
+      effectiveAt: 1781861094,
+      summary:
+        "High-TVL directional pool challenge now finds coherent same-direction protocol subsets instead of allowing one incoherent outlier to veto replacement.",
+      impact: [
+        "A near-peg soft price can still be replaced when at least two high-TVL DEX protocol medians mutually corroborate the same depeg direction",
+        "Incoherent same-direction outliers are excluded from the replacement set rather than blocking otherwise coherent high-TVL corroboration",
+        "The existing direction, depeg-size, TVL, validation, and pool-challenge bps requirements remain unchanged",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.16",
       title: "DEX pool replacement price validation",
       date: "2026-06-14",

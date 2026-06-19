@@ -1,10 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.16` (2026-02-01 -> 2026-06-14).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.17` (2026-02-01 -> 2026-06-19).
 
 ---
 
 > Older entries are archived in [pricing-pipeline-timeline-archive.md](./pricing-pipeline-timeline-archive.md); this file keeps the 10 most recent.
+
+## v6.17 - High-TVL DEX outlier isolation (June 19, 2026)
+
+- High-TVL directional pool challenge now searches for the largest coherent same-direction protocol subset, so one incoherent high-TVL outlier cannot veto two or more mutually coherent protocol medians
+- Near-peg soft prices can still be replaced by corroborated high-TVL DEX medians while isolated poisoned or malformed protocol medians remain excluded from the replacement set
 
 ## v6.16 - DEX pool replacement price validation (June 14, 2026)
 

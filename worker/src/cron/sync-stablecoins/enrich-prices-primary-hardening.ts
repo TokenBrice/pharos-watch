@@ -276,29 +276,50 @@ function selectHighTvlDirectionalReplacementGroups(params: {
   let selected: Array<{ price: number; tvl: number; observedAt?: number | null }> = [];
   for (const groups of byDirection.values()) {
     if (groups.length < 2) continue;
-    if (!areProtocolGroupsCoherent(groups, params.poolChallengeBps)) continue;
+    const coherentGroups = selectLargestCoherentProtocolGroup(groups, params.poolChallengeBps);
     const selectedTvl = selected.reduce((sum, group) => sum + group.tvl, 0);
-    const candidateTvl = groups.reduce((sum, group) => sum + group.tvl, 0);
-    if (groups.length > selected.length || (groups.length === selected.length && candidateTvl > selectedTvl)) {
-      selected = groups;
+    const candidateTvl = coherentGroups.reduce((sum, group) => sum + group.tvl, 0);
+    if (
+      coherentGroups.length > selected.length ||
+      (coherentGroups.length === selected.length && candidateTvl > selectedTvl)
+    ) {
+      selected = coherentGroups;
     }
   }
 
   return selected;
 }
 
-function areProtocolGroupsCoherent(
-  groups: Array<{ price: number }>,
+function selectLargestCoherentProtocolGroup<T extends { price: number; tvl: number }>(
+  groups: T[],
   thresholdBps: number,
-): boolean {
-  for (let i = 0; i < groups.length; i++) {
-    for (let j = i + 1; j < groups.length; j++) {
-      if (pricePairDivergenceBps(groups[i]!.price, groups[j]!.price) > thresholdBps) {
-        return false;
+): T[] {
+  let selected: T[] = [];
+
+  function visit(index: number, candidate: T[]): void {
+    if (candidate.length + groups.length - index < Math.max(2, selected.length)) return;
+    if (index >= groups.length) {
+      const selectedTvl = selected.reduce((sum, group) => sum + group.tvl, 0);
+      const candidateTvl = candidate.reduce((sum, group) => sum + group.tvl, 0);
+      if (
+        candidate.length >= 2 &&
+        (candidate.length > selected.length ||
+          (candidate.length === selected.length && candidateTvl > selectedTvl))
+      ) {
+        selected = candidate;
       }
+      return;
     }
+
+    const group = groups[index]!;
+    if (candidate.every((existing) => pricePairDivergenceBps(existing.price, group.price) <= thresholdBps)) {
+      visit(index + 1, [...candidate, group]);
+    }
+    visit(index + 1, candidate);
   }
-  return true;
+
+  visit(0, []);
+  return selected;
 }
 
 function hasHardCandidateAgreement(result: PrimaryPriceResult, price: number): boolean {

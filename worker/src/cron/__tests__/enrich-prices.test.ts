@@ -3490,6 +3490,49 @@ describe("applyPoolChallenge", () => {
     expect(result.observedAt).toBe(1_780_700_000);
   });
 
+  it("ignores incoherent high-TVL outliers when coherent DEX protocols directionally corroborate a depeg", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0,
+        source: "coingecko+defillama-list",
+        selectedSource: "coingecko",
+        priceEstimator: "cluster_median",
+        confidence: "high",
+        dlPrice: 1.0,
+        cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list", "curve-dex", "uniswap-v4-dex", "balancer-dex"],
+        agreeSources: ["coingecko", "defillama-list"],
+        disagreeSources: ["curve-dex", "uniswap-v4-dex", "balancer-dex"],
+        allPrices: {
+          coingecko: 1.0,
+          "defillama-list": 1.0,
+          "curve-dex": 0.985,
+          "uniswap-v4-dex": 0.986,
+          "balancer-dex": 0.93,
+        },
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [
+        { price: 0.985, tvlUsd: 6_000_000, protocol: "curve", chain: "ethereum", observedAt: 1_780_700_000 },
+        { price: 0.986, tvlUsd: 6_000_000, protocol: "uniswap-v4", chain: "ethereum", observedAt: 1_780_700_020 },
+        { price: 0.93, tvlUsd: 6_000_000, protocol: "balancer", chain: "ethereum", observedAt: 1_780_700_040 },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+    const result = results.get("dusd-test")!;
+
+    expect(downgrades).toBe(1);
+    expect(result.confidence).toBe("low");
+    expect(result.source).toBe("pool-tvl-weighted");
+    expect(result.price).toBeCloseTo(0.985, 6);
+    expect(result.allPrices).toEqual({ "pool-tvl-weighted": result.price });
+    expect(result.observedAt).toBe(1_780_700_000);
+  });
+
   it("does not replace with high-TVL DEX protocols that disagree directionally or incoherently", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["dusd-test", {
