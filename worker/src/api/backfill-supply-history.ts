@@ -955,6 +955,9 @@ async function executeBackfillSupplyHistory(
       const exact = priceBySnapshotDate.get(snapshotDate);
       if (exact != null) return exact;
       if (needsConversion && historicalPrices.length > 0) {
+        const first = historicalRateSeries[0];
+        const last = historicalRateSeries[historicalRateSeries.length - 1];
+        if (snapshotDate < first.timestamp || snapshotDate > last.timestamp) return null;
         const interpolated = interpolateRateAtTimestamp(historicalRateSeries, snapshotDate);
         return interpolated && interpolated > 0 ? interpolated : null;
       }
