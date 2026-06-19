@@ -105,7 +105,9 @@ export function derivePegRates(
     // Commodity pegs (gold/silver) use peer median — XAUT/PAXG are arbitraged
     // against spot within seconds, so the median is a live reference. metals.dev
     // spot is only fetched once per day and can be >1.5% stale, causing false depegs.
-    const fallback = Object.hasOwn(mergedFallbacks, peg) ? mergedFallbacks[peg] : undefined;
+    const fallback = Object.prototype.hasOwnProperty.call(mergedFallbacks, peg)
+      ? mergedFallbacks[peg]
+      : undefined;
     if (fallback && prices.length < 3) {
       rates[peg] = fallback;
       sources[peg] = "fallback";
