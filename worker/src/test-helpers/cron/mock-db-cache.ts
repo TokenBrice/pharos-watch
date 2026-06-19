@@ -19,6 +19,8 @@ export interface MockDbCacheOptions {
   getCacheFn?: Mock;
   /** Optional pre-built spy for `setCache`. Defaults to `vi.fn(async () => {})`. */
   setCacheFn?: Mock;
+  /** Optional pre-built spy for `deleteCache`. Defaults to `vi.fn(async () => {})`. */
+  deleteCacheFn?: Mock;
   /** Optional pre-built spy for `setCacheIfNewer`. */
   setCacheIfNewerFn?: Mock;
   /** Optional pre-built spy for `writeFreshnessSentinel`. */
@@ -28,6 +30,7 @@ export interface MockDbCacheOptions {
 export interface MockDbCacheExports {
   getCache: Mock;
   setCache: Mock;
+  deleteCache: Mock;
   setCacheIfNewer: Mock;
   writeFreshnessSentinel: Mock;
 }
@@ -50,6 +53,7 @@ export function mockDbCache(options: MockDbCacheOptions = {}): MockDbCacheExport
   return {
     getCache: options.getCacheFn ?? vi.fn(async () => null),
     setCache: options.setCacheFn ?? vi.fn(async () => {}),
+    deleteCache: options.deleteCacheFn ?? vi.fn(async () => {}),
     setCacheIfNewer:
       options.setCacheIfNewerFn ??
       vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),

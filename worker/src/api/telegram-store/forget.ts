@@ -1,4 +1,5 @@
 import { batchExecute } from "../../lib/db";
+import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { unixNow } from "./subscribers";
 
 /**
@@ -47,6 +48,32 @@ export async function forgetSubscriber(db: D1Database, chatId: string): Promise<
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
     ...prepareDeleteTelegramChatCacheStatements(db, chatId),
   ]);
+  await removeChatFromBurstMarkers(db, chatId);
+}
+
+const BURST_MARKERS_CACHE_KEY = "telegram:burst-markers";
+
+async function removeChatFromBurstMarkers(db: D1Database, chatId: string): Promise<void> {
+  const cached = await getCache(db, BURST_MARKERS_CACHE_KEY);
+  if (!cached) return;
+
+  let parsed: Record<string, unknown>;
+  try {
+    const value = JSON.parse(cached.value) as unknown;
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    parsed = value as Record<string, unknown>;
+  } catch {
+    return;
+  }
+
+  if (!(chatId in parsed)) return;
+  delete parsed[chatId];
+
+  if (Object.keys(parsed).length === 0) {
+    await deleteCache(db, BURST_MARKERS_CACHE_KEY);
+    return;
+  }
+  await setCache(db, BURST_MARKERS_CACHE_KEY, JSON.stringify(parsed));
 }
 
 const CHAT_CACHE_EXACT_KEY_BUILDERS = [
