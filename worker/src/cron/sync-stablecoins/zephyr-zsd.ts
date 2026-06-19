@@ -6,6 +6,7 @@ import {
 } from "@shared/lib/onchain-supply-probe";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { isReasonablePrice } from "../../lib/price-validation";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 import { pegTypeKey, getSupplementalChainLabels, toPositiveFiniteNumber } from "./supplemental-assets/shared";
@@ -41,13 +42,19 @@ function parseZephyrAssetStats(
   supplyKey: string,
   priceKey: string,
   fallbackPrice: number | null,
+  opts?: { pegType?: string; navToken?: boolean },
 ): ZephyrScannerAssetStats | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as Record<string, unknown>;
   const supply = toPositiveFiniteNumber(record[supplyKey]);
   if (supply == null) return null;
 
-  const reportedPrice = toPositiveFiniteNumber(record[priceKey]);
+  const rawReportedPrice = toPositiveFiniteNumber(record[priceKey]);
+  const reportedPrice = rawReportedPrice != null && (
+    !opts?.pegType || isReasonablePrice(rawReportedPrice, opts.pegType, undefined, { navToken: opts.navToken })
+  )
+    ? rawReportedPrice
+    : undefined;
   const mcapPrice = reportedPrice ?? fallbackPrice;
   if (mcapPrice == null) return null;
 
@@ -60,11 +67,11 @@ function parseZephyrAssetStats(
 }
 
 export function parseZephyrZsdStats(payload: unknown): ZephyrScannerAssetStats | null {
-  return parseZephyrAssetStats(payload, "zsd_circ", "zsd_price", 1.0);
+  return parseZephyrAssetStats(payload, "zsd_circ", "zsd_price", 1.0, { pegType: "peggedUSD" });
 }
 
 export function parseZephyrZysStats(payload: unknown): ZephyrScannerAssetStats | null {
-  return parseZephyrAssetStats(payload, "zys_circ", "zys_price", null);
+  return parseZephyrAssetStats(payload, "zys_circ", "zys_price", null, { pegType: "peggedUSD", navToken: true });
 }
 
 export function parseZephyrProtocolStats(payload: unknown): ZephyrProtocolStats | null {
@@ -131,7 +138,10 @@ function buildZephyrPeggedAsset(
   nowSec = Math.floor(Date.now() / 1000),
 ): PeggedAsset | null {
   if (!isZephyrScannerAssetId(meta.id)) return null;
-  if (!Number.isFinite(stats.mcap) || stats.mcap <= 0) return null;
+  const circulatingMcap = meta.id === ZEPHYR_ZSD_ASSET_ID
+    ? stats.supply * (priceResolution?.price ?? 1.0)
+    : stats.mcap;
+  if (!Number.isFinite(circulatingMcap) || circulatingMcap <= 0) return null;
 
   const pKey = pegTypeKey(meta);
   const resolvedPrice = resolveZephyrPrice(stats, priceResolution, nowSec);
@@ -150,7 +160,7 @@ function buildZephyrPeggedAsset(
     priceObservedAtMode: resolvedPrice.observedAtMode,
     priceSyncedAt: resolvedPrice.syncedAt,
     supplySource: ZEPHYR_SUPPLY_SOURCE,
-    circulating: { [pKey]: stats.mcap },
+    circulating: { [pKey]: circulatingMcap },
     circulatingPrevDay: null,
     circulatingPrevWeek: null,
     circulatingPrevMonth: null,
