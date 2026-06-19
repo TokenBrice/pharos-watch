@@ -3,7 +3,6 @@ import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
-import { rotateFromCursor } from "./shared/cursor-rotation";
 import { toErrorMessage } from "../lib/error-utils";
 import {
   buildReserveSyncAttemptHistoryInsertStatement,
@@ -53,11 +52,16 @@ export interface RecordDeferredTailResult {
   additionalBreakerKeys: Set<string>;
 }
 
-export function rotateConfiguredCoins(
+export function selectConfiguredCoinRunQueue(
   configuredCoins: readonly ConfiguredCoin[],
   nextStablecoinId: string | null,
 ): ConfiguredCoin[] {
-  return rotateFromCursor(configuredCoins, nextStablecoinId, (coin) => coin.id).items;
+  if (!nextStablecoinId) return [...configuredCoins];
+
+  const cursorIndex = configuredCoins.findIndex((coin) => coin.id === nextStablecoinId);
+  if (cursorIndex < 0) return [...configuredCoins];
+
+  return configuredCoins.slice(cursorIndex);
 }
 
 export async function loadLiveReserveCursorState(db: D1Database): Promise<LoadedLiveReserveCursorState | null> {
