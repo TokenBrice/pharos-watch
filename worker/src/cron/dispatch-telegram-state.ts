@@ -93,14 +93,9 @@ export async function loadDewsRows(db: D1Database, nowSec: number): Promise<Dews
     latestRows = [];
   }
 
-  // stress_signals_latest is the current primary source and is upserted as a
-  // complete snapshot each DEWS run. When it is present and fresh it already
-  // covers every current coin, so skip the legacy stress_signals query (and its
-  // correlated MAX(computed_at) sub-query) entirely rather than always paying
-  // for a redundant round-trip on every 5-minute dispatch.
-  if (latestRows.length > 0 && !areDewsLatestRowsStale(latestRows, nowSec)) {
-    return latestRows;
-  }
+  // Fallback keeps stale-materialization and partial latest-table deployments
+  // safe. stress_signals_latest is an optimization over the canonical history
+  // table, so Telegram dispatch merges both and keeps the newest row per coin.
 
   const legacyStmt = db.prepare(
     completedAt == null
