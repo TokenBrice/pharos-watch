@@ -1,6 +1,5 @@
 import * as React from "react";
-import { CardFrame, MetricLabel, Sparkline, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS } from "./shared";
-import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
+import { CardFrame, MetricLabel, Sparkline, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS, GRADE_COLORS } from "./shared";
 import { getBackingLabelShort, getGovernanceLabelShort, THREAT_BAND_HEX } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
 
@@ -12,7 +11,6 @@ export interface StablecoinCardData {
   dewsBand: string;
   liquidityScore: number;
   mcap: number;
-  vol24h: number | null;
   flow7d: number;
   sparklineData: number[];
   hasActiveDepeg: boolean;
@@ -111,7 +109,7 @@ function MetricRow({
 
 export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   const treatment = getAdaptiveTreatment(data);
-  const gradeColor = GRADE_RADAR_COLORS[gradeRange(data.grade as Parameters<typeof gradeRange>[0])] ?? TEXT_SECONDARY;
+  const gradeColor = GRADE_COLORS[data.grade] ?? TEXT_SECONDARY;
   const dewsColor = THREAT_BAND_HEX[data.dewsBand as keyof typeof THREAT_BAND_HEX] ?? TEXT_SECONDARY;
   
   // Build primary metrics row (5 items - PSI removed as it's market-wide)

@@ -20,6 +20,8 @@ export const SEMANTIC_COLORS = {
  * Grade-to-hex mapping for OG images. Uses project branding colors
  * (e.g., frost-blue #5ba3d9 for B grades) which intentionally differ
  * from GRADE_RADAR_COLORS in shared/lib/report-cards.ts (standard palette).
+ * All OG card templates (stablecoin-card, safety-scores-card) use this palette
+ * so grade colors are consistent across share images.
  */
 export const GRADE_COLORS: Record<string, string> = {
   "A+": "#22c55e", "A": "#22c55e", "A-": "#4ade80",

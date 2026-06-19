@@ -24,7 +24,7 @@ import { DepegCard, type DepegCardData } from "../../lib/og-templates/depeg-card
 import { ChainCard, type ChainCardData } from "../../lib/og-templates/chain-card";
 
 describe("stablecoin OG card data", () => {
-  it("marks unavailable 24h volume as null", () => {
+  it("derives flow7d and sparkline data", () => {
     const data = deriveStablecoinOgCardData({
       coin: {
         name: "USD Coin",
@@ -46,7 +46,6 @@ describe("stablecoin OG card data", () => {
       change24h: 0.5,
     });
 
-    expect(data.vol24h).toBeNull();
     expect(data.flow7d).toBe(5_000_000);
     expect(data.sparklineData).toEqual([1.0001, 0.9998]);
     expect(data.pegScore).toBe(95);
@@ -67,7 +66,6 @@ describe("stablecoin OG card data", () => {
           dewsBand: "CALM",
           liquidityScore: 80,
           mcap: 1_000_000_000,
-          vol24h: null,
           flow7d: 10_000_000,
           sparklineData: [0.999, 1.001],
           hasActiveDepeg: false,
@@ -189,7 +187,6 @@ describe("stablecoin OG card data", () => {
           dewsBand: "CALM",
           liquidityScore: 70,
           mcap: 10_000_000,
-          vol24h: null,
           flow7d: 500_000,
           sparklineData: [0.995, 1.0],
           hasActiveDepeg: false,
@@ -471,7 +468,6 @@ describe("og cards render through satori", () => {
     dewsBand: "CALM",
     liquidityScore: 92,
     mcap: 120_000_000_000,
-    vol24h: null,
     flow7d: 250_000_000,
     sparklineData: [1.0001, 1.0002, 0.9999, 1.0, 1.0001, 1.0003, 1.0002],
     hasActiveDepeg: false,

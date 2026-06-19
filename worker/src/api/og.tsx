@@ -163,7 +163,6 @@ export function deriveStablecoinOgCardData({
     dewsBand: dewsBand ?? "CALM",
     liquidityScore: dexLiquidityScore ?? 0,
     mcap,
-    vol24h: null,
     flow7d: flow7d ?? (mcap - prevWeekMcap),
     sparklineData: sparklineData.length >= 2 ? sparklineData : [pegPrice, pegPrice],
     hasActiveDepeg,
@@ -605,6 +604,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   // skips chains whose tracked supply is currently zero. Render a degraded
   // "no tracked supply" card instead of 404 so baked share images never break
   // when a chain's supply transiently drops out of the aggregate.
+  const updated = nowUtcLabel();
   const data: ChainCardData = chain
     ? {
         name: chain.name,
@@ -619,7 +619,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
           share: coin.share,
           supplyUsd: coin.supplyUsd,
         })),
-        lastUpdated: nowUtcLabel(),
+        lastUpdated: updated,
       }
     : {
         name: CHAIN_META[chainId].name,
@@ -630,7 +630,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
         healthScore: null,
         healthBand: null,
         topStablecoins: [],
-        lastUpdated: nowUtcLabel(),
+        lastUpdated: updated,
       };
 
   const png = await renderPng(<ChainCard data={data} />);
