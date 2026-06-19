@@ -51,6 +51,7 @@ export async function runAlchemyAddressProvider(
       provider: "alchemy-address",
       url,
       endpoint: "api.g.alchemy.com/prices/v1/<api-key>/tokens/by-address",
+      fetchLogUrl: "https://api.g.alchemy.com/prices/v1/<api-key>/tokens/by-address",
       init: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
