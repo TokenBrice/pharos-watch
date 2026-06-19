@@ -46,7 +46,7 @@ export interface InfiniFiProtocolData {
 export interface InfiniFiRateHistoryResponse {
   code: string;
   data?: {
-    dataPoints?: Array<{ time?: number; value?: number }>;
+    dataPoints?: unknown;
   };
 }
 
@@ -104,11 +104,17 @@ export function resolveInfiniFiFreshness(
 ):
   | { sourceTimestamp: number; freshnessMode: "verified" }
   | { freshnessMode: "unverified"; details: { freshnessSource: string; freshnessReason: string } } {
-  const points = rateHistory?.code === "OK" ? rateHistory.data?.dataPoints ?? [] : [];
+  const points = rateHistory?.code === "OK" && Array.isArray(rateHistory.data?.dataPoints)
+    ? rateHistory.data.dataPoints
+    : [];
   let latest: { time: number; value: number } | null = null;
   for (const point of points) {
     if (
-      typeof point.time === "number" && Number.isFinite(point.time)
+      point != null
+      && typeof point === "object"
+      && "time" in point
+      && "value" in point
+      && typeof point.time === "number" && Number.isFinite(point.time)
       && typeof point.value === "number" && Number.isFinite(point.value)
     ) {
       latest = { time: point.time, value: point.value };

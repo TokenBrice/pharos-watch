@@ -373,6 +373,44 @@ describe("adaptInfiniFi", () => {
     });
   });
 
+  it("falls back to unverified freshness when the optional rate-history probe has malformed data points", async () => {
+    const url = "https://example.com/infinifi";
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        stats: {
+          asset: { totalTVLAssetNormalized: 100 },
+          staked: { exchangeRateNormalized: 1.0727 },
+        },
+      },
+    };
+
+    const result = await fetchInfiniFiReserves(
+      { id: "infinifi" } as never,
+      {
+        adapter: "infinifi",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map<string, Promise<unknown>>([
+          [`json-get:${url}:12000:null`, Promise.resolve(response)],
+          [RATE_HISTORY_CACHE_KEY, Promise.resolve({ code: "OK", data: { dataPoints: [null] } })],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessReason: "InfiniFi protocol stats payload does not expose a trustworthy source timestamp",
+      },
+    });
+  });
+
   it("verifies freshness from the siUSD rate-history probe when it matches the live staked rate", async () => {
     const url = "https://example.com/infinifi";
     const response: InfiniFiProtocolData = {
@@ -449,6 +487,17 @@ describe("resolveInfiniFiFreshness", () => {
     const expectedReason = "InfiniFi protocol stats payload does not expose a trustworthy source timestamp";
     for (const rateHistory of [null, { code: "ERROR" }, { code: "OK", data: { dataPoints: [] } }] as const) {
       expect(resolveInfiniFiFreshness(payloadWithRate(1.07), rateHistory as InfiniFiRateHistoryResponse | null))
+        .toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: expectedReason } });
+    }
+  });
+
+  it("stays unverified for malformed rate-history dataPoints payloads", () => {
+    const expectedReason = "InfiniFi protocol stats payload does not expose a trustworthy source timestamp";
+    for (const rateHistory of [
+      { code: "OK", data: { dataPoints: {} } },
+      { code: "OK", data: { dataPoints: [null] } },
+    ] as const) {
+      expect(resolveInfiniFiFreshness(payloadWithRate(1.07), rateHistory))
         .toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: expectedReason } });
     }
   });
