@@ -1,3 +1,25 @@
+import fs from "node:fs";
+import path from "node:path";
+
+/**
+ * Recursively yields files under `dir` (skipping `_next/`) whose names satisfy
+ * `predicate`. Works for both HTML and index-file traversals.
+ * @param {string} dir
+ * @param {(name: string) => boolean} predicate
+ * @returns {Generator<string>}
+ */
+export function* walkOutFiles(dir, predicate) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "_next") continue;
+      yield* walkOutFiles(full, predicate);
+      continue;
+    }
+    if (entry.isFile() && predicate(entry.name)) yield full;
+  }
+}
+
 export function parseSitemapLocs(xml, { asSet = false } = {}) {
   const locs = [];
   const re = /<loc>([^<]+)<\/loc>/g;

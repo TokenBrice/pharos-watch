@@ -18,6 +18,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const OUT_DIR = path.resolve("out");
 
@@ -72,17 +73,6 @@ function extractInlineScripts(html) {
   return inline;
 }
 
-function* walkHtml(dir) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "_next") continue;
-      yield* walkHtml(full);
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith(".html")) yield full;
-  }
-}
 
 function relPath(file) {
   return path.relative(OUT_DIR, file).replace(/\\/g, "/");
@@ -114,7 +104,7 @@ function main() {
     process.exit(2);
   }
 
-  const files = Array.from(walkHtml(OUT_DIR));
+  const files = [...walkOutFiles(OUT_DIR, (name) => name.endsWith(".html"))];
   const violations = [];
   for (const file of files) {
     const findings = scanFile(file);

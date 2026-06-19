@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
+import { parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
@@ -290,21 +290,6 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
 // a future sitemap intentionally points at a Pages Function or non-HTML asset.
 const SITEMAP_LOCAL_HTML_EXCEPTIONS = new Set([]);
 
-function walkIndexFiles(dir) {
-  const results = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "_next") continue;
-      results.push(...walkIndexFiles(fullPath));
-      continue;
-    }
-    if (entry.isFile() && entry.name === "index.html") {
-      results.push(fullPath);
-    }
-  }
-  return results;
-}
 
 function routeFromFile(filePath, outDir) {
   const relDir = path.relative(outDir, path.dirname(filePath)).replace(/\\/g, "/");
@@ -922,7 +907,7 @@ export function collectSeoStaticCheckResult({
     };
   }
 
-  const indexFiles = walkIndexFiles(outDir);
+  const indexFiles = [...walkOutFiles(outDir, (name) => name === "index.html")];
   const pageRecords = indexFiles.map((filePath) => {
     const html = fs.readFileSync(filePath, "utf8");
     const robotsTags = getMetaContents(html, "name", "robots");
