@@ -36,15 +36,12 @@ const SIGNATURES = [
     id: "history-replacestate-near-credential",
     severity: "red",
     test: (script) =>
-      /history\.replaceState/.test(script) &&
-      /\b(verify|token|auth|key|session|otp|magic)\b/i.test(script),
+      /history\.replaceState/.test(script) && /\b(verify|token|auth|key|session|otp|magic)\b/i.test(script),
   },
   {
     id: "url-hash-token-extraction",
     severity: "red",
-    test: (script) =>
-      /URLSearchParams\s*\(/.test(script) &&
-      /(window\.)?location\.hash/.test(script),
+    test: (script) => /URLSearchParams\s*\(/.test(script) && /(window\.)?location\.hash/.test(script),
   },
   {
     id: "token-shaped-window-global",
@@ -55,18 +52,19 @@ const SIGNATURES = [
     id: "phishing-kit-shape",
     severity: "red",
     // The textbook structure: try{...read hash...replaceState...}
-    test: (script) =>
-      /try\s*\{[\s\S]*location\.hash[\s\S]*replaceState[\s\S]*\}\s*catch/.test(script),
+    test: (script) => /try\s*\{[\s\S]*location\.hash[\s\S]*replaceState[\s\S]*\}\s*catch/.test(script),
   },
 ];
 
 /** Extract the textual content of every inline <script>...</script> block. */
 function extractInlineScripts(html) {
   const inline = [];
-  const pattern = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+  const pattern = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   let match;
   while ((match = pattern.exec(html)) !== null) {
-    const body = match[1];
+    const attributes = match[1];
+    if (/(?:^|\s)src\s*=/i.test(attributes)) continue;
+    const body = match[2];
     if (body.trim().length === 0) continue;
     inline.push(body);
   }
