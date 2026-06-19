@@ -470,6 +470,61 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("preserves case-sensitive Sui Move identifiers from tracked metadata", async () => {
+    const suiAusdCoinId = "sui:0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD";
+    const assets: PeggedAsset[] = [
+      {
+        id: "ausd-agora", name: "Agora Dollar", symbol: "AUSD", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: suiAusdCoinId,
+        body: {
+          coins: {
+            [suiAusdCoinId]: dlQuote(1.0002, "AUSD", { confidence: 0.95 }),
+          },
+        },
+      },
+    ]);
+
+    const result = await runDlContractPasses(assets, undefined);
+
+    expect(result.pass1).toBe(1);
+    expect(assets[0].price).toBe(1.0002);
+    expect(assets[0].priceSource).toBe("defillama-contract");
+  });
+
+  it("preserves colon-rich Move identifiers in explicit chain-qualified addresses", async () => {
+    const suiUsdtCoinId = "sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT";
+    const assets: PeggedAsset[] = [
+      {
+        id: "sui-usdt-test", name: "Sui USDT", symbol: "USDT", price: 0,
+        address: suiUsdtCoinId,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: suiUsdtCoinId,
+        body: {
+          coins: {
+            [suiUsdtCoinId]: dlQuote(0.9998, "USDT", { confidence: 0.95 }),
+          },
+        },
+      },
+    ]);
+
+    const result = await runDlContractPasses(assets, undefined);
+
+    expect(result.pass1).toBe(1);
+    expect(assets[0].price).toBe(0.9998);
+    expect(assets[0].priceSource).toBe("defillama-contract");
+  });
+
   it("rejects unreasonable DefiLlama contract prices and allows later fallback passes to resolve", async () => {
     const assets: PeggedAsset[] = [
       {
