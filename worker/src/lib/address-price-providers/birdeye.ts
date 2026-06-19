@@ -23,9 +23,7 @@ const BIRDEYE_ADDRESS_MAX_REQUESTS = 10;
 const BIRDEYE_REQUEST_SPACING_MS = 1_000;
 
 function isBirdeyeMissingPricePayload(json: unknown): json is Record<string, unknown> {
-  if (!isRecord(json)) return false;
-  if ("data" in json && json.data == null) return true;
-  return json.success === false && typeof json.message === "string";
+  return isRecord(json) && json.success === true && "data" in json && json.data == null;
 }
 
 export async function runBirdeyeAddressProvider(
