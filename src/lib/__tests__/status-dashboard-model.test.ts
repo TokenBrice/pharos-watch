@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult } from "@shared/types";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
-import { buildBrowserProbeSummary, buildStatusDashboardData, getTopCauses } from "../status-dashboard-model";
+import { buildBrowserProbeSummary, buildStatusDashboardData } from "../status-dashboard-model";
 
 const BASE_STATUS = makeHealthyStatusResponse();
 const BASE_HEALTH = makeHealthyHealthResponse();
@@ -62,19 +62,4 @@ describe("status dashboard model", () => {
     expect(model.notices.some((notice) => notice.id === "client-stale")).toBe(true);
   });
 
-  it("excludes info-only causes from blocker-first top causes", () => {
-    const topCauses = getTopCauses({
-      availability: [
-        { code: "degraded_cron_warning", layer: "availability", severity: "info", message: "Watch-only degraded cron." },
-      ],
-      dataQuality: [
-        { code: "blacklist_gap_query_failed", layer: "data-quality", severity: "info", message: "Blacklist diagnostics unavailable." },
-        { code: "missing_prices_degraded", layer: "data-quality", severity: "warning", message: "Missing prices elevated." },
-      ],
-      overall: [],
-    }, 4);
-
-    expect(topCauses).toHaveLength(1);
-    expect(topCauses[0]?.code).toBe("missing_prices_degraded");
-  });
 });

@@ -225,10 +225,6 @@ function getCauses(causes: StatusResponse["causes"], kind: "blocker" | "watch"):
   );
 }
 
-export function getTopCauses(causes: StatusResponse["causes"], limit: number): StatusCause[] {
-  return getCauses(causes, "blocker").slice(0, limit);
-}
-
 interface BuildStatusDashboardOptions {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
@@ -293,6 +289,7 @@ export function buildStatusDashboardData({
   const watchCauseCount = watchCauses.length;
   const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
   const overallTone = getStatusTone(data.overallStatus);
+  const pipelineTone = getStatusTone(data.dataQualityStatus);
   const staleQuerySyncs = criticalSyncs.filter((sync) => sync.stale);
   const clientDataStale = staleQuerySyncs.length > 0;
 
@@ -410,8 +407,8 @@ export function buildStatusDashboardData({
       title: "Pipeline Health",
       description: "Dataset recency, price coverage, supply drift, liquidity coverage, and discovery backlog.",
       accentClassName: "border-l-cyan-500",
-      value: getStatusTone(data.dataQualityStatus).label,
-      valueClassName: getStatusTone(data.dataQualityStatus).valueClassName,
+      value: pipelineTone.label,
+      valueClassName: pipelineTone.valueClassName,
       summary: `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps`,
     },
     {
