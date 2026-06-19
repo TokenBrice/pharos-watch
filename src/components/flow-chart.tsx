@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives/axes";
+import { TimeXAxis, MonoYAxis, TimeGrid, ChartLegendChip } from "@/components/chart-primitives/axes";
 import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
@@ -233,25 +233,18 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-4 mb-4">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_GREEN }} />
+        <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_GREEN }}>
           Net Mint
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
+        </ChartLegendChip>
+        <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_RED }}>
           Net Burn
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
+        </ChartLegendChip>
+        <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_BLUE }}>
           Cumulative
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span
-            className="inline-block h-2.5 w-2.5 rounded-sm"
-            style={{ backgroundColor: CHART_SLATE, opacity: 0.35 }}
-          />
+        </ChartLegendChip>
+        <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_SLATE, opacity: 0.35 }}>
           7{useDailyBuckets ? "d" : "h"} rolling-net band
-        </div>
+        </ChartLegendChip>
         <span className="ml-auto text-[11px] text-muted-foreground/70 uppercase tracking-wide">
           {useDailyBuckets ? "Daily" : "Hourly"}
         </span>

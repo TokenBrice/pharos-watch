@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
-import { MonoYAxis, TimeXAxis } from "@/components/chart-primitives/axes";
+import { MonoYAxis, TimeXAxis, ChartLegendChip } from "@/components/chart-primitives/axes";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
 export interface FlowSeries {
@@ -75,16 +75,9 @@ export function FlowComparisonChart({
       <CardContent>
         <div className="mb-3 flex flex-wrap gap-3">
           {series.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-            >
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: s.color }}
-              />
+            <ChartLegendChip key={s.id} markerStyle={{ backgroundColor: s.color }}>
               {s.label}
-            </div>
+            </ChartLegendChip>
           ))}
         </div>
         <ResponsiveContainer width="100%" height={200}>
