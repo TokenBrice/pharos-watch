@@ -109,6 +109,20 @@ export function stripDebugFromSelectorSnapshot(value: Record<string, unknown>): 
   return snapshot;
 }
 
+/**
+ * Snapshot POST is unauthenticated, so caller-authored prose must not be
+ * persisted or replayed as official Pharos copy. Keep deterministic numeric /
+ * key fields, but drop prose fields that the UI can derive locally from those
+ * keys after replay.
+ */
+export function stripUntrustedSelectorSnapshotProse(value: SelectorOutput): SelectorOutput {
+  return {
+    ...value,
+    recommended: value.recommended.map(({ whyText: _whyText, watchText: _watchText, ...rec }) => rec),
+    lowerRanked: value.lowerRanked.map(({ verdictText: _verdictText, teachingText: _teachingText, ...entry }) => entry),
+  } as SelectorOutput;
+}
+
 export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValidationResult {
   if (!isSelectorSnapshotStructurallySafe(value)) {
     return { ok: false, error: "unsafe" };
@@ -120,7 +134,7 @@ export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValida
   if (!isSelectorOutputShape(snapshot)) {
     return { ok: false, error: "shape" };
   }
-  return { ok: true, snapshot };
+  return { ok: true, snapshot: stripUntrustedSelectorSnapshotProse(snapshot) };
 }
 
 export function computeSelectorSnapshotSid(snapshot: unknown): string {
@@ -344,8 +358,8 @@ function isRecommendationShape(value: unknown, outputProfile: string): boolean {
     && value.isBeta === true
     && isRecommendationSourceSlotsShape(value)
     && (value.relaxedReason === undefined || value.relaxedReason === null || (typeof value.relaxedReason === "string" && EXCLUSION_REASON_SET.has(value.relaxedReason)))
-    && isNonEmptyString(value.whyText)
-    && isNonEmptyString(value.watchText)
+    && (value.whyText === undefined || isNonEmptyString(value.whyText))
+    && (value.watchText === undefined || isNonEmptyString(value.watchText))
   );
 }
 
@@ -360,8 +374,8 @@ function isLowerRankedShape(value: unknown): boolean {
     && LOWER_RANKED_REASON_SET.has(value.reasonKey)
     && (value.failedComponent === null || (typeof value.failedComponent === "string" && WEIGHT_KEY_SET.has(value.failedComponent)))
     && (value.hypotheticalScore === null || isNumberInRange(value.hypotheticalScore, 0, 100))
-    && isNonEmptyString(value.verdictText)
-    && isNonEmptyString(value.teachingText)
+    && (value.verdictText === undefined || isNonEmptyString(value.verdictText))
+    && (value.teachingText === undefined || isNonEmptyString(value.teachingText))
   );
 }
 

@@ -214,6 +214,7 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
   }
 
   let responseBody = stored;
+  let normalizedStored = stored;
   try {
     const decoded = JSON.parse(stored) as unknown;
     const validation = validateSelectorSnapshot(decoded);
@@ -231,13 +232,8 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
       return jsonError(502, "Snapshot value is malformed");
     }
 
-    if (
-      decoded !== null
-      && typeof decoded === "object"
-      && Object.prototype.hasOwnProperty.call(decoded, "debug")
-    ) {
-      responseBody = JSON.stringify(validation.snapshot);
-    }
+    normalizedStored = JSON.stringify(validation.snapshot);
+    responseBody = normalizedStored;
   } catch (error) {
     console.warn("[selector-snapshot] stored payload decode failure", error);
     return jsonError(502, "Snapshot value is malformed");
@@ -245,8 +241,9 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
 
   if (!retentionExtended) {
     // First successful read: extend the unread TTL to the full retention TTL.
-    // Stored bytes are re-put verbatim so the sid integrity check still holds.
-    const extension = env.SELECTOR_SNAPSHOTS.put(kvKey, stored, {
+    // Re-put the normalized replay snapshot so legacy debug/prose fields are
+    // removed while preserving the content-addressed sid contract.
+    const extension = env.SELECTOR_SNAPSHOTS.put(kvKey, normalizedStored, {
       expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
       metadata: { extended: true },
     }).catch((error) => {

@@ -206,6 +206,47 @@ describe("selector-snapshot Pages Function", () => {
       expect(debugBody.sid).toBe(plainBody.sid);
     });
 
+    it("strips caller-authored prose before storing snapshots", async () => {
+      const env = makeEnv();
+      const output = buildSelectorSnapshotOutput({
+        recommended: [
+          buildSnapshotRecommendation({
+            whyText: "Attacker-authored recommendation prose.",
+            watchText: "Attacker-authored watch prose.",
+          }),
+        ],
+        lowerRanked: [
+          {
+            id: "usdt-tether",
+            symbol: "USDT",
+            name: "Tether USD",
+            slot: "A",
+            reasonKey: "weak-liquidity",
+            failedComponent: "liquidity",
+            hypotheticalScore: 70,
+            verdictText: "Attacker-authored verdict.",
+            teachingText: "Attacker-authored teaching copy.",
+          },
+        ],
+      });
+
+      const response = await onRequest({
+        request: postRequest(output),
+        env,
+        params: {},
+      });
+      const { sid } = (await response.json()) as { sid: string };
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      const stored = JSON.parse(kv.__getStore().get(`s:${sid}`) ?? "{}") as Record<string, unknown>;
+      const recommended = stored.recommended as Array<Record<string, unknown>>;
+      const lowerRanked = stored.lowerRanked as Array<Record<string, unknown>>;
+
+      expect(recommended[0]?.whyText).toBeUndefined();
+      expect(recommended[0]?.watchText).toBeUndefined();
+      expect(lowerRanked[0]?.verdictText).toBeUndefined();
+      expect(lowerRanked[0]?.teachingText).toBeUndefined();
+    });
+
     it("is idempotent when re-POSTing the same payload", async () => {
       const env = makeEnv();
       const output = buildSelectorSnapshotOutput();
@@ -383,6 +424,50 @@ describe("selector-snapshot Pages Function", () => {
       expect(get.status).toBe(200);
       const body = (await get.json()) as Record<string, unknown>;
       expect(body.debug).toBeUndefined();
+    });
+
+    it("strips prose from legacy stored snapshots before replay", async () => {
+      const env = makeEnv();
+      const legacyShape = buildSelectorSnapshotOutput({
+        recommended: [buildSnapshotRecommendation({ whyText: "Legacy prose", watchText: "Legacy watch" })],
+        lowerRanked: [
+          {
+            id: "usdt-tether",
+            symbol: "USDT",
+            name: "Tether USD",
+            slot: "A",
+            reasonKey: "weak-liquidity",
+            failedComponent: "liquidity",
+            hypotheticalScore: 70,
+            verdictText: "Legacy verdict",
+            teachingText: "Legacy teaching",
+          },
+        ],
+      });
+      const post = await onRequest({
+        request: postRequest(legacyShape),
+        env,
+        params: {},
+      });
+      const { sid } = (await post.json()) as { sid: string };
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(legacyShape));
+
+      const get = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
+      });
+      expect(get.status).toBe(200);
+      const body = (await get.json()) as Record<string, unknown>;
+      const recommended = body.recommended as Array<Record<string, unknown>>;
+      const lowerRanked = body.lowerRanked as Array<Record<string, unknown>>;
+      expect(recommended[0]?.whyText).toBeUndefined();
+      expect(recommended[0]?.watchText).toBeUndefined();
+      expect(lowerRanked[0]?.verdictText).toBeUndefined();
+      expect(lowerRanked[0]?.teachingText).toBeUndefined();
     });
   });
 

@@ -63,8 +63,8 @@ describe("selector snapshot contract", () => {
     }));
   });
 
-  it("accepts engine prose and relaxed-fallback output fields", () => {
-    expectValid(
+  it("strips caller prose while accepting relaxed-fallback output fields", () => {
+    const snapshot = expectValid(
       buildSelectorSnapshotOutput({
         recommended: [
           buildSnapshotRecommendation({
@@ -116,6 +116,11 @@ describe("selector snapshot contract", () => {
         ],
       }),
     );
+
+    expect(snapshot.recommended[0]?.whyText).toBeUndefined();
+    expect(snapshot.recommended[0]?.watchText).toBeUndefined();
+    expect(snapshot.lowerRanked[0]?.verdictText).toBeUndefined();
+    expect(snapshot.lowerRanked[0]?.teachingText).toBeUndefined();
   });
 
   it("strips debug before validation output and sid computation", () => {
