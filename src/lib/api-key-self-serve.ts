@@ -11,6 +11,7 @@ import type {
 import { buildApiUrl } from "@/lib/api";
 
 const VERIFICATION_TOKEN_PREFIX = "akv_";
+const VERIFICATION_TOKEN_SESSION_STORAGE_KEY = "pharos:api-key-verify-token";
 
 interface ApiErrorPayload {
   error?: string;
@@ -106,7 +107,19 @@ function scrubHashVerificationToken(hash: string): string {
 
 export function readVerificationTokenFromUrl(): string | null {
   if (typeof window === "undefined") return null;
-  return parseHashVerificationToken(window.location.hash);
+  const hashToken = parseHashVerificationToken(window.location.hash);
+  if (hashToken) return hashToken;
+  try {
+    const storedToken = window.sessionStorage?.getItem(VERIFICATION_TOKEN_SESSION_STORAGE_KEY)?.trim() ?? null;
+    if (storedToken?.startsWith(VERIFICATION_TOKEN_PREFIX)) {
+      window.sessionStorage.removeItem(VERIFICATION_TOKEN_SESSION_STORAGE_KEY);
+      return storedToken;
+    }
+  } catch {
+    // Storage can be disabled in privacy-restricted browsers; the hash path
+    // above remains the best-effort fallback.
+  }
+  return null;
 }
 
 export function stripVerificationTokenFromUrl(): void {

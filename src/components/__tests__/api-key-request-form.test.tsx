@@ -10,6 +10,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
+  window.sessionStorage.clear();
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: undefined,
@@ -112,6 +113,26 @@ describe("ApiKeyRequestForm", () => {
 
     expect(screen.queryByRole("heading", { name: "Your API Key Is Ready" })).toBeNull();
     expect(screen.queryByText("Copy this token now.")).toBeNull();
+  });
+
+  it("verifies a token staged by the pre-hydration hash sanitizer", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(issuedResponse(suffix, `ph_test_${suffix}_token`)), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    window.history.replaceState(null, "", "/api/?utm_source=email");
+    window.sessionStorage.setItem("pharos:api-key-verify-token", `akv_${suffix}`);
+    render(<ApiKeyRequestForm />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(window.location.href).toContain("utm_source=email");
+    expect(window.location.href).not.toContain(`akv_${suffix}`);
+    expect(window.sessionStorage.getItem("pharos:api-key-verify-token")).toBeNull();
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`akv_${suffix}`);
   });
 
   it("verifies via hash token and scrubs the fragment before posting", async () => {

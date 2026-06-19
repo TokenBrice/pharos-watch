@@ -3576,9 +3576,9 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, coverage warning counts, and authored recommendation/lower-ranked prose). Semantic validation rejects impossible component/score ranges, unknown enum values, wrong-profile `venuePreferences`, unknown `whyKeys`, malformed confidence/rank diagnostics, unknown lower-ranked reason keys, malformed `recommendedSource` objects, malformed `perInputStaleness`, and impossible rank/slot values. Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected-peg decision universe and must change when any exclusion, scoring, tie-break, explanation, source-selection, or version-affecting field changes. Freshness-only metadata is excluded unless it affects output semantics. `engineVersion` / selector version carries the bump on deterministic behavior, weight, exclusion-rule, missing-data, tie-break, or explanation changes.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, and coverage warning counts). Authored recommendation/lower-ranked prose fields are optional on input and are stripped before persistence/replay, so shared links derive visible copy from canonical keys instead of trusting caller-supplied free-form text. Semantic validation rejects impossible component/score ranges, unknown enum values, wrong-profile `venuePreferences`, unknown `whyKeys`, malformed confidence/rank diagnostics, unknown lower-ranked reason keys, malformed `recommendedSource` objects, malformed `perInputStaleness`, and impossible rank/slot values. Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected-peg decision universe and must change when any exclusion, scoring, tie-break, explanation, source-selection, or version-affecting field changes. Freshness-only metadata is excluded unless it affects output semantics. `engineVersion` / selector version carries the bump on deterministic behavior, weight, exclusion-rule, missing-data, tie-break, or explanation changes.
 
-On GET, the Pages Function parses the stored payload, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`.
+On GET, the Pages Function parses the stored payload, strips legacy debug/prose fields, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`.
 
 **Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
 
@@ -3597,11 +3597,11 @@ Stores a Stablecoin Picker output JSON under a server-recomputed `sid`. Idempote
 
 **Authentication:** exempt — same-origin gated.
 
-**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap. Debug traces are stripped before canonical sid computation and storage.
+**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap. Debug traces and caller-supplied selector prose (`whyText`, `watchText`, `verdictText`, `teachingText`) are stripped before canonical sid computation and storage.
 
 **Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
 
-Share-link privacy property: the stored payload contains the Picker answers and output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact and that the KV entry is retained for 5 years.
+Share-link privacy property: the stored payload contains the Picker answers and output rows with free-form selector prose removed, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact and that the KV entry is retained for 5 years.
 
 **Validation matrix:**
 
