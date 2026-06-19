@@ -1,6 +1,7 @@
 import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
 import { BPS_PER_UNIT } from "./math";
 import { isFiniteNumber } from "./type-guards";
+import { formatRelativeAgeSeconds } from "./relative-time";
 export { formatCompactUsdShort, formatCompactUsdShortLowerK } from "./format-compact-usd-short";
 
 /** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
@@ -242,12 +243,12 @@ export function formatElapsedSeconds(seconds: number): string {
 /** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */
 export function timeAgo(epochSec: number, nowSec = Date.now() / 1000): string {
   if (!Number.isFinite(epochSec)) return "N/A";
-  const diffMin = Math.floor((nowSec - epochSec) / SECONDS_PER_MINUTE);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  return `${Math.floor(diffH / 24)}d ago`;
+  return formatRelativeAgeSeconds(nowSec - epochSec, {
+    suffix: "ago",
+    nowLabel: "just now",
+    nowThresholdSec: SECONDS_PER_MINUTE,
+    rounding: "floor",
+  });
 }
 
 /** Tailwind color class for net flow values (positive = green, negative = red) */
