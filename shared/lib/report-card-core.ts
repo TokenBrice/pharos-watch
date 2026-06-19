@@ -116,7 +116,7 @@ export const BREAKDOWN_DIMENSIONS: ReadonlySet<DimensionKey> = new Set([
   "dependencyRisk",
 ]);
 
-export const GRADE_RADAR_COLORS: Record<string, string> = {
+export const GRADE_RADAR_COLORS: Record<ReportCardGradeRange, string> = {
   A: "#10b981",
   B: "#3b82f6",
   C: "#f59e0b",

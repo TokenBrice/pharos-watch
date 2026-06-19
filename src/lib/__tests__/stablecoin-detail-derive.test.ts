@@ -3,11 +3,8 @@ import {
   deriveDeviationBps,
   deriveGaugeDeviationBps,
   derivePegReferenceContext,
-  derivePrev90dReferenceMcap,
   deriveSupplyFromMarketCap,
 } from "../stablecoin-detail-derive";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe("stablecoin detail derivations", () => {
   describe("deriveDeviationBps", () => {
@@ -26,31 +23,6 @@ describe("stablecoin detail derivations", () => {
     it("forces gauge deviation to zero for NAV tokens", () => {
       expect(deriveGaugeDeviationBps(240, true)).toBe(0);
       expect(deriveGaugeDeviationBps(240, false)).toBe(240);
-    });
-  });
-
-  describe("derivePrev90dReferenceMcap", () => {
-    it("selects the closest datapoint to the 90d target", () => {
-      const nowMs = Date.UTC(2026, 2, 1, 0, 0, 0);
-      const targetMs = nowMs - 90 * DAY_MS;
-      const history = [
-        { date: targetMs - DAY_MS, circulatingUsd: 95 },
-        { date: targetMs + 2 * DAY_MS, circulatingUsd: 110 },
-        { date: targetMs + 6 * DAY_MS, circulatingUsd: 120 },
-      ];
-
-      expect(derivePrev90dReferenceMcap(history, nowMs)).toBe(95);
-    });
-
-    it("returns zero when no point is within the 7d tolerance window", () => {
-      const nowMs = Date.UTC(2026, 2, 1, 0, 0, 0);
-      const targetMs = nowMs - 90 * DAY_MS;
-      const history = [
-        { date: targetMs - 10 * DAY_MS, circulatingUsd: 90 },
-        { date: targetMs + 12 * DAY_MS, circulatingUsd: 110 },
-      ];
-
-      expect(derivePrev90dReferenceMcap(history, nowMs)).toBe(0);
     });
   });
 
@@ -153,31 +125,5 @@ describe("deriveGaugeDeviationBps", () => {
   it("passes through deviation for non-NAV tokens", () => {
     expect(deriveGaugeDeviationBps(50, false)).toBe(50);
     expect(deriveGaugeDeviationBps(-30, false)).toBe(-30);
-  });
-});
-
-describe("derivePrev90dReferenceMcap", () => {
-  const NOW_MS = Date.now();
-  const DAY_MS_LOCAL = 86_400_000;
-  const NINETY_DAYS_MS = 90 * DAY_MS_LOCAL;
-
-  it("finds closest entry to 90 days ago", () => {
-    const history = [
-      { date: NOW_MS - NINETY_DAYS_MS, circulatingUsd: 5_000_000 },
-      { date: NOW_MS - 30 * DAY_MS_LOCAL, circulatingUsd: 8_000_000 },
-      { date: NOW_MS, circulatingUsd: 10_000_000 },
-    ];
-    expect(derivePrev90dReferenceMcap(history, NOW_MS)).toBe(5_000_000);
-  });
-
-  it("returns 0 for empty history", () => {
-    expect(derivePrev90dReferenceMcap([], NOW_MS)).toBe(0);
-  });
-
-  it("returns 0 when closest entry exceeds tolerance", () => {
-    const history = [
-      { date: NOW_MS - 120 * DAY_MS_LOCAL, circulatingUsd: 5_000_000 },
-    ];
-    expect(derivePrev90dReferenceMcap(history, NOW_MS)).toBe(0);
   });
 });

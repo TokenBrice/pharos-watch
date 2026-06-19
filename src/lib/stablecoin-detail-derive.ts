@@ -1,14 +1,5 @@
 import { derivePegRates, getPegReference, type PegRateSource } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types";
-import { NINETY_DAYS_MS, WEEK_MS } from "./constants";
-
-const NINETY_DAY_TOLERANCE_MS = WEEK_MS;
-
-interface SupplyHistoryEntry {
-  date: number;
-  circulatingUsd: number;
-}
-
 interface PegReferenceInputs {
   assets: PegAssetBase[];
   pegType: string | undefined;
@@ -50,25 +41,6 @@ export function deriveGaugeDeviationBps(
   isNavToken: boolean,
 ): number {
   return isNavToken ? 0 : deviationBps;
-}
-
-export function derivePrev90dReferenceMcap(
-  supplyHistory: SupplyHistoryEntry[],
-  nowMs: number,
-): number {
-  if (supplyHistory.length === 0) return 0;
-
-  const targetMs = nowMs - NINETY_DAYS_MS;
-  let closest = supplyHistory[0];
-
-  for (const entry of supplyHistory) {
-    if (Math.abs(new Date(entry.date).getTime() - targetMs) < Math.abs(new Date(closest.date).getTime() - targetMs)) {
-      closest = entry;
-    }
-  }
-
-  if (Math.abs(new Date(closest.date).getTime() - targetMs) > NINETY_DAY_TOLERANCE_MS) return 0;
-  return closest.circulatingUsd;
 }
 
 export function derivePegReferenceContext({
