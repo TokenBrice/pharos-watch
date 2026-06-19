@@ -23,7 +23,7 @@ import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import type { DigestValidationProfile } from "./daily-digest/response";
 import { rollupDigestInputs, type RollupSummary } from "./daily-digest/collectors-shared";
-import { DEWS_BAND_RANK } from "./daily-digest/digest-intelligence-utils";
+import { DEWS_BAND_RANK, getMetaString } from "./daily-digest/digest-intelligence-utils";
 import { forbiddenTicsPromptLine } from "./daily-digest/voice-guards";
 
 const WEEKLY_SYSTEM_PROMPT = [
@@ -257,11 +257,6 @@ function encodeWeeklyDigestMeta(
 function shouldRetryExistingWeeklyTelegram(meta: WeeklyDigestMeta): boolean {
   if (meta.telegramDelivered !== false) return false;
   return meta.telegramDeliveryStatus !== "skipped: quality-gate";
-}
-
-function weeklyMetaString(meta: WeeklyDigestMeta, key: string): string | null {
-  const value = meta[key];
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 async function updateWeeklyTelegramDeliveryMeta(
@@ -1005,7 +1000,7 @@ export async function generateWeeklyRecap(
       digestExtended: existing.digest_extended,
       digestText: existing.digest_text,
       generatedAt: existing.generated_at,
-      weekStartLabel: weeklyMetaString(existingMeta, "weekStart")
+      weekStartLabel: getMetaString(existingMeta, "weekStart")
         ?? formatIsoDate(existing.generated_at),
     });
     await updateWeeklyTelegramDeliveryMeta(db, existing, {
