@@ -68,21 +68,26 @@ async function fetchSecondaryCurrencyCandidate(
     return null;
   }
 
-  const payload = await res.json();
-  const validation = validatePayloadWithSchema(
-    SecondaryCurrencyResponseSchema,
-    payload,
-    `sync-fx-rates:secondary:${endpoint}`,
-  );
-  if (!validation.ok) {
-    console.warn(`[sync-fx-rates] Secondary FX payload invalid (${endpoint}): ${validation.issues}`);
+  try {
+    const payload = await res.json();
+    const validation = validatePayloadWithSchema(
+      SecondaryCurrencyResponseSchema,
+      payload,
+      `sync-fx-rates:secondary:${endpoint}`,
+    );
+    if (!validation.ok) {
+      console.warn(`[sync-fx-rates] Secondary FX payload invalid (${endpoint}): ${validation.issues}`);
+      return null;
+    }
+
+    return {
+      endpoint,
+      payload: validation.data,
+    };
+  } catch (error) {
+    console.warn(`[sync-fx-rates] Secondary FX payload unreadable (${endpoint}):`, error);
     return null;
   }
-
-  return {
-    endpoint,
-    payload: validation.data,
-  };
 }
 
 function chooseSecondaryCurrencyCandidate(
