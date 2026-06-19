@@ -244,7 +244,10 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   ]);
 
   if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {
-    return ogErrorResponse("Data not yet available", 503);
+    return ogErrorResponse("Data not yet available", 503, {
+      "Retry-After": "60",
+      "Cache-Control": "no-store",
+    });
   }
 
   const { peggedAssets, fxFallbackRates } = stablecoinsPayload.payload;

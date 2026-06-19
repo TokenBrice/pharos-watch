@@ -156,6 +156,28 @@ describe("stablecoin OG card data", () => {
     });
   });
 
+  it("returns a no-store 503 when the stablecoins cache has no usable payload", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: [] }), updated_at: nowSec }],
+      },
+      { match: "dex_liquidity", rows: [] },
+      { match: "stress_signals", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "mint_burn_hourly", rows: [] },
+    ]);
+
+    const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+    expect(res?.status).toBe(503);
+    // A transient 503 must not be CDN-pinned on share-image URLs (og-4).
+    expect(res?.headers.get("Cache-Control")).toBe("no-store");
+    expect(res?.headers.get("Retry-After")).toBe("60");
+  });
+
   it("renders variant context when provided", () => {
     const markup = renderToStaticMarkup(
       <StablecoinCard
