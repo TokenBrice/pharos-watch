@@ -292,12 +292,12 @@ export function YieldClient() {
           )}
         </section>
 
-        {visibleRows.length > 0 ? (
-          <section aria-label="Yield vs Safety landscape" className="order-2 space-y-3">
-            <YieldRiskBudgetSlider
-              stops={viewModel.riskBudget.stops}
-              onSelect={handleApplyRiskBudget}
-            />
+        <section aria-label="Yield vs Safety landscape" className="order-2 space-y-3">
+          <YieldRiskBudgetSlider
+            stops={viewModel.riskBudget.stops}
+            onSelect={handleApplyRiskBudget}
+          />
+          {visibleRows.length > 0 ? (
             <YieldScatterPlot
               rankings={visibleRows}
               benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
@@ -309,8 +309,8 @@ export function YieldClient() {
               onDotClick={handleNavigate}
               compact
             />
-          </section>
-        ) : null}
+          ) : null}
+        </section>
 
         <section className="order-3" aria-label="Yield filters">
           <YieldLeaderboardControls
