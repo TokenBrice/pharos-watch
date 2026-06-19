@@ -1,5 +1,15 @@
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { createLeaseOwner, runCronWithLease, type CronLeaseOptions } from "../../lib/cron-lease";
+import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
+import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
+import { normalizeCgApiKey } from "../../lib/coingecko";
+import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
+import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
+import { parseCsvEnv, type Env } from "../../lib/env";
+import {
+  resolveMintBurnFreshnessConfig,
+  type MintBurnFreshnessConfig,
+} from "../../lib/mint-burn-health-config";
 
 /**
  * Per-job overrides for cron lease behavior. Jobs not listed use the default
@@ -12,16 +22,6 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
   "dispatch-telegram-alerts": { heartbeatSec: 30, maxRenewFailures: 3 },
   "daily-digest": { heartbeatSec: 30, maxRenewFailures: 3 },
 };
-import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
-import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
-import { normalizeCgApiKey } from "../../lib/coingecko";
-import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
-import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
-import { parseCsvEnv, type Env } from "../../lib/env";
-import {
-  resolveMintBurnFreshnessConfig,
-  type MintBurnFreshnessConfig,
-} from "../../lib/mint-burn-health-config";
 
 export interface ScheduledRuntimeContext {
   db: D1Database;
@@ -109,13 +109,11 @@ export function createScheduledRuntimeContext(
     chainRpcs,
     runLeasedCron: (job, fn) =>
       logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
+        const slotMeta = { slotStartedAt: scheduled.slotStartedAt, scheduleKey: scheduled.scheduleKey };
         await reportProgress({
           stage: "started",
           message: `Starting ${job}`,
-          metadata: {
-            slotStartedAt: scheduled.slotStartedAt,
-            scheduleKey: scheduled.scheduleKey,
-          },
+          metadata: slotMeta,
         });
         const leaseOwner = createLeaseOwner(job);
         const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
@@ -124,10 +122,7 @@ export function createScheduledRuntimeContext(
             stage: "lease-acquired",
             message: `Lease acquired for ${job}`,
             leaseOwner,
-            metadata: {
-              slotStartedAt: scheduled.slotStartedAt,
-              scheduleKey: scheduled.scheduleKey,
-            },
+            metadata: slotMeta,
           });
           return fn(leaseSignal, reportProgress);
         }, { owner: leaseOwner, abortSignal: signal, ...perJobLeaseOptions });
@@ -137,10 +132,7 @@ export function createScheduledRuntimeContext(
             stage: "skipped-locked",
             message: `Lease already held for ${job}`,
             leaseOwner: lease.leaseOwner,
-            metadata: {
-              slotStartedAt: scheduled.slotStartedAt,
-              scheduleKey: scheduled.scheduleKey,
-            },
+            metadata: slotMeta,
           });
           return {
             status: "skipped_locked",
@@ -148,8 +140,7 @@ export function createScheduledRuntimeContext(
               reason: "lease-locked",
               leaseOwner: lease.leaseOwner,
               renewFailures: lease.renewFailures,
-              slotStartedAt: scheduled.slotStartedAt,
-              scheduleKey: scheduled.scheduleKey,
+              ...slotMeta,
             }),
           };
         }
@@ -160,8 +151,7 @@ export function createScheduledRuntimeContext(
             metadata: JSON.stringify({
               leaseOwner: lease.leaseOwner,
               renewFailures: lease.renewFailures,
-              slotStartedAt: scheduled.slotStartedAt,
-              scheduleKey: scheduled.scheduleKey,
+              ...slotMeta,
             }),
           };
         }
@@ -169,8 +159,7 @@ export function createScheduledRuntimeContext(
         const leaseMeta = {
           leaseOwner: lease.leaseOwner,
           renewFailures: lease.renewFailures,
-          slotStartedAt: scheduled.slotStartedAt,
-          scheduleKey: scheduled.scheduleKey,
+          ...slotMeta,
         };
 
         const metadata = mergeCronMetadataWithLease(
@@ -182,10 +171,7 @@ export function createScheduledRuntimeContext(
           stage: "completed",
           message: `Completed ${job}`,
           leaseOwner: lease.leaseOwner,
-          metadata: {
-            slotStartedAt: scheduled.slotStartedAt,
-            scheduleKey: scheduled.scheduleKey,
-          },
+          metadata: slotMeta,
         });
 
         return { ...result, metadata };
