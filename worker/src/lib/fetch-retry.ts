@@ -7,15 +7,18 @@ interface FetchWithRetryOptions {
   passthroughStatuses?: number[];
   returnFinalResponse?: boolean;
   timeoutMs?: number;
+  maxRetryDelayMs?: number;
 }
-function getRetryDelayMs(response: Response, attempt: number): number | null {
+function getRetryDelayMs(response: Response, attempt: number, maxRetryDelayMs?: number): number | null {
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
     const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
-    return waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
+    const delayMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
+    return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
   }
   if (response.status === 529) {
-    return Math.min(30_000, 5_000 * 2 ** attempt);
+    const delayMs = Math.min(30_000, 5_000 * 2 ** attempt);
+    return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
   }
   return null;
 }
@@ -39,6 +42,7 @@ export async function fetchWithRetry(
   const passthroughStatuses = new Set<number>(options?.passthroughStatuses ?? []);
   if (passthrough404) passthroughStatuses.add(404);
   const timeoutMs = options?.timeoutMs ?? 15_000;
+  const maxRetryDelayMs = options?.maxRetryDelayMs;
   const signal = opts?.signal ?? undefined;
   for (let i = 0; i <= maxRetries; i++) {
     throwIfAborted(signal);
@@ -59,7 +63,7 @@ export async function fetchWithRetry(
       }
       if (res.ok) return res;
       if (passthroughStatuses.has(res.status)) {
-        const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i) : null;
+        const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i, maxRetryDelayMs) : null;
         if (passthroughDelayMs != null) {
           const body = await res.text();
           console.warn(`[fetch-retry] ${logUrl} rate-limited (${res.status}), waiting ${passthroughDelayMs}ms before passthrough`);
@@ -72,7 +76,7 @@ export async function fetchWithRetry(
         }
         return res;
       }
-      const retryDelayMs = i < maxRetries ? getRetryDelayMs(res, i) : null;
+      const retryDelayMs = i < maxRetries ? getRetryDelayMs(res, i, maxRetryDelayMs) : null;
       if (retryDelayMs != null) {
         const label = res.status === 529 ? "overloaded" : "rate-limited";
         console.warn(`[fetch-retry] ${logUrl} ${label} (${res.status}), waiting ${retryDelayMs}ms`);

@@ -80,6 +80,29 @@ describe("fetchWithRetry", () => {
     expect(sleepWithSignalMock).toHaveBeenCalledWith(1000, undefined);
   });
 
+  it("caps provider-controlled retry delays when configured", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "slow down" }), {
+          status: 429,
+          headers: { "Retry-After": "120" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchWithRetry(
+      "https://example.com/token",
+      undefined,
+      1,
+      { maxRetryDelayMs: 5000 },
+    );
+
+    expect(res?.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleepWithSignalMock).toHaveBeenCalledWith(5000, undefined);
+  });
+
   it("waits on Retry-After before returning passthrough 429 responses", async () => {
     const rateLimitedResponse = new Response(JSON.stringify({ error: "slow down" }), {
       status: 429,

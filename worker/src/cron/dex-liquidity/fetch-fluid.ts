@@ -17,6 +17,7 @@ const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
 const FLUID_GET_COLLATERAL_RESERVES_SELECTOR = "0x957755e6";
 const FLUID_GET_DEBT_RESERVES_SELECTOR = "0x55181f11";
 const FLUID_GET_POOL_FEE_SELECTOR = "0x42fcc6fb";
+const FLUID_RETRY_DELAY_CAP_MS = 5_000;
 
 /** Fluid API chain IDs mapped to our internal chain keys */
 const FLUID_CHAINS: Record<string, number> = {
@@ -161,7 +162,7 @@ export async function fetchFluidPools(
           signal,
         },
         2,
-        { timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS },
+        { timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS, maxRetryDelayMs: FLUID_RETRY_DELAY_CAP_MS },
       );
       if (!res) {
         throw new Error(`${chain} request failed after retries`);
