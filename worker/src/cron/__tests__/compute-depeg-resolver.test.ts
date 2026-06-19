@@ -341,6 +341,11 @@ describe("computeDepegResolver", () => {
       nowSec: NOW_SEC - 600,
       storageAvailable: true,
     });
+    previousSnapshot.rows[0].live = {
+      ...previousSnapshot.rows[0].live,
+      stale: true,
+      degradedReason: "previous-context-failure",
+    };
     const db = mockD1([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
