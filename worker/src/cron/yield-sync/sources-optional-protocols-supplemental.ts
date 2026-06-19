@@ -103,9 +103,7 @@ function resolveMorphoTrackedAsset(
     if (byAddress) return byAddress;
   }
 
-  const symbol = asset.symbol.trim();
-  const meta = ACTIVE_STABLECOINS.find((entry) => entry.symbol.toLowerCase() === symbol.toLowerCase());
-  return meta ? { stablecoinId: meta.id, symbol: meta.symbol } : null;
+  return null;
 }
 
 function isSanePendleExpiry(expiry: string, nowMs: number): boolean {
