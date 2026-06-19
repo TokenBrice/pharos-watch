@@ -108,6 +108,9 @@ const ETHEREUM_RPC_URLS = [getPublicRpcUrl(ETHEREUM_CHAIN), getSecondaryFallback
 );
 const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
+const DIRECT_LLAMMA_MAX_MARKETS = 64;
+const DIRECT_LLAMMA_MAX_BANDS_PER_MARKET = 2_048;
+const DIRECT_LLAMMA_MAX_MULTICALL_ENTRIES = 8_192;
 const CRVUSD_MARKET_READ_CONCURRENCY = 2;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
@@ -312,6 +315,11 @@ async function fetchLlammaMarketDescriptors(
   if (!Number.isSafeInteger(marketCount) || marketCount < 0) {
     throw new Error(`crvUSD ControllerFactory n_collaterals invalid: ${String(countRaw)}`);
   }
+  if (marketCount > DIRECT_LLAMMA_MAX_MARKETS) {
+    throw new Error(
+      `crvUSD ControllerFactory n_collaterals exceeds operational cap: ${marketCount} > ${DIRECT_LLAMMA_MAX_MARKETS}`,
+    );
+  }
 
   const descriptors = await mapWithConcurrency(
     Array.from({ length: marketCount }, (_, marketId) => marketId),
@@ -340,6 +348,12 @@ async function fetchLlammaMarketDescriptors(
       const minBand = safeInt256ToNumber(minBandRaw as bigint, `market ${marketId} min_band`);
       const maxBand = safeInt256ToNumber(maxBandRaw as bigint, `market ${marketId} max_band`);
       if (maxBand < minBand) return null;
+      const bandCount = maxBand - minBand + 1;
+      if (!Number.isSafeInteger(bandCount) || bandCount > DIRECT_LLAMMA_MAX_BANDS_PER_MARKET) {
+        throw new Error(
+          `crvUSD LLAMMA band span exceeds operational cap for market ${marketId}: ${bandCount} > ${DIRECT_LLAMMA_MAX_BANDS_PER_MARKET}`,
+        );
+      }
       return {
         marketId,
         collateralAddress,
@@ -376,9 +390,17 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
     ctx,
   );
 
+  const totalMulticallEntries = descriptors.reduce((sum, market) => sum + (market.maxBand - market.minBand + 1) * 2, 0);
+  if (totalMulticallEntries > DIRECT_LLAMMA_MAX_MULTICALL_ENTRIES) {
+    throw new Error(
+      `crvUSD LLAMMA band multicall exceeds operational cap: ${totalMulticallEntries} > ${DIRECT_LLAMMA_MAX_MULTICALL_ENTRIES}`,
+    );
+  }
+
   const calls = descriptors.flatMap((market) => {
     const marketCalls = [];
     for (let band = market.minBand; band <= market.maxBand; band += 1) {
+      throwIfAborted(signal);
       marketCalls.push({
         label: `${market.marketId}:y:${band}`,
         contract: market.ammAddress,

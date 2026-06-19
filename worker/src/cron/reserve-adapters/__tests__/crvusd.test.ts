@@ -443,6 +443,116 @@ describe("fetchCrvUsdReserves", () => {
     });
   });
 
+  it("rejects malicious LLAMMA market counts before descriptor allocation", async () => {
+    vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
+      const normalizedAddress = address.toLowerCase();
+      const callData = data as `0x${string}`;
+
+      if (normalizedAddress === CURVE_CONTROLLER_FACTORY.toLowerCase()) {
+        const decoded = decodeFunctionData({ abi: CURVE_FACTORY_ABI, data: callData });
+        if (decoded.functionName === "n_collaterals") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "n_collaterals", result: 65n });
+        }
+      }
+
+      if (normalizedAddress === YIELD_BASIS_FACTORY) {
+        const decoded = decodeFunctionData({ abi: FACTORY_ABI, data: callData });
+        if (decoded.functionName === "market_count") {
+          return encodeFunctionResult({ abi: FACTORY_ABI, functionName: "market_count", result: 0n });
+        }
+      }
+
+      return null;
+    });
+
+    const config: LiveReservesConfig = {
+      adapter: "crvusd",
+      version: 3,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "onchain-evm",
+          chain: "ethereum",
+          rpcMode: "public-rpc",
+        },
+      },
+    };
+
+    await expect(fetchCrvUsdReserves({} as never, config, signal)).rejects.toThrow(
+      "n_collaterals exceeds operational cap",
+    );
+    expect(fetchOnchainMulticall3).not.toHaveBeenCalled();
+  });
+
+  it("rejects malicious LLAMMA band spans before building multicall entries", async () => {
+    vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
+      const normalizedAddress = address.toLowerCase();
+      const callData = data as `0x${string}`;
+
+      if (normalizedAddress === CURVE_CONTROLLER_FACTORY.toLowerCase()) {
+        const decoded = decodeFunctionData({ abi: CURVE_FACTORY_ABI, data: callData });
+        if (decoded.functionName === "n_collaterals") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "n_collaterals", result: 1n });
+        }
+        if (decoded.functionName === "collaterals") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "collaterals", result: BTC_ASSET });
+        }
+        if (decoded.functionName === "controllers") {
+          return encodeFunctionResult({
+            abi: CURVE_FACTORY_ABI,
+            functionName: "controllers",
+            result: LLAMMA_CONTROLLER,
+          });
+        }
+        if (decoded.functionName === "amms") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "amms", result: LLAMMA_AMM });
+        }
+      }
+
+      if (normalizedAddress === BTC_ASSET) {
+        const decoded = decodeFunctionData({ abi: ERC20_ABI, data: callData });
+        if (decoded.functionName === "symbol") {
+          return encodeFunctionResult({ abi: ERC20_ABI, functionName: "symbol", result: "WBTC" });
+        }
+      }
+
+      if (normalizedAddress === LLAMMA_AMM.toLowerCase()) {
+        const decoded = decodeFunctionData({ abi: CURVE_AMM_ABI, data: callData });
+        if (decoded.functionName === "min_band") {
+          return encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "min_band", result: 0n });
+        }
+        if (decoded.functionName === "max_band") {
+          return encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "max_band", result: 2048n });
+        }
+      }
+
+      if (normalizedAddress === YIELD_BASIS_FACTORY) {
+        const decoded = decodeFunctionData({ abi: FACTORY_ABI, data: callData });
+        if (decoded.functionName === "market_count") {
+          return encodeFunctionResult({ abi: FACTORY_ABI, functionName: "market_count", result: 0n });
+        }
+      }
+
+      return null;
+    });
+
+    const config: LiveReservesConfig = {
+      adapter: "crvusd",
+      version: 3,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "onchain-evm",
+          chain: "ethereum",
+          rpcMode: "public-rpc",
+        },
+      },
+    };
+
+    await expect(fetchCrvUsdReserves({} as never, config, signal)).rejects.toThrow("band span exceeds operational cap");
+    expect(fetchOnchainMulticall3).not.toHaveBeenCalled();
+  });
+
   it("loads Yield Basis markets onchain and merges them with direct Curve collateral", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
       chains: {
