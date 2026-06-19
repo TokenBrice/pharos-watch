@@ -13,6 +13,7 @@ function makeAction(overrides: Partial<StatusPageAction> = {}): StatusPageAction
     destructive: false,
     method: "POST",
     acceptsStablecoinFilter: true,
+    group: "recovery",
     ...overrides,
   };
 }
