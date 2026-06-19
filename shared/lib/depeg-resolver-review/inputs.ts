@@ -1,3 +1,4 @@
+import type { DepegDirection } from "../../types/market";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "../../types/depeg-resolver";
 import type {
   DdrrActualEvent,
@@ -43,7 +44,7 @@ export interface DdrrV2CoverageInput {
   name: string;
   pegCurrency: string;
   governance: string;
-  direction: "above" | "below";
+  direction: DepegDirection;
   startedAt: number;
   eligibleAt: number;
   sourceEventState: DdrrSourceEventState;
@@ -69,7 +70,7 @@ export interface DdrrV2InvalidatedPredictionInput {
   name: string;
   pegCurrency: string;
   governance: string;
-  direction: "above" | "below";
+  direction: DepegDirection;
   startedAt: number;
   eligibleAt: number;
   sourceEventState?: DdrrSourceEventState;

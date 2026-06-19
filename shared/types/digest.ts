@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { DepegDirection } from "./market";
 
 export type DigestEditorialCandidateKind =
   | "depeg"
@@ -109,7 +110,7 @@ export interface DigestInputData {
     stablecoinId?: string;
     symbol: string;
     bps: number;
-    direction?: "above" | "below";
+    direction?: DepegDirection;
     mcapUsd: number;
     startedAt?: number;
     ageHours?: number;
@@ -158,7 +159,7 @@ export interface DigestInputData {
     stablecoinId?: string;
     symbol: string;
     peakBps: number;
-    direction?: "above" | "below";
+    direction?: DepegDirection;
     durationHours: number;
     mcapUsd: number;
     startedAt?: number;

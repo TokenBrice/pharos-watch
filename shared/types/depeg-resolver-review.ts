@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DepegDirectionSchema } from "./market";
 import {
   DDR_ASSESSMENT_CHECKPOINT_VALUES,
   DDR_CELL_STATE_VALUES,
@@ -140,7 +141,7 @@ export const DdrrAssessmentSchema = z.object({
   name: z.string(),
   pegCurrency: z.string(),
   governance: z.string(),
-  direction: z.enum(["above", "below"]),
+  direction: DepegDirectionSchema,
   startedAt: z.number().int().nonnegative(),
   eligibleAt: z.number().int().nonnegative().optional(),
   lockedAt: z.number().int().nonnegative().optional(),
@@ -199,7 +200,7 @@ export const DdrrV2BaseRowSchema = z.object({
   name: z.string(),
   pegCurrency: z.string(),
   governance: z.string(),
-  direction: z.enum(["above", "below"]),
+  direction: DepegDirectionSchema,
   startedAt: z.number().int().nonnegative(),
   eligibleAt: z.number().int().nonnegative(),
   sourceEventState: z.enum(DDRR_SOURCE_EVENT_STATE_VALUES),

@@ -7,6 +7,7 @@
  * when support allows, and are dropped first under the "most-dependable" rule.
  */
 
+import type { DepegDirection } from "../../types/market";
 import type { DdrCoinStructural } from "./inputs";
 
 export type DdrDepthBucket = "minor" | "moderate" | "severe" | "catastrophic";
@@ -17,14 +18,14 @@ export type DdrCurrencyClass = "USD" | "non-USD";
 export const STRATUM_ANY = "__any__";
 
 export interface DdrStratumKey {
-  direction: "above" | "below";
+  direction: DepegDirection;
   depth: DdrDepthBucket;
   structural: DdrStructuralClass;
   currency: DdrCurrencyClass;
 }
 
 export interface DdrStratumCandidate {
-  direction: "above" | "below";
+  direction: DepegDirection;
   depths: readonly DdrDepthBucket[];
   structural: DdrStructuralClass | typeof STRATUM_ANY;
   currency: DdrCurrencyClass | typeof STRATUM_ANY;

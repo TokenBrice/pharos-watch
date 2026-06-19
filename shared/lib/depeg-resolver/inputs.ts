@@ -55,13 +55,15 @@ export interface DdrLiveContext {
   redemptionRouteFamily?: string | null;
 }
 
+import type { DepegDirection } from "../../types/market";
+
 /** The active confirmed depeg event being resolved. */
 export interface DdrActiveEventInput {
   id: number;
   stablecoinId: string;
   symbol: string;
   pegType: string;
-  direction: "above" | "below";
+  direction: DepegDirection;
   peakDeviationBps: number;
   startedAt: number;
   pegReference: number;
@@ -71,7 +73,7 @@ export interface DdrActiveEventInput {
 /** A raw historical depeg event row, pre-grouping (from depeg_events). */
 export interface DdrHistoricalEvent {
   stablecoinId: string;
-  direction: "above" | "below";
+  direction: DepegDirection;
   peakDeviationBps: number;
   startedAt: number;
   endedAt: number | null;

@@ -10,6 +10,7 @@
  */
 
 import { median } from "../stats";
+import type { DepegDirection } from "../../types/market";
 import type { DdrHistoricalEvent } from "./inputs";
 import {
   currencyClass,
@@ -30,7 +31,7 @@ export interface DdrIncidentFragment {
 
 export interface DdrIncident {
   stablecoinId: string;
-  direction: "above" | "below";
+  direction: DepegDirection;
   /** worst (largest magnitude) peak deviation across merged fragments */
   peakDeviationBps: number;
   depth: DdrDepthBucket;
@@ -64,7 +65,7 @@ export function groupIncidents(
 
   const incidents: DdrIncident[] = [];
   for (const [key, list] of byKey) {
-    const [stablecoinId, direction] = key.split("|") as [string, "above" | "below"];
+    const [stablecoinId, direction] = key.split("|") as [string, DepegDirection];
     list.sort((a, b) => a.startedAt - b.startedAt);
 
     let cur: {

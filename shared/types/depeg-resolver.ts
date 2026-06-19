@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
+import { DepegDirectionSchema } from "./market";
 
 /**
  * Depeg Duration Resolver (DDR) shared contract.
@@ -142,7 +143,7 @@ export const DdrRowSchema = z.object({
   eventId: z.number(),
   startedAt: z.number(),
   ageSec: z.number().int().nonnegative(),
-  direction: z.enum(["above", "below"]),
+  direction: DepegDirectionSchema,
   peakDeviationBps: z.number(),
   currentDeviationBps: z.number().nullable().optional().default(null),
   resolution: DdrResolutionSchema,
@@ -314,7 +315,7 @@ export const DdrV2BaseRowSchema = z.object({
   eventId: z.number().int().positive(),
   incidentKey: z.string(),
   startedAt: z.number().int().nonnegative(),
-  direction: z.enum(["above", "below"]),
+  direction: DepegDirectionSchema,
 });
 export type DdrV2BaseRow = z.infer<typeof DdrV2BaseRowSchema>;
 

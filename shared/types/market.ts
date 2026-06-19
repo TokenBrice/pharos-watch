@@ -292,12 +292,15 @@ export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema
 
 export const DEX_GLOBAL_KEY = "__global__";
 
+export type DepegDirection = "above" | "below";
+export const DepegDirectionSchema = z.enum(["above", "below"]);
+
 export interface DepegEvent {
   id: number;
   stablecoinId: string;
   symbol: string;
   pegType: string;
-  direction: "above" | "below";
+  direction: DepegDirection;
   peakDeviationBps: number;
   startedAt: number;
   endedAt: number | null;
@@ -330,7 +333,7 @@ export interface DepegEventSearchEntry {
   stablecoinId: DepegEvent["stablecoinId"];
   symbol: DepegEvent["symbol"];
   pegType: DepegEvent["pegType"];
-  direction: DepegEvent["direction"];
+  direction: DepegDirection;
   peakDeviationBps: DepegEvent["peakDeviationBps"];
   startedAt: DepegEvent["startedAt"];
 }
@@ -340,7 +343,7 @@ const DepegEventSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
   pegType: z.string(),
-  direction: z.enum(["above", "below"]),
+  direction: DepegDirectionSchema,
   peakDeviationBps: z.number(),
   startedAt: z.number(),
   endedAt: z.number().nullable(),
@@ -375,7 +378,7 @@ const DepegEventSchema = z.object({
 export const DepegPendingIncidentSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
-  direction: z.enum(["above", "below"]),
+  direction: DepegDirectionSchema,
   firstSeenAt: z.number(),
   lastSeenAt: z.number(),
   firstSeenBps: z.number(),
