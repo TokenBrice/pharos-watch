@@ -607,7 +607,7 @@ describe("syncBlacklist", () => {
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness)
       .mockImplementationOnce(async () => {
-        vi.setSystemTime(new Date("2025-06-15T12:06:30Z"));
+        vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
         return completeEtherscanLogs();
       })
       .mockResolvedValue(completeEtherscanLogs());

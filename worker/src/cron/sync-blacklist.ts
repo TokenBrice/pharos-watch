@@ -36,7 +36,7 @@ import {
 import { toErrorMessage } from "../lib/error-utils";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
-const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
+const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
 const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
 
 type SyncBlacklistResult = {
