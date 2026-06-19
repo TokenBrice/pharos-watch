@@ -1,4 +1,5 @@
 import { batchExecute } from "../../lib/db";
+import { pruneOverflowPlanBacklogForChat } from "../../cron/dispatch-telegram-overflow";
 import { unixNow } from "./subscribers";
 
 /**
@@ -38,6 +39,7 @@ export async function unsubscribeAll(db: D1Database, chatId: string): Promise<vo
  * `telegram_processed_updates` so replay-ack idempotency survives a re-/start.
  */
 export async function forgetSubscriber(db: D1Database, chatId: string): Promise<void> {
+  const now = unixNow();
   await batchExecute(db, [
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
@@ -47,6 +49,7 @@ export async function forgetSubscriber(db: D1Database, chatId: string): Promise<
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
     ...prepareDeleteTelegramChatCacheStatements(db, chatId),
   ]);
+  await pruneOverflowPlanBacklogForChat(db, chatId, now);
 }
 
 const CHAT_CACHE_EXACT_KEY_BUILDERS = [
