@@ -294,6 +294,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     ? allParsedRows.filter((row) => deferredTxHashSet.has(row.tx_hash))
     : [];
   if (burnCounts.txContextShortfalls > 0) {
+    apiErrors++;
+    summary.errors++;
     summary.failedEventDefs.push(`tx-context:${burnCounts.txContextShortfalls}`);
     summary.bridgeClassificationDeferredRows = deferredRows.length;
   }
@@ -301,10 +303,14 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   bridgeBurns += burnCounts.bridgeBurns;
   reviewBurns += burnCounts.reviewBurns;
 
-  for (const row of allParsedRows) {
+  const persistableRows = deferredTxHashSet.size > 0
+    ? allParsedRows.filter((row) => !deferredTxHashSet.has(row.tx_hash))
+    : allParsedRows;
+
+  for (const row of persistableRows) {
     summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
   }
-  const persistResult = await persistMintBurnRows(db, allParsedRows, affectedHours);
+  const persistResult = await persistMintBurnRows(db, persistableRows, affectedHours);
   summary.rowsInserted += persistResult.inserted;
   summary.rowsIgnored += persistResult.ignored;
 
@@ -317,14 +323,21 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   const timestampCoverageFrontier = summary.earliestMissingTimestampBlock != null
     ? summary.earliestMissingTimestampBlock - 1
     : null;
+  const txContextCoverageFrontier = deferredRows.length > 0
+    ? Math.min(...deferredRows.map((row) => row.block_number)) - 1
+    : null;
   const partialCoverageFrontier = minOrNull(
-    [eventCoverageFrontier, timestampCoverageFrontier]
+    [eventCoverageFrontier, timestampCoverageFrontier, txContextCoverageFrontier]
       .filter((value): value is number => value != null),
   );
   summary.coverageFrontier = partialCoverageFrontier;
 
   let newLastBlock: number | null = null;
-  if (fullEventCoverage && summary.missingTimestampCount === 0) {
+  if (
+    fullEventCoverage &&
+    summary.missingTimestampCount === 0 &&
+    summary.txContextShortfalls === 0
+  ) {
     if (summary.maxBlockSeen > 0) {
       newLastBlock = summary.maxBlockSeen;
       summary.advanceReason = "full-success-events";
