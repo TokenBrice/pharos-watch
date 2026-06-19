@@ -1,4 +1,4 @@
-import { numberValue as finiteNumber } from "@shared/lib/type-guards";
+import { isRecord, numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { getCache, setCache } from "../lib/db-cache";
 import {
   TELEGRAM_ALERT_TTL_SEC,
@@ -26,10 +26,6 @@ const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
 const OVERFLOW_PLAN_CACHE_VERSION = 1;
 
 type OverflowPlannedSubscriberAlert = PlannedSubscriberAlert & { expiresAt?: number };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
 
 function isTelegramAlertType(value: unknown): value is PlannedSubscriberAlert["alertType"] {
   return value === "depeg" || value === "dews" || value === "safety" || value === "launch" || value === "reserve";

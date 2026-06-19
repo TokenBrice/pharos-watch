@@ -1,3 +1,4 @@
+import { isRecord } from "@shared/lib/type-guards";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
@@ -83,10 +84,6 @@ export function getNativePegQueryCurrencies(pegCurrency: string | null | undefin
 
 export function getPreferredNativePegQueryCurrency(pegCurrency: string | null | undefined): string | null {
   return getNativePegQueryCurrencies(pegCurrency)[0] ?? null;
-}
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export async function fetchCurrentNativePegQuotes(
@@ -175,7 +172,7 @@ export async function fetchCurrentNativePegQuotes(
           }
 
           const payload = await response.json();
-          if (!isObjectRecord(payload)) {
+          if (!isRecord(payload)) {
             options?.diagnostics?.push({
               ...diagnostic,
               ok: true,
@@ -192,7 +189,7 @@ export async function fetchCurrentNativePegQuotes(
           let emptyCount = 0;
           for (const request of pendingRequests) {
             const rawEntry = payload[request.geckoId];
-            if (!isObjectRecord(rawEntry)) {
+            if (!isRecord(rawEntry)) {
               emptyCount++;
               continue;
             }
