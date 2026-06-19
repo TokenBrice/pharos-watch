@@ -1,0 +1,333 @@
+{
+  "generatedBy": "scripts/maintenance/build-og-case-studies.ts",
+  "fonts": {
+    "newsreader": "9e25af908d11add17f0e32bb096f119aea11da11bcc5abd7d896e620aa61081c",
+    "geistMono": "a4022744c97e497a45bc1d05e68221104df6829f6cac74552e0fdb03a331c648"
+  },
+  "cards": [
+    {
+      "file": "og-learn-case-usdc-svb-2023.png",
+      "slug": "usdc-svb-2023",
+      "kicker": "Reserve banking shock",
+      "title": "USDC and the Silicon Valley Bank weekend",
+      "outcome": "survived",
+      "logo": {
+        "path": "public/logos/2-usdc.svg",
+        "sha256": "e578830a7c3a251e67be3326c2884c0496985664f267cebf02df703a8224e128"
+      },
+      "svgSha256": "e0e8d80d8d47cf1059dbec393e97ae86e2ff19ab0eabac090270f2bdb54e54a9"
+    },
+    {
+      "file": "og-learn-case-lusd-flight-to-safety-2023.png",
+      "slug": "lusd-flight-to-safety-2023",
+      "kicker": "Flight to safety",
+      "title": "LUSD: the peg that held during the SVB weekend",
+      "outcome": "survived",
+      "logo": {
+        "path": "public/logos/8-lusd.png",
+        "sha256": "d5bad1fbc7e95ab6cb5ac8d80bb5c549e2e6cb169d0c29ed2983feb1c59dbe7e"
+      },
+      "svgSha256": "8bc40a808fc63d82cb3c56a5b416caca9b3c0a6ee61b742c72e460358c635036"
+    },
+    {
+      "file": "og-learn-case-terra-ust-2022.png",
+      "slug": "terra-ust-2022",
+      "kicker": "Algorithmic collapse",
+      "title": "TerraUSD: the death spiral that erased $18 billion",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/ust.png",
+        "sha256": "96b8c904fffe3309fa11f727373dc6f76764dcb78dcb137b1b0c2d7338dea2f9"
+      },
+      "svgSha256": "30ee64ae6aecce95fad673641a8fce102a54532bd313dfaa9d4a317a1793d548"
+    },
+    {
+      "file": "og-learn-case-dai-black-thursday.png",
+      "slug": "dai-black-thursday",
+      "kicker": "CDP under stress",
+      "title": "Dai: Black Thursday and the PSM dependency",
+      "outcome": "survived",
+      "logo": {
+        "path": "public/logos/5-dai.png",
+        "sha256": "ed847eb4eeab353b1c2f79cf1f2c41471e8c0c8e1dd5783a60b47deded0eee53"
+      },
+      "svgSha256": "c848328dc101872f3ac2006b36c0957a7975605e16326606a11655265c634926"
+    },
+    {
+      "file": "og-learn-case-usde-oracle-2025.png",
+      "slug": "usde-oracle-2025",
+      "kicker": "Venue oracle dislocation",
+      "title": "USDe and the October 2025 Binance oracle print",
+      "outcome": "survived",
+      "logo": {
+        "path": "public/logos/146-usde.png",
+        "sha256": "ef9fc91aa5f0a99cb92736363798a1cbf7ef453b92ae8b06a45435ebfbbab086"
+      },
+      "svgSha256": "563549df2e620353ab000ac9e5cc7265e599348645d0e9248eba975ae2565189"
+    },
+    {
+      "file": "og-learn-case-buidl-tokenized-tbill-2025.png",
+      "slug": "buidl-tokenized-tbill-2025",
+      "kicker": "T-bill survivor",
+      "title": "BUIDL: the tokenized T-bill that held",
+      "outcome": "survived",
+      "logo": {
+        "path": "public/logos/173-buidl.png",
+        "sha256": "62559ed2c59032135d8c9f0ad0986ddac4ccf63525578588abb2a4f64a43806a"
+      },
+      "svgSha256": "5ce38f89255e9d10dba1c029e8224b7e0d92d507e16ff9036d008f6e6f80b5f9"
+    },
+    {
+      "file": "og-learn-case-usyc-nav-pricing-2025.png",
+      "slug": "usyc-nav-pricing-2025",
+      "kicker": "NAV pricing wound",
+      "title": "USYC: when a T-bill fund became DeFi collateral",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/237-usyc.png",
+        "sha256": "9e5b37b0d8a401f9202644ed2a8f728739e4d5c0b2211788c8227afc4037d78b"
+      },
+      "svgSha256": "52f3cf7226170d96b3d20bfcc87d1edf842c842a3f9f16d407c92de66d61f045"
+    },
+    {
+      "file": "og-learn-case-usd0pp-usual-2025.png",
+      "slug": "usd0pp-usual-2025",
+      "kicker": "Redemption-terms shock",
+      "title": "USD0++ depeg: when Usual changed the redemption floor",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/195-usd0.png",
+        "sha256": "ac516fa49a0e9735d5c526e92f86b9141a72834cbdcdb33286ca3b15812245b2"
+      },
+      "svgSha256": "61e88eed6c99ccdb187a1997c5e216297f84c7eb137e1b8ade592c23442a2841"
+    },
+    {
+      "file": "og-learn-case-crvusd-exploit-trilogy.png",
+      "slug": "crvusd-exploit-trilogy",
+      "kicker": "CDP resilience",
+      "title": "crvUSD's exploit trilogy: three shocks, no collapse",
+      "outcome": "survived",
+      "logo": {
+        "path": "public/logos/110-crvusd.jpg",
+        "sha256": "9cd4c66420316669c1c7c5a9ac8c8796bd265b971c5bbe3bba1d9c22be719644"
+      },
+      "svgSha256": "dcc2878bc7f2d10b69d1a8318a51da64260b95b30c29246bdca7d931c07da0cf"
+    },
+    {
+      "file": "og-learn-case-susd-sip420-2025.png",
+      "slug": "susd-sip420-2025",
+      "kicker": "Governance depeg",
+      "title": "sUSD and SIP-420: the depeg a governance vote chose",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/22-susd.png",
+        "sha256": "f90d5e697f91d33c0eaf81ce4f177e8783d0dfc9df6bd16f34127365f1e28844"
+      },
+      "svgSha256": "71263b32da6b93af177cfe40c91e61c54699ad04c88992acc3df70c8e774d208"
+    },
+    {
+      "file": "og-learn-case-iron-titan-2021.png",
+      "slug": "iron-titan-2021",
+      "kicker": "Algorithmic collapse",
+      "title": "IRON Finance & TITAN: the algorithmic prequel to Terra",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/iron.png",
+        "sha256": "281331f518ed4d0d650079350115fa2aefeb2712e3691a22d4d5f0f1af894d18"
+      },
+      "svgSha256": "1b6d893c628174b4ad6582c386cd3bcbfc885866a83423f2df059e8b7d90b8ce"
+    },
+    {
+      "file": "og-learn-case-usdn-neutrino-2022.png",
+      "slug": "usdn-neutrino-2022",
+      "kicker": "Algorithmic collapse",
+      "title": "Neutrino USD: the stablecoin collapse before Terra",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/usdn.png",
+        "sha256": "a5d71c26ead8199777ad4af3d7beae70ae8c12ff009b8cf78b144b1968b6d234"
+      },
+      "svgSha256": "b3b7070e5a86266873472bd6d9936cbb1b729d9c1fb7fdc9fd62f8e946f16789"
+    },
+    {
+      "file": "og-learn-case-fei-protocol.png",
+      "slug": "fei-protocol",
+      "kicker": "Algorithmic collapse",
+      "title": "Fei Protocol: the peg that broke at birth",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/fei.png",
+        "sha256": "b002c7ace2510cdcc1abd4343b8aae38a41787d1f5515be9da5a6aba23391222"
+      },
+      "svgSha256": "fede664c28317b4648291c86f984b6e8ef0b0f9e7f77837a4870704a80cdc1f1"
+    },
+    {
+      "file": "og-learn-case-usr-resolv-2026.png",
+      "slug": "usr-resolv-2026",
+      "kicker": "Operational-security failure",
+      "title": "Resolv USD: when one key minted eighty million",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/197-usr.png",
+        "sha256": "e063e4a33ce3a7b03886e3bbf7d31995d3144b38fd7a77613f6e8e53fa660ceb"
+      },
+      "svgSha256": "7ac7984e16111e157087648b904c7c83e51edb74aa0e09a369590fbcd660cd3d"
+    },
+    {
+      "file": "og-learn-case-stream-elixir-contagion-2025.png",
+      "slug": "stream-elixir-contagion-2025",
+      "kicker": "Composability cascade",
+      "title": "Stream Finance: loss broke three stablecoins",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/xusd.png",
+        "sha256": "52037be252d507459d9dd20c19ba1ba366183a176e822ef4a987f4aa43ef9902"
+      },
+      "svgSha256": "6404de9232cb9931b000c20e91cf5b17ca2f7ffc6ae36b2b8bce140e6d68eca9"
+    },
+    {
+      "file": "og-learn-case-usdf-falcon-2025.png",
+      "slug": "usdf-falcon-2025",
+      "kicker": "Opacity discount",
+      "title": "USDf and the opacity discount",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/246-usdf.png",
+        "sha256": "31e4db556c1278178a9d2a885e08c8ff973874293eced079254317bb4bc4bb3f"
+      },
+      "svgSha256": "52f1db9ccbf1d3c5c84ddc97c16414ba0ee7e2a572f0dd76703b3bfbfbc31ef7"
+    },
+    {
+      "file": "og-learn-case-fdusd-sun-fdt-2025.png",
+      "slug": "fdusd-sun-fdt-2025",
+      "kicker": "Reflexive bank run",
+      "title": "FDUSD and the insolvency tweet",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/119-fdusd.png",
+        "sha256": "74916c3bcc649903c3659f9acca5c582c901ba1a63b606f085fe5863c880fb9d"
+      },
+      "svgSha256": "0306d6d979d01afe68a487cf69db4c2a6b945d6446db3dafee56200a628d5731"
+    },
+    {
+      "file": "og-learn-case-busd-paxos-2023.png",
+      "slug": "busd-paxos-2023",
+      "kicker": "Regulatory shutdown",
+      "title": "BUSD: the regulator's off-switch",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/busd.png",
+        "sha256": "09846bd3e206d70932267005a072ce92e9a41340ee0d8a39aa5c275b1258c704"
+      },
+      "svgSha256": "f088004e6399e61da005fd7688bf4172cc46377f6201c09905e7a3cb311d3007"
+    },
+    {
+      "file": "og-learn-case-multichain-usdc-2023.png",
+      "slug": "multichain-usdc-2023",
+      "kicker": "Bridge failure",
+      "title": "Multichain USDC: the bridge died, not the dollar",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/usdc-multichain.png",
+        "sha256": "5a55b4177a3711276a6adcc01aaa527098d4f5bd0b8011dfbf387888bfbd251c"
+      },
+      "svgSha256": "0057ce12470f884e76d883af5d47e21c4739d6cd9aadcbd5780044f0832169f8"
+    },
+    {
+      "file": "og-learn-case-ftx-contagion-2022.png",
+      "slug": "ftx-contagion-2022",
+      "kicker": "Exchange-collapse contagion",
+      "title": "The FTX weekend: which pegs broke",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/husd.jpg",
+        "sha256": "bd2f35c699dc721efa36a904abfca66e242521fe9c22dc4d8bb9773281ecbfd2"
+      },
+      "svgSha256": "f75afa18e0aa4f5076b147100a52f6fce03fad95c5dad67245861ec892050461"
+    },
+    {
+      "file": "og-learn-case-usdr-real-usd-2023.png",
+      "slug": "usdr-real-usd-2023",
+      "kicker": "Illiquid RWA run",
+      "title": "USDR: tokenized houses cannot sell at 3 AM",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/usdr.png",
+        "sha256": "22977df9807ad913814a595af158dc8cf41eea287d9c7a9f88cb483018ab06ea"
+      },
+      "svgSha256": "de850a891ccfeedd0f40e96b66ef3c7f587d58a14a8c1ba3088ded3714a7c649"
+    },
+    {
+      "file": "og-learn-case-eurt-mica-exit-2024.png",
+      "slug": "eurt-mica-exit-2024",
+      "kicker": "Regulatory exit",
+      "title": "Euro Tether: the stablecoin that died by jurisdiction",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/cemetery/eurt.png",
+        "sha256": "c4cf122cb0cfee72ae93900dd99c263bd9479fe55f0e72dc1cbc7c38e6fee123"
+      },
+      "svgSha256": "30c0a70868d6534e7865278aff7d49445777cb463d25489f4ef4c847646c21a3"
+    },
+    {
+      "file": "og-learn-case-usdd-tron-reserve-2024.png",
+      "slug": "usdd-tron-reserve-2024",
+      "kicker": "Reflexive collateral",
+      "title": "USDD: when the issuer pulled the Bitcoin",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/14-usdd.jpg",
+        "sha256": "1d066f5470af5dde3bb2fe7d6aa71d6a531b763bed3fc1c389f68b012a0d2004"
+      },
+      "svgSha256": "6c3b8c816622bbe46daa43f759f50dcc9187ae5b884cb2e990e984619277656a"
+    },
+    {
+      "file": "og-learn-case-usdx-kava-2022.png",
+      "slug": "usdx-kava-2022",
+      "kicker": "Collateral contagion",
+      "title": "Kava USDX: one toxic collateral leg",
+      "outcome": "died",
+      "logo": {
+        "path": "public/logos/usdx-kava.png",
+        "sha256": "7af99a7af31b17201b2f0cb4ff2f6ddd26ae94578ec8f2815ab44e38cc0fb7ef"
+      },
+      "svgSha256": "3d2e32de343319b8bc01948c31b4dd60f68cad5ed808fb9e5a5e29f3a713dac4"
+    },
+    {
+      "file": "og-learn-case-mai-qidao-bridge-2023.png",
+      "slug": "mai-qidao-bridge-2023",
+      "kicker": "Bridge bad debt",
+      "title": "MAI: the bridge that broke the peg",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/mai-qidao.png",
+        "sha256": "a2fd38e22db749e6159d4f9f4a626178254ef15224818f5b5eb55eddc85cbdfe"
+      },
+      "svgSha256": "2564d7219ad0bf99a7e2985c8ea0e2120b423652fed3fc3c4d24447625128718"
+    },
+    {
+      "file": "og-learn-case-pmusd-precious-metals.png",
+      "slug": "pmusd-precious-metals",
+      "kicker": "Chronic fragility",
+      "title": "pmUSD and the in-situ gold collateral chain",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/332-pmusd.png",
+        "sha256": "b9db3fc724a406740aeb364ac6d22affae56ada259c82b033cedf5296616013c"
+      },
+      "svgSha256": "5515f8d8b3e771d65da174cebfd84111f4aa39e31ce32715223e675b8fd4528e"
+    },
+    {
+      "file": "og-learn-case-apxusd-dat-collateral.png",
+      "slug": "apxusd-dat-collateral",
+      "kicker": "Correlated collateral shock",
+      "title": "apxUSD and the Bitcoin-treasury collateral chain",
+      "outcome": "wounded",
+      "logo": {
+        "path": "public/logos/354-apxusd.webp",
+        "sha256": "40d0659b1bf7262e1eca98e086134b23d5f594e797ccbf6532b139299958880f"
+      },
+      "svgSha256": "39e5cd893c2d0facb4cb7dc602dd6a135436bb6e39934195e3000ed4200f41f2"
+    }
+  ]
+}

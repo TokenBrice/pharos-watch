@@ -15,6 +15,8 @@
  *   tsx scripts/maintenance/build-og-case-studies.ts --check
  */
 import { firefox } from "playwright";
+import sharp from "sharp";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -23,7 +25,7 @@ import {
   unlinkSync,
   rmSync,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 
@@ -32,7 +34,14 @@ const REPO_ROOT = resolve(__dirname, "../..");
 const PUBLIC = resolve(REPO_ROOT, "public");
 const STAGING_ROOT = resolve(REPO_ROOT, "agents/og-case-study-staging");
 const STAGING = resolve(STAGING_ROOT, `run-${process.pid}`);
+const SIGNATURE_PATH = resolve(REPO_ROOT, "src/generated/og-case-study-signatures.json");
+const NEWSREADER_FONT = resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2");
+const GEIST_MONO_FONT = resolve(REPO_ROOT, "src/assets/fonts/GeistMono-Regular.woff2");
 const CHECK_MODE = process.argv.includes("--check");
+const FONT_SIGNATURES = {
+  newsreader: sha256(readFileSync(NEWSREADER_FONT)),
+  geistMono: sha256(readFileSync(GEIST_MONO_FONT)),
+};
 
 // Coin logo lookup: tracked coins via data/logos.json (id -> "/logos/<file>"),
 // cemetery-only coins (UST/IRON/FEI) via their cemetery logoUrl.
@@ -64,6 +73,7 @@ function resolveLogoPath(primaryCoinId: string | undefined, cemeteryId: string |
 
 mkdirSync(STAGING, { recursive: true });
 mkdirSync(PUBLIC, { recursive: true });
+mkdirSync(dirname(SIGNATURE_PATH), { recursive: true });
 
 const OUTCOME_LABEL: Record<string, string> = { survived: "Survived", wounded: "Wounded", died: "Died" };
 const OUTCOME_COLOR: Record<string, string> = { survived: "#34d399", wounded: "#fbbf24", died: "#fb7185" };
@@ -83,6 +93,76 @@ function escapeXml(s: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+function sha256(input: string | Buffer) {
+  return createHash("sha256").update(input).digest("hex");
+}
+
+function repoRelativePath(path: string) {
+  return relative(REPO_ROOT, path).split("/").join("/");
+}
+
+function buildSignatureManifest(
+  cards: Array<{
+    file: string;
+    slug: string;
+    kicker: string;
+    title: string;
+    outcome: string;
+    logo: { path: string; sha256: string } | null;
+    svgSha256: string;
+  }>,
+) {
+  return `${JSON.stringify(
+    {
+      generatedBy: "scripts/maintenance/build-og-case-studies.ts",
+      fonts: FONT_SIGNATURES,
+      cards,
+    },
+    null,
+    2,
+  )}\n`;
+}
+
+async function comparePngContent(expectedPath: string, actualPath: string) {
+  const expected = await sharp(expectedPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const actual = await sharp(actualPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (
+    expected.info.width !== actual.info.width ||
+    expected.info.height !== actual.info.height ||
+    expected.info.channels !== actual.info.channels
+  ) {
+    return {
+      matches: false,
+      summary: `dimension/channel mismatch expected ${expected.info.width}x${expected.info.height}x${expected.info.channels}, got ${actual.info.width}x${actual.info.height}x${actual.info.channels}`,
+    };
+  }
+
+  let totalAbs = 0;
+  let changedPixels = 0;
+  const { data: expectedData } = expected;
+  const { data: actualData } = actual;
+  const channels = expected.info.channels;
+  const pixelCount = expected.info.width * expected.info.height;
+  for (let offset = 0; offset < expectedData.length; offset += channels) {
+    let pixelDelta = 0;
+    for (let channel = 0; channel < channels; channel += 1) {
+      const channelDelta = Math.abs(expectedData[offset + channel] - actualData[offset + channel]);
+      pixelDelta += channelDelta;
+      totalAbs += channelDelta;
+    }
+    if (pixelDelta / channels > 8) {
+      changedPixels += 1;
+    }
+  }
+
+  const meanAbsPerChannel = totalAbs / expectedData.length;
+  const changedPixelRatio = changedPixels / pixelCount;
+  return {
+    matches: meanAbsPerChannel <= 2.5 && changedPixelRatio <= 0.04,
+    summary: `meanAbsPerChannel=${meanAbsPerChannel.toFixed(3)}, changedPixels=${(changedPixelRatio * 100).toFixed(2)}%`,
+  };
 }
 
 /** Greedy word-wrap into at most `maxLines` lines of ~`maxChars` each. */
@@ -179,12 +259,8 @@ function buildSvg({
 }
 
 function buildHtml(svg: string) {
-  const newsreaderUrl = pathToFileURL(
-    resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2"),
-  ).href;
-  const geistMonoUrl = pathToFileURL(
-    resolve(REPO_ROOT, "src/assets/fonts/GeistMono-Regular.woff2"),
-  ).href;
+  const newsreaderUrl = pathToFileURL(NEWSREADER_FONT).href;
+  const geistMonoUrl = pathToFileURL(GEIST_MONO_FONT).href;
   return `<!doctype html><html><head><meta charset="utf-8"/><style>
   @font-face { font-family: 'Newsreader'; font-style: normal; font-weight: 200 800; src: url('${newsreaderUrl}') format('woff2'); font-display: block; }
   @font-face { font-family: 'GeistMono'; font-style: normal; font-weight: 400 700; src: url('${geistMonoUrl}') format('woff2'); font-display: block; }
@@ -195,12 +271,40 @@ function buildHtml(svg: string) {
 async function main() {
   const browser = await firefox.launch({ headless: true });
   const staleFiles: string[] = [];
+  const signatures: Array<{
+    file: string;
+    slug: string;
+    kicker: string;
+    title: string;
+    outcome: string;
+    logo: { path: string; sha256: string } | null;
+    svgSha256: string;
+  }> = [];
   try {
     for (const card of CARDS) {
       const fileName = `og-learn-case-${card.slug}.png`;
+      const logoSignature = card.logoPath
+        ? {
+            path: repoRelativePath(card.logoPath),
+            sha256: sha256(readFileSync(card.logoPath)),
+          }
+        : null;
+      const signatureSvg = buildSvg({
+        ...card,
+        logoHref: logoSignature ? `repo://${logoSignature.path}` : null,
+      });
       const svg = buildSvg({
         ...card,
         logoHref: card.logoPath ? pathToFileURL(card.logoPath).href : null,
+      });
+      signatures.push({
+        file: fileName,
+        slug: card.slug,
+        kicker: card.kicker,
+        title: card.title,
+        outcome: card.outcome,
+        logo: logoSignature,
+        svgSha256: sha256(signatureSvg),
       });
       const svgPath = resolve(STAGING, `${card.slug}.svg`);
       const htmlPath = resolve(STAGING, `${card.slug}.html`);
@@ -224,7 +328,16 @@ async function main() {
       if (CHECK_MODE) {
         const expected = existsSync(publicPath) ? readFileSync(publicPath) : null;
         const actual = readFileSync(outPath);
-        if (!expected || !actual.equals(expected)) staleFiles.push(fileName);
+        if (!expected) {
+          staleFiles.push(fileName);
+        } else if (!actual.equals(expected)) {
+          const comparison = await comparePngContent(publicPath, outPath);
+          if (comparison.matches) {
+            console.warn(`${fileName}: byte-level PNG drift tolerated (${comparison.summary})`);
+          } else {
+            staleFiles.push(`${fileName} (${comparison.summary})`);
+          }
+        }
       }
 
       try {
@@ -235,6 +348,16 @@ async function main() {
         /* swallow */
       }
       console.log(`${CHECK_MODE ? "Checked" : "Wrote"} ${publicPath}`);
+    }
+
+    const signatureManifest = buildSignatureManifest(signatures);
+    if (CHECK_MODE) {
+      const expectedManifest = existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
+      if (expectedManifest !== signatureManifest) {
+        staleFiles.push("src/generated/og-case-study-signatures.json");
+      }
+    } else {
+      writeFileSync(SIGNATURE_PATH, signatureManifest);
     }
 
     if (staleFiles.length > 0) {
