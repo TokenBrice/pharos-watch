@@ -45,6 +45,15 @@ import {
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
 
+/** Base Tailwind classes shared by every badge pill in this card. Color and
+ *  interactive modifiers are appended at each call site as static literals. */
+const BADGE_PILL_BASE = "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold";
+
+/** Plain span badge pill — wraps BADGE_PILL_BASE + a color cls. */
+function BadgePill({ cls, children }: { cls: string; children: ReactNode }) {
+  return <span className={`${BADGE_PILL_BASE} ${cls}`}>{children}</span>;
+}
+
 function ClassificationBadgeLink({
   href,
   cls,
@@ -63,7 +72,7 @@ function ClassificationBadgeLink({
       href={href}
       title={title}
       aria-label={ariaLabel}
-      className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${cls}`}
+      className={`pharos-focus-ring ${BADGE_PILL_BASE} transition-colors hover:brightness-110 ${cls}`}
     >
       {children}
     </Link>
@@ -78,7 +87,7 @@ function AttestorTierBadge({
   if (!proofOfReserves.attestorTier) return null;
 
   const tierStyle = POR_TIER_STYLES[proofOfReserves.attestorTier];
-  const pillClass = `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${tierStyle.cls}`;
+  const pillClass = `${BADGE_PILL_BASE} ${tierStyle.cls}`;
   const pillText = `${tierStyle.label}${proofOfReserves.provider ? ` · ${proofOfReserves.provider}` : ""}`;
   const details: Array<{ label: string; value: string }> = [];
 
@@ -252,11 +261,7 @@ export function KeyInfoCard({
                   {peg.label}
                 </ClassificationBadgeLink>
               ) : (
-                <span
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
-                >
-                  {peg.label}
-                </span>
+                <BadgePill cls={peg.cls}>{peg.label}</BadgePill>
               ))}
             {infrastructureSummaries.map(({ value, label, href }) => (
               <Link
@@ -273,30 +278,24 @@ export function KeyInfoCard({
               </Link>
             ))}
             {meta.flags.yieldBearing && (
-              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+              <BadgePill cls="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
                 Yield-Bearing
-              </span>
+              </BadgePill>
             )}
             {meta.flags.rwa && (
-              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">
-                RWA
-              </span>
+              <BadgePill cls="bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">RWA</BadgePill>
             )}
             {!isDecentralized &&
               (meta.proofOfReserves ? (
                 meta.proofOfReserves.attestorTier ? (
                   <AttestorTierBadge proofOfReserves={meta.proofOfReserves} />
                 ) : (
-                  <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
-                  >
+                  <BadgePill cls={POR_BADGE_STYLES[meta.proofOfReserves.type].cls}>
                     {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-                  </span>
+                  </BadgePill>
                 )
               ) : (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-                  No PoR
-                </span>
+                <BadgePill cls="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">No PoR</BadgePill>
               ))}
           </div>
           {hasLinks && (
@@ -433,14 +432,14 @@ export function KeyInfoCard({
                 <div className="flex flex-wrap items-center gap-2">
                   {meta.jurisdiction && <span className="text-sm font-medium">{meta.jurisdiction.country}</span>}
                   {meta.jurisdiction?.regulator && (
-                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
+                    <BadgePill cls="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
                       {meta.jurisdiction.regulator}
-                    </span>
+                    </BadgePill>
                   )}
                   {meta.jurisdiction?.license && (
-                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20">
+                    <BadgePill cls="bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20">
                       {meta.jurisdiction.license}
-                    </span>
+                    </BadgePill>
                   )}
                   {meta.mica && micaStatus && (
                     <ClassificationBadgeLink
