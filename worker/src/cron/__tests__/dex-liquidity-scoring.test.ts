@@ -619,8 +619,8 @@ describe("dex-liquidity scoring", () => {
       -99,
       1.01,
       JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 750_000 },
-        { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 250_000 },
+        { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 750_000, sourceFamily: "dl" },
+        { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 250_000, sourceFamily: "direct_api" },
       ]),
       1_700_000_001,
     ]);
@@ -704,7 +704,7 @@ describe("dex-liquidity scoring", () => {
       280_000,
       0,
       1,
-      JSON.stringify([{ protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000 }]),
+      JSON.stringify([{ protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000, sourceFamily: "dl" }]),
       1_700_000_001,
     ]);
   });
@@ -763,8 +763,8 @@ describe("dex-liquidity scoring", () => {
       0,
       0.3,
       JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000 },
-        { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000 },
+        { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000, sourceFamily: "dl" },
+        { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000, sourceFamily: "direct_api" },
       ]),
       1_700_000_001,
     ]);
@@ -915,8 +915,8 @@ describe("dex-liquidity scoring", () => {
       186,
       0.1129,
       JSON.stringify([
-        { protocol: "uniswap", chain: "Ethereum", price: 0.115, tvl: 627_528 },
-        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711 },
+        { protocol: "uniswap", chain: "Ethereum", price: 0.115, tvl: 627_528, sourceFamily: "gecko_terminal" },
+        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711, sourceFamily: "dl" },
       ]),
       1_700_000_005,
     ]);
@@ -969,7 +969,7 @@ describe("dex-liquidity scoring", () => {
       204,
       0.1129,
       JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711 },
+        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711, sourceFamily: "dl" },
       ]),
       1_700_000_006,
     ]);
