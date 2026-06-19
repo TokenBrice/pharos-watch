@@ -19,7 +19,7 @@ import type {
   SelectorLowerRanked,
   SelectorProfile,
 } from "./types";
-import { selectorComponentProseLabel } from "./selector-labels";
+import { selectorComponentProseLabel, selectorExclusionReasonLabel } from "./selector-labels";
 
 export interface WhatToWatchTemplate {
   /** Free-form prose ≤80 chars after substitution. */
@@ -299,7 +299,7 @@ export function labelForSelectorReason(reasonKey: string): string {
     const component = reasonKey.slice("weak-".length);
     return selectorComponentProseLabel(component) ?? "a profile-emphasized metric";
   }
-  return LOWER_REASON_LABELS[reasonKey] ?? "a profile-specific gate";
+  return LOWER_REASON_LABELS[reasonKey] ?? selectorExclusionReasonLabel(reasonKey) ?? "a profile-specific gate";
 }
 
 export function getLowerRankedText(
