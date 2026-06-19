@@ -72,7 +72,7 @@ The Mint Authority Score becomes a Safety Score input. The Decentralization dime
 
 - `sgho-aave` now uses a dedicated live reserve adapter that reads `previewRedeem(totalSupply)` from the legacy sGHO/stkGHO-compatible contract
 - Reservoir reserve classification now maps AUSD and Steakhouse Prime USDC strategy rows from the live balance-sheet API, removing unknown-exposure degradation for clean srUSD/wsrUSD snapshots
-- USD.AI reserve freshness now uses the latest scoped proof-row timestamp while preserving oldest/latest spread metadata, and mRe7YIELD permits a weekly Chainlink NAV update cadence
+- USD.AI reserve freshness now uses the oldest scoped proof-row timestamp as the freshness bound while preserving oldest/latest spread metadata, and mRe7YIELD permits a weekly Chainlink NAV update cadence
 
 ## v7.22 — Additional independent NAV and wrapper reserve feeds (2026-05-12)
 

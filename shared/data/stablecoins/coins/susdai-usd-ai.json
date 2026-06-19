@@ -118,7 +118,6 @@
     "semantics": "collateral-mix",
     "scoring": {
       "allowedDegradedWarningCodes": [
-        "source-timestamp-spread",
         "usdai-share-coverage-gap"
       ]
     },

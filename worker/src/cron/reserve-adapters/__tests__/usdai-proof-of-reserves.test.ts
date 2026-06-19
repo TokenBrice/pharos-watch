@@ -184,13 +184,13 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("extracts the latest proof-page collateral update timestamp", () => {
+  it("extracts the oldest proof-page collateral update timestamp", () => {
     const timestamp = extractUsdAiProofPageTimestamp(
       '\\"dealsDetailsCache\\":{\\"proofs\\":[{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"},'
       + '{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}]}',
     );
 
-    expect(timestamp).toBe(Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000));
+    expect(timestamp).toBe(Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000));
   });
 
   it("summarizes proof-page collateral update timestamps for oldest-component freshness", () => {
@@ -207,7 +207,7 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("picks the latest timeLastUpdated only from the proof-row payload", () => {
+  it("picks the oldest timeLastUpdated only from the proof-row payload", () => {
     const html =
       '\\"activity\\":[{\\"timeLastUpdated\\":\\"2099-01-01T00:00:00.000Z\\"}],'
       + '\\"dealsDetailsCache\\":{\\"tokens\\":['
@@ -216,7 +216,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       + ']}';
 
     expect(extractUsdAiProofPageTimestamp(html)).toBe(
-      Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000),
+      Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000),
     );
   });
 
@@ -235,12 +235,12 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("can stamp the latest proof-row timestamp while preserving oldest-component metadata", () => {
+  it("stamps the oldest proof-row timestamp while preserving latest-component metadata", () => {
     const oldest = Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000);
     const latest = Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000);
     const result = adaptUsdAiProofOfReserves(
       parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD),
-      latest,
+      oldest,
       {
         sourceTimestamp: oldest,
         latestSourceTimestamp: latest,
@@ -251,7 +251,7 @@ describe("usdai-proof-of-reserves adapter", () => {
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: latest,
+      sourceTimestamp: oldest,
       oldestSourceTimestamp: oldest,
       latestSourceTimestamp: latest,
       sourceTimestampSpreadSec: latest - oldest,
@@ -394,7 +394,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       coinId: "pyusd-paypal",
     });
     expect(result.metadata?.freshnessMode).toBe("verified");
-    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000));
+    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000));
     expect(result.metadata?.oldestSourceTimestamp).toBe(Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000));
   });
 });

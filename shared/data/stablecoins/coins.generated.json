@@ -56284,7 +56284,6 @@
       },
       "scoring": {
         "allowedDegradedWarningCodes": [
-          "source-timestamp-spread",
           "usdai-share-coverage-gap"
         ]
       },
