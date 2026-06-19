@@ -134,6 +134,32 @@ describe("applyFilters", () => {
     expect(result.map((r) => r.id).sort()).toEqual(["eurs-stasis", "newcoin"]);
   });
 
+  it("includes rows exactly on DEWS range boundaries", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMin: 40, dewsMax: 100 };
+    const result = applyFilters([
+      makeRow({ id: "below-min", dewsScore: 39 }),
+      makeRow({ id: "at-min", dewsScore: 40 }),
+      makeRow({ id: "inside", dewsScore: 75 }),
+      makeRow({ id: "at-default-max", dewsScore: 100 }),
+      makeRow({ id: "unrated", dewsScore: null }),
+    ], filters);
+
+    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-default-max"]);
+  });
+
+  it("includes rows exactly on supply range boundaries", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, supplyMin: 100, supplyMax: 200 };
+    const result = applyFilters([
+      makeRow({ id: "below-min", supplyUsd: 99 }),
+      makeRow({ id: "at-min", supplyUsd: 100 }),
+      makeRow({ id: "inside", supplyUsd: 150 }),
+      makeRow({ id: "at-max", supplyUsd: 200 }),
+      makeRow({ id: "above-max", supplyUsd: 201 }),
+    ], filters);
+
+    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-max"]);
+  });
+
   it("filters by mechanism (multi-select)", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] };
     const result = applyFilters(rows, filters);
