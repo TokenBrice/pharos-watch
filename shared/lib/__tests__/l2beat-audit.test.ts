@@ -57,12 +57,10 @@ describe("L2BEAT audit helpers", () => {
     });
     expect(audit.reviewRows.find((row) => row.coinId === "base-native")).toMatchObject({
       suggestedChainTier: "stage1-l2",
-      suggestedDeploymentModel: null,
       reasons: ["chain-tier-stage1-candidate"],
     });
     expect(audit.reviewRows.find((row) => row.coinId === "multi-route")).toMatchObject({
       reasons: ["deployment-model-multichain-review"],
-      suggestedDeploymentModel: null,
     });
     expect(audit.reviewRows.find((row) => row.coinId === "l3-token")?.reasons).toContain("layer3-host-chain-review");
   });

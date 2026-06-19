@@ -1,4 +1,4 @@
-import type { ChainTier, DeploymentModel } from "../../types";
+import type { ChainTier } from "../../types";
 
 export const L2BEAT_CHAIN_RISK_SNAPSHOT_META = {
   source: "https://l2beat.com/api/scaling/summary",
@@ -765,7 +765,6 @@ export interface L2BeatSafetyScoreAudit {
   hostChain: string;
   chainEnvironmentScore: number;
   suggestedChainTier: ChainTier | null;
-  suggestedDeploymentModel: DeploymentModel | null;
   notes: string[];
 }
 
@@ -842,7 +841,6 @@ export function getL2BeatSafetyScoreAudit(chainId: string): L2BeatSafetyScoreAud
     hostChain: snapshot.hostChain,
     chainEnvironmentScore,
     suggestedChainTier,
-    suggestedDeploymentModel: null,
     notes,
   };
 }

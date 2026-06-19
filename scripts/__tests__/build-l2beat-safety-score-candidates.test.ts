@@ -58,7 +58,6 @@ describe("build-l2beat-safety-score-candidates", () => {
         hostChainId: "ethereum",
         chainEnvironmentScore: 82,
         suggestedChainTier: "stage1-l2",
-        suggestedDeploymentModel: null,
         reasons: ["chain-tier-stage1-candidate"],
         notes: ["deploymentModel remains an asset-level manual review."],
       }],

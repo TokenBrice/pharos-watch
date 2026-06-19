@@ -183,7 +183,6 @@ describe("computeChainEnvironmentAssessment", () => {
     const scrollAudit = getL2BeatSafetyScoreAudit("scroll");
 
     expect(baseAudit?.suggestedChainTier).toBe("stage1-l2");
-    expect(baseAudit?.suggestedDeploymentModel).toBeNull();
     expect(scrollAudit?.suggestedChainTier).toBeNull();
     expect(scrollAudit?.notes.join(" ")).toContain("deploymentModel remains an asset-level manual review");
   });

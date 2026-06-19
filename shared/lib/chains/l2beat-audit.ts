@@ -117,7 +117,6 @@ export interface L2BeatStablecoinReviewRow {
   hostChainId: string | null;
   chainEnvironmentScore: number;
   suggestedChainTier: ChainTier | null;
-  suggestedDeploymentModel: DeploymentModel | null;
   reasons: L2BeatStablecoinReviewReason[];
   notes: string[];
 }
@@ -453,7 +452,6 @@ export function buildL2BeatStablecoinSafetyAudit(options: {
         hostChainId: context.hostChainId,
         chainEnvironmentScore: audit.chainEnvironmentScore,
         suggestedChainTier: audit.suggestedChainTier,
-        suggestedDeploymentModel: audit.suggestedDeploymentModel,
         reasons,
         notes: [...audit.notes, ...weakestRiskNotes(context.projectId)],
       });
