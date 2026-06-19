@@ -143,8 +143,12 @@ async function fetchHistoricalPegFxPrices(
 // Protocol TVL from DefiLlama can diverge from token market cap (e.g. XAUT TVL includes
 // multi-chain reserves that far exceed the token's market cap).
 
-function firstEvmContract(contracts?: ContractDeployment[]): ContractDeployment | null {
-  return contracts?.find((c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron") ?? null;
+function firstConfiguredEvmContract(
+  contracts: ContractDeployment[] | undefined,
+  chainRpcs: Map<string, ChainRpcConfig> | undefined,
+): ContractDeployment | null {
+  if (!contracts || !chainRpcs) return null;
+  return contracts.find((contract) => chainRpcs.get(contract.chain)?.type === "evm") ?? null;
 }
 
 function selectSingleHistoricalEvmContract(contracts?: ContractDeployment[]): ContractDeployment | null {
@@ -276,7 +280,7 @@ async function fetchOnChainTotalSupply(
   logLabel: string,
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const contract = firstEvmContract(contracts);
+  const contract = firstConfiguredEvmContract(contracts, chainRpcs);
   if (!contract || !chainRpcs) return null;
 
   try {

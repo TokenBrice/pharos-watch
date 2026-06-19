@@ -490,6 +490,85 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts[1].args[2] as number).toBeCloseTo(1_001_100, -1);
   });
 
+  it("skips non-EVM first contracts when using on-chain totalSupply fallback", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const rpcFetches: string[] = [];
+
+    const ts = 1_775_692_800_000;
+    const onChainRawSupply = 2_000_000_000_000n; // 2,000,000 tokens at 6 decimals
+    const rawHex = `0x${onChainRawSupply.toString(16).padStart(64, "0")}`;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.includes("/coins/apollo-diversified-credit-securitize-fund/market_chart")) {
+        return new Response(
+          JSON.stringify({
+            market_caps: [[ts, 0]],
+            prices: [[ts, 1.01]],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/coins/apollo-diversified-credit-securitize-fund?")) {
+        return new Response(
+          JSON.stringify({ market_data: { circulating_supply: 0 } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("fake-avax-rpc")) {
+        rpcFetches.push(url);
+        return new Response(
+          JSON.stringify({ jsonrpc: "2.0", id: 1, result: rawHex }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const chainRpcs = new Map<string, ChainRpcConfig>([
+      [
+        "avalanche",
+        {
+          chainId: "avalanche",
+          chainName: "Avalanche",
+          type: "evm",
+          rpcUrl: "https://fake-avax-rpc.test",
+          explorerUrl: "https://snowtrace.io",
+        },
+      ],
+    ]);
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=acred-apollo-securitize&startDay=2026-04-09&endDay=2026-04-09"),
+      true,
+      makeApiRequest("/api/backfill-supply-history?stablecoin=acred-apollo-securitize&startDay=2026-04-09&endDay=2026-04-09", {
+        adminKey: "secret",
+      }),
+      null,
+      chainRpcs,
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+    };
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.rowsInserted).toBe(1);
+    expect(body.errors).toBeUndefined();
+    expect(rpcFetches).toEqual(["https://fake-avax-rpc.test"]);
+
+    const inserts = capturedStatements.filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].args[0]).toBe("acred-apollo-securitize");
+    expect(inserts[0].args[2] as number).toBeCloseTo(2_020_000, -1);
+  });
+
   it("backfills eEARN from historical Ethereum totalSupply and CoinGecko price", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
     const day1 = Math.floor(Date.UTC(2026, 5, 9) / 1000);
