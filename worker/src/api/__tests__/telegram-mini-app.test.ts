@@ -505,6 +505,39 @@ describe("handleTelegramMiniAppSession", () => {
     expect(invalidDb.getHistory()).toHaveLength(0);
   });
 
+  it("rate-limits stale auth telemetry by signed Mini App user", async () => {
+    const staleInitData = await signedInitData({
+      auth_date: String(NOW_SEC - 301),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const cooldownKey = "telegram:command-cooldown:42:mini-app:mutation:any";
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 5],
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        matchBinds: [cooldownKey],
+        rows: [{ updated_at: NOW_SEC - 1 }],
+      },
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(
+      db,
+      request("/api/telegram-mini-app/mutate", { initData: staleInitData, operation: { kind: "clear-snooze" } }),
+      BOT_TOKEN,
+    );
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ code: "rate-limited" });
+    expect(historyHas(db, "INSERT INTO cache (key, value, updated_at)", [cooldownKey])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_session_invalid"])).toBe(false);
+  });
+
   it("attaches a non-null latencyBucket to successful session analytics rows", async () => {
     // T-64: every recordMiniAppEvent call carries latency telemetry. With fake
     // timers `Date.now() - start === 0`, which buckets to "lt_250ms".
