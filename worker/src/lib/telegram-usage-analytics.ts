@@ -226,18 +226,17 @@ export function classifyTelegramStartSource(args: string): string {
   return "unknown";
 }
 
-export async function recordTelegramUsageEvent(
+function prepareTelegramUsageEventStatement(
   db: D1Database,
   input: TelegramUsageEventInput,
-): Promise<void> {
+): D1PreparedStatement {
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   const day = dayFromUnixSeconds(nowSec);
   const latencyBucket =
     input.latencyBucket ?? bucketTelegramCommandLatency(input.latencyMs);
-  try {
-    await db
-      .prepare(
-        `INSERT INTO telegram_usage_daily (
+  return db
+    .prepare(
+      `INSERT INTO telegram_usage_daily (
            day,
            event_type,
            source_category,
@@ -261,19 +260,49 @@ export async function recordTelegramUsageEvent(
          ) DO UPDATE SET
            count = telegram_usage_daily.count + 1,
            last_seen_at = excluded.last_seen_at`,
-      )
-      .bind(
-        day,
-        input.eventType,
-        clampDimension(input.sourceCategory, "unknown"),
-        usageActionDetail(input),
-        clampDimension(input.outcome, "unknown"),
-        clampDimension(latencyBucket, "unknown"),
-        clampDimension(input.failureClass, ""),
-        nowSec,
-        nowSec,
-      )
-      .run();
+    )
+    .bind(
+      day,
+      input.eventType,
+      clampDimension(input.sourceCategory, "unknown"),
+      usageActionDetail(input),
+      clampDimension(input.outcome, "unknown"),
+      clampDimension(latencyBucket, "unknown"),
+      clampDimension(input.failureClass, ""),
+      nowSec,
+      nowSec,
+    );
+}
+
+export async function recordTelegramUsageEvent(
+  db: D1Database,
+  input: TelegramUsageEventInput,
+): Promise<void> {
+  try {
+    await prepareTelegramUsageEventStatement(db, input).run();
+  } catch {
+    // Usage telemetry must never block a user-facing bot command.
+  }
+}
+
+/**
+ * Record multiple usage events in a single D1 round-trip via db.batch().
+ * Used on hot paths (e.g. the Mini App session response) where several
+ * independent telemetry writes would otherwise issue sequential awaited
+ * inserts. Batching keeps a single connection from the shared 6-connection
+ * pool; it must never use Promise.all, which would widen concurrency.
+ */
+export async function recordTelegramUsageEvents(
+  db: D1Database,
+  inputs: TelegramUsageEventInput[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  if (inputs.length === 1) {
+    await recordTelegramUsageEvent(db, inputs[0]);
+    return;
+  }
+  try {
+    await db.batch(inputs.map((input) => prepareTelegramUsageEventStatement(db, input)));
   } catch {
     // Usage telemetry must never block a user-facing bot command.
   }

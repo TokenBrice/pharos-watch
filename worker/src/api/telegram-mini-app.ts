@@ -9,6 +9,8 @@ import {
 import {
   bucketTelegramCommandLatency,
   recordTelegramUsageEvent,
+  recordTelegramUsageEvents,
+  type TelegramUsageEventInput,
   type TelegramUsageEventType,
 } from "../lib/telegram-usage-analytics";
 import { acquireTelegramCommandCooldown, releaseTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
@@ -210,14 +212,39 @@ async function recordMiniAppEvent(db: D1Database, input: {
   failureClass?: string | null;
   latencyMs?: number | null;
 }): Promise<void> {
-  await recordTelegramUsageEvent(db, {
+  await recordTelegramUsageEvent(db, toUsageEventInput(input));
+}
+
+function toUsageEventInput(input: {
+  eventType: TelegramUsageEventType;
+  auth?: TelegramMiniAppAuthContext | null;
+  startParam?: string | null;
+  actionDetail?: string | null;
+  outcome?: string | null;
+  failureClass?: string | null;
+  latencyMs?: number | null;
+}): TelegramUsageEventInput {
+  return {
     eventType: input.eventType,
     sourceCategory: sourceCategory(input.auth, input.startParam),
     actionDetail: input.actionDetail,
     outcome: input.outcome,
     failureClass: input.failureClass,
     latencyBucket: bucketTelegramCommandLatency(input.latencyMs ?? null),
-  });
+  };
+}
+
+/**
+ * Batch several Mini App telemetry events into one D1 round-trip. The session
+ * response path emits up to two independent writes (session_valid plus an
+ * optional group_readonly); batching avoids sequential awaited inserts while
+ * respecting the shared 6-connection pool (db.batch, never Promise.all).
+ */
+async function recordMiniAppEvents(
+  db: D1Database,
+  inputs: Parameters<typeof toUsageEventInput>[0][],
+): Promise<void> {
+  await recordTelegramUsageEvents(db, inputs.map(toUsageEventInput));
 }
 
 function authResponse(err: TelegramMiniAppAuthError): Response {
@@ -331,8 +358,14 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       });
     }
 
-    await recordMiniAppEvent(db, { eventType: "mini_app_session_valid", auth, outcome: "success", latencyMs: Date.now() - start });
-    if (!auth.canMutatePrivateChat) await recordMiniAppEvent(db, { eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs: Date.now() - start });
+    const latencyMs = Date.now() - start;
+    const sessionEvents: Parameters<typeof recordMiniAppEvents>[1] = [
+      { eventType: "mini_app_session_valid", auth, outcome: "success", latencyMs },
+    ];
+    if (!auth.canMutatePrivateChat) {
+      sessionEvents.push({ eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs });
+    }
+    await recordMiniAppEvents(db, sessionEvents);
 
     return jsonResponse(await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
