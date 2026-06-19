@@ -15,23 +15,38 @@ export interface CollapsedTapeEntry {
   coinIds?: string[];
 }
 
-// Collapse non-consecutive runs of the same (coinId, eventClass) into one
+function collapseAttributionKey(event: TapeEvent, cls: string): string {
+  // Events with no coin attribution (e.g., USDT freeze.blocked rows from the
+  // blacklist projector) still share a chain — group those so a single busy
+  // chain doesn't flood the strip with one row per blacklist tx.
+  if (event.coinId) return `coin:${event.coinId}:${cls}`;
+  if (event.chain) return `chain:${event.chain}:${cls}`;
+  return `event:${event.id}`;
+}
+
+function collapseTransitionKey(event: TapeEvent): string {
+  return typeof event.transition === "string" && event.transition.length > 0
+    ? event.transition
+    : "none";
+}
+
+// Collapse non-consecutive runs of the same attribution, full event type,
+// severity, and lifecycle transition into one
 // entry positioned at the most recent occurrence. Used by the homepage strip
 // and by /tape's day groups to keep flapping coins (e.g. USDXL with repeated
-// peg cycles) from dominating the visible list.
+// peak updates) from dominating the visible list while keeping opposite
+// lifecycle transitions and severity changes visible.
 export function collapseByCoinClass(events: ReadonlyArray<TapeEvent>): CollapsedTapeEntry[] {
   const result: CollapsedTapeEntry[] = [];
   const indexByKey = new Map<string, number>();
   for (const event of events) {
     const cls = eventClassSlug(event.type);
-    // Events with no coin attribution (e.g., USDT freeze.blocked rows from the
-    // blacklist projector) still share a chain — group those so a single busy
-    // chain doesn't flood the strip with one row per blacklist tx.
-    const key = event.coinId
-      ? `${event.coinId}:${cls}`
-      : event.chain
-        ? `chain:${event.chain}:${cls}`
-        : `event:${event.id}`;
+    const key = [
+      collapseAttributionKey(event, cls),
+      `type:${event.type}`,
+      `severity:${event.severity}`,
+      `transition:${collapseTransitionKey(event)}`,
+    ].join("|");
     const existingIdx = indexByKey.get(key);
     if (existingIdx != null) {
       result[existingIdx]!.count += 1;
