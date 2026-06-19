@@ -143,7 +143,16 @@ describe("getCoinsByLifecycleStatus", () => {
     expect(coins.length).toBeGreaterThan(0);
   });
 
+  it("returns frozen coins only for an explicit frozen status", () => {
+    const frozenCoins = getCoinsByLifecycleStatus("fiat-cash", "frozen");
+    const invalidCoins = getCoinsByLifecycleStatus(
+      "fiat-cash",
+      "dead" as "active" | "pre-launch" | "frozen",
+    );
 
+    expect(frozenCoins.length).toBeGreaterThan(0);
+    expect(invalidCoins).toEqual([]);
+  });
 });
 
 describe("nestVariants", () => {
