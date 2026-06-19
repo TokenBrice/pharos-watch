@@ -346,12 +346,6 @@ async function buildTelegramPulseSnapshot(
     historySource: heavySections.historySource,
     topCoins: heavySections.topCoins,
     watcherHistory: heavySections.watcherHistory,
-    alertTypeChats: currentSnapshot.alertTypeOptIns,
-    quietHoursEnabledChats: publicRequiredCount(
-      currentSnapshot.quietHoursEnabledChats,
-      "quietHoursEnabledChats",
-      suppressedFields,
-    ),
     pendingDeliveries: unavailableFields.has("pendingDeliveries")
       ? null
       : publicRequiredCount(currentSnapshot.pendingDeliveries, "pendingDeliveries", suppressedFields),

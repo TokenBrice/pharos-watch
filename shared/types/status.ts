@@ -385,8 +385,6 @@ const TelegramPulseBaseSchema = z.object({
   historySource: z.enum(["snapshot", "live-fallback"]).optional(),
   topCoins: z.array(z.string()),
   watcherHistory: z.array(TelegramWatcherHistoryPointSchema),
-  alertTypeChats: TelegramAlertTypeChatsSchema,
-  quietHoursEnabledChats: z.number().nullable(),
   pendingDeliveries: z.number().nullable(),
   miniAppSessionsToday: z.number().nullable().optional(),
   miniAppMutationsToday: z.number().nullable().optional(),
