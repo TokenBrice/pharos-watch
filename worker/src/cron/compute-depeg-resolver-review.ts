@@ -30,6 +30,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause, chunkArray } from "../lib/db";
+import { toErrorMessage } from "../lib/error-utils";
 import { logWorkerEvent } from "../lib/structured-log";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 import type {
@@ -297,7 +298,7 @@ async function loadTapeTerminalEvidenceByStablecoinId(
     } catch (err) {
       // Older local/test databases may not have tape_events. Registry and
       // cemetery metadata remain the authoritative terminal evidence sources.
-      const message = err instanceof Error ? err.message : String(err);
+      const message = toErrorMessage(err);
       if (message.includes("no such table")) continue;
       // Any other failure (transient D1 overload, malformed query, binding
       // fault) would silently drop terminal evidence and misclassify incidents

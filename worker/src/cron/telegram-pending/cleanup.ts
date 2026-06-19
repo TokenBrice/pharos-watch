@@ -1,6 +1,7 @@
 import { recordTelegramAlertTargetStatuses } from "../telegram-alert-target-status";
 import { PENDING_TTL_SEC } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   deadLetterTerminalPendingRows,
   deletePendingAlertsByIds,
@@ -227,7 +228,7 @@ export async function clearPendingAlertsForDisabledChat(
   } catch (error) {
     logTelegramEvent({
       level: "warn",
-      message: `Failed to clear pending alerts for disabled chat: ${error instanceof Error ? error.message : String(error)}`,
+      message: `Failed to clear pending alerts for disabled chat: ${toErrorMessage(error)}`,
       chatId,
       action: "clear-disabled-chat-pending",
       module: "telegram-pending-cleanup",

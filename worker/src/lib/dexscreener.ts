@@ -8,6 +8,7 @@ import { DS_CHAIN_MAP } from "@shared/lib/chains";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 import { USER_AGENT } from "./constants";
+import { toErrorMessage } from "./error-utils";
 
 export { DS_CHAIN_MAP } from "@shared/lib/chains";
 
@@ -197,7 +198,7 @@ export async function fetchDsTokenPoolsWithStatus(
       pairs: [],
       status,
       contentType,
-      error: `DexScreener JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: `DexScreener JSON parse failed: ${toErrorMessage(error)}`,
     };
   }
 }

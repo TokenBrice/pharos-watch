@@ -26,6 +26,7 @@ import {
   readDataWord,
 } from "../../lib/evm-logs";
 import { ETHERSCAN_V2_BASE } from "../../lib/constants";
+import { toErrorMessage } from "../../lib/error-utils";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchEvmTokenBalance } from "../blacklist/balance-providers";
 import type { BlacklistRow } from "../blacklist/shared";
@@ -85,7 +86,7 @@ function markRecoveryAttempt(
 }
 
 function inferErrorClass(error: unknown): BlacklistRecoveryErrorClass {
-  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  const message = toErrorMessage(error).toLowerCase();
   if (message.includes("timeout") || message.includes("timed out")) return "provider_timeout";
   if (/\b[45]\d{2}\b/.test(message)) return "provider_http_error";
   return "provider_null";
