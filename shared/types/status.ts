@@ -424,22 +424,15 @@ export interface TelegramDispatchEventsDetected {
   suppressedMethodologyChanges: number;
 }
 
-/** The alert categories tracked by the Telegram dispatcher. */
-export type TelegramAlertType = "dews" | "depeg" | "safety" | "launch" | "reserve";
-
 /**
  * Canonical membership list for {@link TelegramAlertType}, ordered to match the
  * positional `alert_*`/`global_alert_*` columns in `telegram_subscribers`.
  * Use for iteration and membership checks; order-significant routing arrays
  * (e.g. ALERT_TYPE_PRIORITY) intentionally keep their own ordering.
  */
-export const TELEGRAM_ALERT_TYPES: readonly TelegramAlertType[] = [
-  "dews",
-  "depeg",
-  "safety",
-  "launch",
-  "reserve",
-];
+export const TELEGRAM_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
+/** The alert categories tracked by the Telegram dispatcher. */
+export type TelegramAlertType = (typeof TELEGRAM_ALERT_TYPES)[number];
 
 export function isTelegramAlertType(value: unknown): value is TelegramAlertType {
   return (TELEGRAM_ALERT_TYPES as readonly string[]).includes(value as string);
