@@ -62,6 +62,8 @@ const SCORE_TONE_BANDS = [
   },
 ] as const satisfies readonly (ScoreTone & { min: number })[];
 
+const CRITICAL_SCORE_TONE = SCORE_TONE_BANDS[SCORE_TONE_BANDS.length - 1];
+
 function scoreTone(row: SafetyInspectionRow): {
   text: string;
   bar: string;
@@ -73,7 +75,7 @@ function scoreTone(row: SafetyInspectionRow): {
   if (score == null) {
     return NOT_RATED_SCORE_TONE;
   }
-  return SCORE_TONE_BANDS.find((band) => score >= band.min) ?? SCORE_TONE_BANDS[0];
+  return SCORE_TONE_BANDS.find((band) => score >= band.min) ?? CRITICAL_SCORE_TONE;
 }
 
 function formatScoreOrNotRated(score: number | null): string {
