@@ -114,7 +114,7 @@ export function stripDebugFromSelectorSnapshot(value: Record<string, unknown>): 
  * deterministic numeric/key fields, but drop prose that the UI can derive from
  * canonical selector keys during replay.
  */
-export function stripUntrustedSelectorSnapshotProse(value: SelectorOutput): SelectorOutput {
+function stripUntrustedSelectorSnapshotProse(value: SelectorOutput): SelectorOutput {
   return {
     ...value,
     recommended: value.recommended.map(({ whyText: _whyText, watchText: _watchText, ...rec }) => rec),

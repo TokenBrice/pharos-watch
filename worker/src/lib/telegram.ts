@@ -150,7 +150,7 @@ export interface SendToChatResult {
   rateLimitScope?: "chat" | "global";
 }
 
-function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
+function inferRateLimitScope(responseBody: string): "chat" | "global" {
   const lower = responseBody.toLowerCase();
   if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
     return "global";
@@ -176,7 +176,7 @@ function parseTelegramRetryAfter(responseBody: string): number | null {
   }
 }
 
-function buildResponseFailure(statusCode: number, responseBody = "", retryAfterSec: number | null = null): SendToChatResult {
+function buildResponseFailure(statusCode: number, responseBody = ""): SendToChatResult {
   if (statusCode === 403) {
     return {
       ok: false,
@@ -199,7 +199,7 @@ function buildResponseFailure(statusCode: number, responseBody = "", retryAfterS
       errorClass: "rate_limit",
       delivery: "retryable_failure",
       retryAfterSec: null,
-      rateLimitScope: inferRateLimitScope(responseBody, retryAfterSec),
+      rateLimitScope: inferRateLimitScope(responseBody),
     };
   }
   if (statusCode >= 500) {
@@ -313,7 +313,7 @@ export async function sendToChat(
       const body = await res.text().catch(() => "");
       const telegramRetryAfterSec = parseTelegramRetryAfter(body);
       const resolvedRetryAfterSec = telegramRetryAfterSec ?? (Number.isFinite(retryAfterSec) ? retryAfterSec : null);
-      const failure = buildResponseFailure(res.status, body, resolvedRetryAfterSec);
+      const failure = buildResponseFailure(res.status, body);
       return {
         ...failure,
         retryAfterSec: resolvedRetryAfterSec,

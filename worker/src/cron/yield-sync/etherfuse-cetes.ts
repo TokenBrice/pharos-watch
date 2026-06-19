@@ -5,7 +5,7 @@ import {
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { isRecord } from "@shared/lib/type-guards";
 
-export const ETHERFUSE_CETES_BENCHMARK_SOURCE = "etherfuse-cetes-current-issuance";
+const ETHERFUSE_CETES_BENCHMARK_SOURCE = "etherfuse-cetes-current-issuance";
 export const ETHERFUSE_CETES_SOURCE_KEY = `protocol-api:${ETHERFUSE_CETES_BENCHMARK_SOURCE}`;
 export const ETHERFUSE_CETES_SOURCE_LABEL = "Etherfuse CETES current issuance";
 export const ETHERFUSE_CETES_SOURCE_TYPE = "nav-appreciation";

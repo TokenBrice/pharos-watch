@@ -1,4 +1,4 @@
-import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
@@ -306,7 +306,7 @@ export async function generateDailyDigest(
           );
         } catch (err) {
           degradedReasons.push("telegram-send-marker-write");
-          console.error("[daily-digest] Failed to write Telegram send marker:", err);
+          recordCronFailure("daily-digest", err, { metadata: { stage: "telegram-send-marker-write" } });
           throw err;
         }
         try {

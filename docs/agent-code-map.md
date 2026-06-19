@@ -19,7 +19,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/alt-pegs/client.tsx` - AltPegsClient
 - `src/app/alt-pegs/error.tsx`
 - `src/app/alt-pegs/page.tsx` - route /alt-pegs; metadata
-- `src/app/api/layout.tsx` - default:ApiAccessLayout
 - `src/app/api/page.tsx` - route /api; default:ApiAccessPage, metadata
 - `src/app/blacklist/page.tsx` - route /blacklist; default:LegacyBlacklistPage
 - `src/app/cemetery/error.tsx`
