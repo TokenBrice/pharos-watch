@@ -274,7 +274,8 @@ function sumEvents(metadata: ReturnType<typeof parseTelegramDispatchCronMetadata
     (events.dews ?? 0) +
     (events.depeg ?? 0) +
     (events.safety ?? 0) +
-    (events.launch ?? 0)
+    (events.launch ?? 0) +
+    (events.reserve ?? 0)
   );
 }
 

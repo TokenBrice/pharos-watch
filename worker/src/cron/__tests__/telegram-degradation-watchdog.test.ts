@@ -448,6 +448,26 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
     expect(meta.zeroSend.streak).toBe(1);
   });
 
+  it("increments the streak for a reserve-only zero-send run", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    const db = makeDb({
+      pendingCount: 0,
+      dispatchMetadata: {
+        eventsDetected: { dews: 0, depeg: 0, safety: 0, launch: 0, reserve: 2 },
+        messagesSent: 0,
+        freshCandidateChats: 2,
+      },
+    });
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(meta.zeroSend.streak).toBe(1);
+  });
+
   it("alerts after threshold consecutive zero-send runs", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
