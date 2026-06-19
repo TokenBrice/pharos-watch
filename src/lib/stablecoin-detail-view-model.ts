@@ -167,6 +167,7 @@ type FeatureAvailabilitySnapshot = {
   stressSignal: StressSignalEntry | null;
   hasFlows: boolean;
   hasBlacklist: boolean;
+  blacklistSymbol: BlacklistStablecoin | null;
 };
 
 function isEligibleForUsdPerformance(coin: StablecoinMeta): boolean {
@@ -281,6 +282,7 @@ function buildFeatureAvailability(
     (supplemental.blacklist.isLoading ||
       (!!supplemental.blacklist.summary &&
         (supplemental.blacklist.summary.stats.perCoinTotalEvents[coin.symbol as BlacklistStablecoin] ?? 0) > 0));
+  const blacklistSymbol = isBlacklistSupported ? (coin.symbol as BlacklistStablecoin) : null;
 
   return {
     yieldRanking,
@@ -288,6 +290,7 @@ function buildFeatureAvailability(
     stressSignal,
     hasFlows,
     hasBlacklist,
+    blacklistSymbol,
   };
 }
 
@@ -370,6 +373,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   redemptionBackstop: RedemptionBackstopEntry | undefined;
   hasFlows: boolean;
   hasBlacklist: boolean;
+  blacklistSymbol: BlacklistStablecoin | null;
   supplyHistory: SupplyHistoryPoint[];
   earliestTrackingDate: number | null;
   reserves: ReserveResult | null;
@@ -895,6 +899,7 @@ export function buildStablecoinDetailViewModel({
     redemptionBackstop,
     hasFlows: featureAvailability.hasFlows,
     hasBlacklist: featureAvailability.hasBlacklist,
+    blacklistSymbol: featureAvailability.blacklistSymbol,
     supplyHistory: resolvedSupplyHistory,
     earliestTrackingDate: market.earliestTrackingDate,
     reserves,

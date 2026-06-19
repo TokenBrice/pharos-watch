@@ -39,7 +39,6 @@ import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-auth
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import type { BlacklistStablecoin } from "@shared/types";
 
 const FeedbackModal = dynamic(() => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal), {
   ssr: false,
@@ -277,7 +276,7 @@ export default function StablecoinDetailClient({
     );
   }
 
-  const hasPriceTransparency = !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const hasPriceTransparency = viewModel.coinData.price != null || !!viewModel.dexPriceCheck;
   const hasRedemptionBackstop = Boolean(viewModel.redemptionBackstop);
   const frozenNote =
     viewModel.coin.status === "frozen" && viewModel.coin.frozenAt ? (
@@ -513,7 +512,7 @@ export default function StablecoinDetailClient({
                 {hasRedemptionBackstop && viewModel.redemptionBackstop ? (
                   <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
                 ) : null}
-                {hasPriceTransparency && viewModel.coinData ? (
+                {hasPriceTransparency ? (
                   <section id="price" aria-label="Price transparency">
                     <PriceTransparencyCard
                       coinData={viewModel.coinData}
@@ -539,7 +538,7 @@ export default function StablecoinDetailClient({
               <div>
                 {frozenNote}
                 <SectionErrorBoundary name="blacklist">
-                  <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.coin.symbol as BlacklistStablecoin} />
+                  <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
                 </SectionErrorBoundary>
               </div>
             )}
@@ -577,7 +576,7 @@ export default function StablecoinDetailClient({
               <SectionErrorBoundary name="blacklist-history">
                 <BlacklistHistorySection
                   stablecoinId={viewModel.id}
-                  symbol={viewModel.coin.symbol as BlacklistStablecoin}
+                  symbol={viewModel.blacklistSymbol!}
                 />
               </SectionErrorBoundary>
             ) : null}
