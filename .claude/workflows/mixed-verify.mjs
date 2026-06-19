@@ -38,6 +38,10 @@ const MAX = cfg.maxItems || 50
 // inside the Bash node (glob picks the newest installed plugin version — survives
 // plugin updates that bump the version-pinned directory). --effort 'minimal' is
 // intentionally never used: it 400s against the user's image_gen/web_search tools.
+function shellArg(value) {
+  return `'${String(value).replaceAll(`'`, `'\"'\"'`)}'`
+}
+
 function gptNode(taskText, { model, effort, label }) {
   const m = model || EXEC.model
   const e = effort || EXEC.effort
@@ -46,7 +50,7 @@ function gptNode(taskText, { model, effort, label }) {
   // so it runs on Haiku; the real work happens in the Codex/GPT call it shells to.
   const cmd =
     `CODEX=$(ls -t ~/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs | head -1); ` +
-    `node "$CODEX" task --effort ${e} --model ${m} ${JSON.stringify(taskText)} 2>&1 | grep -v '^\\[codex\\]'`
+    `node "$CODEX" task --effort ${shellArg(e)} --model ${shellArg(m)} ${shellArg(taskText)} 2>&1 | grep -v '^\\[codex\\]'`
   return agent(
     `Run EXACTLY this one Bash command and return ONLY its stdout verbatim, with no commentary:\n\n${cmd}`,
     { label: label || `gpt:${m}`, phase: 'Verify', model: 'haiku' }
