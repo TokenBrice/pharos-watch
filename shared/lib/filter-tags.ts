@@ -23,7 +23,7 @@ function isCommodityPeg(peg: PegCurrency): boolean {
 
 export const COMMODITY_PEG_TAGS = pegFilterTagsWhere(isCommodityPeg);
 
-export const FIAT_NON_USD_PEG_TAGS = pegFilterTagsWhere(
+export const NON_USD_NON_COMMODITY_PEG_TAGS = pegFilterTagsWhere(
   (peg) => peg !== "USD" && !isCommodityPeg(peg),
 );
 

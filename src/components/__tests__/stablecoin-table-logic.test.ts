@@ -9,7 +9,7 @@ import {
 } from "@/components/stablecoin-table-logic";
 import {
   COMMODITY_PEG_TAGS,
-  FIAT_NON_USD_PEG_TAGS,
+  NON_USD_NON_COMMODITY_PEG_TAGS,
   getFilterTags,
   OTHER_PEG_TAGS,
 } from "@shared/lib/filter-tags";
@@ -110,7 +110,7 @@ describe("buildTrackedIdSet", () => {
   it("returns active non-USD non-commodity assets when filtering by fiat-non-usd-peg", () => {
     const trackedIds = buildTrackedIdSet(["fiat-non-usd-peg"]);
     const activeFiatNonUsdIds = ACTIVE_STABLECOINS
-      .filter((coin) => getFilterTags(coin).some((tag) => FIAT_NON_USD_PEG_TAGS.includes(tag)))
+      .filter((coin) => getFilterTags(coin).some((tag) => NON_USD_NON_COMMODITY_PEG_TAGS.includes(tag)))
       .map((coin) => coin.id);
 
     expect(activeFiatNonUsdIds.length).toBeGreaterThan(0);
