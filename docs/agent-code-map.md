@@ -162,6 +162,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-compare-selection.ts` - useCompareSelection
 - `src/hooks/use-compare-share-actions.ts` - useCompareShareActions
 - `src/hooks/use-contagion-graph-drag.ts` - useContagionGraphDrag
+- `src/hooks/use-copy-to-clipboard.ts` - useCopyToClipboard
 - `src/hooks/use-count-up.ts` - useCountUp
 - `src/hooks/use-coverage-matrix-model.ts` - useCoverageMatrixModel
 - `src/hooks/use-depeg-events.ts` - depegEventsInfiniteQueryOptions, useActiveDepegEvents, useInfiniteDepegEvents
@@ -187,13 +188,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-portfolio.ts` - categorizeCollateral, computeGroupedExposure, usePortfolio
 - `src/hooks/use-preferences.ts` - usePreference
 - `src/hooks/use-prefers-reduced-motion.ts` - usePrefersReducedMotion
-- `src/hooks/use-prefetch-stablecoin.ts` - usePrefetchStablecoin
+- `src/hooks/use-prefetch-stablecoin.ts` - PREFETCH_DEBOUNCE_MS, usePrefetchStablecoin
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
 - `src/hooks/use-row-cursor.ts` - UseRowCursorOptions, UseRowCursorResult, useRowCursor
-- `src/hooks/use-show-work-mode.ts` - ShowWorkMode, useShowWorkMode
-- ... 26 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 28 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -279,7 +279,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/changelog-week-nav.tsx` - ChangelogWeekNav
 - `src/components/chart-primitives/annotations.tsx` - AnnotationDensityStrip, ChartAnnotationLegend, ChartAnnotationLines
 - `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartAreaGradient, ChartLegendChip, ChartMargin, DateTooltip, MONO_Y_AXIS_WIDTH
-- `src/components/chart-primitives/data-table.tsx` - ChartDataTable, ChartDataTableColumn, capDataForTable
+- `src/components/chart-primitives/data-table.tsx` - ChartDataTable, ChartDataTableColumn, ScreenReaderDataTable, capDataForTable
 - `src/components/chart-primitives/market-data-x-tick.tsx` - MarketDataXTick
 - `src/components/chart-primitives/scale-toggle.tsx` - ChartScale, ChartScaleToggle
 - `src/components/chart-primitives/shell.tsx` - ChartCardShell
@@ -358,7 +358,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/classification/domain.ts` - BACKING_LABELS, BACKING_LABELS_SHORT, BACKING_PROSE_LABELS, GOVERNANCE_FILTER_OPTIONS, GOVERNANCE_LABELS, GOVERNANCE_LABELS_SHORT
 - `shared/lib/classification/index.ts`
 - `shared/lib/classification/mechanism-archetypes.ts` - MECHANISM_ARCHETYPE_CTA_NOUNS, MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, MECHANISM_ARCHETYPE_SHORT_LABELS, getMechanismArchetypeCtaNoun, getMechanismArchetypeLabel
-- `shared/lib/classification/pegs.ts` - PEG_FILTER_OPTIONS, PEG_FILTER_TAG_LABELS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA, PegCurrencyFilterTag
+- `shared/lib/classification/pegs.ts` - PEG_FILTER_OPTIONS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA, mapPegMetadata
 - `shared/lib/classification/resolve-mechanism-archetype.ts` - resolveMechanismArchetype
 - `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel, NOTICE_TONE_COLORS, RATIO_QUALITY_COLORS
 - `shared/lib/cloudflare-access-jwt.ts` - JwtVerifyOptions, _resetJwksCache, normalizeTeamDomain, verifyAccessJwt
@@ -464,7 +464,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/scheduled/run-best-effort-job.ts` - BestEffortScheduledJobOutcome, runBestEffortScheduledJobWithOutcome
 - `worker/src/handlers/scheduled/run-circuit-gated-job.ts` - runCircuitGatedLeasedScheduledJob
 - `worker/src/handlers/scheduled/slot-groups.ts` - ScheduledSlotGroup, ScheduledSlotGroupDefinition, ScheduledSlotGroupMode, ScheduledSlotParallelSerialGroup, ScheduledSlotTask, ScheduledSlotTaskChain
-- `worker/src/handlers/scheduled/slot-summary.ts` - ScheduledSlotJobOutcome, ScheduledSlotJobSummary, ScheduledSlotSummary, buildScheduledSlotSummary, mergeScheduledSlotSummaries, summarizeCronResult
+- `worker/src/handlers/scheduled/slot-summary.ts` - ScheduledSlotJobOutcome, ScheduledSlotJobSummary, ScheduledSlotSummary, buildScheduledSlotSummary, mergeScheduledSlotSummaries, runSinglePropagatingSlotJob
 - `worker/src/handlers/scheduled/status-self-check.ts` - runStatusSelfCheckSlot
 - `worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts` - runTwoHourlyDexDiscoverySlot
 - `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts` - runHalfHourlyMintBurnCriticalSlot
@@ -617,7 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- ... 318 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 331 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -629,7 +629,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/address-price-providers/dexscreener.ts` - runDexScreenerAddressProvider
 - `worker/src/lib/address-price-providers/index.ts` - ADDRESS_PROVIDER_CIRCUIT_SOURCE, buildAddressPriceTargetsByProvider, collectAddressPriceProviderQuotes, resolveEnabledAddressPriceProviders, resolveFallbackChain
 - `worker/src/lib/address-price-providers/moralis.ts` - runMoralisAddressProvider
-- `worker/src/lib/address-price-providers/shared.ts` - ADDRESS_PROVIDER_MIN_LIQUIDITY_USD, ADDRESS_PROVIDER_RUN_BUDGET_MS, chunk, emptyProviderResult, fetchProviderJson, getTokenAddressFromRecord
+- `worker/src/lib/address-price-providers/shared.ts` - ADDRESS_PROVIDER_MIN_LIQUIDITY_USD, ADDRESS_PROVIDER_RUN_BUDGET_MS, chunk, createProviderRunState, emptyProviderResult, fetchProviderJson
 - `worker/src/lib/address-price-providers/types.ts` - AddressPriceAssetLike, AddressPriceProviderCollectionResult, AddressPriceProviderKey, AddressPriceProviderRunResult, AddressPriceProviderRuntimeConfig, AddressPriceQuote
 - `worker/src/lib/admin-action-audit.ts` - AdminActionLogEntry, DETAILS_MAX_LEN, logAdminAction
 - `worker/src/lib/admin-job.ts` - AdminJobContext, buildAdminJobSummary, noAdminTargetsResponse, readAdminIntegerParam, readAdminStringParam, runAdminJob
@@ -666,7 +666,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/backfill-fx.ts` - COMMODITY_PEGS, FxTimeSeries, OTHER_COIN_FX, PEG_TO_FX, SECONDARY_PEG_TO_FX, buildCommodityMedianSeriesFromCg
 - `worker/src/lib/backfill-query.ts` - noCoinsInBatchResponse, selectBackfillCoins
 - `worker/src/lib/backtest-anchors.ts` - BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS, BacktestAnchor, BacktestNegativeControl
-- `worker/src/lib/base64url.ts` - base64UrlToBytes, bytesToBase64Url
+- `worker/src/lib/base64url.ts` - base64UrlToBytes, base64UrlToString, bytesToBase64Url, stringToBase64Url
 - `worker/src/lib/bigint.ts` - decimalNumberFromBigInt, decimalStringFromBigInt, finiteDecimalNumberFromBigInt
 - `worker/src/lib/binary-search.ts` - binarySearchNearest
 - `worker/src/lib/blacklist-api.ts` - BlacklistEventRow, mapBlacklistEventRow
@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
 - `worker/src/lib/chain-config.ts` - ChainConfig, chainConfig
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
-- ... 232 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 233 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -699,6 +699,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-archetype-explainer-coverage.test.ts`
 - `scripts/__tests__/check-attestor-tier-coverage.test.ts`
 - `scripts/__tests__/check-critical-coverage.test.ts`
+- `scripts/__tests__/check-cron-abort-contract.test.ts` - helperDropsSignal, run, scheduled
 - `scripts/__tests__/check-cron-connection-budget.test.ts`
 - `scripts/__tests__/check-cron-console-usage.test.ts`
 - `scripts/__tests__/check-env-contract.test.ts` - After, Env
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/remote-d1.test.ts`
 - `scripts/__tests__/rollback-pages-deployment.test.ts`
 - `scripts/__tests__/seo-sitemap.test.ts`
-- `scripts/__tests__/serve-static-export.test.ts`
-- ... 202 more files omitted; use `rg --files scripts` for the full list.
+- ... 203 more files omitted; use `rg --files scripts` for the full list.
