@@ -638,6 +638,47 @@ export function sealPublicNoCall(
   );
 }
 
+/**
+ * Shared 3-branch filter dispatch for chunked IN reads.
+ * Each branch receives a clause-builder callback that turns the IN-clause SQL
+ * into the WHERE/AND fragment appropriate for that function's query.
+ */
+function dispatchFilteredChunkedRead<T>(
+  filters: LoadSealedPublicPredictionsFilters,
+  clauseBuilders: {
+    byPredictionIds: (inClauseSql: string) => string;
+    byIncidentKeys: (inClauseSql: string) => string;
+    byEventIds: (inClauseSql: string) => string;
+  },
+  readRows: (filterSql: string, binds: unknown[]) => Promise<T[]>,
+): Promise<T[]> {
+  if (filters.publicPredictionIds) {
+    if (filters.publicPredictionIds.length === 0) return Promise.resolve([]);
+    return runChunkedInRead(
+      normalizeIdSet(filters.publicPredictionIds),
+      clauseBuilders.byPredictionIds,
+      readRows,
+    );
+  }
+  if (filters.incidentKeys) {
+    if (filters.incidentKeys.length === 0) return Promise.resolve([]);
+    return runChunkedInRead(
+      [...new Set(filters.incidentKeys)],
+      clauseBuilders.byIncidentKeys,
+      readRows,
+    );
+  }
+  if (filters.eventIds) {
+    if (filters.eventIds.length === 0) return Promise.resolve([]);
+    return runChunkedInRead(
+      normalizeIdSet(filters.eventIds),
+      clauseBuilders.byEventIds,
+      readRows,
+    );
+  }
+  return readRows("", []);
+}
+
 export async function loadSealedPublicPredictions(
   db: D1Database,
   filters: LoadSealedPublicPredictionsFilters = {},
@@ -659,34 +700,15 @@ export async function loadSealedPublicPredictions(
     return (result.results ?? []).map(mapSealedPublicPrediction);
   };
 
-  if (filters.publicPredictionIds) {
-    if (filters.publicPredictionIds.length === 0) return [];
-    return runChunkedInRead(
-      normalizeIdSet(filters.publicPredictionIds),
-      (inClauseSql) => `WHERE id IN (${inClauseSql})`,
-      readRows,
-    );
-  }
-
-  if (filters.incidentKeys) {
-    if (filters.incidentKeys.length === 0) return [];
-    return runChunkedInRead(
-      [...new Set(filters.incidentKeys)],
-      (inClauseSql) => `WHERE incident_key IN (${inClauseSql})`,
-      readRows,
-    );
-  }
-
-  if (filters.eventIds) {
-    if (filters.eventIds.length === 0) return [];
-    return runChunkedInRead(
-      normalizeIdSet(filters.eventIds),
-      (inClauseSql) => `WHERE event_id IN (${inClauseSql})`,
-      readRows,
-    );
-  }
-
-  return readRows("", []);
+  return dispatchFilteredChunkedRead(
+    filters,
+    {
+      byPredictionIds: (inClauseSql) => `WHERE id IN (${inClauseSql})`,
+      byIncidentKeys: (inClauseSql) => `WHERE incident_key IN (${inClauseSql})`,
+      byEventIds: (inClauseSql) => `WHERE event_id IN (${inClauseSql})`,
+    },
+    readRows,
+  );
 }
 
 async function loadPublicationManifestByToken(
@@ -902,32 +924,13 @@ export async function loadFirstPublicationMembership(
     }));
   };
 
-  if (filters.publicPredictionIds) {
-    if (filters.publicPredictionIds.length === 0) return [];
-    return runChunkedInRead(
-      normalizeIdSet(filters.publicPredictionIds),
-      (inClauseSql) => `AND r.public_prediction_id IN (${inClauseSql})`,
-      readRows,
-    );
-  }
-
-  if (filters.incidentKeys) {
-    if (filters.incidentKeys.length === 0) return [];
-    return runChunkedInRead(
-      [...new Set(filters.incidentKeys)],
-      (inClauseSql) => `AND r.incident_key IN (${inClauseSql})`,
-      readRows,
-    );
-  }
-
-  if (filters.eventIds) {
-    if (filters.eventIds.length === 0) return [];
-    return runChunkedInRead(
-      normalizeIdSet(filters.eventIds),
-      (inClauseSql) => `AND p.event_id IN (${inClauseSql})`,
-      readRows,
-    );
-  }
-
-  return readRows("", []);
+  return dispatchFilteredChunkedRead(
+    filters,
+    {
+      byPredictionIds: (inClauseSql) => `AND r.public_prediction_id IN (${inClauseSql})`,
+      byIncidentKeys: (inClauseSql) => `AND r.incident_key IN (${inClauseSql})`,
+      byEventIds: (inClauseSql) => `AND p.event_id IN (${inClauseSql})`,
+    },
+    readRows,
+  );
 }
