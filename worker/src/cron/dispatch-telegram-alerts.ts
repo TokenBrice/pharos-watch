@@ -683,7 +683,10 @@ async function executeFullFanoutPath({
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
   const pendingQueueChanged =
     drainResult.sent > 0 ||
+    drainResult.blocked > 0 ||
+    drainResult.retryQueued > 0 ||
     drainResult.dropped > 0 ||
+    drainResult.deferred > 0 ||
     expiredCount > 0 ||
     pendingEnqueued > 0;
   const pendingCapacityAfter = pendingQueueChanged

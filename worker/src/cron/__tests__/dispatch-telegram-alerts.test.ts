@@ -2119,6 +2119,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.freshSent).toBe(1);
     expect(metadata.freshDeferredPerChat).toBe(0);
     expect(mockSendBatch).toHaveBeenCalled();
+    expect(db.getHistory().filter((entry) => entry.sql.includes("COUNT(*) AS total")).length).toBe(2);
   });
 
   it("defers fresh alerts for chats already in per-chat backoff without sending", async () => {
