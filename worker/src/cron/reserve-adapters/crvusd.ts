@@ -108,6 +108,8 @@ const ETHEREUM_RPC_URLS = [getPublicRpcUrl(ETHEREUM_CHAIN), getSecondaryFallback
 );
 const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
+const DIRECT_LLAMMA_MAX_BANDS_PER_MARKET = 2_048;
+const DIRECT_LLAMMA_MAX_MULTICALLS = 10_000;
 const CRVUSD_MARKET_READ_CONCURRENCY = 2;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
@@ -297,6 +299,19 @@ function safeInt256ToNumber(value: bigint, label: string): number {
   return asNumber;
 }
 
+function countLlammaBands(minBand: number, maxBand: number, marketId: number): number {
+  const bandCount = maxBand - minBand + 1;
+  if (!Number.isSafeInteger(bandCount) || bandCount < 1) {
+    throw new Error(`crvUSD LLAMMA market ${marketId} band range invalid: ${minBand}..${maxBand}`);
+  }
+  if (bandCount > DIRECT_LLAMMA_MAX_BANDS_PER_MARKET) {
+    throw new Error(
+      `crvUSD LLAMMA market ${marketId} band range too wide: ${bandCount} bands exceeds ${DIRECT_LLAMMA_MAX_BANDS_PER_MARKET}`,
+    );
+  }
+  return bandCount;
+}
+
 async function fetchLlammaMarketDescriptors(
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -340,6 +355,7 @@ async function fetchLlammaMarketDescriptors(
       const minBand = safeInt256ToNumber(minBandRaw as bigint, `market ${marketId} min_band`);
       const maxBand = safeInt256ToNumber(maxBandRaw as bigint, `market ${marketId} max_band`);
       if (maxBand < minBand) return null;
+      countLlammaBands(minBand, maxBand, marketId);
       return {
         marketId,
         collateralAddress,
@@ -375,6 +391,16 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
     signal,
     ctx,
   );
+
+  const callCount = descriptors.reduce(
+    (total, market) => total + countLlammaBands(market.minBand, market.maxBand, market.marketId) * 2,
+    0,
+  );
+  if (callCount > DIRECT_LLAMMA_MAX_MULTICALLS) {
+    throw new Error(
+      `crvUSD LLAMMA band multicall too large: ${callCount} calls exceeds ${DIRECT_LLAMMA_MAX_MULTICALLS}`,
+    );
+  }
 
   const calls = descriptors.flatMap((market) => {
     const marketCalls = [];
