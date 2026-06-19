@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
 import { writePegAnalyticsCache } from "./peg-analytics-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -106,6 +106,7 @@ export async function buildReportCardsSnapshot(
     let depegEventsToday = 0;
     let depegEventsYesterday = 0;
     for (const event of pegAnalytics.allEvents ?? []) {
+      if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
       if (event.startedAt >= todayStartSec) depegEventsToday += 1;
       else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
     }
