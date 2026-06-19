@@ -110,6 +110,8 @@ const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
 const CRVUSD_MARKET_READ_CONCURRENCY = 2;
 const CRVUSD_MAX_LLAMMA_MARKETS = 256;
+const CRVUSD_MAX_LLAMMA_BANDS_PER_MARKET = 2_048;
+const CRVUSD_MAX_LLAMMA_MULTICALL_ENTRIES = 8_192;
 const CRVUSD_MAX_YIELD_BASIS_MARKETS = 256;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
@@ -307,6 +309,20 @@ function validateOnchainMarketCount(raw: bigint, label: string, maxCount: number
   return marketCount;
 }
 
+function validateLlammaBandCount(minBand: number, maxBand: number, marketId: number): number {
+  const bandCount = maxBand - minBand + 1;
+  if (!Number.isSafeInteger(bandCount) || bandCount < 1) {
+    throw new Error(`crvUSD LLAMMA band range invalid for market ${marketId}: ${minBand}..${maxBand}`);
+  }
+  if (bandCount > CRVUSD_MAX_LLAMMA_BANDS_PER_MARKET) {
+    throw new Error(
+      `crvUSD LLAMMA band span exceeds operational cap for market ${marketId}: ` +
+        `${bandCount} > ${CRVUSD_MAX_LLAMMA_BANDS_PER_MARKET}`,
+    );
+  }
+  return bandCount;
+}
+
 async function fetchLlammaMarketDescriptors(
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -351,6 +367,7 @@ async function fetchLlammaMarketDescriptors(
       const minBand = safeInt256ToNumber(minBandRaw as bigint, `market ${marketId} min_band`);
       const maxBand = safeInt256ToNumber(maxBandRaw as bigint, `market ${marketId} max_band`);
       if (maxBand < minBand) return null;
+      validateLlammaBandCount(minBand, maxBand, marketId);
       return {
         marketId,
         collateralAddress,
@@ -369,6 +386,17 @@ async function fetchLlammaMarketDescriptors(
 async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterContext): Promise<LlammaMarketExposure[]> {
   const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
   if (descriptors.length === 0) return [];
+
+  const multicallEntryCount = descriptors.reduce(
+    (total, market) => total + validateLlammaBandCount(market.minBand, market.maxBand, market.marketId) * 2,
+    0,
+  );
+  if (multicallEntryCount > CRVUSD_MAX_LLAMMA_MULTICALL_ENTRIES) {
+    throw new Error(
+      `crvUSD LLAMMA band multicall exceeds operational cap: ` +
+        `${multicallEntryCount} > ${CRVUSD_MAX_LLAMMA_MULTICALL_ENTRIES}`,
+    );
+  }
 
   const priceMap = await fetchDefiLlamaPrices(
     Array.from(
@@ -390,6 +418,7 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
   const calls = descriptors.flatMap((market) => {
     const marketCalls = [];
     for (let band = market.minBand; band <= market.maxBand; band += 1) {
+      throwIfAborted(signal);
       marketCalls.push({
         label: `${market.marketId}:y:${band}`,
         contract: market.ammAddress,
