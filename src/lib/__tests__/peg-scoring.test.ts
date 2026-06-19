@@ -25,6 +25,7 @@ function makeEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt"
     endedAt: null,
     confirmationSources: null,
     pendingReason: null,
+    provenance: null,
     ...overrides,
   };
 }

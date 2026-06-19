@@ -69,6 +69,7 @@ function makeEvent(pendingReason: string | null) {
     source: "live" as const,
     confirmationSources: "CoinGecko",
     pendingReason,
+    provenance: null,
   };
 }
 

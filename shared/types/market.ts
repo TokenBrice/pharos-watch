@@ -295,39 +295,6 @@ export const DEX_GLOBAL_KEY = "__global__";
 export type DepegDirection = "above" | "below";
 export const DepegDirectionSchema = z.enum(["above", "below"]);
 
-export interface DepegEvent {
-  id: number;
-  stablecoinId: string;
-  symbol: string;
-  pegType: string;
-  direction: DepegDirection;
-  peakDeviationBps: number;
-  startedAt: number;
-  endedAt: number | null;
-  startPrice: number;
-  peakPrice: number | null;
-  recoveryPrice: number | null;
-  pegReference: number;
-  source: "live" | "backfill";
-  confirmationSources: string | null;
-  pendingReason: string | null;
-  provenance?: {
-    sourceKind?: string | null;
-    replayRunId?: string | null;
-    replayVersion?: string | null;
-    sourcePriceProviders?: string[] | null;
-    quoteMode?: string | null;
-    pegReferenceSource?: string | null;
-    supplySource?: string | null;
-    confirmationPolicy?: string | null;
-    confirmationPointCount?: number | null;
-    confidenceTier?: string | null;
-    auditVerdict?: string | null;
-    pegScoreEligible?: boolean | null;
-    updatedAt?: number | null;
-  } | null;
-}
-
 export interface DepegEventSearchEntry {
   slug: string;
   stablecoinId: DepegEvent["stablecoinId"];
@@ -338,7 +305,7 @@ export interface DepegEventSearchEntry {
   startedAt: DepegEvent["startedAt"];
 }
 
-const DepegEventSchema = z.object({
+export const DepegEventSchema = z.object({
   id: z.number(),
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -374,6 +341,7 @@ const DepegEventSchema = z.object({
     .optional()
     .default(null),
 });
+export type DepegEvent = z.infer<typeof DepegEventSchema>;
 
 export const DepegPendingIncidentSchema = z.object({
   stablecoinId: z.string(),

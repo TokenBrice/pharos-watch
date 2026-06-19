@@ -22,6 +22,7 @@ function makeDepegEvent(
     endedAt: null,
     confirmationSources: null,
     pendingReason: null,
+    provenance: null,
     ...overrides,
   };
 }
