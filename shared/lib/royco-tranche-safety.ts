@@ -107,6 +107,19 @@ function withdrawalPenalty(sourceRisk: YieldSourceRisk, side: YieldTrancheSide):
   return penalty;
 }
 
+// Slope and cap constants for the drawdown penalty curve, asymmetric by tranche side.
+const DRAWDOWN_SENIOR_SLOPE = 0.6;
+const DRAWDOWN_JUNIOR_SLOPE = 1.2;
+const DRAWDOWN_SENIOR_CAP = 20;
+const DRAWDOWN_JUNIOR_CAP = 30;
+
+function computeDrawdownPenalty(drawdownRatio: number | null, side: YieldTrancheSide): number {
+  if (drawdownRatio == null) return 0;
+  const slope = side === "senior" ? DRAWDOWN_SENIOR_SLOPE : DRAWDOWN_JUNIOR_SLOPE;
+  const cap = side === "senior" ? DRAWDOWN_SENIOR_CAP : DRAWDOWN_JUNIOR_CAP;
+  return Math.min(cap, drawdownRatio * 100 * slope);
+}
+
 export function computeRoycoDawnTrancheSafetyScore(params: {
   underlyingSafetyScore: number;
   sourceRisk: YieldSourceRisk;
@@ -123,7 +136,7 @@ export function computeRoycoDawnTrancheSafetyScore(params: {
   const trancheTvlUsd = numberValue(params.sourceRisk.trancheTvlUsd ?? params.sourceRisk.marketTvlUsd);
 
   const firstLossPenalty = side === "junior" ? 18 : 0;
-  const drawdownPenalty = drawdownRatio == null ? 0 : Math.min(side === "senior" ? 20 : 30, drawdownRatio * 100 * (side === "senior" ? 0.6 : 1.2));
+  const drawdownPenalty = computeDrawdownPenalty(drawdownRatio, side);
   const penalty =
     firstLossPenalty +
     statusPenalty(params.sourceRisk.marketStatus, side) +

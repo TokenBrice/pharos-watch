@@ -80,4 +80,61 @@ describe("computeRoycoDawnTrancheSafetyScore", () => {
       }),
     ).toBeNull();
   });
+
+  describe("drawdown penalty arithmetic", () => {
+    // senior slope=0.6, cap=20; junior slope=1.2, cap=30
+    it("applies senior drawdown penalty: slope 0.6 per 1% drawdown, capped at 20", () => {
+      // 10% drawdown → 10 * 0.6 = 6 penalty contribution (below cap)
+      const r6 = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", marketDrawdownRatio: 0.1 },
+      });
+      expect(r6).not.toBeNull();
+      // Record base penalty (no drawdown) then diff
+      const rBase = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", marketDrawdownRatio: 0 },
+      });
+      expect(r6!.penalty - rBase!.penalty).toBe(6);
+
+      // 40% drawdown → would be 24 but capped at 20
+      const rCap = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", marketDrawdownRatio: 0.4 },
+      });
+      expect(rCap!.penalty - rBase!.penalty).toBe(20);
+    });
+
+    it("applies junior drawdown penalty: slope 1.2 per 1% drawdown, capped at 30", () => {
+      // 10% drawdown → 10 * 1.2 = 12 penalty contribution (below cap)
+      const rBase = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "junior", marketDrawdownRatio: 0 },
+      });
+      const r12 = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "junior", marketDrawdownRatio: 0.1 },
+      });
+      expect(r12!.penalty - rBase!.penalty).toBe(12);
+
+      // 30% drawdown → would be 36 but capped at 30
+      const rCap = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "junior", marketDrawdownRatio: 0.3 },
+      });
+      expect(rCap!.penalty - rBase!.penalty).toBe(30);
+    });
+
+    it("returns zero drawdown penalty when marketDrawdownRatio is null", () => {
+      const rBase = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", marketDrawdownRatio: 0 },
+      });
+      const rNull = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 100,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", marketDrawdownRatio: null },
+      });
+      expect(rNull!.penalty).toBe(rBase!.penalty);
+    });
+  });
 });
