@@ -586,7 +586,13 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
         mcapUsd: transition.mcapUsd,
         date: d.date,
       }))
-      .filter((transition) => transition.mcapUsd != null),
+      .filter((transition) => (
+        typeof transition.symbol === "string"
+        && typeof transition.fromGrade === "string"
+        && typeof transition.toGrade === "string"
+        && typeof transition.mcapUsd === "number"
+        && Number.isFinite(transition.mcapUsd)
+      )),
     (row) => row.mcapUsd,
   );
   const topYieldAnomalies = topSignals(

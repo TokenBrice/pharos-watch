@@ -402,6 +402,35 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toMatch(/PSI midpoint: current .+ prior .+/i);
   });
 
+  it("filters malformed grade transitions before building the weekly risk leaderboard", async () => {
+    const rows = buildDailyRows();
+    rows[1] = {
+      ...rows[1]!,
+      input_data: JSON.stringify({
+        ...(JSON.parse(rows[1]!.input_data) as Record<string, unknown>),
+        gradeTransitions: [{ mcapUsd: 1_000_000 }],
+      }),
+    };
+    rows[2] = {
+      ...rows[2]!,
+      input_data: JSON.stringify({
+        ...(JSON.parse(rows[2]!.input_data) as Record<string, unknown>),
+        gradeTransitions: [{ symbol: "USDT", fromGrade: "A", toGrade: "B", mcapUsd: 2_000_000 }],
+      }),
+    };
+    const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    await expect(generateWeeklyRecap(db, "anthropic-key", null)).resolves.toMatchObject({ itemCount: 1 });
+
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    const prompt = body.messages[0].content;
+    expect(prompt).toContain("USDT: grade A -> B");
+    expect(prompt).not.toContain("undefined: grade undefined");
+  });
+
   it("selects the latest daily row per UTC date before limiting the weekly input window", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
