@@ -23,6 +23,9 @@ const GOVERNANCE_DETAIL_LABEL: Record<GovernanceType, string> = {
   centralized: "Centralized",
 };
 
+// Intentionally set below the 75-point weak-dep threshold so that an
+// unresolvable dependency both scores at this value AND draws the -10
+// weak-dep penalty. Changing this constant is a methodology decision.
 const UNAVAILABLE_DEPENDENCY_SCORE = 70;
 
 export interface ScoreDependencyRiskArgs {
