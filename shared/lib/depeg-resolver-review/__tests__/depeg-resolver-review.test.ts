@@ -287,6 +287,26 @@ describe("DDRR v2 scoring", () => {
     expect(row.durationReview).toBe("duration_unscored");
   });
 
+  it("does not treat overlapping coarse terminal evidence as settled before recovery", () => {
+    const row = reviewDepegResolverAssessment(
+      assessment({ resolutionTier: "recovery_likely" }),
+      actualEvent({
+        endedAt: LOCKED_AT + 4_000,
+        recoveryPrice: 1,
+        terminalObserved: true,
+        terminalEvidenceAt: LOCKED_AT + 3_000,
+        terminalEvidenceInterval: { start: LOCKED_AT + 3_000, end: LOCKED_AT + 5_000 },
+        terminalEvidencePrecision: "day",
+      }),
+      REVIEWED_AT,
+    );
+
+    expect(row.actual.kind).toBe("recovered");
+    expect(row.verdictReview).toBe("correct_recoverable");
+    expect(row.durationReview).not.toBe("duration_unscored");
+    expect(row.actualRemainingSec).toBe(4_000);
+  });
+
   it("reviews horizons as hit, miss, pending, or unscored from lock-time horizons", () => {
     const hit = reviewDepegResolverAssessment(
       assessment({ horizonCells: [horizonCell("6h")] }),
