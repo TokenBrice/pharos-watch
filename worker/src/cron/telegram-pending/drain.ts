@@ -45,7 +45,6 @@ import { logTelegramEvent } from "../../lib/telegram-log";
 
 const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
-const GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
   return row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec;
@@ -524,10 +523,6 @@ export async function drainPendingQueue(
             } else {
               distinctRateLimitedChats.add(result.chatId);
               chatRateLimitedThisLoop.set(result.chatId, { notBeforeAt: classification.rateLimit.notBeforeAt });
-              if (distinctRateLimitedChats.size >= GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
-                globalRateLimited = true;
-                await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
-              }
             }
           }
           break;
