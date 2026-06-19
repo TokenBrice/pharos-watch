@@ -80,7 +80,23 @@ async function fetchLargeFlows(
     ? [since, until, NOTICE_USD, limit]
     : [since, NOTICE_USD, limit];
   const result = await db.prepare(sql).bind(...binds).all<MintBurnSourceRow>();
-  return result.results ?? [];
+  const rows = result.results ?? [];
+  if (rows.length < limit) return rows;
+
+  const cutoff = rows[rows.length - 1]?.timestamp;
+  if (cutoff == null) return rows;
+  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
+  const expandedSql = `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
+                              counterparty, timestamp, flow_type, burn_type
+                         FROM mint_burn_events
+                         WHERE timestamp > ? AND timestamp <= ?
+                           AND amount_usd IS NOT NULL
+                           AND amount_usd >= ?
+                           AND (flow_type IS NULL OR flow_type != 'bridge_transfer')
+                           AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')
+                         ORDER BY timestamp ASC, id ASC`;
+  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil, NOTICE_USD).all<MintBurnSourceRow>();
+  return expanded.results ?? [];
 }
 
 function chainLabel(chainId: string): string {

@@ -65,7 +65,18 @@ async function fetchSamplesSince(
                  LIMIT ?`;
   const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
   const result = await db.prepare(sql).bind(...binds).all<StressSignalRow>();
-  return result.results ?? [];
+  const rows = result.results ?? [];
+  if (rows.length < limit) return rows;
+
+  const cutoff = rows[rows.length - 1]?.computed_at;
+  if (cutoff == null) return rows;
+  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
+  const expandedSql = `SELECT stablecoin_id, computed_at, score, band
+                         FROM stress_signals
+                         WHERE computed_at > ? AND computed_at <= ?
+                         ORDER BY computed_at ASC, stablecoin_id ASC`;
+  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<StressSignalRow>();
+  return expanded.results ?? [];
 }
 
 /**

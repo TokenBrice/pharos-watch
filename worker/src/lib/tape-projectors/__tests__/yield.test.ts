@@ -220,6 +220,25 @@ describe("yield.warning_emitted projector", () => {
     expect(result.projected).toBe(0);
     expect(extractInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(0);
   });
+
+  it("expands a full timestamp batch before advancing the warning cursor", async () => {
+    const rows = [
+      { stablecoin_id: "coin-a", source_key: "src-a", recorded_at: SEC, warning_signals: JSON.stringify(["reward-heavy"]) },
+      { stablecoin_id: "coin-b", source_key: "src-b", recorded_at: SEC, warning_signals: JSON.stringify(["reward-heavy"]) },
+      { stablecoin_id: "coin-c", source_key: "src-c", recorded_at: SEC, warning_signals: JSON.stringify(["reward-heavy"]) },
+    ];
+    const db = mockD1([
+      { match: MATCH_CACHE, rows: [] },
+      { match: MATCH_FETCH_HISTORY, matchBinds: [0, 2], rows: rows.slice(0, 2) },
+      { match: MATCH_FETCH_HISTORY, matchBinds: [0, SEC], rows },
+      { match: MATCH_PRIOR_HISTORY, rows: [] },
+    ]) as MockD1Database;
+
+    const result = await projectYieldWarningEmitted(db, { maxRows: 2 });
+
+    expect(result.advanced).toBe(SEC);
+    expect(extractInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(3);
+  });
 });
 
 describe("yield.pys_dropped projector", () => {

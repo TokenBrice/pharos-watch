@@ -100,11 +100,23 @@ async function fetchYieldHistorySince(
   const sql = `SELECT stablecoin_id, source_key, recorded_at, warning_signals
                  FROM yield_history
                  WHERE is_best = 1 AND recorded_at > ?${untilClause}
-                 ORDER BY stablecoin_id ASC, recorded_at ASC
+                 ORDER BY recorded_at ASC, stablecoin_id ASC
                  LIMIT ?`;
   const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
   const result = await db.prepare(sql).bind(...binds).all<YieldHistoryRow>();
-  return result.results ?? [];
+  const rows = result.results ?? [];
+  if (rows.length < limit) return rows;
+
+  const cutoff = rows[rows.length - 1]?.recorded_at;
+  if (cutoff == null) return rows;
+  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
+  const expandedUntilClause = " AND recorded_at <= ?";
+  const expandedSql = `SELECT stablecoin_id, source_key, recorded_at, warning_signals
+                         FROM yield_history
+                         WHERE is_best = 1 AND recorded_at > ?${expandedUntilClause}
+                         ORDER BY recorded_at ASC, stablecoin_id ASC`;
+  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<YieldHistoryRow>();
+  return expanded.results ?? [];
 }
 
 /**
@@ -156,14 +168,18 @@ export async function projectYieldWarningEmitted(
   const rows = await fetchYieldHistorySince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
 
+  rows.sort((a, b) => (
+    a.stablecoin_id === b.stablecoin_id
+      ? a.recorded_at - b.recorded_at
+      : a.stablecoin_id.localeCompare(b.stablecoin_id)
+  ));
   const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
   const priorByCoin = await fetchPriorWarningSignals(db, distinctCoinIds, since);
 
   const events: TapeEventInsert[] = [];
   let maxCursor = since;
 
-  // Rows are ordered by stablecoin_id ASC, recorded_at ASC. Walk per-coin and
-  // emit when net-new signals appear vs. the running snapshot.
+  // Walk per-coin and emit when net-new signals appear vs. the running snapshot.
   let currentCoin: string | null = null;
   let prevSignals: string[] = [];
   for (const row of rows) {
@@ -258,11 +274,23 @@ async function fetchYieldDecisionsSince(
   const sql = `SELECT stablecoin_id, selected_source_key, selected_score, created_at
                  FROM yield_source_decisions
                  WHERE created_at > ?${untilClause}
-                 ORDER BY stablecoin_id ASC, created_at ASC
+                 ORDER BY created_at ASC, stablecoin_id ASC
                  LIMIT ?`;
   const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
   const result = await db.prepare(sql).bind(...binds).all<YieldDecisionRow>();
-  return result.results ?? [];
+  const rows = result.results ?? [];
+  if (rows.length < limit) return rows;
+
+  const cutoff = rows[rows.length - 1]?.created_at;
+  if (cutoff == null) return rows;
+  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
+  const expandedUntilClause = " AND created_at <= ?";
+  const expandedSql = `SELECT stablecoin_id, selected_source_key, selected_score, created_at
+                         FROM yield_source_decisions
+                         WHERE created_at > ?${expandedUntilClause}
+                         ORDER BY created_at ASC, stablecoin_id ASC`;
+  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<YieldDecisionRow>();
+  return expanded.results ?? [];
 }
 
 async function fetchPriorPysScores(
@@ -308,6 +336,11 @@ export async function projectYieldPysDropped(
   const rows = await fetchYieldDecisionsSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
 
+  rows.sort((a, b) => (
+    a.stablecoin_id === b.stablecoin_id
+      ? a.created_at - b.created_at
+      : a.stablecoin_id.localeCompare(b.stablecoin_id)
+  ));
   const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
   const priorByCoin = await fetchPriorPysScores(db, distinctCoinIds, since);
 
