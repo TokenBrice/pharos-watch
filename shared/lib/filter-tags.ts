@@ -51,15 +51,7 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   }
   if (meta.variantOf && meta.variantKind) {
     tags.push("variant-tracked");
-    if (meta.variantKind === "savings-passthrough") {
-      tags.push("variant-savings-passthrough");
-    } else if (meta.variantKind === "strategy-vault") {
-      tags.push("variant-strategy-vault");
-    } else if (meta.variantKind === "risk-absorption") {
-      tags.push("variant-risk-absorption");
-    } else if (meta.variantKind === "bond-maturity") {
-      tags.push("variant-bond-maturity");
-    }
+    tags.push(`variant-${meta.variantKind}` as FilterTag);
   }
   return tags;
 }
