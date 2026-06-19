@@ -69,6 +69,16 @@ function terminalOutcome(input: {
   };
 }
 
+function isTerminalEvidenceSettledBy(
+  terminalEvidenceAt: number | null,
+  terminalEvidenceInterval: { start: number; end: number } | null,
+  endedAt: number,
+): boolean {
+  if (terminalEvidenceAt == null || terminalEvidenceAt > endedAt) return false;
+  if (terminalEvidenceInterval == null) return true;
+  return terminalEvidenceInterval.end <= endedAt;
+}
+
 export function getAssessmentReviewAnchorSec(assessment: DdrrAssessmentInput): number {
   return assessment.lockedAt ?? assessment.assessedAt;
 }
@@ -121,8 +131,7 @@ export function deriveActualOutcome(
     terminalObserved &&
     event.endedAt != null &&
     event.recoveryPrice != null &&
-    terminalEvidenceAt != null &&
-    terminalEvidenceAt <= event.endedAt
+    isTerminalEvidenceSettledBy(terminalEvidenceAt, terminalEvidenceInterval, event.endedAt)
   ) {
     return terminalOutcome({
       actualEndedAt: event.endedAt,
