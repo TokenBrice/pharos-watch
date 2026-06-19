@@ -88,6 +88,11 @@ export interface DetailQueryResource<TData> {
   meta: ApiMeta | null;
 }
 
+function resolveReportCardSnapshotUpdatedAtMs(reportCards: DetailQueryResource<ReportCardsResponse>): number | null {
+  const updatedAtSeconds = reportCards.meta?.updatedAt ?? reportCards.data?.updatedAt ?? null;
+  return updatedAtSeconds != null && updatedAtSeconds > 0 ? updatedAtSeconds * 1000 : null;
+}
+
 export interface DetailSupplyHistoryInput {
   data?: SupplyHistoryPoint[];
   isLoading: boolean;
@@ -870,7 +875,7 @@ export function buildStablecoinDetailViewModel({
     summary,
     logoSrc,
     reportCard,
-    reportCardUpdatedAt: reportCards.dataUpdatedAt > 0 ? reportCards.dataUpdatedAt : null,
+    reportCardUpdatedAt: resolveReportCardSnapshotUpdatedAtMs(reportCards),
     variantParent,
     variantSiblings: variantRelationship?.siblings ?? [],
     childVariants,
