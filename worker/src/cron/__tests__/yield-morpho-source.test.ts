@@ -19,7 +19,10 @@ describe("fetchMorphoVaultSources", () => {
             items: [{
               address: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
               name: "Gauntlet USDC Prime",
-              asset: { symbol: "USDC" },
+              asset: {
+                symbol: "USDC",
+                address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+              },
               chain: { id: 1 },
               state: { netApy: 0.02968, totalAssetsUsd: 142_917_322, fee: 0 },
             }],
@@ -83,14 +86,20 @@ describe("fetchMorphoVaultSources", () => {
             items: [
               {
                 name: "Missing address",
-                asset: { symbol: "USDC" },
+                asset: {
+                  symbol: "USDC",
+                  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                },
                 chain: { id: 1 },
                 state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
               },
               {
                 address: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
                 name: "Gauntlet USDC Prime",
-                asset: { symbol: "USDC" },
+                asset: {
+                  symbol: "USDC",
+                  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                },
                 chain: { id: 1 },
                 state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
               },
@@ -103,6 +112,40 @@ describe("fetchMorphoVaultSources", () => {
     const results = await fetchMorphoVaultSources();
     expect(results).toHaveLength(1);
     expect(results[0].symbol).toBe("USDC");
+  });
+
+  it("skips vaults whose asset address is missing or not tracked", async () => {
+    mockFetch([{
+      match: "api.morpho.org",
+      body: {
+        data: {
+          vaults: {
+            items: [
+              {
+                address: "0xabc",
+                name: "Missing Asset Address",
+                asset: { symbol: "USDC" },
+                chain: { id: 1 },
+                state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
+              },
+              {
+                address: "0xdef",
+                name: "Spoofed Asset Address",
+                asset: {
+                  symbol: "USDC",
+                  address: "0xdead000000000000000000000000000000000000",
+                },
+                chain: { id: 1 },
+                state: { netApy: 0.42, totalAssetsUsd: 1_000_000, fee: 0 },
+              },
+            ],
+          },
+        },
+      },
+    }]);
+
+    const results = await fetchMorphoVaultSources();
+    expect(results).toEqual([]);
   });
 
   it("uses tracked chain/address identity before returned symbols", async () => {
