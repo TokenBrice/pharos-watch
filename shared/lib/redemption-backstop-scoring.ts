@@ -206,7 +206,7 @@ function interpolateScore(
     }
   }
 
-  return breakpoints[breakpoints.length - 1].score;
+  return breakpoints[breakpoints.length - 1].score; // unreachable: loop always returns once value < top.value
 }
 
 export function computeCapacityScore(args: {
@@ -309,14 +309,14 @@ function resolveSettlementDelayMultiplier(settlementDelaySec: number): number {
   for (const tier of SETTLEMENT_DELAY_PENALTY_TIERS) {
     if (settlementDelaySec <= tier.maxSec) return tier.multiplier;
   }
-  return 1;
+  return 1; // NaN-input fall-through: no penalty
 }
 
 function resolveQueueBacklogMultiplier(backlogRatio: number): number {
   for (const tier of QUEUE_BACKLOG_PENALTY_TIERS) {
     if (backlogRatio >= tier.minRatio) return tier.multiplier;
   }
-  return 1;
+  return 1; // NaN-input fall-through: no penalty
 }
 
 function resolveMinRedeemMultiplier(minRedeemUsd: number): number {
