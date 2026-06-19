@@ -3,6 +3,34 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import security from "eslint-plugin-security";
 
+const layoutScriptRestrictedSyntax = [
+  {
+    selector:
+      "JSXOpeningElement[name.name='Script'] > JSXAttribute[name.name='strategy'][value.value='beforeInteractive']",
+    message:
+      "beforeInteractive Script in a layout file matches a phishing-kit signature on every static page. Move the logic into a route-scoped client component instead.",
+  },
+  {
+    // Inline executable <script>. JSON-LD (`type="application/ld+json"`)
+    // is data, not code — explicitly allowed.
+    selector:
+      "JSXOpeningElement[name.name='script']:not(:has(JSXAttribute[name.name='type'][value.value='application/ld+json']))",
+    message:
+      "Inline executable <script> in a layout file matches phishing-kit signatures on every static page. Use next/script in a route-scoped client component, or render an external script src.",
+  },
+];
+
+const apiPathRestrictedSyntax = [
+  {
+    selector: "CallExpression[callee.type!='MemberExpression'] > Literal[value=/^\\/api\\//]",
+    message: "Use API_PATHS or FRONTEND_API_QUERY_REGISTRY from shared/lib/api-endpoints instead of a /api/ string literal.",
+  },
+  {
+    selector: "CallExpression[callee.type!='MemberExpression'] > TemplateLiteral > TemplateElement[value.cooked=/^\\/api\\//]",
+    message: "Use API_PATHS or FRONTEND_API_QUERY_REGISTRY from shared/lib/api-endpoints instead of a /api/ template literal.",
+  },
+];
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -73,23 +101,7 @@ const eslintConfig = defineConfig([
     // route-scoped via a client component on the page that actually needs it.
     files: ["src/app/**/layout.{ts,tsx}"],
     rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector:
-            "JSXOpeningElement[name.name='Script'] > JSXAttribute[name.name='strategy'][value.value='beforeInteractive']",
-          message:
-            "beforeInteractive Script in a layout file matches a phishing-kit signature on every static page. Move the logic into a route-scoped client component instead.",
-        },
-        {
-          // Inline executable <script>. JSON-LD (`type="application/ld+json"`)
-          // is data, not code — explicitly allowed.
-          selector:
-            "JSXOpeningElement[name.name='script']:not(:has(JSXAttribute[name.name='type'][value.value='application/ld+json']))",
-          message:
-            "Inline executable <script> in a layout file matches phishing-kit signatures on every static page. Use next/script in a route-scoped client component, or render an external script src.",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...layoutScriptRestrictedSyntax],
     },
   },
   {
@@ -158,16 +170,19 @@ const eslintConfig = defineConfig([
       "**/*.spec.{ts,tsx}",
     ],
     rules: {
+      "no-restricted-syntax": ["error", ...apiPathRestrictedSyntax],
+    },
+  },
+  {
+    // ESLint flat config replaces duplicate rule keys for overlapping files.
+    // Re-apply both selector sets for layouts so the broad /api/ literal guard
+    // does not disable the site-wide layout script security guard above.
+    files: ["src/app/**/layout.{ts,tsx}"],
+    rules: {
       "no-restricted-syntax": [
         "error",
-        {
-          selector: "CallExpression[callee.type!='MemberExpression'] > Literal[value=/^\\/api\\//]",
-          message: "Use API_PATHS or FRONTEND_API_QUERY_REGISTRY from shared/lib/api-endpoints instead of a /api/ string literal.",
-        },
-        {
-          selector: "CallExpression[callee.type!='MemberExpression'] > TemplateLiteral > TemplateElement[value.cooked=/^\\/api\\//]",
-          message: "Use API_PATHS or FRONTEND_API_QUERY_REGISTRY from shared/lib/api-endpoints instead of a /api/ template literal.",
-        },
+        ...layoutScriptRestrictedSyntax,
+        ...apiPathRestrictedSyntax,
       ],
     },
   },
