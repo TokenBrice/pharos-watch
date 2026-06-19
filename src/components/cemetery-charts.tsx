@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { CategoricalXAxis, ChartAreaGradient, ChartLegendChip, useSvgId } from "@/components/chart-primitives/axes";
+import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
@@ -25,7 +26,6 @@ import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
-import { cn } from "@/lib/utils";
 import type { CauseOfDeath } from "@shared/types";
 
 function CemeteryChartCard({ title, ariaLabel, children }: { title: string; ariaLabel?: string; children: ReactNode }) {
@@ -433,7 +433,7 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
           Cumulative Peak Value Destroyed
         </CardTitle>
         <CardAction>
-          <ScaleToggle value={logScale ? "log" : "lin"} onChange={(v) => setLogScale(v === "log")} />
+          <ChartScaleToggle value={logScale ? "log" : "lin"} onChange={(v) => setLogScale(v === "log")} />
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -516,30 +516,6 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
   );
 }
 
-function ScaleToggle({ value, onChange }: { value: "lin" | "log"; onChange: (v: "lin" | "log") => void }) {
-  const baseBtn =
-    "pharos-focus-ring h-7 min-w-8 rounded-sm px-2 text-[11px] font-mono uppercase tracking-wide transition-colors";
-  return (
-    <div className="inline-flex items-center gap-0.5 rounded-md border border-border/60 bg-muted/30 p-0.5">
-      {(["lin", "log"] as const).map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          aria-pressed={value === opt}
-          onClick={() => onChange(opt)}
-          className={cn(
-            baseBtn,
-            value === opt
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /* ══════════════════════════════════════════════════════════════════════
    Combined export
