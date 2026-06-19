@@ -8,6 +8,7 @@ import {
 } from "../lib/telegram-constants";
 import { deliverTelegramSubscriberQueue, type DeliverTelegramSubscriberQueueResult } from "./dispatch-telegram-delivery";
 import {
+  estimatedPlannedChunks,
   formatPlannedSubscribers,
   planSubscriberQueue,
   selectChatsToFormat,
@@ -27,10 +28,6 @@ const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
 const OVERFLOW_PLAN_CACHE_VERSION = 1;
 
 type OverflowPlannedSubscriberAlert = PlannedSubscriberAlert & { expiresAt?: number };
-
-function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {
-  return plans.reduce((sum, plan) => sum + Math.max(1, plan.estimatedChunks), 0);
-}
 
 function normalizeCachedAlerts(value: unknown): AlertsByChatEntry["alerts"] | null {
   if (!isRecord(value)) return null;

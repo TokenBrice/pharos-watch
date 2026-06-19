@@ -10,6 +10,7 @@ import { recordTelegramAlertTargetStatuses, type TelegramAlertTargetStatusUpdate
 import {
   deliverFreshAlerts,
   emptyPerAlertTypeDelivery,
+  estimatedPlannedChunks,
   expandSubscriberChunks,
   formatPlannedSubscriber,
   splitFreshQueue,
@@ -58,10 +59,6 @@ export interface DeliverTelegramSubscriberQueueResult {
   cappedAtLimit: boolean;
   perAlertType: PerAlertTypeDelivery;
   remainingOverflowPlanned: PlannedSubscriberAlert[];
-}
-
-function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {
-  return plans.reduce((sum, plan) => sum + Math.max(1, plan.estimatedChunks), 0);
 }
 
 function selectOverflowPlansToFormat(
