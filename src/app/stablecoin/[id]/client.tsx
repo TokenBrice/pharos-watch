@@ -341,7 +341,10 @@ export default function StablecoinDetailClient({
     />
   ) : null;
   const showPegChart =
-    viewModel.coin.flags.pegCurrency === "USD" && !viewModel.isNavToken && viewModel.supplyHistory.length > 0;
+    viewModel.coin.flags.pegCurrency === "USD" &&
+    !viewModel.isNavToken &&
+    viewModel.coin.flags.yieldBearing !== true &&
+    viewModel.supplyHistory.length > 0;
   const archetypeOverride = viewModel.coin.archetypeOverride === true;
   const isWrapperVariant = viewModel.isVariant && !archetypeOverride;
   const parentArchetype =
