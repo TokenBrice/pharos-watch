@@ -1,5 +1,30 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV813Entry() {
+  return (
+    <VersionCard entry={getScoringEntry("8.13")}>
+      <p>
+        Dependency Risk now falls back to curated reserve links or manual dependencies when a score-grade live reserve
+        snapshot contains no mapped tracked-asset links at all.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Partial live mappings stay authoritative: unmapped live reserve remainder still counts as self-backed or
+          non-stablecoin exposure instead of reviving older curated percentages.
+        </li>
+        <li>
+          The fallback applies only to the all-unmapped live case, where treating the whole snapshot as self-backed can
+          erase known upstream stablecoin dependencies.
+        </li>
+        <li>
+          Raw inputs keep <code className="text-xs">dependencyFromLive</code> true only for live-derived or explicitly
+          live-unmapped dependency sets; curated/manual fallback dependencies report false.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV812Entry() {
   return (
     <VersionCard entry={getScoringEntry("8.12")}>
@@ -110,6 +135,7 @@ export function ScoringChangelogV80Entry() {
 export function ScoringChangelogV8Entries() {
   return (
     <>
+      <ScoringChangelogV813Entry />
       <ScoringChangelogV812Entry />
       <ScoringChangelogV811Entry />
       <ScoringChangelogV81Entry />

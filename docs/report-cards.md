@@ -6,12 +6,12 @@ The stablecoin registry currently contains 406 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.12`
+- **Current methodology version:** `v8.13`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v8.12)
+## Overall Grade (v8.13)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v8.12 adds reviewed bridge-route risk as a Safety Score input inside Decentralization. When `bridgeRouteRisk` metadata is present, Decentralization applies a penalty-only blend after the CDP oracle step and before Mint Authority: `decentralization = min(current, 0.80 x current + 0.20 x bridgeRouteScore)`. Strong issuer-native or canonical routes never lift a score, missing bridge-route reviews stay neutral, and weak external lock/mint, liquidity, or intent routes can drag the dimension down. L2BEAT Interop is used as a static review/evidence source and candidate queue; report-card scoring consumes only curated Pharos metadata. The v8.11 oracle provenance and branch handling, v8.0 Mint Authority blend, v7.29 liquidity/redemption rules, and v7.291 degraded-input history guard carry forward unchanged.
+Current-version note: v8.13 tightens Dependency Risk live-reserve derivation: when a score-grade live reserve snapshot has no mapped tracked-asset links at all, Dependency Risk falls back to curated reserve links or manual dependencies before treating the asset as live-unmapped/self-backed. Partial live mappings remain authoritative, so unmapped remainder inside a mapped live snapshot still counts as self-backed / non-stablecoin reserve share. The v8.12 bridge-route blend, v8.11 oracle provenance and branch handling, v8.0 Mint Authority blend, v7.29 liquidity/redemption rules, and v7.291 degraded-input history guard carry forward unchanged.
 
 ## Yield Source-Risk Boundary
 
@@ -152,7 +152,9 @@ The `dependencyFromLive` flag indicates that the Dependency Risk input came from
 the same score-grade live reserve snapshot. Live slices with `coinId` links are
 converted to dependency weights; live slices without `coinId` stay as implicit
 self-backed / non-stablecoin reserve share instead of reviving older curated
-stablecoin-link percentages.
+stablecoin-link percentages. If a score-grade live snapshot contains no mapped
+`coinId` links at all, Dependency Risk falls back to curated reserve links or
+manual dependencies before preserving an empty `live-unmapped` dependency set.
 
 A delta alert fires when the independent live-derived score diverges from curated by >15 points,
 signaling that curated metadata (and potentially the governance classification) may
@@ -338,7 +340,7 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 
 **Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
-**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveEffectiveDependencies()` in `shared/lib/dependency-derivation.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). When score-grade live reserve slices are present, they are the dependency source for that snapshot; otherwise the resolver falls back to curated `StablecoinMeta.reserves`, then to the manual `dependencies` array when curated reserves have no tracked links. Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin or unmapped live reserve slices contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero.
+**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveEffectiveDependencies()` in `shared/lib/dependency-derivation.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). When score-grade live reserve slices contain mapped tracked links, they are the dependency source for that snapshot; otherwise the resolver falls back to curated `StablecoinMeta.reserves`, then to the manual `dependencies` array when curated reserves have no tracked links. If a score-grade live snapshot exists but contains no mapped tracked links, that curated/manual fallback is used before the resolver keeps an empty `live-unmapped` dependency set. Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin or unmapped live reserve slices inside a partially mapped live snapshot contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero.
 
 **Scoring:**
 

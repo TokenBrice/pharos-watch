@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.13",
+    title: "All-unmapped live reserve dependencies fall back to curated links",
+    date: "2026-06-19",
+    effectiveAt: 1781870400,
+    summary:
+      "Dependency Risk now treats score-grade live reserve snapshots with no mapped tracked-asset links as insufficient dependency evidence when curated reserve or manual dependency links exist. Partial live mappings remain authoritative, and only the all-unmapped live case falls back to curated/manual dependency evidence.",
+    impact: [
+      "Live reserve slices with mapped `coinId` links still drive Dependency Risk, raw dependency inputs, topological ordering, and dependency graph edges",
+      "Unmapped remainder inside a partially mapped live snapshot remains self-backed or non-stablecoin reserve share instead of reviving stale curated percentages",
+      "When a score-grade live snapshot has zero mapped `coinId` links, Dependency Risk falls back to curated reserve links, then manual dependencies, before treating the asset as live-unmapped/self-backed",
+      "The `dependencyFromLive` raw-input flag is false for fallback-derived dependencies and true only when the effective dependency set is live-derived or explicitly live-unmapped with no fallback evidence",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.12",
     title: "Bridge-route risk enters Decentralization",
     date: "2026-06-12",

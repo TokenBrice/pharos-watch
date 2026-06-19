@@ -84,26 +84,10 @@ export function deriveDependencies(meta: Pick<StablecoinMeta, "reserves" | "depe
   return reserveDependencies;
 }
 
-export function deriveEffectiveDependencySet(
+function deriveCuratedDependencySet(
   meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies">,
-  options?: { liveReserveSlices?: readonly ReserveSlice[] },
+  mappedLiveReserveWeight: number | null = null,
 ): DerivedDependencySet {
-  if (Array.isArray(options?.liveReserveSlices)) {
-    const liveDependencies = aggregateReserveDependencies(options.liveReserveSlices);
-    const dependencies = injectVariantParent(liveDependencies, meta.variantOf);
-    const baseSource: DependencyDerivationBaseSource = liveDependencies.length > 0
-      ? "live-reserve"
-      : "live-unmapped";
-
-    return {
-      dependencies,
-      source: resolveSource(baseSource, dependencies, meta.variantOf),
-      baseSource,
-      dependencyFromLive: true,
-      mappedLiveReserveWeight: sumDependencyWeight(liveDependencies),
-    };
-  }
-
   const reserveDependencies = meta.reserves?.length
     ? aggregateReserveDependencies(meta.reserves)
     : [];
@@ -121,8 +105,44 @@ export function deriveEffectiveDependencySet(
     source: resolveSource(baseSource, dependencies, meta.variantOf),
     baseSource,
     dependencyFromLive: false,
-    mappedLiveReserveWeight: null,
+    mappedLiveReserveWeight,
   };
+}
+
+export function deriveEffectiveDependencySet(
+  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies">,
+  options?: { liveReserveSlices?: readonly ReserveSlice[] },
+): DerivedDependencySet {
+  if (Array.isArray(options?.liveReserveSlices)) {
+    const liveDependencies = aggregateReserveDependencies(options.liveReserveSlices);
+    const mappedLiveReserveWeight = sumDependencyWeight(liveDependencies);
+
+    if (liveDependencies.length === 0) {
+      const fallbackSet = deriveCuratedDependencySet(meta, mappedLiveReserveWeight);
+      if (fallbackSet.dependencies.length > 0) return fallbackSet;
+
+      return {
+        dependencies: [],
+        source: "live-unmapped",
+        baseSource: "live-unmapped",
+        dependencyFromLive: true,
+        mappedLiveReserveWeight,
+      };
+    }
+
+    const dependencies = injectVariantParent(liveDependencies, meta.variantOf);
+    const baseSource: DependencyDerivationBaseSource = "live-reserve";
+
+    return {
+      dependencies,
+      source: resolveSource(baseSource, dependencies, meta.variantOf),
+      baseSource,
+      dependencyFromLive: true,
+      mappedLiveReserveWeight,
+    };
+  }
+
+  return deriveCuratedDependencySet(meta);
 }
 
 export function deriveEffectiveDependencies(

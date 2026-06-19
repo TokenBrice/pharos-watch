@@ -305,7 +305,7 @@ describe("buildReportCardsSnapshot", () => {
     );
   });
 
-  it("keeps live-unmapped reserve dependencies from falling back to curated dependencies", async () => {
+  it("keeps live-unmapped reserve dependencies empty when no curated dependencies exist", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "dai-makerdao", symbol: "DAI" })]);
     loadFreshIndependentLiveReserveMapMock.mockResolvedValueOnce(
       new Map([

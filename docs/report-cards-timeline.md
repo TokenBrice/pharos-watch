@@ -1,8 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.12 (2026-02-25 → 2026-06-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.13 (2026-02-25 → 2026-06-19). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
 
 > Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the most recent entries.
+
+## v8.13 — All-unmapped live reserve dependencies fall back to curated links (2026-06-19)
+
+Dependency Risk now treats score-grade live reserve snapshots with no mapped tracked-asset links as insufficient dependency evidence when curated reserve or manual dependency links exist. Partial live mappings remain authoritative: unmapped live reserve remainder inside a partially mapped snapshot still counts as self-backed / non-stablecoin exposure instead of reviving older curated percentages. Only the all-unmapped live case falls back to curated reserve links, then manual dependencies, before preserving an empty `live-unmapped` dependency set.
 
 ## v8.12 — Bridge-route risk enters Decentralization (2026-06-12)
 
