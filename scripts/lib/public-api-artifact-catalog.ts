@@ -807,7 +807,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SAFETY_SCORE_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
-      order: 3,
+      order: 4,
       query: { stablecoin: "{{stablecoinId}}", days: "3650" },
     },
   },
@@ -819,7 +819,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     tags: ["Digest"],
     postman: {
       folder: "Historical data",
-      order: 4,
+      order: 5,
       description: "Latest AI-generated market digest.",
     },
   },
@@ -831,7 +831,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     tags: ["Digest"],
     postman: {
       folder: "Historical data",
-      order: 5,
+      order: 6,
     },
   },
   {
@@ -851,7 +851,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     ],
     postman: {
       folder: "Historical data",
-      order: 6,
+      order: 7,
       query: { date: "{{digestDate}}" },
     },
   },
@@ -863,7 +863,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     tags: ["Digest"],
     postman: {
       folder: "Historical data",
-      order: 7,
+      order: 8,
     },
   },
   {
@@ -884,7 +884,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     ],
     postman: {
       folder: "Historical data",
-      order: 8,
+      order: 9,
       path: snapshotPostmanPath(API_PATHS.snapshotDay(SNAPSHOT_DATE_TOKEN)),
     },
   },
@@ -913,7 +913,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     ],
     postman: {
       folder: "Historical data",
-      order: 9,
+      order: 10,
       path: snapshotPostmanPath(API_PATHS.snapshotCoin(SNAPSHOT_DATE_TOKEN, STABLECOIN_ID_TOKEN)),
     },
   },
