@@ -181,7 +181,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const staticCoin = buildStablecoinStaticMeta(coin, {
     hasCollateralUsage: collateralUsageEntries.length > 0,
   });
-  const clientCoin = buildStablecoinDetailClientCoin(coin);
+  const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
   // Server-rendered in both the crawl-state fallback and the hydrated dossier
   // so the FAQPage JSON-LD content stays visible in every render state.
