@@ -138,7 +138,7 @@ function buildLifecycleHistory(
     };
   }
 
-  if (fallbackHistory.length === 0) {
+  if (snapshotHistory.length > 1 || fallbackHistory.length === 0) {
     return { source: "snapshot", points: snapshotHistory };
   }
 
