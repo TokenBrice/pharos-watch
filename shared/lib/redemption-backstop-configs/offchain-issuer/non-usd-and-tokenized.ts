@@ -306,68 +306,49 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Tracked USDY metadata records a 5% bank-demand-deposit slice; Pharos uses that reserve slice as the documented hot-buffer lower bound and does not promote the unvalidated 8% proposal.",
     ],
   },
-  "iauon-ondo": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-05-24"),
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Ondo Global Markets subscriptions and redemptions follow the tokenized IAU economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee",
-    ),
-    docs: [
-      sourceRef("IAUon asset page", "https://app.ondo.finance/assets/iauon", ["route", "capacity"]),
-      sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
-        "route",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
-        "Ondo Global Markets important notes",
-        "https://docs.ondo.finance/ondo-global-markets/important-notes",
-        ["access", "fees", "settlement"],
-      ),
-      sourceRef(
-        "Ondo Global Markets trust and transparency",
-        "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-        ["capacity"],
-      ),
-    ],
-    notes: [
-      "IAUon is modeled as an eligible-investor NAV redemption route to Ondo GM value, not as direct holder ownership or delivery of underlying iShares Gold Trust shares.",
-    ],
-  },
-  "slvon-ondo": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-05-24"),
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Ondo Global Markets subscriptions and redemptions follow the tokenized SLV economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee",
-    ),
-    docs: [
-      sourceRef("SLVon asset page", "https://app.ondo.finance/assets/slvon", ["route", "capacity"]),
-      sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
-        "route",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
-        "Ondo Global Markets important notes",
-        "https://docs.ondo.finance/ondo-global-markets/important-notes",
-        ["access", "fees", "settlement"],
-      ),
-      sourceRef(
-        "Ondo Global Markets trust and transparency",
-        "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-        ["capacity"],
-      ),
-    ],
-    notes: [
-      "SLVon is modeled as an eligible-investor NAV redemption route to Ondo GM value, not as direct holder ownership or delivery of underlying iShares Silver Trust shares.",
-    ],
-  },
+  /** iauon-ondo and slvon-ondo share the Ondo GM shape; they differ only in ticker,
+   *  asset page URL, and the underlying-fund name in the notes. */
+  ...Object.fromEntries(
+    (
+      [
+        ["iauon-ondo", "IAUon", "iauon", "iShares Gold Trust"],
+        ["slvon-ondo", "SLVon", "slvon", "iShares Silver Trust"],
+      ] as const
+    ).map(([id, label, slug, fundName]) => [
+      id,
+      {
+        ...issuerBase,
+        ...documentedBoundSupplyFull("2026-05-24"),
+        settlementModel: "days",
+        executionModel: "rules-based-nav",
+        outputAssetType: "nav",
+        costModel: undisclosedReviewedFee(
+          `Ondo Global Markets subscriptions and redemptions follow the tokenized ${slug.toUpperCase()} economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee`,
+        ),
+        docs: [
+          sourceRef(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`, ["route", "capacity"]),
+          sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
+            "route",
+            "access",
+            "settlement",
+          ]),
+          sourceRef(
+            "Ondo Global Markets important notes",
+            "https://docs.ondo.finance/ondo-global-markets/important-notes",
+            ["access", "fees", "settlement"],
+          ),
+          sourceRef(
+            "Ondo Global Markets trust and transparency",
+            "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+            ["capacity"],
+          ),
+        ],
+        notes: [
+          `${label} is modeled as an eligible-investor NAV redemption route to Ondo GM value, not as direct holder ownership or delivery of underlying ${fundName} shares.`,
+        ],
+      } satisfies RedemptionBackstopConfig,
+    ]),
+  ),
   "thbill-theo": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
