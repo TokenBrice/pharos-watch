@@ -5,6 +5,7 @@ import {
   resolveEnabledAddressPriceProviders,
   resolveFallbackChain,
 } from "../address-price-providers";
+import { runAlchemyAddressProvider } from "../address-price-providers/alchemy";
 import { runBirdeyeAddressProvider } from "../address-price-providers/birdeye";
 import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
@@ -210,6 +211,33 @@ describe("address price providers", () => {
         rejectionReasonCounts: { "missing-quote": 1 },
       },
     ]);
+  });
+
+  it("redacts the Alchemy API key from retry logs while fetching with the real endpoint", async () => {
+    const target = makeDexScreenerTarget(0);
+    const secret = "ALCH_SECRET_123/plus+space value";
+    const encodedSecret = encodeURIComponent(secret);
+    const fetchMock = vi.fn(async () => new Response("upstream error", { status: 520 }));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runAlchemyAddressProvider(
+      [target],
+      { alchemyApiKey: secret },
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(result.attemptedRequests).toBe(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `https://api.g.alchemy.com/prices/v1/${encodedSecret}/tokens/by-address`,
+      expect.any(Object),
+    );
+    const warnOutput = warnSpy.mock.calls.map((call) => call.join(" ")).join("\n");
+    expect(warnOutput).toContain("https://api.g.alchemy.com/prices/v1/<api-key>/tokens/by-address");
+    expect(warnOutput).not.toContain(secret);
+    expect(warnOutput).not.toContain(encodedSecret);
+    warnSpy.mockRestore();
   });
 
   it("limits DexScreener address augmentation to one batch per run", async () => {

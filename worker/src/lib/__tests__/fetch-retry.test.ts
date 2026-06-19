@@ -104,6 +104,24 @@ describe("fetchWithRetry", () => {
     await expect(res?.json()).resolves.toEqual({ error: "slow down" });
   });
 
+  it("uses an explicit safe URL in retry logs without changing the fetched URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("bad gateway", { status: 520 }));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchWithRetry(
+      "https://example.com/secret-token/resource",
+      undefined,
+      0,
+      { logUrl: "https://example.com/<redacted>/resource" },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith("https://example.com/secret-token/resource", expect.any(Object));
+    expect(warnSpy).toHaveBeenCalledWith("[fetch-retry] https://example.com/<redacted>/resource returned 520 (attempt 1/1)");
+    expect(warnSpy.mock.calls.map((call) => call.join(" ")).join("\n")).not.toContain("secret-token");
+    warnSpy.mockRestore();
+  });
+
   it("backs off on 529 overload responses before succeeding", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: "overloaded" }), { status: 529 }))

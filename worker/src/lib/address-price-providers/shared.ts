@@ -98,6 +98,7 @@ export async function fetchProviderJson(params: {
   provider: AddressPriceProviderKey;
   url: string;
   endpoint?: string;
+  fetchLogUrl?: string;
   init?: RequestInit;
   candidateCount: number;
   signal?: AbortSignal;
@@ -123,6 +124,7 @@ export async function fetchProviderJson(params: {
     ADDRESS_PROVIDER_MAX_RETRIES,
     {
       timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
+      logUrl: params.fetchLogUrl,
       passthroughStatuses: PASSTHROUGH_STATUSES,
     },
   );
