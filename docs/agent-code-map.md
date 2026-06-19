@@ -209,7 +209,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/api-key-admin-view-model.ts` - ApiKeySummaryItem, CreateExpiryMode, CreateKeyState, DEFAULT_CREATE_KEY_STATE, EditableKeyState, buildApiKeyInventorySummary
 - `src/lib/api-key-request-admin-view-model.ts` - API_KEY_REQUEST_ACTION_LABELS, API_KEY_REQUEST_STATUS_FILTERS, API_KEY_REQUEST_STATUS_LABELS, ApiKeyRequestAction, ApiKeyRequestCardViewModel, ApiKeyRequestSummaryItem
 - `src/lib/api-key-request-form-view-model.ts` - API_KEY_REQUEST_CADENCE_OPTIONS, API_KEY_REQUEST_ENDPOINT_OPTIONS, API_KEY_REQUEST_EXPIRY_DAYS, API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL, API_KEY_REQUEST_SAMPLE_PATH, ApiKeyRequestWorkflowAction
-- `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, verifyApiKeyRequestToken
+- `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripQueryVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, verifyApiKeyRequestToken
 - `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
 - `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceEndpointSummary, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock
@@ -705,6 +705,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-duplicate-exports.test.ts`
 - `scripts/__tests__/check-env-contract.test.ts` - After, Env
 - `scripts/__tests__/check-glossary-coverage.test.ts`
+- `scripts/__tests__/check-phishing-signatures.test.ts`
 - `scripts/__tests__/check-provider-resilience.test.ts` - run
 - `scripts/__tests__/check-redemption-backstops.test.ts`
 - `scripts/__tests__/check-reserve-fixture-freshness.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/parse-version-upload.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
-- `scripts/__tests__/remote-d1.test.ts`
-- ... 205 more files omitted; use `rg --files scripts` for the full list.
+- ... 206 more files omitted; use `rg --files scripts` for the full list.
