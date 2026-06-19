@@ -94,6 +94,7 @@ export async function runDexScreenerAddressProvider(
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
+  let processedCount = 0;
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
@@ -123,6 +124,7 @@ export async function runDexScreenerAddressProvider(
       } else if (json != null) {
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected DexScreener token-address response array");
       }
+      processedCount += batch.length;
       diagnostics.push(diagnostic);
       if (!diagnostic.success) {
         break;
@@ -131,7 +133,7 @@ export async function runDexScreenerAddressProvider(
     if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
   }
 
-  const cappedTargets = Math.max(0, targets.length - Math.min(targets.length, DEXSCREENER_ADDRESS_MAX_REQUESTS * 30));
+  const cappedTargets = Math.max(0, targets.length - processedCount);
   if (cappedTargets > 0) {
     diagnostics.push(buildCapSkipDiagnostic({ source: "dexscreener-address", label: "DexScreener" }, cappedTargets));
   }
