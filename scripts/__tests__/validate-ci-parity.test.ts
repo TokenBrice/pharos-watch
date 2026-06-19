@@ -456,7 +456,7 @@ describe("validate-ci parity", () => {
     expect(deployValidateJob).toContain("run_pages_build_and_seo: false");
 
     const uploadWorkerJob = extractJobBlock(deployWorkflow, "upload-worker-version", "deploy-worker");
-    expect(uploadWorkerJob).not.toContain("- validate");
+    expect(uploadWorkerJob).toContain("- validate");
     expect(uploadWorkerJob).not.toContain("Apply production D1 migrations");
     expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
     expect(uploadWorkerJob).toContain("uses: ./.github/actions/setup-workspace");
@@ -501,6 +501,7 @@ describe("validate-ci parity", () => {
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
     expect(pagesReleaseJob).toContain("needs:");
     expect(pagesReleaseJob).toContain("- detect-changes");
+    expect(pagesReleaseJob).toContain("- validate");
     expect(pagesReleaseJob).not.toContain("- upload-worker-version");
     expect(pagesReleaseJob).toContain("uses: ./.github/workflows/pages-release.yml");
     expect(pagesReleaseJob).toContain(

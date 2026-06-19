@@ -71,6 +71,7 @@ jobs:
   upload-worker-version:
     needs:
       - detect-changes
+      - validate
     if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
     runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
@@ -328,6 +329,7 @@ jobs:
   pages-release:
     needs:
       - detect-changes
+      - validate
     if: >-
       ${{
         always()
