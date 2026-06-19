@@ -846,28 +846,31 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(200);
     expect(historyHas(db, "alert_snooze_until_ts = NULL", ["42", "alice"])).toBe(true);
-    expect(historyHas(db, "ON CONFLICT(key) DO NOTHING", [])).toBe(false);
+    expect(historyHas(db, "ON CONFLICT(key) DO NOTHING", [])).toBe(true);
   });
 
-  it("allows multiple mutations from the same fresh Mini App launch", async () => {
+  it("rejects replayed mutations from the same fresh Mini App launch", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const initDataHash = new URLSearchParams(initData).get("hash");
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        matchBinds: [`telegram:mini-app:mutation-init-data:42:${initDataHash}`, "1", NOW_SEC],
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
 
-    const firstResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "clear-snooze" },
-    }), BOT_TOKEN);
-    const secondResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-global", alertType: "safety", enabled: true },
     }), BOT_TOKEN);
 
-    expect(firstResponse.status).toBe(200);
-    expect(secondResponse.status).toBe(200);
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: "replay-claimed" });
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("global_alert_safety = excluded.global_alert_safety"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("global_alert_safety = excluded.global_alert_safety"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily") && entry.binds.includes("mini_app_mutation_denied") && entry.binds.includes("replay_claimed"))).toBe(true);
   });
 
   it("rejects stale mutation auth at the 5-minute boundary", async () => {
@@ -1022,7 +1025,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(true);
     expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:command-cooldown:42:mini-app:mutation:any"])).toBe(true);
   });
 
@@ -1314,7 +1317,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(groupResponse.status).toBe(403);
     expect(await groupResponse.json()).toMatchObject({ code: "not-private" });
 
-    // Fresh auth remains reusable within the same Mini App launch.
+    // Fresh auth is one-shot for mutations; replay attempts are denied.
     const reusableInitData = await privateInitData();
     const reusableDb = mockD1(stateReadTables());
     const reusableResponse = await handleTelegramMiniAppMutation(

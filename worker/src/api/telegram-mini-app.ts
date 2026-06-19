@@ -11,7 +11,7 @@ import {
   recordTelegramUsageEvent,
   type TelegramUsageEventType,
 } from "../lib/telegram-usage-analytics";
-import { acquireTelegramCommandCooldown, releaseTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
+import { acquireTelegramCommandCooldown, claimTelegramMiniAppMutationInitData, releaseTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
 import { TelegramMiniAppMutationRequestSchema, TelegramMiniAppSessionRequestSchema, type TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationActionDetail } from "./telegram-mini-app-mutations";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
@@ -365,10 +365,28 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
+    const mutationNowSec = unixNow();
+    const claimed = await claimTelegramMiniAppMutationInitData(db, {
+      userId: auth.userId,
+      initDataHash: auth.initDataHash,
+      nowSec: mutationNowSec,
+    });
+    if (!claimed) {
+      await recordMiniAppEvent(db, {
+        eventType: "mini_app_mutation_denied",
+        auth,
+        actionDetail: mutationActionDetail(parsed.operation),
+        outcome: "denied",
+        failureClass: "replay_claimed",
+        latencyMs: Date.now() - start,
+      });
+      return miniAppError(409, "replay-claimed", "Telegram Mini App mutation session already used");
+    }
+
     const cooldown = await acquireTelegramCommandCooldown(db, {
       chatId: auth.userId,
       commandKey: MUTATION_COOLDOWN_KEY,
-      nowSec: unixNow(),
+      nowSec: mutationNowSec,
       cooldownSec: MUTATION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) {

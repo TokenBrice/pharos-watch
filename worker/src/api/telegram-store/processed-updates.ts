@@ -185,6 +185,27 @@ export async function maybePruneTelegramProcessedUpdates(
   });
 }
 
+export async function claimTelegramMiniAppMutationInitData(
+  db: D1Database,
+  input: {
+    userId: string;
+    initDataHash: string;
+    nowSec: number;
+  },
+): Promise<boolean> {
+  const key = `telegram:mini-app:mutation-init-data:${input.userId}:${input.initDataHash}`;
+  const result = await db
+    .prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO NOTHING`,
+    )
+    .bind(key, "1", input.nowSec)
+    .run();
+
+  return d1ChangeCount(result) > 0;
+}
+
 export interface TelegramCommandCooldownResult {
   allowed: boolean;
   retryAfterSec: number;

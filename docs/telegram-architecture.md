@@ -295,7 +295,7 @@ Per-coin subscription writes have two deliberate modes: subscribe-style follows 
 **Allowed outbound dependencies.** State / persistence helpers for subscription writes and cooldowns, `telegram-presets` for dynamic preset targets, `telegram-usage-analytics` for validated usage events, shared endpoint metadata, shared stablecoin metadata, and the Telegram WebApp browser bridge on the frontend.
 
 **Must NOT.**
-- Accept mutation auth older than the 5-minute mutation window.
+- Accept mutation auth older than the 5-minute mutation window or reuse an already claimed mutation `initData` hash.
 - Mutate group/supergroup/channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist.
 - Write user-scoped analytics or cooldown rows before signed `initData` validation succeeds. The only pre-auth exception is aggregate abuse/validation counters for body-too-large, malformed JSON, and schema-denied Mini App requests; those counters must not include Telegram user or chat identifiers.
 - Duplicate per-coin or preset write SQL outside the existing State / persistence helpers.
