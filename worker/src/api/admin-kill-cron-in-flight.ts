@@ -4,10 +4,8 @@ import {
   type AdminUrlRouteContext,
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
-import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
+import { VALID_CRON_JOB_IDS } from "@shared/lib/cron-jobs";
 import { logAdminAction, type AdminActionLogEntry } from "../lib/admin-action-audit";
-
-const VALID_JOB_IDS = new Set<string>(CRON_JOB_DEFINITIONS.map((def) => def.job));
 
 export const handleKillCronInFlight = makeIdempotentAdminRoute<AdminUrlRouteContext>(
   "route-kill-cron-in-flight",
@@ -16,7 +14,7 @@ export const handleKillCronInFlight = makeIdempotentAdminRoute<AdminUrlRouteCont
     const job = url.searchParams.get("job")?.trim();
     const leaseOwner = url.searchParams.get("leaseOwner")?.trim();
     if (!job || !leaseOwner) return adminErrorResponse(400, "Missing required params: job, leaseOwner");
-    if (!VALID_JOB_IDS.has(job)) return adminErrorResponse(400, `Unknown cron job: ${job}`);
+    if (!VALID_CRON_JOB_IDS.has(job)) return adminErrorResponse(400, `Unknown cron job: ${job}`);
 
     // Conditional delete: only matches when lease_owner matches what the
     // operator observed. Prevents racing a legitimate replacement that took
