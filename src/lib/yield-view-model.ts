@@ -357,6 +357,10 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
   let sourceUnchangedCount = 0;
   let watchlistCount = 0;
   const depthCounts = new Map<YieldSourceDepthLens, number>();
+  // Fold minSafety/minTvl/hide-thin threshold counts into the main loop to
+  // avoid 8 redundant O(n) filter passes per buildOptions call (vm-3).
+  const safetyCounts = new Map<number, number>();
+  const tvlCounts = new Map<number, number>();
 
   for (const facet of facets) {
     const row = facet.row;
@@ -380,7 +384,25 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
     if (facet.inWatchlist) watchlistCount += 1;
 
     depthCounts.set(facet.sourceDepthLens, (depthCounts.get(facet.sourceDepthLens) ?? 0) + 1);
+
+    if (row.safetyScore !== null) {
+      for (const threshold of MIN_SAFETY_OPTIONS) {
+        if (row.safetyScore >= threshold) {
+          safetyCounts.set(threshold, (safetyCounts.get(threshold) ?? 0) + 1);
+        }
+      }
+    }
+    if (row.sourceTvlUsd !== null) {
+      for (const threshold of MIN_TVL_OPTIONS) {
+        if (row.sourceTvlUsd >= threshold) {
+          tvlCounts.set(threshold, (tvlCounts.get(threshold) ?? 0) + 1);
+        }
+      }
+    }
   }
+
+  // hide-thin = all facets that are not "thin"; derive from depthCounts to avoid an extra pass.
+  const hideThinCount = facets.length - (depthCounts.get("thin") ?? 0);
 
   return {
     peg: buildPegOptions(facets),
@@ -401,7 +423,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
       ...MIN_SAFETY_OPTIONS.map((minSafety) => ({
         value: String(minSafety),
         label: `${minSafety}+ safety`,
-        count: facets.filter((facet) => facet.row.safetyScore !== null && facet.row.safetyScore >= minSafety).length,
+        count: safetyCounts.get(minSafety) ?? 0,
       })),
     ],
     minTvl: [
@@ -409,7 +431,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
       ...MIN_TVL_OPTIONS.map((minTvl) => ({
         value: String(minTvl),
         label: formatTvlOption(minTvl),
-        count: facets.filter((facet) => facet.row.sourceTvlUsd !== null && facet.row.sourceTvlUsd >= minTvl).length,
+        count: tvlCounts.get(minTvl) ?? 0,
       })),
     ],
     sourceConfidence: [
@@ -438,7 +460,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
       {
         value: "hide-thin",
         label: "Hide thin venues",
-        count: facets.filter((facet) => facet.sourceDepthLens !== "thin").length,
+        count: hideThinCount,
       },
       ...(["deep", "moderate", "thin", "unknown"] as const).map((value) => ({
         value,
@@ -547,13 +569,16 @@ function cohortKey(row: YieldRanking): string | null {
 function buildCohortIndex(rows: readonly YieldRanking[]): Map<string, CohortBucket> {
   const buckets = new Map<string, CohortBucket>();
   for (const row of rows) {
+    // cohortKey returns null when pharosYieldScore is null, so score is non-null here.
+    const score = row.pharosYieldScore;
+    if (score === null) continue;
     const key = cohortKey(row);
     if (key === null) continue;
     const existing = buckets.get(key);
     if (existing) {
-      existing.scoresDescending.push(row.pharosYieldScore!);
+      existing.scoresDescending.push(score);
     } else {
-      buckets.set(key, { scoresDescending: [row.pharosYieldScore!] });
+      buckets.set(key, { scoresDescending: [score] });
     }
   }
   for (const bucket of buckets.values()) {
@@ -574,7 +599,8 @@ function computeRowCohortPercentile(
   if (cohortSize < COHORT_MIN_SIZE) {
     return { value: null, cohortSize, cohortKey: key };
   }
-  const score = row.pharosYieldScore!;
+  // cohortKey returns null when pharosYieldScore is null; key being non-null guarantees score is non-null.
+  const score = row.pharosYieldScore ?? 0;
   // Rank: how many cohort members have a strictly higher PYS, plus 1 for self.
   // Percentile reported as "top X%" by mapping rank 1 → 100, rank N → ~0.
   const sorted = bucket.scoresDescending;
