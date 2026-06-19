@@ -17,8 +17,25 @@ export interface PegRatesResult {
   counts: Record<string, number>;
 }
 
-function normalizePegType(pegType: string | undefined): string | undefined {
+export function normalizePegType(pegType: string | undefined): string | undefined {
   return pegType === "peggedBRL" ? "peggedREAL" : pegType;
+}
+
+function normalizeFallbackRates(fallbackRates: Record<string, number> | undefined): Record<string, number> {
+  const normalized: Record<string, number> = {};
+  for (const [pegType, rate] of Object.entries(fallbackRates ?? {})) {
+    const peg = normalizePegType(pegType);
+    if (!peg) continue;
+    normalized[peg] = rate;
+  }
+  return normalized;
+}
+
+function addPegRateAliases(result: PegRatesResult): void {
+  if (result.rates.peggedREAL == null || result.rates.peggedBRL != null) return;
+  result.rates.peggedBRL = result.rates.peggedREAL;
+  if (result.sources.peggedREAL != null) result.sources.peggedBRL = result.sources.peggedREAL;
+  if (result.counts.peggedREAL != null) result.counts.peggedBRL = result.counts.peggedREAL;
 }
 
 /**
@@ -69,7 +86,7 @@ export function derivePegRates(
   // Use only live cached FX rates — no stale hardcoded defaults.
   // On fresh deploy before first FX sync, fallbackRates is undefined
   // and thin-group validation is skipped for one cycle.
-  const mergedFallbacks = fallbackRates ?? {};
+  const mergedFallbacks = normalizeFallbackRates(fallbackRates);
 
   const rates: Record<string, number> = {};
   const sources: Record<string, PegRateSource> = {};
@@ -110,7 +127,9 @@ export function derivePegRates(
   if (!rates["peggedUSD"]) rates["peggedUSD"] = 1;
   if (!sources["peggedUSD"]) sources["peggedUSD"] = "median";
 
-  return { rates, sources, counts };
+  const result = { rates, sources, counts };
+  addPegRateAliases(result);
+  return result;
 }
 
 /**
@@ -124,9 +143,10 @@ export function getPegReference(
   commodityOunces?: number
 ): number {
   if (!pegType) return 1;
-  const rate = rates[pegType] ?? 1;
+  const peg = normalizePegType(pegType);
+  const rate = peg ? rates[peg] ?? 1 : 1;
   // For gold/silver tokens, scale the per-ounce rate by the token's weight
-  if ((pegType === "peggedGOLD" || pegType === "peggedSILVER") && commodityOunces && commodityOunces > 0) {
+  if ((peg === "peggedGOLD" || peg === "peggedSILVER") && commodityOunces && commodityOunces > 0) {
     return rate * commodityOunces;
   }
   return rate;

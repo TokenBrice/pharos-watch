@@ -61,6 +61,9 @@ vi.mock("@shared/lib/peg-score", () => ({
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({ rates: { USD: 1 }, sources: {} })),
   getPegReference: vi.fn(() => 1),
+  normalizePegType: vi.fn((pegType: string | undefined) =>
+    pegType === "peggedBRL" ? "peggedREAL" : pegType,
+  ),
 }));
 
 vi.mock("@shared/lib/depeg-dews-version", () => ({

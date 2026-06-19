@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { getPegReference } from "@shared/lib/peg-rates";
+import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { computeDEWS } from "../../lib/dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../../lib/dews";
 import { isAuthoritativeDepegPegReference } from "../../lib/depeg-trust-policy";
@@ -121,7 +121,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       registerMalformedPersistedInput,
     );
 
-    const pegType = asset.pegType ?? "peggedUSD";
+    const pegType = normalizePegType(asset.pegType) ?? "peggedUSD";
     const hasPegReference = pegType === "peggedUSD" || Object.prototype.hasOwnProperty.call(pegRates, pegType);
     const pegRateSource = pegRateSources[pegType] ?? null;
     const pegRateContributorCount = pegRateContributorCounts[pegType] ?? null;

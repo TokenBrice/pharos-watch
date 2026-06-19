@@ -5,7 +5,7 @@ import {
   NULL_PEG_SCORE_RESULT,
   PEG_SCORE_LOOKBACK_SEC,
 } from "@shared/lib/peg-score";
-import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
@@ -116,17 +116,18 @@ export async function derivePegAnalyticsSnapshot(
         // peer median without a live FX fallback is self-referential (a lone
         // coin always reads ~0; a 2-coin group mirrors half of any real move
         // onto the healthy peer), so deviation is withheld instead of shown.
+        const pegType = normalizePegType(asset.pegType);
         if (
           !isAuthoritativeDepegPegReference({
-            pegType: asset.pegType,
+            pegType,
             pegCurrency: meta.flags.pegCurrency,
-            pegRateSource: pegRateSources[asset.pegType] ?? null,
-            pegRateContributorCount: pegRateCounts[asset.pegType] ?? null,
+            pegRateSource: pegType ? pegRateSources[pegType] ?? null : null,
+            pegRateContributorCount: pegType ? pegRateCounts[pegType] ?? null : null,
           })
         ) {
           pegReferenceUnavailable = true;
         } else {
-          const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
+          const pegRef = getPegReference(pegType, pegRates, meta.commodityOunces);
           currentDeviationBps =
             pegRef != null && Number.isFinite(pegRef) && pegRef > 0
               ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
