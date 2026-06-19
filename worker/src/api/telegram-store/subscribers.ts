@@ -1,4 +1,4 @@
-import type { TelegramAlertType } from "@shared/types/status";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import type { SubscriberRow } from "../telegram-webhook-shared";
 
 export function unixNow(): number {
@@ -20,7 +20,9 @@ export interface UpsertSubscriberInput {
     | { enabled: false };
 }
 
-const ALERT_KEYS: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch", "reserve"];
+// Canonical order — indexes here are positionally bound to the alert_*/
+// global_alert_* columns in the upsert SQL below.
+const ALERT_KEYS = TELEGRAM_ALERT_TYPES;
 
 /**
  * Discriminated normalization of every `telegram_subscribers` upsert. Each

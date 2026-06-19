@@ -1,4 +1,5 @@
 import { isRecord, numberValue as finiteNumber } from "@shared/lib/type-guards";
+import { isTelegramAlertType } from "@shared/types/status";
 import { getCache, setCache } from "../lib/db-cache";
 import {
   TELEGRAM_ALERT_TTL_SEC,
@@ -26,10 +27,6 @@ const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
 const OVERFLOW_PLAN_CACHE_VERSION = 1;
 
 type OverflowPlannedSubscriberAlert = PlannedSubscriberAlert & { expiresAt?: number };
-
-function isTelegramAlertType(value: unknown): value is PlannedSubscriberAlert["alertType"] {
-  return value === "depeg" || value === "dews" || value === "safety" || value === "launch" || value === "reserve";
-}
 
 function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {
   return plans.reduce((sum, plan) => sum + Math.max(1, plan.estimatedChunks), 0);

@@ -1,3 +1,4 @@
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import type { PerAlertTypeDelivery, TelegramAlertType } from "@shared/types/status";
 import { batchExecute } from "../lib/db";
 import { toErrorMessage } from "../lib/error-utils";
@@ -22,8 +23,6 @@ export interface TelegramAlertJobManifest {
   targetCount: number;
 }
 
-const ALERT_TYPES: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch", "reserve"];
-
 function severityForAlertType(alertType: TelegramAlertType): "risk" | "info" {
   return alertType === "launch" ? "info" : "risk";
 }
@@ -39,7 +38,7 @@ export async function persistTelegramAlertJobManifests(
 ): Promise<TelegramAlertJobManifest[]> {
   const manifests: TelegramAlertJobManifest[] = [];
 
-  for (const alertType of ALERT_TYPES) {
+  for (const alertType of TELEGRAM_ALERT_TYPES) {
     const subscribers = subscriberQueue.filter((entry) => entry.alertType === alertType);
     if (subscribers.length === 0) continue;
 
