@@ -431,6 +431,7 @@ describe("formatConsolidatedMessage", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     });
     expect(msg).toContain("DEWS");
     expect(msg).toContain("Depeg Detected");
@@ -486,6 +487,7 @@ describe("formatConsolidatedMessage", () => {
       ],
       safety: [],
       launch: [],
+      reserve: [],
     });
     expect(msg).toContain("Depeg Worsening");
     expect(msg).toContain("1.2% → 2.6%");
@@ -508,6 +510,7 @@ describe("formatConsolidatedMessage", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     });
     expect(msg).toContain("https://pharos.watch/stablecoin/usdc-circle");
   });
@@ -538,6 +541,7 @@ describe("formatConsolidatedMessage", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     });
     expect(msg).toContain('href="https://pharos.watch"');
   });
@@ -762,6 +766,7 @@ describe("context line blockquote (P1-U13)", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     });
     expect(msg).toContain(`<blockquote expandable>${context}</blockquote>`);
   });
@@ -928,6 +933,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     };
   }
 
@@ -1006,6 +1012,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     };
     const markup = buildAlertReplyMarkup(multiCoin, 0, { privateChat: true });
     const callbacks = collectCallbackData(markup);
@@ -1034,6 +1041,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     };
     const markup = buildAlertReplyMarkup(multiCoin, 1);
     const callbacks = collectCallbackData(markup);
@@ -1056,6 +1064,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     };
     const markup = buildAlertReplyMarkup(multiCoin, 0);
     const callbacks = collectCallbackData(markup);
@@ -1075,6 +1084,7 @@ describe("rankAlertCoins (C118)", () => {
     depegWorsening: [],
     safety: [],
     launch: [],
+    reserve: [],
   };
 
   it("ranks a depeg bps severity above a DEWS WATCH band", () => {
@@ -1143,6 +1153,7 @@ describe("resolveAlertLinkPreviewOptions", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     };
   }
 
@@ -1157,6 +1168,7 @@ describe("resolveAlertLinkPreviewOptions", () => {
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     };
   }
 

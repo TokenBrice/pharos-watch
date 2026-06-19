@@ -534,7 +534,7 @@ async function executeFullFanoutPath({
     reserveSubs,
     globalReserveSubs,
     alertsByChat,
-    (alerts) => (alerts.reserve ??= []),
+    (alerts) => alerts.reserve,
     undefined,
     perCoinSnoozeMap,
     perCoinExplicitlyOffMaps.reserve,

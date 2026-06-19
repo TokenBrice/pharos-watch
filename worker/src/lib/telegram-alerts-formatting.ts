@@ -218,7 +218,7 @@ export interface ConsolidatedAlerts {
   depegWorsening: DepegWorsening[];
   safety: SafetyChange[];
   launch: LaunchAlert[];
-  reserve?: ReserveAlert[];
+  reserve: ReserveAlert[];
   /** C128: when set, this chat's per-run alerts collapsed into one burst summary. */
   burst?: BurstSummaryAlert | null;
 }
@@ -257,9 +257,8 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   if (alerts.launch.length > 0) {
     sections.push(`<b>Stablecoin Launched</b>\n${alerts.launch.map(formatLaunchLine).join("\n\n")}`);
   }
-  const reserveAlerts = alerts.reserve ?? [];
-  if (reserveAlerts.length > 0) {
-    sections.push(`<b>Reserve Drift</b>\n${reserveAlerts.map(formatReserveLine).join("\n\n")}`);
+  if (alerts.reserve.length > 0) {
+    sections.push(`<b>Reserve Drift</b>\n${alerts.reserve.map(formatReserveLine).join("\n\n")}`);
   }
 
   const body = sections.join("\n\n");
@@ -321,7 +320,7 @@ export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
     consider(e.stablecoinId, e.symbol, drop);
   }
   for (const e of alerts.launch) consider(e.stablecoinId, e.symbol, 0);
-  for (const e of alerts.reserve ?? []) consider(e.stablecoinId, e.symbol, 0);
+  for (const e of alerts.reserve) consider(e.stablecoinId, e.symbol, 0);
 
   // Stable sort: severity desc, falling back to insertion order on ties.
   return [...byId.values()]
@@ -340,7 +339,7 @@ export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string |
     ...alerts.depegWorsening.map((e) => e.stablecoinId),
     ...alerts.safety.map((e) => e.stablecoinId),
     ...alerts.launch.map((e) => e.stablecoinId),
-    ...(alerts.reserve ?? []).map((e) => e.stablecoinId),
+    ...alerts.reserve.map((e) => e.stablecoinId),
   ];
   const unique = new Set(ids);
   return unique.size === 1 ? ids[0] ?? null : null;
@@ -374,7 +373,7 @@ export function buildAlertReplyMarkup(
     // Multi-coin chunks keep a maximum of two keyboard rows. When the compact
     // per-coin snooze row is absent, private first chunks can use the spare row
     // for the watchlist Mini App entry point.
-    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + (alerts.reserve ?? []).length > 0;
+    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + alerts.reserve.length > 0;
 
     const rows: AlertInlineButton[][] = [];
 

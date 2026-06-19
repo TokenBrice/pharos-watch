@@ -43,6 +43,7 @@ function emptyAlerts(overrides: Partial<ConsolidatedAlerts> = {}): ConsolidatedA
     depegWorsening: [],
     safety: [],
     launch: [],
+    reserve: [],
     ...overrides,
   };
 }

@@ -23,6 +23,7 @@ function subscriber(partial: Partial<RoutedSubscriberAlert> = {}): RoutedSubscri
       depegWorsening: [],
       safety: [],
       launch: [],
+      reserve: [],
     },
     canonicalHtml,
     chunks: partial.chunks ?? [canonicalHtml],
