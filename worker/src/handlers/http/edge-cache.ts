@@ -6,9 +6,19 @@ interface EdgeCacheContext {
   skipCache: boolean;
 }
 
+function createCacheKeyRequest(request: Request, url: URL): Request {
+  if (url.pathname.startsWith("/api/og/")) {
+    const canonicalUrl = new URL(request.url);
+    canonicalUrl.search = "";
+    return new Request(canonicalUrl.toString(), { method: "GET" });
+  }
+
+  return new Request(request.url, { method: "GET" });
+}
+
 export function createEdgeCacheContext(request: Request, url: URL): EdgeCacheContext {
   return {
-    cacheKey: new Request(request.url, { method: "GET" }),
+    cacheKey: createCacheKeyRequest(request, url),
     skipCache: !isCacheableGetRequest(request, url),
   };
 }

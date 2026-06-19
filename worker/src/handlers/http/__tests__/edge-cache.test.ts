@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { writeEdgeCache } from "../edge-cache";
+import { createEdgeCacheContext, writeEdgeCache } from "../edge-cache";
 
 function makeContext() {
   return {
@@ -13,6 +13,24 @@ function makeExecutionContext() {
     waitUntil: vi.fn(),
   } as unknown as ExecutionContext & { waitUntil: ReturnType<typeof vi.fn> };
 }
+
+describe("createEdgeCacheContext", () => {
+  it("canonicalizes OG image cache keys by stripping arbitrary query strings", () => {
+    const request = new Request("https://api.pharos.watch/api/og/chain/ethereum?bust=random");
+    const context = createEdgeCacheContext(request, new URL(request.url));
+
+    expect(context.skipCache).toBe(false);
+    expect(context.cacheKey.url).toBe("https://api.pharos.watch/api/og/chain/ethereum");
+  });
+
+  it("still skips edge cache lookup for HEAD requests", () => {
+    const request = new Request("https://api.pharos.watch/api/og/chain/ethereum?bust=random", { method: "HEAD" });
+    const context = createEdgeCacheContext(request, new URL(request.url));
+
+    expect(context.skipCache).toBe(true);
+    expect(context.cacheKey.url).toBe("https://api.pharos.watch/api/og/chain/ethereum");
+  });
+});
 
 describe("writeEdgeCache", () => {
   const put = vi.fn(async () => undefined);
