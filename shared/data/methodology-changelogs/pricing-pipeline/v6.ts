@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.17",
+      title: "DEX aggregate and high-TVL outlier guards",
+      date: "2026-06-19",
+      effectiveAt: 1781861094,
+      summary:
+        "Primary pricing now withholds the aggregate `dex-promoted` fallback whenever a promoted protocol DEX candidate exists, and the high-TVL pool challenge can ignore incoherent same-direction outliers when a coherent multi-protocol subset still corroborates the depeg.",
+      impact: [
+        "`dex-promoted` can no longer re-enter consensus as an aggregate fallback after the same bridge row produced a promoted protocol candidate that was rejected for registry, freshness, TVL, or corroboration reasons",
+        "The aggregate DEX fallback remains available only when no promoted protocol candidate exists for the asset and the Binance overlap guard is clear",
+        "High-TVL directional pool challenge now selects the largest coherent same-direction protocol subset, so one incoherent outlier no longer vetoes otherwise corroborated DEX replacement evidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.16",
       title: "DEX pool replacement price validation",
       date: "2026-06-14",
@@ -101,7 +116,7 @@ export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
       impact: [
         "Hard Curve on-chain coverage now includes audited direct pools plus explicit opt-in one-hop and chained-hop routes that fail closed on missing dependencies or cycles",
         "`uniswap-v3-dex` and `uniswap-v4-dex` can enter consensus as soft DEX lanes when `dex_prices.price_sources_json` publishes corroborated protocol evidence",
-        "`dex-promoted` is withheld only when a promoted protocol DEX lane is actually admitted, so rejected lone protocol candidates no longer suppress the aggregate DEX voice",
+        "At v6.1, `dex-promoted` was withheld only when a promoted protocol DEX lane was actually admitted, so rejected lone protocol candidates did not suppress the aggregate DEX voice",
         "Exact-address providers prioritize missing and low-depth priced assets, report request-cap skips, and Jupiter can append bounded soft evidence to agreeing low-depth Solana prices without replacing the primary price",
       ],
       commits: [],

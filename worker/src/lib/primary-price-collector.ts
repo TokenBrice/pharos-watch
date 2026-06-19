@@ -489,19 +489,9 @@ export function buildPrimarySourceCandidates(
     }
   }
 
-  const rejectedPromotedDexProtocolTelemetry = dexCandidateTelemetry.filter(
-    (candidate) => candidate.status === "excluded" && candidate.sourceKey.endsWith("-dex"),
-  );
-  const shouldRestoreAggregateAfterProtocolExclusion =
-    collected.dexAggregateQuote != null &&
-    hasPromotedDexProtocolSource &&
-    acceptedPromotedDexProtocolSources.length === 0 &&
-    rejectedPromotedDexProtocolTelemetry.length > 0 &&
-    !hasBinanceDexBridgeOverlap(collected);
-
   if (
     collected.dexAggregateQuote &&
-    acceptedPromotedDexProtocolSources.length === 0 &&
+    !hasPromotedDexProtocolSource &&
     !hasBinanceDexBridgeOverlap(collected)
   ) {
     const dexAggregateSource = buildSourcePrice({
@@ -512,16 +502,6 @@ export function buildPrimarySourceCandidates(
       metadata: {
         poolCount: collected.dexAggregateQuote.source_pool_count,
         tvl: collected.dexAggregateQuote.source_total_tvl,
-        ...(shouldRestoreAggregateAfterProtocolExclusion
-          ? {
-              restorationReason: "dex_promoted_restored_after_protocol_exclusion",
-              rejectedProtocolSources: rejectedPromotedDexProtocolTelemetry.map((candidate) => ({
-                protocol: candidate.protocol,
-                sourceKey: candidate.sourceKey,
-                reason: candidate.reason,
-              })),
-            }
-          : {}),
       },
     });
     if (dexAggregateSource) {

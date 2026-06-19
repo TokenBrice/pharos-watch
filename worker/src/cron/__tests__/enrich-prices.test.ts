@@ -2404,7 +2404,7 @@ describe("fetchPrimaryPrices", () => {
     ]);
   }
 
-  it("restores dex-promoted aggregate when an uncorroborated protocol source is rejected", async () => {
+  it("withholds dex-promoted aggregate when an uncorroborated protocol source is rejected", async () => {
     const assets: PeggedAsset[] = [
       { id: "usr-resolv", name: "Resolv USD", symbol: "USR", geckoId: "resolv-usr", pegType: "peggedUSD", circulating: {} },
     ];
@@ -2442,18 +2442,14 @@ describe("fetchPrimaryPrices", () => {
 
     const result = results.get("usr-resolv");
     expect(result).toBeDefined();
-    expect(result!.candidateSources).toEqual(["coingecko", "defillama-list", "dex-promoted"]);
+    expect(result!.candidateSources).toEqual(["coingecko", "defillama-list"]);
     expect(result!.confidence).toBe("low");
     expect(result!.source).toBe("defillama-list");
     expect(result!.price).toBe(0.549146);
-    expect(result!.priceSourceConfidenceProfile).toEqual({
-      activeDexLanes: 0,
-      freshestDexLaneAgeSec: expect.any(Number),
-      aggregateLaneOnly: true,
-    });
+    expect(result!.priceSourceConfidenceProfile).toBeNull();
   });
 
-  it("suppresses promoted DEX protocol sources when only a soft aggregator corroborates but keeps aggregate DEX", async () => {
+  it("suppresses promoted DEX protocol sources when only a soft aggregator corroborates and withholds aggregate DEX", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin", pegType: "peggedUSD", circulating: {} },
     ];
@@ -2491,14 +2487,10 @@ describe("fetchPrimaryPrices", () => {
     const result = results.get("usdc-circle");
     expect(result).toBeDefined();
     // CG alone is a soft aggregator, so it cannot corroborate the protocol lane.
-    expect(result!.candidateSources).toEqual(["coingecko", "dex-promoted"]);
-    expect(result!.agreeSources).toEqual(["coingecko", "dex-promoted"]);
-    expect(result!.confidence).toBe("high");
-    expect(result!.priceSourceConfidenceProfile).toEqual({
-      activeDexLanes: 0,
-      freshestDexLaneAgeSec: expect.any(Number),
-      aggregateLaneOnly: true,
-    });
+    expect(result!.candidateSources).toEqual(["coingecko"]);
+    expect(result!.agreeSources).toEqual(["coingecko"]);
+    expect(result!.confidence).toBe("single-source");
+    expect(result!.priceSourceConfidenceProfile).toBeNull();
   });
 
   it("withholds dex-promoted aggregate when a corroborated Uniswap protocol lane is accepted", async () => {
@@ -3486,6 +3478,49 @@ describe("applyPoolChallenge", () => {
     expect(result.confidence).toBe("low");
     expect(result.source).toBe("pool-tvl-weighted");
     expect(result.price).toBeCloseTo(0.9344, 6);
+    expect(result.allPrices).toEqual({ "pool-tvl-weighted": result.price });
+    expect(result.observedAt).toBe(1_780_700_000);
+  });
+
+  it("ignores incoherent high-TVL outliers when coherent DEX protocols directionally corroborate a depeg", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0,
+        source: "coingecko+defillama-list",
+        selectedSource: "coingecko",
+        priceEstimator: "cluster_median",
+        confidence: "high",
+        dlPrice: 1.0,
+        cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list", "curve-dex", "uniswap-v4-dex", "balancer-dex"],
+        agreeSources: ["coingecko", "defillama-list"],
+        disagreeSources: ["curve-dex", "uniswap-v4-dex", "balancer-dex"],
+        allPrices: {
+          coingecko: 1.0,
+          "defillama-list": 1.0,
+          "curve-dex": 0.985,
+          "uniswap-v4-dex": 0.986,
+          "balancer-dex": 0.93,
+        },
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [
+        { price: 0.985, tvlUsd: 6_000_000, protocol: "curve", chain: "ethereum", observedAt: 1_780_700_000 },
+        { price: 0.986, tvlUsd: 6_000_000, protocol: "uniswap-v4", chain: "ethereum", observedAt: 1_780_700_020 },
+        { price: 0.93, tvlUsd: 6_000_000, protocol: "balancer", chain: "ethereum", observedAt: 1_780_700_040 },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+    const result = results.get("dusd-test")!;
+
+    expect(downgrades).toBe(1);
+    expect(result.confidence).toBe("low");
+    expect(result.source).toBe("pool-tvl-weighted");
+    expect(result.price).toBeCloseTo(0.985, 6);
     expect(result.allPrices).toEqual({ "pool-tvl-weighted": result.price });
     expect(result.observedAt).toBe(1_780_700_000);
   });

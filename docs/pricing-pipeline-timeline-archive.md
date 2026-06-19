@@ -4,6 +4,14 @@ Older entries moved from [pricing-pipeline-timeline.md](./pricing-pipeline-timel
 
 ---
 
+## v6.07 - Curated production price-gap closure (May 24, 2026)
+
+- `mnee-mnee` and `veur-vnx` now use the allowlisted CoinGecko low-volume fallback when DefiLlama supplies circulation but no usable price
+- `cadd-cad-digital`, `jpym-mento`, `zarm-mento`, and `xofm-mento` can publish scoped `protocol-redeem` FX-par prices when the relevant CAD/JPY/ZAR/XOF reference is fresh or static
+- CADD and the Mento JPY/ZAR/XOF stables can repair DefiLlama zero-supply rows from verified deployments and current FX references when DL chart history is absent or below the tracked repair floor
+
+---
+
 ## v6.06 - DexScreener symbol-search retirement (May 22, 2026)
 
 - The last-resort DexScreener symbol-search fallback no longer calls `/latest/dex/search`
