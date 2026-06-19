@@ -4,6 +4,7 @@ import {
   DIMENSION_WEIGHTS,
   NO_LIQUIDITY_PENALTY,
   PEG_MULTIPLIER_EXPONENT,
+  WEIGHTED_DIMENSION_KEYS,
 } from "@shared/lib/report-card-core";
 import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
 import { round1, roundScore } from "@shared/lib/math";
@@ -467,8 +468,7 @@ function rawBaseWeightedMean(
   let ratedWeight = 0;
   let weightedSum = 0;
   let baseRatedCount = 0;
-  for (const key of DIMENSION_KEYS) {
-    if (key === "pegStability") continue;
+  for (const key of WEIGHTED_DIMENSION_KEYS) {
     const score = dimensions[key].score;
     if (score !== null) {
       ratedWeight += DIMENSION_WEIGHTS[key];

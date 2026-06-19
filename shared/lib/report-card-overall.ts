@@ -8,6 +8,7 @@ import {
   DIMENSION_WEIGHTS,
   NO_LIQUIDITY_PENALTY,
   PEG_MULTIPLIER_EXPONENT,
+  WEIGHTED_DIMENSION_KEYS,
   scoreToGrade,
 } from "./report-card-core";
 import { activeDepegCapScore } from "./report-card-active-depeg";
@@ -25,14 +26,11 @@ export function computeOverallGrade(
   dimensions: Record<DimensionKey, ReportCardDimension>,
   options?: { navToken?: boolean; activeDepegBps?: number | null },
 ): OverallComputation {
-  const keys = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
-
   let ratedWeight = 0;
   let weightedSum = 0;
   let baseRatedCount = 0;
 
-  for (const key of keys) {
-    if (key === "pegStability") continue;
+  for (const key of WEIGHTED_DIMENSION_KEYS) {
     const dimension = dimensions[key];
     if (dimension.score !== null) {
       ratedWeight += DIMENSION_WEIGHTS[key];
