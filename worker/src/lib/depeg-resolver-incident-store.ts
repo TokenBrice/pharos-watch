@@ -401,8 +401,8 @@ function mapIncidentRow(
     policyMembership,
     startedAt: row.current_started_at,
     eligibleAt: row.current_started_at + policyDelaySec,
-    policyUniverseIncluded: row.policy_universe_included === 1,
-    rolloutActiveAtEnablement: row.rollout_active_at_enablement === 1,
+    policyUniverseIncluded: policyMembership?.policyUniverseIncluded ?? (row.policy_universe_included === 1),
+    rolloutActiveAtEnablement: policyMembership?.rolloutActiveAtEnablement ?? (row.rollout_active_at_enablement === 1),
     confirmedAt: null,
     lockState:
       row.lock_eligible_at == null || row.last_state == null
@@ -892,13 +892,17 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
   return readRows(conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "", scopedBinds());
 }
 
-export async function recordLockDeferral(db: D1Database, input: RecordLockDeferralInput): Promise<void> {
+function assertLockInput(input: RecordLockDeferralInput): void {
   assertPositiveInteger(input.eventId, "eventId");
   assertPositiveInteger(input.eligibleAt, "eligibleAt");
   assertPositiveInteger(input.runAt, "runAt");
   assertNonEmpty(input.incidentKey, "incidentKey");
   assertNonEmpty(input.predictionPolicyVersion, "predictionPolicyVersion");
   assertLockMetadata(input);
+}
+
+export async function recordLockDeferral(db: D1Database, input: RecordLockDeferralInput): Promise<void> {
+  assertLockInput(input);
 
   const createdAt = input.createdAt ?? input.runAt;
   const reason = input.reason ?? null;
@@ -963,12 +967,7 @@ export async function recordLockOpportunity(
     return;
   }
 
-  assertPositiveInteger(input.eventId, "eventId");
-  assertPositiveInteger(input.eligibleAt, "eligibleAt");
-  assertPositiveInteger(input.runAt, "runAt");
-  assertNonEmpty(input.incidentKey, "incidentKey");
-  assertNonEmpty(input.predictionPolicyVersion, "predictionPolicyVersion");
-  assertLockMetadata(input);
+  assertLockInput(input);
 
   const createdAt = input.createdAt ?? input.runAt;
   const stateAction =
