@@ -15,8 +15,6 @@ describe("handleTelegramPulse", () => {
       reactivatedWatchersToday: 0,
       historySource: "live-fallback",
       topCoins: ["USDC"],
-      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, reserve: 0, allTypes: 1 },
-      quietHoursEnabledChats: 2,
       pendingDeliveries: 0,
       updatedAt: Math.floor(Date.now() / 1000),
       updatedEverySeconds: 300,
@@ -154,8 +152,6 @@ describe("handleTelegramPulse", () => {
                   reactivatedWatchers: 0,
                 },
               ],
-              alertTypeChats: { dews: 216, depeg: 479, safety: 86, launch: 9, reserve: 0, allTypes: 5 },
-              quietHoursEnabledChats: 6,
               pendingDeliveries: 0,
               currentSnapshotAt: 1_778_681_248,
               lifecycleHistoryUpdatedAt: 1_778_680_000,
@@ -318,8 +314,6 @@ describe("handleTelegramPulse", () => {
       reactivatedWatchersToday: number;
       historySource: string;
       topCoins: string[];
-      alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; reserve: number; allTypes: number };
-      quietHoursEnabledChats: number | null;
       pendingDeliveries: number | null;
       currentSnapshotAt: number;
       lifecycleHistoryUpdatedAt: number | null;
@@ -366,15 +360,6 @@ describe("handleTelegramPulse", () => {
       reactivatedWatchersToday: null,
       historySource: "snapshot",
       topCoins: ["USDPT", "USDC"],
-      alertTypeChats: {
-        dews: 4,
-        depeg: 3,
-        safety: 2,
-        launch: 1,
-        reserve: 0,
-        allTypes: 1,
-      },
-      quietHoursEnabledChats: null,
       pendingDeliveries: null,
       miniAppSessionsToday: 0,
       miniAppMutationsToday: 0,
@@ -391,7 +376,6 @@ describe("handleTelegramPulse", () => {
         suppressedFields: [
           "newWatchersToday",
           "pendingDeliveries",
-          "quietHoursEnabledChats",
           "reactivatedWatchersToday",
           "watcherHistory.churnedWatchers",
           "watcherHistory.newWatchers",
@@ -817,8 +801,6 @@ describe("publishTelegramPulseSnapshot", () => {
       reactivatedWatchersToday: 0,
       historySource: "live-fallback",
       topCoins: ["USDC"],
-      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, reserve: 0, allTypes: 1 },
-      quietHoursEnabledChats: 6,
       pendingDeliveries: 5,
       miniAppSessionsToday: 7,
       miniAppMutationsToday: 6,
@@ -934,8 +916,6 @@ describe("publishTelegramPulseSnapshot", () => {
       reactivatedWatchersToday: 0,
       historySource: "live-fallback",
       topCoins: ["USDC"],
-      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, reserve: 0, allTypes: 1 },
-      quietHoursEnabledChats: 6,
       pendingDeliveries: 5,
       miniAppSessionsToday: 99,
       miniAppMutationsToday: 98,

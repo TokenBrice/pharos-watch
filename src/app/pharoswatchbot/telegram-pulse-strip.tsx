@@ -312,7 +312,6 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   const watcherHistory = data.watcherHistory ?? [];
   const latestHistoryPoint = watcherHistory.at(-1) ?? null;
   const latestHistoryLabel = formatSnapshotAt(data.lifecycleHistoryUpdatedAt);
-  const alertTypeChats = data.alertTypeChats;
   const capacityPercent = capacityUsagePercent(data.activeWatchers);
   const explicitFollows = data.explicitCoinSubscriptions ?? data.coinSubscriptions;
   const presetImpliedFollows = data.presetImpliedCoinSubscriptions ?? 0;
@@ -326,16 +325,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
     { label: "Reactivated today", value: data.reactivatedWatchersToday },
     { label: "Churned today", value: data.churnedWatchersToday },
   ].filter(isPulseStat);
-  const alertCoverageStats = [
-    { label: "DEWS chats", value: alertTypeChats?.dews, shareTotal: data.activeWatchers },
-    { label: "Depeg chats", value: alertTypeChats?.depeg, shareTotal: data.activeWatchers },
-    { label: "Safety chats", value: alertTypeChats?.safety, shareTotal: data.activeWatchers },
-    { label: "Launch chats", value: alertTypeChats?.launch, shareTotal: data.activeWatchers },
-    { label: "Reserve chats", value: alertTypeChats?.reserve, shareTotal: data.activeWatchers },
-    { label: "All five families", value: alertTypeChats?.allTypes, shareTotal: data.activeWatchers },
-  ].filter(isPulseStat);
   const deliveryStats = [
-    { label: "Quiet-hours chats", value: data.quietHoursEnabledChats },
     { label: "Queued deliveries", value: data.pendingDeliveries },
   ].filter(isPulseStat);
   const miniAppStats = [
@@ -482,7 +472,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           <span className="min-w-0">
             <span className="block">More information</span>
             <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">
-              Follow composition, lifecycle deltas, alert coverage, and delivery controls
+              Follow composition, lifecycle deltas, delivery controls, and Mini App activity
             </span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
@@ -491,7 +481,6 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
             <PulseStatGroup title="Follow composition" items={followStats} />
             <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />
-            <PulseStatGroup title="Alert coverage" items={alertCoverageStats} />
             <PulseStatGroup title="Delivery controls" items={deliveryStats} />
             <PulseStatGroup title="Mini App today" items={miniAppStats} />
           </div>

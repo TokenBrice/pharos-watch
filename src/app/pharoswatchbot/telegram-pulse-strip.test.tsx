@@ -48,15 +48,6 @@ const pulse: TelegramPulse = {
       activeWatchers: 1842,
     },
   ],
-  alertTypeChats: {
-    dews: 1701,
-    depeg: 1644,
-    safety: 1512,
-    launch: 1208,
-    reserve: 1104,
-    allTypes: 1191,
-  },
-  quietHoursEnabledChats: 42,
   pendingDeliveries: null,
   currentSnapshotAt: 1_771_856_400,
   lifecycleHistoryUpdatedAt: 1_775_002_000,
@@ -152,18 +143,9 @@ describe("TelegramPulseBoard", () => {
     expect(within(pulseDetails).getByText("New today")).toBeTruthy();
     expect(within(pulseDetails).getByText("Reactivated today")).toBeTruthy();
     expect(within(pulseDetails).getByText("Churned today")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Alert coverage")).toBeTruthy();
-    expect(within(pulseDetails).getByText("DEWS chats")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Depeg chats")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Safety chats")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Launch chats")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Reserve chats")).toBeTruthy();
-    expect(within(pulseDetails).getByText("All five families")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Delivery controls")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Quiet-hours chats")).toBeTruthy();
-    expect(within(pulseDetails).getByText("1,701")).toBeTruthy();
-    expect(within(pulseDetails).getByText("1,104")).toBeTruthy();
-    expect(within(pulseDetails).getByText("42")).toBeTruthy();
+    expect(within(pulseDetails).queryByText("Delivery controls")).toBeNull();
+    expect(within(pulseDetails).queryByText("Alert coverage")).toBeNull();
+    expect(within(pulseDetails).queryByText("Quiet-hours chats")).toBeNull();
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
   });
