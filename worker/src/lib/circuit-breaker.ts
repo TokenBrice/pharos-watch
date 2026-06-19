@@ -218,11 +218,17 @@ function getConfiguredLiveReserveCircuitSources(): Set<string> {
   );
 }
 
+// ACTIVE_STABLECOINS is static per isolate — memoize to avoid recomputing on
+// every /health or /public-status-history request.
+let _activeCircuitSources: Set<string> | undefined;
 function getActiveCircuitSources(): Set<string> {
-  return new Set([
-    ...Object.values(CIRCUIT_SOURCE),
-    ...getConfiguredLiveReserveCircuitSources(),
-  ]);
+  if (!_activeCircuitSources) {
+    _activeCircuitSources = new Set([
+      ...Object.values(CIRCUIT_SOURCE),
+      ...getConfiguredLiveReserveCircuitSources(),
+    ]);
+  }
+  return _activeCircuitSources;
 }
 
 export function isActiveCircuitSource(source: string): boolean {
