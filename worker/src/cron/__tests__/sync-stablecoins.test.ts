@@ -2181,6 +2181,7 @@ describe("syncStablecoins", () => {
         first: {
           value: JSON.stringify({
             peggedCAD: 0.73,
+            peggedCHF: 1.20,
             peggedJPY: 0.00628,
             peggedZAR: 0.0608,
             peggedXOF: 0.00172,
@@ -2229,11 +2230,11 @@ describe("syncStablecoins", () => {
         name: "Mento Japanese Yen",
         symbol: "JPYm",
         geckoId: "celo-japanese-yen",
-        pegType: "peggedJPY",
+        pegType: "peggedCHF",
         pegMechanism: "crypto-backed",
         chains: ["Celo"],
         chainCirculating: {
-          Celo: { current: { peggedJPY: 0 }, circulatingPrevDay: { peggedJPY: 0 }, circulatingPrevWeek: { peggedJPY: 0 }, circulatingPrevMonth: { peggedJPY: 0 } },
+          Celo: { current: { peggedCHF: 0 }, circulatingPrevDay: { peggedCHF: 0 }, circulatingPrevWeek: { peggedCHF: 0 }, circulatingPrevMonth: { peggedCHF: 0 } },
         },
       },
       {
@@ -2331,6 +2332,7 @@ describe("syncStablecoins", () => {
     expect((cadd?.chainCirculating as Record<string, { current: number }> | undefined)?.Base.current).toBeCloseTo(189_873, 6);
     expect(jpym).toMatchObject({ supplySource: "onchain-total-supply", priceSource: "protocol-redeem", priceConfidence: "high", price: 0.00628 });
     expect((jpym?.circulating as Record<string, number> | undefined)?.peggedJPY).toBeCloseTo(103_627.12712522845, 6);
+    expect((jpym?.circulating as Record<string, number> | undefined)?.peggedCHF).toBeUndefined();
     expect(zarm).toMatchObject({ supplySource: "onchain-total-supply", priceSource: "protocol-redeem", priceConfidence: "high", price: 0.0608 });
     expect((zarm?.circulating as Record<string, number> | undefined)?.peggedZAR).toBeCloseTo(8_598.7022994136, 6);
     expect(xofm).toMatchObject({ supplySource: "onchain-total-supply", priceSource: "protocol-redeem", priceConfidence: "high", price: 0.00172 });
