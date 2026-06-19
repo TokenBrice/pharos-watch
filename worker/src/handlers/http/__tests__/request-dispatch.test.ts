@@ -227,30 +227,6 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
-  it("returns 404 when the router returns null after dependency hydration", async () => {
-    mocks.route.mockResolvedValue(null);
-    const ctx = makeCtx();
-    const request = new Request("https://api.pharos.watch/api/stablecoins");
-    const env = makeEnv();
-
-    const response = await handleHttpRequestImpl(request, env, ctx);
-
-    expect(response.status).toBe(404);
-    expect(mocks.buildRouteContext).toHaveBeenCalledWith({
-      request,
-      url: new URL(request.url),
-      env,
-      execCtx: ctx,
-      trustedAdmin: false,
-      routeDependencies: ["coingeckoApiKey"],
-    });
-    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
-    expect(ctx.waitUntil).toHaveBeenCalledOnce();
-    expect(mocks.writeEdgeCache).not.toHaveBeenCalled();
-  });
-
   it("flushes pending prunes, records attribution, and writes edge cache on successful routing", async () => {
     const flushPromise = Promise.resolve();
     const routedResponse = new Response(JSON.stringify({ ok: true }), {

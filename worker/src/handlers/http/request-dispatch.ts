@@ -127,11 +127,6 @@ export async function handleHttpRequestImpl(
     resolvedRoute,
   );
 
-  if (!response) {
-    recordRequestSource();
-    return finalizeResponse(notFoundResponse(), origin, ctx);
-  }
-
   recordRequestSource();
   writeEdgeCache(edgeCache, response, ctx);
   return finalizeResponse(response, origin, ctx);

@@ -89,9 +89,11 @@ async function handleRouteWithErrorBoundary(
   return stripHeadBody(routeCtx.request, responseWithHeaders);
 }
 
+export function route(routeCtx: FullRouteContext, resolvedRoute: ResolvedRoute): Promise<Response>;
+export function route(routeCtx: FullRouteContext, resolvedRoute?: ResolvedRoute | null): Promise<Response> | null;
 export function route(
   routeCtx: FullRouteContext,
-  resolvedRoute = resolveRoute(routeCtx.url, routeCtx.request.method),
+  resolvedRoute: ResolvedRoute | null = resolveRoute(routeCtx.url, routeCtx.request.method),
 ): Promise<Response> | null {
   const path = routeCtx.url.pathname;
   if (!resolvedRoute) return null;
