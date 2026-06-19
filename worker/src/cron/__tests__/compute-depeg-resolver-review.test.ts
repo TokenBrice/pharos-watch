@@ -796,6 +796,61 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.terminalBeforePredictionCount).toBe(1);
   });
 
+  it("rejects YYYY-MM source date with year 0000 and falls back to tape timestamp (ddr-5 regression)", async () => {
+    const incident = {
+      incidentKey: "ddr2:year-zero-month-regression",
+      eventId: 93,
+      currentEventId: 93,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const terminalTs = STARTED_AT + 3600;
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 93,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+      {
+        match: "FROM tape_events",
+        rows: [
+          {
+            coin_id: "lusd-liquity",
+            type: "lifecycle.tracked.frozen",
+            ts: terminalTs * 1000,
+            // "0000-01" previously produced epoch -2208988800 (year 1900);
+            // the year < 1 guard now rejects it and falls through to ts.
+            payload_json: JSON.stringify({ frozenAt: "0000-01" }),
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      sourceEventState: "terminal",
+      terminalEvidenceAt: terminalTs,
+      terminalEvidenceInterval: null,
+      terminalEvidencePrecision: "unknown",
+    });
+  });
+
   it("rethrows non-missing-table tape_events failures instead of failing open", async () => {
     const incident = {
       incidentKey: "ddr2:tape-query-fault",

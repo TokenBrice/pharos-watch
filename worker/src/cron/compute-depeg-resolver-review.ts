@@ -216,7 +216,7 @@ function dateIntervalFromSourceDate(sourceDate: string | null | undefined): Term
   if (monthMatch) {
     const year = Number(monthMatch[1]);
     const month = Number(monthMatch[2]);
-    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+    if (!Number.isInteger(year) || year < 1 || !Number.isInteger(month) || month < 1 || month > 12) return null;
     const start = utcSec(year, month - 1, 1);
     const end = utcSec(year, month, 1);
     return {
