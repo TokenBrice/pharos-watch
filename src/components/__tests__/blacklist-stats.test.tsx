@@ -14,6 +14,15 @@ function makePerCoinRecord(defaultValue: number) {
   return Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, defaultValue]));
 }
 
+function makeSummary(): BlacklistSummaryResponse {
+  return {
+    stats: makeStats(),
+    chart: [],
+    chains: [],
+    totalEvents: 0,
+  };
+}
+
 function makeStats(): BlacklistSummaryResponse["stats"] {
   return {
     usdcBlacklisted: 9_692,
@@ -50,7 +59,7 @@ describe("BlacklistStats", () => {
   it("renders the unfreezable market-share stat from the blacklist-status no bucket", () => {
     render(
       <BlacklistStats
-        stats={makeStats()}
+        summary={{ ...makeSummary(), stats: makeStats() }}
         isLoading={false}
         blacklistStatusBuckets={[
           { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
@@ -69,16 +78,56 @@ describe("BlacklistStats", () => {
     expect(screen.getByText("last-known freeze snapshots")).toBeTruthy();
     expect(screen.getByText("Total Wiped Value")).toBeTruthy();
     expect(screen.queryByText("Snapshot Basis")).toBeNull();
-    expect(screen.queryByText("Data Quality")).toBeNull();
     expect(screen.queryByText("Freeze Ledger")).toBeNull();
     expect(screen.queryByText("USDT Blacklisted")).toBeNull();
     expect(screen.queryByText("unique events")).toBeNull();
   });
 
+  it("surfaces freeze-ledger data-quality warnings", () => {
+    render(
+      <BlacklistStats
+        summary={{
+          ...makeSummary(),
+          dataQuality: {
+            status: "stale",
+            warnings: ["current-balance-provider-failures", "stale-current-balance-snapshots"],
+            amountGaps: {
+              totalEvents: 100,
+              recoverable: 2,
+              unrecoverable: 1,
+              recentRecoverable: 1,
+              missingRatio: 0.03,
+              recentWindowSec: 86_400,
+            },
+            freezeLedger: {
+              providerFailedCount: 4,
+              staleSnapshotCount: 3,
+              trackedGapCount: 2,
+              scopedRows: 10,
+              legacyRows: 0,
+            },
+            coverage: { supportedConfigs: 8, unsupportedDeferredConfigs: 1 },
+          },
+        }}
+        isLoading={false}
+        blacklistStatusBuckets={null}
+        supportDataLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("Data Quality")).toBeTruthy();
+    expect(screen.getByText("Freeze ledger snapshots are stale")).toBeTruthy();
+    expect(screen.getByText("4 current-balance provider failures")).toBeTruthy();
+    expect(screen.getByText("3 stale current-balance snapshots")).toBeTruthy();
+    expect(screen.getByText("2 tracked ledger gaps")).toBeTruthy();
+    expect(screen.getByText(/3 amount gaps across/)).toBeTruthy();
+    expect(screen.getByText("1 deferred coverage configs")).toBeTruthy();
+  });
+
   it("keeps extra precision for sub-0.1% market-share values", () => {
     render(
       <BlacklistStats
-        stats={makeStats()}
+        summary={{ ...makeSummary(), stats: makeStats() }}
         isLoading={false}
         blacklistStatusBuckets={[
           { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
@@ -96,7 +145,7 @@ describe("BlacklistStats", () => {
   it("shows an unresolved unfreezable share while support data is still loading", () => {
     render(
       <BlacklistStats
-        stats={makeStats()}
+        summary={{ ...makeSummary(), stats: makeStats() }}
         isLoading={false}
         blacklistStatusBuckets={[
           { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
