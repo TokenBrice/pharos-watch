@@ -89,6 +89,20 @@ describe("handleYieldHistory", () => {
     expect(body.methodology).toHaveProperty("version");
   });
 
+  it("falls back to legacy yield_history schema when publish snapshot columns are absent", async () => {
+    const db = mockD1([
+      { match: "best-window */", rows: [], throwError: new Error("D1_ERROR: no such column: pys_at_publish") },
+      { match: "legacy-schema", rows: [row] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = (await res.json()) as { history: Array<Record<string, unknown>> };
+
+    expect(res.status).toBe(200);
+    expect(body.history).toHaveLength(1);
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-schema"))).toBe(true);
+  });
+
   it("parses a production-shaped v7.48 old history payload through the schema and handler", async () => {
     expect(YieldHistoryResponseSchema.parse(v748HistoryPayload).publication).toBeUndefined();
     expect(YieldHistoryResponseSchema.parse(v748HistoryPayload).history[0]?.sourceRisk).toBeUndefined();
