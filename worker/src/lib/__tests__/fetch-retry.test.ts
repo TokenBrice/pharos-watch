@@ -22,6 +22,7 @@ describe("fetchWithRetry", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -102,6 +103,32 @@ describe("fetchWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(sleepWithSignalMock).toHaveBeenCalledWith(2000, undefined);
     await expect(res?.json()).resolves.toEqual({ error: "slow down" });
+  });
+
+  it("uses the configured log URL for passthrough 429 warnings", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: "slow down" }), {
+        status: 429,
+        headers: { "Retry-After": "1" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchWithRetry(
+      "https://api.g.alchemy.com/prices/v1/ALCHEMY_SECRET_KEY_DO_NOT_LOG_12345/tokens/by-address",
+      undefined,
+      0,
+      {
+        passthroughStatuses: [429],
+        logUrl: "api.g.alchemy.com/prices/v1/<api-key>/tokens/by-address",
+      },
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[fetch-retry] api.g.alchemy.com/prices/v1/<api-key>/tokens/by-address rate-limited (429), waiting 1000ms before passthrough",
+    );
+    expect(warnSpy.mock.calls.join("\n")).not.toContain("ALCHEMY_SECRET_KEY_DO_NOT_LOG_12345");
   });
 
   it("backs off on 529 overload responses before succeeding", async () => {

@@ -123,6 +123,7 @@ export async function fetchProviderJson(params: {
     {
       timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
       passthroughStatuses: PASSTHROUGH_STATUSES,
+      logUrl: baseDiagnostic.endpoint,
     },
   );
   if (!response) {

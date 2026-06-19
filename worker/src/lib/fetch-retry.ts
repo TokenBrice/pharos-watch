@@ -6,6 +6,7 @@ interface FetchWithRetryOptions {
   passthroughStatuses?: number[];
   returnFinalResponse?: boolean;
   timeoutMs?: number;
+  logUrl?: string;
 }
 function getRetryDelayMs(response: Response, attempt: number): number | null {
   if (response.status === 429) {
@@ -37,6 +38,7 @@ export async function fetchWithRetry(
   const passthroughStatuses = new Set<number>(options?.passthroughStatuses ?? []);
   if (passthrough404) passthroughStatuses.add(404);
   const timeoutMs = options?.timeoutMs ?? 15_000;
+  const logUrl = options?.logUrl ?? url;
   const signal = opts?.signal ?? undefined;
   for (let i = 0; i <= maxRetries; i++) {
     throwIfAborted(signal);
@@ -60,7 +62,7 @@ export async function fetchWithRetry(
         const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i) : null;
         if (passthroughDelayMs != null) {
           const body = await res.text();
-          console.warn(`[fetch-retry] ${url} rate-limited (${res.status}), waiting ${passthroughDelayMs}ms before passthrough`);
+          console.warn(`[fetch-retry] ${logUrl} rate-limited (${res.status}), waiting ${passthroughDelayMs}ms before passthrough`);
           await sleepWithSignal(passthroughDelayMs, signal);
           return new Response(body, {
             status: res.status,
@@ -73,12 +75,12 @@ export async function fetchWithRetry(
       const retryDelayMs = i < maxRetries ? getRetryDelayMs(res, i) : null;
       if (retryDelayMs != null) {
         const label = res.status === 529 ? "overloaded" : "rate-limited";
-        console.warn(`[fetch-retry] ${url} ${label} (${res.status}), waiting ${retryDelayMs}ms`);
+        console.warn(`[fetch-retry] ${logUrl} ${label} (${res.status}), waiting ${retryDelayMs}ms`);
         await cancelResponseBodyQuietly(res);
         await sleepWithSignal(retryDelayMs, signal);
         continue;
       }
-      console.warn(`[fetch-retry] ${url} returned ${res.status} (attempt ${i + 1}/${maxRetries + 1})`);
+      console.warn(`[fetch-retry] ${logUrl} returned ${res.status} (attempt ${i + 1}/${maxRetries + 1})`);
       if (options?.returnFinalResponse && i >= maxRetries) {
         return res;
       }
@@ -87,7 +89,7 @@ export async function fetchWithRetry(
       if (signal?.aborted) {
         throw err instanceof Error ? err : new Error(String(err));
       }
-      console.warn(`[fetch-retry] ${url} failed (attempt ${i + 1}/${maxRetries + 1}):`, err);
+      console.warn(`[fetch-retry] ${logUrl} failed (attempt ${i + 1}/${maxRetries + 1}):`, err);
     }
     if (i < maxRetries) {
       await sleepWithSignal(1000 * 2 ** i, signal);
