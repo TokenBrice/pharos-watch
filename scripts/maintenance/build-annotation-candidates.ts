@@ -22,8 +22,7 @@ import type { StablecoinMeta } from "../../shared/types";
 
 const ROOT = process.cwd();
 const OUTPUT_PATH = resolve(ROOT, "agents/annotation-candidates.md");
-const WORKER_BASE_URL =
-  process.env.PHAROS_WORKER_BASE_URL ?? "http://127.0.0.1:8787";
+const WORKER_BASE_URL = process.env.PHAROS_WORKER_BASE_URL ?? "http://127.0.0.1:8787";
 const PHAROS_API_KEY = process.env.PHAROS_API_KEY?.trim() || null;
 const DEFAULT_LOOKBACK_DAYS = 7;
 const LAUNCH_LOOKBACK_DAYS = 30;
@@ -79,13 +78,11 @@ interface TapeEventLite {
   coinId: string | null;
   title: string;
   summary: string;
+  payload?: Record<string, unknown>;
   sourceUrl: string | null;
 }
 
-async function fetchTapeEvents(
-  classFilter: string,
-  sinceMs: number,
-): Promise<TapeEventLite[] | null> {
+async function fetchTapeEvents(classFilter: string, sinceMs: number): Promise<TapeEventLite[] | null> {
   const url = new URL("/api/events", WORKER_BASE_URL);
   url.searchParams.set("class", classFilter);
   url.searchParams.set("severityFloor", "warning");
@@ -109,10 +106,13 @@ function toIsoDate(ts: number): string {
 function mapDepegCandidate(event: TapeEventLite): Candidate | null {
   if (!event.coinId) return null;
   const severity =
-    event.severity === "critical" ? "high"
-    : event.severity === "severe" ? "high"
-    : event.severity === "warning" ? "med"
-    : "low";
+    event.severity === "critical"
+      ? "high"
+      : event.severity === "severe"
+        ? "high"
+        : event.severity === "warning"
+          ? "med"
+          : "low";
   return {
     coinId: event.coinId,
     date: toIsoDate(event.ts),
@@ -123,19 +123,45 @@ function mapDepegCandidate(event: TapeEventLite): Candidate | null {
   };
 }
 
-function mapBlacklistCandidate(event: TapeEventLite): Candidate | null {
-  if (!event.coinId) return null;
+function buildCoinIdResolver(coins: readonly StablecoinMeta[]): (symbolOrName: unknown) => string | null {
+  const byLabel = new Map<string, string | null>();
+  const add = (label: string, coinId: string) => {
+    const key = label.trim().toLowerCase();
+    if (!key) return;
+    const existing = byLabel.get(key);
+    byLabel.set(key, existing && existing !== coinId ? null : coinId);
+  };
+  for (const coin of coins) {
+    add(coin.id, coin.id);
+    add(coin.symbol, coin.id);
+    add(coin.name, coin.id);
+  }
+  return (symbolOrName: unknown) => {
+    if (typeof symbolOrName !== "string") return null;
+    return byLabel.get(symbolOrName.trim().toLowerCase()) ?? null;
+  };
+}
+
+function mapBlacklistCandidate(
+  event: TapeEventLite,
+  resolveCoinId: (symbolOrName: unknown) => string | null,
+): Candidate | null {
+  const coinId = event.coinId ?? resolveCoinId(event.payload?.stablecoin);
+  if (!coinId) return null;
   const severity =
-    event.severity === "critical" ? "high"
-    : event.severity === "severe" ? "high"
-    : event.severity === "warning" ? "med"
-    : "low";
+    event.severity === "critical"
+      ? "high"
+      : event.severity === "severe"
+        ? "high"
+        : event.severity === "warning"
+          ? "med"
+          : "low";
   return {
-    coinId: event.coinId,
+    coinId,
     date: toIsoDate(event.ts),
     kind: "blacklist-surge",
     description: event.title || event.summary || "blacklist surge",
-    source: "blacklist tape (/api/events)",
+    source: "freeze tape (/api/events)",
     severity,
   };
 }
@@ -164,8 +190,7 @@ function findRecentLaunches(coins: readonly StablecoinMeta[]): Candidate[] {
 
 function findRecentMilestones(coins: readonly StablecoinMeta[]): Candidate[] {
   const cutoffMs = epochAt(LAUNCH_LOOKBACK_DAYS);
-  const launchKeywords =
-    /\b(mainnet|launch|live|public|production|go[- ]?live)\b/i;
+  const launchKeywords = /\b(mainnet|launch|live|public|production|go[- ]?live)\b/i;
   const candidates: Candidate[] = [];
   for (const coin of coins) {
     if ((coin.status ?? "active") !== "pre-launch") continue;
@@ -215,45 +240,51 @@ function indexExistingFingerprints(existingBody: string): Set<string> {
       continue;
     }
     if (currentDate == null) continue;
-    const row = line.match(/^-\s+([^|]+?)\s+\|\s+([^|]+?)\s+\|/);
+    const row = line.match(/^-\s+([^|]+?)\s+\|\s+([^|]+?)\s+\|\s+([^|]+?)\s+\|/);
     if (row) {
-      seen.add(`${currentDate}|${row[1]}|${row[2]}`);
+      const first = row[1]!.trim();
+      const second = row[2]!.trim();
+      const third = row[3]!.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(first)) seen.add(`${first}|${second}|${third}`);
+      else seen.add(`${currentDate}|${first}|${second}`);
     }
   }
   return seen;
 }
 
-function filterAgainstExisting(
-  candidates: Candidate[],
-  existingBody: string,
-): Candidate[] {
+function filterAgainstExisting(candidates: Candidate[], existingBody: string): Candidate[] {
   const existing = indexExistingFingerprints(existingBody);
-  return candidates.filter(
-    (c) => !existing.has(`${c.date}|${c.coinId}|${c.kind}`),
-  );
+  return candidates.filter((c) => !existing.has(`${c.date}|${c.coinId}|${c.kind}`));
 }
 
 function renderRow(c: Candidate): string {
   const sevTag = c.severity ? ` | severity: ${c.severity}` : "";
-  return `- ${c.coinId} | ${c.kind} | ${c.description} | source: ${c.source}${sevTag}`;
+  return `- ${c.date} | ${c.coinId} | ${c.kind} | ${c.description} | source: ${c.source}${sevTag}`;
 }
 
-function renderAppendBlock(
-  date: string,
-  candidates: Candidate[],
-  notes: string[],
-): string {
+function renderAppendBlock(date: string, candidates: Candidate[], notes: string[]): string {
   const lines: string[] = [];
-  lines.push(`## ${date}`);
-  if (notes.length > 0) {
+  let currentDate: string | null = null;
+  const startDate = (sectionDate: string) => {
+    if (currentDate === sectionDate) return;
+    if (lines.length > 0 && lines[lines.length - 1] !== "") lines.push("");
+    lines.push(`## ${sectionDate}`);
+    currentDate = sectionDate;
+  };
+
+  if (notes.length > 0 || candidates.length === 0) {
+    startDate(date);
     for (const note of notes) {
       lines.push(`<!-- ${note} -->`);
     }
+    if (candidates.length === 0) {
+      lines.push(`<!-- producer found no new candidates this run -->`);
+    }
   }
-  if (candidates.length === 0) {
-    lines.push(`<!-- producer found no new candidates this run -->`);
-  } else {
-    for (const c of candidates) lines.push(renderRow(c));
+
+  for (const c of candidates) {
+    startDate(c.date);
+    lines.push(renderRow(c));
   }
   lines.push("");
   return lines.join("\n");
@@ -270,7 +301,12 @@ function buildFile(existingBody: string, appendBlock: string, todaysFooter: stri
       ? "# Annotation candidates\n\nAppend-only queue feeding the `annotations-refresh` skill. Each row is a machine-found event for editorial review — promote, drop, or defer.\n"
       : "";
   const sections = [header, trimmed, appendBlock, todaysFooter].filter(Boolean);
-  return sections.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+  return (
+    sections
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trimEnd() + "\n"
+  );
 }
 
 async function main(): Promise<void> {
@@ -283,9 +319,13 @@ async function main(): Promise<void> {
   const notes: string[] = [];
   const collected: Candidate[] = [];
 
+  const entries = loadPerCoinStablecoinEntries(ROOT);
+  const coins = entries.map((entry) => entry.coin);
+  const resolveCoinId = buildCoinIdResolver(coins);
+
   const [depegEvents, blacklistEvents] = await Promise.all([
     fetchTapeEvents("depeg", sinceMs),
-    fetchTapeEvents("blacklist", sinceMs),
+    fetchTapeEvents("freeze", sinceMs),
   ]);
 
   if (depegEvents == null) {
@@ -298,16 +338,14 @@ async function main(): Promise<void> {
   }
 
   if (blacklistEvents == null) {
-    notes.push(`blacklist tape unreachable at ${WORKER_BASE_URL} — skipped`);
+    notes.push(`freeze tape unreachable at ${WORKER_BASE_URL} — skipped`);
   } else {
     for (const e of blacklistEvents) {
-      const c = mapBlacklistCandidate(e);
+      const c = mapBlacklistCandidate(e, resolveCoinId);
       if (c) collected.push(c);
     }
   }
 
-  const entries = loadPerCoinStablecoinEntries(ROOT);
-  const coins = entries.map((entry) => entry.coin);
   collected.push(...findRecentLaunches(coins));
   collected.push(...findRecentMilestones(coins));
 
