@@ -84,8 +84,7 @@ async function fetchSecondaryCurrencyCandidate(
       endpoint,
       payload: validation.data,
     };
-  } catch (error) {
-    console.warn(`[sync-fx-rates] Secondary FX payload unreadable (${endpoint}):`, error);
+  } catch {
     return null;
   }
 }
