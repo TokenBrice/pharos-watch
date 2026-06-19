@@ -5,6 +5,7 @@ import {
   parseDisambiguationReply,
 } from "../lib/telegram-alerts";
 import {
+  canActOnPendingOwner,
   SETUP_PENDING_ACTION_TYPE,
   type PendingAction,
 } from "./telegram-webhook-shared";
@@ -223,9 +224,7 @@ function canActOnPending(pending: PendingAction, actorUserId: string | null): bo
   return canActOnPendingOwner(pending.initiatorUserId, actorUserId);
 }
 
-function canActOnPendingOwner(initiatorUserId: string | null, actorUserId: string | null): boolean {
-  return initiatorUserId == null || initiatorUserId === actorUserId;
-}
+export { canActOnPendingOwner };
 
 function looksLikeDisambiguationSelection(text: string): boolean {
   const trimmed = text.trim();

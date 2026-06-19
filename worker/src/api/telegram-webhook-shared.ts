@@ -353,6 +353,15 @@ export interface PendingSetupSentinel {
   actionType: typeof SETUP_PENDING_ACTION_TYPE;
 }
 
+/**
+ * Returns true when the acting user may proceed with a pending-owner-gated
+ * action: either no initiator is recorded (public), or the initiator matches
+ * the actor.
+ */
+export function canActOnPendingOwner(initiatorUserId: string | null, actorUserId: string | null): boolean {
+  return initiatorUserId == null || initiatorUserId === actorUserId;
+}
+
 export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
   TRACKED_STABLECOINS.map((coin) => [
     coin.id,

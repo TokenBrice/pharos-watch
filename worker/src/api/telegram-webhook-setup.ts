@@ -25,6 +25,7 @@ import {
   buildSubscriptionSummaryMessage,
 } from "./telegram-webhook-messages";
 import {
+  canActOnPendingOwner,
   SETUP_PENDING_ACTION_TYPE,
   WIZARD_INTRO_MESSAGE,
   type SetupWizardState,
@@ -268,7 +269,7 @@ export async function handleSetupBranch(
   if (state == null) {
     return { text: "Setup expired. Send /start to begin again." };
   }
-  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can continue." };
   }
 
@@ -368,7 +369,7 @@ export async function handleSetupTypeToggle(
   if (!state || state.step !== "custom-types") {
     return { text: "Setup expired. Send /start to begin again." };
   }
-  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can continue." };
   }
   if (!isAllowedAlertType(arg)) {
@@ -398,7 +399,7 @@ export async function handleSetupNext(
   if (!state || state.step !== "custom-types") {
     return { text: "Setup expired. Send /start to begin again." };
   }
-  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can continue." };
   }
   if (state.alertTypes.length === 0) {
@@ -422,7 +423,7 @@ export async function handleSetupTarget(
   if (!state || state.step !== "custom-target") {
     return { text: "Setup expired. Send /start to begin again." };
   }
-  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can continue." };
   }
 
@@ -479,7 +480,7 @@ export async function handleSetupTickerInput(
   text: string,
   state: SetupWizardState,
 ): Promise<void> {
-  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return;
   }
   const resolution = resolveTicker(text.trim());
@@ -514,7 +515,7 @@ export async function handleSetupConfirm(
   if (!state || (state.step !== "confirm-recommended" && state.step !== "confirm-custom")) {
     return { text: "Setup expired. Send /start to begin again." };
   }
-  if (state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can continue." };
   }
   if (state.alertTypes.length === 0 || state.target == null) {
@@ -613,7 +614,7 @@ export async function handleSetupCancel(
   context: CallbackContext,
   state: SetupWizardState | null,
 ): Promise<{ text: string }> {
-  if (state && state.initiatorUserId != null && state.initiatorUserId !== context.actorUserId) {
+  if (state && !canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can cancel." };
   }
   await clearPendingDisambiguation(context.db, context.chatId);
