@@ -100,6 +100,7 @@ describe("selector-snapshot Pages Function", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -464,6 +465,36 @@ describe("selector-snapshot Pages Function", () => {
       });
       expect(otherIp.status).toBe(200);
     });
+  });
+
+  it("persists a per-IP daily quota across isolate rate-limit windows", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-19T00:00:00Z"));
+    const env = makeEnv();
+    const output = buildSelectorSnapshotOutput();
+    const headers = {
+      ...POST_HEADERS,
+      "CF-Connecting-IP": "203.0.113.90",
+    };
+
+    for (let i = 0; i < 100; i++) {
+      vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 0, i + 1, 0)));
+      const response = await onRequest({
+        request: postRequest({ ...output, datasetHash: `quota-${i}` }, headers),
+        env,
+        params: {},
+      });
+      expect(response.status).toBe(200);
+    }
+
+    vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 1, 50, 0)));
+    const throttled = await onRequest({
+      request: postRequest({ ...output, datasetHash: "quota-over" }, headers),
+      env,
+      params: {},
+    });
+    expect(throttled.status).toBe(429);
+    expect(throttled.headers.get("Retry-After")).toBe("86400");
   });
 
   describe("GET failure modes", () => {

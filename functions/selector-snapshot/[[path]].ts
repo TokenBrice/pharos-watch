@@ -43,6 +43,8 @@ const SNAPSHOT_BODY_ENCODER = new TextEncoder();
 const POST_RATE_LIMIT_WINDOW_MS = 60_000;
 const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;
 const POST_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
+const POST_DAILY_QUOTA_MAX_PER_IP = 100;
+const POST_DAILY_QUOTA_TTL_SECONDS = 60 * 60 * 48;
 const postTimestampsByIpHash = new Map<string, number[]>();
 
 async function hashClientIp(ip: string): Promise<string> {
@@ -50,11 +52,19 @@ async function hashClientIp(ip: string): Promise<string> {
   return Array.from(new Uint8Array(digest).slice(0, 8), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function isPostRateLimited(request: Request): Promise<boolean> {
+async function getClientIpHash(request: Request): Promise<string | null> {
   const ip = request.headers.get("CF-Connecting-IP");
-  if (!ip) return false;
+  if (!ip) return null;
+  return hashClientIp(ip);
+}
 
-  const key = await hashClientIp(ip);
+function dailyQuotaKey(ipHash: string, now = new Date()): string {
+  return `q:${now.toISOString().slice(0, 10)}:${ipHash}`;
+}
+
+async function isPostRateLimited(request: Request): Promise<boolean> {
+  const key = await getClientIpHash(request);
+  if (!key) return false;
   const now = Date.now();
   const cutoff = now - POST_RATE_LIMIT_WINDOW_MS;
   const recent = (postTimestampsByIpHash.get(key) ?? []).filter((ts) => ts > cutoff);
@@ -70,6 +80,36 @@ async function isPostRateLimited(request: Request): Promise<boolean> {
   }
   postTimestampsByIpHash.set(key, recent);
   return false;
+}
+
+async function consumeDailyPostQuota(env: SelectorSnapshotEnv, request: Request): Promise<Response | null> {
+  const ipHash = await getClientIpHash(request);
+  if (!ipHash || !env.SELECTOR_SNAPSHOTS) return null;
+
+  const key = dailyQuotaKey(ipHash);
+  let count = 0;
+  try {
+    const stored = await env.SELECTOR_SNAPSHOTS.get(key, "text");
+    count = stored === null ? 0 : Number.parseInt(stored, 10);
+  } catch (error) {
+    console.warn("[selector-snapshot] quota read failure", error);
+    return jsonError(503, "Snapshot store temporarily unavailable");
+  }
+
+  if (Number.isFinite(count) && count >= POST_DAILY_QUOTA_MAX_PER_IP) {
+    return jsonError(429, "Daily snapshot write quota exceeded", { "Retry-After": "86400" });
+  }
+
+  try {
+    await env.SELECTOR_SNAPSHOTS.put(key, String((Number.isFinite(count) ? count : 0) + 1), {
+      expirationTtl: POST_DAILY_QUOTA_TTL_SECONDS,
+    });
+  } catch (error) {
+    console.warn("[selector-snapshot] quota write failure", error);
+    return jsonError(503, "Snapshot store temporarily unavailable");
+  }
+
+  return null;
 }
 
 interface SelectorSnapshotEnv {
@@ -174,6 +214,9 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
   } catch {
     // Treat read failure as best-effort; proceed to write.
   }
+
+  const quotaRejected = await consumeDailyPostQuota(env, request);
+  if (quotaRejected) return quotaRejected;
 
   try {
     // Unread snapshots expire on the short TTL; the first successful read
