@@ -35,8 +35,9 @@ import {
   YieldHistoryTooltip,
 } from "./yield-history-chart-ui";
 
-/** Distinct colors for overlay lines (skip index 0 = blue, use contrasting hues) */
-const OVERLAY_COLORS = [CHART_PALETTE[1], CHART_PALETTE[3], CHART_PALETTE[4], CHART_PALETTE[5]];
+/** Distinct overlay colors (skip CHART_PALETTE[0] = blue, used by the primary series) */
+const SPIKE_COLOR = "oklch(0.72 0.18 35)";
+const OVERLAY_COLORS = [CHART_PALETTE[3], CHART_PALETTE[4], CHART_PALETTE[5]];
 
 export function YieldHistoryChart({
   stablecoinId,
@@ -317,12 +318,12 @@ export function YieldHistoryChart({
                     x={spike.date}
                     y={clampedY}
                     r={4}
-                    fill="oklch(0.72 0.18 35)"
+                    fill={SPIKE_COLOR}
                     stroke="var(--color-background)"
                     strokeWidth={1.5}
                     label={{
                       value: `${isClamped ? "↑↑" : "↑"} ${formatChartNumber(spike.apy, 1, 1)}%`,
-                      fill: "oklch(0.72 0.18 35)",
+                      fill: SPIKE_COLOR,
                       fontSize: 10,
                       position: "top",
                     }}
@@ -335,7 +336,7 @@ export function YieldHistoryChart({
                   key={dataKey}
                   type="monotone"
                   dataKey={dataKey}
-                  stroke={OVERLAY_COLORS[i + 1] ?? OVERLAY_COLORS[0]}
+                  stroke={OVERLAY_COLORS[i]}
                   strokeWidth={1.5}
                   strokeDasharray="6 3"
                   dot={false}
@@ -378,7 +379,7 @@ export function YieldHistoryChart({
           ) : null}
           {model.overlayLabels.map((source, i) => (
             <span key={source.sourceKey} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: OVERLAY_COLORS[i + 1] ?? OVERLAY_COLORS[0] }} />
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: OVERLAY_COLORS[i] }} />
               {source.label}
             </span>
           ))}
@@ -395,7 +396,7 @@ export function YieldHistoryChart({
           </span>
           {spikeAnnotations.length > 0 ? (
             <span className="inline-flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "oklch(0.72 0.18 35)" }} />
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: SPIKE_COLOR }} />
               spike
             </span>
           ) : null}
