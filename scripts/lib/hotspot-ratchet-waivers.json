@@ -71,14 +71,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "src/components/stablecoin-table.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Table-shell refactor removed DOM cursor painting and moved skeleton rendering onto shared table primitives, but the home stablecoin table still owns column visibility, virtualization, density, cursor actions, sorting, and row rendering orchestration. Keep explicitly waived for this release; split orchestration from table rendering in a focused table-shell cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-07",
-    "reviewAfter": "2026-09-07",
-    "nextAction": "Extract column/sort/cursor orchestration from the table render shell after the shared table primitives stabilize."
-  },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work.",
@@ -94,6 +86,14 @@
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "src/app/sitemap.ts": {
+    "disposition": "queued-p4",
+    "notes": "The static sitemap manifest concentrates route membership and last-modified derivation for every indexable family. Keep it explicitly waived while route families are being added; split route-family builders only in a dedicated SEO metadata cleanup.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-19",
+    "reviewAfter": "2026-09-19",
+    "nextAction": "Extract per-route-family sitemap entry builders if the manifest grows again."
   },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
@@ -142,14 +142,6 @@
     "createdAt": "2026-05-27",
     "reviewAfter": "2026-08-27",
     "nextAction": "Extract DDRR terminal-evidence derivation and no-prediction coverage projection into focused helpers after the v2 rollout stabilizes."
-  },
-  "worker/src/cron/fetch-tbill-rate.ts": {
-    "disposition": "queued-p4",
-    "notes": "T-bill rate sync combines provider fetches, validation, fallback/carry-forward behavior, cache writes, and cron result assembly. Keep enrolled for a future rate-source cleanup rather than widening the current audit remediation branch.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Split provider adapters, fallback decisioning, and persistence into focused helpers."
   },
   "worker/src/cron/sync-yield-data.ts": {
     "disposition": "queued-p4",

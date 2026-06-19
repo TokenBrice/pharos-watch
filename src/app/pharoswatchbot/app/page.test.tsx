@@ -452,7 +452,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     render(<PharosWatchBotMiniAppPage />);
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    fireEvent.click(screen.getByRole("button", { name: "Set global depeg step to 500 bps" }));
+    fireEvent.click(screen.getByRole("radio", { name: /\+500 bps/ }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({

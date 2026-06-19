@@ -316,6 +316,29 @@ describe("address price providers", () => {
     });
   });
 
+  it("marks malformed DexPaprika token details as invalid shape diagnostics", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(["not", "a", "token"]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runDexPaprikaAddressProvider(
+      [makeDexScreenerTarget(1)],
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(result.attemptedRequests).toBe(1);
+    expect(result.successfulRequests).toBe(0);
+    expect(result.quotes).toEqual([]);
+    expect(result.diagnostics).toMatchObject([
+      {
+        source: "dexpaprika-address",
+        ok: true,
+        success: false,
+        rejectionReasonCounts: { "invalid-shape": 1 },
+      },
+    ]);
+  });
+
   it("keeps blocked address providers neutral for circuit-breaker accounting", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

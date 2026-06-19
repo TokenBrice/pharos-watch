@@ -36,6 +36,7 @@ import {
   checkCachedPublicApiReadFastRateLimit,
   evaluateAccessGate,
   evaluateCachedPublicApiReadFastGate,
+  handleMaintenanceMode,
 } from "../gates";
 
 const validKey = {
@@ -94,6 +95,24 @@ describe("evaluateAccessGate", () => {
       aud: "ops-aud",
       teamDomain: "pharos-watch",
     });
+  });
+
+  it("serves maintenance mode for non-preflight requests only", async () => {
+    const env = { MAINTENANCE_MODE: "true" };
+
+    const blocked = handleMaintenanceMode(
+      new Request("https://api.pharos.watch/api/stablecoins"),
+      env as never,
+    );
+    const preflight = handleMaintenanceMode(
+      new Request("https://api.pharos.watch/api/stablecoins", { method: "OPTIONS" }),
+      env as never,
+    );
+
+    expect(blocked?.status).toBe(503);
+    expect(blocked?.headers.get("Retry-After")).toBe("300");
+    await expect(blocked?.json()).resolves.toMatchObject({ error: "maintenance" });
+    expect(preflight).toBeNull();
   });
 
   it("denies site-api admin paths after a valid site-proxy credential", async () => {
