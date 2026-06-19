@@ -59,6 +59,7 @@ export interface StatefulDbOptions {
   failOnSql?: string;
   failMessage?: string;
   failBatchAfterApplyOnce?: boolean;
+  failFirstOnSql?: string;
   failRunAfterApplyOnceOnSql?: string;
   seed?: Partial<StatusStateRow>;
 }
@@ -94,6 +95,7 @@ function seedToStateRow(seed: Partial<StatusStateRow>): StatusStateRow {
 
 export function makeStatefulDb(options: StatefulDbOptions = {}) {
   let batchPostApplyFailureUsed = false;
+  let firstSqlFailureUsed = false;
   let runPostApplyFailureUsed = false;
   const store: {
     stateRow: StatusStateRow | null;
@@ -131,6 +133,11 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
       return { results: [] as T[], success: true, meta: {} };
     },
     first: async <T>() => {
+      if (options.failFirstOnSql && !firstSqlFailureUsed && sql.includes(options.failFirstOnSql)) {
+        firstSqlFailureUsed = true;
+        throw new Error(options.failMessage ?? "transient read failed");
+      }
+
       if (sql.includes("FROM status_state")) {
         return store.stateRow as T | null;
       }

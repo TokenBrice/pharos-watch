@@ -50,6 +50,12 @@ export async function reconcileStatusState(
       .first<StatusStateRow>();
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_state_read_failed", "load-status-state", error);
+    return {
+      effectiveStatus: rawStatus,
+      state: buildFallbackStatusState(rawStatus, now),
+      transition: null,
+      persistenceSucceeded: false,
+    };
   }
 
   if (!current) {

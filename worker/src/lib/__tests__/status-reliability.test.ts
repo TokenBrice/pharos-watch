@@ -186,6 +186,43 @@ describe("status-reliability", () => {
     expect(failed).toEqual({ state: null, staleness: null });
   });
 
+  it("does not seed status state after a transient read failure", async () => {
+    const { db, store } = makeStatefulDb({
+      failFirstOnSql: "FROM status_state",
+      failMessage: "transient status read failed",
+      seed: {
+        current_status: "healthy",
+        raw_status: "healthy",
+        last_evaluated_at: 500,
+        last_changed_at: 500,
+        consecutive_healthy: 5,
+      },
+    });
+    const issues: Array<{ code: string; operation: string; message: string }> = [];
+
+    const result = await reconcileStatusState(db, 2_000, "degraded", 0.9, [], (issue) => issues.push(issue));
+
+    expect(result).toMatchObject({
+      effectiveStatus: "degraded",
+      persistenceSucceeded: false,
+      transition: null,
+    });
+    expect(result.state).toEqual(buildFallbackStatusState("degraded", 2_000));
+    expect(store.stateRow).toMatchObject({
+      current_status: "healthy",
+      raw_status: "healthy",
+      last_changed_at: 500,
+      consecutive_healthy: 5,
+    });
+    expect(store.transitions).toHaveLength(0);
+    expect(issues).toEqual([
+      expect.objectContaining({
+        code: "status_state_read_failed",
+        operation: "load-status-state",
+      }),
+    ]);
+  });
+
   it("reports persistence diagnostics when status-state tables are unavailable", async () => {
     const issues: Array<{ code: string; operation: string; message: string }> = [];
 
@@ -205,7 +242,6 @@ describe("status-reliability", () => {
 
     const summary = summarizeStatusPersistenceIssues(issues);
     expect(issues.some((issue) => issue.code === "status_state_read_failed")).toBe(true);
-    expect(issues.some((issue) => issue.code === "status_state_persistence_failed")).toBe(true);
     expect(issues.some((issue) => issue.code === "status_state_snapshot_failed")).toBe(true);
     expect(summary?.code).toBe("status_persistence_degraded");
     expect(summary?.message).toBe("Status persistence degraded.");
