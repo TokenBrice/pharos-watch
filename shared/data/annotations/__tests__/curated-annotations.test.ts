@@ -63,6 +63,12 @@ describe("curated-annotations", () => {
     expect(getCuratedAnnotations("does-not-exist")).toEqual([]);
   });
 
+  it("returns an empty array for prototype-reserved coin ids", () => {
+    expect(getCuratedAnnotations("__proto__")).toEqual([]);
+    expect(getCuratedAnnotations("constructor")).toEqual([]);
+    expect(getCuratedAnnotations("toString")).toEqual([]);
+  });
+
   it("returns the same reference each call (stable EMPTY)", () => {
     const a = getCuratedAnnotations("does-not-exist");
     const b = getCuratedAnnotations("also-not-exist");
