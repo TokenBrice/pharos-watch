@@ -137,7 +137,7 @@ export function extractUsdAiProofPageTimestampSummary(html: string): SourceTimes
 }
 
 export function extractUsdAiProofPageTimestamp(html: string): number | null {
-  return extractUsdAiProofPageTimestampSummary(html)?.latestSourceTimestamp ?? null;
+  return extractUsdAiProofPageTimestampSummary(html)?.sourceTimestamp ?? null;
 }
 
 export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntry[] {
@@ -412,17 +412,17 @@ async function fetchUsdAiProofPageTimestamp(
     };
   }
   const scoped = extractUsdAiProofPageTimestampSummary(html);
-  if (scoped != null) return { timestamp: scoped.latestSourceTimestamp, summary: scoped };
+  if (scoped != null) return { timestamp: scoped.sourceTimestamp, summary: scoped };
 
   const whole = extractUsdAiProofPageTimestampFallback(html);
   if (whole == null) return { timestamp: null, summary: null };
 
   return {
-    timestamp: whole.latestSourceTimestamp,
+    timestamp: whole.sourceTimestamp,
     summary: whole,
     fallbackWarning: reserveInfoWarning(
       "usdai-proof-scope-fallback",
-      "USD.AI proof-row scope not found; used whole-page MAX timeLastUpdated as source timestamp",
+      "USD.AI proof-row scope not found; used whole-page oldest timeLastUpdated as source timestamp",
     ),
   };
 }
