@@ -6,9 +6,7 @@ import {
   getDepegMarketImpactScore,
   isCriticalDepegRisk,
 } from "@shared/lib/digest-risk";
-import { getDepegThresholdBps } from "../../lib/constants";
 import { buildInClause } from "../../lib/db";
-import { deriveDepegSignal } from "../../lib/depeg-signals";
 import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../../lib/mint-burn-scoring";
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
 import { SECONDS } from "../../lib/time-constants";
@@ -76,16 +74,10 @@ export async function collectActiveDepegs(
       const livePrice = typeof asset?.price === "number" && Number.isFinite(asset.price) && asset.price > 0
         ? asset.price
         : null;
-      const pegReference = typeof row.peg_reference === "number" && Number.isFinite(row.peg_reference) && row.peg_reference > 0
-        ? row.peg_reference
-        : 1;
-      const liveSignal = livePrice != null ? deriveDepegSignal(livePrice, pegReference) : null;
-      const threshold = getDepegThresholdBps(row.peg_type ?? asset?.pegType);
-      if (liveSignal && (liveSignal.absBps < threshold || liveSignal.direction !== row.direction)) {
-        return [];
-      }
-      const bps = liveSignal?.bps ?? row.peak_deviation_bps;
-      const direction = liveSignal?.direction ?? row.direction;
+      const direction = row.direction;
+      const bps = direction === "below"
+        ? -Math.abs(row.peak_deviation_bps)
+        : Math.abs(row.peak_deviation_bps);
       const impactScore = getDepegMarketImpactScore(bps, mcapUsd);
       return {
         stablecoinId: row.stablecoin_id,
