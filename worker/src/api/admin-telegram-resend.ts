@@ -20,6 +20,7 @@ import {
   type ReserveAlert,
   type SafetyChange,
 } from "../lib/telegram-alerts";
+import { emptyAlerts } from "../cron/dispatch-telegram-routing";
 import { extractTopSignals } from "../cron/telegram-alert-snapshots";
 import { z } from "zod";
 
@@ -61,18 +62,6 @@ async function parseBody(request: Request): Promise<ResendRequestBody | Response
         : first?.message ?? "Invalid resend request body";
     },
   });
-}
-
-function emptyAlerts(): ConsolidatedAlerts {
-  return {
-    dews: [],
-    depegTriggered: [],
-    depegResolved: [],
-    depegWorsening: [],
-    safety: [],
-    launch: [],
-    reserve: [],
-  };
 }
 
 function getSymbol(stablecoinId: string): string {
@@ -208,7 +197,7 @@ async function buildSyntheticAlerts(
   } else if (alertType === "reserve") {
     const event = buildReserveEvent(stablecoinId);
     if (!event) return null;
-    alerts.reserve?.push(event);
+    alerts.reserve.push(event);
   }
   return alerts;
 }

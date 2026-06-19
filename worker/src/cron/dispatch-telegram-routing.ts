@@ -57,7 +57,7 @@ function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   if (alerts.dews.length > 0) return "dews";
   if (alerts.safety.length > 0) return "safety";
   if (alerts.launch.length > 0) return "launch";
-  if ((alerts.reserve ?? []).length > 0) return "reserve";
+  if (alerts.reserve.length > 0) return "reserve";
   // Fallback: an empty consolidated alert should not reach this path. Pick the
   // lowest-priority type so we never crash on metric attribution.
   return ALERT_TYPE_PRIORITY[ALERT_TYPE_PRIORITY.length - 1];
@@ -118,7 +118,7 @@ export interface FreshSendOutcome {
   }>;
 }
 
-function emptyAlerts(): ConsolidatedAlerts {
+export function emptyAlerts(): ConsolidatedAlerts {
   return {
     dews: [],
     depegTriggered: [],
@@ -217,7 +217,7 @@ function collectEntryStablecoinIds(alerts: ConsolidatedAlerts): string[] {
   for (const e of alerts.depegWorsening) ids.add(e.stablecoinId);
   for (const e of alerts.safety) ids.add(e.stablecoinId);
   for (const e of alerts.launch) ids.add(e.stablecoinId);
-  for (const e of alerts.reserve ?? []) ids.add(e.stablecoinId);
+  for (const e of alerts.reserve) ids.add(e.stablecoinId);
   return [...ids];
 }
 
@@ -305,7 +305,7 @@ function countChatAlerts(alerts: ConsolidatedAlerts): number {
     alerts.depegWorsening.length +
     alerts.safety.length +
     alerts.launch.length +
-    (alerts.reserve?.length ?? 0)
+    alerts.reserve.length
   );
 }
 
@@ -360,6 +360,11 @@ export function selectChatsToFormat(
     }
   }
   return { toFormat, overflow };
+}
+
+/** Total estimated send-chunks across a planned subscriber list. */
+export function estimatedPlannedChunks(plans: readonly PlannedSubscriberAlert[]): number {
+  return plans.reduce((sum, plan) => sum + Math.max(1, plan.estimatedChunks), 0);
 }
 
 /** Format a single planned chat into a deliverable, split message (C102 phase 2). */
