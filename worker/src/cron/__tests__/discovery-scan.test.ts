@@ -83,6 +83,41 @@ describe("upsertDiscoveryCandidates", () => {
     expect(history[0].sql).toContain("ON CONFLICT (gecko_id)");
     expect(history[1].sql).toContain("ON CONFLICT (llama_id)");
   });
+
+  it("falls back to per-candidate upserts when a discovery batch fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = mockD1([
+      {
+        match: "INSERT INTO discovery_candidates",
+        matchBinds: ["bad-stable", null, null, "BAD", 9_000_000, "coingecko", 1771934400, 1771934400],
+        rows: [],
+        throwError: new Error("NOT NULL constraint failed: discovery_candidates.name"),
+      },
+    ]);
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-24T12:00:00Z"));
+    try {
+      const upserted = await upsertDiscoveryCandidates(db, [
+        { geckoId: "good-one", name: "GoodOne", symbol: "GOOD", marketCap: 10_000_000, source: "coingecko" },
+        { geckoId: "bad-stable", name: null as unknown as string, symbol: "BAD", marketCap: 9_000_000, source: "coingecko" },
+        { llamaId: 42, name: "LlamaStable", symbol: "LST", marketCap: 8_000_000, source: "defillama" },
+      ]);
+
+      expect(upserted).toBe(2);
+      expect(warn).toHaveBeenCalledWith(
+        "[discovery] Upsert batch failed; retrying candidates individually:",
+        expect.any(Error),
+      );
+      expect(warn).toHaveBeenCalledWith(
+        "[discovery] Skipping discovery candidate after upsert failure:",
+        expect.any(Error),
+      );
+    } finally {
+      vi.useRealTimers();
+      warn.mockRestore();
+    }
+  });
 });
 
 describe("runDiscoveryScan", () => {

@@ -204,7 +204,13 @@ export async function fetchFluidPools(
 
       successfulChains++;
       for (const pool of pools) {
-        await enrichFluidPool(chain, pool, resolvedChainRpcs, signal);
+        try {
+          await enrichFluidPool(chain, pool, resolvedChainRpcs, signal);
+        } catch (error) {
+          const reason = toErrorMessage(error);
+          errors.push(`${chain} pool ${pool.poolAddress} enrichment failed: ${reason}`);
+          console.warn("[fetch-fluid] Pool enrichment failed:", reason);
+        }
       }
       results.push(...pools);
     } catch (error) {

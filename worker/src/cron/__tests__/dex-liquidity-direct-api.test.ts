@@ -158,6 +158,73 @@ describe("fetchFluidPools", () => {
     expect(mockFetch.mock.calls.some(([input]) => String(input) === "https://rpc.example")).toBe(true);
   });
 
+  it("isolates malformed Fluid pool IDs to a single pool enrichment failure", async () => {
+    const malformedPoolAddress = "not-a-20-byte-hex-address";
+    mockFetch.mockImplementation((input, init) => {
+      const url = String(input);
+      if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
+        return Promise.resolve(jsonResponse([
+          {
+            ticker_id: "0xbase_0xquote",
+            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+            last_price: "0.9999",
+            base_volume: "100000",
+            target_volume: "100000",
+            pool_id: FLUID_POOL_ADDRESS,
+            liquidity_in_usd: "500000",
+          },
+          {
+            ticker_id: "0xbroken_0xquote",
+            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+            last_price: "1.0001",
+            base_volume: "50000",
+            target_volume: "50000",
+            pool_id: malformedPoolAddress,
+            liquidity_in_usd: "400000",
+          },
+        ]));
+      }
+      if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url === "https://rpc.example") {
+        const body = String(init?.body ?? "");
+        if (body.includes("0x957755e6")) {
+          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([1_500_000, 500_000, 0, 0]) }));
+        }
+        if (body.includes("0x55181f11")) {
+          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([0, 0, 500_000, 2_500_000, 0, 0]) }));
+        }
+        if (body.includes("0x42fcc6fb")) {
+          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([100]) }));
+        }
+      }
+      return Promise.resolve(new Response("unexpected", { status: 500 }));
+    });
+
+    const chainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+
+    const pools = await fetchFluidPools(undefined, chainRpcs);
+
+    expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS, malformedPoolAddress]);
+    expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
+    expect(pools.pools[1].balances).toBeNull();
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(true);
+    expect(pools.errors[0]).toContain(malformedPoolAddress);
+    expect(mockFetch.mock.calls.filter(([input]) => String(input) === "https://rpc.example")).toHaveLength(3);
+  });
+
   it("sets empty symbols and decimals=0 for tokens", async () => {
     mockJsonFetch([
       {
