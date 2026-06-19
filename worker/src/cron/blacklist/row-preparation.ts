@@ -11,6 +11,17 @@ function compareBlacklistRows(left: BlacklistRow, right: BlacklistRow): number {
   return left.timestamp === right.timestamp ? left.id.localeCompare(right.id) : left.timestamp - right.timestamp;
 }
 
+export function buildLatestBlacklistRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
+  const latestByAddress = new Map<string, BlacklistRow>();
+  const orderedRows = [...rows].sort(compareBlacklistRows);
+
+  for (const row of orderedRows) {
+    latestByAddress.set(buildCurrentBalanceKey(row), row);
+  }
+
+  return [...latestByAddress.values()].sort(compareBlacklistRows);
+}
+
 function buildCurrentBalanceKey(row: BlacklistRow): string {
   return buildBlacklistContractBalanceKey(
     row.stablecoin,

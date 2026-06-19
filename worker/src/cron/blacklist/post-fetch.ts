@@ -10,6 +10,7 @@ import { insertBlacklistRows } from "./persistence";
 import { type BlacklistRunBudget } from "./run-budget";
 import {
   buildCurrentBalanceSnapshotRows,
+  buildLatestBlacklistRows,
   fetchBlacklistAssetPriceFromCache,
 } from "./row-preparation";
 
@@ -69,9 +70,47 @@ function filterCacheRepairLedgerRows(rows: BlacklistRow[]): BlacklistRow[] {
   return rows.filter(
     (row) =>
       row.suppression_reason == null
-      && (row.event_type === "blacklist" || row.event_type === "destroy")
-      && !shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native),
+      && (row.event_type === "unblacklist"
+        || !shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native)),
   );
+}
+
+async function fetchLatestKnownRepairRows(
+  db: D1Database,
+  rows: BlacklistRow[],
+): Promise<BlacklistRow[]> {
+  if (rows.length === 0) return [];
+
+  const seenKeys = new Set<string>();
+  const statements: D1PreparedStatement[] = [];
+  for (const row of rows) {
+    const key = `${row.stablecoin}:${row.chain_id}:${row.config_key}:${(row.contract_address ?? "").toLowerCase()}:${row.address.toLowerCase()}`;
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    statements.push(
+      db.prepare(`
+        SELECT * FROM blacklist_events
+        WHERE stablecoin = ?
+          AND chain_id = ?
+          AND config_key = ?
+          AND lower(contract_address) = lower(?)
+          AND lower(address) = lower(?)
+        ORDER BY timestamp DESC, id DESC
+        LIMIT 1
+      `).bind(
+        row.stablecoin,
+        row.chain_id,
+        row.config_key,
+        row.contract_address,
+        row.address,
+      ),
+    );
+  }
+
+  const results = await db.batch(statements);
+  return results
+    .map((result) => (result as { results?: BlacklistRow[] }).results?.[0])
+    .filter((row): row is BlacklistRow => row != null && row.suppression_reason == null);
 }
 
 export async function processFetchedBlacklistRows(
@@ -94,6 +133,7 @@ export async function processFetchedBlacklistRows(
   if (newRows.length === 0) {
     const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
     if (duplicateLedgerRows.length > 0) {
+      const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows);
       const assetPriceUsd = getBlacklistPriceAssetId(options.config.stablecoin)
         ? await fetchBlacklistAssetPriceFromCache(options.db, options.config.stablecoin)
         : null;
@@ -111,7 +151,7 @@ export async function processFetchedBlacklistRows(
           signal: options.signal,
           chainRpcs: options.chainRpcs,
           assetPriceUsd,
-          latestRows: buildCurrentBalanceSnapshotRows(duplicateLedgerRows),
+          latestRows: buildLatestBlacklistRows([...duplicateLedgerRows, ...latestKnownRepairRows]),
         },
       );
       return {
@@ -156,8 +196,12 @@ export async function processFetchedBlacklistRows(
   const insertedRows = await insertBlacklistRows(options.db, newRows);
   const ledgerRows = newRows.filter((row) => row.suppression_reason == null);
   const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
+  const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows);
   const cacheSyncRows = [...ledgerRows, ...duplicateLedgerRows];
-  const latestLedgerRows = buildCurrentBalanceSnapshotRows(cacheSyncRows);
+  const latestLedgerRows = [
+    ...buildCurrentBalanceSnapshotRows(ledgerRows),
+    ...buildLatestBlacklistRows([...duplicateLedgerRows, ...latestKnownRepairRows]),
+  ];
   const currentBalanceCacheCounters = await syncCurrentBalanceCacheForRows(
     options.db,
     options.config,
