@@ -135,7 +135,7 @@ describe("sendToChat", () => {
     expect(fetchSpy.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("classifies ambiguous long retry-after 429s as global", async () => {
+  it("keeps ambiguous long retry-after 429s chat-scoped", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response("Too Many Requests", {
         status: 429,
@@ -151,7 +151,7 @@ describe("sendToChat", () => {
       statusCode: 429,
       errorClass: "rate_limit",
       delivery: "retryable_failure",
-      rateLimitScope: "global",
+      rateLimitScope: "chat",
     });
     expect(result.retryAfterSec).toBe(30);
   });
@@ -368,6 +368,42 @@ describe("sendBatch", () => {
     expect(results).toHaveLength(5);
     expect(results.slice(0, 3).every((result) => result.rateLimitScope === "global" && result.attempted === true)).toBe(true);
     expect(results.slice(3).every((result) => result.rateLimitScope === "global" && result.attempted === false)).toBe(true);
+  });
+
+
+  it("keeps sending later batches after an ambiguous Telegram JSON retry_after", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error_code: 429,
+            description: "Too Many Requests: retry after 38",
+            parameters: { retry_after: 38 },
+          }),
+          { status: 429 },
+        ),
+      )
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const messages = Array.from({ length: 5 }, (_, index) => ({
+      chatId: `chat-${index}`,
+      html: `<b>Alert ${index}</b>`,
+      disableNotification: false,
+    }));
+
+    const results = await sendBatch(messages, "bot-token", 2);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(5);
+    expect(results).toHaveLength(5);
+    expect(results[0]).toMatchObject({
+      chatId: "chat-0",
+      errorClass: "rate_limit",
+      retryAfterSec: 38,
+      rateLimitScope: "chat",
+      attempted: true,
+    });
+    expect(results.slice(1).every((result) => result.ok && result.attempted === true)).toBe(true);
   });
 
   it("marks the untouched tail as global retryable after a global rate limit stop", async () => {

@@ -150,19 +150,15 @@ export interface SendToChatResult {
   rateLimitScope?: "chat" | "global";
 }
 
-const GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC = 30;
 const GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
 
-function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
+function inferRateLimitScope(responseBody: string): "chat" | "global" {
   const lower = responseBody.toLowerCase();
   if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
     return "global";
   }
   if (lower.includes("chat") || lower.includes("group") || lower.includes("user")) {
     return "chat";
-  }
-  if (retryAfterSec != null && retryAfterSec >= GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC) {
-    return "global";
   }
   return "chat";
 }
@@ -205,7 +201,7 @@ function buildResponseFailure(statusCode: number, responseBody = "", retryAfterS
       errorClass: "rate_limit",
       delivery: "retryable_failure",
       retryAfterSec: null,
-      rateLimitScope: inferRateLimitScope(responseBody, retryAfterSec),
+      rateLimitScope: inferRateLimitScope(responseBody),
     };
   }
   if (statusCode >= 500) {
