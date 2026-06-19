@@ -47,7 +47,7 @@ function makeZysMeta(): StablecoinMeta {
 }
 
 describe("parseZephyrZsdStats", () => {
-  it("uses official zsd_circ and live zsd_price for market cap", () => {
+  it("uses official zsd_circ and reasonable live zsd_price for fallback price metadata", () => {
     expect(parseZephyrZsdStats({
       zsd_circ: 385_038.0963333748,
       zsd_price: 1.003,
@@ -56,6 +56,28 @@ describe("parseZephyrZsdStats", () => {
       mcapPrice: 1.003,
       mcap: 386_193.2106223749,
       priceReported: true,
+    });
+  });
+
+  it("ignores unreasonable live zsd_price values for ZSD market-cap metadata", () => {
+    expect(parseZephyrZsdStats({
+      zsd_circ: 12_345,
+      zsd_price: "1000000000000",
+    })).toEqual({
+      supply: 12_345,
+      mcapPrice: 1,
+      mcap: 12_345,
+      priceReported: false,
+    });
+
+    expect(parseZephyrZsdStats({
+      zsd_circ: 12_345,
+      zsd_price: "0.000001",
+    })).toEqual({
+      supply: 12_345,
+      mcapPrice: 1,
+      mcap: 12_345,
+      priceReported: false,
     });
   });
 
@@ -144,7 +166,7 @@ describe("buildZephyrZsdPeggedAsset", () => {
       priceObservedAtMode: "upstream",
       priceSyncedAt: 1_700_000_060,
       supplySource: "zephyr-scanner",
-      circulating: { peggedUSD: 386_193.2106223749 },
+      circulating: { peggedUSD: 384_268.020140708 },
       chainCirculating: {},
       chains: [],
     });
@@ -167,7 +189,7 @@ describe("buildZephyrZsdPeggedAsset", () => {
       priceObservedAtMode: "local_fetch",
       priceSyncedAt: 1_700_000_060,
       supplySource: "zephyr-scanner",
-      circulating: { peggedUSD: 384_999.5925237415 },
+      circulating: { peggedUSD: 385_038.0963333748 },
     });
   });
 
