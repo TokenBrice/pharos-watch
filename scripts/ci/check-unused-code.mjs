@@ -158,7 +158,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/coverage.ts::countAvailableFeatures",
   "src/lib/start-here-callout.ts::START_HERE_CALLOUT_STORAGE_KEY",
   "src/lib/start-here-callout.ts::MAX_START_HERE_HOMEPAGE_SESSIONS",
-  "src/lib/status-dashboard-model.ts::getTopCauses",
   "src/lib/yield-constants.ts::WARNING_SIGNAL_LABELS",
   // Consumed by the KpiBar host within the same module; same-file reference
   // the static scan cannot resolve.
@@ -240,20 +239,25 @@ const EXPORT_ALLOWLIST = new Set([
   // Public/script/test helper surfaces intentionally kept exported even when no
   // runtime source currently imports them.
   "shared/lib/api-endpoints/datasets.ts::PUBLIC_DATASET_TOPICS",
+  "shared/lib/redemption-backstop-configs/schema.ts::currentUtcDate",
   "src/components/command-palette-model.ts::scoreStablecoinSearchMatch",
   "src/components/command-palette-model.ts::isExactStablecoinSymbolMatch",
   "src/components/command-palette-model.ts::stablecoinProminenceBonus",
+  "src/components/chart-primitives/data-table.tsx::capDataForTable",
   "src/components/table/table-label.ts::withFallbackTableAriaLabel",
   "src/components/table/table-label.ts::hasTableCaptionChild",
   "src/lib/alt-peg-packing.ts::DEFAULT_COLLISION_ITERATIONS",
   "src/lib/api-key-request-admin-view-model.ts::REQUEST_RISK_FLAG_SCORE",
   "src/lib/api.ts::normalizeApiDependencyMeta",
   "src/lib/constants.ts::HOUR_MS",
+  "src/lib/constants.ts::WEEK_MS",
+  "src/lib/constants.ts::NINETY_DAYS_MS",
   "src/lib/exports/csv.ts::escapeCsvField",
   "src/lib/exports/csv.ts::buildCsv",
   "src/lib/homepage-bootstrap-shared.ts::descriptorMaxAgeMs",
   "src/lib/yield-data-source.ts::YIELD_DATA_SOURCE_META",
   "worker/src/api/dex-liquidity-evidence.ts::isTrendworthyLiquiditySnapshot",
+  "worker/src/api/telegram-webhook-pending-gate.ts::canActOnPendingOwner",
   "worker/src/cron/daily-digest/voice-guards.ts::FORBIDDEN_TICS_ANYWHERE",
   "worker/src/cron/daily-digest/voice-guards.ts::FORBIDDEN_TICS_CLOSER",
   "worker/src/cron/reserve-adapters/slice-math.ts::RATIO_SCALE",

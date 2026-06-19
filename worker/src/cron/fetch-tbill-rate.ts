@@ -51,7 +51,6 @@ import { tryCbrKeyRate } from "./tbill-sources/cbr";
 
 // Parsers live in ./tbill-sources/* alongside their fetch adapters; re-exported
 // here so the existing fetch-tbill-rate test suite can keep importing them.
-export { parseFredLatest } from "./tbill-sources/fred";
 export { parseTreasuryYieldXml } from "./tbill-sources/treasury";
 export { parseEcbCompoundedEstrCsv } from "./tbill-sources/ecb";
 export { parseBoeSoniaCsv, parseBoeSoniaCompoundedIndexCsv } from "./tbill-sources/boe";
