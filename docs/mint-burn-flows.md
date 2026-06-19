@@ -484,7 +484,7 @@ CREATE TABLE mint_burn_config_deferral (
 CREATE INDEX idx_mbcd_until ON mint_burn_config_deferral(deferred_until);
 ```
 
-**Migration history:** The earlier per-step mint/burn migrations were squashed into the baseline; the `mint_burn_events`, `mint_burn_hourly`, and `mint_burn_sync_state` tables (v2 layout) now live in `0000_baseline.sql`. Migration 0096 adds `mint_burn_config_deferral`; migration 0097 adds the `(flow_type, timestamp)` composite index on `mint_burn_events`. These are the only post-baseline mint/burn migrations.
+**Migration history:** The earlier per-step mint/burn migrations were squashed into the baseline; the `mint_burn_events`, `mint_burn_hourly`, and `mint_burn_sync_state` tables (v2 layout) now live in `0000_baseline.sql`. Migration 0096 adds `mint_burn_config_deferral`; migration 0097 adds the `(flow_type, timestamp)` composite index on `mint_burn_events`; migration 0158 purges Re Protocol reUSD rows and resets the old vault plus canonical token cursors so the canonical `Transfer` source rebuilds history without stale vault rows.
 
 ---
 
