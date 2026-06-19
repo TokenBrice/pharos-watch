@@ -1,5 +1,12 @@
 import { CHAIN_META } from "./chains";
 
+/**
+ * Entity type for block-explorer URL construction.
+ *
+ * Note: `'contract'` is only a distinct path segment on tron, starknet, and iota.
+ * On EVM and Solana chains it falls through to the same `/address/` (or `/account/`)
+ * URL as `'address'` — this is an intentional graceful fallback, not a defect.
+ */
 export type ExplorerEntityType = "tx" | "address" | "contract";
 
 interface ExplorerUrlInput {
