@@ -262,6 +262,6 @@ export const RedemptionBackstopConfigSchema = z
     }
   });
 
-function currentUtcDate(): string {
+export function currentUtcDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
