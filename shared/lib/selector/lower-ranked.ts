@@ -102,7 +102,6 @@ export function selectLowerRanked(
           "high-venue-on-c-tier",
           "yield-warning-unstable",
           "yield-warning-thin-tvl",
-          "yield-source-recently-switched",
           "peg-score-floor",
         ]
       : profileDefining;

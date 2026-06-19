@@ -138,7 +138,6 @@ export function buildRelaxableConstraints(
   const venueReason = hasExcludedReason(excluded, [
     "high-venue-on-c-tier",
     "yield-warning-thin-tvl",
-    "liquidity-diversification-floor",
   ]);
   const venueScoped = input.composability !== "high" || !(input.venuePreferences?.includes("all" as never) ?? false);
   if (input.profile !== "treasury" && (venueScoped || venueReason)) {

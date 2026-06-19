@@ -8,6 +8,7 @@
  */
 import type { ReportCardGrade } from "../../types";
 import {
+  tradingDewsCeiling,
   tradingPegScoreFloor,
   treasuryPegScoreFloor,
   yieldPegScoreFloor,
@@ -141,13 +142,7 @@ function applyTradingDeltas(
 ): void {
   filters.safetyPegStabilityMin = tradingPegScoreFloor(input.depegTolerance);
   filters.safetyLiquidityMin = input.exitSpeed === "1h" ? 65 : 50;
-  if (input.exitSpeed === "1h") {
-    filters.dewsMax = 35;
-  } else if (input.exitSpeed === "24h") {
-    filters.dewsMax = 45;
-  } else {
-    filters.dewsMax = 55;
-  }
+  filters.dewsMax = tradingDewsCeiling(input.exitSpeed);
 }
 
 /**
