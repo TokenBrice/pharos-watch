@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.82",
+    title: "Large zero-volume pool retention hardening",
+    date: "2026-06-19",
+    effectiveAt: 1781827200,
+    summary:
+      "Large retained pools must clear the minimum 24-hour volume floor even when a source marks volume as unmeasured.",
+    impact: [
+      "Pools above the large-pool TVL threshold are dropped when 24-hour volume is below the minimum-volume floor regardless of the volumeMeasured diagnostic flag",
+      "Pool-state-only direct sources can still expand coverage with smaller eligible pools, but large zero-volume rows no longer bypass the retained-pool anti-poisoning guard",
+      "Volume-to-TVL outlier checks, blocked-DEX filtering, protocol caps, and post-filter aggregate rebuilds continue to run around the stricter retained-pool gate",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.81",
     title: "Unsupported-chain Curve fallback coverage",
     date: "2026-06-14",

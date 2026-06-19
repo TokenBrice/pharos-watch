@@ -1,6 +1,14 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.81` (2026-02-19 -> 2026-06-14).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.82` (2026-02-19 -> 2026-06-19).
+
+---
+
+## v5.82 - Large zero-volume pool retention hardening (June 19, 2026)
+
+- Large retained pools must clear the minimum 24-hour volume floor even when a source marks volume as unmeasured
+- Pool-state-only direct sources can still expand coverage with smaller eligible pools, but large zero-volume rows no longer bypass the retained-pool anti-poisoning guard
+- Volume-to-TVL outlier checks, blocked-DEX filtering, protocol caps, and post-filter aggregate rebuilds continue to run around the stricter retained-pool gate
 
 ---
 

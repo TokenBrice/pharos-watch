@@ -543,7 +543,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/blacklist/evm-source.ts` - FetchEvmEventsIncrementalResult, RPC_LOG_SCAN_WINDOWS, fetchEvmEventsIncremental, parseEvmLogs, resolveRpcLogTarget, shouldPreferRpcLogScan
 - `worker/src/cron/blacklist/persistence.ts` - insertBlacklistRows
 - `worker/src/cron/blacklist/post-fetch.ts` - BlacklistPostFetchCounters, CurrentBalanceCacheCounters, processFetchedBlacklistRows
-- `worker/src/cron/blacklist/row-preparation.ts` - buildCurrentBalanceSnapshotRows, fetchBlacklistAssetPriceFromCache
+- `worker/src/cron/blacklist/row-preparation.ts` - buildCurrentBalanceSnapshotRows, buildLatestBlacklistRows, fetchBlacklistAssetPriceFromCache
 - `worker/src/cron/blacklist/run-budget.ts` - BlacklistRunBudget, blacklistRuntimeBudgetReached, blacklistShouldStopBeforeNextConfig, blacklistSubrequestBudgetReached, createBlacklistRunBudget
 - `worker/src/cron/blacklist/shared.ts` - BlacklistRow, BlacklistScanResult, buildBlacklistRow, shouldSuppressAsMirrorZero
 - `worker/src/cron/blacklist/sync-support.ts` - SyncBlacklistApiErrorConfig, applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
