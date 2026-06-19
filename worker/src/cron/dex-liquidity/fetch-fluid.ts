@@ -220,10 +220,6 @@ export async function fetchFluidPools(
     }
   }
 
-  if (results.length > 0) {
-    console.log(`[fetch-fluid] Fetched ${results.length} pools across ${Object.keys(FLUID_CHAINS).length} chains`);
-  }
-
   return makeDexApiFetchResult(results, {
     ok: successfulChains > 0,
     degraded: errors.length > 0,

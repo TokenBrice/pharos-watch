@@ -31,7 +31,42 @@ const BINANCE_TICKER_URLS = [
   "https://data-api.binance.vision/api/v3/ticker/price",
   "https://api.binance.com/api/v3/ticker/price",
 ] as const;
-const DECIMAL_PRICE_PATTERN = /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+function isAsciiDigit(char: string): boolean {
+  return char >= "0" && char <= "9";
+}
+
+function isDecimalPriceLiteral(value: string): boolean {
+  let index = 0;
+  let hasMantissaDigit = false;
+
+  while (index < value.length && isAsciiDigit(value[index])) {
+    hasMantissaDigit = true;
+    index++;
+  }
+
+  if (value[index] === ".") {
+    index++;
+    while (index < value.length && isAsciiDigit(value[index])) {
+      hasMantissaDigit = true;
+      index++;
+    }
+  }
+
+  if (!hasMantissaDigit) return false;
+  if (index === value.length) return true;
+  if (value[index] !== "e" && value[index] !== "E") return false;
+
+  index++;
+  if (value[index] === "+" || value[index] === "-") index++;
+
+  let hasExponentDigit = false;
+  while (index < value.length && isAsciiDigit(value[index])) {
+    hasExponentDigit = true;
+    index++;
+  }
+
+  return hasExponentDigit && index === value.length;
+}
 
 function parseCexPrice(value: unknown): number | null {
   if (typeof value === "number") {
@@ -40,7 +75,7 @@ function parseCexPrice(value: unknown): number | null {
   if (typeof value !== "string") return null;
 
   const trimmed = value.trim();
-  if (!DECIMAL_PRICE_PATTERN.test(trimmed)) return null;
+  if (!isDecimalPriceLiteral(trimmed)) return null;
 
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;

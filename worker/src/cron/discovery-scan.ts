@@ -186,11 +186,6 @@ export async function runDiscoveryScan(
   const upserted = await upsertDiscoveryCandidates(db, upsertItems);
   const cleaned = await cleanupOldDismissed(db);
 
-  console.log(
-    `[discovery] CG: ${cgFetched ? cgCandidates.length : "skipped"} candidates, ` +
-    `upserted: ${upserted}, cleaned: ${cleaned}`,
-  );
-
   const circuitOpenNoAttempt = !cgAllowed && !cgFetched;
   return {
     itemCount: upserted,
