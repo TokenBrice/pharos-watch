@@ -41,7 +41,7 @@ export function derivePegRates(
   metaById?: ReadonlyMap<string, Pick<StablecoinMeta, "commodityOunces">>,
   fallbackRates?: Record<string, number>,
 ): PegRatesResult {
-  const groups: Record<string, number[]> = {};
+  const groups = new Map<string, number[]>();
 
   for (const a of assets) {
     const peg = normalizePegType(a.pegType);
@@ -62,8 +62,9 @@ export function derivePegRates(
       }
     }
 
-    if (!groups[peg]) groups[peg] = [];
-    groups[peg].push(price);
+    const prices = groups.get(peg) ?? [];
+    prices.push(price);
+    groups.set(peg, prices);
   }
 
   // Use only live cached FX rates — no stale hardcoded defaults.
@@ -71,10 +72,10 @@ export function derivePegRates(
   // and thin-group validation is skipped for one cycle.
   const mergedFallbacks = fallbackRates ?? {};
 
-  const rates: Record<string, number> = {};
-  const sources: Record<string, PegRateSource> = {};
-  const counts: Record<string, number> = {};
-  for (const [peg, prices] of Object.entries(groups)) {
+  const rates: Record<string, number> = Object.create(null) as Record<string, number>;
+  const sources: Record<string, PegRateSource> = Object.create(null) as Record<string, PegRateSource>;
+  const counts: Record<string, number> = Object.create(null) as Record<string, number>;
+  for (const [peg, prices] of groups.entries()) {
     // Keep the scoring reference unrounded; display medians round at the API edge.
     // medianOf() returns null for empty groups, so no separate empty-array guard is needed.
     const median = medianOf(prices);
@@ -85,7 +86,7 @@ export function derivePegRates(
     // Commodity pegs (gold/silver) use peer median — XAUT/PAXG are arbitraged
     // against spot within seconds, so the median is a live reference. metals.dev
     // spot is only fetched once per day and can be >1.5% stale, causing false depegs.
-    const fallback = mergedFallbacks[peg];
+    const fallback = Object.hasOwn(mergedFallbacks, peg) ? mergedFallbacks[peg] : undefined;
     if (fallback && prices.length < 3) {
       rates[peg] = fallback;
       sources[peg] = "fallback";
