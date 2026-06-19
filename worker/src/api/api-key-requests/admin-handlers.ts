@@ -41,6 +41,25 @@ interface ApiKeyRequestByIdRouteContext extends AdminRouteContext {
   requestId: string;
 }
 
+async function revokeAndDeactivateLinkedSelfServeKey(
+  db: D1Database,
+  input: {
+    apiKeyId: number;
+    keyPrefix: string;
+    requestId: string;
+    nowSec: number;
+  },
+): Promise<void> {
+  await recordSelfServeRevocation(db, {
+    apiKeyId: input.apiKeyId,
+    keyPrefix: input.keyPrefix,
+    requestId: input.requestId,
+    nowSec: input.nowSec,
+    reason: "admin_reject",
+  });
+  await deactivateLinkedSelfServeKey(db, input);
+}
+
 export const handleApiKeyRequestsAdminRoute = makeAdminRoute<AdminRouteContext>(
   "api-key-requests-admin",
   async ({ db, request }) => {
@@ -75,12 +94,6 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
     const row = await selectRequestWithKeyStateByRequestId(db, requestId);
     if (!row) return adminErrorResponse(404, "API key request not found");
     const nowSec = getNowSec();
-    if (row.status === "rejected") {
-      return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
-    }
-    if (row.status !== "pending_verification" && row.status !== "issued") {
-      return adminErrorResponse(409, "Only pending or issued self-serve requests can be rejected");
-    }
     const linkedKeyPrefix = row.linked_key_prefix;
     if (row.api_key_id != null) {
       const mismatch = row.linked_key_tier !== "self-serve"
@@ -89,6 +102,21 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
       if (mismatch) {
         return adminErrorResponse(409, "Linked API key does not match the self-serve request");
       }
+    }
+    if (row.status === "rejected") {
+      if (row.api_key_id != null && linkedKeyPrefix) {
+        await revokeAndDeactivateLinkedSelfServeKey(db, {
+          apiKeyId: row.api_key_id,
+          keyPrefix: linkedKeyPrefix,
+          requestId,
+          nowSec,
+        });
+      }
+      await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
+      return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
+    }
+    if (row.status !== "pending_verification" && row.status !== "issued") {
+      return adminErrorResponse(409, "Only pending or issued self-serve requests can be rejected");
     }
     // Flip the request status first: D1 has no multi-statement transactions, so
     // the 0-changes guard must short-circuit before any key mutation. Otherwise
@@ -103,14 +131,7 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
       return adminErrorResponse(409, "API key request state changed before rejection");
     }
     if (row.api_key_id != null && linkedKeyPrefix) {
-      await recordSelfServeRevocation(db, {
-        apiKeyId: row.api_key_id,
-        keyPrefix: linkedKeyPrefix,
-        requestId,
-        nowSec,
-        reason: "admin_reject",
-      });
-      await deactivateLinkedSelfServeKey(db, {
+      await revokeAndDeactivateLinkedSelfServeKey(db, {
         apiKeyId: row.api_key_id,
         keyPrefix: linkedKeyPrefix,
         requestId,
