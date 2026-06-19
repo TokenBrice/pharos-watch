@@ -627,7 +627,6 @@ function getBindingsForRuntime(
 ): EnvBindingDefinition[] {
   return ENV_BINDINGS
     .filter((binding) => binding.runtimes[runtime]?.status === status)
-    .slice()
     .sort((left, right) => compareRuntimeOrder(left, right, runtime));
 }
 

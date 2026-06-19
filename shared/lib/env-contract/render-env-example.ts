@@ -108,8 +108,7 @@ export function renderEnvExample(): string {
     lines.push(...section.comments);
 
     const bindings = ENV_BINDINGS
-      .filter((binding) => binding.example?.section === section.key)
-      .slice();
+      .filter((binding) => binding.example?.section === section.key);
 
     if (section.key === "workerOptional" || section.key === "workerReserved") {
       const ordered = bindings
