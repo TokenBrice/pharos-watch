@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { ALERT_LABELS, DEPEG_STEP_OPTIONS } from "../constants";
 import { formatHour, formatQuietHoursRange, formatQuietHoursTimezone } from "../format";
 import type {
@@ -12,6 +11,7 @@ import type {
   TelegramMiniAppState,
 } from "../types";
 import { MiniButton } from "./MiniButton";
+import { SegmentedControl } from "./SegmentedControl";
 import { TogglePill } from "./TogglePill";
 
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
@@ -246,10 +246,10 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
             </MiniButton>
           </div>
         ) : (
-          <button
-            type="button"
+          <MiniButton
+            variant="danger"
+            ariaLabel="Delete all my data"
             disabled={!canMutate || isMutating}
-            aria-label="Delete all my data"
             onClick={() => {
               if (requiresArming) {
                 setUnsubscribeArmed(false);
@@ -258,10 +258,9 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
               }
               onForgetMe();
             }}
-            className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300"
           >
             Delete all my data
-          </button>
+          </MiniButton>
         )}
       </div>
     </section>
@@ -312,27 +311,14 @@ export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, 
               {currentDepegStep == null ? "Any" : `${currentDepegStep} bps`}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {DEPEG_STEP_OPTIONS.map((option) => {
-              const selected = currentDepegStep === option.value;
-              return (
-                <button
-                  key={option.label}
-                  type="button"
-                  aria-label={option.value == null ? "Set global depeg step to any depeg" : `Set global depeg step to ${option.value} bps`}
-                  aria-pressed={selected}
-                  disabled={!canMutate || isMutating}
-                  onClick={() => onMutate({ kind: "set-global-depeg-step", depegStepBps: option.value })}
-                  className={cn(
-                    "pharos-focus-ring min-h-12 rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                    selected ? "mini-selected" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
-                  )}
-                >
-                  <span className="block text-sm font-semibold">{option.label}</span>
-                  <span className="block text-[11px] leading-tight">{option.caption}</span>
-                </button>
-              );
-            })}
+          <div className="mt-3">
+            <SegmentedControl
+              ariaLabel="Global depeg step"
+              value={currentDepegStep}
+              options={DEPEG_STEP_OPTIONS}
+              disabled={!canMutate || isMutating}
+              onChange={(next) => onMutate({ kind: "set-global-depeg-step", depegStepBps: next })}
+            />
           </div>
         </div>
       </section>
