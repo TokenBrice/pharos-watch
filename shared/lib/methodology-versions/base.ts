@@ -60,20 +60,24 @@ export interface MethodologyVersion {
   getVersionAt: (unixSeconds: number) => string;
 }
 
-function parseMethodologyVersion(version: string): number[] {
-  return version.split(".").map((segment) => {
-    const value = Number.parseInt(segment, 10);
-    return Number.isFinite(value) ? value : 0;
-  });
+function normalizeMethodologyVersionSegment(segment: string, width: number): number {
+  const normalized = segment.padEnd(width, "0");
+  const value = Number.parseInt(normalized, 10);
+  return Number.isFinite(value) ? value : 0;
 }
 
 export function compareMethodologyVersions(a: string, b: string): number {
-  const aParts = parseMethodologyVersion(a);
-  const bParts = parseMethodologyVersion(b);
+  const aParts = a.split(".");
+  const bParts = b.split(".");
   const maxLength = Math.max(aParts.length, bParts.length);
 
   for (let index = 0; index < maxLength; index += 1) {
-    const diff = (aParts[index] ?? 0) - (bParts[index] ?? 0);
+    const aPart = aParts[index] ?? "0";
+    const bPart = bParts[index] ?? "0";
+    const width = Math.max(aPart.length, bPart.length, 1);
+    const diff =
+      normalizeMethodologyVersionSegment(aPart, width) -
+      normalizeMethodologyVersionSegment(bPart, width);
     if (diff !== 0) return diff;
   }
 

@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareMethodologyVersions,
   createMethodologyVersion,
   formatMethodologyDisplayDate,
   methodologyChangelogEntryId,
   toMethodologyVersionLabel,
 } from "../methodology-version";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../depeg-resolver-version";
+
+describe("compareMethodologyVersions", () => {
+  it("orders decimal methodology versions with leading-zero hundredths before tenths", () => {
+    expect(compareMethodologyVersions("6.09", "6.1")).toBeLessThan(0);
+    expect(compareMethodologyVersions("6.1", "6.09")).toBeGreaterThan(0);
+    expect(compareMethodologyVersions("6.10", "6.1")).toBe(0);
+    expect(compareMethodologyVersions("6.16", "6.11")).toBeGreaterThan(0);
+  });
+});
 
 describe("createMethodologyVersion", () => {
   it("resolves to the higher version when two entries share effectiveAt", () => {
