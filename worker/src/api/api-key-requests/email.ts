@@ -1,3 +1,4 @@
+import { escapeHtml } from "../../lib/telegram";
 import type { RequiredInitialSelfServeEnv } from "./types";
 
 interface SendVerificationEmailInput {
@@ -71,12 +72,4 @@ export function redactProviderBody(value: string): string {
     .replace(/\bakv_[A-Za-z0-9_-]+\b/g, "[redacted-verification-token]")
     .replace(/\bph_live_[0-9a-f]{16}_[A-Za-z0-9_-]{32}\b/g, "[redacted-api-key]")
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[redacted-email]");
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
