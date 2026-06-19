@@ -152,3 +152,41 @@ describe("getFilterTags — tracked variants", () => {
     expect(tags).not.toContain("variant-risk-absorption");
   });
 });
+
+describe("getFilterTags — peg-group tags", () => {
+  it("USD peg emits usd-peg and no group tag", () => {
+    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "USD", governance: "centralized", backing: "rwa-backed", yieldBearing: false, rwa: true, navToken: false } }));
+    expect(tags).toContain("usd-peg");
+    expect(tags).not.toContain("commodity-peg");
+    expect(tags).not.toContain("fiat-non-usd-peg");
+  });
+
+  it("GOLD peg emits gold-peg and commodity-peg group tag", () => {
+    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "GOLD", governance: "centralized", backing: "rwa-backed", yieldBearing: false, rwa: true, navToken: false } }));
+    expect(tags).toContain("gold-peg");
+    expect(tags).toContain("commodity-peg");
+    expect(tags).not.toContain("fiat-non-usd-peg");
+  });
+
+  it("EUR peg emits eur-peg and fiat-non-usd-peg group tag", () => {
+    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "EUR", governance: "centralized", backing: "rwa-backed", yieldBearing: false, rwa: true, navToken: false } }));
+    expect(tags).toContain("eur-peg");
+    expect(tags).toContain("fiat-non-usd-peg");
+    expect(tags).not.toContain("commodity-peg");
+    expect(tags).not.toContain("usd-peg");
+  });
+
+  it("VAR (CPI) peg emits var-peg and fiat-non-usd-peg group tag", () => {
+    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "VAR", governance: "centralized", backing: "algo", yieldBearing: false, rwa: false, navToken: false } }));
+    expect(tags).toContain("var-peg");
+    expect(tags).toContain("fiat-non-usd-peg");
+    expect(tags).not.toContain("commodity-peg");
+  });
+
+  it("OTHER peg emits other-peg and fiat-non-usd-peg group tag", () => {
+    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "OTHER", governance: "centralized", backing: "rwa-backed", yieldBearing: false, rwa: true, navToken: false } }));
+    expect(tags).toContain("other-peg");
+    expect(tags).toContain("fiat-non-usd-peg");
+    expect(tags).not.toContain("commodity-peg");
+  });
+});
