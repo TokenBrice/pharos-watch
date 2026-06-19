@@ -1,5 +1,4 @@
 import { CIRCUIT_SOURCE, D1_BATCH_SIZE, USER_AGENT } from "../lib/constants";
-import { batchExecute } from "../lib/db";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -106,12 +105,27 @@ export async function upsertDiscoveryCandidates(
     }
   }
 
-  try {
-    return await batchExecute(db, stmts, D1_BATCH_SIZE);
-  } catch (err) {
-    console.warn("[discovery] Upsert batch failed:", err);
-    return 0;
+  let changes = 0;
+  for (let i = 0; i < stmts.length; i += D1_BATCH_SIZE) {
+    const chunk = stmts.slice(i, i + D1_BATCH_SIZE);
+    try {
+      const result = await db.batch(chunk);
+      for (const row of result) {
+        changes += Number(row?.meta?.changes ?? 0);
+      }
+    } catch (err) {
+      console.warn("[discovery] Upsert batch failed; retrying candidates individually:", err);
+      for (const stmt of chunk) {
+        try {
+          const result = await stmt.run();
+          changes += Number(result?.meta?.changes ?? 0);
+        } catch (candidateErr) {
+          console.warn("[discovery] Skipping discovery candidate after upsert failure:", candidateErr);
+        }
+      }
+    }
   }
+  return changes;
 }
 
 async function cleanupOldDismissed(db: D1Database): Promise<number> {
