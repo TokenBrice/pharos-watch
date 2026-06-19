@@ -13,11 +13,13 @@ export type TelegramMiniAppAuthErrorCode =
 
 export class TelegramMiniAppAuthError extends Error {
   readonly code: TelegramMiniAppAuthErrorCode;
+  readonly authContext: TelegramMiniAppAuthContext | null;
 
-  constructor(code: TelegramMiniAppAuthErrorCode) {
+  constructor(code: TelegramMiniAppAuthErrorCode, authContext: TelegramMiniAppAuthContext | null = null) {
     super(code);
     this.name = "TelegramMiniAppAuthError";
     this.code = code;
+    this.authContext = authContext;
   }
 }
 
@@ -125,10 +127,6 @@ export async function validateTelegramMiniAppInitData(
   if (authDate > nowSec + 60) {
     throw new TelegramMiniAppAuthError("invalid-auth");
   }
-  if (nowSec - authDate > options.maxAgeSec) {
-    throw new TelegramMiniAppAuthError("stale-auth");
-  }
-
   const user = parseUser(params.get("user"));
   const chatType = params.get("chat_type") || null;
   warnNovelMiniAppChatType(chatType);
@@ -140,7 +138,7 @@ export async function validateTelegramMiniAppInitData(
     ? rawStartParam
     : null;
 
-  return {
+  const authContext: TelegramMiniAppAuthContext = {
     userId: user.id,
     username: user.username,
     firstName: user.firstName,
@@ -150,4 +148,9 @@ export async function validateTelegramMiniAppInitData(
     initDataHash: providedHash,
     canMutatePrivateChat: isPrivateUserLaunchChatType(chatType),
   };
+  if (nowSec - authDate > options.maxAgeSec) {
+    throw new TelegramMiniAppAuthError("stale-auth", authContext);
+  }
+
+  return authContext;
 }

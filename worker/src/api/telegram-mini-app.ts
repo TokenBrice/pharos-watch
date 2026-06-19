@@ -258,7 +258,7 @@ async function validateOrResponse(
   db: D1Database,
   initData: string,
   botToken: string,
-  options: { maxAgeSec: number; start: number },
+  options: { maxAgeSec: number; start: number; cooldownKey: string; cooldownSec: number },
   botTokenPrevious?: string,
 ): Promise<TelegramMiniAppAuthContext | Response> {
   try {
@@ -271,12 +271,28 @@ async function validateOrResponse(
   } catch (err) {
     if (err instanceof TelegramMiniAppAuthError) {
       if (err.code === "stale-auth") {
+        const staleAuth = err.authContext;
+        if (staleAuth) {
+          const cooldown = await acquireTelegramCommandCooldown(db, {
+            chatId: staleAuth.userId,
+            commandKey: options.cooldownKey,
+            nowSec: unixNow(),
+            cooldownSec: options.cooldownSec,
+          });
+          if (!cooldown.allowed) {
+            return miniAppError(429, "rate-limited", "Mini App auth rate limited", {
+              retryAfterSec: cooldown.retryAfterSec,
+            });
+          }
+        }
         // Stale-auth requires the HMAC signature to have already validated; emit
         // a usage event so operators can distinguish expired sessions from
         // invalid-signature / invalid-auth (which stay silent to avoid an
-        // unauthenticated-write gate). See backend audit F5 / T-63.
+        // unauthenticated-write gate). Signed stale-auth carries user context,
+        // so acquire the per-user cooldown before the analytics write.
         await recordMiniAppEvent(db, {
           eventType: "mini_app_session_invalid",
+          auth: staleAuth,
           outcome: err.code,
           failureClass: err.code,
           latencyMs: Date.now() - options.start,
@@ -336,6 +352,8 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     const auth = await validateOrResponse(db, parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
       start,
+      cooldownKey: "mini-app:session",
+      cooldownSec: SESSION_COOLDOWN_SEC,
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
@@ -394,6 +412,8 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     const auth = await validateOrResponse(db, parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
       start,
+      cooldownKey: MUTATION_COOLDOWN_KEY,
+      cooldownSec: MUTATION_COOLDOWN_SEC,
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
