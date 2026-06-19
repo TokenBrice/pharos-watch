@@ -1,5 +1,5 @@
 import { jsonResponse, parseClampedIntegerParam } from "../lib/api-utils";
-import { makeAdminRoute } from "../lib/route-wrappers";
+import { makeAdminRoute, type AdminUrlRouteContext } from "../lib/route-wrappers";
 import { safeJsonParse } from "../lib/api-cache-read";
 
 interface AdminActionAuditRow {
@@ -17,17 +17,9 @@ const DEFAULT_LIMIT = 50;
 const MIN_LIMIT = 1;
 const MAX_LIMIT = 200;
 
-
-interface AdminActionLogContext {
-  db: D1Database;
-  url: URL;
-  request: Request;
-  trustedAdmin: boolean;
-}
-
-export const handleAdminActionLog = makeAdminRoute(
+export const handleAdminActionLog = makeAdminRoute<AdminUrlRouteContext>(
   "route-admin-action-log",
-  async ({ db, url }: AdminActionLogContext) => {
+  async ({ db, url }) => {
     const limit = parseClampedIntegerParam(url.searchParams.get("limit"), DEFAULT_LIMIT, MIN_LIMIT, MAX_LIMIT);
     const rows = await db
       .prepare(

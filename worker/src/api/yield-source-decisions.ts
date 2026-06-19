@@ -1,5 +1,5 @@
 import { jsonResponse, parseIntParam, parseOptionalEnumParam } from "../lib/api-utils";
-import { makeAdminRoute } from "../lib/route-wrappers";
+import { makeAdminRoute, type AdminUrlRouteContext } from "../lib/route-wrappers";
 
 type GenerationState = "staged" | "published" | "failed";
 
@@ -45,13 +45,6 @@ interface YieldSourceDecisionAlternativeRow {
   alt_apy30d_delta: number | null;
   rejection_reason_code: string;
   recorded_at: number;
-}
-
-interface AdminRouteContext {
-  db: D1Database;
-  url: URL;
-  request: Request;
-  trustedAdmin: boolean;
 }
 
 const GENERATION_STATES = new Set<GenerationState>(["staged", "published", "failed"]);
@@ -253,7 +246,7 @@ async function loadStablecoinDecisions(
 }
 
 
-export const handleYieldSourceDecisions = makeAdminRoute<AdminRouteContext>(
+export const handleYieldSourceDecisions = makeAdminRoute<AdminUrlRouteContext>(
   "route-yield-source-decisions",
   async ({ db, url }) => {
     const limit = parseIntParam(

@@ -1,16 +1,10 @@
 import type { TelegramCreds } from "../lib/telegram";
-import { makeAdminRoute, runAdminRoute } from "../lib/route-wrappers";
+import { makeAdminRoute, runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { runIdempotentAdminAction } from "../lib/idempotency";
 import { setCache } from "../lib/db-cache";
 import { jsonResponse } from "../lib/api-utils";
 import { handleDismissCandidate } from "./discovery";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
-
-interface AdminRouteContext {
-  db: D1Database;
-  request: Request;
-  trustedAdmin: boolean;
-}
 
 interface TriggerDigestRouteContext extends AdminRouteContext {
   execCtx: ExecutionContext;
