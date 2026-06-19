@@ -272,7 +272,6 @@ async function loadFreshTelegramPulseSnapshot(
 ): Promise<TelegramPulse | null> {
   const cached = await loadCachedTelegramPulseSnapshot(db);
   if (!cached || nowSec - cached.updatedAt > TELEGRAM_PULSE_CACHE_SECONDS) return null;
-  if (needsBootstrapHistoryRebuild(cached.pulse)) return null;
   return cached.pulse;
 }
 
