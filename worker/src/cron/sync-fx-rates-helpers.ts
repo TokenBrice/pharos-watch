@@ -375,6 +375,10 @@ export class FxSyncRunState {
         loaders.primaryMappings,
         { includeMissingPrevious: true },
       );
+      // includeMissingPrevious intentionally omitted here: the secondary-live
+      // fallback is best-effort, consistent with the Frankfurter happy path
+      // (sync-fx-rates.ts also omits it). Only the exchange-rate-api fallback
+      // carries forward missing previous values.
       this.applySecondaryRates(secondaryCandidate, loaders.secondaryMappings);
       this.fallbackMode = "secondary-live-fallback";
       this.sources = {
