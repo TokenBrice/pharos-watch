@@ -27,7 +27,7 @@ The route shell is intentionally `noindex,follow` via route metadata and uses ca
 
 Initial selectable pegs are `USD`, `EUR`, `CHF`, and `GOLD`. This pass is limited to pegs that have enough active rows and live Safety/Peg/DEWS/liquidity/yield coverage to avoid empty Picker routes.
 
-Yield exposes the same peg set (`USD`, `EUR`, `CHF`, `GOLD`). Thin or strict combinations can use the engine's low-confidence fallback rather than returning an empty result, but rows still need required profile signals and a usable Yield source before they can be recommended.
+Yield exposes the same peg set (`USD`, `EUR`, `CHF`, `GOLD`). Thin or strict combinations can use the engine's low-confidence fallback rather than returning an empty result, but the fallback is limited to the explicitly relaxable peg-score floor. Rows still need required profile signals, a usable Yield source, and must not violate other profile or input-driven exclusions before they can be recommended.
 
 `SILVER`, `VAR`, and `OTHER` are intentionally excluded because their current live signal coverage still produces empty picker routes or needs separate reference-asset treatment. `BRL` is also held back until the `peggedREAL` alias path is audited across sync, price validation, and supplemental-asset creation.
 
@@ -173,7 +173,7 @@ When changing Picker behavior, update this doc alongside:
 1. **Snapshot endpoint contract** (POST/GET, failure modes, canonicalization rules) → `functions/selector-snapshot/[[path]].ts`, `functions/__tests__/selector-snapshot.test.ts`, `docs/api-reference.md` Pages Function endpoints section.
 2. **localStorage keys or schema** → `src/components/selector/selector-callout.tsx` (frontend), `docs/privacy-page.md`.
 3. **Banned-phrase policy** → `scripts/ci/check-selector-banned-phrases.mjs`. Wire any new banned phrase into `BANNED_PATTERNS`; document durable replacement guidance in this file or a focused `/docs/` page.
-4. **Weight, exclusion, scoring, ranking, yield-source, or deterministic output behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint. The current picker remediation is `selector-v1.8`.
+4. **Weight, exclusion, scoring, ranking, yield-source, or deterministic output behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint. The current picker remediation is `selector-v1.9`.
 5. **OG content** → replace `public/og-selector-*.png` and re-verify the marketing copy is calibrated against the banned-phrase list before commit.
 6. **Methodology page** → `/methodology/selector/` ships within 30 days post-MVP (design §9.1 item 7; project-tracker post-ship task).
 

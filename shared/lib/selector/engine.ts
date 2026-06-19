@@ -47,18 +47,8 @@ import { selectYieldSource } from "./yield-source";
 export const ENGINE_VERSION = SELECTOR_VERSION;
 export { scoreIgnoringExclusion };
 
-const RELAXED_FALLBACK_BLOCKED_REASONS: ReadonlySet<ExclusionReason> = new Set([
-  "active-depeg",
-  "apy-below-floor",
-  "below-supply-floor",
-  "coverage-too-thin",
-  "howey-uncertain",
-  "lifecycle-non-active",
-  "peg-currency-mismatch",
-  "pys-null",
-  "safety-grade-floor",
-  "template-coverage-gap",
-  "yield-native-only-violation",
+const RELAXED_FALLBACK_ALLOWED_REASONS: ReadonlySet<ExclusionReason> = new Set([
+  "peg-score-floor",
 ]);
 
 const SELECTOR_DEBUG =
@@ -243,13 +233,8 @@ function relaxedFallbackReason(
   if (!coverage.ok) return null;
   const exclusion = evaluateExclusions(row, input);
   if (exclusion == null) return null;
-  if (RELAXED_FALLBACK_BLOCKED_REASONS.has(exclusion.reason)) return null;
-  if (
-    input.profile === "treasury" &&
-    exclusion.reason === "peg-score-floor"
-  ) {
-    return null;
-  }
+  if (!RELAXED_FALLBACK_ALLOWED_REASONS.has(exclusion.reason)) return null;
+  if (input.profile === "treasury") return null;
   return exclusion.reason;
 }
 
