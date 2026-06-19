@@ -276,7 +276,7 @@ export function scoreRow(
     confidenceReasons.add("yield-source-switched");
   }
   for (const reason of confidenceReasons) {
-    if (String(reason).startsWith("missing-critical-")) confidence -= 8;
+    if (reason.startsWith("missing-critical-")) confidence -= 8;
   }
   confidence = clamp(confidence, 0, 100);
   if (profile === "yield" && row.yieldHistoryDays < 60) {
