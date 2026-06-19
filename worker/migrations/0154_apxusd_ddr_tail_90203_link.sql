@@ -82,6 +82,87 @@ WHERE a.event_id = 90203
     WHERE c.authorization_id = a.id
   );
 
+
+DROP TRIGGER IF EXISTS trg_ddr_incident_links_no_update;
+
+UPDATE depeg_resolver_incident_event_links
+SET incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776',
+    relation = 'repair_replacement',
+    repair_authorization_id = (
+      SELECT a.id
+      FROM depeg_resolver_event_repair_authorizations a
+      WHERE a.event_id = 90203
+        AND a.incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776'
+        AND a.operation = 'incident_link'
+        AND a.created_by = 'migration-0154'
+    ),
+    note = 'sealed incident tail relinked from accidental fresh incident through explicit repair authorization'
+WHERE incident_key = 'ddr2:70a8e43c093e0afcdc8a37143a6849f9'
+  AND event_id = 90203
+  AND EXISTS (
+    SELECT 1
+    FROM depeg_resolver_event_repair_authorizations a
+    JOIN depeg_resolver_event_repair_authorization_consumptions c
+      ON c.authorization_id = a.id
+     AND c.event_id = a.event_id
+     AND c.incident_key = a.incident_key
+     AND c.operation = a.operation
+    WHERE a.event_id = 90203
+      AND a.incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776'
+      AND a.operation = 'incident_link'
+      AND a.created_by = 'migration-0154'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incidents accidental
+    WHERE accidental.incident_key = 'ddr2:70a8e43c093e0afcdc8a37143a6849f9'
+      AND accidental.stablecoin_id = 'apxusd-apyx'
+      AND accidental.first_event_id = 90203
+      AND accidental.current_event_id = 90203
+      AND accidental.incident_state = 'active'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:70a8e43c093e0afcdc8a37143a6849f9'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links canonical
+    WHERE canonical.incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776'
+      AND canonical.event_id = 90203
+  );
+
+CREATE TRIGGER IF NOT EXISTS trg_ddr_incident_links_no_update
+BEFORE UPDATE ON depeg_resolver_incident_event_links
+BEGIN
+  SELECT RAISE(ABORT, 'incident event links are append-only');
+END;
+
+INSERT INTO depeg_resolver_event_repair_authorization_uses
+  (authorization_id, event_id, incident_key, operation, used_at, target_table, target_key)
+SELECT a.id, a.event_id, a.incident_key, a.operation, unixepoch(),
+       'depeg_resolver_incident_event_links',
+       a.incident_key || ':' || a.event_id
+FROM depeg_resolver_event_repair_authorizations a
+JOIN depeg_resolver_event_repair_authorization_consumptions c
+  ON c.authorization_id = a.id
+ AND c.event_id = a.event_id
+ AND c.incident_key = a.incident_key
+ AND c.operation = a.operation
+JOIN depeg_resolver_incident_event_links l
+  ON l.incident_key = a.incident_key
+ AND l.event_id = a.event_id
+WHERE a.event_id = 90203
+  AND a.incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776'
+  AND a.operation = 'incident_link'
+  AND a.created_by = 'migration-0154'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_event_repair_authorization_uses u
+    WHERE u.authorization_id = a.id
+  );
+
 INSERT OR IGNORE INTO depeg_resolver_incident_event_links
   (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
 SELECT
@@ -191,6 +272,33 @@ WHERE a.event_id = 90203
       AND existing.current_event_id = 90203
       AND existing.reason = 'sealed APXUSD tail event adopted as current source event'
   );
+
+UPDATE depeg_resolver_incidents
+SET incident_state = 'superseded',
+    superseded_by_incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776',
+    updated_at = unixepoch()
+WHERE incident_key = 'ddr2:70a8e43c093e0afcdc8a37143a6849f9'
+  AND stablecoin_id = 'apxusd-apyx'
+  AND first_event_id = 90203
+  AND current_event_id = 90203
+  AND incident_state = 'active'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:70a8e43c093e0afcdc8a37143a6849f9'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links canonical
+    WHERE canonical.incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776'
+      AND canonical.event_id = 90203
+  );
+
+DROP INDEX IF EXISTS idx_ddr_incident_current_event;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ddr_incident_current_event
+  ON depeg_resolver_incidents(current_event_id)
+  WHERE incident_state = 'active';
 
 UPDATE depeg_resolver_incidents
 SET current_event_id = 90203,
