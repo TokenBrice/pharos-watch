@@ -81,6 +81,13 @@ interface SnapshotEnvelope {
   liquidity: Array<{ stablecoinId: string; liquidityScore: number | null; coverageClass: string | null }>;
 }
 
+/**
+ * Normalized view of a report-card entry shared between the snapshot and
+ * live-endpoint-fallback paths. `score`/`grade` are the snapshot-shape fields;
+ * `safetyScore`/`safetyGrade`/`overall` are live-endpoint aliases for the same
+ * values. The `?? fallback` chains at the consumer site handle whichever shape
+ * is present — do NOT consolidate to a single field.
+ */
 interface ReportCardScore {
   pegScore?: number;
   safetyScore?: number;
