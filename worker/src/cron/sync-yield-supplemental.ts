@@ -26,9 +26,10 @@ function buildSupplementalCandidateDedupKey(candidate: ResolvedYieldCandidate): 
   return `${sourceKey}|${chain}|${identity}`;
 }
 
-function dedupeCandidates(
-  candidates: ResolvedYieldCandidate[],
-): { candidates: ResolvedYieldCandidate[]; droppedCount: number } {
+function dedupeCandidates(candidates: ResolvedYieldCandidate[]): {
+  candidates: ResolvedYieldCandidate[];
+  droppedCount: number;
+} {
   const byDedupKey = new Map<string, ResolvedYieldCandidate>();
   let droppedCount = 0;
 
@@ -92,17 +93,12 @@ export async function syncYieldSupplemental(
       },
     },
   });
-  const {
-    candidates,
-    familyResults,
-    sourceFamilyCounts,
-    supplementalSourceAccounting,
-    optionalRpcTelemetry,
-  } = await loadSupplementalSourceFamilies({
-    startSec,
-    signal,
-    chainRpcs,
-  });
+  const { candidates, familyResults, sourceFamilyCounts, supplementalSourceAccounting, optionalRpcTelemetry } =
+    await loadSupplementalSourceFamilies({
+      startSec,
+      signal,
+      chainRpcs,
+    });
   await reportSupplementalProgress("source-family-fetch-complete", "Completed supplemental yield source fetches", {
     itemsDone: familyResults.length,
     metadata: {
@@ -146,15 +142,15 @@ export async function syncYieldSupplemental(
         rowsWritten: 0,
         rowsDropped: droppedCount,
         sourceCoverage: {
-        rawSupplementalCandidates: rawCandidateCount,
-        dedupedSupplementalCandidates: 0,
-        supplementalCandidatesWritten: 0,
-        sourceFamilyCounts,
-        supplementalSourceAccounting,
-        optionalRpcTelemetry,
-      },
-      fallbackMode: "empty-snapshot",
-      cacheWriteSkipped: true,
+          rawSupplementalCandidates: rawCandidateCount,
+          dedupedSupplementalCandidates: 0,
+          supplementalCandidatesWritten: 0,
+          sourceFamilyCounts,
+          supplementalSourceAccounting,
+          optionalRpcTelemetry,
+        },
+        fallbackMode: "empty-snapshot",
+        cacheWriteSkipped: true,
       }),
     };
   }
@@ -177,11 +173,13 @@ export async function syncYieldSupplemental(
     startSec,
     signal,
   );
-  const familyCacheResults: Record<SupplementalSourceFamilyKey, "published" | "skipped-newer" | "empty"> =
-    Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((key) => [key, "empty"])) as Record<
-      SupplementalSourceFamilyKey,
-      "published" | "skipped-newer" | "empty"
-    >;
+  const familyCacheResults: Record<
+    SupplementalSourceFamilyKey,
+    "published" | "skipped-newer" | "empty" | "empty-skipped"
+  > = Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((key) => [key, "empty"])) as Record<
+    SupplementalSourceFamilyKey,
+    "published" | "skipped-newer" | "empty" | "empty-skipped"
+  >;
 
   for (const family of familyResults) {
     if (family.status !== "ok") continue;
@@ -199,6 +197,10 @@ export async function syncYieldSupplemental(
       },
     });
     const { candidates: dedupedFamilyCandidates } = dedupeCandidates(family.candidates);
+    if (dedupedFamilyCandidates.length === 0) {
+      familyCacheResults[family.key] = "empty-skipped";
+      continue;
+    }
     const familyCacheResult = await setCacheIfNewer(
       db,
       getYieldSupplementalFamilyCacheKey(family.key),

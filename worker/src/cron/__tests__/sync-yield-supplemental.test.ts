@@ -178,7 +178,9 @@ describe("syncYieldSupplemental", () => {
 
     const cacheCall = vi.mocked(setCacheIfNewer).mock.calls[0];
     expect(cacheCall?.[1]).toBe("yield:supplemental-sources:v1");
-    expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:aaveV3")).toBe(true);
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:aaveV3"),
+    ).toBe(true);
 
     const payload = JSON.parse(String(cacheCall?.[2])) as {
       sourceCount: number;
@@ -222,7 +224,7 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.missingTargetCount).toBe(0);
   });
 
-  it("publishes fresh empty cache rows for successful zero-candidate families", async () => {
+  it("skips empty family cache rows to preserve previous non-empty caches", async () => {
     vi.mocked(fetchBeefySources).mockResolvedValue([
       {
         symbol: "USDC",
@@ -247,30 +249,23 @@ describe("syncYieldSupplemental", () => {
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 
-    for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
-      expect(
-        vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === `yield:supplemental-sources:v1:${family}`),
-      ).toBe(true);
-    }
-
-    const morphoCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) =>
-      call[1] === "yield:supplemental-sources:v1:morpho"
-    );
-    const morphoPayload = JSON.parse(String(morphoCall?.[2])) as { sourceCount: number; data: unknown[] };
-    expect(morphoPayload.sourceCount).toBe(0);
-    expect(morphoPayload.data).toEqual([]);
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:beefy"),
+    ).toBe(true);
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:morpho"),
+    ).toBe(false);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty">;
+      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-skipped">;
     };
-    expect(metadata.familyCacheResults?.morpho).toBe("published");
+    expect(metadata.familyCacheResults?.beefy).toBe("published");
+    expect(metadata.familyCacheResults?.morpho).toBe("empty-skipped");
   });
 
   it("keeps same-asset Aave markets on different chains when per-target results are available", async () => {
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
-      rates: new Map([
-        ["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }],
-      ]),
+      rates: new Map([["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }]]),
       results: [
         {
           stablecoinId: "usdc-circle",
@@ -304,7 +299,10 @@ describe("syncYieldSupplemental", () => {
 
     const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
       sourceCount: number;
-      data: Array<{ stablecoinId?: string; yield: { sourceKey: string; currentApy: number; sourceTvlUsd: number | null } }>;
+      data: Array<{
+        stablecoinId?: string;
+        yield: { sourceKey: string; currentApy: number; sourceTvlUsd: number | null };
+      }>;
     };
     expect(payload.sourceCount).toBe(2);
     expect(payload.data).toEqual([
@@ -506,7 +504,8 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.total).toBe(1);
     expect(metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.bySourceFamily?.beefy).toBe(1);
     expect(
-      metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.exampleSourceKeysBySourceFamily?.beefy,
+      metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.exampleSourceKeysBySourceFamily
+        ?.beefy,
     ).toEqual(["(missing-source-key)"]);
     expect(metadata.sourceCoverage?.supplementalSourceAccounting?.sizeGatedDrops?.total).toBe(0);
   });
@@ -539,15 +538,19 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", []));
     vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", []));
     vi.mocked(fetchRoycoDawnSources).mockImplementation(trackFamily("roycoDawn", []));
-    vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(trackFamily("compoundV3", {
-      results: [],
-      telemetry: emptyTelemetry,
-    }));
-    vi.mocked(fetchAaveV3SupplyRates).mockImplementation(trackFamily("aaveV3", {
-      rates: new Map(),
-      results: [],
-      telemetry: emptyTelemetry,
-    }));
+    vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(
+      trackFamily("compoundV3", {
+        results: [],
+        telemetry: emptyTelemetry,
+      }),
+    );
+    vi.mocked(fetchAaveV3SupplyRates).mockImplementation(
+      trackFamily("aaveV3", {
+        rates: new Map(),
+        results: [],
+        telemetry: emptyTelemetry,
+      }),
+    );
 
     const loadPromise = loadSupplementalSourceFamilies({ startSec: 1 });
     await flushMicrotasks();
