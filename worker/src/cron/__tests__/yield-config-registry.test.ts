@@ -455,20 +455,27 @@ describe("yield config registry", () => {
     expect(config).toMatchObject({
       stablecoinId: "usdgo-osl",
       spreadBps: 38,
+      benchmarkCurrency: "USD_EFFR",
       benchmarkOverrideKey: "USD_EFFR",
     });
-    expect(config?.benchmarkCurrency).toBeUndefined();
     expect(intentionalGapIds.has("usdgo-osl")).toBe(false);
     expect(INTENTIONAL_GAP_REASONS["usdgo-osl"]).toBeUndefined();
   });
 
-  it("keeps EFFR-linked rate-derived rows on benchmarkOverrideKey instead of benchmarkCurrency", () => {
-    const effrConfigs = RATE_DERIVED_CONFIGS.filter((entry) =>
-      entry.label.toUpperCase().includes("EFFR") || entry.benchmarkOverrideKey === "USD_EFFR",
+  it("distinguishes EFFR APY sources from EFFR PYS benchmark overrides", () => {
+    const effrApyConfigs = RATE_DERIVED_CONFIGS.filter((entry) => entry.label.toUpperCase().includes("EFFR"));
+    const effrOverrideOnlyConfigs = RATE_DERIVED_CONFIGS.filter(
+      (entry) => entry.benchmarkOverrideKey === "USD_EFFR" && !entry.label.toUpperCase().includes("EFFR"),
     );
 
-    expect(effrConfigs.length).toBeGreaterThan(0);
-    for (const config of effrConfigs) {
+    expect(effrApyConfigs.length).toBeGreaterThan(0);
+    for (const config of effrApyConfigs) {
+      expect(config.benchmarkCurrency, config.stablecoinId).toBe("USD_EFFR");
+      expect(config.benchmarkOverrideKey, config.stablecoinId).toBe("USD_EFFR");
+    }
+
+    expect(effrOverrideOnlyConfigs.length).toBeGreaterThan(0);
+    for (const config of effrOverrideOnlyConfigs) {
       expect(config.benchmarkOverrideKey, config.stablecoinId).toBe("USD_EFFR");
       expect(config.benchmarkCurrency, config.stablecoinId).toBeUndefined();
     }
