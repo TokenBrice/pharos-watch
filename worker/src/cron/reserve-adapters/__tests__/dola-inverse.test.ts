@@ -167,6 +167,32 @@ describe("adaptFirmMarkets", () => {
     expect(riskByPrefix["BTC"]).toBe("medium");
     expect(riskByPrefix["Governance tokens"]).toBe("very-high");
   });
+
+  it("treats prototype-key symbols as unknown collateral instead of tracked stablecoins", () => {
+    const result = adaptFirmMarkets({
+      markets: [
+        makeMarket("toString", 1_000_000),
+        makeMarket("sUSDe", 1_000_000),
+      ],
+      timestamp: 1000,
+    });
+
+    expect(result.slices).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: "sUSDe collateral",
+        pct: 50,
+        risk: "high",
+        coinId: "susde-ethena",
+      }),
+      expect.objectContaining({
+        name: "Other collateral",
+        pct: 50,
+        risk: "high",
+      }),
+    ]));
+    expect(result.slices.find((slice) => slice.name === "toString collateral")).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+  });
 });
 
 describe("listUnexpectedDolaAssets", () => {
