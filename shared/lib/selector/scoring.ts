@@ -270,6 +270,7 @@ export function scoreRow(
   }
   if (profile === "treasury" && row.depegEventCount >= 2) {
     confidence -= Math.min(12, row.depegEventCount * 3);
+    confidenceReasons.add("treasury-depeg-history");
   }
   if (profile === "yield" && row.sourceSwitch) {
     confidence -= 8;

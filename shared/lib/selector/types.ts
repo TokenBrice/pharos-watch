@@ -254,6 +254,7 @@ export const BASE_CONFIDENCE_REASON_KEYS = [
   "recent-listing",
   "yield-source-switched",
   "short-yield-history",
+  "treasury-depeg-history",
   "redistributed-missing-data",
   "source-risk-missing",
   "relaxed-fallback",
