@@ -1,12 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useState, useCallback } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -36,10 +31,15 @@ const TYPE_LABELS: Record<FeedbackType, string> = {
 
 const DESCRIPTION_HINTS: Record<FeedbackType, string> = {
   bug: "Describe what happened and what you expected instead.",
-  "data-correction":
-    "e.g. USDC shows $0.00 price since yesterday. CoinGecko shows $1.0001.",
+  "data-correction": "e.g. USDC shows $0.00 price since yesterday. CoinGecko shows $1.0001.",
   "feature-request": "Describe the feature and why it would be useful.",
 };
+
+function getCurrentPageUrl() {
+  return typeof window === "undefined"
+    ? "/"
+    : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
 
 export function FeedbackModal({
   open,
@@ -57,6 +57,7 @@ export function FeedbackModal({
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [pageUrl, setPageUrl] = useState(getCurrentPageUrl);
 
   const reset = useCallback(() => {
     setType(defaultType);
@@ -74,20 +75,15 @@ export function FeedbackModal({
       if (!next) reset();
       onOpenChange(next);
     },
-    [onOpenChange, reset]
-  );
-
-  const pageUrl = useMemo(
-    () =>
-      typeof window === "undefined"
-        ? "/"
-        : `${window.location.pathname}${window.location.search}${window.location.hash}`,
-    [],
+    [onOpenChange, reset],
   );
 
   const handleSubmit = useCallback(async () => {
     setStatus("loading");
     setErrorMsg("");
+
+    const currentPageUrl = getCurrentPageUrl();
+    setPageUrl(currentPageUrl);
 
     const body = {
       type,
@@ -98,7 +94,7 @@ export function FeedbackModal({
       ...(stablecoinName ? { stablecoinName } : {}),
       ...(pegValue ? { pegValue } : {}),
       ...(contactHandle.trim() ? { contactHandle: contactHandle.trim() } : {}),
-      pageUrl,
+      pageUrl: currentPageUrl,
       website,
     };
 
@@ -122,12 +118,13 @@ export function FeedbackModal({
       setErrorMsg("Network error. Please try again.");
       setStatus("error");
     }
-  }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle, website, pageUrl]);
+  }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle, website]);
+
+  const displayPageUrl = open ? getCurrentPageUrl() : pageUrl;
 
   const needsTitle = type === "bug" || type === "feature-request";
   const contactValid =
-    contactHandle.trim().length === 0 ||
-    (contactHandle.trim().length >= 2 && contactHandle.trim().length <= 100);
+    contactHandle.trim().length === 0 || (contactHandle.trim().length >= 2 && contactHandle.trim().length <= 100);
   const isValid =
     description.trim().length >= 10 &&
     description.trim().length <= 2000 &&
@@ -144,9 +141,7 @@ export function FeedbackModal({
         {status === "success" ? (
           <div className="py-8 text-center space-y-2">
             <p className="text-lg font-medium">Thanks — submitted!</p>
-            <p className="text-sm text-muted-foreground">
-              We review all submissions and prioritize data corrections.
-            </p>
+            <p className="text-sm text-muted-foreground">We review all submissions and prioritize data corrections.</p>
             <Button variant="outline" className="mt-4" onClick={() => handleOpenChange(false)}>
               Close
             </Button>
@@ -172,11 +167,23 @@ export function FeedbackModal({
             </div>
 
             {/* Context banner */}
-            {(stablecoinName || pageUrl) && (
+            {(stablecoinName || displayPageUrl) && (
               <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
-                {stablecoinName && <div><span className="font-medium">Stablecoin:</span> {stablecoinName}</div>}
-                {pegValue && <div><span className="font-medium">Current value:</span> {pegValue}</div>}
-                {pageUrl && <div><span className="font-medium">Page:</span> {pageUrl}</div>}
+                {stablecoinName && (
+                  <div>
+                    <span className="font-medium">Stablecoin:</span> {stablecoinName}
+                  </div>
+                )}
+                {pegValue && (
+                  <div>
+                    <span className="font-medium">Current value:</span> {pegValue}
+                  </div>
+                )}
+                {displayPageUrl && (
+                  <div>
+                    <span className="font-medium">Page:</span> {displayPageUrl}
+                  </div>
+                )}
               </div>
             )}
 
@@ -197,9 +204,7 @@ export function FeedbackModal({
 
             {/* Description */}
             <div className="space-y-1.5">
-              <Label htmlFor="fb-desc">
-                {type === "data-correction" ? "What is wrong?" : "Description"}
-              </Label>
+              <Label htmlFor="fb-desc">{type === "data-correction" ? "What is wrong?" : "Description"}</Label>
               <Textarea
                 id="fb-desc"
                 placeholder={DESCRIPTION_HINTS[type]}
@@ -211,17 +216,14 @@ export function FeedbackModal({
                 className="max-w-full resize-none whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
                 style={{ fieldSizing: "fixed" }}
               />
-              <p className="text-xs text-muted-foreground text-right">
-                {description.length}/2000
-              </p>
+              <p className="text-xs text-muted-foreground text-right">{description.length}/2000</p>
             </div>
 
             {/* Expected value (data-correction only) */}
             {type === "data-correction" && (
               <div className="space-y-1.5">
                 <Label htmlFor="fb-expected">
-                  Expected value / source{" "}
-                  <span className="text-muted-foreground">(optional)</span>
+                  Expected value / source <span className="text-muted-foreground">(optional)</span>
                 </Label>
                 <Input
                   id="fb-expected"
@@ -236,8 +238,7 @@ export function FeedbackModal({
 
             <div className="space-y-1.5">
               <Label htmlFor="fb-contact">
-                Contact handle{" "}
-                <span className="text-xs text-muted-foreground">(optional)</span>
+                Contact handle <span className="text-xs text-muted-foreground">(optional)</span>
               </Label>
               <Input
                 id="fb-contact"
@@ -247,9 +248,7 @@ export function FeedbackModal({
                 maxLength={100}
                 disabled={status === "loading"}
               />
-              <p className="text-xs text-muted-foreground">
-                This handle will be included publicly on GitHub issues.
-              </p>
+              <p className="text-xs text-muted-foreground">This handle will be included publicly on GitHub issues.</p>
             </div>
 
             {/* Honeypot */}
@@ -265,23 +264,14 @@ export function FeedbackModal({
             />
 
             {/* Error */}
-            {status === "error" && errorMsg && (
-              <p className="text-sm text-destructive">{errorMsg}</p>
-            )}
+            {status === "error" && errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
 
             {/* Submit */}
             <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => handleOpenChange(false)}
-                disabled={status === "loading"}
-              >
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={status === "loading"}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!isValid || status === "loading"}
-              >
+              <Button onClick={handleSubmit} disabled={!isValid || status === "loading"}>
                 {status === "loading" ? "Submitting…" : "Submit"}
               </Button>
             </div>
