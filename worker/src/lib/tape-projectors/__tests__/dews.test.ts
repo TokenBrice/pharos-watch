@@ -232,6 +232,42 @@ describe("dews projector", () => {
     expect(deescalated[0]![2]).toBe("info");
   });
 
+  it("single-pass projector preserves already-advanced divergent watermarks", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "tape-projector:cursor:dews.escalated", value: String(SEC + 900) },
+          { key: "tape-projector:cursor:dews.deescalated", value: String(SEC) },
+        ],
+      },
+      {
+        match: MATCH_FETCH_SAMPLES,
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            computed_at: SEC + 100,
+            score: 50,
+            band: "ALERT",
+          },
+        ],
+      },
+      { match: MATCH_PRIOR_BAND, rows: [] },
+    ]) as MockD1Database;
+
+    const result = await projectDewsBandTransitions(db);
+
+    expect(result.advanced).toBe(SEC + 100);
+    const watermarkWrites = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
+      .map((entry) => entry.binds);
+    expect(watermarkWrites).toEqual([
+      ["tape-projector:cursor:dews.escalated", String(SEC + 900), expect.any(Number)],
+      ["tape-projector:cursor:dews.deescalated", String(SEC + 100), expect.any(Number)],
+    ]);
+  });
+
   it("single-pass projector emits nothing for an empty batch", async () => {
     const db = mockD1(baseTables([])) as MockD1Database;
     const result = await projectDewsBandTransitions(db);
