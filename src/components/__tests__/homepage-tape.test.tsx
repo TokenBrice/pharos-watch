@@ -203,7 +203,7 @@ describe("HomepageTape", () => {
     expect(root?.className).not.toContain("-mx-3");
   });
 
-  it("collapses repeated same-coin same-class events into one cell with a count badge", () => {
+  it("collapses repeated same-coin same-type events into one cell with a count badge", () => {
     mockLatestEvents({
       data: {
         events: [
@@ -217,15 +217,15 @@ describe("HomepageTape", () => {
           makeTapeEvent({
             id: "evt-2",
             ts: Date.now() - 600_000,
-            type: "depeg.opened",
-            title: "USDXL depeg opened (−109 bps)",
+            type: "depeg.peak_worsened",
+            title: "USDXL depeg peak worsened (−109 bps)",
             coinId: "usdxl-last",
           }),
           makeTapeEvent({
             id: "evt-1",
             ts: Date.now() - 1_200_000,
-            type: "depeg.resolved",
-            title: "USDXL depeg resolved",
+            type: "depeg.peak_worsened",
+            title: "USDXL depeg peak worsened (−104 bps)",
             coinId: "usdxl-last",
           }),
         ],
@@ -237,11 +237,11 @@ describe("HomepageTape", () => {
 
     render(<HomepageTape />);
 
-    // The most recent event's title is kept; the two older same-(coin,class)
+    // The most recent event's title is kept; the two older same-(coin,type)
     // events are collapsed into the single cell.
     expect(screen.getAllByText("USDXL depeg peak worsened (−112 bps)")).toHaveLength(2);
-    expect(screen.queryByText("USDXL depeg opened (−109 bps)")).toBeNull();
-    expect(screen.queryByText("USDXL depeg resolved")).toBeNull();
+    expect(screen.queryByText("USDXL depeg peak worsened (−109 bps)")).toBeNull();
+    expect(screen.queryByText("USDXL depeg peak worsened (−104 bps)")).toBeNull();
     // ×N badge reflects the total event count in the collapsed group, doubled
     // by the marquee loop.
     expect(screen.getAllByText("×3")).toHaveLength(2);
