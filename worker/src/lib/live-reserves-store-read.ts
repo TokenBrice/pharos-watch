@@ -1,5 +1,5 @@
 import { buildInClause } from "./db";
-import { chunkArray } from "./collections";
+import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./collections";
 import {
   parseSnapshotMetadata,
   parseWarnings,
@@ -49,13 +49,12 @@ async function loadMapByStablecoinId<Row extends { stablecoin_id: string }, Valu
   stablecoinIds: readonly string[],
   sqlForInClause: (inClauseSql: string) => string,
   mapRow: (row: Row) => Value,
-  chunkSize = 50,
 ): Promise<Map<string, Value>> {
   if (stablecoinIds.length === 0) return new Map();
 
   const result = new Map<string, Value>();
 
-  for (const batch of chunkArray(stablecoinIds, chunkSize)) {
+  for (const batch of chunkArray(stablecoinIds, D1_SAFE_IN_CLAUSE_BIND_LIMIT)) {
     const inClause = buildInClause(batch);
     const rows = await db
       .prepare(sqlForInClause(inClause.sql))
