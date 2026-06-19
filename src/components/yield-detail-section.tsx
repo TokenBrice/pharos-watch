@@ -247,6 +247,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             grade={view.ranking.safetyGrade}
             safetyScore={view.ranking.safetyScore}
             sourceRiskDrivers={view.sourceRiskDrivers}
+            scalingFactor={view.pysBreakdown.scalingFactor}
           />
           {view.ranking.provenance?.usedDefaultSafety ? (
             <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>

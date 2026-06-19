@@ -41,6 +41,7 @@ export interface YieldDetailSectionReadyModel {
     benchmarkAdjustment: number;
     benchmarkSpread: number | null;
     effectiveYield: number;
+    scalingFactor: number;
     sourceRiskPenalty: number;
     yieldEfficiency: number;
     sustainabilityMult: number;
@@ -112,17 +113,20 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     return { status: "error", shouldHaveYieldData, error: error instanceof Error ? error : null };
   }
 
-  if (!ranking) {
+  if (!ranking || !data) {
     return { status: "unavailable", shouldHaveYieldData };
   }
 
-  const pysBreakdown = computePysBreakdown(
-    ranking.apy30d,
-    ranking.safetyScore,
-    ranking.yieldStability,
-    ranking.benchmarkRate,
-    ranking.sourceRisk?.sourceRiskPenalty ?? null,
-  );
+  const pysBreakdown = {
+    ...computePysBreakdown(
+      ranking.apy30d,
+      ranking.safetyScore,
+      ranking.yieldStability,
+      ranking.benchmarkRate,
+      ranking.sourceRisk?.sourceRiskPenalty ?? null,
+    ),
+    scalingFactor: data.scalingFactor,
+  };
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
   const dataSourceMeta = getYieldDataSourceMeta(ranking.dataSource);

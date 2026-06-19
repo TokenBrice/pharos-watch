@@ -328,6 +328,7 @@ export function YieldClient() {
               logos={logos ?? {}}
               riskFreeRate={data.riskFreeRate}
               medianApy={data.medianApy ?? 0}
+              scalingFactor={data.scalingFactor}
               emptyMessage={viewModel.emptyState.description}
               filterSummary={{
                 visibleCount: visibleRows.length,

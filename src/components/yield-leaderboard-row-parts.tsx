@@ -28,6 +28,7 @@ import type { YieldViewModelRow } from "@/lib/yield-view-model";
 // per-metric rendering, tooltips, and accessible labels.
 
 type PysBreakdownValues = {
+  scalingFactor: number;
   adjustedRiskPenalty: number;
   benchmarkAdjustment: number;
   benchmarkSpread: number | null;
@@ -167,6 +168,7 @@ export function YieldPysValue({
               grade={grade}
               safetyScore={safetyScore}
               sourceRiskDrivers={sourceRiskDrivers}
+              scalingFactor={breakdown.scalingFactor}
             />
           </TooltipContent>
         </Tooltip>
