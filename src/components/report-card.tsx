@@ -20,7 +20,7 @@ import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/com
 import { cn } from "@/lib/utils";
 import { parseDimensionDetail } from "@/lib/report-card-parsing";
 import { getSafetyGradeMetadata, gradeBandLabel } from "@/lib/report-card-ui";
-import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
+import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "@shared/lib/liquidity-score-weights";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { CRON_24H } from "@/lib/cron-intervals";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -76,49 +76,82 @@ function RiskSourceLinks({ links }: { links: readonly RiskSourceLink[] }) {
   );
 }
 
+/** Shared wrapper for OracleRiskPanel and BridgeRouteRiskPanel.
+ * Renders the border-left container, title/score header, a meta row
+ * whose content is passed as `metaRow`, a summary paragraph, optional
+ * extra content (`children`), and source links. */
+function RiskSubPanel({
+  title,
+  score,
+  metaRow,
+  summary,
+  children,
+  sourceLinks,
+}: {
+  title: string;
+  score: number;
+  metaRow: ReactNode;
+  summary: string;
+  children?: ReactNode;
+  sourceLinks: readonly RiskSourceLink[];
+}) {
+  return (
+    <div className="border-l border-border/70 pl-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-foreground">{title}</span>
+        <span className="font-mono tabular-nums text-foreground/80">{score}/100</span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        {metaRow}
+      </div>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{summary}</p>
+      {children}
+      <RiskSourceLinks links={sourceLinks} />
+    </div>
+  );
+}
+
 function OracleRiskPanel({ risk }: { risk: OracleRiskDisplay }) {
   const sourceLinks = risk.sources ?? [];
   const branchRows = risk.branches ?? [];
 
+  const metaRow = (
+    <>
+      <span>{risk.label}</span>
+      {risk.inheritedFrom ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>
+            inherited from{" "}
+            <Link
+              href={buildStablecoinUrl(risk.inheritedFrom.id)}
+              className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-2"
+            >
+              {risk.inheritedFrom.symbol}
+            </Link>
+          </span>
+        </>
+      ) : null}
+      {risk.confidence ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>{ORACLE_RISK_CONFIDENCE_LABELS[risk.confidence]}</span>
+        </>
+      ) : null}
+      {risk.reviewedAt ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>
+            reviewed {risk.reviewedAt}
+            {risk.reviewer ? ` by ${risk.reviewer}` : ""}
+          </span>
+        </>
+      ) : null}
+    </>
+  );
+
   return (
-    <div className="border-l border-border/70 pl-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="font-medium text-foreground">Oracle setup</span>
-        <span className="font-mono tabular-nums text-foreground/80">{risk.score}/100</span>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <span>{risk.label}</span>
-        {risk.inheritedFrom ? (
-          <>
-            <span aria-hidden="true">·</span>
-            <span>
-              inherited from{" "}
-              <Link
-                href={buildStablecoinUrl(risk.inheritedFrom.id)}
-                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-2"
-              >
-                {risk.inheritedFrom.symbol}
-              </Link>
-            </span>
-          </>
-        ) : null}
-        {risk.confidence ? (
-          <>
-            <span aria-hidden="true">·</span>
-            <span>{ORACLE_RISK_CONFIDENCE_LABELS[risk.confidence]}</span>
-          </>
-        ) : null}
-        {risk.reviewedAt ? (
-          <>
-            <span aria-hidden="true">·</span>
-            <span>
-              reviewed {risk.reviewedAt}
-              {risk.reviewer ? ` by ${risk.reviewer}` : ""}
-            </span>
-          </>
-        ) : null}
-      </div>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{risk.summary}</p>
+    <RiskSubPanel title="Oracle setup" score={risk.score} metaRow={metaRow} summary={risk.summary} sourceLinks={sourceLinks}>
       {risk.selectedBranch ? (
         <p className="mt-1 text-xs text-muted-foreground">
           Binding branch: <span className="text-foreground/80">{risk.selectedBranch.label}</span>
@@ -137,8 +170,7 @@ function OracleRiskPanel({ risk }: { risk: OracleRiskDisplay }) {
           ))}
         </div>
       ) : null}
-      <RiskSourceLinks links={sourceLinks} />
-    </div>
+    </RiskSubPanel>
   );
 }
 
@@ -146,23 +178,21 @@ function BridgeRouteRiskPanel({ risk }: { risk: BridgeRouteRiskDisplay }) {
   const sourceLinks = risk.sources ?? [];
   const protocols = risk.protocols ?? [];
 
+  const metaRow = (
+    <>
+      <span>{risk.label}</span>
+      <span aria-hidden="true">·</span>
+      <span>{BRIDGE_ROUTE_RISK_CONFIDENCE_LABELS[risk.confidence]}</span>
+      <span aria-hidden="true">·</span>
+      <span>
+        reviewed {risk.reviewedAt}
+        {risk.reviewer ? ` by ${risk.reviewer}` : ""}
+      </span>
+    </>
+  );
+
   return (
-    <div className="border-l border-border/70 pl-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="font-medium text-foreground">Bridge route</span>
-        <span className="font-mono tabular-nums text-foreground/80">{risk.score}/100</span>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <span>{risk.label}</span>
-        <span aria-hidden="true">·</span>
-        <span>{BRIDGE_ROUTE_RISK_CONFIDENCE_LABELS[risk.confidence]}</span>
-        <span aria-hidden="true">·</span>
-        <span>
-          reviewed {risk.reviewedAt}
-          {risk.reviewer ? ` by ${risk.reviewer}` : ""}
-        </span>
-      </div>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{risk.summary}</p>
+    <RiskSubPanel title="Bridge route" score={risk.score} metaRow={metaRow} summary={risk.summary} sourceLinks={sourceLinks}>
       {protocols.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1 text-xs">
           {protocols.map((protocol) => (
@@ -176,8 +206,7 @@ function BridgeRouteRiskPanel({ risk }: { risk: BridgeRouteRiskDisplay }) {
           ))}
         </div>
       ) : null}
-      <RiskSourceLinks links={sourceLinks} />
-    </div>
+    </RiskSubPanel>
   );
 }
 
@@ -380,13 +409,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
 
 interface ReportCardDetailProps {
   card: ReportCardType;
-  liquidityComponents?: {
-    tvlDepth: number;
-    volumeActivity: number;
-    poolQuality: number;
-    durability: number;
-    pairDiversity: number;
-  } | null;
+  liquidityComponents?: Record<LiquidityScoreComponentKey, number> | null;
   updatedAtMs?: number | null;
   /** Optional slot rendered as the right column at lg+; when absent, the safety column fills the card. */
   rightColumn?: ReactNode;
