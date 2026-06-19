@@ -94,13 +94,17 @@ function makeDb(opts: {
           band: "WARNING",
           computed_at: Math.floor(Date.now() / 1000) - 300,
         }];
-        // Normal path filters with `computed_at <= ?` (published generation upper bound);
+        // Normal path filters with `computed_at = ?` (exact published generation);
         // the no-pointer fallback path filters with `computed_at >= ?` (scan-window floor).
         let filtered = dewsRows;
         if (bound != null) {
-          filtered = sql.includes("computed_at >= ?")
-            ? dewsRows.filter((row) => row.computed_at >= bound)
-            : dewsRows.filter((row) => row.computed_at <= bound);
+          if (sql.includes("computed_at >= ?")) {
+            filtered = dewsRows.filter((row) => row.computed_at >= bound);
+          } else if (sql.includes("computed_at = ?")) {
+            filtered = dewsRows.filter((row) => row.computed_at === bound);
+          } else {
+            filtered = dewsRows.filter((row) => row.computed_at <= bound);
+          }
         }
         return { results: filtered as T[] };
       }
@@ -437,6 +441,39 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsRowsRead).toBe(1);
     expect(metadata.dewsLatestComputedAt).toBe(publishedAt);
     expect(metadata.dewsStressBreadth).toBe(0);
+  });
+
+  it("reads only the exact published DEWS generation instead of stale retained rows", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const publishedAt = nowSec - 300;
+    const staleComputedAt = nowSec - CRON_INTERVALS["compute-dews"] * 2 - 1;
+    const db = makeDb({
+      dewsPublishedAt: publishedAt,
+      dewsRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 72,
+          band: "WARNING",
+          computed_at: publishedAt,
+        },
+        {
+          stablecoin_id: "benji-franklin-templeton",
+          score: 95,
+          band: "DANGER",
+          computed_at: staleComputedAt,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      dewsRowsRead: number;
+      dewsLatestComputedAt: number | null;
+    };
+    expect(metadata.dewsRowsRead).toBe(1);
+    expect(metadata.dewsLatestComputedAt).toBe(publishedAt);
   });
 
   it("fails closed when the active depeg query is unavailable", async () => {

@@ -4,7 +4,7 @@ import { STABILITY_INDEX_V3 } from "../../data/methodology-changelogs/stability-
 import { createMethodologyVersion } from "./base";
 
 const psi = createMethodologyVersion({
-  currentVersion: "3.4",
+  currentVersion: "3.5",
   changelogPath: "/methodology/stability-index-changelog/",
   changelog: [
     ...STABILITY_INDEX_V3,

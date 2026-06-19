@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.5",
+    title: "Exact DEWS generation dependency",
+    date: "2026-06-19",
+    effectiveAt: 1781902800,
+    summary:
+      "PSI now reads the exact DEWS generation advertised by the published-generation pointer instead of selecting latest rows at or before that timestamp.",
+    impact: [
+      "Retained stale DEWS rows for assets absent from the current published generation no longer fail PSI freshness",
+      "Stress breadth is computed from a single coherent DEWS generation rather than a mix of current rows and older retained latest rows",
+      "The no-pointer fallback remains bounded by the recent scan window and the existing staleness gate",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.4",
     title: "Fail-closed DEWS freshness dependency",
     date: "2026-06-06",

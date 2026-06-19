@@ -1,6 +1,14 @@
 # Stability Index Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.4` (2026-02-25 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.5` (2026-02-25 -> 2026-06-19).
+
+---
+
+## v3.5 — Exact DEWS generation dependency (Jun 19, 2026)
+
+- PSI now reads `stress_signals` rows for the exact generation advertised by `dews:published-generation`
+- Retained stale DEWS rows for assets absent from the current published generation no longer fail PSI freshness
+- Stress breadth is computed from one coherent DEWS generation; the no-pointer fallback remains bounded by the recent scan window and the existing staleness gate
 
 ---
 

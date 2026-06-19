@@ -125,12 +125,15 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     }
     // completedDewsAt is null on the first-ever run (no publication pointer yet) or if the
     // pointer row is corrupt/unreadable. In that case we cannot replay against a known-good
-    // generation timestamp, so we fall back to the latest row per stablecoin. The fallback is
-    // still safe because the staleness gate below (DEWS_STRESS_MAX_AGE_SEC) discards anything
-    // older than the freshness window; we additionally bound the subquery scan to the last
-    // DEWS_FALLBACK_SCAN_WINDOW_SEC so D1 does not read the full stress_signals history just to
-    // throw most of it away. The window is intentionally wider than DEWS_STRESS_MAX_AGE_SEC so it
-    // never tightens correctness beyond the staleness gate.
+    // generation timestamp, so we fall back to the latest row per stablecoin. Once a published
+    // generation exists, read that exact generation only; retained latest rows for assets that
+    // dropped out of the current DEWS universe must not poison PSI freshness.
+    //
+    // The fallback remains safe because the staleness gate below (DEWS_STRESS_MAX_AGE_SEC)
+    // discards anything older than the freshness window; we additionally bound the subquery scan
+    // to the last DEWS_FALLBACK_SCAN_WINDOW_SEC so D1 does not read the full stress_signals
+    // history just to throw most of it away. The window is intentionally wider than
+    // DEWS_STRESS_MAX_AGE_SEC so it never tightens correctness beyond the staleness gate.
     const dewsFallbackFloor = now - DEWS_FALLBACK_SCAN_WINDOW_SEC;
     const dewsStmt = db.prepare(
       completedDewsAt == null
@@ -144,14 +147,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
            GROUP BY stablecoin_id
          ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
         :
-        `SELECT s.stablecoin_id, s.score, s.band, s.computed_at
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) as max_at
-           FROM stress_signals
-           WHERE computed_at <= ?
-           GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+        `SELECT stablecoin_id, score, band, computed_at
+         FROM stress_signals
+         WHERE computed_at = ?`,
     );
     const dewsRows = await dewsStmt
       .bind(completedDewsAt == null ? dewsFallbackFloor : completedDewsAt)
