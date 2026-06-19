@@ -64,6 +64,31 @@ function emptyOutcome(): WatchdogAlertOutcome {
   return { triggered: false, recovered: false, alertSent: false, detail: null };
 }
 
+/**
+ * Shared clear-episode logic: mark recovered, optionally send a recovery alert,
+ * and delete the two cache keys only if the alert succeeded (or was not needed).
+ * Returns { recovered: true, alertSent } to merge into the caller's outcome.
+ */
+async function clearEpisodeIfAlerted(
+  db: D1Database,
+  alreadyAlerted: boolean,
+  sinceKey: string,
+  alertedKey: string,
+  sendRecoveryAlert: () => Promise<boolean>,
+): Promise<{ recovered: true; alertSent: boolean }> {
+  let canClearEpisode = true;
+  let alertSent = false;
+  if (alreadyAlerted) {
+    alertSent = await sendRecoveryAlert();
+    canClearEpisode = alertSent;
+  }
+  if (canClearEpisode) {
+    await deleteCache(db, sinceKey);
+    await deleteCache(db, alertedKey);
+  }
+  return { recovered: true, alertSent };
+}
+
 async function readPendingCapacity(db: D1Database, nowSec: number): Promise<PendingCapacitySnapshot | null> {
   try {
     return await readPendingCapacitySnapshot(db, nowSec);
@@ -185,20 +210,15 @@ async function evaluatePendingBacklog(
   }
 
   if (flagSince != null) {
-    outcome.recovered = true;
-    let canClearEpisode = true;
-    if (alreadyAlerted) {
-      outcome.alertSent = await sendAlert(
-        alertWebhookUrl,
-        "Telegram pending backlog recovered",
-        `pending=${count} (cleared after sustained breach)`,
-      );
-      canClearEpisode = outcome.alertSent;
-    }
-    if (canClearEpisode) {
-      await deleteCache(db, WATCHDOG_KEYS.pendingSince);
-      await deleteCache(db, WATCHDOG_KEYS.pendingAlerted);
-    }
+    const cleared = await clearEpisodeIfAlerted(
+      db,
+      alreadyAlerted,
+      WATCHDOG_KEYS.pendingSince,
+      WATCHDOG_KEYS.pendingAlerted,
+      () => sendAlert(alertWebhookUrl, "Telegram pending backlog recovered", `pending=${count} (cleared after sustained breach)`),
+    );
+    outcome.recovered = cleared.recovered;
+    outcome.alertSent = cleared.alertSent;
     outcome.detail = `pending=${count}, recovered`;
   }
   return outcome;
@@ -248,20 +268,15 @@ async function evaluateSafetySource(
   }
 
   if (flagSince != null) {
-    outcome.recovered = true;
-    let canClearEpisode = true;
-    if (alreadyAlerted) {
-      outcome.alertSent = await sendAlert(
-        alertWebhookUrl,
-        "Telegram safety-source cache recovered",
-        "state=ok",
-      );
-      canClearEpisode = outcome.alertSent;
-    }
-    if (canClearEpisode) {
-      await deleteCache(db, WATCHDOG_KEYS.safetySourceSince);
-      await deleteCache(db, WATCHDOG_KEYS.safetySourceAlerted);
-    }
+    const cleared = await clearEpisodeIfAlerted(
+      db,
+      alreadyAlerted,
+      WATCHDOG_KEYS.safetySourceSince,
+      WATCHDOG_KEYS.safetySourceAlerted,
+      () => sendAlert(alertWebhookUrl, "Telegram safety-source cache recovered", "state=ok"),
+    );
+    outcome.recovered = cleared.recovered;
+    outcome.alertSent = cleared.alertSent;
     outcome.detail = "state=ok, recovered";
   }
   return outcome;
@@ -322,20 +337,15 @@ async function evaluateZeroSendStreak(
 
   if (priorStreak >= ZERO_SEND_STREAK_THRESHOLD) {
     outcome.streak = 0;
-    outcome.recovered = true;
-    let canClearEpisode = true;
-    if (alreadyAlerted) {
-      outcome.alertSent = await sendAlert(
-        alertWebhookUrl,
-        "Telegram dispatch zero-send streak recovered",
-        `messagesSent=${messagesSent}, eventsDetected=${events}`,
-      );
-      canClearEpisode = outcome.alertSent;
-    }
-    if (canClearEpisode) {
-      await deleteCache(db, WATCHDOG_KEYS.zeroSendStreak);
-      await deleteCache(db, WATCHDOG_KEYS.zeroSendAlerted);
-    }
+    const cleared = await clearEpisodeIfAlerted(
+      db,
+      alreadyAlerted,
+      WATCHDOG_KEYS.zeroSendStreak,
+      WATCHDOG_KEYS.zeroSendAlerted,
+      () => sendAlert(alertWebhookUrl, "Telegram dispatch zero-send streak recovered", `messagesSent=${messagesSent}, eventsDetected=${events}`),
+    );
+    outcome.recovered = cleared.recovered;
+    outcome.alertSent = cleared.alertSent;
     outcome.detail = `recovered after streak=${priorStreak}`;
     return outcome;
   }
