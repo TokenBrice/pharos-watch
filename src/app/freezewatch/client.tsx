@@ -137,7 +137,7 @@ export default function FreezeWatchClient() {
             onBucketSelect={handleStatusBucketChange}
           />
           <BlacklistStats
-            stats={summary?.stats}
+            summary={summary}
             isLoading={summaryLoading}
             blacklistStatusBuckets={blacklistStatusBuckets}
             supportDataLoading={supportDataLoading}

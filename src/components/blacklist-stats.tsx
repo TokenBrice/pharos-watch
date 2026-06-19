@@ -8,7 +8,7 @@ import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
 
 interface BlacklistStatsProps {
-  stats: BlacklistSummaryResponse["stats"] | undefined;
+  summary: BlacklistSummaryResponse | undefined;
   isLoading: boolean;
   blacklistStatusBuckets: BlacklistStatusBucket[] | null;
   supportDataLoading: boolean;
@@ -22,12 +22,14 @@ function formatMarketSharePercentage(value: number): string {
 }
 
 export function BlacklistStats({
-  stats,
+  summary,
   isLoading,
   blacklistStatusBuckets,
   supportDataLoading,
   onUnfreezableSelect,
 }: BlacklistStatsProps) {
+  const stats = summary?.stats;
+  const dataQuality = summary?.dataQuality;
   const trackedFrozenTotal = stats?.trackedFrozenTotal ?? stats?.activeFrozenTotal ?? 0;
   const totalTrackedMarketCap = (blacklistStatusBuckets ?? []).reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const unfreezableBucket = blacklistStatusBuckets?.find((bucket) => bucket.key === "no") ?? null;
@@ -47,6 +49,19 @@ export function BlacklistStats({
   const unfreezableMarketShareSubtext = canDrillIntoUnfreezable
     ? `${baseUnfreezableSubtext} · View list →`
     : baseUnfreezableSubtext;
+  const hasFreezeLedgerWarnings =
+    dataQuality &&
+    (dataQuality.status !== "ok" ||
+      dataQuality.warnings.length > 0 ||
+      dataQuality.freezeLedger.providerFailedCount > 0 ||
+      dataQuality.freezeLedger.staleSnapshotCount > 0 ||
+      dataQuality.freezeLedger.trackedGapCount > 0 ||
+      dataQuality.amountGaps.recoverable > 0 ||
+      dataQuality.amountGaps.unrecoverable > 0 ||
+      dataQuality.coverage.unsupportedDeferredConfigs > 0);
+  const qualityTone = dataQuality?.status === "stale" ? "stale" : "degraded";
+  const qualityTitle =
+    dataQuality?.status === "stale" ? "Freeze ledger snapshots are stale" : "Freeze ledger coverage is degraded";
 
   if (isLoading) {
     return (
@@ -67,6 +82,47 @@ export function BlacklistStats({
 
   return (
     <div className="grid grid-cols-1 gap-3 animate-in fade-in duration-300 sm:grid-cols-2 sm:gap-5">
+      {hasFreezeLedgerWarnings ? (
+        <Card
+          className={
+            qualityTone === "stale"
+              ? "rounded-xl border-amber-500/60 bg-amber-500/10 sm:col-span-2"
+              : "rounded-xl border-yellow-500/60 bg-yellow-500/10 sm:col-span-2"
+          }
+          role="status"
+        >
+          <CardHeader className="pb-2">
+            <p className="pharos-kicker">Data Quality</p>
+            <h3 className="text-sm font-semibold text-foreground">{qualityTitle}</h3>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              Tracked frozen totals use last-known freeze snapshots. Treat the exposure figures as provisional until the
+              freeze-ledger checks recover.
+            </p>
+            <ul className="grid gap-1 sm:grid-cols-2">
+              {dataQuality.freezeLedger.providerFailedCount > 0 ? (
+                <li>{dataQuality.freezeLedger.providerFailedCount} current-balance provider failures</li>
+              ) : null}
+              {dataQuality.freezeLedger.staleSnapshotCount > 0 ? (
+                <li>{dataQuality.freezeLedger.staleSnapshotCount} stale current-balance snapshots</li>
+              ) : null}
+              {dataQuality.freezeLedger.trackedGapCount > 0 ? (
+                <li>{dataQuality.freezeLedger.trackedGapCount} tracked ledger gaps</li>
+              ) : null}
+              {dataQuality.amountGaps.recoverable + dataQuality.amountGaps.unrecoverable > 0 ? (
+                <li>
+                  {dataQuality.amountGaps.recoverable + dataQuality.amountGaps.unrecoverable} amount gaps across freeze
+                  events
+                </li>
+              ) : null}
+              {dataQuality.coverage.unsupportedDeferredConfigs > 0 ? (
+                <li>{dataQuality.coverage.unsupportedDeferredConfigs} deferred coverage configs</li>
+              ) : null}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       <MetricStatCard
         title="Unfreezable Market Share"
         value={unfreezableMarketShareValue}
