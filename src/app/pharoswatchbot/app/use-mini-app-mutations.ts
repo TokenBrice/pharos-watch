@@ -175,6 +175,8 @@ export interface UseMiniAppMutationsResult {
  */
 export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMutationsResult {
   const { initData, state, webApp, onStateReplaced, reloadSession, messageAutoDismissActive } = args;
+  // webApp identity is stable per render, so showConfirm is safe to hoist once.
+  const showConfirm = webApp?.showConfirm;
   const [isMutating, setIsMutating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -335,20 +337,18 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, []);
 
   const remove = useCallback((coin: SubscribedCoin) => {
-    const captured: SubscribedCoin = coin;
     const fire = () => void (async () => {
       const next = await performMutation({ kind: "remove-coin", stablecoinId: coin.stablecoinId });
       if (!next) return;
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-      setPendingUndo(captured);
+      setPendingUndo(coin);
       undoTimerRef.current = setTimeout(() => {
         setPendingUndo(null);
         undoTimerRef.current = null;
       }, UNDO_WINDOW_MS);
     })();
-    const confirmFn = webApp?.showConfirm;
-    confirmThenFire(confirmFn, `Remove ${coin.symbol} from your watchlist?`, fire);
-  }, [performMutation, webApp?.showConfirm]);
+    confirmThenFire(showConfirm, `Remove ${coin.symbol} from your watchlist?`, fire);
+  }, [performMutation, showConfirm]);
 
   const undoRemove = useCallback(() => {
     const captured = pendingUndo;
@@ -366,34 +366,31 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const unfollowPreset = useCallback((preset: FollowedPreset) => {
     // Presets aren't joined to subscribed coins in the current state payload, so we
     // always show the confirm sheet when the Telegram bridge exposes one (T-48).
-    const confirmFn = webApp?.showConfirm;
-    confirmThenFire(confirmFn, `Unfollow ${preset.label}? This also removes explicit coin rows covered by this preset.`, () => {
+    confirmThenFire(showConfirm, `Unfollow ${preset.label}? This also removes explicit coin rows covered by this preset.`, () => {
       void performMutation({ kind: "unfollow-preset", presetId: preset.id });
     });
-  }, [performMutation, webApp?.showConfirm]);
+  }, [performMutation, showConfirm]);
 
   const unsubscribeAll = useCallback(() => {
-    const confirmFn = webApp?.showConfirm;
     // R3 fix: clear any pending undo before unsubscribing-all so the toast cannot
     // re-add a coin to a now-empty subscriber row.
     const fire = () => {
       clearPendingUndo();
       void performMutation({ kind: "unsubscribe-all" });
     };
-    confirmThenFire(confirmFn, "Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", fire);
-  }, [clearPendingUndo, performMutation, webApp?.showConfirm]);
+    confirmThenFire(showConfirm, "Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", fire);
+  }, [clearPendingUndo, performMutation, showConfirm]);
 
   const forgetMe = useCallback(() => {
-    const confirmFn = webApp?.showConfirm;
     // Destructive, irreversible op with no optimistic-state effect: dispatch
     // imperatively (like remove/unfollowPreset) rather than through the
     // optimistic `mutate` layer, whose React 19 transition-revert path is
     // inert here and merely inconsistent with the other danger-zone actions.
     const fire = () => void performMutation({ kind: "forget-me" });
-    confirmThenFire(confirmFn, "Delete all your Pharos alert data? This cannot be undone.", () => {
-      confirmThenFire(confirmFn, "Are you absolutely sure? Your subscriber row will be deleted.", fire);
+    confirmThenFire(showConfirm, "Delete all your Pharos alert data? This cannot be undone.", () => {
+      confirmThenFire(showConfirm, "Are you absolutely sure? Your subscriber row will be deleted.", fire);
     });
-  }, [performMutation, webApp?.showConfirm]);
+  }, [performMutation, showConfirm]);
 
   const addToHomeScreen = useCallback(() => {
     webApp?.addToHomeScreen?.();
