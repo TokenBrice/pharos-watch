@@ -217,6 +217,94 @@ describe("adaptCrvUsd", () => {
 });
 
 describe("fetchCrvUsdReserves", () => {
+  it("rejects untrusted LLAMMA market counts above the adapter cap before scheduling market reads", async () => {
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map());
+    vi.mocked(fetchOnchainMulticall3).mockResolvedValue([]);
+    vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
+      const normalizedAddress = address.toLowerCase();
+      const callData = data as `0x${string}`;
+
+      if (normalizedAddress === CURVE_CONTROLLER_FACTORY.toLowerCase()) {
+        const decoded = decodeFunctionData({ abi: CURVE_FACTORY_ABI, data: callData });
+        if (decoded.functionName === "n_collaterals") {
+          return encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "n_collaterals", result: 257n });
+        }
+        throw new Error(`unexpected LLAMMA market read: ${decoded.functionName}`);
+      }
+
+      if (normalizedAddress === YIELD_BASIS_FACTORY) {
+        const decoded = decodeFunctionData({ abi: FACTORY_ABI, data: callData });
+        if (decoded.functionName === "market_count") {
+          return encodeFunctionResult({ abi: FACTORY_ABI, functionName: "market_count", result: 0n });
+        }
+      }
+
+      return null;
+    });
+
+    const config: LiveReservesConfig = {
+      adapter: "crvusd",
+      version: 3,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "onchain-evm",
+          chain: "ethereum",
+          rpcMode: "public-rpc",
+        },
+      },
+    };
+
+    await expect(fetchCrvUsdReserves({} as never, config, signal)).rejects.toThrow(
+      "crvUSD ControllerFactory n_collaterals invalid: 257 (max 256)",
+    );
+    expect(fetchEvmCallHexAtBlock).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops Yield Basis when its untrusted market count exceeds the adapter cap before scheduling market reads", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      chains: {
+        ethereum: {
+          data: [{ collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } }],
+        },
+      },
+    });
+    vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
+      const normalizedAddress = address.toLowerCase();
+      const callData = data as `0x${string}`;
+
+      if (normalizedAddress === YIELD_BASIS_FACTORY) {
+        const decoded = decodeFunctionData({ abi: FACTORY_ABI, data: callData });
+        if (decoded.functionName === "market_count") {
+          return encodeFunctionResult({ abi: FACTORY_ABI, functionName: "market_count", result: 257n });
+        }
+        throw new Error(`unexpected Yield Basis market read: ${decoded.functionName}`);
+      }
+
+      return null;
+    });
+
+    const config: LiveReservesConfig = {
+      adapter: "crvusd",
+      version: 2,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://prices.curve.finance/v1/crvusd/markets",
+        },
+      },
+    };
+
+    const result = await fetchCrvUsdReserves({} as never, config, signal);
+
+    expect(result.slices).toEqual([{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "yield-basis-read-failed", effect: "degraded" })]),
+    );
+    expect(fetchEvmCallHexAtBlock).toHaveBeenCalledTimes(1);
+  });
+
   it("schedules Yield Basis market reads across markets before awaiting the first market", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({ chains: { ethereum: { data: [] } } });
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(

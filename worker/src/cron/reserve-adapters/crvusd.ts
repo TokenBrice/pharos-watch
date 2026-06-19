@@ -109,6 +109,8 @@ const ETHEREUM_RPC_URLS = [getPublicRpcUrl(ETHEREUM_CHAIN), getSecondaryFallback
 const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
 const CRVUSD_MARKET_READ_CONCURRENCY = 2;
+const CRVUSD_MAX_LLAMMA_MARKETS = 256;
+const CRVUSD_MAX_YIELD_BASIS_MARKETS = 256;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
 const YIELD_BASIS_OPTIONAL_TIMEOUT_MS = 6_000;
@@ -297,6 +299,14 @@ function safeInt256ToNumber(value: bigint, label: string): number {
   return asNumber;
 }
 
+function validateOnchainMarketCount(raw: bigint, label: string, maxCount: number): number {
+  const marketCount = Number(raw);
+  if (!Number.isSafeInteger(marketCount) || marketCount < 0 || marketCount > maxCount) {
+    throw new Error(`crvUSD ${label} invalid: ${String(raw)} (max ${maxCount})`);
+  }
+  return marketCount;
+}
+
 async function fetchLlammaMarketDescriptors(
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -308,10 +318,11 @@ async function fetchLlammaMarketDescriptors(
     signal,
     ctx,
   )) as bigint;
-  const marketCount = Number(countRaw);
-  if (!Number.isSafeInteger(marketCount) || marketCount < 0) {
-    throw new Error(`crvUSD ControllerFactory n_collaterals invalid: ${String(countRaw)}`);
-  }
+  const marketCount = validateOnchainMarketCount(
+    countRaw,
+    "ControllerFactory n_collaterals",
+    CRVUSD_MAX_LLAMMA_MARKETS,
+  );
 
   const descriptors = await mapWithConcurrency(
     Array.from({ length: marketCount }, (_, marketId) => marketId),
@@ -468,10 +479,11 @@ async function fetchYieldBasisMarketPositions(
     signal,
     ctx,
   )) as bigint;
-  const marketCount = Number(marketCountRaw);
-  if (!Number.isSafeInteger(marketCount) || marketCount < 0) {
-    throw new Error(`crvUSD Yield Basis market_count invalid: ${String(marketCountRaw)}`);
-  }
+  const marketCount = validateOnchainMarketCount(
+    marketCountRaw,
+    "Yield Basis market_count",
+    CRVUSD_MAX_YIELD_BASIS_MARKETS,
+  );
 
   const positions = await mapWithConcurrency(
     Array.from({ length: marketCount }, (_, marketId) => marketId),
