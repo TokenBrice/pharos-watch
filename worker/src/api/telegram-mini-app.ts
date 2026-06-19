@@ -331,7 +331,6 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       });
     }
 
-    await recordMiniAppEvent(db, { eventType: "mini_app_open", auth, outcome: "success", latencyMs: Date.now() - start });
     await recordMiniAppEvent(db, { eventType: "mini_app_session_valid", auth, outcome: "success", latencyMs: Date.now() - start });
     if (!auth.canMutatePrivateChat) await recordMiniAppEvent(db, { eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs: Date.now() - start });
 

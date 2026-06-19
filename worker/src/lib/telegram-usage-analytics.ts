@@ -23,7 +23,6 @@ export type TelegramUsageEventType =
   | "unknown_command"
   | "command"
   | "reply_failure"
-  | "mini_app_open"
   | "mini_app_session_valid"
   | "mini_app_session_invalid"
   | "mini_app_mutation"
