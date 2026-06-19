@@ -1,6 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import type { RawStatusComputation } from "../status-evaluation";
-import { setCacheIfNewer } from "../db-cache";
+import { getCache, setCacheIfNewer } from "../db-cache";
 import { toErrorMessage } from "../error-utils";
 import {
   STATUS_SYSTEM_FRESHNESS_SEC,
@@ -164,11 +164,8 @@ export async function loadStatusRawSnapshot(
   maxAgeSec = STATUS_RAW_SNAPSHOT_MAX_AGE_SEC,
 ): Promise<StatusRawSnapshotLoadResult> {
   try {
-    const row = await db
-      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-      .bind(STATUS_RAW_SNAPSHOT_CACHE_KEY)
-      .first<{ value: string; updated_at: number }>();
-    if (!row) {
+    const cached = await getCache(db, STATUS_RAW_SNAPSHOT_CACHE_KEY);
+    if (!cached) {
       return {
         kind: "missing",
         updatedAt: null,
@@ -177,21 +174,21 @@ export async function loadStatusRawSnapshot(
       };
     }
 
-    const ageSec = Math.max(0, now - row.updated_at);
+    const ageSec = Math.max(0, now - cached.updatedAt);
     if (ageSec > maxAgeSec) {
       return {
         kind: "stale",
-        updatedAt: row.updated_at,
+        updatedAt: cached.updatedAt,
         ageSec,
         maxAgeSec,
       };
     }
 
-    const payload = parseStatusRawSnapshotPayload(row.value);
+    const payload = parseStatusRawSnapshotPayload(cached.value);
     if (!payload) {
       return {
         kind: "unreadable",
-        updatedAt: row.updated_at,
+        updatedAt: cached.updatedAt,
         ageSec,
         maxAgeSec,
         error: "invalid status raw snapshot payload",
@@ -201,7 +198,7 @@ export async function loadStatusRawSnapshot(
     return {
       kind: "fresh",
       raw: payload.raw,
-      updatedAt: row.updated_at,
+      updatedAt: cached.updatedAt,
       ageSec,
       maxAgeSec,
     };
