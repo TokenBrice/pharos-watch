@@ -238,11 +238,18 @@ function supply1dOutcome(trigger: DigestNextTrigger, data: DigestInputData, thre
 }
 
 function supply7dOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const velocity = (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === trigger.symbol?.toUpperCase());
-  if (!velocity) return { status: "missed" as const, detail: `${trigger.symbol} has no current weekly supply signal.` };
+  const symbol = trigger.symbol?.toUpperCase();
+  const biggestChange = data.biggestSupplyChange;
+  const biggestWeeklyChange = biggestChange && biggestChange.symbol.toUpperCase() === symbol
+    ? { coin: biggestChange.symbol, change7d: biggestChange.changeUsd }
+    : null;
+  const weeklyChange = (data.supplyChanges7d ?? []).find((entry) => entry.coin.toUpperCase() === symbol)
+    ?? biggestWeeklyChange
+    ?? (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === symbol);
+  if (!weeklyChange) return { status: "missed" as const, detail: `${trigger.symbol} has no current weekly supply change.` };
   return {
-    status: Math.abs(velocity.change7d) >= threshold ? "hit" as const : "missed" as const,
-    detail: `${trigger.symbol} moved ${signedCurrency(velocity.change7d)} over 7d versus ${trigger.thresholdLabel}.`,
+    status: Math.abs(weeklyChange.change7d) >= threshold ? "hit" as const : "missed" as const,
+    detail: `${trigger.symbol} moved ${signedCurrency(weeklyChange.change7d)} over 7d versus ${trigger.thresholdLabel}.`,
   };
 }
 
