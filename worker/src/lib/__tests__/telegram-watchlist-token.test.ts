@@ -22,6 +22,22 @@ describe("watchlist token codec (C129)", () => {
     if (decoded.ok) expect(decoded.state).toEqual(state);
   });
 
+  it("encodes ASCII payloads byte-identically to the legacy btoa codec (f-xcut-6)", () => {
+    // The shared bytes codec (TextEncoder route) must match the prior raw-btoa
+    // codec for ASCII token bodies, so old tokens keep decoding after the swap.
+    const state = {
+      coinIds: ["usdc-circle", "dai-makerdao"],
+      alertTypes: ["dews", "depeg", "safety"],
+      presetIds: ["usd-top25"],
+    };
+    const body = JSON.stringify({ v: 1, c: state.coinIds, t: state.alertTypes, p: state.presetIds });
+    const legacy = btoa(body).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    expect(encodeWatchlistToken(state)).toBe(legacy);
+    const decoded = decodeWatchlistToken(legacy);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(decoded.state).toEqual(state);
+  });
+
   it("produces a url-safe, unpadded token", () => {
     const token = encodeWatchlistToken({ coinIds: ["usdc-circle"], alertTypes: ["dews"], presetIds: [] });
     expect(token).toMatch(/^[A-Za-z0-9_-]+$/);

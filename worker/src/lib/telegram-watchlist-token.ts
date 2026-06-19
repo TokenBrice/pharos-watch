@@ -17,6 +17,8 @@
  * per-coin granularity (no new write code).
  */
 
+import { base64UrlToString, stringToBase64Url } from "./base64url";
+
 const TOKEN_VERSION = 1;
 
 /** Hard ceiling well under Telegram's 4096-char message limit. */
@@ -34,18 +36,6 @@ export type WatchlistTokenDecodeResult =
   | { ok: true; state: WatchlistTokenState }
   | { ok: false; error: WatchlistTokenDecodeError };
 
-function toBase64Url(input: string): string {
-  // btoa is Latin1; token payloads are ASCII (kebab-case ids/types).
-  return btoa(input).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function fromBase64Url(input: string): string {
-  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
-  // Throws on invalid base64; callers wrap in try/catch.
-  return atob(padded);
-}
-
 export function encodeWatchlistToken(state: WatchlistTokenState): string {
   const body = {
     v: TOKEN_VERSION,
@@ -53,7 +43,8 @@ export function encodeWatchlistToken(state: WatchlistTokenState): string {
     t: state.alertTypes,
     p: state.presetIds,
   };
-  return toBase64Url(JSON.stringify(body));
+  // Payloads are ASCII (kebab-case ids/types), so this matches the prior btoa codec byte-for-byte.
+  return stringToBase64Url(JSON.stringify(body));
 }
 
 function asStringArray(value: unknown): string[] {
@@ -72,7 +63,8 @@ export function decodeWatchlistToken(raw: string): WatchlistTokenDecodeResult {
 
   let json: string;
   try {
-    json = fromBase64Url(cleaned);
+    // Throws on invalid base64; copy/paste artifacts were already stripped above.
+    json = base64UrlToString(cleaned);
   } catch {
     return { ok: false, error: "malformed" };
   }
