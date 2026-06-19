@@ -7,9 +7,9 @@ const SEC = 1_700_000_000;
 // Substring matchers — the mock-d1 helper does a substring search against the
 // raw SQL emitted by the projector, so each pattern only has to be unique
 // enough to disambiguate the projector's two queries.
-const MATCH_FETCH_HISTORY = "is_best = 1 AND recorded_at > ?";
+const MATCH_FETCH_HISTORY = "recorded_at > ? OR (recorded_at = ? AND stablecoin_id > ?)";
 const MATCH_PRIOR_HISTORY = "MAX(recorded_at) as max_at";
-const MATCH_FETCH_DECISIONS = "WHERE created_at > ?";
+const MATCH_FETCH_DECISIONS = "created_at > ? OR (created_at = ? AND stablecoin_id > ?)";
 const MATCH_PRIOR_DECISIONS = "MAX(created_at) as max_at";
 const MATCH_CACHE = "FROM cache WHERE key";
 
@@ -220,6 +220,37 @@ describe("yield.warning_emitted projector", () => {
     expect(result.projected).toBe(0);
     expect(extractInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(0);
   });
+
+  it("persists a composite timestamp/coin cursor from timestamp-ordered warning scans", async () => {
+    const db = mockD1(
+      historyTables([
+        {
+          stablecoin_id: "a-issuer",
+          source_key: "aave-v3:a",
+          recorded_at: SEC,
+          warning_signals: JSON.stringify(["yield-spike"]),
+        },
+        {
+          stablecoin_id: "b-issuer",
+          source_key: "aave-v3:b",
+          recorded_at: SEC,
+          warning_signals: JSON.stringify(["yield-spike"]),
+        },
+      ], [], 0),
+    ) as MockD1Database;
+
+    await projectYieldWarningEmitted(db, { maxRows: 2 });
+
+    const historyScan = db.getHistory().find((entry) => entry.sql.includes(MATCH_FETCH_HISTORY));
+    expect(historyScan?.sql).toContain("ORDER BY recorded_at ASC, stablecoin_id ASC");
+    const cacheWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(JSON.parse(cacheWrite?.binds[1] as string)).toEqual({
+      timestamp: SEC,
+      stablecoinId: "b-issuer",
+    });
+  });
 });
 
 describe("yield.pys_dropped projector", () => {
@@ -363,5 +394,36 @@ describe("yield.pys_dropped projector", () => {
     const result = await projectYieldPysDropped(db);
     expect(result.projected).toBe(0);
     expect(extractInsertBindsForType(db, "yield.pys_dropped")).toHaveLength(0);
+  });
+
+  it("persists a composite timestamp/coin cursor from timestamp-ordered PYS scans", async () => {
+    const db = mockD1(
+      decisionTables([
+        {
+          stablecoin_id: "a-issuer",
+          selected_source_key: "aave-v3:a",
+          selected_score: 80,
+          created_at: SEC,
+        },
+        {
+          stablecoin_id: "b-issuer",
+          selected_source_key: "aave-v3:b",
+          selected_score: 80,
+          created_at: SEC,
+        },
+      ], [], 0),
+    ) as MockD1Database;
+
+    await projectYieldPysDropped(db, { maxRows: 2 });
+
+    const decisionScan = db.getHistory().find((entry) => entry.sql.includes(MATCH_FETCH_DECISIONS));
+    expect(decisionScan?.sql).toContain("ORDER BY created_at ASC, stablecoin_id ASC");
+    const cacheWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(JSON.parse(cacheWrite?.binds[1] as string)).toEqual({
+      timestamp: SEC,
+      stablecoinId: "b-issuer",
+    });
   });
 });

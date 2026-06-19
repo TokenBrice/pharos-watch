@@ -4,7 +4,7 @@ import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransition
 
 const SEC = 1_700_000_000;
 
-const MATCH_FETCH_SAMPLES = "WHERE computed_at > ?";
+const MATCH_FETCH_SAMPLES = "computed_at > ? OR (computed_at = ? AND stablecoin_id > ?)";
 const MATCH_PRIOR_BAND = "MAX(computed_at) as max_at";
 
 function extractInsertBinds(db: MockD1Database): unknown[][] {
@@ -238,5 +238,27 @@ describe("dews projector", () => {
     expect(result.projected).toBe(0);
     expect(extractInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
     expect(extractInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
+  });
+
+  it("persists a composite timestamp/coin cursor from timestamp-ordered scans", async () => {
+    const db = mockD1(
+      baseTables([
+        { stablecoin_id: "a-issuer", computed_at: SEC, score: 10, band: "CALM" },
+        { stablecoin_id: "b-issuer", computed_at: SEC, score: 60, band: "WARNING" },
+      ]),
+    ) as MockD1Database;
+
+    await projectDewsBandTransitions(db, { maxRows: 2 });
+
+    const sampleScan = db.getHistory().find((entry) => entry.sql.includes(MATCH_FETCH_SAMPLES));
+    expect(sampleScan?.sql).toContain("ORDER BY computed_at ASC, stablecoin_id ASC");
+    const cacheWrites = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(cacheWrites).toHaveLength(2);
+    expect(JSON.parse(cacheWrites[0]!.binds[1] as string)).toEqual({
+      timestamp: SEC,
+      stablecoinId: "b-issuer",
+    });
   });
 });

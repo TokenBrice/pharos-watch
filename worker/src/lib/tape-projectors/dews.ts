@@ -10,14 +10,16 @@
  * coin.
  *
  * Algorithm:
- *   1. Read all rows with `computed_at > watermark` (ordered by coin, time).
+ *   1. Read rows after the persisted `(computed_at, stablecoin_id)` cursor
+ *      (ordered by source timestamp, then coin, for safe limited batches).
  *   2. For each coin in the batch, look up its most recent sample BEFORE the
  *      watermark to seed the "previous band" for the batch's first row.
  *   3. Walk samples per coin and emit one event for each band change.
  *
  * Idempotency: `sourceRowId` is `<coinId>:<computed_at>:<newBand>`, and the
  * `tape_events` unique index on `(source_table, source_row_id, transition)`
- * absorbs duplicates. Watermark advancement keeps the scan cheap on re-runs.
+ * absorbs duplicates. Composite cursor advancement keeps the scan cheap on
+ * re-runs without skipping same-timestamp rows.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
@@ -26,9 +28,10 @@ import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/cl
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import { buildInClause, chunkArray } from "../db";
 import {
-  getProjectorWatermark,
+  getProjectorCompositeCursor,
   insertTapeEvents,
-  setProjectorWatermark,
+  setProjectorCompositeCursor,
+  type ProjectorCompositeCursor,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
@@ -54,16 +57,19 @@ const BAND_SEVERITY: Record<ThreatBand, TapeEventSeverity> = {
 async function fetchSamplesSince(
   db: D1Database,
   since: number,
+  sinceStablecoinId: string,
   until: number | null,
   limit: number,
 ): Promise<StressSignalRow[]> {
   const untilClause = until != null ? " AND computed_at <= ?" : "";
   const sql = `SELECT stablecoin_id, computed_at, score, band
                  FROM stress_signals
-                 WHERE computed_at > ?${untilClause}
+                 WHERE (computed_at > ? OR (computed_at = ? AND stablecoin_id > ?))${untilClause}
                  ORDER BY computed_at ASC, stablecoin_id ASC
                  LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
+  const binds: unknown[] = until != null
+    ? [since, since, sinceStablecoinId, until, limit]
+    : [since, since, sinceStablecoinId, limit];
   const result = await db.prepare(sql).bind(...binds).all<StressSignalRow>();
   return result.results ?? [];
 }
@@ -77,9 +83,11 @@ async function fetchPriorBands(
   db: D1Database,
   coinIds: string[],
   since: number,
+  inclusive: boolean = true,
 ): Promise<Map<string, StressSignalRow>> {
   const map = new Map<string, StressSignalRow>();
   if (coinIds.length === 0 || since <= 0) return map;
+  const op = inclusive ? "<=" : "<";
 
   for (const chunk of chunkArray([...new Set(coinIds)])) {
     const inClause = buildInClause(chunk);
@@ -91,7 +99,7 @@ async function fetchPriorBands(
              SELECT stablecoin_id, MAX(computed_at) as max_at
              FROM stress_signals
              WHERE stablecoin_id IN (${inClause.sql})
-               AND computed_at <= ?
+               AND computed_at ${op} ?
              GROUP BY stablecoin_id
            ) latest
              ON s.stablecoin_id = latest.stablecoin_id
@@ -104,6 +112,45 @@ async function fetchPriorBands(
     }
   }
   return map;
+}
+
+async function fetchPriorBandsForCursor(
+  db: D1Database,
+  rows: StressSignalRow[],
+  cursor: ProjectorCompositeCursor,
+): Promise<Map<string, StressSignalRow>> {
+  const firstByCoin = new Map<string, StressSignalRow>();
+  for (const row of rows) {
+    if (!firstByCoin.has(row.stablecoin_id)) firstByCoin.set(row.stablecoin_id, row);
+  }
+  const inclusiveCoinIds: string[] = [];
+  const exclusiveCoinIds: string[] = [];
+  for (const [coinId, row] of firstByCoin) {
+    if (cursor.stablecoinId && row.computed_at === cursor.timestamp) {
+      exclusiveCoinIds.push(coinId);
+    } else {
+      inclusiveCoinIds.push(coinId);
+    }
+  }
+  const priorByCoin = await fetchPriorBands(db, inclusiveCoinIds, cursor.timestamp);
+  const exclusivePriorByCoin = await fetchPriorBands(db, exclusiveCoinIds, cursor.timestamp, false);
+  for (const [coinId, row] of exclusivePriorByCoin) priorByCoin.set(coinId, row);
+  return priorByCoin;
+}
+
+function lastSampleCursor(rows: StressSignalRow[], fallback: ProjectorCompositeCursor): ProjectorCompositeCursor {
+  const last = rows[rows.length - 1];
+  return last
+    ? { timestamp: last.computed_at, stablecoinId: last.stablecoin_id }
+    : fallback;
+}
+
+function minCompositeCursor(
+  a: ProjectorCompositeCursor,
+  b: ProjectorCompositeCursor,
+): ProjectorCompositeCursor {
+  if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? a : b;
+  return a.stablecoinId <= b.stablecoinId ? a : b;
 }
 
 interface BandTransition {
@@ -202,34 +249,33 @@ async function projectDewsByVariant(
 ): Promise<ProjectorResult> {
   const cursorKey = variant === "escalated" ? "dews.escalated" : "dews.deescalated";
   const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const persistedCursor = options?.since == null
+    ? await getProjectorCompositeCursor(db, cursorKey)
+    : { timestamp: since, stablecoinId: "" };
 
-  const rows = await fetchSamplesSince(db, since, until, limit);
+  const rows = await fetchSamplesSince(db, since, persistedCursor.stablecoinId, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
+  const advancedCursor = lastSampleCursor(rows, persistedCursor);
+  const maxCursor = advancedCursor.timestamp;
   rows.sort((a, b) => (
     a.stablecoin_id === b.stablecoin_id
       ? a.computed_at - b.computed_at
       : a.stablecoin_id.localeCompare(b.stablecoin_id)
   ));
 
-  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
-  const priorByCoin = await fetchPriorBands(db, distinctCoinIds, since);
+  const priorByCoin = await fetchPriorBandsForCursor(db, rows, persistedCursor);
 
   const transitions = classifyTransitions(rows, priorByCoin);
   const wanted = transitions.filter((t) => t.direction === variant);
 
   const events = wanted.map(buildEvent);
 
-  let maxCursor = since;
-  for (const row of rows) {
-    if (row.computed_at > maxCursor) maxCursor = row.computed_at;
-  }
-
   if (!dryRun) {
     if (events.length > 0) await insertTapeEvents(db, events);
     // Advance the watermark even when nothing transitioned, so we do not
     // re-scan the same snapshot rows next run.
     if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
+      await setProjectorCompositeCursor(db, cursorKey, advancedCursor);
     }
   }
   return { projected: events.length, advanced: dryRun ? null : maxCursor };
@@ -265,37 +311,36 @@ export async function projectDewsBandTransitions(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   // Seed from the older of the two cursors so neither variant skips a window.
-  const escWatermark = await getProjectorWatermark(db, "dews.escalated");
-  const deescWatermark = await getProjectorWatermark(db, "dews.deescalated");
-  const since = options?.since ?? Math.min(escWatermark, deescWatermark);
+  const escCursor = await getProjectorCompositeCursor(db, "dews.escalated");
+  const deescCursor = await getProjectorCompositeCursor(db, "dews.deescalated");
+  const cursor = options?.since == null
+    ? minCompositeCursor(escCursor, deescCursor)
+    : { timestamp: options.since, stablecoinId: "" };
+  const since = cursor.timestamp;
   const until = options?.until ?? null;
   const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
   const dryRun = options?.dryRun === true;
 
-  const rows = await fetchSamplesSince(db, since, until, limit);
+  const rows = await fetchSamplesSince(db, since, cursor.stablecoinId, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
+  const advancedCursor = lastSampleCursor(rows, cursor);
+  const maxCursor = advancedCursor.timestamp;
   rows.sort((a, b) => (
     a.stablecoin_id === b.stablecoin_id
       ? a.computed_at - b.computed_at
       : a.stablecoin_id.localeCompare(b.stablecoin_id)
   ));
 
-  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
-  const priorByCoin = await fetchPriorBands(db, distinctCoinIds, since);
+  const priorByCoin = await fetchPriorBandsForCursor(db, rows, cursor);
 
   const transitions = classifyTransitions(rows, priorByCoin);
   const events = transitions.map(buildEvent);
 
-  let maxCursor = since;
-  for (const row of rows) {
-    if (row.computed_at > maxCursor) maxCursor = row.computed_at;
-  }
-
   if (!dryRun) {
     if (events.length > 0) await insertTapeEvents(db, events);
     if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, "dews.escalated", maxCursor);
-      await setProjectorWatermark(db, "dews.deescalated", maxCursor);
+      await setProjectorCompositeCursor(db, "dews.escalated", advancedCursor);
+      await setProjectorCompositeCursor(db, "dews.deescalated", advancedCursor);
     }
   }
   return { projected: events.length, advanced: dryRun ? null : maxCursor };

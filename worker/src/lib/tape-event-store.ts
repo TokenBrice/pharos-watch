@@ -12,6 +12,15 @@ function tapeProjectorCursorKey(eventClass: string): string {
 export async function getProjectorWatermark(db: D1Database, eventClass: string): Promise<number> {
   const row = await getCache(db, tapeProjectorCursorKey(eventClass));
   if (!row) return 0;
+  if (row.value.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(row.value) as { timestamp?: unknown };
+      const timestamp = Number(parsed.timestamp);
+      return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0;
+    } catch {
+      return 0;
+    }
+  }
   const parsed = Number(row.value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
@@ -24,6 +33,54 @@ export async function setProjectorWatermark(
 ): Promise<void> {
   if (!Number.isFinite(value) || value <= 0) return;
   await setCache(db, tapeProjectorCursorKey(eventClass), String(Math.floor(value)));
+}
+
+export interface ProjectorCompositeCursor {
+  timestamp: number;
+  stablecoinId: string;
+}
+
+/** Read a timestamp + stablecoin cursor, with backward compatibility for numeric watermarks. */
+export async function getProjectorCompositeCursor(
+  db: D1Database,
+  eventClass: string,
+): Promise<ProjectorCompositeCursor> {
+  const row = await getCache(db, tapeProjectorCursorKey(eventClass));
+  if (!row) return { timestamp: 0, stablecoinId: "" };
+  if (!row.value.startsWith("{")) {
+    const timestamp = Number(row.value);
+    return {
+      timestamp: Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0,
+      stablecoinId: "",
+    };
+  }
+  try {
+    const parsed = JSON.parse(row.value) as { timestamp?: unknown; stablecoinId?: unknown };
+    const timestamp = Number(parsed.timestamp);
+    return {
+      timestamp: Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0,
+      stablecoinId: typeof parsed.stablecoinId === "string" ? parsed.stablecoinId : "",
+    };
+  } catch {
+    return { timestamp: 0, stablecoinId: "" };
+  }
+}
+
+/** Write a timestamp + stablecoin cursor for timestamp-ordered snapshot projectors. */
+export async function setProjectorCompositeCursor(
+  db: D1Database,
+  eventClass: string,
+  value: ProjectorCompositeCursor,
+): Promise<void> {
+  if (!Number.isFinite(value.timestamp) || value.timestamp <= 0) return;
+  await setCache(
+    db,
+    tapeProjectorCursorKey(eventClass),
+    JSON.stringify({
+      timestamp: Math.floor(value.timestamp),
+      stablecoinId: value.stablecoinId,
+    }),
+  );
 }
 
 /**

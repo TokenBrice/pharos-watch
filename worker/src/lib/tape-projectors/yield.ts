@@ -18,7 +18,9 @@
  *
  * Idempotency: sourceRowId encodes the source-row timestamp + event class,
  * which is unique per generation/coin, so re-runs are absorbed by the
- * tape_events (source_table, source_row_id, transition) unique index.
+ * tape_events (source_table, source_row_id, transition) unique index. Snapshot
+ * scans persist a `(timestamp, stablecoin_id)` cursor so limited batches can
+ * resume within same-timestamp groups without skipping later coins.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
@@ -27,8 +29,10 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import { buildInClause, chunkArray } from "../db";
 import {
+  getProjectorCompositeCursor,
   insertTapeEvents,
-  setProjectorWatermark,
+  setProjectorCompositeCursor,
+  type ProjectorCompositeCursor,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
@@ -93,16 +97,20 @@ interface YieldHistoryRow {
 async function fetchYieldHistorySince(
   db: D1Database,
   since: number,
+  sinceStablecoinId: string,
   until: number | null,
   limit: number,
 ): Promise<YieldHistoryRow[]> {
   const untilClause = until != null ? " AND recorded_at <= ?" : "";
   const sql = `SELECT stablecoin_id, source_key, recorded_at, warning_signals
                  FROM yield_history
-                 WHERE is_best = 1 AND recorded_at > ?${untilClause}
-                 ORDER BY stablecoin_id ASC, recorded_at ASC
+                 WHERE is_best = 1
+                   AND (recorded_at > ? OR (recorded_at = ? AND stablecoin_id > ?))${untilClause}
+                 ORDER BY recorded_at ASC, stablecoin_id ASC
                  LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
+  const binds: unknown[] = until != null
+    ? [since, since, sinceStablecoinId, until, limit]
+    : [since, since, sinceStablecoinId, limit];
   const result = await db.prepare(sql).bind(...binds).all<YieldHistoryRow>();
   return result.results ?? [];
 }
@@ -116,9 +124,11 @@ async function fetchPriorWarningSignals(
   db: D1Database,
   coinIds: string[],
   since: number,
+  inclusive: boolean = true,
 ): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   if (coinIds.length === 0 || since <= 0) return map;
+  const op = inclusive ? "<=" : "<";
   for (const chunk of chunkArray([...new Set(coinIds)])) {
     const inClause = buildInClause(chunk);
     const rows = await db
@@ -130,7 +140,7 @@ async function fetchPriorWarningSignals(
              FROM yield_history
              WHERE stablecoin_id IN (${inClause.sql})
                AND is_best = 1
-               AND recorded_at <= ?
+               AND recorded_at ${op} ?
              GROUP BY stablecoin_id
            ) latest
              ON yh.stablecoin_id = latest.stablecoin_id
@@ -146,21 +156,64 @@ async function fetchPriorWarningSignals(
   return map;
 }
 
+async function fetchPriorWarningSignalsForCursor(
+  db: D1Database,
+  rows: YieldHistoryRow[],
+  cursor: ProjectorCompositeCursor,
+): Promise<Map<string, string[]>> {
+  const firstByCoin = new Map<string, YieldHistoryRow>();
+  for (const row of rows) {
+    if (!firstByCoin.has(row.stablecoin_id)) firstByCoin.set(row.stablecoin_id, row);
+  }
+  const inclusiveCoinIds: string[] = [];
+  const exclusiveCoinIds: string[] = [];
+  for (const [coinId, row] of firstByCoin) {
+    if (cursor.stablecoinId && row.recorded_at === cursor.timestamp) {
+      exclusiveCoinIds.push(coinId);
+    } else {
+      inclusiveCoinIds.push(coinId);
+    }
+  }
+  const priorByCoin = await fetchPriorWarningSignals(db, inclusiveCoinIds, cursor.timestamp);
+  const exclusivePriorByCoin = await fetchPriorWarningSignals(db, exclusiveCoinIds, cursor.timestamp, false);
+  for (const [coinId, signals] of exclusivePriorByCoin) priorByCoin.set(coinId, signals);
+  return priorByCoin;
+}
+
+function lastCursor<T extends { stablecoin_id: string }>(
+  rows: T[],
+  timestampFor: (row: T) => number,
+  fallback: ProjectorCompositeCursor,
+): ProjectorCompositeCursor {
+  const last = rows[rows.length - 1];
+  return last
+    ? { timestamp: timestampFor(last), stablecoinId: last.stablecoin_id }
+    : fallback;
+}
+
 export async function projectYieldWarningEmitted(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   const cursorKey = "yield.warning_emitted";
   const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const persistedCursor = options?.since == null
+    ? await getProjectorCompositeCursor(db, cursorKey)
+    : { timestamp: since, stablecoinId: "" };
 
-  const rows = await fetchYieldHistorySince(db, since, until, limit);
+  const rows = await fetchYieldHistorySince(db, since, persistedCursor.stablecoinId, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
+  const advancedCursor = lastCursor(rows, (row) => row.recorded_at, persistedCursor);
+  const maxCursor = advancedCursor.timestamp;
+  rows.sort((a, b) => (
+    a.stablecoin_id === b.stablecoin_id
+      ? a.recorded_at - b.recorded_at
+      : a.stablecoin_id.localeCompare(b.stablecoin_id)
+  ));
 
-  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
-  const priorByCoin = await fetchPriorWarningSignals(db, distinctCoinIds, since);
+  const priorByCoin = await fetchPriorWarningSignalsForCursor(db, rows, persistedCursor);
 
   const events: TapeEventInsert[] = [];
-  let maxCursor = since;
 
   // Rows are ordered by stablecoin_id ASC, recorded_at ASC. Walk per-coin and
   // emit when net-new signals appear vs. the running snapshot.
@@ -171,8 +224,6 @@ export async function projectYieldWarningEmitted(
       currentCoin = row.stablecoin_id;
       prevSignals = priorByCoin.get(currentCoin) ?? [];
     }
-    if (row.recorded_at > maxCursor) maxCursor = row.recorded_at;
-
     const currentSignals = parseSignals(row.warning_signals);
     if (currentSignals.length === 0) {
       prevSignals = currentSignals;
@@ -233,7 +284,7 @@ export async function projectYieldWarningEmitted(
   if (!dryRun) {
     if (events.length > 0) await insertTapeEvents(db, events);
     if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
+      await setProjectorCompositeCursor(db, cursorKey, advancedCursor);
     }
   }
   return { projected: events.length, advanced: dryRun ? null : maxCursor };
@@ -251,16 +302,19 @@ interface YieldDecisionRow {
 async function fetchYieldDecisionsSince(
   db: D1Database,
   since: number,
+  sinceStablecoinId: string,
   until: number | null,
   limit: number,
 ): Promise<YieldDecisionRow[]> {
   const untilClause = until != null ? " AND created_at <= ?" : "";
   const sql = `SELECT stablecoin_id, selected_source_key, selected_score, created_at
                  FROM yield_source_decisions
-                 WHERE created_at > ?${untilClause}
-                 ORDER BY stablecoin_id ASC, created_at ASC
+                 WHERE (created_at > ? OR (created_at = ? AND stablecoin_id > ?))${untilClause}
+                 ORDER BY created_at ASC, stablecoin_id ASC
                  LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
+  const binds: unknown[] = until != null
+    ? [since, since, sinceStablecoinId, until, limit]
+    : [since, since, sinceStablecoinId, limit];
   const result = await db.prepare(sql).bind(...binds).all<YieldDecisionRow>();
   return result.results ?? [];
 }
@@ -269,9 +323,11 @@ async function fetchPriorPysScores(
   db: D1Database,
   coinIds: string[],
   since: number,
+  inclusive: boolean = true,
 ): Promise<Map<string, number | null>> {
   const map = new Map<string, number | null>();
   if (coinIds.length === 0 || since <= 0) return map;
+  const op = inclusive ? "<=" : "<";
   for (const chunk of chunkArray([...new Set(coinIds)])) {
     const inClause = buildInClause(chunk);
     const rows = await db
@@ -282,7 +338,7 @@ async function fetchPriorPysScores(
              SELECT stablecoin_id, MAX(created_at) as max_at
              FROM yield_source_decisions
              WHERE stablecoin_id IN (${inClause.sql})
-               AND created_at <= ?
+               AND created_at ${op} ?
              GROUP BY stablecoin_id
            ) latest
              ON ysd.stablecoin_id = latest.stablecoin_id
@@ -298,22 +354,53 @@ async function fetchPriorPysScores(
   return map;
 }
 
+async function fetchPriorPysScoresForCursor(
+  db: D1Database,
+  rows: YieldDecisionRow[],
+  cursor: ProjectorCompositeCursor,
+): Promise<Map<string, number | null>> {
+  const firstByCoin = new Map<string, YieldDecisionRow>();
+  for (const row of rows) {
+    if (!firstByCoin.has(row.stablecoin_id)) firstByCoin.set(row.stablecoin_id, row);
+  }
+  const inclusiveCoinIds: string[] = [];
+  const exclusiveCoinIds: string[] = [];
+  for (const [coinId, row] of firstByCoin) {
+    if (cursor.stablecoinId && row.created_at === cursor.timestamp) {
+      exclusiveCoinIds.push(coinId);
+    } else {
+      inclusiveCoinIds.push(coinId);
+    }
+  }
+  const priorByCoin = await fetchPriorPysScores(db, inclusiveCoinIds, cursor.timestamp);
+  const exclusivePriorByCoin = await fetchPriorPysScores(db, exclusiveCoinIds, cursor.timestamp, false);
+  for (const [coinId, score] of exclusivePriorByCoin) priorByCoin.set(coinId, score);
+  return priorByCoin;
+}
+
 export async function projectYieldPysDropped(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   const cursorKey = "yield.pys_dropped";
   const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const persistedCursor = options?.since == null
+    ? await getProjectorCompositeCursor(db, cursorKey)
+    : { timestamp: since, stablecoinId: "" };
 
-  const rows = await fetchYieldDecisionsSince(db, since, until, limit);
+  const rows = await fetchYieldDecisionsSince(db, since, persistedCursor.stablecoinId, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
+  const advancedCursor = lastCursor(rows, (row) => row.created_at, persistedCursor);
+  const maxCursor = advancedCursor.timestamp;
+  rows.sort((a, b) => (
+    a.stablecoin_id === b.stablecoin_id
+      ? a.created_at - b.created_at
+      : a.stablecoin_id.localeCompare(b.stablecoin_id)
+  ));
 
-  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
-  const priorByCoin = await fetchPriorPysScores(db, distinctCoinIds, since);
+  const priorByCoin = await fetchPriorPysScoresForCursor(db, rows, persistedCursor);
 
   const events: TapeEventInsert[] = [];
-  let maxCursor = since;
-
   let currentCoin: string | null = null;
   let prevScore: number | null = null;
   for (const row of rows) {
@@ -321,8 +408,6 @@ export async function projectYieldPysDropped(
       currentCoin = row.stablecoin_id;
       prevScore = priorByCoin.get(currentCoin) ?? null;
     }
-    if (row.created_at > maxCursor) maxCursor = row.created_at;
-
     const newScore = row.selected_score;
     if (newScore == null || !Number.isFinite(newScore)) {
       // Carry prevScore unchanged — a null score does not reset the baseline.
@@ -380,7 +465,7 @@ export async function projectYieldPysDropped(
   if (!dryRun) {
     if (events.length > 0) await insertTapeEvents(db, events);
     if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
+      await setProjectorCompositeCursor(db, cursorKey, advancedCursor);
     }
   }
   return { projected: events.length, advanced: dryRun ? null : maxCursor };
