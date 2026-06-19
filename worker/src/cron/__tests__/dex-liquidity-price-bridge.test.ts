@@ -11,8 +11,8 @@ describe("loadDexPriceSources", () => {
             {
               stablecoin_id: "usdc",
               price_sources_json: JSON.stringify([
-                { protocol: "fluid", chain: "ethereum", price: 0.9998, tvl: 500000 },
-                { protocol: "balancer", chain: "ethereum", price: 1.0001, tvl: 800000 },
+                { protocol: "fluid", sourceFamily: "fluid", chain: "ethereum", price: 0.9998, tvl: 500000 },
+                { protocol: "balancer", sourceFamily: "balancer", chain: "ethereum", price: 1.0001, tvl: 800000 },
               ]),
               updated_at: Math.floor(Date.now() / 1000),
             },
@@ -88,7 +88,7 @@ describe("loadDexPriceSources", () => {
             {
               stablecoin_id: "usdc",
               price_sources_json: JSON.stringify([
-                { protocol: "fluid", chain: "ethereum", price: 0.9998, tvl: 500000 },
+                { protocol: "fluid", sourceFamily: "fluid", chain: "ethereum", price: 0.9998, tvl: 500000 },
               ]),
               updated_at: updatedAt,
             },

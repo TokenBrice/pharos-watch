@@ -537,8 +537,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 4,
             source_total_tvl: 5_000_000,
             price_sources_json: JSON.stringify([
-              { price: 0.96, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
-              { price: 0.955, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 0.96, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 0.955, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
             ]),
           },
           {
@@ -548,8 +548,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 4,
             source_total_tvl: 5_000_000,
             price_sources_json: JSON.stringify([
-              { price: 1.001, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
-              { price: 1, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 1.001, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 1, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
             ]),
           },
         ],
@@ -761,8 +761,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 4,
             source_total_tvl: 6_000_000,
             price_sources_json: JSON.stringify([
-              { price: 1.03, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
-              { price: 1.031, tvl: 3_000_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 1.03, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 1.031, tvl: 3_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
             ]),
           },
         ],
@@ -852,8 +852,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 3,
             source_total_tvl: 5_000_000,
             price_sources_json: JSON.stringify([
-              { price: 0.988, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
-              { price: 0.987, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 0.988, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 0.987, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
             ]),
           },
         ],
@@ -1037,8 +1037,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 4,
             source_total_tvl: 4_000_000,
             price_sources_json: JSON.stringify([
-              { price: 1.03, tvl: 1_500_000, protocol: "curve", chain: "ethereum" },
-              { price: 1.001, tvl: 900_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 1.03, tvl: 1_500_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 1.001, tvl: 900_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
             ]),
           },
         ],
@@ -1351,8 +1351,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 2,
             source_total_tvl: 5_000_000,
             price_sources_json: JSON.stringify([
-              { price: 0.96, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
-              { price: 0.959, tvl: 2_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.96, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 0.959, tvl: 2_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
             ]),
           },
         ],
@@ -1692,9 +1692,9 @@ describe("confirmPendingDepegs", () => {
             source_total_tvl: 3_290_000,
             // Individual pools show real depeg via price_sources_json
             price_sources_json: JSON.stringify([
-              { price: 0.80, tvl: 500_000, protocol: "curve", chain: "ethereum" },
-              { price: 0.95, tvl: 200_000, protocol: "uniswap", chain: "ethereum" },
-              { price: 1.00, tvl: 50_000, protocol: "balancer", chain: "ethereum" },
+              { price: 0.80, tvl: 500_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 0.95, tvl: 200_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+              { price: 1.00, tvl: 50_000, protocol: "balancer", sourceFamily: "balancer", chain: "ethereum" },
             ]),
           },
         ],
@@ -1757,8 +1757,8 @@ describe("confirmPendingDepegs", () => {
             source_total_tvl: 50_000_000,
             // All pools near peg — should NOT confirm
             price_sources_json: JSON.stringify([
-              { price: 1.001, tvl: 20_000_000, protocol: "uniswap", chain: "ethereum" },
-              { price: 0.999, tvl: 15_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 1.001, tvl: 20_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+              { price: 0.999, tvl: 15_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
             ]),
           },
         ],
@@ -1806,8 +1806,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 5,
             source_total_tvl: 10_000_000,
             price_sources_json: JSON.stringify([
-              { price: 0.98, tvl: 1_000_000, protocol: "curve", chain: "ethereum" },
-              { price: 0.979, tvl: 1_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.98, tvl: 1_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 0.979, tvl: 1_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
             ]),
           },
         ],
@@ -1856,8 +1856,8 @@ describe("confirmPendingDepegs", () => {
           source_pool_count: 4,
           source_total_tvl: 4_000_000,
           price_sources_json: JSON.stringify([
-            { price: 0.997, tvl: 5_000_000, protocol: "curve", chain: "ethereum" },
-            { price: 1.012, tvl: 5_000_000, protocol: "uniswap", chain: "ethereum" },
+            { price: 0.997, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+            { price: 1.012, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
           ]),
         },
       ];
@@ -1899,7 +1899,7 @@ describe("confirmPendingDepegs", () => {
           source_pool_count: 1,
           source_total_tvl: 6_000_000,
           price_sources_json: JSON.stringify([
-            { price: 0.98, tvl: 6_000_000, protocol: "curve", chain: "ethereum" },
+            { price: 0.98, tvl: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
           ]),
         },
       ];
@@ -1940,8 +1940,8 @@ describe("confirmPendingDepegs", () => {
           source_pool_count: 4,
           source_total_tvl: 4_000_000,
           price_sources_json: JSON.stringify([
-            { price: 0.998, tvl: 5_000_000, protocol: "curve", chain: "ethereum" },
-            { price: 0.999, tvl: 5_000_000, protocol: "uniswap", chain: "ethereum" },
+            { price: 0.998, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+            { price: 0.999, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
           ]),
         },
       ];
@@ -2024,8 +2024,8 @@ describe("confirmPendingDepegs", () => {
             source_pool_count: 3,
             source_total_tvl: 5_000_000,
             price_sources_json: JSON.stringify([
-              { price: 0.988, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
-              { price: 0.987, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 0.988, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 0.987, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
             ]),
           },
         ],

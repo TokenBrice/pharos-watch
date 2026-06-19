@@ -188,8 +188,8 @@ function normalizeDexGroupPart(value: string | null | undefined, fallback: strin
   return normalized.length > 0 ? normalized : fallback;
 }
 
-export function dexProtocolGroupKey(source: Pick<DexPoolSource, "protocol" | "chain">): string {
-  return normalizeDexGroupPart(source.protocol, normalizeDexGroupPart(source.chain, "unknown"));
+export function dexProtocolGroupKey(source: Pick<DexPoolSource, "protocol" | "chain" | "sourceFamily">): string {
+  return normalizeDexGroupPart(source.sourceFamily, "unknown");
 }
 
 export function dexPoolIndependentGroupKey(

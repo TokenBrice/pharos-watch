@@ -32,6 +32,11 @@ const POOL_VOL_TO_TVL_RATIO_MAX = 50;
 const LARGE_POOL_TVL_MIN_USD = 100_000_000;
 const LARGE_POOL_MIN_VOLUME_USD = 50_000;
 
+function normalizeSourceFamily(value: string | null | undefined): string | undefined {
+  const normalized = (value ?? "").trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   const protocolTvl: Record<string, number> = {};
   const chainTvl: Record<string, number> = {};
@@ -471,15 +476,19 @@ export function collapseDuplicateObservations(
 
 export function aggregateProtocolSources(
   observations: DexPriceObs[],
-): Array<{ protocol: string; chain: string; price: number; tvl: number }> {
-  const byProtocol = new Map<string, DexPriceObs[]>();
+): Array<{ protocol: string; chain: string; price: number; tvl: number; sourceFamily?: string }> {
+  const byProtocolFamily = new Map<string, DexPriceObs[]>();
   for (const observation of observations) {
-    const existing = byProtocol.get(observation.protocol) ?? [];
+    const sourceFamily = normalizeSourceFamily(observation.sourceFamily);
+    const key = `${observation.protocol}:${sourceFamily ?? "unknown"}`;
+    const existing = byProtocolFamily.get(key) ?? [];
     existing.push(observation);
-    byProtocol.set(observation.protocol, existing);
+    byProtocolFamily.set(key, existing);
   }
 
-  const aggregated = Array.from(byProtocol.entries(), ([protocol, protocolObs]) => {
+  const aggregated = Array.from(byProtocolFamily.values(), (protocolObs) => {
+    const protocol = protocolObs[0]?.protocol ?? "unknown";
+    const sourceFamily = normalizeSourceFamily(protocolObs[0]?.sourceFamily);
     const totalTvl = protocolObs.reduce((sum, observation) => sum + observation.tvl, 0);
 
     const chains = [...new Set(protocolObs.map((observation) => observation.chain))];
@@ -488,6 +497,7 @@ export function aggregateProtocolSources(
       chain: chains.length === 1 ? chains[0] : "multi",
       price: tvlWeightedMedian(protocolObs),
       tvl: Math.round(totalTvl),
+      ...(sourceFamily != null ? { sourceFamily } : {}),
     };
   });
 
