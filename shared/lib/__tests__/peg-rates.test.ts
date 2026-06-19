@@ -149,6 +149,20 @@ describe("normalizePegType", () => {
     expect(normalizePegType("peggedEUR")).toBe("peggedEUR");
     expect(normalizePegType(undefined)).toBeUndefined();
   });
+
+  it("handles peg types that match inherited object property names", () => {
+    const result = derivePegRates([
+      asset("constructor-token", "constructor", 1.23, 2_000_000),
+      asset("proto-token", "__proto__", 1.25, 2_000_000),
+      asset("tostring-token", "toString", 1.27, 2_000_000),
+    ]);
+
+    expect(result.rates["constructor"]).toBe(1.23);
+    expect(result.rates["__proto__"]).toBe(1.25);
+    expect(result.rates["toString"]).toBe(1.27);
+    expect(result.sources["constructor"]).toBe("median");
+    expect(result.counts["__proto__"]).toBe(1);
+  });
 });
 
 describe("getPegReference", () => {
