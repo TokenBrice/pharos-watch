@@ -101,7 +101,9 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
     ),
   ),
   defineDynamicRouteFromDescriptor("og-image", (routeCtx) =>
-    handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
+    handleOg(routeCtx.db, routeCtx.url.pathname, routeCtx.request.method).then(
+      (response) => response ?? errorResponse(404, "Unknown OG route"),
+    ),
   ),
   defineDynamicRouteFromDescriptor("snapshot-day", (routeCtx, match) => handleSnapshotDay(routeCtx.db, match[1])),
   defineDynamicRouteFromDescriptor("snapshot-coin", (routeCtx, match) => {

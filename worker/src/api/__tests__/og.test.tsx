@@ -331,6 +331,19 @@ describe("chain OG route", () => {
     const res = await handleOg(mockD1([]), "/api/og/chain/not-a-chain");
     expect(res?.status).toBe(404);
   });
+
+  it("answers HEAD without loading data or rendering the PNG", async () => {
+    const db = makeChainOgDb([makeAsset({ chainCirculating: {}, chains: [] })]);
+    const satoriMock = vi.mocked(satoriStandalone);
+    satoriMock.mockClear();
+
+    const res = await handleOg(db, "/api/og/chain/ethereum", "HEAD");
+
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("Content-Type")).toBe("image/png");
+    expect((await res?.arrayBuffer())?.byteLength).toBe(0);
+    expect(satoriMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("depeg OG handler aggregation", () => {

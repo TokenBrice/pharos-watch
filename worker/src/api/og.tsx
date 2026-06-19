@@ -660,7 +660,39 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
 const STABLECOIN_OG_PATTERN = /^\/api\/og\/stablecoin\/(.+)$/;
 const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;
 
-export async function handleOg(db: D1Database, path: string): Promise<Response | null> {
+function handleOgHead(path: string): Response | null {
+  const stablecoinMatch = path.match(STABLECOIN_OG_PATTERN);
+  if (stablecoinMatch) {
+    try {
+      const resolved = resolveOrReject(decodeURIComponent(stablecoinMatch[1]));
+      if (resolved instanceof Response) {
+        return ogErrorResponse("Unknown stablecoin", 404);
+      }
+      return new Response(null, { headers: CACHE_HEADERS });
+    } catch {
+      return ogErrorResponse("Malformed URI", 400);
+    }
+  }
+
+  const chainMatch = path.match(CHAIN_OG_PATTERN);
+  if (chainMatch) {
+    return CHAIN_META[chainMatch[1]]
+      ? new Response(null, { headers: CACHE_HEADERS })
+      : ogErrorResponse("Unknown chain", 404);
+  }
+
+  if (path === "/api/og/safety-scores" || path === "/api/og/depeg" || path === "/api/og/stability-index") {
+    return new Response(null, { headers: CACHE_HEADERS });
+  }
+
+  return null;
+}
+
+export async function handleOg(db: D1Database, path: string, method = "GET"): Promise<Response | null> {
+  if (method === "HEAD") {
+    return handleOgHead(path);
+  }
+
   try {
     // /api/og/stablecoin/:id
     const stablecoinMatch = path.match(STABLECOIN_OG_PATTERN);
