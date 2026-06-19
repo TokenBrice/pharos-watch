@@ -8,7 +8,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
 import { readDewsPublishedGeneration } from "../lib/dews-publication-pointer";
 import { deriveDepegSignal } from "../lib/depeg-signals";
-import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
+import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 
@@ -184,7 +184,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       for (const row of rows) {
         if (!DEWS_STRESS_BANDS.has(row.band)) continue;
         const coinMcap = mcapById.get(row.stablecoin_id) ?? 0;
-        dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * 1.5;
+        dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * DEWS_STRESS_BREADTH_SCALE;
       }
     }
   } catch (error) {

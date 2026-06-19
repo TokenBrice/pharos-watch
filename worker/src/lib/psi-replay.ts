@@ -1,5 +1,5 @@
 import { isDewsAlertBand } from "@shared/lib/classification";
-import { computeStabilityIndex, type StabilityInput, type StabilityResult } from "./stability-index";
+import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, type StabilityInput, type StabilityResult } from "./stability-index";
 import type { SupplySnapshotMap, PsiUniverseCache } from "./psi-history-universe";
 import { getPsiHistoricalUniverseForDay } from "./psi-history-universe";
 import { buildStabilityInputForDay, type PsiDepegEventRow } from "./psi-recompute";
@@ -41,7 +41,7 @@ export function computeHistoricalDewsStressBreadth(
   for (const row of rows) {
     if (!isDewsAlertBand(row.band)) continue;
     const mcapUsd = universe.mcapById.get(row.stablecoin_id) ?? 0;
-    stressBreadth += Math.sqrt(mcapUsd / 1e9) * 1.5;
+    stressBreadth += Math.sqrt(mcapUsd / 1e9) * DEWS_STRESS_BREADTH_SCALE;
   }
 
   return stressBreadth;

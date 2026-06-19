@@ -44,6 +44,11 @@ export interface StabilityResult {
 
 const K = 60;
 const GRACE_DAYS = 30;
+
+/** Stress-breadth scale: multiplied by sqrt(mcapUsd/1e9) for each DEWS-stressed coin.
+ * Must stay in sync with the live cron (cron/stability-index.ts) and the replay path
+ * (lib/psi-replay.ts) — export from here to enforce a single source of truth. */
+export const DEWS_STRESS_BREADTH_SCALE = 1.5;
 const DECAY_DAYS = 120;
 const DEPRECIATION_FLOOR = 0.25;
 
