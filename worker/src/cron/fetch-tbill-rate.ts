@@ -1163,24 +1163,8 @@ export async function fetchTbillRate(
     throwIfAborted(signal);
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");
     const usdBenchmark = usdRetained ?? buildHardcodedUsdBenchmark("circuit-open");
-    const uniformCircuitOpenKeys = [
-      "USD_EFFR",
-      "EUR",
-      "CHF",
-      "GBP",
-      "JPY",
-      "MXN",
-      "BRL",
-      "AUD",
-      "CAD",
-      "RUB",
-      "TRY",
-    ] as const;
-    const uniformBenchmarks = {} as Record<
-      (typeof uniformCircuitOpenKeys)[number],
-      ParsedYieldBenchmarkMeta | null
-    >;
-    for (const key of uniformCircuitOpenKeys) {
+    const uniformBenchmarks = {} as Record<BenchmarkProviderKey, ParsedYieldBenchmarkMeta | null>;
+    for (const key of BENCHMARK_PROVIDER_ORDER) {
       uniformBenchmarks[key] = buildRetainedBenchmark(previous[key] ?? null, "circuit-open");
     }
     const benchmarks: ParsedYieldBenchmarkRegistry = {
