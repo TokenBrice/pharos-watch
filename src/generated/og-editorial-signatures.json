@@ -1,0 +1,52 @@
+{
+  "generatedBy": "scripts/maintenance/build-og-editorial.mjs",
+  "methodologyVersion": "8.13",
+  "fonts": {
+    "newsreader": "9e25af908d11add17f0e32bb096f119aea11da11bcc5abd7d896e620aa61081c",
+    "geistMono": "a4022744c97e497a45bc1d05e68221104df6829f6cac74552e0fdb03a331c648"
+  },
+  "cards": [
+    {
+      "file": "og-editorial-digest.png",
+      "kicker": "Daily Digest",
+      "title": "Daily Digest",
+      "svgSha256": "a1412eb5141e64f42bf8c8b609a9fef097f315378a7054503103bef0ec66d4e0"
+    },
+    {
+      "file": "og-editorial-depeg.png",
+      "kicker": "Depeg Briefing",
+      "title": "Depeg Briefing",
+      "svgSha256": "bbdef1ac2c062d7cad9d23f250249a88024ee4bd4e8aea103832dc9cf2359178"
+    },
+    {
+      "file": "og-editorial-methodology.png",
+      "kicker": "Methodology",
+      "title": "How Pharos grades the peg",
+      "svgSha256": "b8fa9b919d485682e95eb22a522f6b960f9bb97616ecc1fba152ca61c4a430ad"
+    },
+    {
+      "file": "og-editorial-cemetery.png",
+      "kicker": "Cemetery",
+      "title": "A record of failure",
+      "svgSha256": "e24fca5247bf57b89d97482e3864460f9dfd65549c40cf22f07801313f8998ab"
+    },
+    {
+      "file": "og-editorial-about.png",
+      "kicker": "About",
+      "title": "About Pharos",
+      "svgSha256": "e37275c5d49fad54a7d03a7f9c32596d49244099e3796e5030a4e08ffc569323"
+    },
+    {
+      "file": "og-editorial-learn.png",
+      "kicker": "Learn",
+      "title": "Stablecoin mechanisms",
+      "svgSha256": "5243659bbc4fc304d386b9454593015240c5ce32fa7559260050b94afc9264e5"
+    },
+    {
+      "file": "og-editorial-profile.png",
+      "kicker": "Stablecoin Profile",
+      "title": "Stablecoin Profile",
+      "svgSha256": "3e49eeb9027de268a1fc50532abbbcad85be2d538fe706a2ded6efdd2df8c1ec"
+    }
+  ]
+}

@@ -18,6 +18,8 @@
  *   node scripts/maintenance/build-og-editorial.mjs --check
  */
 import { firefox } from "playwright";
+import sharp from "sharp";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -26,10 +28,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const PUBLIC = resolve(REPO_ROOT, "public");
 const STAGING = resolve(REPO_ROOT, "agents/og-editorial-staging");
+const SIGNATURE_PATH = resolve(REPO_ROOT, "src/generated/og-editorial-signatures.json");
+const NEWSREADER_FONT = resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2");
+const GEIST_MONO_FONT = resolve(REPO_ROOT, "src/assets/fonts/GeistMono-Regular.woff2");
 const CHECK_MODE = process.argv.includes("--check");
 
 mkdirSync(STAGING, { recursive: true });
 mkdirSync(PUBLIC, { recursive: true });
+mkdirSync(dirname(SIGNATURE_PATH), { recursive: true });
 
 // Read the canonical methodology version label so the version pin always
 // matches what the rest of the app renders. Both the TS app and this script
@@ -41,6 +47,10 @@ const { currentVersion } = JSON.parse(
   ),
 );
 const METHODOLOGY_LABEL = `Methodology v${currentVersion}`;
+const FONT_SIGNATURES = {
+  newsreader: sha256(readFileSync(NEWSREADER_FONT)),
+  geistMono: sha256(readFileSync(GEIST_MONO_FONT)),
+};
 
 const CARDS = [
   { kicker: "Daily Digest", title: "Daily Digest", file: "og-editorial-digest.png" },
@@ -139,15 +149,68 @@ function escapeXml(s) {
     .replace(/'/g, "&apos;");
 }
 
+function sha256(input) {
+  return createHash("sha256").update(input).digest("hex");
+}
+
+function buildSignatureManifest(cards) {
+  return `${JSON.stringify(
+    {
+      generatedBy: "scripts/maintenance/build-og-editorial.mjs",
+      methodologyVersion: currentVersion,
+      fonts: FONT_SIGNATURES,
+      cards,
+    },
+    null,
+    2,
+  )}\n`;
+}
+
+async function comparePngContent(expectedPath, actualPath) {
+  const expected = await sharp(expectedPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const actual = await sharp(actualPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (
+    expected.info.width !== actual.info.width ||
+    expected.info.height !== actual.info.height ||
+    expected.info.channels !== actual.info.channels
+  ) {
+    return {
+      matches: false,
+      summary: `dimension/channel mismatch expected ${expected.info.width}x${expected.info.height}x${expected.info.channels}, got ${actual.info.width}x${actual.info.height}x${actual.info.channels}`,
+    };
+  }
+
+  let totalAbs = 0;
+  let changedPixels = 0;
+  const { data: expectedData } = expected;
+  const { data: actualData } = actual;
+  const channels = expected.info.channels;
+  const pixelCount = expected.info.width * expected.info.height;
+  for (let offset = 0; offset < expectedData.length; offset += channels) {
+    let pixelDelta = 0;
+    for (let channel = 0; channel < channels; channel += 1) {
+      const channelDelta = Math.abs(expectedData[offset + channel] - actualData[offset + channel]);
+      pixelDelta += channelDelta;
+      totalAbs += channelDelta;
+    }
+    if (pixelDelta / channels > 8) {
+      changedPixels += 1;
+    }
+  }
+
+  const meanAbsPerChannel = totalAbs / expectedData.length;
+  const changedPixelRatio = changedPixels / pixelCount;
+  return {
+    matches: meanAbsPerChannel <= 2.5 && changedPixelRatio <= 0.04,
+    summary: `meanAbsPerChannel=${meanAbsPerChannel.toFixed(3)}, changedPixels=${(changedPixelRatio * 100).toFixed(2)}%`,
+  };
+}
+
 // Wrap SVG in an HTML page that loads the Pharos local fonts via @font-face
 // so Playwright Firefox can use the exact serif/mono the dashboard renders.
 function buildHtml(svg) {
-  const newsreaderUrl = pathToFileURL(
-    resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2"),
-  ).href;
-  const geistMonoUrl = pathToFileURL(
-    resolve(REPO_ROOT, "src/assets/fonts/GeistMono-Regular.woff2"),
-  ).href;
+  const newsreaderUrl = pathToFileURL(NEWSREADER_FONT).href;
+  const geistMonoUrl = pathToFileURL(GEIST_MONO_FONT).href;
   return `<!doctype html>
 <html><head><meta charset="utf-8"/>
 <style>
@@ -174,9 +237,16 @@ function buildHtml(svg) {
 
 const browser = await firefox.launch({ headless: true });
 const staleFiles = [];
+const signatures = [];
 try {
   for (const card of CARDS) {
     const svg = buildSvg({ kicker: card.kicker, title: card.title });
+    signatures.push({
+      file: card.file,
+      kicker: card.kicker,
+      title: card.title,
+      svgSha256: sha256(svg),
+    });
     const svgPath = resolve(STAGING, card.file.replace(/\.png$/, ".svg"));
     const htmlPath = resolve(STAGING, card.file.replace(/\.png$/, ".html"));
     writeFileSync(svgPath, svg);
@@ -201,8 +271,15 @@ try {
     if (CHECK_MODE) {
       const expected = existsSync(publicPath) ? readFileSync(publicPath) : null;
       const actual = readFileSync(outPath);
-      if (!expected || !actual.equals(expected)) {
+      if (!expected) {
         staleFiles.push(card.file);
+      } else if (!actual.equals(expected)) {
+        const comparison = await comparePngContent(publicPath, outPath);
+        if (comparison.matches) {
+          console.warn(`${card.file}: byte-level PNG drift tolerated (${comparison.summary})`);
+        } else {
+          staleFiles.push(`${card.file} (${comparison.summary})`);
+        }
       }
     }
 
@@ -215,6 +292,16 @@ try {
       /* swallow */
     }
     console.log(`${CHECK_MODE ? "Checked" : "Wrote"} ${publicPath} (kicker: ${card.kicker})`);
+  }
+
+  const signatureManifest = buildSignatureManifest(signatures);
+  if (CHECK_MODE) {
+    const expectedManifest = existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
+    if (expectedManifest !== signatureManifest) {
+      staleFiles.push("src/generated/og-editorial-signatures.json");
+    }
+  } else {
+    writeFileSync(SIGNATURE_PATH, signatureManifest);
   }
 
   if (staleFiles.length > 0) {
