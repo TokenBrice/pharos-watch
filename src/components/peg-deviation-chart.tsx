@@ -17,7 +17,7 @@ import {
 } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
-import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
 import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
@@ -267,20 +267,15 @@ export function PegDeviationChart({
           role="figure"
           aria-label={`Peg deviation chart showing ${visibleData.length} data points`}
         >
-          {(() => {
-            const { rows, truncated } = capDataForTable(visibleData, 90);
-            return (
-              <ChartDataTable
-                caption={
-                  truncated
-                    ? `Peg deviation history — most recent ${rows.length} of ${visibleData.length} data points`
-                    : `Peg deviation history — ${visibleData.length} data points`
-                }
-                data={rows}
-                columns={PEG_TABLE_COLUMNS}
-              />
-            );
-          })()}
+          <ScreenReaderDataTable
+            data={visibleData}
+            columns={PEG_TABLE_COLUMNS}
+            caption={(rows, truncated, total) =>
+              truncated
+                ? `Peg deviation history — most recent ${rows.length} of ${total} data points`
+                : `Peg deviation history — ${total} data points`
+            }
+          />
           {isChartReady ? (
             <LineChart
               width={width}

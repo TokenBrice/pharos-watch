@@ -12,7 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { TimeXAxis, MonoYAxis, TimeGrid, ChartLegendChip } from "@/components/chart-primitives/axes";
-import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
@@ -255,21 +255,16 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
         role="figure"
         aria-label={`Mint and burn waterfall chart showing ${chartData.length} ${useDailyBuckets ? "daily" : "hourly"} data points`}
       >
-        {(() => {
-          const { rows, truncated } = capDataForTable(chartData, 90);
-          const bucketLabel = useDailyBuckets ? "daily" : "hourly";
-          return (
-            <ChartDataTable
-              caption={
-                truncated
-                  ? `Mint and burn flow — most recent ${rows.length} of ${chartData.length} ${bucketLabel} buckets`
-                  : `Mint and burn flow — ${chartData.length} ${bucketLabel} buckets`
-              }
-              data={rows}
-              columns={FLOW_TABLE_COLUMNS}
-            />
-          );
-        })()}
+        <ScreenReaderDataTable
+          data={chartData}
+          columns={FLOW_TABLE_COLUMNS}
+          caption={(rows, truncated, total) => {
+            const bucketLabel = useDailyBuckets ? "daily" : "hourly";
+            return truncated
+              ? `Mint and burn flow — most recent ${rows.length} of ${total} ${bucketLabel} buckets`
+              : `Mint and burn flow — ${total} ${bucketLabel} buckets`;
+          }}
+        />
         {isChartReady ? (
           <ComposedChart
             width={width}

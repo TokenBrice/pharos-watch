@@ -16,7 +16,7 @@ import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
-import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
@@ -185,20 +185,15 @@ export function McapChart({
           role="figure"
           aria-label={`Market cap chart showing ${visibleData.length} data points`}
         >
-          {(() => {
-            const { rows, truncated } = capDataForTable(visibleData, 90);
-            return (
-              <ChartDataTable
-                caption={
-                  truncated
-                    ? `Market cap history — most recent ${rows.length} of ${visibleData.length} data points`
-                    : `Market cap history — ${visibleData.length} data points`
-                }
-                data={rows}
-                columns={MCAP_TABLE_COLUMNS}
-              />
-            );
-          })()}
+          <ScreenReaderDataTable
+            data={visibleData}
+            columns={MCAP_TABLE_COLUMNS}
+            caption={(rows, truncated, total) =>
+              truncated
+                ? `Market cap history — most recent ${rows.length} of ${total} data points`
+                : `Market cap history — ${total} data points`
+            }
+          />
           {isChartReady ? (
             <AreaChart
               width={width}

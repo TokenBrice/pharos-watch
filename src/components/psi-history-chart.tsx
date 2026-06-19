@@ -15,8 +15,7 @@ import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-hi
 import { trackEvent } from "@/lib/analytics";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
 import {
-  ChartDataTable,
-  capDataForTable,
+  ScreenReaderDataTable,
   type ChartDataTableColumn,
 } from "@/components/chart-primitives/data-table";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -121,20 +120,15 @@ export function ScoreChart({
               role="figure"
               aria-label={`PSI score history chart showing ${filteredData.length} data points`}
             >
-              {(() => {
-                const { rows, truncated } = capDataForTable(filteredData, 90);
-                return (
-                  <ChartDataTable
-                    caption={
-                      truncated
-                        ? `PSI score history — most recent ${rows.length} of ${filteredData.length} data points`
-                        : `PSI score history — ${filteredData.length} data points`
-                    }
-                    data={rows}
-                    columns={PSI_TABLE_COLUMNS}
-                  />
-                );
-              })()}
+              <ScreenReaderDataTable
+                data={filteredData}
+                columns={PSI_TABLE_COLUMNS}
+                caption={(rows, truncated, total) =>
+                  truncated
+                    ? `PSI score history — most recent ${rows.length} of ${total} data points`
+                    : `PSI score history — ${total} data points`
+                }
+              />
               {isChartReady ? (
                 <div className="animate-fade-in">
                 <AreaChart

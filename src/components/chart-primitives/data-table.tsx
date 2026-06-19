@@ -116,3 +116,23 @@ export function capDataForTable<T>(
   if (data.length <= maxRows) return { rows: data, truncated: false };
   return { rows: data.slice(data.length - maxRows), truncated: true };
 }
+
+/**
+ * Convenience wrapper: caps `data` to `maxRows`, then renders a `ChartDataTable`.
+ * The `caption` render-prop receives `(rows, truncated, total)` so each chart
+ * can produce its own human-readable description without duplicating the cap logic.
+ */
+export function ScreenReaderDataTable<T>({
+  data,
+  columns,
+  maxRows = 90,
+  caption,
+}: {
+  data: ReadonlyArray<T>;
+  columns: ReadonlyArray<ChartDataTableColumn<T>>;
+  maxRows?: number;
+  caption: (rows: ReadonlyArray<T>, truncated: boolean, total: number) => string;
+}) {
+  const { rows, truncated } = capDataForTable(data, maxRows);
+  return <ChartDataTable caption={caption(rows, truncated, data.length)} data={rows} columns={columns} />;
+}
