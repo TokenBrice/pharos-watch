@@ -138,7 +138,7 @@ export const SHARED_SCHEDULED_JOB_IDENTITIES = {
 } as const satisfies Record<string, readonly CronScheduleKey[]>;
 
 export function flattenScheduledSlotPlanJobs(plan: ScheduledSlotPlan): string[] {
-  return plan.jobChains.flatMap((chain) => [...chain]);
+  return plan.jobChains.flatMap((chain) => chain);
 }
 
 export function getScheduledSlotPlanBudgetEntries(plan: ScheduledSlotPlan): string[] {
