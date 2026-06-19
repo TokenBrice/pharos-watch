@@ -26,12 +26,26 @@ interface SqliteD1 extends D1Database {
   sqlite: DatabaseSync;
 }
 
+function migrationFiles(): string[] {
+  return readdirSync(MIGRATIONS_DIR).filter((entry) => entry.endsWith(".sql")).sort();
+}
+
+function applyMigrationFile(db: DatabaseSync, file: string): void {
+  // Test-only migration replay loads repo-controlled SQL from the migration directory.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
+  db.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
+}
+
 function applyMigrations(db: DatabaseSync): void {
-  for (const file of readdirSync(MIGRATIONS_DIR).filter((entry) => entry.endsWith(".sql")).sort()) {
-    // Test-only migration replay must load every migration file from the repo-controlled migration directory.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    db.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
+  for (const file of migrationFiles()) applyMigrationFile(db, file);
+}
+
+function applyMigrationsThrough(db: DatabaseSync, throughFile: string): void {
+  for (const file of migrationFiles()) {
+    applyMigrationFile(db, file);
+    if (file === throughFile) return;
   }
+  throw new Error(`Migration ${throughFile} was not found`);
 }
 
 function makeSqliteD1(): SqliteD1 {
@@ -248,6 +262,141 @@ async function sealPredictionFixture(db: SqliteD1) {
 }
 
 describe("DDRv2 storage migrations and stores", () => {
+  it("repairs APXUSD event 90203 when the earlier relink migration found an accidental link", () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      applyMigrationsThrough(sqlite, "0153_status_reliability_idempotency.sql");
+
+      sqlite.exec(`
+        INSERT INTO depeg_events
+          (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+           started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+        VALUES
+          (90089, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', -1200,
+           1780671044, 1781624981, 0.99, 0.88, 1.00, 1, 'live'),
+          (90203, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', -900,
+           1781632159, NULL, 0.99, 0.91, NULL, 1, 'live');
+
+        INSERT INTO depeg_resolver_incident_event_links
+          (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+        VALUES
+          ('ddr2:e32c8186781838eac1b740a44c3b8776', 90089, 'observed', NULL, 1781625000, 'canonical event'),
+          ('ddr2:70a8e43c093e0afcdc8a37143a6849f9', 90203, 'observed', NULL, 1781632200, 'accidental tail');
+
+        INSERT INTO depeg_resolver_incidents
+          (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+           first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+           superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+        VALUES
+          ('ddr2:e32c8186781838eac1b740a44c3b8776', 'apxusd-apyx', 'USD', 'below',
+           90089, 90089, 1780671044, 1780671044, 1200, 'active', NULL,
+           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1781625000, 1781625000),
+          ('ddr2:70a8e43c093e0afcdc8a37143a6849f9', 'apxusd-apyx', 'USD', 'below',
+           90203, 90203, 1781632159, 1781632159, 900, 'active', NULL,
+           'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 1781632200, 1781632200);
+
+        DROP TRIGGER IF EXISTS trg_ddr_public_predictions_relational_guard;
+        DROP TRIGGER IF EXISTS trg_ddr_public_predictions_version_guard;
+        DROP TRIGGER IF EXISTS trg_ddr_public_predictions_payload_identity_guard;
+        DROP TRIGGER IF EXISTS trg_ddr_public_predictions_payload_prediction_guard;
+        DROP TRIGGER IF EXISTS trg_ddr_public_predictions_prediction_kind_guard;
+        DROP TRIGGER IF EXISTS trg_ddr_public_predictions_no_call_kind_guard;
+
+        INSERT INTO depeg_resolver_public_predictions
+          (incident_key, event_id, assessment_id, outcome_kind, prediction_policy_version,
+           prediction_methodology_version, prediction_methodology_version_label, resolution_rubric_version,
+           duration_model_version, incident_grouping_version, support_rules_version, policy_delay_sec,
+           eligible_at, locked_at, event_age_at_lock_sec, lock_timing, sealed_payload_json, row_hash, created_at)
+        VALUES
+          ('ddr2:e32c8186781838eac1b740a44c3b8776', 90089, 1, 'prediction', 'sticky-24h-v1',
+           'v1', 'v1', 'rubric-v1', 'duration-v1', 'group-v1', 'support-v1', 86400,
+           1780757444, 1780757444, 86400, 'on_time', '{}',
+           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc', 1780757444);
+
+        INSERT INTO cache (key, value, updated_at)
+        VALUES
+          ('depeg-resolver:snapshot', '{}', 1781632300),
+          ('depeg-resolver-review:snapshot', '{}', 1781632300);
+      `);
+
+      applyMigrationFile(sqlite, "0154_apxusd_ddr_tail_90203_link.sql");
+
+      expect(
+        sqlite
+          .prepare("SELECT incident_key FROM depeg_resolver_incident_event_links WHERE event_id = 90203")
+          .get(),
+      ).toEqual({ incident_key: "ddr2:70a8e43c093e0afcdc8a37143a6849f9" });
+      expect(
+        sqlite
+          .prepare("SELECT current_event_id FROM depeg_resolver_incidents WHERE incident_key = ?")
+          .get("ddr2:e32c8186781838eac1b740a44c3b8776"),
+      ).toEqual({ current_event_id: 90089 });
+
+      applyMigrationFile(sqlite, "0161_apxusd_ddr_tail_90203_relink_repair.sql");
+
+      expect(
+        sqlite
+          .prepare(
+            `SELECT incident_key, relation
+             FROM depeg_resolver_incident_event_links
+             WHERE event_id = 90203`,
+          )
+          .get(),
+      ).toEqual({
+        incident_key: "ddr2:e32c8186781838eac1b740a44c3b8776",
+        relation: "repair_replacement",
+      });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT current_event_id
+             FROM depeg_resolver_incidents
+             WHERE incident_key = ?`,
+          )
+          .get("ddr2:e32c8186781838eac1b740a44c3b8776"),
+      ).toEqual({ current_event_id: 90203 });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT incident_state, superseded_by_incident_key
+             FROM depeg_resolver_incidents
+             WHERE incident_key = ?`,
+          )
+          .get("ddr2:70a8e43c093e0afcdc8a37143a6849f9"),
+      ).toEqual({
+        incident_state: "superseded",
+        superseded_by_incident_key: "ddr2:e32c8186781838eac1b740a44c3b8776",
+      });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT COUNT(*) AS count
+             FROM depeg_resolver_event_repair_authorization_uses u
+             JOIN depeg_resolver_event_repair_authorizations a
+               ON a.id = u.authorization_id
+             WHERE a.event_id = 90203
+               AND a.incident_key = 'ddr2:e32c8186781838eac1b740a44c3b8776'
+               AND a.operation IN ('incident_link', 'incident_current_update')`,
+          )
+          .get(),
+      ).toEqual({ count: 2 });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT sql
+             FROM sqlite_master
+             WHERE type = 'index'
+               AND name = 'idx_ddr_incident_current_event'`,
+          )
+          .get(),
+      ).toEqual({
+        sql: "CREATE UNIQUE INDEX idx_ddr_incident_current_event\n  ON depeg_resolver_incidents(current_event_id)\n  WHERE incident_state = 'active'",
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("replaces the monolithic public-prediction guard with split triggers", () => {
     const db = makeSqliteD1();
     try {
