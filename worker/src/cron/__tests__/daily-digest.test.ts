@@ -1778,7 +1778,7 @@ describe("collectActiveDepegs", () => {
     expect(result.value.topDepegs[0].suppressReason).toBeUndefined();
   });
 
-  it("uses the live stablecoins-cache price instead of the open event peak", async () => {
+  it("keeps the open event peak as authoritative while showing cache price as context", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -1803,7 +1803,7 @@ describe("collectActiveDepegs", () => {
     expect(result.value.activeDepegCount).toBe(1);
     expect(result.value.topDepegs[0]).toMatchObject({
       symbol: "USDC",
-      bps: -100,
+      bps: -5568,
       peakBps: -5568,
       currentPriceUsd: 0.99,
       peakPriceUsd: 0.443,
@@ -1851,7 +1851,7 @@ describe("collectActiveDepegs", () => {
     expect(result.value.topDepegs.some((depeg) => depeg.stablecoinId === "usr-resolv")).toBe(false);
   });
 
-  it("does not keep an active depeg candidate when fresh cache price recovered", async () => {
+  it("keeps an open depeg event even when the cache price appears recovered", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -1873,8 +1873,16 @@ describe("collectActiveDepegs", () => {
 
     const result = await collectActiveDepegs(makeCollectorCtx(db));
 
-    expect(result.value.activeDepegCount).toBe(0);
-    expect(result.value.topDepegs).toEqual([]);
+    expect(result.value.activeDepegCount).toBe(1);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      bps: -500,
+      direction: "below",
+      peakBps: -500,
+      peakPriceUsd: 0.95,
+      currentPriceUsd: 0.9975,
+    });
   });
 });
 

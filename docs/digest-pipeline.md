@@ -41,7 +41,7 @@ The cron assembles a `DigestInputData` object from the collector set below befor
 |----------|--------|-------------|
 | Market metrics | stablecoins cache | Total mcap, 7d delta, biggest supply mover (>$1M), cache age |
 | Editorial candidates | derived from all collected signals | Pre-ranked lead candidates with impact, novelty, confidence, artifact risk, and suppression reasons |
-| Depeg events | `depeg_events` table + current `stablecoins` cache price | Active count, top 8 by critical severity then absolute current impact (\|live bps\| × mcap), active age/chronic suppression with critical-depeg override, historical peak context, resolved depegs by absolute impact |
+| Depeg events | `depeg_events` table + current `stablecoins` cache price as display context | Active count and active depeg inclusion follow open `depeg_events` rows (the canonical detector closes recovered events); top 8 are ranked by critical severity then recorded event impact (\|event bps\| × mcap), with cache price shown only as supplemental context, active age/chronic suppression with critical-depeg override, historical peak context, and resolved depegs by absolute impact |
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 15-min sample, yesterday's from daily table |
 | Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR ≥$10M single; zero-value bursts are artifact-risk candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
