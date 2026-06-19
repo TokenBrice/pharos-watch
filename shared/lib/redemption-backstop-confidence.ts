@@ -69,7 +69,7 @@ export function inferStoredFeeModelKind(args: {
   return "undisclosed-reviewed";
 }
 
-export function deriveModelConfidence(args: {
+export interface DeriveModelConfidenceArgs {
   resolutionState: RedemptionResolutionState;
   capacityConfidence: RedemptionCapacityConfidence;
   feeConfidence: RedemptionFeeConfidence;
@@ -80,25 +80,16 @@ export function deriveModelConfidence(args: {
   sourceMode?: RedemptionSourceMode;
   freshnessKind?: RedemptionLiveFreshnessKind;
   now?: number;
-}): RedemptionModelConfidence {
+}
+
+export function deriveModelConfidence(args: DeriveModelConfidenceArgs): RedemptionModelConfidence {
   // Allocation fast path: unresolved routes are always low-confidence and do
   // not need the five detail scorers unless a caller asks for details.
   if (args.resolutionState !== "resolved") return "low";
   return deriveModelConfidenceWithDetails(args).modelConfidence;
 }
 
-export function deriveModelConfidenceWithDetails(args: {
-  resolutionState: RedemptionResolutionState;
-  capacityConfidence: RedemptionCapacityConfidence;
-  feeConfidence: RedemptionFeeConfidence;
-  routeStatus?: RedemptionRouteStatus;
-  routeStatusSource?: RedemptionRouteStatusSource;
-  reviewedAt?: string;
-  holderEligibility?: RedemptionHolderEligibility;
-  sourceMode?: RedemptionSourceMode;
-  freshnessKind?: RedemptionLiveFreshnessKind;
-  now?: number;
-}): {
+export function deriveModelConfidenceWithDetails(args: DeriveModelConfidenceArgs): {
   modelConfidence: RedemptionModelConfidence;
   confidenceDetails: RedemptionConfidenceDetails;
 } {
