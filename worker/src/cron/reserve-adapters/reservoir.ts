@@ -59,14 +59,6 @@ const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
   "usdc",
 ];
 
-function searchableReservoirText(item: ReservoirBalanceItem): string {
-  return [
-    item.label,
-    item.description ?? "",
-    item.iconPath ?? "",
-  ].join(" ");
-}
-
 // Word-boundary regex rules are single-token exclusive; for multi-token
 // labels (e.g. "PYUSD/USDC") the first matching rule wins, so wrappers
 // (USD1/PYUSD/RLUSD/GHO) are listed before USDT/USDC.
@@ -98,7 +90,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     name: "AUSD lending markets",
     risk: "medium",
     ...wrapperAssetMeta("ausd"),
-    match: (item) => /\bAUSD\b/.test(searchableReservoirText(item)),
+    match: (item) => /\bAUSD\b/.test(item.label),
   },
   {
     key: "gho",
@@ -125,7 +117,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     // USDC standalone only; other stablecoins that contain "USD" (USD1/USDT/etc)
     // match their own rules first.
     match: (item) =>
-      /\bUSDC\b/.test(searchableReservoirText(item))
+      /\bUSDC\b/.test(item.label)
       || /\bSteakhouse Prime Instant\b/i.test(item.label),
   },
   {
@@ -138,13 +130,13 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "prime",
     name: "Hastra / Sentora PRIME credit allocations",
     risk: "high",
-    match: (item) => /\bPRIME\b/.test(searchableReservoirText(item)),
+    match: (item) => /\bPRIME\b/.test(item.label),
   },
   {
     key: "usdat",
     name: "Pendle PT USDat tokenized-treasury principal token",
     risk: "high",
-    match: (item) => /\bUSDAT\b/i.test(searchableReservoirText(item)),
+    match: (item) => /\bUSDAT\b/i.test(item.label),
   },
 ];
 
