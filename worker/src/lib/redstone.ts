@@ -209,7 +209,6 @@ export async function fetchRedstonePrices(
     let recoveredCount = 0;
     let retries = 0;
     for (const symbol of missingSymbols) {
-      if (results.has(symbol)) continue;
       if (retries >= REDSTONE_RETRY_BUDGET) break;
       retries++;
       await sleepWithSignal(REDSTONE_RETRY_SLEEP_MS, signal);
