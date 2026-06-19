@@ -151,8 +151,9 @@ The `collateralFromLive` flag in `RawDimensionInputs` indicates which collateral
 The `dependencyFromLive` flag indicates that the Dependency Risk input came from
 the same score-grade live reserve snapshot. Live slices with `coinId` links are
 converted to dependency weights; live slices without `coinId` stay as implicit
-self-backed / non-stablecoin reserve share instead of reviving older curated
-stablecoin-link percentages.
+self-backed / non-stablecoin reserve share. If a live snapshot contains no mapped
+`coinId` links at all, Dependency Risk falls back to curated reserve links or
+manual dependencies rather than treating an unmapped upstream feed as self-backed.
 
 A delta alert fires when the independent live-derived score diverges from curated by >15 points,
 signaling that curated metadata (and potentially the governance classification) may

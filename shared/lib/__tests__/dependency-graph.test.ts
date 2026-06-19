@@ -147,7 +147,7 @@ describe("dependency-graph", () => {
     ]);
   });
 
-  it("does not fall back to curated dependencies when live reserve slices have no tracked upstreams", () => {
+  it("falls back to curated dependencies when live reserve slices have no tracked upstreams", () => {
     const dependencies = deriveEffectiveDependencies(
       makeMeta({
         id: "dependent",
@@ -163,15 +163,38 @@ describe("dependency-graph", () => {
       },
     );
 
-    expect(dependencies).toEqual([]);
+    expect(dependencies).toEqual([
+      { id: "curated-upstream", weight: 1, type: "wrapper" },
+    ]);
   });
 
-  it("exposes live-unmapped provenance when live reserve slices resolve no tracked upstreams", () => {
+  it("exposes fallback provenance when live reserve slices resolve no tracked upstreams", () => {
     const result = deriveEffectiveDependencySet(
       makeMeta({
         id: "dependent",
         dependencies: [{ id: "manual-upstream", weight: 1, type: "collateral" }],
       }),
+      {
+        liveReserveSlices: [
+          { name: "Cash and bills", pct: 80, risk: "very-low" },
+          { name: "Tokenized treasuries", pct: 20, risk: "low" },
+        ],
+      },
+    );
+
+    expect(result).toMatchObject({
+      dependencies: [{ id: "manual-upstream", weight: 1, type: "collateral" }],
+      source: "manual",
+      baseSource: "manual",
+      dependencyFromLive: false,
+      mappedLiveReserveWeight: 0,
+    });
+  });
+
+
+  it("keeps live-unmapped provenance when unmapped live reserve slices have no fallback dependencies", () => {
+    const result = deriveEffectiveDependencySet(
+      makeMeta({ id: "dependent" }),
       {
         liveReserveSlices: [
           { name: "Cash and bills", pct: 80, risk: "very-low" },
