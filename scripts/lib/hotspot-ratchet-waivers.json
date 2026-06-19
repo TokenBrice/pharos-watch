@@ -87,13 +87,13 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "src/app/sitemap.ts": {
+  "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "The static sitemap manifest concentrates route membership and last-modified derivation for every indexable family. Keep it explicitly waived while route families are being added; split route-family builders only in a dedicated SEO metadata cleanup.",
+    "notes": "Yield route client surfaced as a max-function-lines hotspot after the security PR batch added empty-view controls, PYS scaling-factor plumbing, and benchmark provenance handling. Keep the accepted fixes scoped for this merge; split route orchestration, filter controls, and chart/leaderboard section rendering in a focused yield UI cleanup.",
     "owner": "repo-maintenance",
     "createdAt": "2026-06-19",
     "reviewAfter": "2026-09-19",
-    "nextAction": "Extract per-route-family sitemap entry builders if the manifest grows again."
+    "nextAction": "Extract yield route section rendering and URL/filter orchestration helpers from the client route shell."
   },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
