@@ -192,10 +192,45 @@ async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatch
     .filter((point) => point.date && Number.isFinite(point.timestamp) && point.timestamp > 0);
 }
 
+function sanitizePublicPulse(pulse: TelegramPulse): TelegramPulse {
+  const suppressedFields = new Set(pulse.privacy.suppressedFields);
+
+  return {
+    ...pulse,
+    newWatchersToday: pulse.newWatchersToday == null
+      ? pulse.newWatchersToday
+      : publicOptionalCount(pulse.newWatchersToday, "newWatchersToday", suppressedFields),
+    churnedWatchersToday: pulse.churnedWatchersToday == null
+      ? pulse.churnedWatchersToday
+      : publicOptionalCount(pulse.churnedWatchersToday, "churnedWatchersToday", suppressedFields),
+    reactivatedWatchersToday: pulse.reactivatedWatchersToday == null
+      ? pulse.reactivatedWatchersToday
+      : publicOptionalCount(pulse.reactivatedWatchersToday, "reactivatedWatchersToday", suppressedFields),
+    watcherHistory: sanitizeWatcherHistory(pulse.watcherHistory, suppressedFields),
+    quietHoursEnabledChats: pulse.quietHoursEnabledChats == null
+      ? pulse.quietHoursEnabledChats
+      : publicRequiredCount(pulse.quietHoursEnabledChats, "quietHoursEnabledChats", suppressedFields),
+    pendingDeliveries: pulse.pendingDeliveries == null
+      ? pulse.pendingDeliveries
+      : publicRequiredCount(pulse.pendingDeliveries, "pendingDeliveries", suppressedFields),
+    miniAppSessionsToday: pulse.miniAppSessionsToday == null
+      ? pulse.miniAppSessionsToday
+      : publicOptionalCount(pulse.miniAppSessionsToday, "miniAppSessionsToday", suppressedFields),
+    miniAppMutationsToday: pulse.miniAppMutationsToday == null
+      ? pulse.miniAppMutationsToday
+      : publicOptionalCount(pulse.miniAppMutationsToday, "miniAppMutationsToday", suppressedFields),
+    privacy: {
+      ...pulse.privacy,
+      lowCardinalityThreshold: PUBLIC_LOW_CARDINALITY_THRESHOLD,
+      suppressedFields: [...suppressedFields].sort(),
+    },
+  };
+}
+
 function parseCachedPulse(value: string): TelegramPulse | null {
   try {
     const result = TelegramPulseSchema.safeParse(JSON.parse(value));
-    return result.success ? result.data : null;
+    return result.success ? sanitizePublicPulse(result.data) : null;
   } catch {
     return null;
   }
