@@ -22,6 +22,9 @@ import {
   type StatusTransitionRow,
 } from "./status-reliability-shared";
 
+const STATUS_STATE_SELECT_COLUMNS =
+  "scope, current_status, raw_status, last_evaluated_at, last_changed_at, consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json";
+
 export async function reconcileStatusState(
   db: D1Database,
   now: number,
@@ -42,9 +45,7 @@ export async function reconcileStatusState(
   try {
     current = await db
       .prepare(
-        `SELECT scope, current_status, raw_status, last_evaluated_at, last_changed_at,
-                consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json
-         FROM status_state WHERE scope = ?`,
+        `SELECT ${STATUS_STATE_SELECT_COLUMNS} FROM status_state WHERE scope = ?`,
       )
       .bind(STATUS_SCOPE)
       .first<StatusStateRow>();
@@ -291,10 +292,7 @@ export async function getStatusStateSnapshot(
   try {
     const row = await db
       .prepare(
-        `SELECT scope, current_status, raw_status, last_evaluated_at, last_changed_at,
-                consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json
-         FROM status_state
-         WHERE scope = ?`,
+        `SELECT ${STATUS_STATE_SELECT_COLUMNS} FROM status_state WHERE scope = ?`,
       )
       .bind(STATUS_SCOPE)
       .first<StatusStateRow>();
