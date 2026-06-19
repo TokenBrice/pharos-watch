@@ -15,10 +15,21 @@ describe("handleTelegramPulse", () => {
       reactivatedWatchersToday: 0,
       historySource: "live-fallback",
       topCoins: ["USDC"],
-      pendingDeliveries: 0,
+      pendingDeliveries: 3,
+      miniAppSessionsToday: 4,
+      miniAppMutationsToday: 2,
       updatedAt: Math.floor(Date.now() / 1000),
       updatedEverySeconds: 300,
-      watcherHistory: [],
+      watcherHistory: [
+        {
+          date: "2026-04-01",
+          timestamp: 1_775_001_600_000,
+          newWatchers: 1,
+          activeWatchers: 8,
+          churnedWatchers: 2,
+          reactivatedWatchers: 0,
+        },
+      ],
     };
     const db = mockD1([
       {
@@ -37,6 +48,17 @@ describe("handleTelegramPulse", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       ...cachedPulse,
+      newWatchersToday: null,
+      pendingDeliveries: null,
+      miniAppSessionsToday: null,
+      miniAppMutationsToday: null,
+      watcherHistory: [
+        {
+          ...cachedPulse.watcherHistory[0],
+          newWatchers: null,
+          churnedWatchers: null,
+        },
+      ],
       currentSnapshotAt: cachedPulse.updatedAt,
       lifecycleHistoryUpdatedAt: null,
       lifecycleHistoryEverySeconds: 900,
@@ -44,7 +66,14 @@ describe("handleTelegramPulse", () => {
       privacy: {
         exactActiveWatchers: true,
         lowCardinalityThreshold: 5,
-        suppressedFields: [],
+        suppressedFields: [
+          "miniAppMutationsToday",
+          "miniAppSessionsToday",
+          "newWatchersToday",
+          "pendingDeliveries",
+          "watcherHistory.churnedWatchers",
+          "watcherHistory.newWatchers",
+        ],
       },
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers s"))).toBe(false);
@@ -890,9 +919,13 @@ describe("publishTelegramPulseSnapshot", () => {
     expect(pulse.coinSubscriptions).toBe(18);
     expect(pulse.pendingDeliveries).toBe(42);
     expect(pulse.topCoins).toEqual(["USDC"]);
-    expect(pulse.watcherHistory).toEqual(cachedPulse.watcherHistory);
+    expect(pulse.watcherHistory).toEqual([
+      { ...cachedPulse.watcherHistory[0], newWatchers: null },
+      cachedPulse.watcherHistory[1],
+    ]);
     expect(pulse.miniAppSessionsToday).toBe(7);
     expect(pulse.lifecycleHistoryUpdatedAt).toBe(nowSec - 3_600);
+    expect(pulse.privacy.suppressedFields).toContain("watcherHistory.newWatchers");
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("FROM telegram_pending_alerts"))).toBe(false);
