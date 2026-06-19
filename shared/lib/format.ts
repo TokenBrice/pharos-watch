@@ -1,6 +1,7 @@
 import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
 import { BPS_PER_UNIT } from "./math";
 import { isFiniteNumber } from "./type-guards";
+import type { PegCurrency } from "../types/core";
 export { formatCompactUsdShort, formatCompactUsdShortLowerK } from "./format-compact-usd-short";
 
 /** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
@@ -55,10 +56,10 @@ function trimTrailingZeros(value: string): string {
   return value.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
 }
 
-const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
+const PEG_CURRENCY_SYMBOLS: Record<PegCurrency, string> & Record<string, string> = {
   USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
-  IDR: "Rp", SGD: "S$", TRY: "₺", AUD: "A$", ZAR: "R",
-  CAD: "C$", CNY: "¥", CNH: "¥", PHP: "₱", MXN: "MX$", UAH: "₴", ARS: "AR$",
+  KRW: "₩", IDR: "Rp", INR: "₹", MYR: "RM", SGD: "S$", HKD: "HK$", TRY: "₺", AUD: "A$", ZAR: "R",
+  CAD: "C$", CNY: "¥", CNH: "¥", PHP: "₱", MXN: "MX$", VND: "₫", UAH: "₴", ARS: "AR$",
   KGS: "som", NGN: "₦", XOF: "CFA ",
   GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
