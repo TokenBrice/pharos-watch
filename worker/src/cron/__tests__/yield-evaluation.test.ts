@@ -375,6 +375,35 @@ describe("evaluateYieldSources", () => {
     expect(stale?.sourceRiskPenalty).toBeGreaterThan(1);
   });
 
+  it("uses DeFiLlama row-level observed timestamps before input metadata age", () => {
+    const startSec = 1776729600;
+    const rowObservedAt = startSec - 8 * 60 * 60;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      dlPoolsMeta: {
+        mode: "dex-cache",
+        updatedAt: startSec - 60,
+        ageSeconds: 60,
+        poolCount: 1,
+        fallbackMode: null,
+      },
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:row-stale",
+            sourceObservedAt: rowObservedAt,
+          }),
+        },
+      ],
+    }));
+
+    const stale = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:row-stale");
+    expect(stale?.sourceObservedAt).toBe(rowObservedAt);
+    expect(stale?.sourceRiskPenalty).toBeGreaterThan(1);
+  });
+
   it("marks derived rows with materially stale comparison anchors", () => {
     const startSec = 1776729600;
     const result = evaluateYieldSources(baseEvaluationInput({

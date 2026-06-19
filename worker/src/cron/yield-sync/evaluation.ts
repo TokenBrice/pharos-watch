@@ -171,6 +171,9 @@ function resolveSourceAgeSeconds(
   sourceObservedAt: number | null,
   dlPoolsMeta: YieldSourceInputMeta | undefined,
 ): number | null {
+  if (typeof source.sourceObservedAt === "number" && Number.isFinite(source.sourceObservedAt)) {
+    return computeSourceAgeSeconds(startSec, sourceObservedAt);
+  }
   if (
     isDefiLlamaDataSource(source.dataSource) &&
     typeof dlPoolsMeta?.ageSeconds === "number" &&
