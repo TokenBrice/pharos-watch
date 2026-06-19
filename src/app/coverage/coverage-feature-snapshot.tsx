@@ -57,6 +57,10 @@ export interface CoverageFeatureSnapshotRowProps {
 function getStackedBarItems(summary: CoverageFeatureSummary): CoverageBreakdownItem[] {
   const nonZeroItems = summary.breakdown.filter((item) => item.count > 0);
 
+  if (summary.feature.key === "mintAuthority") {
+    return nonZeroItems.filter((item) => !item.key.startsWith("score-"));
+  }
+
   if (summary.feature.key !== "price") {
     return nonZeroItems;
   }
