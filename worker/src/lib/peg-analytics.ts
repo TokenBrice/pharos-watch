@@ -69,7 +69,7 @@ export async function derivePegAnalyticsSnapshot(
   const [eventsResult, firstSeenMap] = await Promise.all([
     db.prepare(
       `SELECT /* pharos:peg-analytics:recent-depeg-events */
-         * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC`,
+         * FROM depeg_events_with_provenance WHERE started_at > ? ORDER BY started_at DESC`,
     )
       .bind(fourYearsAgoSec)
       .all<DepegRow>(),
