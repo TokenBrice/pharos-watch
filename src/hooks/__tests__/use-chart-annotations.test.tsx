@@ -310,6 +310,43 @@ describe("useChartAnnotations", () => {
     expect(result.current.data.map((a) => a.label)).toEqual(["Depeg opened (kept)"]);
   });
 
+  it("keeps material depeg peak-worsened tape rows", () => {
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    useApiQueryWithMetaMock.mockReturnValue({
+      data: {
+        events: [
+          tape({
+            id: "tape-peak-worsened",
+            type: "depeg.peak_worsened",
+            severity: "critical",
+            ts: Date.UTC(2023, 3, 11),
+            title: "Active depeg widened",
+            sourceUrl: "https://example.com/depeg-peak",
+          }),
+        ],
+        nextCursor: null,
+        total: 1,
+        totalExact: true,
+      },
+      isLoading: false,
+    });
+    getCuratedAnnotationsMock.mockReturnValue([]);
+
+    const { result } = renderHook(() =>
+      useChartAnnotations("test-coin", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
+    );
+
+    expect(result.current.data).toEqual([
+      {
+        ts: Date.UTC(2023, 3, 11),
+        kind: "depeg",
+        label: "Active depeg widened",
+        severity: "high",
+        href: "https://example.com/depeg-peak",
+      },
+    ]);
+  });
+
   it("sorts merged output by timestamp ascending", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
     useApiQueryWithMetaMock.mockReturnValue({

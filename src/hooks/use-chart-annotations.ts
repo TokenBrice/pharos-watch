@@ -59,6 +59,7 @@ const TAPE_EVENTS_LIMIT = 200;
  *
  * Only editorially significant tape kinds reach the chart overlay:
  *   - `depeg.opened` — rare, grade-impacting
+ *   - `depeg.peak_worsened` — active depeg widened materially
  *   - `methodology.*` — issued by us, low-volume
  *
  * `mint_burn.*` and `freeze.*` are intentionally NOT mapped. They fire often
@@ -74,7 +75,7 @@ const TAPE_EVENTS_LIMIT = 200;
  * editorial signal.
  */
 function mapWorkerKind(rowType: string): ChartAnnotationKind | null {
-  if (rowType === "depeg.opened") return "depeg";
+  if (rowType === "depeg.opened" || rowType === "depeg.peak_worsened") return "depeg";
   if (rowType.startsWith("methodology.")) return "methodology-change";
   return null;
 }
