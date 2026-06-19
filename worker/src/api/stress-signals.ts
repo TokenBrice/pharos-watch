@@ -462,10 +462,11 @@ export const handleStressSignals = withErrorHandler(
     const methodologyVersion = updatedAt > 0
       ? getDepegDewsMethodologyVersionAt(updatedAt)
       : DEPEG_DEWS_METHODOLOGY_VERSION;
+    const aggregateFreshnessAt = oldestComputedAt ?? updatedAt;
     const responseHeaders = updatedAt > 0
       ? addFreshnessHeaders({
           "Cache-Control": CACHE_PROFILES.standard,
-        }, updatedAt, STRESS_SIGNALS_MAX_AGE_SEC)
+        }, aggregateFreshnessAt, STRESS_SIGNALS_MAX_AGE_SEC)
       : buildUnavailableHeaders("DEWS current rows unavailable");
 
     return jsonResponse({ signals, updatedAt, oldestComputedAt: oldestComputedAt ?? undefined, eligibleCount, computedCount, missingCount, malformedRows, coverageRatio, coverageStatus: coverage.status, coverageReasons: coverage.reasons, methodology: buildMethodologyEnvelope({
