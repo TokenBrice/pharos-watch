@@ -137,6 +137,53 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
     });
   });
 
+  it("degrades M extension capacity when route probes cannot be verified", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      const to = call.to?.toLowerCase();
+      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
+      if (call.data === "0xae06b7e4") return jsonResponse({ result: addressResult(SWAP_FACILITY) });
+      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(4_000_000_000000n) });
+      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
+      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(4_000_000_000000n) });
+      }
+      if (to === SWAP_FACILITY && (call.data === "0x5c975abb" || call.data.startsWith("0xd8e21132"))) {
+        return jsonResponse({ error: { code: -32000, message: "route probe unavailable" } });
+      }
+      return null;
+    });
+
+    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
+    const result = await fetchM0WrapperUnderlyingReserves(
+      { id: "usdsc-startale" } as StablecoinMeta,
+      baseConfig({
+        mode: "m-extension",
+        expectedSwapFacilityAddress: SWAP_FACILITY,
+        swapperAddress: SWAPPER,
+      }),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      redemption: {
+        capacityUsd: 4_000_000,
+        routeStatus: "unknown",
+        routeStatusSource: "onchain",
+        routeStatusReason: "Could not verify M0 SwapFacility redemption path status",
+      },
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "m0-extension-route-unverified",
+        effect: "degraded",
+        severity: "warning",
+      }),
+    ]);
+  });
+
   it("degrades under-backed wrappers instead of publishing score-grade coverage", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
