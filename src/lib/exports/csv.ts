@@ -6,9 +6,15 @@ export interface CsvColumn<T> {
   accessor: (row: T, index: number) => string | number | null;
 }
 
+const FORMULA_LEADING_CHARS = /^[\t\r ]*[=+\-@]/;
+
+function neutralizeSpreadsheetFormula(value: string): string {
+  return FORMULA_LEADING_CHARS.test(value) ? `'${value}` : value;
+}
+
 export function escapeCsvField(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
-  const str = String(value);
+  const str = typeof value === "string" ? neutralizeSpreadsheetFormula(value) : String(value);
   return str.includes(",") || str.includes('"') || str.includes("\n")
     ? `"${str.replace(/"/g, '""')}"`
     : str;
