@@ -46,32 +46,18 @@ export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronSche
 export type CronTriggerMode = "shared" | "isolated";
 export type CronStatusImpact = "critical" | "watch";
 
-export const CRON_SCHEDULES = Object.freeze(
-  Object.fromEntries(
-    Object.entries(CRON_SCHEDULE_DEFINITIONS).map(([scheduleKey, definition]) => [
-      scheduleKey,
-      definition.schedule,
-    ]),
-  ) as Record<CronScheduleKey, CronScheduleExpression>,
-);
+const _cronSchedules: Record<string, CronScheduleExpression> = {};
+const _cronIntervals: Record<string, number> = {};
+const _cronOffsets: Record<string, number> = {};
+for (const [scheduleKey, definition] of Object.entries(CRON_SCHEDULE_DEFINITIONS)) {
+  _cronSchedules[scheduleKey] = definition.schedule;
+  _cronIntervals[scheduleKey] = definition.intervalSec;
+  _cronOffsets[scheduleKey] = definition.offsetSec;
+}
 
-const CRON_SCHEDULE_INTERVALS = Object.freeze(
-  Object.fromEntries(
-    Object.entries(CRON_SCHEDULE_DEFINITIONS).map(([scheduleKey, definition]) => [
-      scheduleKey,
-      definition.intervalSec,
-    ]),
-  ) as Record<CronScheduleKey, number>,
-);
-
-const CRON_SCHEDULE_BUCKET_OFFSETS = Object.freeze(
-  Object.fromEntries(
-    Object.entries(CRON_SCHEDULE_DEFINITIONS).map(([scheduleKey, definition]) => [
-      scheduleKey,
-      definition.offsetSec,
-    ]),
-  ) as Record<CronScheduleKey, number>,
-);
+export const CRON_SCHEDULES = Object.freeze(_cronSchedules as Record<CronScheduleKey, CronScheduleExpression>);
+const CRON_SCHEDULE_INTERVALS = Object.freeze(_cronIntervals as Record<CronScheduleKey, number>);
+const CRON_SCHEDULE_BUCKET_OFFSETS = Object.freeze(_cronOffsets as Record<CronScheduleKey, number>);
 
 export interface CronGroupDefinition {
   key: CronGroupKey;
