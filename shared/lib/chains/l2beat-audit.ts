@@ -43,7 +43,7 @@ export interface L2BeatAliasIntegrityIssue {
 
 export interface L2BeatInfrastructureContext {
   chainId: string;
-  projectId: string;
+  projectId: L2BeatProjectId;
   slug: string;
   name: string;
   layer: "layer2" | "layer3";
@@ -310,7 +310,7 @@ export function buildL2BeatChainCoverageAudit(options: {
       ...context,
       chainName: meta.name,
       aliasStatus: chainId in L2BEAT_CHAIN_ALIASES ? "explicit" : "implicit",
-      riskSentiments: riskSentimentCounts(context.projectId as L2BeatProjectId),
+      riskSentiments: riskSentimentCounts(context.projectId),
     });
   }
 
@@ -390,7 +390,7 @@ function reviewReasons(input: {
   if (input.audit.notes.some((note) => note.includes("under review"))) {
     reasons.add("l2beat-under-review");
   }
-  if (input.context.chainEnvironmentScore < 60 || hasWeakRiskSentiment(input.context.projectId as L2BeatProjectId)) {
+  if (input.context.chainEnvironmentScore < 60 || hasWeakRiskSentiment(input.context.projectId)) {
     reasons.add("weak-l2beat-chain-environment");
   }
 
@@ -410,14 +410,17 @@ export function buildL2BeatStablecoinSafetyAudit(options: {
     const contractChains = uniqueContractChains(coin);
     if (contractChains.length > 0) stablecoinsWithContracts += 1;
 
-    const auditsForCoin = contractChains.flatMap((chainId) => {
-      const audit = getL2BeatSafetyScoreAudit(chainId);
-      return audit ? [audit] : [];
-    });
+    const auditByChainId = new Map(
+      contractChains.flatMap((chainId) => {
+        const audit = getL2BeatSafetyScoreAudit(chainId);
+        return audit ? [[chainId, audit] as const] : [];
+      }),
+    );
+    const auditsForCoin = [...auditByChainId.values()];
     if (auditsForCoin.length > 0) stablecoinsWithL2BeatDeployments.add(coin.id);
 
     for (const chainId of contractChains) {
-      const audit = getL2BeatSafetyScoreAudit(chainId);
+      const audit = auditByChainId.get(chainId);
       const context = getL2BeatInfrastructureContext(chainId);
       if (!audit || !context) continue;
       matchedDeploymentCount += 1;
@@ -452,7 +455,7 @@ export function buildL2BeatStablecoinSafetyAudit(options: {
         suggestedChainTier: audit.suggestedChainTier,
         suggestedDeploymentModel: audit.suggestedDeploymentModel,
         reasons,
-        notes: [...audit.notes, ...weakestRiskNotes(context.projectId as L2BeatProjectId)],
+        notes: [...audit.notes, ...weakestRiskNotes(context.projectId)],
       });
     }
   }
