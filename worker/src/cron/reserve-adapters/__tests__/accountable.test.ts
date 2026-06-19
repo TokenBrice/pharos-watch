@@ -383,6 +383,99 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
+
+  it("rejects poisoned Apyx Accountable mapped buckets before reserve slice normalization", async () => {
+    const config = apxusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Apyx Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    await expect(fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.001022,
+              ts: "1780583904415",
+              reserves: {
+                total_reserves: { value: 476_302_149.26, name: "Total Reserves" },
+                reserves_split: [
+                  { value: -296_181_048.36, name: "STRC" },
+                  { value: 180_040_870.38, name: "Cash & Equivalents" },
+                  { value: 0, name: "SATA" },
+                  { value: "not-a-number", name: "Other" },
+                ],
+              },
+            },
+          })],
+        ]),
+      },
+    )).rejects.toThrow(/Accountable reserves_split bucket "STRC" has invalid value/);
+  });
+
+  it("rejects Apyx Accountable mapped buckets that would be silently dropped as zero", async () => {
+    const config = apxusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Apyx Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    await expect(fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.001022,
+              ts: "1780583904415",
+              reserves: {
+                total_reserves: { value: 180_040_870.38, name: "Total Reserves" },
+                reserves_split: [
+                  { value: 0, name: "STRC" },
+                  { value: 180_040_870.38, name: "Cash & Equivalents" },
+                  { value: 0, name: "SATA" },
+                  { value: 0, name: "Other" },
+                ],
+              },
+            },
+          })],
+        ]),
+      },
+    )).rejects.toThrow(/non-positive value: Other, SATA, STRC/);
+  });
+
+  it("rejects Accountable bucket totals that materially diverge from total_reserves", () => {
+    expect(() => adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.01,
+          ts: "1773337492853",
+          reserves: {
+            total_reserves: { value: 1_000, name: "Total Reserves" },
+            reserves_split: [
+              { name: "Cash & Equivalents", value: 100 },
+            ],
+          },
+        },
+      },
+      {
+        bucket: "reserves_split",
+        riskMap: { "Cash & Equivalents": "very-low" },
+      },
+    )).toThrow(/bucket total 100 does not match total_reserves 1000/);
+  });
+
   it("maps the current Yuzu Accountable exposure buckets without unknown exposure warnings", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const primary = config.inputs.primary;
