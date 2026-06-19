@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import type { ApiKeySelfServeCadence } from "@shared/types";
 import {
   readVerificationTokenFromUrl,
+  stripQueryVerificationTokenFromUrl,
   stripVerificationTokenFromUrl,
   submitApiKeyRequest,
   verifyApiKeyRequestToken,
@@ -28,6 +29,7 @@ function useVerificationTokenEffect(verifyToken: (token: string) => Promise<void
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    stripQueryVerificationTokenFromUrl();
     const token = readVerificationTokenFromUrl();
     if (!token || consumedVerificationTokenRef.current === token) return;
     consumedVerificationTokenRef.current = token;

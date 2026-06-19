@@ -148,13 +148,13 @@ describe("ApiKeyRequestForm", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(window.location.href).toContain("utm_source=email");
-    expect(window.location.href).toContain(`verify=qs-${suffix}`);
+    expect(window.location.href).not.toContain(`verify=qs-${suffix}`);
     expect(window.location.href).not.toContain(`akv_${suffix}`);
     const [, init] = fetchMock.mock.calls[0] ?? [];
     expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`akv_${suffix}`);
   });
 
-  it("ignores a query-string verify parameter without posting or rewriting the URL", async () => {
+  it("ignores a query-string verify parameter without posting and scrubs it from the URL", async () => {
     const suffix = randomUUID().slice(0, 8);
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -164,8 +164,8 @@ describe("ApiKeyRequestForm", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(window.location.search).toContain(`verify=qs-${suffix}`);
-    expect(window.location.search).toContain("utm_source=email");
+    expect(window.location.search).not.toContain(`verify=qs-${suffix}`);
+    expect(window.location.search).toBe("?utm_source=email");
   });
 
   it("does not display the durable request id after a pending submission", async () => {
