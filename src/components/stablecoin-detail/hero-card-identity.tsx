@@ -211,20 +211,20 @@ function HeroClassificationLine({
 
   if (stackedSegments) {
     return (
-      <p className="text-xs text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {sentenceNode}
-        <span className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           {taxonomyNodes}
-        </span>
-      </p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
       {sentenceNode}
       {taxonomyNodes}
-    </p>
+    </div>
   );
 }
 
