@@ -285,14 +285,19 @@ export async function generateDailyDigest(
       if (!sentMarker) {
         // Write the idempotency marker BEFORE sending so a marker-write
         // failure leaves the send unattempted (and surfaces as a hard cron
-        // failure via the channel-delivery wrapper) rather than risking a
-        // duplicate send on the next run. If the send itself fails, roll the
+        // failure after the channel wrapper records the failed attempt)
+        // rather than risking a duplicate send on the next run. If the send itself fails, roll the
         // marker back so a genuine delivery failure can be retried.
-        await setCache(
-          db,
-          markerKey,
-          JSON.stringify({ sentAt: now, editionNumber }),
-        );
+        try {
+          await setCache(
+            db,
+            markerKey,
+            JSON.stringify({ sentAt: now, editionNumber }),
+          );
+        } catch (err) {
+          degradedReasons.push("telegram-send-marker-write");
+          throw err;
+        }
         try {
           await postDigestToTelegram(
             digestCopy.digestTitle,
@@ -330,6 +335,10 @@ export async function generateDailyDigest(
       return `ok${appendixSuffix}`;
     },
   });
+
+  if (degradedReasons.includes("telegram-send-marker-write")) {
+    throw new Error(`Telegram digest marker write failed; delivery skipped: ${telegramStatus}`);
+  }
 
   const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
 
