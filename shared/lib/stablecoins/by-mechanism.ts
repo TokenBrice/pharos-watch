@@ -86,9 +86,11 @@ export function getCoinsByLifecycleStatus(
   } else if (status === "pre-launch") {
     pool = PRE_LAUNCH_STABLECOINS;
     registryForPool = PRE_LAUNCH_META_MAP;
-  } else {
+  } else if (status === "frozen") {
     pool = FROZEN_STABLECOINS;
     registryForPool = FROZEN_META_MAP;
+  } else {
+    return [];
   }
 
   return pool.filter(
