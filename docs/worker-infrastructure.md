@@ -112,7 +112,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `MINT_BURN_STALE_CRIT_SEC` | `string` | optional | - | - | Mint/burn stale-critical threshold override (seconds). |
 | `MINT_BURN_ALERT_COOLDOWN_SEC` | `string` | optional | - | - | Mint/burn stale-alert dedupe cooldown override (seconds). |
 | `OPENEXCHANGERATES_API_KEY` | `string` | optional | - | - | Open Exchange Rates credential used for FX cross-validation. |
-| `BANXICO_TOKEN` | `string` | optional | - | - | Banxico SIE API token used for official MXN CETES 28-day benchmark rates; when absent/failing, the benchmark cron can use Etherfuse CETES current issuance as an explicit degraded proxy. |
+| `BANXICO_TOKEN` | `string` | optional | - | - | Banxico SIE API token used for official MXN CETES 28-day benchmark rates; when absent/failing, MXN retains the last market benchmark when available or remains unavailable for USD fallback. |
 | `CLOUDFLARE_ACCOUNT_ID` | `string` | optional | - | - | Cloudflare account scope used by admin D1 status metrics. |
 | `CLOUDFLARE_D1_STATUS_API_TOKEN` | `string` | optional | - | - | Cloudflare API token with D1 status/analytics read access for admin metrics. |
 | `CLOUDFLARE_D1_DATABASE_ID` | `string` | optional | - | - | Target D1 database ID used by admin D1 status metrics. |

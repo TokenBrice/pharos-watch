@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.292`
+- **Current methodology version:** `v8.293`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.293 hardens MXN benchmark integrity by removing the Etherfuse CETES issuer page from the shared benchmark fallback path. Etherfuse CETES current issuance remains the product APY source for `cetes-etherfuse`, but the global MXN benchmark now resolves from Banxico SIE `SF43936` or retained prior market data only. Fallback benchmark resolutions also stop refreshing `lastMarket*` metadata, so degraded proxy values cannot become the durable last-market source for later retained fallbacks. PYS formula shape, source-risk calibration, history semantics, and publication guards are otherwise unchanged.
 
 Yield v8.292 replaces the hand-set 3-bucket venue tier with Yearn's shipped 5-category weighted rubric (audits, centralization, funds management, liquidity, operational; each 1–5), derives `venueRiskTier` from the resulting 1–5 score, and moves the PYS venue penalty to a continuous, calibration-preserving curve `max(0, weighted - 2.0) * 0.15` (blue-chip `low` venues stay a 0 no-op; `3.0` reproduces the legacy `medium` +0.15). It scores 49 previously-unreviewed long-tail venues (the reviewed registry grows 12 → 61), lighting up uncollateralized/RWA credit, newer money markets, CDPs, app-chain lenders, and additional risky allowlist venues that were formerly `unknown` = neutral. It also adds a reviewer-set cross-venue `dependencyConcentration` sub-signal (seeded with `yvusdc-yearn` = Sky), anchored to Yearn's own published yvUSDC risk report. The newly-scored medium/high venues feed the DEWS structured-venue branch (DEWS v6.091) with no DEWS threshold change. The PYS formula shape, benchmark selection, history semantics, and publication guards are otherwise unchanged.
 
@@ -46,7 +48,7 @@ Yield v8.17 tracks `sdusd-dtrinity` as the first-class dTRINITY dStake yield wra
 
 Yield v8.16 fixes `fpi-frax`, `silk-shade-protocol`, and `isc-international-stable-currency` NAV-token metadata so they route through NAV-appreciation coverage, and adds rate-derived proxy coverage for `cgusd-cygnus-finance` and `usdn-noble`.
 
-Yield v8.15 gives `cetes-etherfuse` a curated `protocol-api:etherfuse-cetes-current-issuance` APY source from Etherfuse's current Stablebond issuance rate. This replaces the selected USD price-derived NAV fallback when Etherfuse is reachable, so MXN/USD FX movement is no longer interpreted as CETES yield. The MXN benchmark still prefers Banxico SIE `SF43936`, but when `BANXICO_TOKEN` is missing or Banxico fails, the daily benchmark cron can use the Etherfuse CETES current issuance rate as an explicit degraded proxy fallback (`isFallback: true`, `isProxy: true`).
+Yield v8.15 gives `cetes-etherfuse` a curated `protocol-api:etherfuse-cetes-current-issuance` APY source from Etherfuse's current Stablebond issuance rate. This replaces the selected USD price-derived NAV fallback when Etherfuse is reachable, so MXN/USD FX movement is no longer interpreted as CETES yield. The MXN benchmark uses Banxico SIE `SF43936`; Etherfuse CETES current issuance is not used as a shared MXN benchmark fallback.
 
 Yield v8.14 ships the public adapter manifest endpoint at `/api/yield-adapter-manifest` as the canonical machine-readable source list for every yield-bearing asset. Each entry carries `stablecoinId`, `coinSymbol`, `family` (`onchain` / `protocol-api` / `defillama` / `defillama-auto` / `rate-derived` / `price-derived` / `intentional-gap`), nullable `sourceKey`, optional `sourceKeyPattern`, `label`, optional `chain`/`project` hints, `lifecycle` (`active` / `quarantined` / `intentional-gap` / `experimental`), `quarantineReason` when lifecycle is `quarantined`, the current `methodologyVersion` label, and a methodology-snapshot `updatedAt`. `sourceKey` is populated only when the entry has an exact runtime key that can join to rankings, decision rows, or `/api/yield-history?sourceKey=...`; runtime-resolved DeFiLlama variant rows and disabled/quarantined readers use `sourceKey: null` plus `sourceKeyPattern` instead of publishing synthetic keys. Scoring, source resolution, history semantics, and publication rules are unchanged in v8.14; the bump tracks the new public contract only.
 
@@ -505,7 +507,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
 | `GBP` | GBP 3M compounded SONIA | Bank of England IADB SONIA Compounded Index `IUDZOS2` CSV | Annualized from the trailing 90-day index change; metadata source `boe-sonia-compounded-index`, fallback mode `gbp-sonia-compounded-index-failed` |
 | `JPY` | JPY overnight call (TONA proxy) | Bank of Japan Time-Series Data Search `STRDCLUCON` | Used as a TONA-equivalent proxy |
-| `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`), then Etherfuse CETES current issuance fallback | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, Etherfuse is marked `isFallback` and `isProxy`. CETES (Etherfuse) is itself a 28d CETES tokenization, so the spread is ~0% — see "Self-reference caveat" below |
+| `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`) | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, MXN retains the last market source when available or remains unavailable so rows fall back to USD. Etherfuse CETES current issuance is deliberately limited to the CETES product APY source, not the shared MXN benchmark. |
 | `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily |
 | `AUD` | AUD cash-rate target | Reserve Bank of Australia F1 money-market CSV | RBA cash-rate target used as the AUD local cash hurdle |
 | `CAD` | CAD overnight repo (CORRA proxy) | Bank of Canada Valet API (series `V122530`) | Overnight repo; CORRA-equivalent |
@@ -527,7 +529,6 @@ https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp
 https://www.stat-search.boj.or.jp/api/v1/getDataCode
 https://www.rba.gov.au/statistics/tables/csv/f1-data.csv
 https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno
-https://app.etherfuse.com/bonds/cetes
 https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json
 https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1
 https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx
@@ -537,7 +538,7 @@ https://evds3.tcmb.gov.tr/igmevdsms-dis/serieList/fe/type=json&code=bie_bisttlre
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known source-backed value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it. MXN additionally tries Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable.
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known source-backed value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it. MXN does not use issuer-controlled product pages as benchmark fallbacks.
 
 **Tokenized-treasury benchmark overrides:** Some rate-derived treasury-like products tokenize the same instrument as their local benchmark, which can compress excess-yield and PYS context toward zero. `benchmarkOverrideKey` lets a rate-derived row compute APY from its configured product benchmark while comparing PYS/excess-yield against an explicit benchmark hurdle. USD T-bill/MMF-style proxies use `USD_EFFR` as the comparison hurdle; EUTBL and UKTBL carry explicit same-currency override keys. CETES still uses its protocol-native issuance adapter plus the MXN CETES benchmark path, so CETES-specific override policy remains a separate future decision.
 
@@ -753,7 +754,7 @@ Fetches the benchmark registry used by Yield Intelligence:
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
 - GBP 3M compounded SONIA from the Bank of England IADB SONIA Compounded Index `IUDZOS2`, annualized from the trailing 90-day index change (v8.28)
 - JPY call-rate proxy from Bank of Japan Time-Series Data Search `STRDCLUCON` (v8.22)
-- MXN CETES 28-day from Banxico SIE (`SF43936`), falling back to Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable (v8.15)
+- MXN CETES 28-day from Banxico SIE (`SF43936`), with retained-last-market fallback only when a prior market source exists (v8.293 removed the Etherfuse degraded benchmark proxy)
 - BRL SELIC overnight from BCB SGS series 11 (no auth) (v8.13)
 - AUD cash-rate target from the Reserve Bank of Australia F1 money-market CSV (v8.22)
 - CAD CORRA proxy from Bank of Canada Valet `V122530` (v8.13)
@@ -1133,7 +1134,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, USD EFFR, EUR 3M compounded €STR, CHF 3M compounded SARON, GBP 3M compounded SONIA, JPY call-rate proxy, MXN CETES 28d with Etherfuse fallback, BRL SELIC, AUD cash-rate target, CAD CORRA proxy, RUB CBR key rate, TRY BIST TLREF) |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, USD EFFR, EUR 3M compounded €STR, CHF 3M compounded SONIA, JPY call-rate proxy, MXN CETES 28d, BRL SELIC, AUD cash-rate target, CAD CORRA proxy, RUB CBR key rate, TRY BIST TLREF) |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |

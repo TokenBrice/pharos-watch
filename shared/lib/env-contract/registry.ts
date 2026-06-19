@@ -464,7 +464,7 @@ export const ENV_BINDINGS = [
   {
     key: "BANXICO_TOKEN",
     valueType: "string",
-    description: "Banxico SIE API token used for official MXN CETES 28-day benchmark rates; when absent/failing, the benchmark cron can use Etherfuse CETES current issuance as an explicit degraded proxy.",
+    description: "Banxico SIE API token used for official MXN CETES 28-day benchmark rates; when absent/failing, MXN retains the last market benchmark when available or remains unavailable for USD fallback.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 38, status: "optional" },

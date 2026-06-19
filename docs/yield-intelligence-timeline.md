@@ -1,10 +1,19 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.292`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.293`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent.
+
+## v8.293 - Banxico-Only MXN Benchmark Hardening (June 19, 2026)
+
+- MXN benchmark resolution still prefers Banxico SIE `SF43936` with `BANXICO_TOKEN`, but no longer queries Etherfuse CETES current issuance when Banxico is unavailable
+- Etherfuse CETES current issuance remains the `cetes-etherfuse` product APY source only; it is not written into the shared `risk_free_rates` benchmark cache as a global MXN proxy
+- Degraded benchmark resolutions no longer refresh `lastMarket*` fields, so fallback/proxy values cannot become durable retained market sources on later feed failures
+- When Banxico is unavailable and no prior market MXN benchmark is retained, MXN-pegged rows fall back through the normal USD benchmark-selection path
+
+---
 
 ## v8.292 - Yearn-Style 5-Category Venue Risk and Dependency Concentration (June 15, 2026)
 
@@ -121,4 +130,3 @@ Internal changelog reconstructed from git history. Runtime currently reports Yie
 - JPY benchmark refresh now reads Bank of Japan Time-Series Data Search `STRDCLUCON`, replacing the stale FRED mirror that ended at December 2023
 - AUD benchmark refresh now reads the Reserve Bank of Australia F1 money-market CSV cash-rate target instead of the FRED 3-month interbank mirror
 - Retained-last-market fallback semantics and PYS scoring math are unchanged; the update is a benchmark source-roster and freshness reliability change
-

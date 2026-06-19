@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.293",
+    title: "Banxico-Only MXN Benchmark Hardening",
+    date: "2026-06-19",
+    effectiveAt: 1781827200,
+    summary:
+      "Yield Intelligence removes the Etherfuse CETES issuer page from the shared MXN benchmark fallback path so MXN benchmarks are sourced from Banxico or retained prior market data only.",
+    impact: [
+      "MXN benchmark resolution still prefers Banxico SIE `SF43936` with `BANXICO_TOKEN`; when the token is missing or Banxico fails, the cron no longer fetches Etherfuse CETES current issuance as a global benchmark proxy",
+      "Etherfuse CETES current issuance remains available only as the CETES product's own `protocol-api:etherfuse-cetes-current-issuance` APY source",
+      "Fallback benchmark resolutions no longer refresh `lastMarket*` fields, preventing degraded proxy values from becoming retained last-market benchmarks on later source failures",
+      "If Banxico is unavailable and no prior Banxico-backed MXN benchmark is retained, MXN-pegged rows fall back to the normal USD benchmark-selection path",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.292",
     title: "Yearn-Style 5-Category Venue Risk and Dependency Concentration",
     date: "2026-06-15",

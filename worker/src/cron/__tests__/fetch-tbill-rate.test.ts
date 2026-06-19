@@ -1088,10 +1088,6 @@ describe("fetchTbillRate — new currency fetchers", () => {
           + "02-Mar-2026,4.30,,4.31\n",
           { status: 200 },
         ),
-        "app.etherfuse.com/bonds/cetes": new Response(ETHERFUSE_CETES_HTML, {
-          status: 200,
-          headers: { "Content-Type": "text/html" },
-        }),
         "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
         "bankofcanada.ca/valet": new Response(
           JSON.stringify({
@@ -1112,12 +1108,12 @@ describe("fetchTbillRate — new currency fetchers", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(calls.some((u) => u.includes("banxico.org.mx"))).toBe(false);
-    expect(calls.some((u) => u.includes("app.etherfuse.com/bonds/cetes"))).toBe(true);
-    expect(metadata.mxnSource).toBe("etherfuse-cetes-current-issuance");
-    expect(metadata.mxnRate).toBe(5.58);
-    expect(metadata.mxnRecordDate).toBe("2026-05-14");
+    expect(calls.some((u) => u.includes("app.etherfuse.com/bonds/cetes"))).toBe(false);
+    expect(metadata.mxnSource).toBeNull();
+    expect(metadata.mxnRate).toBeNull();
+    expect(metadata.mxnRecordDate).toBeNull();
     expect(result.status).toBe("degraded");
-    expect(String(metadata.fallbackMode)).toContain("mxn:banxico-token-missing-etherfuse-stablebond");
+    expect(String(metadata.fallbackMode)).toContain("mxn:banxico-token-missing");
   });
 
   it("retains the last MXN benchmark when the Banxico fetch fails", async () => {
