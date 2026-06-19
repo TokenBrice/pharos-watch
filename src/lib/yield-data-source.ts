@@ -35,12 +35,18 @@ export const YIELD_DATA_SOURCE_META: Record<string, YieldDataSourceMeta> = {
   },
 };
 
+function getKnownYieldDataSourceMeta(dataSource: string): YieldDataSourceMeta | null {
+  return Object.prototype.hasOwnProperty.call(YIELD_DATA_SOURCE_META, dataSource)
+    ? YIELD_DATA_SOURCE_META[dataSource]
+    : null;
+}
+
 export function getYieldDataSourceMeta(dataSource: string): YieldDataSourceMeta {
-  return YIELD_DATA_SOURCE_META[dataSource] ?? YIELD_DATA_SOURCE_META.defillama;
+  return getKnownYieldDataSourceMeta(dataSource) ?? YIELD_DATA_SOURCE_META.defillama;
 }
 
 export function getYieldDataSourceLabel(dataSource: string): string {
-  const known = YIELD_DATA_SOURCE_META[dataSource];
+  const known = getKnownYieldDataSourceMeta(dataSource);
   if (known) return known.label;
   return (
     dataSource

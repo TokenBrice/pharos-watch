@@ -164,6 +164,30 @@ describe("buildYieldSourceBoardModel", () => {
     expect(model.benchmarkLabels).toEqual([{ label: "USD 3M T-Bill", count: 1 }]);
   });
 
+  it("formats prototype-property dataSource values as unknown labels", () => {
+    const model = buildYieldSourceBoardModel([
+      makeYieldRanking({
+        id: "unknown-source-row",
+        dataSource: "unknown-source",
+        yieldSource: "Unknown Source",
+        apy30d: 5,
+        provenance: null,
+      }),
+      makeYieldRanking({
+        id: "constructor-source-row",
+        dataSource: "constructor",
+        yieldSource: "Constructor Source",
+        apy30d: 6,
+        provenance: null,
+      }),
+    ]);
+
+    expect(model.groups.map((group) => group.dataSourceLabel)).toEqual([
+      "Constructor",
+      "Unknown Source",
+    ]);
+  });
+
   it("infers lane confidence tier from known dataSource values and returns null for unknown", () => {
     expect(inferLaneConfidenceTier("onchain")).toBe("deterministic");
     expect(inferLaneConfidenceTier("rate-derived")).toBe("deterministic");
