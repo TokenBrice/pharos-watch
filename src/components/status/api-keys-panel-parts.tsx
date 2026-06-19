@@ -18,6 +18,7 @@ import {
   isApiKeyExpiringSoon,
 } from "@/lib/api-key-admin-view-model";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
+import { StatusPill } from "./severity-pill";
 
 type CreateKeyPatch = Partial<CreateKeyState>;
 type EditableKeyPatch = Partial<EditableKeyState>;
@@ -240,9 +241,9 @@ export function ApiKeyTable({
                 <TableRow key={key.id} className={isEditing ? "bg-primary/8" : "hover:bg-muted/25"}>
                   <TableCell className="px-3 py-2 align-top">
                     <div className="flex flex-wrap gap-1.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(keyStatus)}`}>
+                      <StatusPill className={apiKeyStatusBadgeClassName(keyStatus)}>
                         {keyStatus}
-                      </span>
+                      </StatusPill>
                       {expiringSoon ? (
                         <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
                           expiring soon
@@ -319,9 +320,9 @@ export function ApiKeyRowEditor({
           <div className="font-mono tabular-nums text-xs text-muted-foreground">{apiKey.maskedToken}</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(keyStatus)}`}>
+          <StatusPill className={apiKeyStatusBadgeClassName(keyStatus)}>
             {keyStatus}
-          </span>
+          </StatusPill>
           {expiringSoon ? (
             <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
               expiring soon

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { AdminActionButton, type AdminActionExecution } from "./admin-action-button";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { SeverityPill } from "./severity-pill";
+import { SeverityPill, StatusPill } from "./severity-pill";
 
 const ADMIN_ACTIONS = getStatusPageActions();
 type AdminAction = (typeof ADMIN_ACTIONS)[number];
@@ -146,15 +146,15 @@ export function AdminActionsPanel({
                 <div key={`${execution.action.path}-${execution.executedAt}`} className="rounded-md border border-border/60 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-sm font-medium">{execution.action.label}</div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    <StatusPill
+                      className={
                         execution.ok
                           ? "bg-green-500/15 text-green-700 dark:text-green-400"
                           : "bg-red-500/15 text-red-700 dark:text-red-400"
-                      }`}
+                      }
                     >
                       {execution.ok ? "ok" : "error"}
-                    </span>
+                    </StatusPill>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {formatElapsedSeconds(Math.max(0, nowSeconds - execution.executedAt))} ago

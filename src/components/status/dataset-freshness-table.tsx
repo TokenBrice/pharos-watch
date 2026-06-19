@@ -3,6 +3,7 @@ import type { StatusResponse } from "@shared/types";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { StatusPill } from "./severity-pill";
 
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
 
@@ -176,9 +177,9 @@ export function DatasetFreshnessTable({
                 </TableCell>
                 <TableCell className="py-2 text-xs text-muted-foreground">{row.owners}</TableCell>
                 <TableCell className="py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${row.band.className}`}>
+                  <StatusPill className={row.band.className}>
                     {row.band.label}
-                  </span>
+                  </StatusPill>
                 </TableCell>
               </TableRow>
             ))}

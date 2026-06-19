@@ -3,6 +3,7 @@ import type { ApiRequestAttributionResponse } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
+import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {
@@ -142,11 +143,9 @@ export function ApiKeyLoadTable({
                       <div className="mt-1 font-mono tabular-nums text-xs text-muted-foreground">{row.maskedToken}</div>
                     </TableCell>
                     <TableCell className="py-2 align-top">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${trafficClassBadgeClassName(row.trafficClass)}`}
-                      >
+                      <StatusPill className={trafficClassBadgeClassName(row.trafficClass)}>
                         {row.trafficClass}
-                      </span>
+                      </StatusPill>
                     </TableCell>
                     <TableCell className="py-2 align-top pharos-numeric text-foreground">
                       {formatCompactCount(row.requestCount)}
@@ -161,11 +160,9 @@ export function ApiKeyLoadTable({
                       {formatCompactCount(row.rateLimitPerMinute)}/min
                     </TableCell>
                     <TableCell className="py-2 align-top">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(status)}`}
-                      >
+                      <StatusPill className={apiKeyStatusBadgeClassName(status)}>
                         {status}
-                      </span>
+                      </StatusPill>
                     </TableCell>
                   </TableRow>
                 );

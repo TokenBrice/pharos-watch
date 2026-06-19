@@ -3,6 +3,7 @@ import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
 
 interface CacheFreshnessTableProps {
@@ -115,18 +116,18 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         </TableCell>
         <TableCell className="py-2 align-top">{describeSource(cache)}</TableCell>
         <TableCell className="py-2 align-top">
-          <span
-            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+          <StatusPill
+            className={
               modeLabel === "cached-fallback"
                 ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
                 : "bg-muted text-muted-foreground"
-            }`}
+            }
           >
             {modeLabel}
-          </span>
+          </StatusPill>
         </TableCell>
         <TableCell className="py-2 align-top">
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${band.className}`}>{band.label}</span>
+          <StatusPill className={band.className}>{band.label}</StatusPill>
         </TableCell>
         <TableCell className="py-2 align-top text-xs leading-relaxed text-muted-foreground">
           {noteParts.length > 0 ? noteParts.join(" · ") : "No extra warning"}
