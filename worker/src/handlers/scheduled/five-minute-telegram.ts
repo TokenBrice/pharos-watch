@@ -120,13 +120,14 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     // Token is absent: groups are only enumerated for skip-summaries; the task
     // closures are never invoked, so an empty token placeholder is unused.
     const groups = buildTelegramSlotGroups(runtime, "");
+    const tasks = flattenScheduledSlotGroupTasks(groups);
     const skippedJobs = [
       summarizeSkippedScheduledJob("telegram-registration-reconciliation", "missing-telegram-bot-token"),
-      ...flattenScheduledSlotGroupTasks(groups).map((task) =>
+      ...tasks.map((task) =>
         summarizeSkippedScheduledJob(task.job, "missing-telegram-bot-token")
       ),
     ];
-    for (const task of flattenScheduledSlotGroupTasks(groups)) {
+    for (const task of tasks) {
       await logSkippedCronRun(runtime, {
         job: task.job,
         reason: "missing-telegram-bot-token",
