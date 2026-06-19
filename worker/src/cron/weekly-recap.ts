@@ -165,7 +165,13 @@ interface ExistingWeeklyDigestRow {
   digest_meta: string | null;
 }
 
-type WeeklyDigestMeta = Record<string, unknown>;
+interface WeeklyDigestMeta {
+  telegramDelivered?: boolean;
+  telegramDeliveryStatus?: string;
+  telegramDeliveryUpdatedAt?: number;
+  telegramDeliveredAt?: number;
+  [key: string]: unknown;
+}
 
 /**
  * File-local helper: collapse the `flatMap → sort desc → slice` shape used
@@ -629,8 +635,26 @@ function buildWeeklySpikeMetrics(
   const gaugeObservations = parsed
     .map((d) => d.inputData.mintBurnFlows?.gaugeScore != null ? { date: d.date, score: d.inputData.mintBurnFlows.gaugeScore } : null)
     .filter((entry): entry is { date: string; score: number } => entry !== null);
-  const maxDepegByBps = [...allDepegSignals].sort((a, b) => b.bps - a.bps || b.impactScore - a.impactScore)[0];
-  const maxDepegByImpact = [...allDepegSignals].sort((a, b) => b.impactScore - a.impactScore || b.bps - a.bps)[0];
+  const { maxDepegByBps, maxDepegByImpact } = allDepegSignals.reduce<{
+    maxDepegByBps: WeeklyDepegSignal | undefined;
+    maxDepegByImpact: WeeklyDepegSignal | undefined;
+  }>(
+    (acc, s) => ({
+      maxDepegByBps:
+        acc.maxDepegByBps == null ||
+        s.bps > acc.maxDepegByBps.bps ||
+        (s.bps === acc.maxDepegByBps.bps && s.impactScore > acc.maxDepegByBps.impactScore)
+          ? s
+          : acc.maxDepegByBps,
+      maxDepegByImpact:
+        acc.maxDepegByImpact == null ||
+        s.impactScore > acc.maxDepegByImpact.impactScore ||
+        (s.impactScore === acc.maxDepegByImpact.impactScore && s.bps > acc.maxDepegByImpact.bps)
+          ? s
+          : acc.maxDepegByImpact,
+    }),
+    { maxDepegByBps: undefined, maxDepegByImpact: undefined },
+  );
   return {
     minPsi: psiObservations.length > 0 ? [...psiObservations].sort((a, b) => a.score - b.score)[0] : null,
     minGauge: gaugeObservations.length > 0 ? [...gaugeObservations].sort((a, b) => a.score - b.score)[0] : null,
