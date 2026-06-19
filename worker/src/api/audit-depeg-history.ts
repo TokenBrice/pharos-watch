@@ -29,9 +29,8 @@ type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
 const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
-// Default and max intentionally match: audit history is capped at 25 events per request.
-const AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT = 25;
-const AUDIT_DEPEG_HISTORY_MAX_LIMIT = 25;
+// Audit history is capped at 25 events per request (default and max are the same).
+const AUDIT_DEPEG_HISTORY_LIMIT = 25;
 const DELETE_ID_PATTERN = /^\d+$/;
 // If at least this fraction of attempted CG fetches fail, treat it as an
 // upstream outage rather than genuine per-event errors: mark the result
@@ -228,9 +227,9 @@ function parseAuditRequest(url: URL, request?: Request): ParsedAuditRequest | Re
   const parsed = parseQueryParams(url.searchParams, {
     limit: {
       type: "int",
-      default: AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT,
+      default: AUDIT_DEPEG_HISTORY_LIMIT,
       min: 1,
-      max: AUDIT_DEPEG_HISTORY_MAX_LIMIT,
+      max: AUDIT_DEPEG_HISTORY_LIMIT,
       rangePolicy: "reject",
     },
     offset: { type: "int", default: 0, min: 0, max: 100_000 },
