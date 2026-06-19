@@ -217,7 +217,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     reviewedAt: "2026-06-10",
     costModel: fixedFee(0, "Paxos states it does not charge a USDP redemption fee"),
     docs: [
-      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem", ["route", "capacity", "fees"]),
+      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"]),
       sourceRef(
         "Paxos USD stablecoin terms",
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
