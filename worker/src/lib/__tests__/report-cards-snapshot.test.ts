@@ -1063,8 +1063,9 @@ describe("buildReportCardsSnapshot", () => {
       pegDataById: new Map([["usdt-tether", pegSummary]]),
       eventsByCoin: new Map(),
       allEvents: [
-        { startedAt: Math.max(todayStartSec, nowSec - 60) },
-        { startedAt: todayStartSec - 60 },
+        { stablecoinId: "usdt-tether", startedAt: Math.max(todayStartSec, nowSec - 60) },
+        { stablecoinId: "fpi-frax", startedAt: Math.max(todayStartSec, nowSec - 30) },
+        { stablecoinId: "usdt-tether", startedAt: todayStartSec - 60 },
       ],
       nowSec,
       methodology: {
