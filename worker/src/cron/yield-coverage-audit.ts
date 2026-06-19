@@ -1,4 +1,3 @@
-import { toErrorMessage } from "../lib/error-utils";
 /**
  * Monthly yield coverage audit.
  *
@@ -9,6 +8,7 @@ import { toErrorMessage } from "../lib/error-utils";
  */
 
 import { logCronEvent, type CronResult } from "../lib/cron-logger";
+import { toErrorMessage } from "../lib/error-utils";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -54,6 +54,10 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 
 /** Minimum TVL (USD) for a pool to be flagged as an unmatched high-TVL pool. */
 const HIGH_TVL_THRESHOLD_USD = 5_000_000;
+/** TVL floor (USD) for a protocol to be promoted to the high-confidence recommendation tier. */
+const HIGH_CONFIDENCE_TVL_USD = 10_000_000;
+/** Minimum pool count for a protocol to reach the high-confidence recommendation tier. */
+const HIGH_CONFIDENCE_MIN_POOL_COUNT = 3;
 const OPERATOR_QUEUE_ITEM_LIMIT = 20;
 const ALLOWLIST_AUDIT_QUEUE_ANCHOR = "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR";
 const DEFILLAMA_PROTOCOLS_SOURCE_URL = "https://api.llama.fi/protocols";
@@ -411,8 +415,8 @@ function buildProtocolRecommendations(
       const sortedPools = [...v.pools].sort((a, b) => b.tvlUsd - a.tvlUsd);
       const protocolCategory = sortedPools.find((pool) => pool.protocolCategory != null)?.protocolCategory ?? null;
       const recommendedTier: ProtocolRecommendation["recommendedTier"] =
-        v.tvl >= 10_000_000 &&
-        v.pools.length >= 3 &&
+        v.tvl >= HIGH_CONFIDENCE_TVL_USD &&
+        v.pools.length >= HIGH_CONFIDENCE_MIN_POOL_COUNT &&
         isHighConfidenceProtocolCategory(protocolCategory)
           ? "high-confidence"
           : "review-needed";
