@@ -11,11 +11,11 @@
  * reconciliation is unavailable or needs to be forced immediately.
  *
  * Usage:
- *   tsx scripts/maintenance/register-telegram.ts --action commands --bot-token ...
- *   tsx scripts/maintenance/register-telegram.ts --action profile  --bot-token ...
- *   tsx scripts/maintenance/register-telegram.ts --action webhook  --bot-token ... --webhook-secret ...
- *   tsx scripts/maintenance/register-telegram.ts --action all      --bot-token ... --webhook-secret ...
- *   tsx scripts/maintenance/register-telegram.ts --check --bot-token ...   # dry run, print payloads
+ *   TELEGRAM_BOT_TOKEN=... tsx scripts/maintenance/register-telegram.ts --action commands
+ *   TELEGRAM_BOT_TOKEN=... tsx scripts/maintenance/register-telegram.ts --action profile
+ *   TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... tsx scripts/maintenance/register-telegram.ts --action webhook
+ *   TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... tsx scripts/maintenance/register-telegram.ts --action all
+ *   TELEGRAM_BOT_TOKEN=... tsx scripts/maintenance/register-telegram.ts --check   # dry run, print payloads
  *
  * Command scope (only meaningful for --action commands):
  *   --scope default              setMyCommands default scope
@@ -25,7 +25,8 @@
  *   (omit --scope to register both all_private_chats and all_group_chats, as
  *    the original register-telegram-commands.sh did)
  *
- * Env fallbacks: TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, WEBHOOK_BASE_URL.
+ * Secrets must be provided through TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET.
+ * Optional non-secret env: WEBHOOK_BASE_URL.
  */
 import process from "node:process";
 import {
@@ -80,14 +81,6 @@ function parseOptions(argv: string[]): CliOptions {
       options.action = value;
       return "value";
     },
-    "--bot-token": ({ readValue }) => {
-      options.botToken = readValue();
-      return "value";
-    },
-    "--webhook-secret": ({ readValue }) => {
-      options.webhookSecret = readValue();
-      return "value";
-    },
     "--webhook-base-url": ({ readValue }) => {
       options.webhookBaseUrl = readValue();
       return "value";
@@ -115,7 +108,7 @@ function parseOptions(argv: string[]): CliOptions {
       options.check = true;
     },
   };
-  parseCliOptions(argv, handlers);
+  parseCliOptions(argv, handlers, { allowUnknown: false });
 
   if (options.scope === "chat" && !options.chatId) {
     throw new Error("--scope chat requires --chat-id <id>");
@@ -260,7 +253,7 @@ async function runProfile(options: CliOptions): Promise<void> {
 
 async function runWebhook(options: CliOptions): Promise<void> {
   if (!options.webhookSecret) {
-    throw new Error("--action webhook requires --webhook-secret or TELEGRAM_WEBHOOK_SECRET");
+    throw new Error("--action webhook requires TELEGRAM_WEBHOOK_SECRET");
   }
   const payload = buildWebhookPayload(options.webhookBaseUrl, options.webhookSecret);
   if (options.check) {
@@ -276,7 +269,7 @@ async function runWebhook(options: CliOptions): Promise<void> {
 async function main(): Promise<void> {
   const options = parseOptions(process.argv.slice(2));
   if (!options.botToken) {
-    throw new Error("--bot-token or TELEGRAM_BOT_TOKEN is required");
+    throw new Error("TELEGRAM_BOT_TOKEN is required");
   }
 
   const actions: Action[] = options.action === "all"
