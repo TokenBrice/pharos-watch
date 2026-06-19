@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useCallback, useRef, useState } from "react";
+import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -15,7 +15,8 @@ import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { PegCurrency } from "@shared/types";
-import { trackEvent, trackSearch } from "@/lib/analytics";
+import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
+import { trackEvent } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
 import {
   PEG_FILTERS,
@@ -41,19 +42,7 @@ export function LiquidityClient() {
 
   // Search: local state for instant input, deferred value for filtering,
   // debounced sync to URL + analytics to avoid per-keystroke overhead
-  const [searchInput, setSearchInput] = useState(() => getParam("q"));
-  const deferredSearch = useDeferredValue(searchInput);
-  const urlSyncTimer = useRef<ReturnType<typeof setTimeout>>(null);
-  useEffect(() => {
-    if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current);
-    urlSyncTimer.current = setTimeout(() => {
-      setParam("q", deferredSearch);
-      if (deferredSearch) trackSearch("liquidity", deferredSearch.length);
-    }, 300);
-    return () => {
-      if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current);
-    };
-  }, [deferredSearch, setParam]);
+  const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync("liquidity");
 
   const { scoredRows, unratedRows, summaryStats } = useMemo(
     () => buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch),

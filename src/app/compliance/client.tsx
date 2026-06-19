@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
@@ -17,7 +17,8 @@ import { TableSourceLink } from "@/components/table/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { trackEvent, trackSearch } from "@/lib/analytics";
+import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
+import { trackEvent } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { PEG_FILTER_OPTIONS, PEG_METADATA } from "@shared/lib/classification";
@@ -130,19 +131,7 @@ export function ComplianceClient() {
     [setParam],
   );
 
-  const [searchInput, setSearchInput] = useState(() => getParam("q"));
-  const deferredSearch = useDeferredValue(searchInput);
-  const urlSyncTimer = useRef<ReturnType<typeof setTimeout>>(null);
-  useEffect(() => {
-    if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current);
-    urlSyncTimer.current = setTimeout(() => {
-      setParam("q", deferredSearch);
-      if (deferredSearch) trackSearch("compliance", deferredSearch.length);
-    }, 300);
-    return () => {
-      if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current);
-    };
-  }, [deferredSearch, setParam]);
+  const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync("compliance");
 
   const { rows, watchRows, totalTracked, isGeniusEffective } = useMemo(
     () =>
