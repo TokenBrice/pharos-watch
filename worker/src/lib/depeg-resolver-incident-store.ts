@@ -581,6 +581,13 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
     return linkSealedNearbyIncidentTail(db, event, row, options, policyDelaySec);
   }
 
+  if (!canAutoRepairUnsealedTail(event, row, nowSec, policyDelaySec)) {
+    throw new DdrIncidentRepairRequiredError(
+      event.eventId,
+      `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
+    );
+  }
+
   await db.batch([
     db
       .prepare(
@@ -624,6 +631,26 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
       relation: "repair_replacement",
     },
     policyDelaySec,
+  );
+}
+
+function canAutoRepairUnsealedTail(
+  event: DdrCanonicalIncidentEventInput,
+  row: IncidentRow,
+  nowSec: number,
+  policyDelaySec: number,
+): boolean {
+  const originalEligibleAt = row.first_started_at + policyDelaySec;
+  return (
+    row.incident_state === "active" &&
+    event.source === "live" &&
+    event.endedAt == null &&
+    event.stablecoinId === row.stablecoin_id &&
+    event.pegCurrency === row.peg_currency &&
+    event.direction === row.direction &&
+    event.startedAt > row.current_started_at &&
+    event.startedAt <= originalEligibleAt &&
+    nowSec < originalEligibleAt
   );
 }
 
