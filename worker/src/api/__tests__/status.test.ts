@@ -1469,6 +1469,37 @@ describe("handleStatus", () => {
     expect(body.datasetFreshness.discoveryCandidates).toBe(discoveryWriterAt);
   });
 
+  it("keeps status available when the shared stablecoins cache preload throws", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60)],
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        throwError: new Error("simulated stablecoins cache read failure"),
+      },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request, "coingecko-key");
+    const body = (await res.json()) as {
+      sectionErrors: { coingeckoPriceDiff?: { code: string; message: string } };
+      coingeckoPriceDiff: unknown;
+      mintBurnReconciliation: unknown;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.coingeckoPriceDiff).toBeNull();
+    expect(body.mintBurnReconciliation).toBeNull();
+    expect(body.sectionErrors.coingeckoPriceDiff?.code).toBe("coingecko_price_diff_query_failed");
+  });
+
   it("marks data quality stale when the stablecoins cache is malformed", async () => {
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },

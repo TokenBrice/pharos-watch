@@ -250,8 +250,21 @@ export async function loadStatusSupplements(
 
   // Load the large stablecoins cache blob once per request; loadCoinGeckoPriceDiff,
   // loadSourceDepthDistribution, and getMintBurnReconciliation all consume it, so a
-  // single read avoids three D1 round-trips for the same row (audit S-018).
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  // single read avoids three D1 round-trips for the same row (audit S-018). Keep
+  // read/runtime failures contained so optional status supplements preserve the
+  // endpoint's partial-failure behavior.
+  let stablecoinsCache: StablecoinsCacheLoadResult;
+  try {
+    stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  } catch (err) {
+    logStatusSupplementWarning(
+      "stablecoins_cache_preload_failed",
+      "Stablecoins cache preload failed",
+      err,
+      { source: "stablecoins-cache" },
+    );
+    stablecoinsCache = { kind: "error", reason: "cache-read-failed", updatedAt: null };
+  }
 
   let discoveryCandidates: DiscoveryCandidate[] | null = null;
   try {
