@@ -1,5 +1,6 @@
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted } from "../../lib/abort";
+import { logWorkerEvent } from "../../lib/structured-log";
 import {
   SIX_BROWSER_USER_AGENT,
   SIX_OAUTH_TOKEN_URL,
@@ -80,7 +81,15 @@ async function trySixGuestToken(signal?: AbortSignal): Promise<string | null> {
     return parseSixOauthToken(await res.text());
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] SIX guest token fetch failed: ${String(err).slice(0, 200)}`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      job: "fetch-tbill-rate",
+      event: "benchmark_fetch_failed",
+      source: "six_guest_token",
+      message: "SIX guest token fetch failed",
+      error: err,
+    });
     return null;
   }
 }
@@ -113,7 +122,15 @@ export async function trySixSar3mcCsv(signal?: AbortSignal): Promise<{ rate: num
     return parseSixSar3mcCsv(body);
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] SIX SAR3MC fetch failed: ${String(err).slice(0, 200)}`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      job: "fetch-tbill-rate",
+      event: "benchmark_fetch_failed",
+      source: "six_sar3mc",
+      message: "SIX SAR3MC fetch failed",
+      error: err,
+    });
     return null;
   }
 }

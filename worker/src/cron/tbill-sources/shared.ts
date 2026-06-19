@@ -1,6 +1,7 @@
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { BENCHMARK_FETCH_TIMEOUT_MS, BENCHMARK_FETCH_MAX_RETRIES } from "../../lib/constants";
 import { rethrowIfAborted } from "../../lib/abort";
+import { logWorkerEvent } from "../../lib/structured-log";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 
 export type BenchmarkFetchResult = { rate: number; recordDate: string };
@@ -115,7 +116,14 @@ export async function fetchAndParseBenchmark<T>({
     return parse(await res.text());
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] ${warnLabel} failed: ${String(err).slice(0, 200)}`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      job: "fetch-tbill-rate",
+      event: "benchmark_fetch_failed",
+      message: `${warnLabel} failed`,
+      error: err,
+    });
     return null;
   }
 }
