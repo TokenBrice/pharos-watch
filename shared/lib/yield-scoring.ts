@@ -229,11 +229,7 @@ export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): nu
   } else if (input.venueRiskTier === "medium") {
     penalty += 0.15;
   }
-  if (input.dependencyConcentrationSeverity === "high") {
-    penalty += PYS_DEPENDENCY_CONCENTRATION_PENALTY.high;
-  } else if (input.dependencyConcentrationSeverity === "medium") {
-    penalty += PYS_DEPENDENCY_CONCENTRATION_PENALTY.medium;
-  }
+  penalty += PYS_DEPENDENCY_CONCENTRATION_PENALTY[input.dependencyConcentrationSeverity ?? "low"] ?? 0;
 
   return resolvePysSourceRiskPenalty(1 + penalty).penalty;
 }
