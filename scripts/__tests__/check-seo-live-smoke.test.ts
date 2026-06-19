@@ -1,5 +1,9 @@
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkSitemapUrls } from "../ci/check-seo-live-smoke.mjs";
+import { checkSitemapUrls, isMainEntrypoint } from "../ci/check-seo-live-smoke.mjs";
 
 function responseWithBody(status: number, contentType = "text/plain") {
   const cancel = vi.fn(async () => {});
@@ -47,5 +51,21 @@ describe("check-seo-live-smoke sitemap URL checks", () => {
       "https://pharos.watch/not-found/: sitemap URL returns 404",
       "https://pharos.watch/error/: sitemap URL returns 503",
     ]);
+  });
+});
+
+describe("check-seo-live-smoke entrypoint guard", () => {
+  it("matches symlinked invocation paths against the real module URL", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "pharos-seo-smoke-"));
+    const realScript = join(tempDir, "check-seo-live-smoke.mjs");
+    const symlinkedScript = join(tempDir, "check-seo-live-smoke-link.mjs");
+    writeFileSync(realScript, "export {};\n");
+    symlinkSync(realScript, symlinkedScript);
+
+    try {
+      expect(isMainEntrypoint(pathToFileURL(realScript).href, symlinkedScript)).toBe(true);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });
