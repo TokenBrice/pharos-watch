@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-const { scanCronAbortContract } = await import("./check-cron-abort-contract.mjs") as {
+const { scanCronAbortContract } = await import("../ci/check-cron-abort-contract.mjs") as {
   scanCronAbortContract: (
     roots?: string[],
     cwd?: string,
