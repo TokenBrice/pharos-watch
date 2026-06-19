@@ -4,7 +4,12 @@ import {
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
 } from "../depeg-trust-policy";
-import { buildInsertDepegEventStmt, rowToDepegEvent, type DepegRow } from "../depeg-helpers";
+import {
+  buildInsertDepegEventStmt,
+  collectDexProtocolCorroborations,
+  rowToDepegEvent,
+  type DepegRow,
+} from "../depeg-helpers";
 
 describe("classifyPrimaryDepegTrust", () => {
   const nowSec = 1_700_000_000;
@@ -252,5 +257,39 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
     expect(() => rowToDepegEvent({ ...baseDepegRow, source: "manual" })).toThrow(
       '[depeg-helpers] Invalid source "manual" for event 1',
     );
+  });
+});
+
+describe("collectDexProtocolCorroborations", () => {
+  it("counts DEX corroboration by source family instead of protocol labels", () => {
+    const groups = collectDexProtocolCorroborations(
+      [
+        { protocol: "curve", chain: "ethereum", price: 0.96, tvl: 2_000_000, updatedAt: 1, sourceFamily: "poisoned-provider" },
+        { protocol: "uniswap", chain: "ethereum", price: 0.955, tvl: 2_000_000, updatedAt: 1, sourceFamily: "poisoned-provider" },
+        { protocol: "balancer", chain: "ethereum", price: 0.958, tvl: 2_000_000, updatedAt: 1, sourceFamily: "independent-provider" },
+      ],
+      1,
+      200,
+      "below",
+      "confirm",
+    );
+
+    expect(groups.map((group) => group.key).sort()).toEqual(["independent-provider", "poisoned-provider"]);
+  });
+
+  it("does not treat source-family-free legacy protocol rows as independent", () => {
+    const groups = collectDexProtocolCorroborations(
+      [
+        { protocol: "curve", chain: "ethereum", price: 0.96, tvl: 2_000_000, updatedAt: 1 },
+        { protocol: "uniswap", chain: "ethereum", price: 0.955, tvl: 2_000_000, updatedAt: 1 },
+      ],
+      1,
+      200,
+      "below",
+      "confirm",
+    );
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.key).toBe("unknown");
   });
 });

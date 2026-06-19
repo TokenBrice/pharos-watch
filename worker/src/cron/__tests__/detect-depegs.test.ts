@@ -407,8 +407,8 @@ describe("detectDepegEvents", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "curve", chain: "ethereum", price: 0.55, tvl: 3_000_000 },
-            { protocol: "uniswap", chain: "ethereum", price: 0.551, tvl: 2_000_000 },
+            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.55, tvl: 3_000_000 },
+            { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.551, tvl: 2_000_000 },
           ]),
           updated_at: now - 60,
         }],
@@ -961,8 +961,8 @@ describe("detectDepegEvents", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "curve", chain: "ethereum", price: 0.994, tvl: 2_000_000 },
-            { protocol: "uniswap", chain: "ethereum", price: 0.9945, tvl: 2_000_000 },
+            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.994, tvl: 2_000_000 },
+            { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.9945, tvl: 2_000_000 },
           ]),
           updated_at: now - 60,
         }],
@@ -1058,9 +1058,9 @@ describe("detectDepegEvents", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
-            { protocol: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
-            { protocol: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
+            { protocol: "bunni-ethereum", sourceFamily: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
+            { protocol: "uniswap-v4-ethereum", sourceFamily: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
+            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
           ]),
           updated_at: now - 60,
         }],
@@ -1118,9 +1118,9 @@ describe("detectDepegEvents", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "fluid", chain: "ethereum", price: 0.9997, tvl: 900_000 },
-            { protocol: "balancer", chain: "ethereum", price: 1.0001, tvl: 700_000 },
-            { protocol: "curve", chain: "ethereum", price: 0.9999, tvl: 300_000 },
+            { protocol: "fluid", sourceFamily: "fluid", chain: "ethereum", price: 0.9997, tvl: 900_000 },
+            { protocol: "balancer", sourceFamily: "balancer", chain: "ethereum", price: 1.0001, tvl: 700_000 },
+            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.9999, tvl: 300_000 },
           ]),
           updated_at: now - 60,
         }],
@@ -1178,9 +1178,9 @@ describe("detectDepegEvents", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "curve", chain: "ethereum", price: 0.9438, tvl: 11_000_000 },
-            { protocol: "pancakeswap", chain: "bsc", price: 0.9461, tvl: 5_000_000 },
-            { protocol: "uniswap-v4", chain: "ethereum", price: 0.9442, tvl: 3_000_000 },
+            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.9438, tvl: 11_000_000 },
+            { protocol: "pancakeswap", sourceFamily: "pancakeswap", chain: "bsc", price: 0.9461, tvl: 5_000_000 },
+            { protocol: "uniswap-v4", sourceFamily: "uniswap-v4", chain: "ethereum", price: 0.9442, tvl: 3_000_000 },
           ]),
           updated_at: now - 60,
         }],
@@ -1230,9 +1230,9 @@ describe("detectDepegEvents", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
-            { protocol: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
-            { protocol: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
+            { protocol: "bunni-ethereum", sourceFamily: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
+            { protocol: "uniswap-v4-ethereum", sourceFamily: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
+            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
           ]),
           updated_at: now - 60,
         }],

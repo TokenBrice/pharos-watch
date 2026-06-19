@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   accumulateGlobalAggregate,
+  aggregateProtocolSources,
   classifyCoverage,
   collapseDuplicateObservations,
   filterRetainedPools,
@@ -184,6 +185,22 @@ describe("classifyCoverage", () => {
 
     expect(coverageClass).toBe("mixed");
     expect(coverageConfidence).toBeCloseTo(0.61, 6);
+  });
+});
+
+describe("aggregateProtocolSources", () => {
+  it("preserves source family on protocol-source rows for depeg corroboration", () => {
+    const aggregated = aggregateProtocolSources([
+      makeObs({ protocol: "curve", price: 0.99, tvl: 1_000_000, sourceFamily: "dl" }),
+      makeObs({ protocol: "curve", price: 0.98, tvl: 2_000_000, sourceFamily: "gecko_terminal" }),
+      makeObs({ protocol: "uniswap", price: 0.97, tvl: 3_000_000, sourceFamily: "gecko_terminal" }),
+    ]);
+
+    expect(aggregated).toEqual([
+      expect.objectContaining({ protocol: "uniswap", sourceFamily: "gecko_terminal", tvl: 3_000_000 }),
+      expect.objectContaining({ protocol: "curve", sourceFamily: "gecko_terminal", tvl: 2_000_000 }),
+      expect.objectContaining({ protocol: "curve", sourceFamily: "dl", tvl: 1_000_000 }),
+    ]);
   });
 });
 
