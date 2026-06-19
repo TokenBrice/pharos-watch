@@ -371,7 +371,7 @@ const DEPEG_HISTORY_COLUMNS: CsvColumn<DepegHistoryRow>[] = [
 ];
 
 function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegHistoryRow[] {
-  const cutoffSec = Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) - RETENTION_DAYS * 86_400;
+  const cutoffSec = cutoffSecForSnapshotDate(snapshotDate);
   return events
     .filter((event) => event.startedAt >= cutoffSec)
     .map((event) => ({
