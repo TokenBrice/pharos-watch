@@ -159,24 +159,28 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     const rows = dewsRows.results ?? [];
     dewsRowsRead = rows.length;
     for (const row of rows) {
-      if (Number.isFinite(row.computed_at)) {
-        dewsLatestComputedAt =
-          dewsLatestComputedAt == null
-            ? row.computed_at
-            : Math.max(dewsLatestComputedAt, row.computed_at);
+      if (!Number.isFinite(row.computed_at)) {
+        dewsUnavailable = true;
+        dewsFailureReason ??= "stress_signals latest rows are missing computed_at";
+        continue;
+      }
+
+      dewsLatestComputedAt =
+        dewsLatestComputedAt == null
+          ? row.computed_at
+          : Math.max(dewsLatestComputedAt, row.computed_at);
+
+      const rowAgeSec = now - row.computed_at;
+      if (rowAgeSec > DEWS_STRESS_MAX_AGE_SEC) {
+        dewsUnavailable = true;
+        dewsFailureReason ??=
+          `stress_signals latest row for ${row.stablecoin_id} is stale (ageSec=${rowAgeSec}, maxAgeSec=${DEWS_STRESS_MAX_AGE_SEC})`;
       }
     }
 
     if (rows.length === 0) {
       dewsUnavailable = true;
       dewsFailureReason = "stress_signals returned no latest rows";
-    } else if (dewsLatestComputedAt == null) {
-      dewsUnavailable = true;
-      dewsFailureReason = "stress_signals latest rows are missing computed_at";
-    } else if (now - dewsLatestComputedAt > DEWS_STRESS_MAX_AGE_SEC) {
-      dewsUnavailable = true;
-      dewsFailureReason =
-        `stress_signals latest row is stale (ageSec=${now - dewsLatestComputedAt}, maxAgeSec=${DEWS_STRESS_MAX_AGE_SEC})`;
     }
 
     if (!dewsUnavailable) {
