@@ -36,7 +36,6 @@ export interface L2BeatRiskValue {
 }
 
 export interface L2BeatChainRiskSnapshot {
-  id: string;
   slug: string;
   name: string;
   type: L2BeatScalingLayer;
@@ -54,7 +53,6 @@ const r = (value: string, sentiment: L2BeatRiskSentiment): L2BeatRiskValue => ({
 
 export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
   arbitrum: {
-    id: "arbitrum",
     slug: "arbitrum",
     name: "Arbitrum One",
     type: "layer2",
@@ -71,7 +69,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   base: {
-    id: "base",
     slug: "base",
     name: "Base Chain",
     type: "layer2",
@@ -88,7 +85,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   optimism: {
-    id: "optimism",
     slug: "op-mainnet",
     name: "OP Mainnet",
     type: "layer2",
@@ -105,7 +101,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   "polygon-pos": {
-    id: "polygon-pos",
     slug: "polygon-pos",
     name: "Polygon PoS",
     type: "layer2",
@@ -122,7 +117,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   gnosis: {
-    id: "gnosis",
     slug: "gnosis",
     name: "Gnosis Chain",
     type: "layer2",
@@ -139,7 +133,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   celo: {
-    id: "celo",
     slug: "celo",
     name: "Celo",
     type: "layer2",
@@ -156,7 +149,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   zksync2: {
-    id: "zksync2",
     slug: "zksync-era",
     name: "ZKsync Era",
     type: "layer2",
@@ -173,7 +165,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   worldchain: {
-    id: "worldchain",
     slug: "world",
     name: "World Chain",
     type: "layer2",
@@ -190,7 +181,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   unichain: {
-    id: "unichain",
     slug: "unichain",
     name: "Unichain",
     type: "layer2",
@@ -207,7 +197,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   ink: {
-    id: "ink",
     slug: "ink",
     name: "Ink",
     type: "layer2",
@@ -224,7 +213,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   plumenetwork: {
-    id: "plumenetwork",
     slug: "plumenetwork",
     name: "Plume Network",
     type: "layer2",
@@ -241,7 +229,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   megaeth: {
-    id: "megaeth",
     slug: "megaeth",
     name: "MegaETH",
     type: "layer2",
@@ -258,7 +245,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   mantle: {
-    id: "mantle",
     slug: "mantle",
     name: "Mantle",
     type: "layer2",
@@ -275,7 +261,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   linea: {
-    id: "linea",
     slug: "linea",
     name: "Linea",
     type: "layer2",
@@ -292,7 +277,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   scroll: {
-    id: "scroll",
     slug: "scroll",
     name: "Scroll",
     type: "layer2",
@@ -309,7 +293,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   blast: {
-    id: "blast",
     slug: "blast",
     name: "Blast",
     type: "layer2",
@@ -326,7 +309,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   mode: {
-    id: "mode",
     slug: "mode",
     name: "Mode Network",
     type: "layer2",
@@ -343,7 +325,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   mantapacific: {
-    id: "mantapacific",
     slug: "mantapacific",
     name: "Manta Pacific",
     type: "layer2",
@@ -360,7 +341,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   bob: {
-    id: "bob",
     slug: "bob",
     name: "BOB",
     type: "layer2",
@@ -377,7 +357,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   fraxtal: {
-    id: "fraxtal",
     slug: "fraxtal",
     name: "Fraxtal",
     type: "layer2",
@@ -394,7 +373,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   taiko: {
-    id: "taiko",
     slug: "taiko",
     name: "Taiko Alethia",
     type: "layer2",
@@ -411,7 +389,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   polygonzkevm: {
-    id: "polygonzkevm",
     slug: "polygonzkevm",
     name: "Polygon zkEVM",
     type: "layer2",
@@ -428,7 +405,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   bobanetwork: {
-    id: "bobanetwork",
     slug: "bobanetwork",
     name: "Boba Network",
     type: "layer2",
@@ -445,7 +421,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   soneium: {
-    id: "soneium",
     slug: "soneium",
     name: "Soneium",
     type: "layer2",
@@ -462,7 +437,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   zircuit: {
-    id: "zircuit",
     slug: "zircuit",
     name: "Zircuit",
     type: "layer2",
@@ -479,7 +453,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   metis: {
-    id: "metis",
     slug: "metis",
     name: "Metis Andromeda",
     type: "layer2",
@@ -496,7 +469,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   morph: {
-    id: "morph",
     slug: "morph",
     name: "Morph",
     type: "layer2",
@@ -513,7 +485,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   swell: {
-    id: "swell",
     slug: "swell",
     name: "Swellchain",
     type: "layer2",
@@ -530,7 +501,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   xlayer: {
-    id: "xlayer",
     slug: "xlayer",
     name: "X Layer",
     type: "layer2",
@@ -547,7 +517,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   apechain: {
-    id: "apechain",
     slug: "apechain",
     name: "ApeChain",
     type: "layer3",
@@ -564,7 +533,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   abstract: {
-    id: "abstract",
     slug: "abstract",
     name: "Abstract",
     type: "layer2",
@@ -581,7 +549,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   corn: {
-    id: "corn",
     slug: "corn",
     name: "Corn",
     type: "layer2",
@@ -598,7 +565,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   edgechain: {
-    id: "edgechain",
     slug: "edgechain",
     name: "Edge Chain",
     type: "layer3",
@@ -615,7 +581,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   hemi: {
-    id: "hemi",
     slug: "hemi",
     name: "Hemi",
     type: "layer2",
@@ -632,7 +597,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   immutablezkevm: {
-    id: "immutablezkevm",
     slug: "immutablezkevm",
     name: "Immutable zkEVM",
     type: "layer2",
@@ -649,7 +613,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   katana: {
-    id: "katana",
     slug: "katana",
     name: "Katana",
     type: "layer2",
@@ -666,7 +629,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   sophon: {
-    id: "sophon",
     slug: "sophon",
     name: "Sophon",
     type: "layer2",
@@ -683,7 +645,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   starknet: {
-    id: "starknet",
     slug: "starknet",
     name: "Starknet",
     type: "layer2",
@@ -700,7 +661,6 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     },
   },
   fluent: {
-    id: "fluent",
     slug: "fluent",
     name: "Fluent",
     type: "layer2",
@@ -780,7 +740,6 @@ export const L2BEAT_RISK_SENTIMENT_SCORES: Record<L2BeatRiskSentiment, number> =
 
 export const L2BEAT_STAGE_WEIGHT = 0.4;
 export const L2BEAT_RISK_WEIGHT = 0.6;
-const SAFETY_STAGE1_CHAIN_TIER_STAGES = new Set<L2BeatStage>(["Stage 1", "Stage 2"]);
 
 export interface L2BeatChainEnvironmentAssessment {
   source: "l2beat";
@@ -837,7 +796,7 @@ export function getL2BeatChainEnvironmentAssessment(chainId: string): L2BeatChai
   const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
   const stageScore = L2BEAT_STAGE_SCORES[snapshot.stage];
   const riskScore = computeL2BeatRiskScore(snapshot);
-  const score = computeL2BeatChainEnvironmentScore(snapshot);
+  const score = Math.round(stageScore * L2BEAT_STAGE_WEIGHT + riskScore * L2BEAT_RISK_WEIGHT);
 
   return {
     source: "l2beat",
@@ -861,7 +820,7 @@ export function getL2BeatSafetyScoreAudit(chainId: string): L2BeatSafetyScoreAud
   const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
   const stage: L2BeatStage = snapshot.stage;
   const chainEnvironmentScore = computeL2BeatChainEnvironmentScore(snapshot);
-  const stageSupportsStage1Tier = SAFETY_STAGE1_CHAIN_TIER_STAGES.has(stage);
+  const stageSupportsStage1Tier = stage === "Stage 1" || stage === "Stage 2";
   const suggestedChainTier: ChainTier | null = stageSupportsStage1Tier ? "stage1-l2" : null;
   const notes = [
     stageSupportsStage1Tier

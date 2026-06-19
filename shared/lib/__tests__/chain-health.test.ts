@@ -28,7 +28,6 @@ function l2beatSnapshotFixture(input: {
   const sentiments = input.sentiments ?? ["neutral", "neutral", "neutral", "neutral", "neutral"];
   const [sequencerFailure, stateValidation, dataAvailability, exitWindow, proposerFailure] = sentiments;
   return {
-    id: "fixture",
     slug: "fixture",
     name: "Fixture",
     type: "layer2",
