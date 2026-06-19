@@ -5,19 +5,14 @@ import { toErrorMessage } from "./error-utils";
 
 const CHAT_MEMBER_CACHE_TTL_SEC = 5 * 60;
 
-export type TelegramChatMemberStatus =
-  | "creator"
-  | "administrator"
-  | "member"
-  | "restricted"
-  | "left"
-  | "kicked";
+export type TelegramChatMemberStatus = "creator" | "administrator" | "member" | "restricted" | "left" | "kicked";
 
 export interface TelegramChatMember {
   status: TelegramChatMemberStatus;
   userId: string;
   username: string | null;
   firstName: string | null;
+  isAnonymous: boolean;
 }
 
 interface TelegramApiUser {
@@ -29,6 +24,7 @@ interface TelegramApiUser {
 interface TelegramChatMemberResult {
   status?: string;
   user?: TelegramApiUser;
+  is_anonymous?: boolean;
 }
 
 interface TelegramApiResponse<T> {
@@ -71,6 +67,7 @@ function normalizeMember(raw: TelegramChatMemberResult, fallbackUserId: string):
     userId,
     username: raw.user?.username ?? null,
     firstName: raw.user?.first_name ?? null,
+    isAnonymous: raw.is_anonymous === true,
   };
 }
 
@@ -109,9 +106,7 @@ export async function getCachedChatMember(
 
   if (!response.ok) {
     await drainResponseBody(response);
-    console.warn(
-      `[telegram-chat-member] getChatMember returned ${response.status} for chat ${chatId} user ${userId}`,
-    );
+    console.warn(`[telegram-chat-member] getChatMember returned ${response.status} for chat ${chatId} user ${userId}`);
     return null;
   }
 
@@ -140,7 +135,9 @@ export async function getCachedChatAdministrators(
   if (cached && isFresh(cached.updatedAt)) {
     try {
       const parsed = JSON.parse(cached.value) as TelegramChatMember[];
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed) && parsed.every((entry) => typeof entry?.isAnonymous === "boolean")) {
+        return parsed;
+      }
     } catch {
       /* fall through to refresh */
     }
@@ -150,18 +147,13 @@ export async function getCachedChatAdministrators(
   try {
     response = await postTelegramBotApi(botToken, "getChatAdministrators", { chat_id: chatId });
   } catch (err) {
-    console.warn(
-      `[telegram-chat-member] getChatAdministrators fetch failed for chat ${chatId}:`,
-      toErrorMessage(err),
-    );
+    console.warn(`[telegram-chat-member] getChatAdministrators fetch failed for chat ${chatId}:`, toErrorMessage(err));
     return null;
   }
 
   if (!response.ok) {
     await drainResponseBody(response);
-    console.warn(
-      `[telegram-chat-member] getChatAdministrators returned ${response.status} for chat ${chatId}`,
-    );
+    console.warn(`[telegram-chat-member] getChatAdministrators returned ${response.status} for chat ${chatId}`);
     return null;
   }
 
@@ -186,6 +178,7 @@ export function formatAdministratorMentions(admins: TelegramChatMember[]): strin
   const labels: string[] = [];
   for (const admin of admins) {
     if (admin.status !== "creator" && admin.status !== "administrator") continue;
+    if (admin.isAnonymous) continue;
     if (admin.username) {
       labels.push(`@${admin.username}`);
     } else if (admin.firstName) {

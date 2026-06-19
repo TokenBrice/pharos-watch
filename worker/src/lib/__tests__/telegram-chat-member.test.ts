@@ -5,7 +5,8 @@ import { jsonResponse } from "../../test-helpers/__shared/mock-fetch";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { getCachedChatMember, getCachedChatAdministrators } = await import("../telegram-chat-member");
+const { getCachedChatMember, getCachedChatAdministrators, formatAdministratorMentions } =
+  await import("../telegram-chat-member");
 
 const NOW_SEC = Math.floor(Date.now() / 1000);
 
@@ -20,6 +21,7 @@ describe("getCachedChatMember", () => {
       userId: "42",
       username: "alice",
       firstName: "Alice",
+      isAnonymous: false,
     });
     const db = mockD1([
       {
@@ -37,6 +39,7 @@ describe("getCachedChatMember", () => {
       userId: "42",
       username: "alice",
       firstName: "Alice",
+      isAnonymous: false,
     });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -71,6 +74,7 @@ describe("getCachedChatMember", () => {
       userId: "42",
       username: "bob",
       firstName: "Bob",
+      isAnonymous: false,
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0];
@@ -134,14 +138,16 @@ describe("getCachedChatAdministrators", () => {
     const result = await getCachedChatAdministrators(db, "bot-token", "-100");
 
     expect(result).toEqual([
-      { status: "creator", userId: "1", username: "alice", firstName: "Alice" },
-      { status: "administrator", userId: "2", username: null, firstName: "Bob" },
+      { status: "creator", userId: "1", username: "alice", firstName: "Alice", isAnonymous: false },
+      { status: "administrator", userId: "2", username: null, firstName: "Bob", isAnonymous: false },
     ]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("returns the cached value without calling Telegram when fresh", async () => {
-    const cached = JSON.stringify([{ status: "creator", userId: "1", username: "alice", firstName: "Alice" }]);
+    const cached = JSON.stringify([
+      { status: "creator", userId: "1", username: "alice", firstName: "Alice", isAnonymous: false },
+    ]);
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -153,7 +159,21 @@ describe("getCachedChatAdministrators", () => {
 
     const result = await getCachedChatAdministrators(db, "bot-token", "-100");
 
-    expect(result).toEqual([{ status: "creator", userId: "1", username: "alice", firstName: "Alice" }]);
+    expect(result).toEqual([
+      { status: "creator", userId: "1", username: "alice", firstName: "Alice", isAnonymous: false },
+    ]);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("formatAdministratorMentions", () => {
+  it("omits anonymous administrators from group-visible hints", () => {
+    expect(
+      formatAdministratorMentions([
+        { status: "creator", userId: "1", username: "alice", firstName: "Alice", isAnonymous: false },
+        { status: "administrator", userId: "2", username: "hidden", firstName: "Hidden", isAnonymous: true },
+        { status: "administrator", userId: "3", username: null, firstName: "Bob", isAnonymous: false },
+      ]),
+    ).toBe("@alice, Bob");
   });
 });
