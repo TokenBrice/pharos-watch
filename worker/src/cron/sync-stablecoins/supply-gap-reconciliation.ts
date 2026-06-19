@@ -1,5 +1,6 @@
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { CHAIN_META } from "@shared/lib/chains";
+import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -306,7 +307,7 @@ function buildSupplyGapCandidates(
     const meta = ACTIVE_META_BY_ID.get(assetId);
     if (!meta || meta.detailProvider !== "defillama") continue;
 
-    const pegKey = asset.pegType ?? Object.keys(asset.circulating ?? {})[0];
+    const pegKey = normalizePegTypeFromCurrency(meta.flags.pegCurrency);
     if (!pegKey) continue;
 
     const dlMarketCap = sumPegBuckets(asset.circulating);
