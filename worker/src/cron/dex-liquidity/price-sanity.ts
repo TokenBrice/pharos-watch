@@ -1,20 +1,10 @@
+import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildPriceValidationContext,
   validatePriceCandidate,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
-
-function pegTypeFromCurrency(pegCurrency: string | undefined): string | undefined {
-  if (!pegCurrency || pegCurrency === "VAR" || pegCurrency === "OTHER") {
-    return undefined;
-  }
-  // DefiLlama uses peggedREAL for BRL-pegged assets.
-  if (pegCurrency === "BRL") {
-    return "peggedREAL";
-  }
-  return `pegged${pegCurrency}`;
-}
 
 /** Peg-aware sanity gate for DEX price observations across all tracked stablecoin types. */
 export function isPlausibleDexObservationPrice(
@@ -27,7 +17,7 @@ export function isPlausibleDexObservationPrice(
   const context = buildPriceValidationContext({
     stablecoinId,
     pegCurrency: meta?.flags.pegCurrency,
-    pegType: pegTypeFromCurrency(meta?.flags.pegCurrency),
+    pegType: normalizePegTypeFromCurrency(meta?.flags.pegCurrency),
     navToken: meta?.flags.navToken,
     commodityOunces: meta?.commodityOunces,
   });
