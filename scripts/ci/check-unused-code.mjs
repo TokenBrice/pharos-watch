@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { extname, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
+import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
 
 const ROOT = process.cwd();
 const AUDIT_ALLOWLIST = !process.argv.includes("--skip-allowlist-audit");
@@ -371,32 +372,12 @@ if (deadModules.length === 0 && unusedExports.length === 0) {
 process.exit(1);
 
 function collectSourceFiles() {
-  const results = [];
-  for (const dir of SOURCE_DIRS) {
-    walk(resolve(ROOT, dir), results);
-  }
+  const excludedDirs = new Set(["node_modules", ".next", "out"]);
+  const results = SOURCE_DIRS.flatMap((dir) =>
+    collectSourceFilesUnderRoot(dir, ROOT, { extensions: SOURCE_EXTENSIONS, excludedDirs })
+      .filter((f) => !f.endsWith(".d.ts")),
+  );
   return results.sort();
-}
-
-function walk(dir, results) {
-  let entries = [];
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-
-  for (const entry of entries) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "node_modules" || entry.name === ".next" || entry.name === "out") continue;
-      walk(full, results);
-      continue;
-    }
-    if (full.endsWith(".d.ts")) continue;
-    if (!SOURCE_EXTENSIONS.has(extname(entry.name))) continue;
-    results.push(full);
-  }
 }
 
 function analyzeModule(file) {
