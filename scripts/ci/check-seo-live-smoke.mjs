@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { realpathSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "../lib/smoke-runtime.mjs";
 
@@ -255,7 +255,15 @@ async function main() {
 }
 
 export function isMainEntrypoint(importMetaUrl, argvPath = process.argv[1]) {
-  return Boolean(argvPath) && importMetaUrl === pathToFileURL(realpathSync(argvPath)).href;
+  if (!argvPath) {
+    return false;
+  }
+  try {
+    const modulePath = realpathSync(fileURLToPath(importMetaUrl));
+    return pathToFileURL(modulePath).href === pathToFileURL(realpathSync(argvPath)).href;
+  } catch {
+    return false;
+  }
 }
 
 if (isMainEntrypoint(import.meta.url)) {
