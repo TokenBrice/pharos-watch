@@ -288,6 +288,54 @@ describe("stablecoin detail view-model builder", () => {
     ]);
   });
 
+  it("drops malformed mint-authority runtime fields instead of crashing", () => {
+    const controlsAsObject = buildMintAuthorityDetailViewModel({
+      mintAuthoritySummary: {
+        mintPath: "permissioned-minter",
+        authorityPosture: "bounded-admin",
+        confidence: "verified",
+        summary: "Minting is controlled by a published admin.",
+        controls: { label: "not an array" },
+      },
+    } as never);
+
+    expect(controlsAsObject.status).toBe("reviewed");
+    expect(controlsAsObject.controls).toEqual([]);
+
+    const malformedControlFields = buildMintAuthorityDetailViewModel({
+      mintAuthoritySummary: {
+        mintPath: "permissioned-minter",
+        authorityPosture: "bounded-admin",
+        confidence: "verified",
+        summary: "Minting is controlled by a published admin.",
+        controls: [
+          {
+            chain: { name: "ethereum" },
+            address: { value: "0x123400000000000000000000000000000000abcd" },
+            label: "Malformed admin",
+            role: "minter-admin",
+            authorityType: "safe",
+            directMintAbility: "can-authorize",
+            threshold: "2",
+            signerCount: Number.NaN,
+            timelockDelaySec: { seconds: 3600 },
+            capDescription: ["cap"],
+          },
+        ],
+      },
+    } as never);
+
+    expect(malformedControlFields.controls[0]).toMatchObject({
+      label: "Malformed admin",
+      locationLabel: "No address published",
+      fullLocationLabel: "No address published",
+      addressUrl: null,
+      thresholdLabel: null,
+      timelockLabel: null,
+      capDescription: null,
+    });
+  });
+
   it("builds a ready view model from fetched inputs", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();

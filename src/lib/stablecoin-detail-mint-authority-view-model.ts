@@ -6,7 +6,13 @@ import type {
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { isRecord, stringValue } from "@shared/lib/type-guards";
+import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import {
+  MINT_AUTHORITY_CONTROL_ROLE_VALUES,
+  MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
+  MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
+  MINT_AUTHORITY_TYPE_VALUES,
+} from "@shared/types/core";
 import {
   mintAuthorityScoreTextClassName,
   resolveMintAuthorityScoreDisplay,
@@ -290,6 +296,10 @@ function labelFromMap(value: unknown, labels: Readonly<Record<string, string>>):
   );
 }
 
+function enumValue<T extends string>(value: string | null, allowed: readonly T[]): T | null {
+  return value != null && (allowed as readonly string[]).includes(value) ? (value as T) : null;
+}
+
 function formatThreshold(threshold: number | null, signerCount: number | null): string | null {
   if (threshold == null && signerCount == null) return null;
   if (threshold != null && signerCount != null) return `${threshold}/${signerCount} threshold`;
@@ -327,11 +337,11 @@ function readSources(value: unknown): MintAuthorityDetailSourceViewModel[] {
   return sources;
 }
 
-function readMintAuthorityCandidate(coin: StablecoinDetailCoinMeta): MintAuthorityClientSummary | null {
+function readMintAuthorityCandidate(coin: StablecoinDetailCoinMeta): Record<string, unknown> | null {
   // Single untrusted boundary: the summary is produced in-repo with the
-  // MintAuthorityClientSummary shape, but the isRecord guard keeps callers that
-  // pass arbitrary input (e.g. tests) safe before narrowing to the producer type.
-  return isRecord(coin.mintAuthoritySummary) ? (coin.mintAuthoritySummary as MintAuthorityClientSummary) : null;
+  // MintAuthorityClientSummary shape, but keep the value unknown at runtime so
+  // malformed callers cannot bypass field-level guards below.
+  return isRecord(coin.mintAuthoritySummary) ? coin.mintAuthoritySummary : null;
 }
 
 function postureToneFrom(value: unknown): MintAuthorityPostureTone {
@@ -452,11 +462,53 @@ function buildMintAuthorityControlViewModel(
   };
 }
 
+function readMintAuthorityControl(value: unknown): MintAuthorityClientControlSummary | null {
+  if (!isRecord(value)) return null;
+  const label = stringValue(value.label);
+  if (!label) return null;
+
+  const control: MintAuthorityClientControlSummary = {
+    label,
+    role: enumValue(stringValue(value.role), MINT_AUTHORITY_CONTROL_ROLE_VALUES) ?? "unknown",
+    authorityType: enumValue(stringValue(value.authorityType), MINT_AUTHORITY_TYPE_VALUES) ?? "unknown",
+    directMintAbility:
+      enumValue(stringValue(value.directMintAbility), MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES) ?? "unknown",
+  };
+
+  const chain = stringValue(value.chain);
+  const address = stringValue(value.address);
+  const threshold = numberValue(value.threshold);
+  const signerCount = numberValue(value.signerCount);
+  const timelockDelaySec = numberValue(value.timelockDelaySec);
+  const capDescription = stringValue(value.capDescription);
+  const modulesOrGuardsStatus = enumValue(
+    stringValue(value.modulesOrGuardsStatus),
+    MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
+  );
+
+  if (chain) control.chain = chain;
+  if (address) control.address = address;
+  if (threshold != null) control.threshold = threshold;
+  if (signerCount != null) control.signerCount = signerCount;
+  if (timelockDelaySec != null) control.timelockDelaySec = timelockDelaySec;
+  if (capDescription) control.capDescription = capDescription;
+  if (value.canRaiseCap === true || value.canRaiseCap === false || value.canRaiseCap === "unknown") {
+    control.canRaiseCap = value.canRaiseCap;
+  }
+  if (modulesOrGuardsStatus) control.modulesOrGuardsStatus = modulesOrGuardsStatus;
+  if (isRecord(value.keyCustodyAttestation)) {
+    control.keyCustodyAttestation =
+      value.keyCustodyAttestation as unknown as MintAuthorityClientControlSummary["keyCustodyAttestation"];
+  }
+
+  return control;
+}
+
 export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta): MintAuthorityDetailViewModel {
   const candidate = readMintAuthorityCandidate(coin);
   if (!candidate) return NOT_REVIEWED_MINT_AUTHORITY;
 
-  const summary = candidate.summary;
+  const summary = stringValue(candidate.summary);
   if (!summary) return NOT_REVIEWED_MINT_AUTHORITY;
 
   // The producer flattens review.sources / review.reviewedAt and per-control /
@@ -470,10 +522,23 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     seenSources.add(key);
     return true;
   });
-  const controls = (candidate.controls ?? [])
+  const controls = (Array.isArray(candidate.controls) ? candidate.controls : [])
+    .map(readMintAuthorityControl)
+    .filter((control): control is MintAuthorityClientControlSummary => control !== null);
+  const controlViewModels = controls
     .map(buildMintAuthorityControlViewModel)
     .filter((control): control is MintAuthorityDetailControlViewModel => control !== null);
-  const score = buildMintAuthorityScoreViewModel(resolveMintAuthorityScoreDisplay(coin.id, coin.mintAuthoritySummary));
+  const scoreCandidate: MintAuthorityClientSummary = {
+    ...candidate,
+    summary,
+    mintPath: stringValue(candidate.mintPath) ?? "unknown",
+    authorityPosture: stringValue(candidate.authorityPosture) ?? "unknown",
+    confidence: stringValue(candidate.confidence) ?? "unknown",
+    inheritedFrom: stringValue(candidate.inheritedFrom) ?? undefined,
+    mintIncidents: readMintIncidents(candidate.mintIncidents),
+    controls,
+  } as MintAuthorityClientSummary;
+  const score = buildMintAuthorityScoreViewModel(resolveMintAuthorityScoreDisplay(coin.id, scoreCandidate));
 
   return {
     status: "reviewed",
@@ -485,13 +550,17 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     confidenceLabel: labelFromMap(candidate.confidence, CONFIDENCE_LABELS),
     confidenceVerified: candidate.confidence === "verified",
     summary,
-    inheritedFrom: candidate.inheritedFrom ?? null,
-    controls,
+    inheritedFrom: stringValue(candidate.inheritedFrom) ?? null,
+    controls: controlViewModels,
     sources: dedupedSources,
     score,
-    reviewedAt: candidate.reviewedAt ?? null,
+    reviewedAt: stringValue(candidate.reviewedAt) ?? null,
     mintIncidents: readMintIncidents(candidate.mintIncidents),
-    sourceFreeRationale: candidate.sourceFreeRationale ?? null,
-    unresolvedQuestions: candidate.unresolvedQuestions ?? [],
+    sourceFreeRationale: stringValue(candidate.sourceFreeRationale) ?? null,
+    unresolvedQuestions: Array.isArray(candidate.unresolvedQuestions)
+      ? candidate.unresolvedQuestions
+          .map((question) => stringValue(question))
+          .filter((question): question is string => question !== null)
+      : [],
   };
 }
