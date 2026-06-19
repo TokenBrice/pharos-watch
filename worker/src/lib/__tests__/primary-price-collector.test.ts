@@ -25,7 +25,7 @@ function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): Primary
 }
 
 describe("buildPrimarySourceCandidates", () => {
-  it("restores aggregate DEX promotion when a single protocol candidate lacks hard corroboration", () => {
+  it("withholds aggregate DEX promotion when a single protocol candidate lacks hard corroboration", () => {
     const collected = makeCollected({
       cgPrice: 1.0,
       cgObservedAt: 1_700_000_000,
@@ -51,17 +51,7 @@ describe("buildPrimarySourceCandidates", () => {
 
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source.endsWith("-dex"))).toBe(false);
-    expect(sources.map((s) => s.source)).toEqual(["coingecko", "dex-promoted"]);
-    expect(sources.find((s) => s.source === "dex-promoted")?.metadata).toMatchObject({
-      restorationReason: "dex_promoted_restored_after_protocol_exclusion",
-      rejectedProtocolSources: [
-        {
-          protocol: "balancer",
-          sourceKey: "balancer-dex",
-          reason: "lacked_corroboration",
-        },
-      ],
-    });
+    expect(sources.map((s) => s.source)).toEqual(["coingecko"]);
     expect(dexCandidateTelemetry).toMatchObject([
       {
         stablecoinId: "dusd-test",
@@ -70,11 +60,7 @@ describe("buildPrimarySourceCandidates", () => {
         reason: "lacked_corroboration",
       },
     ]);
-    expect(priceSourceConfidenceProfile).toEqual({
-      activeDexLanes: 0,
-      freshestDexLaneAgeSec: 30,
-      aggregateLaneOnly: true,
-    });
+    expect(priceSourceConfidenceProfile).toBeNull();
   });
 
   it("accepts a single promoted DEX protocol when a hard CEX source agrees and withholds the aggregate", () => {

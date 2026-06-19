@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.17",
+      title: "Rejected DEX aggregate corroboration guard",
+      date: "2026-06-19",
+      effectiveAt: 1781861025,
+      summary:
+        "The aggregate `dex-promoted` lane is now withheld whenever a promoted protocol DEX candidate exists but fails admission, so rejected DEX bridge evidence cannot re-enter consensus as a separate soft source family.",
+      impact: [
+        "A lone protocol DEX candidate that lacks hard market/oracle/protocol corroboration remains excluded together with the overlapping aggregate DEX lane",
+        "The aggregate `dex-promoted` fallback still enters when no promoted protocol DEX candidate exists for the asset and the Binance overlap guard is clear",
+        "Soft aggregator prices can no longer become high-confidence severe-downside clusters solely by pairing with an aggregate rebuilt from rejected protocol DEX evidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.16",
       title: "DEX pool replacement price validation",
       date: "2026-06-14",

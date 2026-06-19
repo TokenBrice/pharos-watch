@@ -1,10 +1,18 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.16` (2026-02-01 -> 2026-06-14).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.17` (2026-02-01 -> 2026-06-19).
 
 ---
 
 > Older entries are archived in [pricing-pipeline-timeline-archive.md](./pricing-pipeline-timeline-archive.md); this file keeps the 10 most recent.
+
+## v6.17 - Rejected DEX aggregate corroboration guard (June 19, 2026)
+
+- The aggregate `dex-promoted` lane is withheld whenever a promoted protocol DEX candidate exists but fails admission
+- A lone protocol DEX candidate that lacks hard market/oracle/protocol corroboration no longer re-enters consensus through the overlapping aggregate lane
+- The aggregate `dex-promoted` fallback still enters when no promoted protocol DEX candidate exists and the Binance overlap guard is clear
+
+---
 
 ## v6.16 - DEX pool replacement price validation (June 14, 2026)
 
@@ -64,7 +72,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 - Hard Curve on-chain coverage now includes audited direct pools plus explicit opt-in one-hop and chained-hop routes that fail closed on missing dependencies or cycles
 - `uniswap-v3-dex` and `uniswap-v4-dex` can enter consensus as soft DEX lanes when `dex_prices.price_sources_json` publishes corroborated protocol evidence
-- `dex-promoted` is withheld only when a promoted protocol DEX lane is actually admitted, so rejected lone protocol candidates no longer suppress the aggregate DEX voice
+- `dex-promoted` was withheld only when a promoted protocol DEX lane was actually admitted, so rejected lone protocol candidates no longer suppressed the aggregate DEX voice
 - Exact-address providers prioritize missing and low-depth priced assets, report request-cap skips, and Jupiter can append bounded soft evidence to agreeing low-depth Solana prices without replacing the primary price
 
 ---
