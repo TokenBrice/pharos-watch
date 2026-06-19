@@ -633,6 +633,85 @@ describe("syncBlacklist", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
+  it("keeps a one-contract runtime tail ok and still writes producer snapshots", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
+    vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async () => {
+      vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
+      return {
+        logs: [],
+        complete: true,
+        scannedToBlock: 20000000,
+        calls: 1,
+        maxDepth: 0,
+      };
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+
+    expect(result.status).toBe("ok");
+    const meta = JSON.parse(result.metadata);
+    expect(meta.runtimeBudgetReached).toBe(true);
+    expect(meta.contractsSkipped).toBe(1);
+    expect(meta.runtimeBudgetSkippedOkThreshold).toBe(1);
+    expect(meta.runtimeBudgetSkippedWithinTolerance).toBe(true);
+    expect(meta.incompleteRuntimeConfigs).toBe(0);
+    expect(meta.subrequestBudgetReached).toBe(false);
+    expect(meta.producerSnapshotWindowUnavailable).toBe(false);
+    expect(meta.producerSnapshotSkipped).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
+  });
+
+  it("records producer snapshot materialization errors without failing an otherwise healthy run", async () => {
+    const db = mockD1([
+      { match: "blacklist_sync_state", rows: [] },
+      { match: "blacklist_events", rows: [] },
+      { match: "blacklist-gap-metrics-cache-write", rows: [], throwError: new Error("snapshot write failed") },
+    ]);
+    const onProgress = vi.fn();
+
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    const result = await syncBlacklist(buildTestOpts({ db, onProgress }));
+
+    expect(result.status).toBe("ok");
+    const meta = JSON.parse(result.metadata);
+    expect(meta.producerSnapshotError).toBe("Error");
+    expect(meta.producerGapMetricSnapshots).toBe(0);
+    expect(meta.producerSummarySnapshot).toBe(false);
+    expect(meta.producerSnapshotSkipped).toBe(false);
+    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+      stage: "producer-snapshots",
+      message: "Failed to materialize blacklist producer snapshots",
+      metadata: expect.objectContaining({
+        producerSnapshotError: "Error",
+        errorMessage: "snapshot write failed",
+      }),
+    }));
+  });
+
   it("advances sync state for EVM chains toward chain head when no events", async () => {
     const db = makeDb();
 
