@@ -160,6 +160,20 @@ function prepareDepegSetting(
   };
 }
 
+/** Shared body for the three simple boolean alert prepare* functions (tg-3[mutations]). */
+function prepareBooleanSetting(
+  label: string,
+  prepareFn: () => D1PreparedStatement[],
+  value: string,
+): { description: string | null; statements: D1PreparedStatement[] } {
+  if (value !== "0" && value !== "1") return { description: null, statements: [] };
+  const enabled = value === "1";
+  return {
+    description: enabled ? `${label} on.` : `${label} off.`,
+    statements: prepareFn(),
+  };
+}
+
 function prepareLaunchSetting(
   db: D1Database,
   chatId: string,
@@ -167,12 +181,8 @@ function prepareLaunchSetting(
   coinId: string,
   value: string,
 ): { description: string | null; statements: D1PreparedStatement[] } {
-  if (value !== "0" && value !== "1") return { description: null, statements: [] };
   const enabled = value === "1";
-  return {
-    description: enabled ? "Launch on." : "Launch off.",
-    statements: prepareLaunch(db, chatId, username, coinId, enabled),
-  };
+  return prepareBooleanSetting("Launch", () => prepareBoolAlert(db, chatId, username, coinId, enabled, "launch", buildLaunchUpsert), value);
 }
 
 function prepareReserveSetting(
@@ -182,20 +192,19 @@ function prepareReserveSetting(
   coinId: string,
   value: string,
 ): { description: string | null; statements: D1PreparedStatement[] } {
-  if (value !== "0" && value !== "1") return { description: null, statements: [] };
   const enabled = value === "1";
-  return {
-    description: enabled ? "Reserve on." : "Reserve off.",
-    statements: prepareReserve(db, chatId, username, coinId, enabled),
-  };
+  return prepareBooleanSetting("Reserve", () => prepareBoolAlert(db, chatId, username, coinId, enabled, "reserve", buildReserveUpsert), value);
 }
 
-function prepareReserve(
+/** Shared body for the three simple boolean alert prepare* helpers (tg-2[mutations]). */
+function prepareBoolAlert(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   enabled: boolean,
+  bumpKey: "reserve" | "depeg" | "launch",
+  buildUpsert: (chatId: string, coinId: string, enabled: boolean) => BuiltSubscriptionUpsert,
 ): D1PreparedStatement[] {
   const now = unixNow();
   return [
@@ -203,9 +212,9 @@ function prepareReserve(
       chatId,
       username,
       nowSec: now,
-      perCoinAlertBumps: enabled ? { reserve: 1 } : undefined,
+      perCoinAlertBumps: enabled ? { [bumpKey]: 1 } : undefined,
     }),
-    prepareSubscriptionUpsert(db, buildReserveUpsert(chatId, coinId, enabled)),
+    prepareSubscriptionUpsert(db, buildUpsert(chatId, coinId, enabled)),
   ];
 }
 
@@ -254,16 +263,7 @@ function prepareDepeg(
   coinId: string,
   enabled: boolean,
 ): D1PreparedStatement[] {
-  const now = unixNow();
-  return [
-    prepareUpsertSubscriberRow(db, {
-      chatId,
-      username,
-      nowSec: now,
-      perCoinAlertBumps: enabled ? { depeg: 1 } : undefined,
-    }),
-    prepareSubscriptionUpsert(db, buildDepegUpsert(chatId, coinId, enabled)),
-  ];
+  return prepareBoolAlert(db, chatId, username, coinId, enabled, "depeg", buildDepegUpsert);
 }
 
 function prepareDepegStep(
@@ -284,25 +284,6 @@ function prepareDepegStep(
   ];
   statements.push(prepareSubscriptionUpsert(db, buildDepegStepUpsert(chatId, coinId, step)));
   return statements;
-}
-
-function prepareLaunch(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  coinId: string,
-  enabled: boolean,
-): D1PreparedStatement[] {
-  const now = unixNow();
-  return [
-    prepareUpsertSubscriberRow(db, {
-      chatId,
-      username,
-      nowSec: now,
-      perCoinAlertBumps: enabled ? { launch: 1 } : undefined,
-    }),
-    prepareSubscriptionUpsert(db, buildLaunchUpsert(chatId, coinId, enabled)),
-  ];
 }
 
 function prepareSubscriptionUpsert(
