@@ -868,6 +868,7 @@ describe("handleStatus", () => {
           name: "PayPal USD",
           symbol: "PYUSD",
           geckoId: "paypal-usd",
+          frozen: true,
           pegType: "peggedUSD",
           pegMechanism: "fiat-backed",
           price: 0.9,

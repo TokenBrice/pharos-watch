@@ -180,7 +180,7 @@ async function loadCoinGeckoPriceDiff(
   }
 
   const trackedWithGeckoId = stablecoinsCache.payload.peggedAssets.filter(
-    (asset) => !asset.frozen && ACTIVE_IDS.has(asset.id) && typeof asset.geckoId === "string" && asset.geckoId.length > 0,
+    (asset) => ACTIVE_IDS.has(asset.id) && typeof asset.geckoId === "string" && asset.geckoId.length > 0,
   );
   if (trackedWithGeckoId.length === 0) {
     return {
