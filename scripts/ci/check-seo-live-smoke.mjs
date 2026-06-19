@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "../lib/smoke-runtime.mjs";
@@ -253,7 +254,11 @@ async function main() {
   console.log(`OK: SEO live smoke passed for ${baseUrl.toString()} (${sitemapLabel})`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+export function isMainEntrypoint(importMetaUrl, argvPath = process.argv[1]) {
+  return Boolean(argvPath) && importMetaUrl === pathToFileURL(realpathSync(argvPath)).href;
+}
+
+if (isMainEntrypoint(import.meta.url)) {
   main().catch((error) => {
     console.error(error);
     process.exit(1);
