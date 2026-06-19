@@ -149,6 +149,10 @@ export interface DigestInputData {
     change7d: number;
     signal: string;
   }[];
+  supplyChanges7d?: {
+    coin: string;
+    change7d: number;
+  }[];
   safetyScores?: {
     mentionedCoins: { symbol: string; grade: string; score: number; peg: number | null; liq: number | null }[];
     medianGrade: string;

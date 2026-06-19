@@ -1505,6 +1505,41 @@ describe("digest intelligence enrichment", () => {
     expect(intelligence.calmNarrativeFrame?.label).toBe("Supply rotation");
   });
 
+  it("evaluates a supply-7d trigger against the coin's weekly change when no velocity signal is emitted", () => {
+    const previous: DigestInputData = {
+      ...current,
+      dataQuality: { generatedAt: 1_772_668_800, stablecoinsCacheUpdatedAt: null, stablecoinsCacheAgeSec: null, windows: current.dataQuality?.windows ?? {
+        blacklistActivity: { label: "x", start: 0, end: 0 },
+        mintBurnFlows: { label: "x", start: 0, end: 0 },
+        supplyVelocity: { label: "x", dates: [] },
+        psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
+      } },
+      nextTriggers: [{
+        id: "trigger:supply-7d:usdc",
+        label: "USDC weekly supply move",
+        metric: "supply-7d-usd",
+        comparator: "abs-gte",
+        thresholdValue: 30_000_000,
+        thresholdLabel: "$30M 7d move",
+        symbol: "USDC",
+        rationale: "The largest weekly mover stays useful only if the move keeps scaling.",
+        detail: "If USDC's 7d supply move clears $30M, the story has follow-through.",
+      }],
+    };
+    const today: DigestInputData = {
+      ...current,
+      supplyVelocity: [],
+      supplyChanges7d: [{ coin: "USDC", change7d: 40_000_000 }],
+    };
+
+    const intelligence = buildDigestIntelligence(today, previous);
+
+    expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({
+      status: "hit",
+      triggerId: "trigger:supply-7d:usdc",
+    });
+  });
+
   it("evaluates a supply-7d trigger against the coin's own velocity even when a different coin is the biggest weekly mover", () => {
     const previous: DigestInputData = {
       ...current,

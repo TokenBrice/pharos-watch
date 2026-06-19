@@ -114,6 +114,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;
   let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
+  const supplyChanges7d: NonNullable<DigestInputData["supplyChanges7d"]> = [];
   let biggestAbsChange = 0;
 
   for (const coin of trackedStablecoinAssets) {
@@ -124,14 +125,16 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     totalPrevWeek += prevWeek;
 
     if (mcap > 1_000_000) {
-      const absChange = Math.abs(mcap - prevWeek);
+      const change7d = mcap - prevWeek;
+      supplyChanges7d.push({ coin: coin.symbol, change7d });
+      const absChange = Math.abs(change7d);
       if (absChange > biggestAbsChange) {
         biggestAbsChange = absChange;
         biggestSupplyChange = {
           id: coin.id,
           symbol: coin.symbol,
           name: coin.name,
-          changeUsd: mcap - prevWeek,
+          changeUsd: change7d,
           currentMcap: mcap,
         };
       }
@@ -283,6 +286,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       yesterdayIndex,
       blacklistActivity,
       supplyVelocity,
+      supplyChanges7d,
       safetyScores,
       resolvedDepegs,
       mintBurnFlows,
