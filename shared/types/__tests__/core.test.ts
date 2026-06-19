@@ -177,7 +177,7 @@ describe("getFilterTags — peg-group tags", () => {
   });
 
   it("VAR (CPI) peg emits var-peg and fiat-non-usd-peg group tag", () => {
-    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "VAR", governance: "centralized", backing: "algo", yieldBearing: false, rwa: false, navToken: false } }));
+    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "VAR", governance: "centralized", backing: "algorithmic", yieldBearing: false, rwa: false, navToken: false } }));
     expect(tags).toContain("var-peg");
     expect(tags).toContain("fiat-non-usd-peg");
     expect(tags).not.toContain("commodity-peg");
