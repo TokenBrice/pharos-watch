@@ -1,5 +1,5 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
@@ -30,10 +30,21 @@ const ADDRESS_OVERRIDES: Record<string, string> = {
   "bean-beanstalk": "arbitrum:0xBEA0005B8599265D41256905A9B3073D397812E4",
 };
 
+function isEvmChain(chain: string): boolean {
+  const canonicalChain = resolveChainId(chain);
+  return canonicalChain != null && CHAIN_META[canonicalChain]?.type === "evm";
+}
+
+function normalizeAddressForDefiLlamaChain(chain: string, address: string): string {
+  return isEvmChain(chain) && address.startsWith("0x") ? address.toLowerCase() : address;
+}
+
 function addressToCoinId(address: string): string {
-  if (address.includes(":")) {
-    const [chain, rawAddress] = address.split(":", 2);
-    return rawAddress?.startsWith("0x") ? `${chain}:${rawAddress.toLowerCase()}` : address;
+  const separatorIndex = address.indexOf(":");
+  if (separatorIndex >= 0) {
+    const chain = address.slice(0, separatorIndex);
+    const rawAddress = address.slice(separatorIndex + 1);
+    return `${chain}:${normalizeAddressForDefiLlamaChain(chain, rawAddress)}`;
   }
   if (address.startsWith("0x")) {
     return `ethereum:${address.toLowerCase()}`;
@@ -136,7 +147,7 @@ function isDefiLlamaContractQuoteUsable(
 
 function buildDefiLlamaCoinIdForChainAddress(chain: string, address: string): string {
   const prefix = DL_COINS_CHAIN_PREFIX_BY_CHAIN[chain] ?? chain;
-  const normalizedAddress = address.startsWith("0x") ? address.toLowerCase() : address;
+  const normalizedAddress = normalizeAddressForDefiLlamaChain(chain, address);
   return `${prefix}:${normalizedAddress}`;
 }
 
