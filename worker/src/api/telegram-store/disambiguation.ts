@@ -185,6 +185,8 @@ export async function clearPendingDisambiguation(
 // cleanup. Two TTLs gives a slow user mid-selection room to finish, with a
 // 10-minute floor so the guard remains meaningful if the TTL is ever shortened.
 const DISAMBIGUATION_CLEANUP_GRACE_SEC = Math.max(2 * DISAMBIGUATION_TTL_SEC, 600);
+const DISAMBIGUATION_CLEANUP_BATCH_SIZE = 500;
+const DISAMBIGUATION_CLEANUP_MAX_BATCHES = 10;
 
 /**
  * Deletes expired rows from `telegram_pending_disambiguation`. Rows are only
@@ -200,18 +202,42 @@ export async function cleanExpiredDisambiguations(
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const cutoffSec = Math.floor(Date.now() / 1000) - DISAMBIGUATION_CLEANUP_GRACE_SEC;
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare("DELETE FROM telegram_pending_disambiguation WHERE expires_at < ?")
-      .bind(cutoffSec)
-      .run(),
-    3,
-    signal,
-  );
-  const disambiguationRowsCleaned = result.meta?.changes ?? 0;
+  let disambiguationRowsCleaned = 0;
+  let batches = 0;
+  let lastBatchSize = 0;
+
+  do {
+    throwIfAborted(signal);
+    const result = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(
+            `
+          DELETE FROM telegram_pending_disambiguation
+          WHERE chat_id IN (
+            SELECT chat_id
+              FROM telegram_pending_disambiguation
+             WHERE expires_at < ?
+             ORDER BY expires_at ASC
+             LIMIT ?
+          )
+        `,
+          )
+          .bind(cutoffSec, DISAMBIGUATION_CLEANUP_BATCH_SIZE)
+          .run(),
+      3,
+      signal,
+    );
+    lastBatchSize = result.meta?.changes ?? 0;
+    disambiguationRowsCleaned += lastBatchSize;
+    batches += 1;
+  } while (lastBatchSize >= DISAMBIGUATION_CLEANUP_BATCH_SIZE && batches < DISAMBIGUATION_CLEANUP_MAX_BATCHES);
+
+  throwIfAborted(signal);
+  const disambiguationCleanupHasMore = lastBatchSize >= DISAMBIGUATION_CLEANUP_BATCH_SIZE;
   return createCronResult({
     status: "ok",
     itemCount: disambiguationRowsCleaned,
-    metadata: { disambiguationRowsCleaned, cutoffSec },
+    metadata: { disambiguationRowsCleaned, cutoffSec, batches, disambiguationCleanupHasMore },
   });
 }

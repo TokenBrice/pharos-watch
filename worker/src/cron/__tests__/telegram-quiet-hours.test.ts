@@ -107,14 +107,19 @@ function createStubDb(rows: DisambiguationRow[]): D1Database {
         return stmt as unknown as D1PreparedStatement;
       },
       run: async () => {
-        if (sql.startsWith("DELETE FROM telegram_pending_disambiguation WHERE expires_at <")) {
-          const [cutoff] = bound as [number];
+        if (sql.includes("DELETE FROM telegram_pending_disambiguation") && sql.includes("ORDER BY expires_at ASC")) {
+          const [cutoff, limit] = bound as [number, number];
           let removed = 0;
-          for (let i = rows.length - 1; i >= 0; i--) {
-            if (rows[i].expires_at < cutoff) {
-              rows.splice(i, 1);
-              removed += 1;
-            }
+          const doomed = rows
+            .map((row, index) => ({ row, index }))
+            .filter(({ row }) => row.expires_at < cutoff)
+            .sort((a, b) => a.row.expires_at - b.row.expires_at)
+            .slice(0, limit)
+            .map(({ index }) => index)
+            .sort((a, b) => b - a);
+          for (const index of doomed) {
+            rows.splice(index, 1);
+            removed += 1;
           }
           return { success: true, meta: { changes: removed } };
         }
@@ -192,6 +197,44 @@ describe("cleanExpiredDisambiguations", () => {
 
     expect(rows.map((row) => row.chat_id)).toEqual(["active", "fresh-expired", "boundary"]);
     expect(result.itemCount).toBe(0);
+  });
+
+  it("deletes expired rows in bounded batches", async () => {
+    const rows: DisambiguationRow[] = Array.from({ length: 501 }, (_, index) => ({
+      chat_id: `old-${index}`,
+      expires_at: NOW_SEC - GRACE_SEC - 60 - index,
+    }));
+    const db = createStubDb(rows);
+
+    const result = await cleanExpiredDisambiguations(db);
+
+    expect(rows).toHaveLength(0);
+    expect(result.itemCount).toBe(501);
+    const metadata = JSON.parse(result.metadata!) as {
+      batches: number;
+      disambiguationCleanupHasMore: boolean;
+    };
+    expect(metadata.batches).toBe(2);
+    expect(metadata.disambiguationCleanupHasMore).toBe(false);
+  });
+
+  it("caps each cron pass to avoid monopolizing the Telegram slot", async () => {
+    const rows: DisambiguationRow[] = Array.from({ length: 5_001 }, (_, index) => ({
+      chat_id: `old-${index}`,
+      expires_at: NOW_SEC - GRACE_SEC - 60 - index,
+    }));
+    const db = createStubDb(rows);
+
+    const result = await cleanExpiredDisambiguations(db);
+
+    expect(rows).toHaveLength(1);
+    expect(result.itemCount).toBe(5_000);
+    const metadata = JSON.parse(result.metadata!) as {
+      batches: number;
+      disambiguationCleanupHasMore: boolean;
+    };
+    expect(metadata.batches).toBe(10);
+    expect(metadata.disambiguationCleanupHasMore).toBe(true);
   });
 
   it("reports zero cleaned when the table is empty", async () => {
