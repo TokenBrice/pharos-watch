@@ -63,6 +63,14 @@ describe("check-phishing-signatures", () => {
     ).not.toThrow();
   });
 
+  it("scans executable inline scripts after legacy comment markers inside prior scripts", () => {
+    expect(() =>
+      runChecker(
+        `<html><body><script>console.log("<!-- benign legacy marker");</script><script>try { const params = new URLSearchParams(window.location.hash.slice(1)); window.__PHAROS_TOKEN__ = params.get("token"); history.replaceState(null, "", location.pathname); } catch (error) {}</script></body></html>`,
+      ),
+    ).toThrow(/Inline-script phishing-kit signatures detected/);
+  });
+
   it("detects inline phishing signatures when script end tags contain browser-accepted spacing", () => {
     expect(() =>
       runChecker(
