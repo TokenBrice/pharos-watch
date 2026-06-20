@@ -1621,6 +1621,12 @@ describe("syncStablecoins", () => {
 
     expect(result.status).toBe("degraded");
     expect(cacheWrites.map((write) => write.key)).not.toContain("stablecoins");
+    expect(recordOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.DL_STABLECOINS,
+      false,
+      undefined,
+    );
   });
 
   it("degrades cleanly when the previous stablecoins cache is malformed", async () => {
