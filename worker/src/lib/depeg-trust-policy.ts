@@ -43,11 +43,13 @@ function getPrimaryPriceAgeSec(
   input: Pick<PrimaryPriceTrustInput, "priceObservedAt" | "priceUpdatedAt">,
   nowSec: number,
 ): number {
-  return typeof input.priceObservedAt === "number" && Number.isFinite(input.priceObservedAt)
-    ? Math.max(0, nowSec - input.priceObservedAt)
+  const observedAt = typeof input.priceObservedAt === "number" && Number.isFinite(input.priceObservedAt)
+    ? input.priceObservedAt
     : typeof input.priceUpdatedAt === "number" && Number.isFinite(input.priceUpdatedAt)
-      ? Math.max(0, nowSec - input.priceUpdatedAt)
-      : Number.POSITIVE_INFINITY;
+      ? input.priceUpdatedAt
+      : null;
+  if (observedAt == null || observedAt > nowSec) return Number.POSITIVE_INFINITY;
+  return nowSec - observedAt;
 }
 
 function getPrimaryTrustSources(input: Pick<PrimaryPriceTrustInput, "agreeSources" | "priceSource">): string[] {

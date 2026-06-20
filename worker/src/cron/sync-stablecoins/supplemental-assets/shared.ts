@@ -1,5 +1,4 @@
 import { CHAIN_META } from "@shared/lib/chains";
-import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../../lib/response-body";
@@ -32,11 +31,23 @@ export function toPositiveFiniteNumber(value: unknown): number | null {
   return null;
 }
 
-function isFreshSupplementalPrice(source: SupplementalPriceResolution["source"], observedAt: number | null): boolean {
-  if (observedAt == null) return true;
-  const maxTrustedAgeSec = getPricingSourceRegistryEntry(source)?.maxTrustedAgeSec ?? 15 * 60;
-  const nowSec = Math.floor(Date.now() / 1000);
-  return nowSec - observedAt <= maxTrustedAgeSec;
+function normalizeFreshSupplementalPriceResolution(
+  resolution: SupplementalPriceResolution,
+  options: { requireObservedAt?: boolean } = {},
+): SupplementalPriceResolution | null {
+  const freshness = validatePricingSourceFreshness({
+    source: resolution.source,
+    observedAt: resolution.observedAt,
+    observedAtMode: resolution.observedAtMode,
+    requireObservedAt: options.requireObservedAt,
+  });
+  if (!freshness.accepted) return null;
+
+  return {
+    ...resolution,
+    observedAt: freshness.observedAt,
+    observedAtMode: freshness.observedAtMode,
+  };
 }
 
 export function resolveLowVolumeCoinGeckoPrice(
@@ -83,7 +94,8 @@ export function resolveSupplementalPrice(
       observedAt,
       observedAtMode: observedAt != null ? "upstream" as const : null,
     };
-    if (isFreshSupplementalPrice(resolution.source, resolution.observedAt)) return resolution;
+    const freshResolution = normalizeFreshSupplementalPriceResolution(resolution);
+    if (freshResolution) return freshResolution;
   }
 
   const cgEntry = cgData[geckoId];
@@ -96,7 +108,7 @@ export function resolveSupplementalPrice(
       observedAt,
       observedAtMode: observedAt != null ? "upstream" as const : null,
     };
-    return isFreshSupplementalPrice(resolution.source, resolution.observedAt) ? resolution : null;
+    return normalizeFreshSupplementalPriceResolution(resolution);
   }
 
   return null;

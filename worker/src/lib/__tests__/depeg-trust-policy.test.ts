@@ -34,6 +34,17 @@ describe("classifyPrimaryDepegTrust", () => {
     }, nowSec)).toBe("authoritative");
   });
 
+  it("requires confirmation for future-dated primary observations", () => {
+    expect(classifyPrimaryDepegTrust({
+      price: 0.998,
+      priceSource: "pyth",
+      priceConfidence: "single-source",
+      priceObservedAt: nowSec + 60,
+      priceObservedAtMode: "upstream",
+      agreeSources: ["pyth"],
+    }, nowSec)).toBe("confirm_required");
+  });
+
   it("uses source observation time rather than sync-write time for freshness", () => {
     expect(classifyPrimaryDepegTrust({
       price: 1,
