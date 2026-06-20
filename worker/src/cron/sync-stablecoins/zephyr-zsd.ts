@@ -138,12 +138,17 @@ function buildZephyrPeggedAsset(
   nowSec = Math.floor(Date.now() / 1000),
 ): PeggedAsset | null {
   if (!isZephyrScannerAssetId(meta.id)) return null;
+
+  const pKey = pegTypeKey(meta);
+  const priceForCirculatingMcap = priceResolution?.price != null
+    && isReasonablePrice(priceResolution.price, pKey, undefined, { navToken: meta.flags.navToken })
+    ? priceResolution.price
+    : 1.0;
   const circulatingMcap = meta.id === ZEPHYR_ZSD_ASSET_ID
-    ? stats.supply * (priceResolution?.price ?? 1.0)
+    ? stats.supply * priceForCirculatingMcap
     : stats.mcap;
   if (!Number.isFinite(circulatingMcap) || circulatingMcap <= 0) return null;
 
-  const pKey = pegTypeKey(meta);
   const resolvedPrice = resolveZephyrPrice(stats, priceResolution, nowSec);
   return {
     id: meta.id,
