@@ -106,6 +106,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0160     | `0160_telegram_per_coin_alert_override_markers.sql`      | Add per-coin Telegram alert override markers so explicit off settings do not confuse default zeroes with opt-outs                                 |
 | 0161     | `0161_apxusd_ddr_tail_90203_relink_repair.sql`           | Repair APXUSD event 90203 relinking when the earlier tail migration found an accidental fresh-incident link already occupying the event            |
 | 0162     | `0162_apxusd_duplicate_ddr_prediction_erratum.sql`       | Invalidate the accidental APXUSD duplicate DDR prediction and supersede its incident as an alias of the canonical June 2 incident                  |
+| 0163     | `0163_selector_snapshot_daily_quota.sql`                 | Add atomic D1 daily quota rows for unauthenticated selector-snapshot writes                                                                       |
 
 ## Retired Individual Migrations
 

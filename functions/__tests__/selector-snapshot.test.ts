@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { KVNamespace, KVNamespaceGetOptions } from "@cloudflare/workers-types";
+import type { D1Database, D1PreparedStatement, KVNamespace, KVNamespaceGetOptions } from "@cloudflare/workers-types";
 import {
   SELECTOR_SNAPSHOT_TTL_SECONDS,
   SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
@@ -65,17 +65,58 @@ function makeKV(): TestKVNamespace {
   return ns as TestKVNamespace;
 }
 
+interface TestD1Database extends D1Database {
+  __getQuotaRows(): Map<string, number>;
+  __setRunHandler(handler: (() => { meta?: { changes?: number } } | Promise<{ meta?: { changes?: number } }>) | null): void;
+}
+
+function makeD1(): TestD1Database {
+  const quotaRows = new Map<string, number>();
+  let runHandler: (() => { meta?: { changes?: number } } | Promise<{ meta?: { changes?: number } }>) | null = null;
+
+  const db: Partial<TestD1Database> = {
+    prepare: ((query: string) => {
+      let values: unknown[] = [];
+      const statement: Partial<D1PreparedStatement> = {
+        bind: (...bindValues: unknown[]) => {
+          values = bindValues;
+          return statement as D1PreparedStatement;
+        },
+        run: async () => {
+          if (runHandler) return runHandler();
+          if (!query.includes("selector_snapshot_daily_quota")) return { meta: { changes: 0 } };
+          const [quotaDate, ipHash, , , maxCount] = values as [string, string, number, number, number];
+          const key = `${quotaDate}:${ipHash}`;
+          const current = quotaRows.get(key) ?? 0;
+          if (current >= maxCount) return { meta: { changes: 0 } };
+          quotaRows.set(key, current + 1);
+          return { meta: { changes: 1 } };
+        },
+      };
+      return statement as D1PreparedStatement;
+    }) as D1Database["prepare"],
+    __getQuotaRows: () => quotaRows,
+    __setRunHandler: (handler) => { runHandler = handler; },
+  };
+
+  return db as TestD1Database;
+}
+
 interface MakeEnvOverrides {
   SELECTOR_SNAPSHOTS?: KVNamespace | undefined;
+  DB?: D1Database | undefined;
   SITE_ORIGIN?: string;
   OPS_UI_ORIGIN?: string;
 }
 
 function makeEnv(overrides: MakeEnvOverrides = {}) {
   const kvProvided = Object.prototype.hasOwnProperty.call(overrides, "SELECTOR_SNAPSHOTS");
+  const dbProvided = Object.prototype.hasOwnProperty.call(overrides, "DB");
   const kv = kvProvided ? overrides.SELECTOR_SNAPSHOTS : makeKV();
+  const db = dbProvided ? overrides.DB : makeD1();
   return {
     SELECTOR_SNAPSHOTS: kv,
+    DB: db,
     SITE_ORIGIN: overrides.SITE_ORIGIN ?? "https://pharos.watch",
     OPS_UI_ORIGIN: overrides.OPS_UI_ORIGIN ?? "https://ops.pharos.watch",
   };
@@ -344,6 +385,34 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(500);
     });
 
+    it("returns 503 when the D1 quota binding is missing for identified clients", async () => {
+      const response = await onRequest({
+        request: postRequest(buildSelectorSnapshotOutput(), {
+          ...POST_HEADERS,
+          "CF-Connecting-IP": "203.0.113.88",
+        }),
+        env: makeEnv({ DB: undefined }),
+        params: {},
+      });
+      expect(response.status).toBe(503);
+    });
+
+    it("returns 503 when the D1 quota reservation fails", async () => {
+      const db = makeD1();
+      db.__setRunHandler(() => {
+        throw new Error("d1 unavailable");
+      });
+      const response = await onRequest({
+        request: postRequest(buildSelectorSnapshotOutput(), {
+          ...POST_HEADERS,
+          "CF-Connecting-IP": "203.0.113.89",
+        }),
+        env: makeEnv({ DB: db }),
+        params: {},
+      });
+      expect(response.status).toBe(503);
+    });
+
     it("returns 503 when the KV write fails", async () => {
       const kv = makeKV();
       kv.__setWriteHandler(() => {
@@ -555,7 +624,8 @@ describe("selector-snapshot Pages Function", () => {
   it("persists a per-IP daily quota across isolate rate-limit windows", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-19T00:00:00Z"));
-    const env = makeEnv();
+    const db = makeD1();
+    const env = makeEnv({ DB: db });
     const output = buildSelectorSnapshotOutput();
     const headers = {
       ...POST_HEADERS,
@@ -580,6 +650,7 @@ describe("selector-snapshot Pages Function", () => {
     });
     expect(throttled.status).toBe(429);
     expect(throttled.headers.get("Retry-After")).toBe("86400");
+    expect([...((env.DB as TestD1Database).__getQuotaRows()).values()]).toEqual([100]);
   });
 
   describe("GET failure modes", () => {

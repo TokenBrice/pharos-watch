@@ -35,11 +35,11 @@ export const ENV_BINDINGS = [
   {
     key: "DB",
     valueType: "D1Database",
-    description: "Primary D1 binding for worker reads/writes; the Pages site-data lane also uses it for attribution telemetry.",
+    description: "Primary D1 binding for worker reads/writes; Pages uses it for site-data attribution telemetry and atomic selector-snapshot write quotas.",
     docs: { includeInOperatorOriginAccess: true },
     runtimes: {
       worker: { order: 50, status: "required" },
-      pagesSiteData: { order: 1, status: "optional" },
+      pagesSiteData: { order: 1, status: "required" },
     },
   },
   {
@@ -602,7 +602,7 @@ export const ENV_BINDINGS = [
   {
     key: "SELECTOR_SNAPSHOTS",
     valueType: "KVNamespace",
-    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries plus hashed-IP write-quota counters.",
+    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries. Hashed-IP write-quota counters live in D1 for atomic reservations.",
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
       pagesSiteData: { order: 5, status: "required" },

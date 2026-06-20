@@ -58,7 +58,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, when `GITHUB_PAT` / `FEEDBACK_IP_SALT` are missing for `POST /api/feedback`, when `API_KEY_HASH_PEPPER` is missing, or when the self-serve API key email verification bindings are only partially configured. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification. The Pages `site-data` `DB` binding is optional: binding it enables same-origin demand telemetry for `/api/request-source-stats`; without `DB`, allowed proxy reads still work but site-data attribution is skipped.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, when `GITHUB_PAT` / `FEEDBACK_IP_SALT` are missing for `POST /api/feedback`, when `API_KEY_HASH_PEPPER` is missing, or when the self-serve API key email verification bindings are only partially configured. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification. The Pages `site-data` `DB` binding is required for same-origin demand telemetry and atomic selector-snapshot write quotas.
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
@@ -67,7 +67,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 
 | Binding | Type | Worker | Pages ops | Pages site-data | Description |
 | --- | --- | --- | --- | --- | --- |
-| `DB` | `D1Database` | required | - | optional | Primary D1 binding for worker reads/writes; the Pages site-data lane also uses it for attribution telemetry. |
+| `DB` | `D1Database` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for site-data attribution telemetry and atomic selector-snapshot write quotas. |
 | `CORS_ORIGIN` | `string` | required | - | - | Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`. |
 | `SELF_URL` | `string` | optional | - | - | Status self-check external probe base URL. |
 | `SITE_API_SHARED_SECRET` | `string` | optional | - | required | Shared secret for Pages `/_site-data/*` -> Worker `site-api` authentication via `X-Pharos-Site-Proxy-Secret`. |
@@ -128,7 +128,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `OPS_API_SERVICE_TOKEN_SECRET` | `string` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | `string` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | `string` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
-| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries plus hashed-IP write-quota counters. |
+| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries. Hashed-IP write-quota counters live in D1 for atomic reservations. |
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---

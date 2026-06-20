@@ -64,7 +64,7 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 
 | Binding | Worker | Pages ops | Pages site-data | Purpose |
 | --- | --- | --- | --- | --- |
-| `DB` | required | - | optional | Primary D1 binding for worker reads/writes; the Pages site-data lane also uses it for attribution telemetry. |
+| `DB` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for site-data attribution telemetry and atomic selector-snapshot write quotas. |
 | `SITE_API_SHARED_SECRET` | optional | - | required | Shared secret for Pages `/_site-data/*` -> Worker `site-api` authentication via `X-Pharos-Site-Proxy-Secret`. |
 | `CF_ACCESS_TEAM_DOMAIN` | optional | required | - | Cloudflare Access team domain used to verify Access JWTs on worker admin requests and the Pages ops proxy. |
 | `CF_ACCESS_OPS_API_AUD` | optional | - | - | Cloudflare Access audience for worker-side `ops-api.pharos.watch` JWT verification. |
@@ -79,7 +79,7 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 
 Use the derived runtime exports in `worker/src/lib/env.ts`, `functions/lib/ops-env.ts`, and `functions/lib/site-api-env.ts` when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.
 
-For `/_site-data/*`, configure `SITE_API_SHARED_SECRET`; production Pages hosts also require `SITE_API_ORIGIN=https://site-api.pharos.watch`. Bind `DB` to the shared D1 database for durable site-data attribution telemetry.
+For `/_site-data/*`, configure `SITE_API_SHARED_SECRET`; production Pages hosts also require `SITE_API_ORIGIN=https://site-api.pharos.watch`. Bind `DB` to the shared D1 database for durable site-data attribution telemetry and atomic selector-snapshot write quotas.
 
 ---
 
