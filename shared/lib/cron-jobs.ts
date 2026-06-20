@@ -213,6 +213,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "dews-psi-chain",
   },
   {
+    job: "cron-slot-sweeper",
+    label: "Cron slot sweeper",
+    group: "quarter-hourly",
+    scheduleKey: "statusSelfCheckOffset",
+    triggerMode: "isolated",
+    maxConnections: 1, // DB stale-slot reconciliation plus optional webhook alert
+    connectionGroup: "status-self-check-chain",
+  },
+  {
     job: "status-self-check",
     label: "Status self-check",
     group: "quarter-hourly",
@@ -306,7 +315,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "halfHourlyOffset",
     triggerMode: "isolated",
-    maxConnections: 4, // DL yields + protocols parallel (2), then Curve chains parallel (4 peak), then GT crawl (1)
+    maxConnections: 5, // Direct API phase can nest to a 5-connection static peak; still below Cloudflare's 6-connection ceiling.
   },
   {
     job: "sync-yield-data",
@@ -432,6 +441,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 1, // 2 sequential Kinesis Horizon fetches (KAU + KAG)
+    connectionGroup: "reserve-sync-chain",
+  },
+  {
+    job: "reserve-post-sync-watchdog",
+    label: "Reserve post-sync watchdog",
+    group: "multi-hourly",
+    scheduleKey: "fourHourlyReserveSync",
+    triggerMode: "shared",
+    maxConnections: 1, // DB drift/cache/age checks plus optional webhook alert
     connectionGroup: "reserve-sync-chain",
   },
   {

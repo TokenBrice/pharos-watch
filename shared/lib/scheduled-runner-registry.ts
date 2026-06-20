@@ -26,7 +26,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
   },
   statusSelfCheckOffset: {
-    jobChains: [["status-self-check", "cron-staleness-watchdog"]],
+    jobChains: [["cron-slot-sweeper", "status-self-check", "cron-staleness-watchdog"]],
   },
   sixHourlyBlacklist: {
     jobChains: [["sync-blacklist"]],
@@ -50,7 +50,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
   },
   fourHourlyReserveSync: {
-    jobChains: [["sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply"]],
+    jobChains: [["sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply", "reserve-post-sync-watchdog"]],
   },
   hourlyYieldSync: {
     jobChains: [["sync-yield-data"]],

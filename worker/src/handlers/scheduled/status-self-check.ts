@@ -1,3 +1,4 @@
+import { runCronSlotSweeper } from "../../cron/cron-slot-sweeper";
 import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import type { ScheduledRuntimeContext } from "./context";
@@ -9,6 +10,11 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
       mode: "serial",
       label: "status-self-check",
       tasks: [
+        {
+          job: "cron-slot-sweeper",
+          errorMessage: "[cron] cron-slot-sweeper failed in isolated slot:",
+          run: (signal) => runCronSlotSweeper(runtime.db, runtime.alertWebhookUrl, signal),
+        },
         {
           job: "status-self-check",
           errorMessage: "[cron] status-self-check failed in isolated slot:",

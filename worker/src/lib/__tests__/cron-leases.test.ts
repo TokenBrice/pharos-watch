@@ -11,6 +11,7 @@ import {
   runCronWithLease,
   runWithOverloadRetry,
   runScheduledSlotWithFence,
+  sweepStaleScheduledSlotExecutions,
 } from "../cron-lease";
 
 type LeaseRow = {
@@ -362,15 +363,33 @@ function makeLeaseDb(seed?: {
           return null;
         },
         all: async () => {
-          if (sql.includes("FROM cron_slot_executions") && sql.includes("ORDER BY slot_started_at ASC")) {
-            const [slotKey, excludeSlotStartedAt, staleBefore] = args as [string, number, number];
+          if (sql.includes("FROM cron_slot_executions") && sql.includes("ORDER BY updated_at ASC")) {
+            const slotScoped = sql.includes("slot_key = ?");
+            const excludesSlotStartedAt = sql.includes("slot_started_at != ?");
+            let slotKey: string | null;
+            let excludeSlotStartedAt: number | null;
+            let staleBefore: number;
+            let limit: number;
+            if (slotScoped && excludesSlotStartedAt) {
+              [slotKey, excludeSlotStartedAt, staleBefore, limit] = args as [string, number, number, number];
+            } else if (slotScoped) {
+              [slotKey, staleBefore, limit] = args as [string, number, number];
+              excludeSlotStartedAt = null;
+            } else if (excludesSlotStartedAt) {
+              [excludeSlotStartedAt, staleBefore, limit] = args as [number, number, number];
+              slotKey = null;
+            } else {
+              [staleBefore, limit] = args as [number, number];
+              slotKey = null;
+              excludeSlotStartedAt = null;
+            }
             return {
               results: [...slots.values()].filter((slot) =>
-                slot.slot_key === slotKey &&
-                slot.slot_started_at !== excludeSlotStartedAt &&
+                (slotKey == null || slot.slot_key === slotKey) &&
+                (excludeSlotStartedAt == null || slot.slot_started_at !== excludeSlotStartedAt) &&
                 slot.state === "running" &&
                 slot.updated_at < staleBefore,
-              ),
+              ).sort((a, b) => a.updated_at - b.updated_at || a.slot_started_at - b.slot_started_at).slice(0, limit),
               success: true,
               meta: {},
             };
@@ -1065,6 +1084,73 @@ describe("runScheduledSlotWithFence", () => {
         },
       },
     });
+  });
+
+  it("sweeps stale slot progress across schedule keys before the next same slot runs", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 3600;
+    const db = makeLeaseDb({
+      slots: [{
+        slot_key: "hourlyYieldSync",
+        slot_started_at: staleSlotStartedAt,
+        state: "running",
+        result_status: null,
+        execution_owner: "slot-owner-a",
+        started_at: staleSlotStartedAt,
+        finished_at: null,
+        updated_at: now - 1800,
+        metadata: null,
+      }],
+      leases: [{
+        job: "sync-yield-data",
+        lease_owner: "yield-owner-a",
+        lease_until: now - 60,
+        heartbeat_at: now - 1800,
+        updated_at: now - 1800,
+      }],
+      progress: [{
+        job: "sync-yield-data",
+        started_at: staleSlotStartedAt + 20,
+        updated_at: now - 1800,
+        stage: "publication",
+        lease_owner: "yield-owner-a",
+        slot_started_at: staleSlotStartedAt,
+      }],
+    });
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+
+    expect(summary).toMatchObject({
+      candidateSlots: 1,
+      slotsReconciled: 1,
+      syntheticCronRuns: 1,
+      progressRowsCleared: 1,
+      leasesCleared: 1,
+    });
+    expect(summary.abandonedSlots).toEqual([
+      expect.objectContaining({
+        slotKey: "hourlyYieldSync",
+        slotStartedAt: staleSlotStartedAt,
+        abandonedJobs: [
+          expect.objectContaining({
+            job: "sync-yield-data",
+            progressStage: "publication",
+            leaseOwner: "yield-owner-a",
+          }),
+        ],
+      }),
+    ]);
+    expect(db.getRuns()).toEqual([
+      expect.objectContaining({
+        job: "sync-yield-data",
+        status: "error",
+        slot_started_at: staleSlotStartedAt,
+      }),
+    ]);
+    expect(db.getProgress("sync-yield-data")).toBeUndefined();
+    expect(db.getLease("sync-yield-data")).toBeUndefined();
+    expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)?.result_status).toBe("error");
+    expect(db.getCache("cron:event:hourlyyieldsync:scheduled-slot-abandoned")).toBeDefined();
   });
 
   it("does not synthesize a stale child cron run while the matching child lease is still active", async () => {

@@ -28,6 +28,17 @@ describe("check-cron-connection-budget", () => {
     expect(report.failed).toBe(false);
   });
 
+  it("models sync-dex-liquidity at its nested direct-API peak", () => {
+    const report = evaluateCronConnectionBudget();
+    const halfHourlyOffset = report.triggerReports.find((trigger) => trigger.scheduleKey === "halfHourlyOffset");
+    const syncDexLiquidity = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "sync-dex-liquidity");
+
+    expect(syncDexLiquidity?.maxConnections).toBe(5);
+    expect(halfHourlyOffset?.totalConnections).toBe(5);
+    expect(report.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
+    expect(report.failed).toBe(false);
+  });
+
   it("sums independent parallel chains even when they share a connection group", () => {
     const report = evaluateCronConnectionBudget({
       budget: {

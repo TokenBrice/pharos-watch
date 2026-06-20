@@ -21,6 +21,9 @@ vi.mock("../../../lib/live-reserves-store", () => ({
 vi.mock("../../../lib/alerts", () => ({
   sendAlert: vi.fn(async () => {}),
 }));
+vi.mock("../../../lib/db-cache", () => ({
+  setCache: vi.fn(async () => {}),
+}));
 
 import { syncLiveReserves } from "../../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
@@ -104,7 +107,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     vi.mocked(syncLiveReserves).mockRejectedValue(new Error("sync blew up"));
 
     await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
-      jobsRun: 0,
+      jobsRun: 1,
       jobsErrored: 1,
       jobsSkipped: 2,
     });
@@ -113,6 +116,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(syncRedemptionBackstops).not.toHaveBeenCalled();
     expect(syncKinesisSupply).not.toHaveBeenCalled();
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
+    expect(runLeasedCron).toHaveBeenCalledWith("reserve-post-sync-watchdog", expect.any(Function));
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Live reserves sync failed"),
       expect.any(Error),
@@ -124,7 +128,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     vi.mocked(syncKinesisSupply).mockRejectedValue(new Error("ks blew up"));
 
     await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
-      jobsRun: 1,
+      jobsRun: 2,
       jobsErrored: 1,
       jobsSkipped: 1,
     });
@@ -143,12 +147,12 @@ describe("runFourHourlyReserveSyncSlot", () => {
     await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
       jobsRun: 3,
       jobsErrored: 0,
-      jobsDegraded: 0,
+      jobsDegraded: 1,
       jobsSkipped: 0,
     });
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Drift check failed"),
-      expect.any(Error),
+      expect.stringContaining("[cron-failure:reserve-post-sync-watchdog]"),
+      expect.any(String),
     );
   });
 });

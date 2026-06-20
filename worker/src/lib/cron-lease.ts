@@ -15,6 +15,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "stability-index": DEFAULT_CRON_TIMEOUT_MS,
   "compute-dews": DEFAULT_CRON_TIMEOUT_MS,
   "project-tape": DEFAULT_CRON_TIMEOUT_MS,
+  "cron-slot-sweeper": DEFAULT_CRON_TIMEOUT_MS,
   "status-self-check": DEFAULT_CRON_TIMEOUT_MS,
   "cron-staleness-watchdog": DEFAULT_CRON_TIMEOUT_MS,
   "telegram-degradation-watchdog": DEFAULT_CRON_TIMEOUT_MS,
@@ -43,6 +44,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "sync-usds-status": DEFAULT_CRON_TIMEOUT_MS,
   "sync-redemption-backstops": DEFAULT_CRON_TIMEOUT_MS,
   "sync-kinesis-supply": DEFAULT_CRON_TIMEOUT_MS,
+  "reserve-post-sync-watchdog": DEFAULT_CRON_TIMEOUT_MS,
   "sync-bluechip": DEFAULT_CRON_TIMEOUT_MS,
   // Daily digest: Anthropic budget is 12 min, wrapper caps at 14 min to leave
   // ~2 min for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
@@ -227,6 +229,31 @@ interface StaleSlotReconciliationSummary {
   }>;
 }
 
+export interface ScheduledSlotSweepOptions {
+  staleAfterSec?: number;
+  limit?: number;
+  nowSec?: number;
+  slotKey?: string;
+  excludeSlotStartedAt?: number;
+  signal?: AbortSignal;
+}
+
+export interface ScheduledSlotSweepSummary {
+  staleBefore: number;
+  candidateSlots: number;
+  slotsReconciled: number;
+  syntheticCronRuns: number;
+  progressRowsCleared: number;
+  leasesCleared: number;
+  abandonedSlots: Array<{
+    slotKey: string;
+    slotStartedAt: number;
+    slotOwner: string;
+    slotUpdatedAt: number;
+    abandonedJobs: StaleSlotReconciliationSummary["abandonedJobs"];
+  }>;
+}
+
 const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 
@@ -275,22 +302,33 @@ async function getScheduledSlotExecution(
 
 async function listStaleScheduledSlotExecutions(
   db: D1Database,
-  slotKey: string,
+  slotKey: string | null,
   staleBefore: number,
-  excludeSlotStartedAt: number,
+  limit: number,
+  excludeSlotStartedAt?: number,
 ): Promise<StaleSlotExecutionRow[]> {
+  const predicates: string[] = [];
+  const bindArgs: Array<string | number> = [];
+  if (slotKey) {
+    predicates.push("slot_key = ?");
+    bindArgs.push(slotKey);
+  }
+  if (excludeSlotStartedAt != null) {
+    predicates.push("slot_started_at != ?");
+    bindArgs.push(excludeSlotStartedAt);
+  }
+  predicates.push("state = 'running'", "updated_at < ?");
+  bindArgs.push(staleBefore, limit);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at
            FROM cron_slot_executions
-           WHERE slot_key = ?
-             AND slot_started_at != ?
-             AND state = 'running'
-             AND updated_at < ?
-           ORDER BY slot_started_at ASC`,
+           WHERE ${predicates.join("\n             AND ")}
+           ORDER BY updated_at ASC, slot_started_at ASC
+           LIMIT ?`,
       )
-      .bind(slotKey, excludeSlotStartedAt, staleBefore)
+      .bind(...bindArgs)
       .all<StaleSlotExecutionRow>(),
   );
   return rows.results ?? [];
@@ -498,6 +536,54 @@ async function finishStaleScheduledSlotExecution(
   );
 }
 
+export async function sweepStaleScheduledSlotExecutions(
+  db: D1Database,
+  options: ScheduledSlotSweepOptions = {},
+): Promise<ScheduledSlotSweepSummary> {
+  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
+  const staleAfterSec = Math.max(60, options.staleAfterSec ?? SLOT_EXECUTION_RUNNING_STALE_SEC);
+  const limit = Math.max(1, Math.min(options.limit ?? 25, 100));
+  const staleBefore = nowSec - staleAfterSec;
+  const staleSlots = await listStaleScheduledSlotExecutions(
+    db,
+    options.slotKey ?? null,
+    staleBefore,
+    limit,
+    options.excludeSlotStartedAt,
+  );
+  const summary: ScheduledSlotSweepSummary = {
+    staleBefore,
+    candidateSlots: staleSlots.length,
+    slotsReconciled: 0,
+    syntheticCronRuns: 0,
+    progressRowsCleared: 0,
+    leasesCleared: 0,
+    abandonedSlots: [],
+  };
+
+  for (const staleSlot of staleSlots) {
+    if (options.signal?.aborted) {
+      throw options.signal.reason instanceof Error ? options.signal.reason : new Error("scheduled slot sweep aborted");
+    }
+    const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
+    await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
+    await finishStaleScheduledSlotExecution(db, staleSlot, nowSec, staleBefore, reconciliation);
+    summary.slotsReconciled++;
+    summary.syntheticCronRuns += reconciliation.syntheticCronRuns;
+    summary.progressRowsCleared += reconciliation.progressRowsCleared;
+    summary.leasesCleared += reconciliation.leasesCleared;
+    summary.abandonedSlots.push({
+      slotKey: staleSlot.slot_key,
+      slotStartedAt: staleSlot.slot_started_at,
+      slotOwner: staleSlot.execution_owner,
+      slotUpdatedAt: staleSlot.updated_at,
+      abandonedJobs: reconciliation.abandonedJobs,
+    });
+  }
+
+  return summary;
+}
+
 async function claimScheduledSlotExecution(
   db: D1Database,
   slotKey: string,
@@ -507,12 +593,12 @@ async function claimScheduledSlotExecution(
 ): Promise<"claimed" | "duplicate" | "running"> {
   const nowSec = Math.floor(Date.now() / 1000);
   const staleBefore = nowSec - staleAfterSec;
-  const staleSlots = await listStaleScheduledSlotExecutions(db, slotKey, staleBefore, slotStartedAt);
-  for (const staleSlot of staleSlots) {
-    const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
-    await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
-    await finishStaleScheduledSlotExecution(db, staleSlot, nowSec, staleBefore, reconciliation);
-  }
+  await sweepStaleScheduledSlotExecutions(db, {
+    slotKey,
+    staleAfterSec,
+    nowSec,
+    excludeSlotStartedAt: slotStartedAt,
+  });
   const inserted = await runWithOverloadRetry(() =>
     db
       .prepare(
