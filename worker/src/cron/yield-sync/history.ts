@@ -13,7 +13,6 @@ export { isSuppressedYieldHistoryRow } from "../../lib/yield-history-ownership-h
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const YIELD_HISTORY_LOAD_CHUNK_SIZE = 30;
-export const YIELD_HISTORY_CANDIDATE_GUARDRAIL_ROWS = 500_000;
 
 export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promise<void> {
   for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
@@ -54,12 +53,6 @@ export interface YieldHistorySnapshotProgress {
   prevBestRows: number;
 }
 
-export interface YieldHistoryCandidateCounts {
-  previousTvlCandidates: number;
-  previousBestCandidates: number;
-  totalPreviousCandidates: number;
-}
-
 export interface LoadYieldHistorySnapshotOptions {
   signal?: AbortSignal;
   chunkSize?: number;
@@ -84,68 +77,6 @@ function buildSuppressedYieldHistoryExclusion(alias: string): { sql: string; bin
     binds.push(stablecoinId, LEGACY_BEST_YIELD_SOURCE_KEY, ...inClause.binds);
   }
   return clauses.length > 0 ? { sql: clauses.join(" AND "), binds } : { sql: "1 = 1", binds: [] };
-}
-
-function countResult(row: { cnt?: number | null } | null): number {
-  const value = row?.cnt ?? 0;
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
-}
-
-export async function estimateYieldHistoryCandidateCounts(
-  db: D1Database,
-  resolvedIds: string[],
-  startSec: number,
-  sevenDaysAgoSec: number,
-  options: Pick<LoadYieldHistorySnapshotOptions, "signal" | "chunkSize" | "yieldToEventLoop"> = {},
-): Promise<YieldHistoryCandidateCounts> {
-  let previousTvlCandidates = 0;
-  let previousBestCandidates = 0;
-  const chunkSize = Math.max(1, Math.min(options.chunkSize ?? YIELD_HISTORY_LOAD_CHUNK_SIZE, D1_SAFE_SQL_IN_CHUNK_SIZE));
-  const idChunks = chunkArray(resolvedIds, chunkSize);
-  const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
-
-  for (const idChunk of idChunks) {
-    throwIfAborted(options.signal);
-    const resolvedIdInClause = buildInClause(idChunk);
-    const exclusion = buildSuppressedYieldHistoryExclusion("h");
-    const previousTvlCount = await db
-      .prepare(
-        `SELECT /* pharos:yield-sync:previous-tvl-candidate-count */
-           COUNT(*) AS cnt
-         FROM yield_history h
-         WHERE h.stablecoin_id IN (${resolvedIdInClause.sql})
-           AND h.recorded_at <= ?
-           AND h.source_tvl_usd IS NOT NULL
-           AND (h.publication_state IS NULL OR h.publication_state = 'published')
-           AND ${exclusion.sql}`,
-      )
-      .bind(...resolvedIdInClause.binds, sevenDaysAgoSec, ...exclusion.binds)
-      .first<{ cnt: number | null }>();
-    previousTvlCandidates += countResult(previousTvlCount);
-    throwIfAborted(options.signal);
-
-    const previousBestCount = await db
-      .prepare(
-        `SELECT /* pharos:yield-sync:previous-best-candidate-count */
-           COUNT(*) AS cnt
-         FROM yield_history h
-         WHERE h.stablecoin_id IN (${resolvedIdInClause.sql})
-           AND h.is_best = 1
-           AND h.recorded_at < ?
-           AND (h.publication_state IS NULL OR h.publication_state = 'published')
-           AND ${exclusion.sql}`,
-      )
-      .bind(...resolvedIdInClause.binds, startSec, ...exclusion.binds)
-      .first<{ cnt: number | null }>();
-    previousBestCandidates += countResult(previousBestCount);
-    await yieldToEventLoop(options.signal);
-  }
-
-  return {
-    previousTvlCandidates,
-    previousBestCandidates,
-    totalPreviousCandidates: previousTvlCandidates + previousBestCandidates,
-  };
 }
 
 export async function loadYieldHistorySnapshots(
