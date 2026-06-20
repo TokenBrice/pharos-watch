@@ -8,10 +8,29 @@ function isDailyDigestLike(value: unknown): value is DailyDigestLike {
   return isRecord(value) && Array.isArray(value.topDepegs);
 }
 
+function depegImpactScore(depeg: { bps: number; mcapUsd: number; impactScore?: number | null }): number {
+  return depeg.impactScore ?? Math.abs(depeg.bps) * depeg.mcapUsd;
+}
+
+function compareDepegRisk(
+  a: { bps: number; mcapUsd: number; impactScore?: number | null },
+  b: { bps: number; mcapUsd: number; impactScore?: number | null },
+): number {
+  const criticalDelta = Number(isCriticalDepegRisk(b)) - Number(isCriticalDepegRisk(a));
+  return criticalDelta || depegImpactScore(b) - depegImpactScore(a) || Math.abs(b.bps) - Math.abs(a.bps);
+}
+
+function compareDigestRiskSignal(a: DigestRiskSignal, b: DigestRiskSignal): number {
+  return compareDepegRisk(
+    { bps: a.bps, mcapUsd: a.mcapUsd ?? 0 },
+    { bps: b.bps, mcapUsd: b.mcapUsd ?? 0 },
+  );
+}
+
 function selectTopDepeg(input: DailyDigestLike, date?: string | null): DigestRiskSignal | null {
   const top = input.topDepegs
     .filter((depeg) => Number.isFinite(depeg.bps))
-    .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps) || (b.impactScore ?? 0) - (a.impactScore ?? 0))[0];
+    .sort(compareDepegRisk)[0];
   if (!top) return null;
   return {
     kind: "depeg",
@@ -41,7 +60,7 @@ export function selectDigestRiskSignal(input: unknown): DigestRiskSignal | null 
         return selectTopDepeg(dailyInput, date);
       })
       .filter((entry): entry is DigestRiskSignal => entry !== null)
-      .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps) || (b.mcapUsd ?? 0) - (a.mcapUsd ?? 0));
+      .sort(compareDigestRiskSignal);
     return candidates[0] ?? null;
   }
 

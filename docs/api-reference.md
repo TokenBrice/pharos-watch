@@ -1587,7 +1587,7 @@ If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 | `digestExtended`      | `string \| null`                     | Extended commentary for the website view                                                  |
 | `generatedAt`         | `number`                             | Unix seconds when this digest was generated (present only when `digest` is non-null)      |
 | `editionNumber`       | `number \| null`                     | Sequential daily digest number (present only when `digest` is non-null)                   |
-| `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from stored digest input data                    |
+| `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from stored digest input data; critical depegs are prioritized before market impact and deviation size |
 | `changeSummary`       | `DigestChangeSummary \| null`        | Deterministic "what changed since yesterday" summary parsed from stored digest input data |
 | `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks for tomorrow's digest                         |
 | `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers against the latest input                |
@@ -1655,7 +1655,7 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 | `psiScore`            | `number \| null`                     | PSI score parsed from archived digest input data                                         |
 | `psiBand`             | `string \| null`                     | PSI condition band parsed from archived digest input data                                |
 | `totalMcapUsd`        | `number \| null`                     | Ecosystem market cap parsed from archived digest input data                              |
-| `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from archived digest input data                 |
+| `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from archived digest input data; critical depegs are prioritized before market impact and deviation size |
 | `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks parsed from archived digest input data       |
 | `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers parsed from archived digest input data |
 | `riskTape`            | `DigestRiskTapeItem[] \| null`       | Compact risk-state chips parsed from archived digest input data                          |

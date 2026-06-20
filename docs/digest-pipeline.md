@@ -310,7 +310,7 @@ Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "
 The latest digest is presented in a broadsheet newspaper style:
 - **Masthead:** compact uppercase lockup with the full date; the homepage preview uses a slightly sharper mono masthead treatment than the archive broadsheet
 - **Headline:** the homepage preview uses `Newsreader` at a larger newspaper-style display scale, while the full `/digest/` broadsheet keeps the original serif headline treatment
-- **Risk badge + tape:** when `/api/daily-digest` exposes an active depeg `riskSignal`, the broadsheet renders a compact depeg badge near the headline so a truncated first paragraph cannot hide the risk state. New rows also render the `riskTape` chips and a compact next-trigger line in preview mode.
+- **Risk badge + tape:** when `/api/daily-digest` exposes an active depeg `riskSignal`, the API prioritizes critical depegs before market impact and deviation size, and the broadsheet renders the resulting compact depeg badge near the headline so a truncated first paragraph cannot hide the risk state. New rows also render the `riskTape` chips and a compact next-trigger line in preview mode.
 - **Body:** Extended text paragraphs in italic Courier-style monospace (`EDITORIAL_BODY_STYLE`). On the homepage and `/digest/` archive preview, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. Digest detail pages show the full editorial body.
 - **Homepage preview split:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right
 
