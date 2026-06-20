@@ -7,6 +7,11 @@ import {
 } from "./shared";
 
 const BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS = 252;
+const BCB_SELIC_MIN_DAILY_PERCENTAGE_RATE = -100;
+
+function isValidBcbSelicDailyRate(rate: number): boolean {
+  return Number.isFinite(rate) && rate > BCB_SELIC_MIN_DAILY_PERCENTAGE_RATE;
+}
 
 function annualizeDailyPercentageRate(rate: number, businessDays: number): number {
   return ((1 + rate / 100) ** businessDays - 1) * 100;
@@ -26,6 +31,7 @@ export function parseBcbSelicSeries(json: string): { recordDate: string; rate: n
       const row = parsed[i];
       const rate = parseRate(typeof row?.valor === "string" ? row.valor : null);
       const dataRaw = typeof row?.data === "string" ? row.data : null;
+      if (!isValidBcbSelicDailyRate(rate)) continue;
       const annualizedRate = annualizeDailyPercentageRate(rate, BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS);
       if (!dataRaw || !isValidBenchmarkRate(annualizedRate)) continue;
       const recordDate = parseSlashDmyToIso(dataRaw);

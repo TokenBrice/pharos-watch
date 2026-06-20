@@ -885,6 +885,22 @@ describe("parseBcbSelicSeries", () => {
     });
   });
 
+  it("skips impossible negative daily SELIC observations before annualization", () => {
+    const payload = JSON.stringify([
+      { data: "17/06/2026", valor: "0.050747" },
+      { data: "18/06/2026", valor: "-200.05" },
+    ]);
+    expect(parseBcbSelicSeries(payload)).toEqual({
+      rate: 13.638253562615565,
+      recordDate: "2026-06-17",
+    });
+  });
+
+  it("returns null when every SELIC observation has an impossible negative daily rate", () => {
+    const payload = JSON.stringify([{ data: "18/06/2026", valor: "-200.05" }]);
+    expect(parseBcbSelicSeries(payload)).toBeNull();
+  });
+
   it("returns null when array is empty", () => {
     expect(parseBcbSelicSeries("[]")).toBeNull();
   });
