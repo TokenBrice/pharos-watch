@@ -2,20 +2,20 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 406;
-export const ACTIVE_STABLECOIN_COUNT = 370;
+export const TRACKED_STABLECOIN_COUNT = 407;
+export const ACTIVE_STABLECOIN_COUNT = 371;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 32;
 export const FROZEN_STABLECOIN_COUNT = 4;
 export const DEAD_STABLECOIN_COUNT = 88;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
   centralized: 181,
-  "centralized-dependent": 169,
+  "centralized-dependent": 170,
   decentralized: 20,
 } as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 268,
+  USD: 269,
   EUR: 21,
   GBP: 6,
   CHF: 5,
@@ -86,6 +86,7 @@ export const TRACKED_STABLECOIN_IDS = [
   "gtusdc-gauntlet",
   "yvusdc-yearn",
   "steakusdc-steakhouse",
+  "bbqusdc-steakhouse",
   "usde-ethena",
   "srusde-strata",
   "susde-ethena",
@@ -486,6 +487,9 @@ export const TRACKED_STABLECOIN_IDS = [
 ] as const;
 
 const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
+  "usr-resolv",
+  "usnd-nerite",
+  "euroe-membrane",
   "usdpt-western-union",
   "roughrider-bnd",
   "fiusd-fiserv",
@@ -494,7 +498,9 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "pgold-polaris",
   "klarnausd-klarna",
   "bd-basedollar",
+  "mmxn-moneta-digital",
   "trusd-tori",
+  "buck-buck-assets",
   "rgbp-revolut",
   "jpysc-sbi-startale",
   "usdb-bridge",
@@ -505,7 +511,6 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "brl-b3",
   "usdf-flipcash",
   "hkdr-rd-technologies",
-  "mmxn-moneta-digital",
   "brd-volpon",
   "krw1-bdacs",
   "rusd-revolut",
@@ -518,10 +523,6 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "ejpy-jbfd",
   "aed-rakbank",
   "bils-bitsofgold",
-  "usr-resolv",
-  "usnd-nerite",
-  "euroe-membrane",
-  "buck-buck-assets",
 ] as const);
 
 export const ACTIVE_STABLECOIN_IDS = TRACKED_STABLECOIN_IDS.filter(
@@ -540,6 +541,7 @@ export const HOMEPAGE_TOP_ACTIVE_STABLECOINS = [
   { id: "gtusdc-gauntlet", name: "Gauntlet USDC Prime V1", symbol: "gtUSDC" },
   { id: "yvusdc-yearn", name: "Yearn v3 USDC Vault", symbol: "yvUSDC-1" },
   { id: "steakusdc-steakhouse", name: "Steakhouse USDC V2", symbol: "steakUSDC" },
+  { id: "bbqusdc-steakhouse", name: "Smokehouse USDC", symbol: "bbqUSDC" },
   { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" },
   { id: "srusde-strata", name: "Strata Senior USDe", symbol: "srUSDe" },
   { id: "susde-ethena", name: "Ethena Staked USDe", symbol: "sUSDe" },
@@ -550,5 +552,4 @@ export const HOMEPAGE_TOP_ACTIVE_STABLECOINS = [
   { id: "susd1plus-lorenzo", name: "staked USD1+", symbol: "sUSD1+" },
   { id: "dai-makerdao", name: "Dai", symbol: "DAI" },
   { id: "sdai-sky", name: "Savings Dai", symbol: "sDAI" },
-  { id: "pyusd-paypal", name: "PayPal USD", symbol: "PYUSD" },
 ] as const;

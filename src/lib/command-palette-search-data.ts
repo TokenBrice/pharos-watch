@@ -18,6 +18,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["gtusdc-gauntlet", "Gauntlet USDC Prime V1", "gtUSDC"],
   ["yvusdc-yearn", "Yearn v3 USDC Vault", "yvUSDC-1"],
   ["steakusdc-steakhouse", "Steakhouse USDC V2", "steakUSDC"],
+  ["bbqusdc-steakhouse", "Smokehouse USDC", "bbqUSDC"],
   ["usde-ethena", "Ethena USDe", "USDe"],
   ["srusde-strata", "Strata Senior USDe", "srUSDe"],
   ["susde-ethena", "Ethena Staked USDe", "sUSDe"],
