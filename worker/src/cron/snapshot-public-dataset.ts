@@ -26,6 +26,7 @@ import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { sha256Hex } from "../lib/hash";
+import { toErrorMessage } from "../lib/error-utils";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chain-health-version";
 import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
@@ -80,6 +81,11 @@ interface ExistingSnapshotRow {
   content_hash: string;
   byte_size: number;
   created_at: number;
+}
+
+interface SnapshotSectionReadFailure {
+  section: "dews" | "liquidity";
+  error: string;
 }
 
 interface SnapshotPublicDatasetOptions {
@@ -291,6 +297,7 @@ export async function snapshotPublicDataset(
   }
 
   // --- 4. DEWS stress signals (latest per coin) ---
+  const sectionReadFailures: SnapshotSectionReadFailure[] = [];
   let stressRows: StressSignalRow[] = [];
   try {
     // Per-coin dedup: take the latest row only. The bare ORDER BY
@@ -314,7 +321,8 @@ export async function snapshotPublicDataset(
     stressRows = result.results ?? [];
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.warn("[snapshot-public-dataset] DEWS read failed:", err);
+    recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "read-dews" } });
+    sectionReadFailures.push({ section: "dews", error: toErrorMessage(err).slice(0, 200) });
   }
 
   // --- 5. DEX liquidity (latest per coin) ---
@@ -333,7 +341,21 @@ export async function snapshotPublicDataset(
     dexRows = result.results ?? [];
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.warn("[snapshot-public-dataset] DEX liquidity read failed:", err);
+    recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "read-liquidity" } });
+    sectionReadFailures.push({ section: "liquidity", error: toErrorMessage(err).slice(0, 200) });
+  }
+
+  if (sectionReadFailures.length > 0) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "public_snapshot_section_read_failed",
+        snapshotDate,
+        missingSections: sectionReadFailures.map((failure) => failure.section),
+        failedSections: sectionReadFailures,
+      }),
+    };
   }
 
   const methodologyVersions = buildMethodologyVersions();

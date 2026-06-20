@@ -4,7 +4,8 @@ import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { getCache, setCache, deleteCache } from "../lib/db-cache";
+import { deleteCache } from "../lib/db-cache";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
 import { buildDailyDigestInput } from "./daily-digest/input";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
@@ -19,10 +20,34 @@ import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
 export { classifyRegime } from "./daily-digest/prompt";
 
 const TELEGRAM_SENT_MARKER_PREFIX = "daily-digest:telegram-sent:";
+const TWITTER_SENT_MARKER_PREFIX = "daily-digest:twitter-sent:";
 
 function getTelegramSentMarkerKey(date: string): string {
   return `${TELEGRAM_SENT_MARKER_PREFIX}${date}`;
 }
+
+function getTwitterSentMarkerKey(date: string): string {
+  return `${TWITTER_SENT_MARKER_PREFIX}${date}`;
+}
+
+async function claimDigestSentMarker(
+  db: D1Database,
+  key: string,
+  value: string,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare("INSERT OR IGNORE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(key, value, nowSec)
+      .run(),
+    3,
+    signal,
+  );
+  return Number(result.meta.changes ?? 0) > 0;
+}
+
 export async function generateDailyDigest(
   db: D1Database,
   anthropicApiKey: string | null,
@@ -216,6 +241,7 @@ export async function generateDailyDigest(
 
   const storedInputData = attachDigestEditorialAudit({ inputData, digestMeta: digestCopy.digestMeta, qualityIssues: digestCopy.qualityIssues, leadRequirements });
   const now = Math.floor(Date.now() / 1000);
+  const digestDate = formatIsoDate(now);
   await reportDigestProgress(reportProgress, {
     stage: "persistence",
     message: "Persisting daily digest row",
@@ -257,10 +283,39 @@ export async function generateDailyDigest(
     logPrefix: "daily-digest",
     channelLabel: "Twitter",
     deliver: async (creds) => {
-      await postDigestTweet(digestCopy.digestTitle, digestCopy.digestText, creds, editionNumber);
+      const markerKey = getTwitterSentMarkerKey(digestDate);
+      try {
+        const markerClaimed = await claimDigestSentMarker(
+          db,
+          markerKey,
+          JSON.stringify({ sentAt: now, editionNumber }),
+          now,
+          signal,
+        );
+        if (!markerClaimed) return "skipped: already-sent";
+      } catch (err) {
+        degradedReasons.push("twitter-send-marker-write");
+        recordCronFailure("daily-digest", err, { metadata: { stage: "twitter-send-marker-write" } });
+        throw err;
+      }
+
+      try {
+        await postDigestTweet(digestCopy.digestTitle, digestCopy.digestText, creds, editionNumber);
+      } catch (err) {
+        try {
+          await deleteCache(db, markerKey);
+        } catch (rollbackErr) {
+          degradedReasons.push("twitter-send-marker-rollback");
+          console.error("[daily-digest] Failed to roll back Twitter send marker after delivery failure:", rollbackErr);
+        }
+        throw err;
+      }
       return "ok";
     },
   });
+  if (degradedReasons.includes("twitter-send-marker-write")) {
+    throw new Error("Twitter daily digest marker write failed");
+  }
 
   await reportDigestProgress(reportProgress, {
     stage: "telegram-delivery",
@@ -280,6 +335,26 @@ export async function generateDailyDigest(
     logPrefix: "daily-digest",
     channelLabel: "Telegram",
     deliver: async (creds) => {
+      const markerKey = getTelegramSentMarkerKey(digestDate);
+      // Claim the idempotency marker BEFORE sending so a marker-write failure
+      // leaves the send unattempted rather than risking a duplicate send on
+      // the next run. If the send itself fails, roll the marker back so a
+      // genuine delivery failure can be retried.
+      try {
+        const markerClaimed = await claimDigestSentMarker(
+          db,
+          markerKey,
+          JSON.stringify({ sentAt: now, editionNumber }),
+          now,
+          signal,
+        );
+        if (!markerClaimed) return "skipped: already-sent";
+      } catch (err) {
+        degradedReasons.push("telegram-send-marker-write");
+        recordCronFailure("daily-digest", err, { metadata: { stage: "telegram-send-marker-write" } });
+        throw err;
+      }
+
       let telegramAppendices: PreparedTelegramDigestAppendices | null = null;
       try {
         telegramAppendices = await prepareTelegramDigestAppendices(db);
@@ -288,58 +363,35 @@ export async function generateDailyDigest(
         console.error("[daily-digest] Failed to prepare Telegram digest appendices:", err);
       }
 
-      const date = formatIsoDate(now);
-      const markerKey = getTelegramSentMarkerKey(date);
-      const sentMarker = await getCache(db, markerKey);
-
-      if (!sentMarker) {
-        // Write the idempotency marker BEFORE sending so a marker-write
-        // failure leaves the send unattempted (and surfaces as a hard cron
-        // failure via the channel-delivery wrapper) rather than risking a
-        // duplicate send on the next run. If the send itself fails, roll the
-        // marker back so a genuine delivery failure can be retried.
-        try {
-          await setCache(
-            db,
-            markerKey,
-            JSON.stringify({ sentAt: now, editionNumber }),
-          );
-        } catch (err) {
-          degradedReasons.push("telegram-send-marker-write");
-          recordCronFailure("daily-digest", err, { metadata: { stage: "telegram-send-marker-write" } });
-          throw err;
-        }
-        try {
-          await postDigestToTelegram(
-            digestCopy.digestTitle,
-            digestCopy.digestExtended,
-            date,
-            creds,
-            editionNumber,
-            telegramAppendices?.appendixHtml ?? null,
-          );
-          if (telegramAppendices?.metadata.hasAppendix) {
-            // Keep appendix pointer advancement coupled to an accepted
-            // Telegram post; already-sent same-day retries must not consume
-            // the next digest's pending notices.
-            try {
-              await telegramAppendices.commitSuccess();
-            } catch (err) {
-              degradedReasons.push("telegram-appendix-commit");
-              console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
-            }
-          }
-        } catch (err) {
+      try {
+        await postDigestToTelegram(
+          digestCopy.digestTitle,
+          digestCopy.digestExtended,
+          digestDate,
+          creds,
+          editionNumber,
+          telegramAppendices?.appendixHtml ?? null,
+        );
+        if (telegramAppendices?.metadata.hasAppendix) {
+          // Keep appendix pointer advancement coupled to an accepted
+          // Telegram post; already-sent same-day retries must not consume
+          // the next digest's pending notices.
           try {
-            await deleteCache(db, markerKey);
-          } catch (rollbackErr) {
-            degradedReasons.push("telegram-send-marker-rollback");
-            console.error("[daily-digest] Failed to roll back Telegram send marker after delivery failure:", rollbackErr);
+            await telegramAppendices.commitSuccess();
+          } catch (err) {
+            degradedReasons.push("telegram-appendix-commit");
+            console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
           }
-          throw err;
         }
+      } catch (err) {
+        try {
+          await deleteCache(db, markerKey);
+        } catch (rollbackErr) {
+          degradedReasons.push("telegram-send-marker-rollback");
+          console.error("[daily-digest] Failed to roll back Telegram send marker after delivery failure:", rollbackErr);
+        }
+        throw err;
       }
-      if (sentMarker) return "skipped: already-sent";
       const appendixSuffix = telegramAppendices?.metadata.hasAppendix
         ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
         : "";

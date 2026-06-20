@@ -1008,6 +1008,91 @@ describe("generateDailyDigest", () => {
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
   });
 
+  it("persists the Twitter sent marker before sending on the happy path", async () => {
+    const db = mockD1(makeBaseTables());
+    await generateDailyDigest(
+      db,
+      "anthropic-key",
+      {
+        apiKey: "x",
+        apiSecret: "y",
+        accessToken: "z",
+        accessTokenSecret: "w",
+      },
+    );
+
+    const markerKey = "daily-digest:twitter-sent:2026-03-06";
+    const history = (db as MockD1Database).getHistory();
+    const markerWrites = history.filter(
+      (entry) => entry.sql.includes("INSERT OR IGNORE INTO cache") && entry.binds[0] === markerKey,
+    );
+    const markerDeletes = history.filter(
+      (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
+    );
+    expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(markerWrites).toHaveLength(1);
+    expect(markerDeletes).toHaveLength(0);
+  });
+
+  it("rolls back the Twitter sent marker when delivery fails so the next run can resend", async () => {
+    vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      {
+        apiKey: "x",
+        apiSecret: "y",
+        accessToken: "z",
+        accessTokenSecret: "w",
+      },
+    );
+
+    expect(result.metadata).toContain("tweet: failed:");
+
+    const markerKey = "daily-digest:twitter-sent:2026-03-06";
+    const history = (db as MockD1Database).getHistory();
+    const markerWrites = history.filter(
+      (entry) => entry.sql.includes("INSERT OR IGNORE INTO cache") && entry.binds[0] === markerKey,
+    );
+    const markerDeletes = history.filter(
+      (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
+    );
+    expect(markerWrites).toHaveLength(1);
+    expect(markerDeletes).toHaveLength(1);
+  });
+
+  it("skips Twitter delivery when the same-day marker claim is already taken", async () => {
+    const markerKey = "daily-digest:twitter-sent:2026-03-06";
+    const db = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO cache",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      ...makeBaseTables(),
+    ]);
+
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      {
+        apiKey: "x",
+        apiSecret: "y",
+        accessToken: "z",
+        accessTokenSecret: "w",
+      },
+    );
+
+    expect(result.metadata).toContain("tweet: skipped: already-sent");
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect((db as MockD1Database).getHistory()).toContainEqual(expect.objectContaining({
+      sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
+      binds: expect.arrayContaining([markerKey]),
+    }));
+  });
+
   it("persists the Telegram sent marker before sending on the happy path", async () => {
     const db = mockD1(makeBaseTables());
     await generateDailyDigest(
@@ -1021,7 +1106,7 @@ describe("generateDailyDigest", () => {
     const markerKey = "daily-digest:telegram-sent:2026-03-06";
     const history = (db as MockD1Database).getHistory();
     const markerWrites = history.filter(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === markerKey,
+      (entry) => entry.sql.includes("INSERT OR IGNORE INTO cache") && entry.binds[0] === markerKey,
     );
     const markerDeletes = history.filter(
       (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
@@ -1049,7 +1134,7 @@ describe("generateDailyDigest", () => {
     const markerKey = "daily-digest:telegram-sent:2026-03-06";
     const history = (db as MockD1Database).getHistory();
     const markerWrites = history.filter(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === markerKey,
+      (entry) => entry.sql.includes("INSERT OR IGNORE INTO cache") && entry.binds[0] === markerKey,
     );
     const markerDeletes = history.filter(
       (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
@@ -1062,7 +1147,7 @@ describe("generateDailyDigest", () => {
 
   it("fails hard and skips Telegram delivery when the sent marker write fails", async () => {
     const db = mockD1([
-      { match: "INSERT OR REPLACE INTO cache", rows: [], throwError: new Error("cache write down") },
+      { match: "INSERT OR IGNORE INTO cache", rows: [], throwError: new Error("cache write down") },
       ...makeBaseTables(),
     ]);
 
@@ -1120,7 +1205,7 @@ describe("generateDailyDigest", () => {
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
   });
 
-  it("does not commit appendix state when the same-day Telegram marker already exists", async () => {
+  it("does not commit appendix state when the same-day Telegram marker claim is already taken", async () => {
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
       metadata: {
@@ -1141,9 +1226,9 @@ describe("generateDailyDigest", () => {
     const markerKey = "daily-digest:telegram-sent:2026-03-06";
     const db = mockD1([
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [markerKey],
-        rows: [{ key: markerKey, value: JSON.stringify({ sentAt: "2026-03-06T00:00:00.000Z" }), updated_at: 1 }],
+        match: "INSERT OR IGNORE INTO cache",
+        rows: [],
+        runMeta: { changes: 0 },
       },
       ...makeBaseTables(),
     ]);
@@ -1161,7 +1246,12 @@ describe("generateDailyDigest", () => {
 
     expect(result.metadata).toContain("telegram: skipped: already-sent");
     expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(prepareTelegramDigestAppendices).not.toHaveBeenCalled();
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
+    expect((db as MockD1Database).getHistory()).toContainEqual(expect.objectContaining({
+      sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
+      binds: expect.arrayContaining([markerKey]),
+    }));
   });
 
   it("does not commit appendix state when Telegram delivery fails", async () => {

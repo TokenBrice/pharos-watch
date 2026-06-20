@@ -369,4 +369,54 @@ describe("snapshotPublicDataset", () => {
     expect(envelope.liquidity).toEqual([]);
     expect(envelope.reportCards).toEqual(REPORT_CARD_CACHE_PAYLOAD);
   });
+
+  it("degrades instead of writing when the DEWS section read fails", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
+        ],
+      },
+      { match: "FROM stability_index", rows: [], first: PSI_ROW },
+      { match: "FROM stress_signals", rows: [], throwError: new Error("D1 read failed") },
+      { match: "FROM dex_liquidity", rows: DEX_ROWS },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "public_snapshot_section_read_failed",
+      missingSections: ["dews"],
+      failedSections: [{ section: "dews", error: "D1 read failed" }],
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("degrades instead of writing when the DEX liquidity section read fails", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
+        ],
+      },
+      { match: "FROM stability_index", rows: [], first: PSI_ROW },
+      { match: "FROM stress_signals", rows: STRESS_ROWS },
+      { match: "FROM dex_liquidity", rows: [], throwError: new Error("D1 liquidity read failed") },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "public_snapshot_section_read_failed",
+      missingSections: ["liquidity"],
+      failedSections: [{ section: "liquidity", error: "D1 liquidity read failed" }],
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
 });

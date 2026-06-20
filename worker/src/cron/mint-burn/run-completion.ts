@@ -8,6 +8,7 @@ import { withBudgetMetadata } from "../../lib/cron-progress";
 import { setMintBurnRunState, type MintBurnRunStateRow } from "./run-state";
 import type { MintBurnConfigSummary } from "./sync-config";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { throwIfAborted } from "../../lib/abort";
 
 // healNullPrices only heals events inside its 48h LOOKBACK_SEC window; events older
 // than that are intentionally left unhealed (their cached prices are no longer
@@ -51,6 +52,7 @@ export async function completeMintBurnRun(input: {
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
+  signal?: AbortSignal;
 }): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown>; error: string | null }> {
   const laggingConfigs = input.configs
     .map((config) => {
@@ -105,9 +107,11 @@ export async function completeMintBurnRun(input: {
     status = "degraded";
   }
 
+  throwIfAborted(input.signal);
   const nowSec = Math.floor(Date.now() / 1000);
   let nullPricesHealed = 0;
   const nullPriceBacklog = await getNullPriceBacklog(input.db, nowSec);
+  throwIfAborted(input.signal);
   if (nullPriceBacklog.historical > NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD) {
     logWorkerEvent({
       scope: "lib",
@@ -123,12 +127,16 @@ export async function completeMintBurnRun(input: {
   }
   if (status !== "error") {
     try {
+      throwIfAborted(input.signal);
       const healResult = await healNullPrices(input.db, nowSec);
       nullPricesHealed = healResult.healed;
       if (healResult.affectedHours.size > 0) {
-        await recalcAffectedHours(input.db, healResult.affectedHours as Map<string, MintBurnAffectedHour>);
+        await recalcAffectedHours(input.db, healResult.affectedHours as Map<string, MintBurnAffectedHour>, {
+          signal: input.signal,
+        });
       }
     } catch (error) {
+      throwIfAborted(input.signal);
       logWorkerEvent({
         scope: "lib",
         level: "warn",
@@ -144,7 +152,8 @@ export async function completeMintBurnRun(input: {
   let roundtripsBacklogSaturated = false;
   if (status !== "error") {
     try {
-      const sweepResult = await sweepRecentRoundtrips(input.db, nowSec);
+      throwIfAborted(input.signal);
+      const sweepResult = await sweepRecentRoundtrips(input.db, nowSec, undefined, input.signal);
       roundtripSweepCount = sweepResult.reclassified;
       roundtripsBacklogSaturated = sweepResult.saturated;
       if (roundtripSweepCount > 0) {
@@ -158,6 +167,7 @@ export async function completeMintBurnRun(input: {
         });
       }
     } catch (error) {
+      throwIfAborted(input.signal);
       logWorkerEvent({
         scope: "lib",
         level: "warn",

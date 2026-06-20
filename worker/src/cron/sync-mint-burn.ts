@@ -240,7 +240,7 @@ export async function syncMintBurn(
   } finally {
     if (affectedHours.size > 0) {
       try {
-        await recalcAffectedHours(db, affectedHours);
+        await recalcAffectedHours(db, affectedHours, { signal });
       } catch (e) {
         recalcFailed = true;
         recalcError = toErrorMessage(e);
@@ -305,6 +305,7 @@ export async function syncMintBurn(
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,
     configBreakdown,
+    signal,
   });
 
   let status = completion.status;

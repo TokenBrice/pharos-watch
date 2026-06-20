@@ -1,4 +1,5 @@
 import { batchExecute } from "../db";
+import { throwIfAborted } from "../abort";
 import { collectAffectedHours, recalcAffectedHours } from "./persistence";
 import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "./roundtrip-detection";
 import type { MintBurnAffectedHour } from "./types";
@@ -22,7 +23,9 @@ export async function sweepRecentRoundtrips(
   db: D1Database,
   nowSec: number,
   lookbackSec = SWEEP_LOOKBACK_SEC,
+  signal?: AbortSignal,
 ): Promise<RoundtripSweepResult> {
+  throwIfAborted(signal);
   const cutoff = nowSec - lookbackSec;
 
   const { results: candidates } = await db.prepare(
@@ -40,6 +43,7 @@ export async function sweepRecentRoundtrips(
     chain_id: string;
     timestamp: number;
   }>();
+  throwIfAborted(signal);
 
   if (candidates.length === 0) {
     return { reclassified: 0, affectedHours: new Map(), saturated: false };
@@ -59,10 +63,10 @@ export async function sweepRecentRoundtrips(
        WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'`,
     ).bind(row.tx_hash, row.stablecoin_id, row.chain_id),
   );
-  const reclassified = await batchExecute(db, updateStmts);
+  const reclassified = await batchExecute(db, updateStmts, { signal });
 
   if (affectedHours.size > 0) {
-    await recalcAffectedHours(db, affectedHours);
+    await recalcAffectedHours(db, affectedHours, { signal });
   }
 
   return { reclassified, affectedHours, saturated };

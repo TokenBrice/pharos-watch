@@ -310,7 +310,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   for (const row of persistableRows) {
     summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
   }
-  const persistResult = await persistMintBurnRows(db, persistableRows, affectedHours);
+  const persistResult = await persistMintBurnRows(db, persistableRows, affectedHours, { signal });
   summary.rowsInserted += persistResult.inserted;
   summary.rowsIgnored += persistResult.ignored;
 

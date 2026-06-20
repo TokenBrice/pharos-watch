@@ -1,14 +1,21 @@
 import { batchExecute } from "../db";
+import { throwIfAborted } from "../abort";
 import { detectAtomicRoundtrips } from "./roundtrip-detection";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 
 const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
 
+export interface MintBurnPersistenceOptions {
+  signal?: AbortSignal;
+}
+
 export async function insertMintBurnRows(
   db: D1Database,
   rows: MintBurnRow[],
+  options: MintBurnPersistenceOptions = {},
 ): Promise<{ inserted: number; ignored: number }> {
   if (rows.length === 0) return { inserted: 0, ignored: 0 };
+  throwIfAborted(options.signal);
 
   const insertStmts = rows.map((row) =>
     db.prepare(
@@ -39,7 +46,10 @@ export async function insertMintBurnRows(
   );
 
   // Each insert binds 18 values; keep D1 batch writes well below the bind-variable ceiling.
-  const inserted = await batchExecute(db, insertStmts, MINT_BURN_EVENT_INSERT_BATCH_SIZE);
+  const inserted = await batchExecute(db, insertStmts, {
+    chunkSize: MINT_BURN_EVENT_INSERT_BATCH_SIZE,
+    signal: options.signal,
+  });
   const ignored = Math.max(0, rows.length - inserted);
   return { inserted, ignored };
 }
@@ -53,6 +63,7 @@ export interface ClassificationUpdateCounters {
 export async function updateEventClassifications(
   db: D1Database,
   rows: MintBurnRow[],
+  options: MintBurnPersistenceOptions = {},
 ): Promise<ClassificationUpdateCounters> {
   // Any burn row gets its classification written unconditionally; mint rows
   // only participate when the classifier produced a non-standard flow_type.
@@ -62,6 +73,7 @@ export async function updateEventClassifications(
   if (needsUpdate.length === 0) {
     return { flowTypeChanges: 0, burnTypeChanges: 0, rowsUpdated: 0 };
   }
+  throwIfAborted(options.signal);
 
   const stmts = needsUpdate.map((row) =>
     db.prepare(
@@ -70,7 +82,7 @@ export async function updateEventClassifications(
        WHERE id = ?`,
     ).bind(row.burn_type, row.burn_review_reason, row.flow_type, row.id),
   );
-  const rowsUpdated = await batchExecute(db, stmts);
+  const rowsUpdated = await batchExecute(db, stmts, { signal: options.signal });
 
   // Per-column counters derived from classifier output rather than D1
   // meta.changes so a row that changed both columns counts once per column
@@ -124,8 +136,10 @@ function hourlyAggSql(whereClause: string): string {
 export async function recalcAffectedHours(
   db: D1Database,
   affectedHours: Map<string, MintBurnAffectedHour>,
+  options: MintBurnPersistenceOptions = {},
 ): Promise<void> {
   if (affectedHours.size === 0) return;
+  throwIfAborted(options.signal);
 
   const deleteStmt = db.prepare(
     `DELETE FROM mint_burn_hourly
@@ -140,16 +154,19 @@ export async function recalcAffectedHours(
   // even, so pairs are never split across chunk boundaries.
   const interleaved: D1PreparedStatement[] = [];
   for (const hour of affectedHours.values()) {
+    throwIfAborted(options.signal);
     interleaved.push(deleteStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs));
     interleaved.push(aggStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs, hour.hourTs + 3600));
   }
-  await batchExecute(db, interleaved);
+  await batchExecute(db, interleaved, { signal: options.signal });
 }
 
 export async function rebuildHourlyForStablecoinIds(
   db: D1Database,
   stablecoinIds: Iterable<string>,
+  options: MintBurnPersistenceOptions = {},
 ): Promise<void> {
+  throwIfAborted(options.signal);
   const ids = [...new Set(stablecoinIds)].sort();
   if (ids.length === 0) return;
 
@@ -157,12 +174,14 @@ export async function rebuildHourlyForStablecoinIds(
   await batchExecute(
     db,
     ids.map((id) => deleteStmt.bind(id)),
+    { signal: options.signal },
   );
 
   const rebuildStmt = db.prepare(hourlyAggSql("stablecoin_id = ?"));
   await batchExecute(
     db,
     ids.map((id) => rebuildStmt.bind(id)),
+    { signal: options.signal },
   );
 }
 
@@ -170,6 +189,7 @@ export async function persistMintBurnRows(
   db: D1Database,
   rows: MintBurnRow[],
   affectedHours?: Map<string, MintBurnAffectedHour>,
+  options: MintBurnPersistenceOptions = {},
 ): Promise<{
   inserted: number;
   ignored: number;
@@ -189,10 +209,12 @@ export async function persistMintBurnRows(
       roundtripsDetected,
     };
   }
+  throwIfAborted(options.signal);
 
-  const insertResult = await insertMintBurnRows(db, rows);
-  const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows);
+  const insertResult = await insertMintBurnRows(db, rows, options);
+  const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows, options);
   if (affectedHours && (insertResult.inserted > 0 || rowsUpdated > 0)) {
+    throwIfAborted(options.signal);
     collectAffectedHours(rows, affectedHours);
   }
   return {

@@ -335,7 +335,34 @@ describe("mint-burn shared pipeline modules", () => {
       Array.from({ length: 56 }, (_, index) => makeRow({ id: `id-${index + 1}`, tx_hash: `0xtx-${index + 1}` })),
     );
 
-    expect(vi.mocked(batchExecute)).toHaveBeenCalledWith(db, expect.any(Array), 50);
+    expect(vi.mocked(batchExecute)).toHaveBeenCalledWith(db, expect.any(Array), {
+      chunkSize: 50,
+      signal: undefined,
+    });
+  });
+
+  it("passes abort signals into mint/burn insert batches", async () => {
+    const db = makeDb();
+    const controller = new AbortController();
+
+    await insertMintBurnRows(db, [makeRow({ id: "id-1" })], { signal: controller.signal });
+
+    expect(vi.mocked(batchExecute)).toHaveBeenCalledWith(db, expect.any(Array), {
+      chunkSize: 50,
+      signal: controller.signal,
+    });
+  });
+
+  it("does not start mint/burn insert batches after cancellation", async () => {
+    const db = makeDb();
+    const controller = new AbortController();
+    controller.abort(new Error("stop mint/burn persistence"));
+
+    await expect(insertMintBurnRows(db, [makeRow({ id: "id-1" })], { signal: controller.signal })).rejects.toThrow(
+      "stop mint/burn persistence",
+    );
+
+    expect(vi.mocked(batchExecute)).not.toHaveBeenCalled();
   });
 
   it("returns bridge/review/effective burn counters", async () => {
