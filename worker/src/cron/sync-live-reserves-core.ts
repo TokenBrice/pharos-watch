@@ -1,5 +1,4 @@
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
-import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
@@ -41,14 +40,16 @@ export type ReserveAdapterRunner = (
   adapter: ReserveAdapterDefinition,
 ) => Promise<AdapterResult>;
 
-function getScoringRelevantWarnings(
-  warnings: readonly LiveReserveWarning[],
-  config: LiveReserveConfig,
-): LiveReserveWarning[] {
-  const allowedCodes = new Set(config.scoring?.allowedDegradedWarningCodes ?? []);
-  return warnings.filter((warning) =>
-    warning.effect !== "degraded" || !allowedCodes.has(warning.code),
-  );
+function getEffectiveScoringMaxSourceAgeSec(config: LiveReserveConfig, adapter: ReserveAdapterDefinition): number | undefined {
+  const adapterMaxSourceAgeSec = adapter.validation?.maxSourceAgeSec;
+  const scoringMaxSourceAgeSec = config.scoring?.maxSourceAgeSec;
+  if (adapterMaxSourceAgeSec == null) {
+    return scoringMaxSourceAgeSec;
+  }
+  if (scoringMaxSourceAgeSec == null) {
+    return undefined;
+  }
+  return Math.min(scoringMaxSourceAgeSec, adapterMaxSourceAgeSec);
 }
 
 export async function syncReserveCoin(args: {
@@ -132,7 +133,7 @@ export async function syncReserveCoin(args: {
     const validation = validateAdapterOutput(result, {
       adapter,
       now: attemptStartedAt,
-      maxSourceAgeSec: config.scoring?.maxSourceAgeSec ?? undefined,
+      maxSourceAgeSec: getEffectiveScoringMaxSourceAgeSec(config, adapter),
     });
     if (!validation.valid) {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
@@ -157,8 +158,7 @@ export async function syncReserveCoin(args: {
       return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
     }
 
-    const scoringAllowsUnverifiedFreshness = config.scoring?.maxSourceAgeSec != null
-      && result.metadata?.freshnessMode === "unverified";
+    const scoringAllowsUnverifiedFreshness = false;
     const snapshotMetadata = {
       ...(result.metadata ?? {}),
       ...(scoringAllowsUnverifiedFreshness ? { scoringAllowsUnverifiedFreshness: true } : {}),
@@ -178,7 +178,6 @@ export async function syncReserveCoin(args: {
       adapterEvidenceClass: adapter.evidenceClass,
     };
 
-    const scoringRelevantWarnings = getScoringRelevantWarnings(warnings, config);
     const successState = buildReserveSyncStateRecord({
       stablecoinId: coin.id,
       config,
@@ -187,7 +186,7 @@ export async function syncReserveCoin(args: {
       previousLastSuccessAttemptId: prevSuccessAttemptId,
       attemptId,
       now: attemptStartedAt,
-      status: hasDegradingWarnings(scoringRelevantWarnings) ? "degraded" : "ok",
+      status: hasDegradingWarnings(warnings) ? "degraded" : "ok",
       warnings,
       metadata: {
         warningEffects: {
