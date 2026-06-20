@@ -13,8 +13,10 @@ import {
 } from "../lib/yield-history-cleanup";
 import { resolveYieldSources } from "./yield-sync/resolve";
 import {
+  estimateYieldHistoryCandidateCounts,
   loadYieldHistorySnapshots,
   purgeYieldHistoryOwnershipHandoffs,
+  YIELD_HISTORY_CANDIDATE_GUARDRAIL_ROWS,
 } from "./yield-sync/history";
 import {
   evaluateYieldSourcesCooperative,
@@ -245,6 +247,36 @@ export async function syncYieldData(
   const resolvedCountByCoin = new Map<string, number>();
   for (const entry of resolvedWithYield) {
     resolvedCountByCoin.set(entry.id, (resolvedCountByCoin.get(entry.id) ?? 0) + 1);
+  }
+
+  const historyCandidateCounts = resolvedIds.length > 0
+    ? await estimateYieldHistoryCandidateCounts(db, resolvedIds, startSec, sevenDaysAgoSec, { signal })
+    : { previousTvlCandidates: 0, previousBestCandidates: 0, totalPreviousCandidates: 0 };
+  if (historyCandidateCounts.totalPreviousCandidates > YIELD_HISTORY_CANDIDATE_GUARDRAIL_ROWS) {
+    await reportYieldProgress("history-guardrail", "Yield history candidate guardrail deferred publication", "yield-history", {
+      itemsDone: 0,
+      itemsTotal: resolvedIds.length,
+      metadata: {
+        guard: "history-candidate-count",
+        countTotals: {
+          resolvedCoins: resolvedIds.length,
+          previousTvlCandidates: historyCandidateCounts.previousTvlCandidates,
+          previousBestCandidates: historyCandidateCounts.previousBestCandidates,
+          totalPreviousCandidates: historyCandidateCounts.totalPreviousCandidates,
+          guardrailRows: YIELD_HISTORY_CANDIDATE_GUARDRAIL_ROWS,
+        },
+      },
+    });
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "yield_history_candidate_guardrail",
+        ...historyCandidateCounts,
+        guardrailRows: YIELD_HISTORY_CANDIDATE_GUARDRAIL_ROWS,
+        preservedPreviousRanking: true,
+      }),
+    };
   }
 
   const historySnapshots = resolvedIds.length > 0
