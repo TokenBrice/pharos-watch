@@ -48,4 +48,61 @@ describe("validateAndWriteStablecoinsCache", () => {
       responseReadyCacheError: "Error",
     });
   });
+  it("strips upstream frozen fields from non-registry assets before publishing", async () => {
+    const syncStartSec = 1_777_000_000;
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+
+    const result = await validateAndWriteStablecoinsCache({
+      assets: [{
+        id: "upstream-controlled-active-coin",
+        name: "Active Coin",
+        symbol: "ACTIVE",
+        pegType: "peggedUSD",
+        pegMechanism: "fiat-backed",
+        price: 1,
+        priceSource: "defillama",
+        circulating: { peggedUSD: 1000 },
+        chainCirculating: {
+          Ethereum: {
+            current: 1000,
+            circulatingPrevDay: 1000,
+            circulatingPrevWeek: 1000,
+            circulatingPrevMonth: 1000,
+          },
+        },
+        chains: ["Ethereum"],
+        frozen: true,
+        frozenAt: "2026-04-27",
+      }],
+      db,
+      syncStartSec,
+      validationContext: "main",
+      returnIfAborted: () => null,
+      abortResult: () => ({
+        status: "degraded",
+        itemCount: 0,
+        metadata: "aborted",
+      }),
+    }, () => ({
+      status: "degraded",
+      itemCount: 0,
+      metadata: "blocked",
+    }));
+
+    expect(result).toMatchObject({ written: true, skippedBecauseNewer: false });
+    const stablecoinsWrite = db.getHistory().find((entry) => entry.binds[0] === "stablecoins");
+    expect(stablecoinsWrite).toBeDefined();
+    const published = JSON.parse(stablecoinsWrite?.binds[1] as string) as {
+      peggedAssets: Array<{ frozen?: boolean; frozenAt?: string }>;
+    };
+    expect(published.peggedAssets[0].frozen).toBeUndefined();
+    expect(published.peggedAssets[0].frozenAt).toBeUndefined();
+  });
+
 });

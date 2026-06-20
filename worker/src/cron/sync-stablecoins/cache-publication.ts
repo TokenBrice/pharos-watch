@@ -68,13 +68,18 @@ export async function validateAndWriteStablecoinsCache(
   // Tag frozen coins so /api/stablecoins exposes `frozen` and `frozenAt` per-coin.
   // Runs after intake's mergeFrozenSnapshots so injected rows also get tagged here.
   for (const asset of assets) {
+    const frozenMeta = FROZEN_META_BY_ID.get(asset.id);
     if (FROZEN_IDS.has(asset.id)) {
       asset.frozen = true;
-      const frozenAt = FROZEN_META_BY_ID.get(asset.id)?.frozenAt;
-      if (frozenAt != null) {
-        asset.frozenAt = frozenAt;
+      if (frozenMeta?.frozenAt != null) {
+        asset.frozenAt = frozenMeta.frozenAt;
+      } else {
+        delete asset.frozenAt;
       }
+      continue;
     }
+    delete asset.frozen;
+    delete asset.frozenAt;
   }
 
   const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
