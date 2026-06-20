@@ -24,6 +24,7 @@ export interface BlacklistResolutionContext {
 export interface ResolveBlacklistStatusOptions {
   context?: BlacklistResolutionContext;
   reserveSlices?: readonly ReserveSlice[];
+  reserveSlicesById?: ReadonlyMap<string, readonly ReserveSlice[]>;
 }
 
 export interface ResolveBlacklistStatusesOptions {
@@ -249,7 +250,10 @@ function resolveBlacklistStatusWithoutExplicitOverride(
     }
     const parentMeta = options.context.trackedMetaById?.get(meta.variantOf);
     if (parentMeta) {
-      const parentStatus = resolveBlacklistStatus(parentMeta, options);
+      const parentStatus = resolveBlacklistStatus(parentMeta, {
+        ...options,
+        reserveSlices: options.reserveSlicesById?.get(parentMeta.id),
+      });
       if (parentStatus === true || parentStatus === "inherited") return "inherited";
       if (parentStatus === "possible") return "possible";
     }
@@ -324,6 +328,7 @@ export function resolveBlacklistStatuses(
       const status = resolveBlacklistStatus(meta, {
         context,
         reserveSlices: reserveSlicesById?.get(meta.id),
+        reserveSlicesById,
       });
       if ((status === true || status === "inherited") && !blacklistableIds.has(meta.id)) {
         blacklistableIds.add(meta.id);
@@ -337,6 +342,7 @@ export function resolveBlacklistStatuses(
         metas.map((meta) => [meta.id, resolveBlacklistStatus(meta, {
           context: finalContext,
           reserveSlices: reserveSlicesById?.get(meta.id),
+          reserveSlicesById,
         })] as const),
       );
     }
