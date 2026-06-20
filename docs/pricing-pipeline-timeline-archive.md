@@ -215,7 +215,7 @@ Older entries moved from [pricing-pipeline-timeline.md](./pricing-pipeline-timel
 - DefiLlama contract fallback and CoinMarketCap category fallback now preserve upstream quote timestamps and validate response shape before recording provider success; stale, low-confidence, wrong-symbol, malformed, or apparently truncated fallback responses no longer look like healthy empty coverage
 - Jupiter fallback now accepts documented Price API V3 payloads without relying on undocumented liquidity fields, validates `blockId` against Solana current slot freshness, and treats malformed OK responses as provider failures
 - DexScreener fallback now separates exact-address provenance from last-resort symbol-search provenance and restricts symbol search to configured chains with USD-like quotes, minimum pair age, 24h volume, and liquidity
-- The methodology now documents the intentional trust-tier-first low-confidence selection policy and the upper-middle estimator used for even-sized consensus clusters
+- The methodology now documents the intentional trust-tier-first low-confidence selection policy and the midpoint-average estimator used for even-sized consensus clusters
 
 ---
 

@@ -39,9 +39,9 @@ export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
     date: "2026-06-15",
     effectiveAt: 1781481600,
     summary:
-      "Yield Intelligence v8.292 expands the reviewed venue-risk registry from 12 to 41 venues, so DEWS's existing structured-venue Yield Anomaly branch now fires for the previously-unscored long tail without any DEWS threshold change.",
+      "Yield Intelligence v8.292 expands the reviewed venue-risk registry from 12 to 61 venues, so DEWS's existing structured-venue Yield Anomaly branch now fires for the previously-unscored long tail without any DEWS threshold change.",
     impact: [
-      "The `structured-high-risk-venue` (+25) and `structured-medium-risk-venue` (+10) branches are unchanged, but `sourceRisk.venueRiskTier` is now derived from a 5-category Yearn-style score across 41 venues instead of 12 hand-set tiers",
+      "The `structured-high-risk-venue` (+25) and `structured-medium-risk-venue` (+10) branches are unchanged, but `sourceRisk.venueRiskTier` is now derived from a 5-category Yearn-style score across 61 venues instead of 12 hand-set tiers",
       "Newly-scored high-risk venues (e.g. Clearpool, Goldfinch, 3Jane, Aries Markets, Curvance, Avantis) now contribute `structured-high-risk-venue` to the Yield Anomaly sub-signal for coins routing yield through them",
       "Newly-scored medium-risk venues (e.g. Fluid, Dolomite, Fraxlend v2, Felix, Centrifuge, Jupiter Lend, Sovryn) now contribute `structured-medium-risk-venue`",
       "Reviewer-set cross-venue dependency concentration raises the source-risk penalty, which can cross the existing +20 `structured-source-risk-penalty` threshold for affected rows",

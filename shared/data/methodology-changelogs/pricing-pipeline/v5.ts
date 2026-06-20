@@ -238,7 +238,7 @@ export const PRICING_PIPELINE_V5: readonly MethodologyChangelogEntry[] = [
         "Promoted DEX protocol lanes are freshness-checked per lane, so a fresh parent dex_prices row cannot carry stale protocol-level sources into consensus",
         "Severe fixed-peg downside publication now requires independent source-family corroboration; correlated CoinGecko plus DefiLlama-list evidence no longer satisfies the guardrail on its own",
         "Tracked-base authoritative inheritance now requires a fresh, replay-safe, high-confidence or explicitly authoritative parent and carries parent provenance through accepted overrides",
-        "The methodology now documents the existing trust-tier-first low-confidence selector and upper-middle median estimator for even-sized clusters",
+        "The methodology now documents the existing trust-tier-first low-confidence selector and midpoint-average median estimator for even-sized clusters",
       ],
       commits: [],
       reconstructed: false,

@@ -79,7 +79,7 @@ When an asset still has no usable current price after validation and fallback re
 1. 0 sources -> no result
 2. 1 source -> `single-source`
 3. 2+ sources -> build fully pairwise agreement clusters within a peg-aware threshold
-4. best cluster with 2+ members -> initially `high` confidence, publish the cluster median, and keep the best trusted member as internal provenance. For even-sized clusters, the median is the upper-middle sorted member rather than the midpoint.
+4. best cluster with 2+ members -> initially `high` confidence, publish the cluster median, and keep the best trusted member as internal provenance. For even-sized clusters, the median is the midpoint average of the two middle sorted members.
 5. no 2+ cluster:
    - fixed pegs -> stay in fixed-peg mode even if the reference price is temporarily unavailable; choose the best trusted fallback source by trust tier first, then reference proximity, and mark `low`
    - NAV tokens -> use a wider 500 bps cluster threshold first, otherwise choose the best trusted fallback source and mark `low`
