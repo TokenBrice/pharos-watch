@@ -12,15 +12,10 @@ import {
 import type { LiveReserveEvidenceClass } from "../../shared/types/live-reserves";
 import type { ReserveSlice, StablecoinMeta } from "../../shared/types";
 import {
-  PROD_ORIGIN,
-  PROD_REPORT_CARDS_URL,
-  PROD_STABLECOINS_URL,
-  extractStablecoinRows,
-  fetchJson,
+  buildMarketCapMapFromStablecoins,
   formatUsd,
   isRecord,
-  joinUrl,
-  marketCapForStablecoinRow,
+  loadCoverageAuditSiteDataInputs,
   markdownValue,
   readRequiredJsonFile,
   resolveGeneratedAt,
@@ -116,18 +111,6 @@ function reserveSlicesFor(coin: StablecoinMeta): readonly ReserveSlice[] {
   return coin.reserves ?? [];
 }
 
-function buildMarketCapMap(stablecoinsPayload: unknown | undefined): Map<string, number> | null {
-  if (stablecoinsPayload === undefined) return null;
-
-  const map = new Map<string, number>();
-  for (const row of extractStablecoinRows(stablecoinsPayload)) {
-    const id = stringValue(row.id, { trim: false });
-    if (!id) continue;
-    map.set(id, marketCapForStablecoinRow(row));
-  }
-  return map;
-}
-
 function buildCuratedOnlyCandidates(
   activeCoins: readonly StablecoinMeta[],
   marketCapById: ReadonlyMap<string, number> | null,
@@ -210,7 +193,7 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
   const activeIds = new Set(activeCoins.map((coin) => coin.id));
   const warnings: string[] = [];
   const liveEnabledByEvidenceClass = emptyEvidenceClassCounts();
-  const marketCapById = buildMarketCapMap(input.stablecoins);
+  const marketCapById = buildMarketCapMapFromStablecoins(input.stablecoins, { trimId: false });
   if (input.stablecoins !== undefined && marketCapById?.size === 0) {
     warnings.push("Stablecoin payload did not contain any pegged asset rows.");
   }
@@ -462,26 +445,11 @@ async function loadReportCardInput(
   cwd: string,
   fetchImpl: typeof fetch,
 ): Promise<Pick<ReserveCoverageAuditInput, "reportCards" | "stablecoins" | "mode">> {
-  if (options.prod) {
-    const siteDataHeaders = {
-      Origin: PROD_ORIGIN,
-      Referer: `${PROD_ORIGIN}/coverage/`,
-    };
-    const [reportCards, stablecoins] = await Promise.all([
-      fetchJson(PROD_REPORT_CARDS_URL, fetchImpl, undefined, siteDataHeaders),
-      fetchJson(PROD_STABLECOINS_URL, fetchImpl, undefined, siteDataHeaders),
-    ]);
-    return { reportCards, stablecoins, mode: "prod" };
-  }
-
-  if (options.apiBase) {
-    const apiKey = process.env.RESERVE_COVERAGE_API_KEY ?? process.env.PHAROS_API_KEY ?? process.env.SMOKE_API_KEY;
-    const [reportCards, stablecoins] = await Promise.all([
-      fetchJson(joinUrl(options.apiBase, "/api/report-cards"), fetchImpl, apiKey),
-      fetchJson(joinUrl(options.apiBase, "/api/stablecoins"), fetchImpl, apiKey),
-    ]);
-    return { reportCards, stablecoins, mode: "api" };
-  }
+  const fetchedInputs = await loadCoverageAuditSiteDataInputs(
+    { prod: options.prod, apiBase: options.apiBase, apiKeyEnv: "RESERVE_COVERAGE_API_KEY" },
+    fetchImpl,
+  );
+  if (fetchedInputs) return fetchedInputs;
 
   const reportCards = options.reportCardsPath
     ? readRequiredJsonFile(resolve(cwd, options.reportCardsPath), "--report-cards")

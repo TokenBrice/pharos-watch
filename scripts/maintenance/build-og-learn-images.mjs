@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { escapeXml } from "../lib/og-svg.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -103,15 +104,6 @@ function extractDesktopSvg(slug) {
   // USDC -> STBL (the placeholder symbol used on explainer pages)
   inner = inner.split("USDC").join("STBL");
   return { inner, viewBoxH: heightAttr };
-}
-
-function escapeXml(s) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 function buildOgSvg(slug) {

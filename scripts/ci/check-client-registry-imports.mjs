@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { collectSourceFiles } from "../lib/source-files.mjs";
-import { getScriptKind } from "../lib/ts-ast.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const ROOT = process.cwd();
 const SOURCE_ROOT = "src";
@@ -53,8 +53,7 @@ function resolveSourceImport(fromFile, specifier) {
   return null;
 }
 
-function collectImports(file, source) {
-  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, getScriptKind(file));
+function collectImports(sourceFile) {
   const imports = [];
   const fatRegistryLines = [];
 
@@ -90,8 +89,8 @@ const files =
 
 const moduleInfoByFile = new Map();
 for (const file of files) {
-  const source = readFileSync(file, "utf8");
-  const { imports, fatRegistryLines } = collectImports(file, source);
+  const { source, sourceFile } = parseSourceFile(file);
+  const { imports, fatRegistryLines } = collectImports(sourceFile);
   moduleInfoByFile.set(file, {
     source,
     imports: imports

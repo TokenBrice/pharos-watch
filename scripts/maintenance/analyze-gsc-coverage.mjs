@@ -99,8 +99,8 @@ function displayPath(inputPath) {
   return relative;
 }
 
-function stripBom(value) {
-  return value.replace(/^\uFEFF/, "");
+export function stripBom(value) {
+  return String(value ?? "").replace(/^\uFEFF/, "");
 }
 
 export function parseCsv(text) {
@@ -158,7 +158,7 @@ export function parseCsv(text) {
   return rows.filter((candidate) => candidate.some((value) => value.trim().length > 0));
 }
 
-function uniqueHeaders(headers) {
+export function uniqueHeaders(headers) {
   const seen = new Map();
   return headers.map((header, index) => {
     const trimmed = stripBom(String(header ?? "").trim()) || `column_${index + 1}`;
@@ -209,7 +209,7 @@ export function isDigit(char) {
   return char >= "0" && char <= "9";
 }
 
-function firstNumberToken(value) {
+export function firstNumberToken(value) {
   const cleaned = String(value ?? "").replaceAll(",", "");
   for (let index = 0; index < cleaned.length; index += 1) {
     const char = cleaned[index] ?? "";

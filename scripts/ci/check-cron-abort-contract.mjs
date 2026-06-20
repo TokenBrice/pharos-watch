@@ -2,9 +2,8 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import ts from "typescript";
-import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
+import { collectSourceFilesUnderRoot, formatScannedOk, runAsCli } from "../lib/source-files.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const DEFAULT_ROOTS = ["worker/src/handlers/scheduled", "worker/src/cron"];
@@ -304,16 +303,8 @@ export function main(cwd = process.cwd()) {
     return 1;
   }
 
-  process.stdout.write(
-    `Cron abort contract: OK (${report.scannedFiles.length} file${report.scannedFiles.length === 1 ? "" : "s"} scanned)\n`,
-  );
+  process.stdout.write(formatScannedOk("Cron abort contract", report.scannedFiles.length));
   return 0;
 }
 
-const isDirectRun = process.argv[1]
-  ? import.meta.url === pathToFileURL(process.argv[1]).href
-  : false;
-
-if (isDirectRun) {
-  process.exitCode = main();
-}
+runAsCli(import.meta.url, main);

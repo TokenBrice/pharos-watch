@@ -23,6 +23,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { escapeXml } from "../lib/og-svg.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -138,15 +139,6 @@ function buildSvg({ kicker, title }) {
         text-anchor="end">pharos.watch</text>
 </svg>
 `;
-}
-
-function escapeXml(s) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 function sha256(input) {

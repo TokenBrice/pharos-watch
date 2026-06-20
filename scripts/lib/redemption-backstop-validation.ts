@@ -910,19 +910,25 @@ function collectVariableDeclarationFiles(
   );
 }
 
+function isBackstopConfigsDecl(
+  node: ts.Node,
+): node is ts.VariableDeclaration & { name: ts.Identifier; initializer: ts.ObjectLiteralExpression } {
+  return (
+    ts.isVariableDeclaration(node) &&
+    ts.isIdentifier(node.name) &&
+    node.name.text.endsWith("BACKSTOP_CONFIGS") &&
+    node.initializer != null &&
+    ts.isObjectLiteralExpression(node.initializer)
+  );
+}
+
 function resolveRegistrySourceFiles(
   node: ts.Node,
   moduleFilePath: string,
   declarationFileByIdentifier: ReadonlyMap<string, string>,
   sourceFileById: Map<string, string>,
 ): void {
-  if (
-    ts.isVariableDeclaration(node) &&
-    ts.isIdentifier(node.name) &&
-    node.name.text.endsWith("BACKSTOP_CONFIGS") &&
-    node.initializer &&
-    ts.isObjectLiteralExpression(node.initializer)
-  ) {
+  if (isBackstopConfigsDecl(node)) {
     for (const property of node.initializer.properties) {
       if (!ts.isPropertyAssignment(property)) continue;
       const id = propertyNameText(property.name);
@@ -987,13 +993,7 @@ function validateStaticConfigSourceFile(
   const registryEntries: { id: string; kind: "expandIds" | "property" }[] = [];
 
   function visit(node: ts.Node): void {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text.endsWith("BACKSTOP_CONFIGS") &&
-      node.initializer &&
-      ts.isObjectLiteralExpression(node.initializer)
-    ) {
+    if (isBackstopConfigsDecl(node)) {
       for (const property of node.initializer.properties) {
         if (
           ts.isSpreadAssignment(property) &&

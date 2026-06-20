@@ -9,7 +9,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { getArgValue, sleep } from "./cli.mjs";
+import { getArgValue, sleep } from "./smoke-runtime.mjs";
 
 interface ResolveApiUrlOptions {
   /** CLI flag that overrides everything else, e.g. `--api-url`. */

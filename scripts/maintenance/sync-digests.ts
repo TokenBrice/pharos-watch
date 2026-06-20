@@ -5,7 +5,7 @@
  */
 
 import { formatIsoDate } from "@shared/lib/format";
-import { getArgValue, parseCheckMode } from "../lib/cli.mjs";
+import { getArgValue, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
 
 interface ApiDigest {

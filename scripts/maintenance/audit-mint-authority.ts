@@ -5,6 +5,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
+import { runAsMain, toPositiveInt } from "../lib/coverage-audit-cli";
 
 const DEFAULT_OUTPUT_DIR = "agents/mint-authority-candidates";
 const DEFAULT_LIMIT = 25;
@@ -86,14 +87,6 @@ function usage(): string {
     "  --json                Print one JSON array to stdout instead of writing files",
     "  --help, -h            Show this help text",
   ].join("\n");
-}
-
-function toPositiveInt(value: string, option: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${option} must be a positive integer`);
-  }
-  return parsed;
 }
 
 export function parseArgs(argv: string[], now = new Date()): AuditMintAuthorityOptions {
@@ -308,13 +301,4 @@ export async function runCli(
   return 0;
 }
 
-if (process.argv[1]?.endsWith("audit-mint-authority.ts")) {
-  runCli()
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    });
-}
+runAsMain(import.meta.url, runCli);

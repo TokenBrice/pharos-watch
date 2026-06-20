@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { extname, isAbsolute, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export const DEFAULT_SOURCE_FILE_EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "node_modules"]);
 
@@ -40,4 +41,18 @@ export function collectSourceFilesUnderRoot(root, cwd, { extensions, excludedDir
   if (!existsSync(absolute)) return [];
   if (statSync(absolute).isFile()) return [absolute];
   return collectSourceFiles(absolute, { extensions, excludedDirs, skipDotEntries });
+}
+
+export function formatScannedOk(label, count) {
+  return `${label}: OK (${count} file${count === 1 ? "" : "s"} scanned)\n`;
+}
+
+export function runAsCli(importMetaUrl, main) {
+  const isDirectRun = process.argv[1]
+    ? importMetaUrl === pathToFileURL(process.argv[1]).href
+    : false;
+
+  if (isDirectRun) {
+    process.exitCode = main();
+  }
 }

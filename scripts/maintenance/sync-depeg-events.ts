@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { getArgValue } from "../lib/cli.mjs";
+import { getArgValue } from "../lib/smoke-runtime.mjs";
 import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
 
 interface DepegEventsResponse {

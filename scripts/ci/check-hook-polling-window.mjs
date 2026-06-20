@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { pathToFileURL } from "node:url";
-import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
+import { collectSourceFiles, formatScannedOk, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
 
 /**
  * Enforces the AGENTS.md polling rule: cron-backed hooks must derive
@@ -124,9 +123,7 @@ export function printHookPollingWindowReport(report) {
     return 1;
   }
 
-  process.stdout.write(
-    `Hook polling window: OK (${report.scannedFiles.length} file${report.scannedFiles.length === 1 ? "" : "s"} scanned)\n`,
-  );
+  process.stdout.write(formatScannedOk("Hook polling window", report.scannedFiles.length));
   return 0;
 }
 
@@ -139,10 +136,4 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   return printHookPollingWindowReport(report);
 }
 
-const isDirectRun = process.argv[1]
-  ? import.meta.url === pathToFileURL(process.argv[1]).href
-  : false;
-
-if (isDirectRun) {
-  process.exitCode = main();
-}
+runAsCli(import.meta.url, main);

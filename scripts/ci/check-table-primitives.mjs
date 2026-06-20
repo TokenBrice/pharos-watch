@@ -2,9 +2,8 @@
 
 import { existsSync } from "node:fs";
 import { isAbsolute, posix, relative, sep } from "node:path";
-import { pathToFileURL } from "node:url";
 import ts from "typescript";
-import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
+import { collectSourceFiles, formatScannedOk, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
@@ -360,9 +359,7 @@ export function printTablePrimitiveReport(report) {
     return 1;
   }
 
-  process.stdout.write(
-    `Table primitive adoption: OK (${report.scannedFiles.length} file${report.scannedFiles.length === 1 ? "" : "s"} scanned)\n`,
-  );
+  process.stdout.write(formatScannedOk("Table primitive adoption", report.scannedFiles.length));
   return 0;
 }
 
@@ -440,10 +437,4 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   return printTablePrimitiveReport(scanTablePrimitives({ roots: options.roots, cwd }));
 }
 
-const isDirectRun = process.argv[1]
-  ? import.meta.url === pathToFileURL(process.argv[1]).href
-  : false;
-
-if (isDirectRun) {
-  process.exitCode = main();
-}
+runAsCli(import.meta.url, main);

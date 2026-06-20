@@ -2,8 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { collectSourceFiles } from "../lib/source-files.mjs";
+import { collectSourceFiles, runAsCli } from "../lib/source-files.mjs";
 import {
   PROVIDER_RESILIENCE_REGISTRY,
   REQUIRED_PROVIDER_SURFACE_FAMILIES,
@@ -229,10 +228,4 @@ export function main(cwd = process.cwd()) {
   return 0;
 }
 
-const isDirectRun = process.argv[1]
-  ? import.meta.url === pathToFileURL(process.argv[1]).href
-  : false;
-
-if (isDirectRun) {
-  process.exitCode = main();
-}
+runAsCli(import.meta.url, main);

@@ -11,20 +11,16 @@ import { getL2BeatInfrastructureContext } from "../../shared/lib/chains/l2beat-a
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../../shared/types";
 import {
-  PROD_ORIGIN,
-  PROD_REPORT_CARDS_URL,
-  PROD_STABLECOINS_URL,
-  extractStablecoinRows,
-  fetchJson,
+  buildMarketCapMapFromStablecoins,
   formatUsd,
   isRecord,
-  joinUrl,
-  marketCapForStablecoinRow,
+  loadCoverageAuditSiteDataInputs,
   markdownValue,
   numberValue,
   readJsonFile,
   readRequiredJsonFile,
   resolveGeneratedAt,
+  runAsMain,
   sortByMarketCapOrRank,
   stringValue,
   writeOutputFile,
@@ -213,19 +209,6 @@ function extractReportCardEdges(payload: unknown): DependencyGraphEdge[] | null 
   });
 }
 
-function buildMarketCapMap(stablecoinsPayload: unknown | undefined): Map<string, number> | null {
-  if (stablecoinsPayload === undefined) return null;
-
-  const rows = extractStablecoinRows(stablecoinsPayload);
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    const id = stringValue(row.id);
-    if (!id) continue;
-    map.set(id, marketCapForStablecoinRow(row));
-  }
-  return map;
-}
-
 function marketCapForId(marketCapById: ReadonlyMap<string, number> | null, id: string): number | null {
   return marketCapById?.get(id) ?? null;
 }
@@ -354,7 +337,7 @@ function findL2BeatDeploymentContextRows(activeCoins: readonly StablecoinMeta[])
 export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput = {}): DependencyCoverageAudit {
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const activeIds = new Set(activeCoins.map((coin) => coin.id));
-  const marketCapById = buildMarketCapMap(input.stablecoins);
+  const marketCapById = buildMarketCapMapFromStablecoins(input.stablecoins);
   const warnings: string[] = [];
   if (input.stablecoins !== undefined && marketCapById?.size === 0) {
     warnings.push("Stablecoin payload did not contain any pegged asset rows.");
@@ -690,26 +673,11 @@ async function loadOptionalInputs(
   cwd: string,
   fetchImpl: typeof fetch,
 ): Promise<Pick<DependencyCoverageAuditInput, "reportCards" | "stablecoins" | "mode">> {
-  if (options.prod) {
-    const siteDataHeaders = {
-      Origin: PROD_ORIGIN,
-      Referer: `${PROD_ORIGIN}/coverage/`,
-    };
-    const [reportCards, stablecoins] = await Promise.all([
-      fetchJson(PROD_REPORT_CARDS_URL, fetchImpl, undefined, siteDataHeaders),
-      fetchJson(PROD_STABLECOINS_URL, fetchImpl, undefined, siteDataHeaders),
-    ]);
-    return { reportCards, stablecoins, mode: "prod" };
-  }
-
-  if (options.apiBase) {
-    const apiKey = process.env.DEPENDENCY_COVERAGE_API_KEY ?? process.env.PHAROS_API_KEY ?? process.env.SMOKE_API_KEY;
-    const [reportCards, stablecoins] = await Promise.all([
-      fetchJson(joinUrl(options.apiBase, "/api/report-cards"), fetchImpl, apiKey),
-      fetchJson(joinUrl(options.apiBase, "/api/stablecoins"), fetchImpl, apiKey),
-    ]);
-    return { reportCards, stablecoins, mode: "api" };
-  }
+  const fetchedInputs = await loadCoverageAuditSiteDataInputs(
+    { prod: options.prod, apiBase: options.apiBase, apiKeyEnv: "DEPENDENCY_COVERAGE_API_KEY" },
+    fetchImpl,
+  );
+  if (fetchedInputs) return fetchedInputs;
 
   const inputDir = options.inputDir ? resolve(cwd, options.inputDir) : null;
   if (inputDir && !existsSync(inputDir)) {
@@ -799,14 +767,4 @@ export async function runCli(
   return 1;
 }
 
-if (process.argv[1]?.endsWith("generate-dependency-coverage-audit.ts")) {
-  runCli().then(
-    (exitCode) => {
-      process.exitCode = exitCode;
-    },
-    (error: unknown) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    },
-  );
-}
+runAsMain(import.meta.url, runCli);

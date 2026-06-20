@@ -1,7 +1,6 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import {
   buildL2BeatChainCoverageAudit,
   type L2BeatChainCoverageAudit,
@@ -13,7 +12,15 @@ import {
   type L2BeatChainRiskSnapshot,
   type L2BeatRiskField,
 } from "../../shared/lib/chains/l2beat-risk";
-import { isRecord, markdownValue, readJsonFile, resolveGeneratedAt, stringValue } from "../lib/coverage-audit-cli";
+import {
+  isRecord,
+  markdownValue,
+  readJsonFile,
+  resolveGeneratedAt,
+  runAsMain,
+  stringValue,
+  writeOutputFile,
+} from "../lib/coverage-audit-cli";
 
 const L2BEAT_SUMMARY_URL = "https://l2beat.com/api/scaling/summary";
 
@@ -374,9 +381,7 @@ export function renderL2BeatSnapshotCoverageAuditMarkdown(audit: L2BeatSnapshotC
 }
 
 function writeOutput(path: string, contents: string): void {
-  const target = resolve(process.cwd(), path);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, contents, "utf8");
+  writeOutputFile(path, contents);
 }
 
 async function loadObservedProjects(options: CliOptions): Promise<{
@@ -435,13 +440,4 @@ export async function runCli(
   return 0;
 }
 
-if (process.argv[1]?.endsWith("generate-l2beat-snapshot-coverage-audit.ts")) {
-  runCli()
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    });
-}
+runAsMain(import.meta.url, runCli);

@@ -180,7 +180,6 @@
     "rehype-slug": "6.0.0",
     "remark-gfm": "4.0.1",
     "tailwind-merge": "^3.6.0",
-    "ws": "8.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

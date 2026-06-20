@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
-import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const EXCLUDED_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules", "out"]);
@@ -34,14 +34,7 @@ export function findBroadSharedTypesValueImports(roots = DEFAULT_ROOTS, cwd = pr
   for (const root of roots) {
     const rootDir = resolveSourceRoot(root, cwd);
     for (const file of collectSourceFiles(rootDir, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS })) {
-      const source = readFileSync(file, "utf8");
-      const sourceFile = ts.createSourceFile(
-        file,
-        source,
-        ts.ScriptTarget.Latest,
-        true,
-        extname(file) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-      );
+      const { sourceFile } = parseSourceFile(file);
 
       for (const statement of sourceFile.statements) {
         if (!ts.isImportDeclaration(statement)) continue;
@@ -77,14 +70,7 @@ export function findSharedTypesRuntimeImports(roots = [SHARED_TYPES_ROOT], cwd =
     for (const file of collectSourceFiles(rootDir, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS })) {
       if (shouldSkipSharedTypesBoundaryFile(file, cwd)) continue;
 
-      const source = readFileSync(file, "utf8");
-      const sourceFile = ts.createSourceFile(
-        file,
-        source,
-        ts.ScriptTarget.Latest,
-        true,
-        extname(file) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-      );
+      const { sourceFile } = parseSourceFile(file);
 
       for (const statement of sourceFile.statements) {
         const moduleSpecifier = getModuleSpecifier(statement);

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { readFileSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
-import { getScriptKind } from "../lib/ts-ast.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const ROOT = process.cwd();
 const AUDIT_ALLOWLIST = !process.argv.includes("--skip-allowlist-audit");
@@ -386,14 +386,7 @@ function collectSourceFiles() {
 }
 
 function analyzeModule(file) {
-  const sourceText = readFileSync(file, "utf8");
-  const sourceFile = ts.createSourceFile(
-    file,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    getScriptKind(file),
-  );
+  const { sourceFile } = parseSourceFile(file);
 
   const exports = new Set();
   // Fully type-only export declarations (`export type { X }` / `export type { X } from`)

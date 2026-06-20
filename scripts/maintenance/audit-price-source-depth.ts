@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import type { StablecoinMeta } from "../../shared/types";
 import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
@@ -19,6 +19,7 @@ import {
   readJsonFile,
   stringValue,
   type UnknownRecord,
+  writeOutputFile,
 } from "../lib/coverage-audit-cli";
 
 const PROD_PEG_SUMMARY_URL = `${PROD_ORIGIN}/_site-data/peg-summary`;
@@ -930,9 +931,7 @@ export async function runCli(
     : options.reportPath;
 
   if (reportPath) {
-    const target = resolve(cwd, reportPath);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, output, "utf8");
+    const target = writeOutputFile(reportPath, output, cwd);
     process.stdout.write(`Wrote price source depth audit to ${target}\n`);
   } else {
     process.stdout.write(output);

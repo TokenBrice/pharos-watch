@@ -21,6 +21,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import "tsx";
+import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "../..");
@@ -63,8 +64,7 @@ function getObjectPropertyValue(objectLiteral, propertyName) {
 
 function extractBlacklistContractCounts() {
   const sourcePath = resolve(root, "worker/src/lib/blacklist-contracts.ts");
-  const sourceText = readFileSync(sourcePath, "utf-8");
-  const sourceFile = ts.createSourceFile(sourcePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const { sourceFile } = parseSourceFile(sourcePath);
   const initializer = findVariableInitializer(sourceFile, "CONTRACT_CONFIG_SPECS");
   if (!initializer || !ts.isArrayLiteralExpression(initializer)) {
     throw new Error("FATAL: Could not find CONTRACT_CONFIG_SPECS array");

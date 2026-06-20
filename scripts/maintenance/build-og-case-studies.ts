@@ -28,6 +28,7 @@ import {
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
+import { escapeXml } from "../lib/og-svg.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -85,15 +86,6 @@ const CARDS = CASE_STUDY_LIST.map((study) => ({
   outcome: study.outcome,
   logoPath: resolveLogoPath(study.primaryCoinId, study.cemeteryId),
 }));
-
-function escapeXml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
 
 function sha256(input: string | Buffer) {
   return createHash("sha256").update(input).digest("hex");

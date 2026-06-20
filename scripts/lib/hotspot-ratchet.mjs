@@ -4,6 +4,7 @@ import ts from "typescript";
 
 import { isValidDateOnly } from "./date-helpers.mjs";
 import { collectSourceFilesUnderRoot } from "./source-files.mjs";
+import { parseSourceFile } from "./ts-ast.mjs";
 
 export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
@@ -95,14 +96,7 @@ function collectHotspotSourceFiles() {
 
 export function collectHotspotMetrics(relPath) {
   const filePath = resolve(process.cwd(), relPath);
-  const sourceText = readFileSync(filePath, "utf8");
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    relPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  const { source: sourceText, sourceFile } = parseSourceFile(filePath);
 
   const fileLines = sourceText.split("\n").length;
   let maxFunctionLines = 0;

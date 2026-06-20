@@ -5,9 +5,10 @@ import { fileURLToPath } from "node:url";
 import {
   collectInputEntries,
   compareText,
-  isDigit,
+  firstNumberToken,
   normalizeHeaderName,
   parseCsv,
+  uniqueHeaders,
 } from "./analyze-gsc-coverage.mjs";
 
 const DEFAULT_TARGET_CTR = 0.045;
@@ -37,21 +38,6 @@ const DASHBOARD_PATHS = new Set([
   "/compliance/",
   "/screener/",
 ]);
-
-function stripBom(value) {
-  return String(value ?? "").replace(/^\uFEFF/, "");
-}
-
-function uniqueHeaders(headers) {
-  const seen = new Map();
-  return headers.map((header, index) => {
-    const trimmed = stripBom(header).trim() || `column_${index + 1}`;
-    const key = normalizeHeaderName(trimmed) || `column${index + 1}`;
-    const count = seen.get(key) ?? 0;
-    seen.set(key, count + 1);
-    return count === 0 ? trimmed : `${trimmed}_${count + 1}`;
-  });
-}
 
 function findHeader(headers, candidates) {
   const lookup = new Map(headers.map((header) => [normalizeHeaderName(header), header]));
@@ -93,33 +79,6 @@ function findPerformanceTable(text) {
     };
   }
   return null;
-}
-
-function firstNumberToken(value) {
-  const cleaned = String(value ?? "").replaceAll(",", "");
-  for (let index = 0; index < cleaned.length; index += 1) {
-    const char = cleaned[index] ?? "";
-    const startsNegativeNumber = char === "-" && isDigit(cleaned[index + 1] ?? "");
-    if (!isDigit(char) && !startsNegativeNumber) continue;
-
-    let end = index + (startsNegativeNumber ? 1 : 0);
-    let sawDot = false;
-    while (end < cleaned.length) {
-      const next = cleaned[end] ?? "";
-      if (isDigit(next)) {
-        end += 1;
-      } else if (next === "." && !sawDot) {
-        sawDot = true;
-        end += 1;
-      } else {
-        break;
-      }
-    }
-
-    const token = cleaned.slice(index, end);
-    return token === "-" || token === "." || token === "-." ? "" : token;
-  }
-  return "";
 }
 
 function parseFiniteNumber(value) {

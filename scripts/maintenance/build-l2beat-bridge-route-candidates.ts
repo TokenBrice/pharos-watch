@@ -1,20 +1,27 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   buildL2BeatBridgeRouteReviewAudit,
   type L2BeatBridgeRouteReviewAudit,
   type L2BeatBridgeRouteReviewRow,
 } from "../../shared/lib/chains/l2beat-audit";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "../../shared/types";
-import { markdownValue, resolveGeneratedAt } from "../lib/coverage-audit-cli";
+import {
+  markdownValue,
+  resolveGeneratedAt,
+  resolveSelectedStablecoins,
+  runAsMain,
+  toPositiveInt,
+  writeAdvisoryReport,
+} from "../lib/coverage-audit-cli";
 
 const DEFAULT_OUTPUT_PATH = "agents/l2beat-bridge-route-candidates.md";
 const DEFAULT_LIMIT = 75;
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const STABLECOIN_DATA_ROOT = resolve(REPO_ROOT, "shared/data/stablecoins");
 
 interface CliOptions {
   coinIds: string[];
@@ -41,14 +48,6 @@ function usage(): string {
     "  --generated-at <iso>  Override generated timestamp; use 'now' for current time",
     "  --help, -h            Show this help text",
   ].join("\n");
-}
-
-function toPositiveInt(value: string, option: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${option} must be a positive integer`);
-  }
-  return parsed;
 }
 
 export function parseArgs(argv: string[]): CliOptions {
@@ -99,17 +98,6 @@ export function parseArgs(argv: string[]): CliOptions {
   }
 
   return options;
-}
-
-function resolveSelectedStablecoins(options: CliOptions): StablecoinMeta[] {
-  if (options.coinIds.length > 0) {
-    return options.coinIds.map((id) => {
-      const coin = ACTIVE_META_BY_ID.get(id);
-      if (!coin) throw new Error(`Unknown active stablecoin ID: ${id}`);
-      return coin;
-    });
-  }
-  return ACTIVE_STABLECOINS;
 }
 
 function limitAuditRows(audit: L2BeatBridgeRouteReviewAudit, options: CliOptions): L2BeatBridgeRouteReviewAudit {
@@ -173,36 +161,13 @@ export function renderL2BeatBridgeRouteReviewAuditMarkdown(audit: L2BeatBridgeRo
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-function assertSafeReportPath(cwd: string, reportPath: string): string {
-  const target = resolve(cwd, reportPath);
-  const stablecoinDataRoot = resolve(REPO_ROOT, "shared/data/stablecoins");
-  const pathFromStablecoinDataRoot = relative(stablecoinDataRoot, target);
-  const isStablecoinDataPath =
-    pathFromStablecoinDataRoot === "" ||
-    (!!pathFromStablecoinDataRoot &&
-      !pathFromStablecoinDataRoot.startsWith("..") &&
-      !isAbsolute(pathFromStablecoinDataRoot));
-
-  if (isStablecoinDataPath) {
-    throw new Error("L2BEAT bridge-route reports are advisory; write them under agents/ or another scratch path.");
-  }
-  return target;
-}
-
-function writeReport(cwd: string, reportPath: string, contents: string): string {
-  const target = assertSafeReportPath(cwd, reportPath);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, contents, "utf8");
-  return target;
-}
-
 export async function runCli(
   argv = process.argv.slice(2),
   cwd = process.cwd(),
   stdout: Pick<NodeJS.WriteStream, "write"> = process.stdout,
 ): Promise<number> {
   const options = parseArgs(argv);
-  const stablecoins = resolveSelectedStablecoins(options);
+  const stablecoins = resolveSelectedStablecoins(options.coinIds, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS);
   const generatedAt = resolveGeneratedAt({ generatedAt: options.generatedAt });
   const audit = limitAuditRows(buildL2BeatBridgeRouteReviewAudit({ stablecoins, generatedAt }), options);
   const output = options.format === "json"
@@ -214,7 +179,10 @@ export async function runCli(
     return 0;
   }
 
-  const target = writeReport(cwd, options.reportPath, output);
+  const target = writeAdvisoryReport(cwd, options.reportPath, output, {
+    protectedRoot: STABLECOIN_DATA_ROOT,
+    message: "L2BEAT bridge-route reports are advisory; write them under agents/ or another scratch path.",
+  });
   if (!existsSync(target)) {
     throw new Error(`Failed to write L2BEAT bridge-route candidate report: ${target}`);
   }
@@ -222,13 +190,4 @@ export async function runCli(
   return 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  runCli()
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    });
-}
+runAsMain(import.meta.url, runCli);

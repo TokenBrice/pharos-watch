@@ -40,7 +40,7 @@ import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/safety-score-version";
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
-import { parseCheckMode } from "../lib/cli.mjs";
+import { parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { type CsvColumn, escapeCsvField } from "../lib/csv-helpers";
 import {
   generatorFetchHeaders,

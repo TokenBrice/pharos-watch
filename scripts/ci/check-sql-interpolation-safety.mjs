@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { pathToFileURL } from "node:url";
-import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
+import { collectSourceFiles, formatScannedOk, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
 
 export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "scripts"];
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;
@@ -56,9 +55,7 @@ export function printSqlInterpolationSafetyReport(report) {
     return 1;
   }
 
-  process.stdout.write(
-    `SQL interpolation safety: OK (${report.scannedFiles.length} file${report.scannedFiles.length === 1 ? "" : "s"} scanned)\n`,
-  );
+  process.stdout.write(formatScannedOk("SQL interpolation safety", report.scannedFiles.length));
   return 0;
 }
 
@@ -72,10 +69,4 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   return printSqlInterpolationSafetyReport(report);
 }
 
-const isDirectRun = process.argv[1]
-  ? import.meta.url === pathToFileURL(process.argv[1]).href
-  : false;
-
-if (isDirectRun) {
-  process.exitCode = main();
-}
+runAsCli(import.meta.url, main);

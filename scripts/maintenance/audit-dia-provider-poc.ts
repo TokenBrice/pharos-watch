@@ -1,11 +1,12 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { PriceSourceDepthAudit, PriceSourceDepthRow } from "./audit-price-source-depth";
 import { ACTIVE_META_BY_ID } from "../../shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { runAsMain, toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
 
 const DIA_ASSET_QUOTATION_BASE_URL = "https://api.diadata.org/v1/assetQuotation";
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -103,14 +104,6 @@ interface CliOptions {
 
 function readJsonFile(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
-
-function toPositiveInt(value: string, option: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${option} must be a positive integer`);
-  }
-  return parsed;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -440,9 +433,7 @@ export async function runCli(
   const output = options.format === "json" ? `${JSON.stringify(report, null, 2)}\n` : renderMarkdown(report);
 
   if (options.reportPath) {
-    const target = resolve(cwd, options.reportPath);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, output, "utf8");
+    const target = writeOutputFile(options.reportPath, output, cwd);
     process.stdout.write(`Wrote DIA provider POC audit to ${target}\n`);
   } else {
     process.stdout.write(output);
@@ -451,14 +442,4 @@ export async function runCli(
   return 0;
 }
 
-if (process.argv[1]?.endsWith("audit-dia-provider-poc.ts")) {
-  runCli().then(
-    (exitCode) => {
-      process.exitCode = exitCode;
-    },
-    (error: unknown) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    },
-  );
-}
+runAsMain(import.meta.url, runCli);

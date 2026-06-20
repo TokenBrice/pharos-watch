@@ -1,12 +1,11 @@
 #!/usr/bin/env tsx
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
 import {
   buildMintAuthorityReviewAudit,
   renderMintAuthorityReviewAuditMarkdown,
 } from "../lib/mint-authority-review-audit";
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+import { runAsMain, toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
 
 type AuditFormat = "markdown" | "json";
 
@@ -30,14 +29,6 @@ function usage(): string {
     "  --live-limit <n>          Maximum URLs to probe when --live is set (default 50)",
     "  --help, -h                Show this help text",
   ].join("\n");
-}
-
-function toPositiveInt(value: string, option: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${option} must be a positive integer`);
-  }
-  return parsed;
 }
 
 export function parseArgs(argv: string[], now = new Date()): Options {
@@ -151,9 +142,7 @@ export async function runCli(
   }
 
   if (options.outputPath) {
-    const target = resolve(options.outputPath);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, output, "utf8");
+    const target = writeOutputFile(options.outputPath, output);
     stdout.write(`Wrote Mint Authority review audit to ${target}\n`);
     return 0;
   }
@@ -162,13 +151,4 @@ export async function runCli(
   return 0;
 }
 
-if (process.argv[1]?.endsWith("generate-mint-authority-review-audit.ts")) {
-  runCli()
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    });
-}
+runAsMain(import.meta.url, runCli);

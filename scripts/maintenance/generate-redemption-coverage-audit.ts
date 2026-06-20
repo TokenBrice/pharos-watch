@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { StablecoinMeta } from "../../shared/types";
 import type { RedemptionRouteFamily } from "../../shared/types/redemption";
 import { resolveCapacityConfidence } from "../../shared/lib/redemption-backstop-confidence";
@@ -13,6 +13,7 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "../../shared/lib/stablecoins/registry";
+import { writeOutputFile } from "../lib/coverage-audit-cli";
 
 export type RedemptionCoverageDisposition = "add" | "defer" | "hard-reject" | "needs-research";
 
@@ -350,6 +351,32 @@ function markdownValue(value: string | null): string {
   return value && value.length > 0 ? value.replace(/[\r\n]+/g, " ").replaceAll("|", "\\|") : "TBD";
 }
 
+const COVERAGE_ROW_HEADER =
+  "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven | source link | reviewed date";
+const COVERAGE_ROW_SEPARATOR = "--- | --- | --- | --- | --- | --- | --- | --- | ---";
+
+function renderCoverageRows(rows: readonly CoverageAuditRow[]): string[] {
+  return [
+    COVERAGE_ROW_HEADER,
+    COVERAGE_ROW_SEPARATOR,
+    ...rows.map((row) =>
+      [
+        row.id,
+        row.lifecycle,
+        `${row.disposition} (${row.reasonCode})`,
+        row.classificationSource,
+        row.blocker,
+        row.evidenceNeeded,
+        row.allowedRouteFamilyIfProven ?? "TBD",
+        row.sourceLink,
+        row.reviewedDate,
+      ]
+        .map(markdownValue)
+        .join(" | "),
+    ),
+  ];
+}
+
 export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageAudit): string {
   const lines = [
     "# Redemption Backstop v4 Coverage Audit",
@@ -371,43 +398,11 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
     "",
     "## Active Unconfigured Gaps",
     "",
-    "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven | source link | reviewed date",
-    "--- | --- | --- | --- | --- | --- | --- | --- | ---",
-    ...audit.activeUnconfigured.map((row) =>
-      [
-        row.id,
-        row.lifecycle,
-        `${row.disposition} (${row.reasonCode})`,
-        row.classificationSource,
-        row.blocker,
-        row.evidenceNeeded,
-        row.allowedRouteFamilyIfProven ?? "TBD",
-        row.sourceLink,
-        row.reviewedDate,
-      ]
-        .map(markdownValue)
-        .join(" | "),
-    ),
+    ...renderCoverageRows(audit.activeUnconfigured),
     "",
     "## Pre-launch And Frozen Exclusions",
     "",
-    "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven | source link | reviewed date",
-    "--- | --- | --- | --- | --- | --- | --- | --- | ---",
-    ...audit.lifecycleExcludedUnconfigured.map((row) =>
-      [
-        row.id,
-        row.lifecycle,
-        `${row.disposition} (${row.reasonCode})`,
-        row.classificationSource,
-        row.blocker,
-        row.evidenceNeeded,
-        row.allowedRouteFamilyIfProven ?? "TBD",
-        row.sourceLink,
-        row.reviewedDate,
-      ]
-        .map(markdownValue)
-        .join(" | "),
-    ),
+    ...renderCoverageRows(audit.lifecycleExcludedUnconfigured),
     "",
     "## V4-43 Heuristic Route Review Queue",
     "",
@@ -544,9 +539,7 @@ export function runCli(
   });
 
   if (options.reportPath) {
-    const target = resolve(cwd, options.reportPath);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, output, "utf8");
+    const target = writeOutputFile(options.reportPath, output, cwd);
     console.log(`Wrote redemption coverage audit to ${target}`);
   } else if (options.check) {
     const baselineDetail = checkBaseline

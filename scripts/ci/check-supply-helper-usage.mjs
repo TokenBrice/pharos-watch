@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { pathToFileURL } from "node:url";
-import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
+import { collectSourceFiles, formatScannedOk, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
 
 export const DEFAULT_SUPPLY_HELPER_ROOTS = ["src/app", "src/components", "worker/src/api"];
 
@@ -65,9 +64,7 @@ export function printSupplyHelperUsageReport(report) {
     return 1;
   }
 
-  process.stdout.write(
-    `Supply helper usage: OK (${report.scannedFiles.length} file${report.scannedFiles.length === 1 ? "" : "s"} scanned)\n`,
-  );
+  process.stdout.write(formatScannedOk("Supply helper usage", report.scannedFiles.length));
   return 0;
 }
 
@@ -77,10 +74,4 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   return printSupplyHelperUsageReport(report);
 }
 
-const isDirectRun = process.argv[1]
-  ? import.meta.url === pathToFileURL(process.argv[1]).href
-  : false;
-
-if (isDirectRun) {
-  process.exitCode = main();
-}
+runAsCli(import.meta.url, main);
