@@ -145,6 +145,24 @@ describe("fetchWithRetry", () => {
     warnSpy.mockRestore();
   });
 
+  it("redacts known provider URLs in retry logs by default", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("bad gateway", { status: 520 }));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchWithRetry(
+      "https://eth-mainnet.g.alchemy.com/v2/real-secret-key",
+      undefined,
+      0,
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[fetch-retry] https://eth-mainnet.g.alchemy.com/[redacted] returned 520 (attempt 1/1)",
+    );
+    expect(warnSpy.mock.calls.map((call) => call.join(" ")).join("\n")).not.toContain("real-secret-key");
+    warnSpy.mockRestore();
+  });
+
   it("backs off on 529 overload responses before succeeding", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: "overloaded" }), { status: 529 }))

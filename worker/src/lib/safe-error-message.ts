@@ -29,7 +29,8 @@ export function stripSensitive(message: string): string {
     .replace(/\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b[^.\n]*/gi, "[sql]")
     // Strip email-like patterns.
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[email]")
-    // Strip URLs.
+    // Strip URLs after provider-specific URL redaction has had a chance to
+    // preserve non-sensitive host context for operational labels.
     .replace(/https?:\/\/\S+/gi, "[url]")
     .trim();
 }
@@ -37,4 +38,44 @@ export function stripSensitive(message: string): string {
 function sanitize(message: string, maxLength: number): string {
   const stripped = stripSensitive(message);
   return stripped.length > maxLength ? `${stripped.slice(0, maxLength)}…` : stripped;
+}
+
+const PROVIDER_URL_HOST_PATTERNS = [
+  /(?:^|\.)alchemy\.com$/i,
+  /(?:^|\.)drpc\.org$/i,
+  /(?:^|\.)etherscan\.io$/i,
+  /(?:^|\.)telegram\.org$/i,
+  /(?:^|\.)twitter\.com$/i,
+  /(?:^|\.)x\.com$/i,
+  /(?:^|\.)anthropic\.com$/i,
+];
+
+const SECRET_QUERY_PARAM_PATTERN =
+  /([?&](?:api[_-]?key|apikey|key|token|access[_-]?token|auth|authorization|secret)=)[^&#\s]+/gi;
+
+function isKnownProviderHost(hostname: string): boolean {
+  return PROVIDER_URL_HOST_PATTERNS.some((pattern) => pattern.test(hostname));
+}
+
+function redactUrlToken(urlText: string): string {
+  try {
+    const url = new URL(urlText);
+    const sanitizedQuery = url.search.replace(SECRET_QUERY_PARAM_PATTERN, "$1[redacted]");
+    if (isKnownProviderHost(url.hostname)) {
+      return `${url.protocol}//${url.hostname}/[redacted]`;
+    }
+    return `${url.protocol}//${url.hostname}${url.pathname}${sanitizedQuery}${url.hash}`;
+  } catch {
+    return "[url]";
+  }
+}
+
+/**
+ * Redacts provider URL paths/query strings while preserving enough host
+ * context for operator logs. Use this before interpolating upstream URLs into
+ * normal console logs; `safeErrorMessage` still strips all URLs for public or
+ * error-string surfaces.
+ */
+export function redactProviderUrls(value: string): string {
+  return value.replace(/https?:\/\/[^\s"'<>),]+/gi, (url) => redactUrlToken(url));
 }

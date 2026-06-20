@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { safeErrorMessage } from "../safe-error-message";
+import { redactProviderUrls, safeErrorMessage } from "../safe-error-message";
 
 describe("safeErrorMessage", () => {
   it("formats Error instances with name and message", () => {
@@ -56,6 +56,21 @@ describe("safeErrorMessage", () => {
     const safe = safeErrorMessage(new Error("fetch failed for https://api.example.com/v1/secret?token=abc"));
     expect(safe).not.toContain("example.com");
     expect(safe).toContain("[url]");
+  });
+
+  it("redacts API-key-bearing provider URLs while preserving host context", () => {
+    expect(
+      redactProviderUrls("rpc https://eth-mainnet.g.alchemy.com/v2/super-secret-key failed"),
+    ).toBe("rpc https://eth-mainnet.g.alchemy.com/[redacted] failed");
+    expect(
+      redactProviderUrls("telegram https://api.telegram.org/bot123456:token/sendMessage failed"),
+    ).toBe("telegram https://api.telegram.org/[redacted] failed");
+    expect(
+      redactProviderUrls("etherscan https://api.etherscan.io/v2/api?chainid=1&apikey=secret&module=logs failed"),
+    ).toBe("etherscan https://api.etherscan.io/[redacted] failed");
+    expect(
+      redactProviderUrls("generic https://example.com/v1/path?token=secret&ok=1 failed"),
+    ).toBe("generic https://example.com/v1/path?token=[redacted]&ok=1 failed");
   });
 
   it("truncates messages longer than maxLength", () => {

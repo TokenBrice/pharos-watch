@@ -1,6 +1,7 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
+import { redactProviderUrls } from "./safe-error-message";
 interface FetchWithRetryOptions {
   logUrl?: string;
   passthrough404?: boolean;
@@ -37,7 +38,7 @@ export async function fetchWithRetry(
   maxRetries = 2,
   options?: FetchWithRetryOptions,
 ): Promise<Response | null> {
-  const logUrl = options?.logUrl ?? url;
+  const logUrl = redactProviderUrls(options?.logUrl ?? url);
   const passthrough404 = options?.passthrough404 ?? false;
   const passthroughStatuses = new Set<number>(options?.passthroughStatuses ?? []);
   if (passthrough404) passthroughStatuses.add(404);
