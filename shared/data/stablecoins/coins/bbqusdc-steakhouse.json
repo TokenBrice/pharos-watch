@@ -1,0 +1,181 @@
+{
+  "id": "bbqusdc-steakhouse",
+  "name": "Smokehouse USDC",
+  "symbol": "bbqUSDC",
+  "oneLiner": "bbqUSDC is Steakhouse's high-yield MetaMorpho USDC vault; share price accrues borrower interest across wider-risk Morpho markets.",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "bbqUSDC resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
+    "reviewer": "Codex data review",
+    "reviewedAt": "2026-06-20"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "bbqUSDC is an immutable MetaMorpho ERC-4626 vault (no EIP-1967 proxy slots); shares are minted only against USDC deposits. Vault owner is the Steakhouse Safe v1.4.1 8/5. Base USDC issuance is inherited from Circle.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+        "label": "Smokehouse USDC MetaMorpho vault (immutable, deposit-only mint)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Vault shares are minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot was found; the owner can manage Morpho vault parameters but cannot mint unbacked base USDC.",
+        "sources": [
+          {
+            "label": "Morpho vault page",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+          },
+          {
+            "label": "MetaMorpho source",
+            "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25358823: asset() returned USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48); EIP-1967 proxy_admin and implementation slots both returned zero; owner() returned 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd. That Safe returned 8 owners, threshold=5, and getModulesPaginated returned no modules."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "label": "Inherited Ethereum USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Reviewed USDC metadata source",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+        },
+        {
+          "label": "Etherscan token contract",
+          "url": "https://etherscan.io/token/0xbeefff209270748ddd194831b3fa287a5386f5bc"
+        },
+        {
+          "label": "MetaMorpho source",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        }
+      ],
+      "evidence": "RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC.",
+      "reviewer": "Codex data review",
+      "reviewedAt": "2026-06-20"
+    }
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into Steakhouse's Smokehouse MetaMorpho vault, allocated across Morpho Blue lending markets that intentionally include wider and more exotic borrower collateral than Steakhouse's Prime line",
+  "pegMechanism": "ERC-4626 MetaMorpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem shares for available USDC liquidity or wait for Morpho market liquidity to return",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SteakhouseFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.steakhouse.financial/docs"
+    },
+    {
+      "label": "Launch forum",
+      "url": "https://forum.morpho.org/t/introducing-the-smokehouse-product-line-bbqusdc-and-bbqdai/1182"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "bbqUSDC is tracked as one Ethereum MetaMorpho vault token. The reviewed Steakhouse and Morpho source set does not show a durable bridge route for this vault share.",
+    "reviewedAt": "2026-06-20",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Steakhouse legacy vaults",
+        "url": "https://www.steakhouse.financial/docs/products/vault-products/legacy-vaults"
+      },
+      {
+        "label": "Morpho Smokehouse USDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+      }
+    ]
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC deposited into Smokehouse-curated Morpho lending markets with wider/exotic collateral exposure",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Smokehouse USDC MetaMorpho vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "bbqusdc-steakhouse",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc",
+      "label": "Morpho Smokehouse USDC"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDC deposited into Smokehouse-curated Morpho lending markets",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    }
+  },
+  "launchDate": "2024-12-12"
+}

@@ -1785,6 +1785,59 @@
     "liveReserveAdapter": "accountable"
   },
   {
+    "id": "bbqusdc-steakhouse",
+    "name": "Smokehouse USDC",
+    "symbol": "bbqUSDC",
+    "oneLiner": "bbqUSDC is Steakhouse's high-yield MetaMorpho USDC vault; share price accrues borrower interest across wider-risk Morpho markets.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "mechanismArchetype": "fiat-cash",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "launchDate": "2024-12-12",
+    "yieldConfig": {
+      "yieldSource": "Smokehouse USDC MetaMorpho vault",
+      "yieldType": "lending-vault"
+    },
+    "reserves": [
+      {
+        "name": "USDC deposited into Smokehouse-curated Morpho lending markets with wider/exotic collateral exposure",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "canRaiseCap": false,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ]
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
+  },
+  {
     "id": "bc3m-backed",
     "name": "Backed GOVIES 0-6 months EURO investment grade",
     "symbol": "bC3M",

@@ -381,9 +381,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 406 entries
-- `shared/data/stablecoins/coins.client.generated.json` - 406 entries
-- `shared/data/stablecoins/coins.generated.json` - 406 entries
+- `shared/data/stablecoins/canonical-order.json` - 407 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 407 entries
+- `shared/data/stablecoins/coins.generated.json` - 407 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 25 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 26 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 28 keys
@@ -407,6 +407,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/avusd-avant.json` - 22 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 21 keys
 - `shared/data/stablecoins/coins/aznd-mu-digital.json` - 26 keys
+- `shared/data/stablecoins/coins/bbqusdc-steakhouse.json` - 26 keys
 - `shared/data/stablecoins/coins/bc3m-backed.json` - 28 keys
 - `shared/data/stablecoins/coins/bd-basedollar.json` - 16 keys
 - `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 29 keys
@@ -420,8 +421,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
 - `shared/data/stablecoins/coins/brla-brla-digital.json` - 27 keys
-- `shared/data/stablecoins/coins/brlm-mento.json` - 28 keys
-- ... 376 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 377 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 

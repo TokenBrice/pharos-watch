@@ -11,7 +11,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and the named `reserve-post-sync-watchdog` child for collateral-drift cache updates and stale-source alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 279 active live-enabled stablecoins across 59 registered adapters; 280 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 56 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 280 active live-enabled stablecoins across 59 registered adapters; 281 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 56 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -416,7 +416,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 62               |
 | `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 36               |
+| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 37               |
 | `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `evm-branch-balances`      | `onchain-evm`                                    | `collateral-mix`                                      | 9                |
 | `falcon`                   | `http-json`                                      | `collateral-mix`                                      | 1                |

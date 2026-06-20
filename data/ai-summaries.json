@@ -2989,6 +2989,16 @@
     "reviewedAt": "2026-06-12",
     "factsAsOf": "2026-06-12"
   },
+  "bbqusdc-steakhouse": {
+    "title": "Smokehouse's Higher-Risk USDC Vault",
+    "text": "Smokehouse USDC is Steakhouse's high-yield MetaMorpho vault over USDC, built for borrowers and collateral types that sit outside the calmer Prime line. The wrapper still starts with Circle's dollar, but the yield stack is Morpho lending exposure curated toward wider and more exotic collateral markets, including tokenized private-credit style additions. Pharos tracks bbqUSDC as a USDC {{term:yield-bearing}}strategy vault{{/term}}, not a new issuer dollar: share price appreciates through borrower interest, while exits depend on available Morpho liquidity and the curator not having allocated too much into slow-to-unwind markets. The token is transparent and deposit-backed, but the word Smokehouse is doing useful labeling work here; this is the spicy Steakhouse sleeve, not the boring one.",
+    "updatedAt": "2026-06-20",
+    "authoredBy": "ai",
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-20",
+    "factsAsOf": "2026-06-20"
+  },
   "srusde-strata": {
     "title": "Senior, Not Simple",
     "text": "srUSDe is Strata's senior ERC-4626 tranche over a strategy that stakes USDe into Ethena's yield stack, with jrUSDe taking first-loss before senior holders are touched. That tranche structure is meaningful: it is more disciplined than a naked leveraged loop and gives senior capital a buffer plus a benchmark-rate yield floor. It is still not a plain dollar stablecoin, because exits depend on Strata tranche liquidity and settlement rules rather than a simple 1:1 issuer redemption. Pharos keeps the reserve risk high because the senior wrapper still inherits Ethena's liquid-stablecoin, BTC, ETH/LST, CEX hedge, and custody assumptions. The junior tranche absorbs the first bruise, but if the Ethena machinery breaks badly enough, senior status becomes an adjective, not armor.",

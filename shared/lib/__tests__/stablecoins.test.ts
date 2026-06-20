@@ -58,8 +58,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(406);
-    expect(canonicalOrder).toHaveLength(406);
+    expect(perCoinGenerated).toHaveLength(407);
+    expect(canonicalOrder).toHaveLength(407);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -91,8 +91,8 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(406);
-    expect(ACTIVE_STABLECOINS).toHaveLength(370);
+    expect(TRACKED_STABLECOINS).toHaveLength(407);
+    expect(ACTIVE_STABLECOINS).toHaveLength(371);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -150,6 +150,7 @@ describe("tracked stablecoin metadata", () => {
       "gtusdc-gauntlet",
       "yvusdc-yearn",
       "steakusdc-steakhouse",
+      "bbqusdc-steakhouse",
       "srusde-strata",
       "susde-ethena",
       "susds-sky",
