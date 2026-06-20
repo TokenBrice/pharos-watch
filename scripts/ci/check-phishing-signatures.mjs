@@ -18,7 +18,6 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { JSDOM } from "jsdom";
 import { walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const OUT_DIR = path.resolve("out");
@@ -58,19 +57,61 @@ const SIGNATURES = [
 ];
 
 /** Extract the textual content of every inline <script>...</script> block. */
-function extractInlineScripts(html) {
-  const dom = new JSDOM(html);
-  try {
-    const document = dom.window.document;
-    return [...document.querySelectorAll("script")].flatMap((script) => {
-      if (script.hasAttribute("src")) return [];
-      const body = script.textContent ?? "";
-      if (body.trim().length === 0) return [];
-      return [body];
-    });
-  } finally {
-    dom.window.close();
+function hasSrcAttribute(openTag) {
+  let index = "<script".length;
+  while (index < openTag.length) {
+    while (index < openTag.length && /[\s/]/.test(openTag[index] ?? "")) index += 1;
+    const nameStart = index;
+    while (index < openTag.length && /[^\s=/>]/.test(openTag[index] ?? "")) index += 1;
+    const name = openTag.slice(nameStart, index).toLowerCase();
+    if (!name) {
+      index += 1;
+      continue;
+    }
+    while (index < openTag.length && /\s/.test(openTag[index] ?? "")) index += 1;
+    if (openTag[index] !== "=") {
+      index += 1;
+      continue;
+    }
+    index += 1;
+    while (index < openTag.length && /\s/.test(openTag[index] ?? "")) index += 1;
+    const quote = openTag[index];
+    if (quote === "\"" || quote === "'") {
+      index += 1;
+      const valueEnd = openTag.indexOf(quote, index);
+      index = valueEnd < 0 ? openTag.length : valueEnd + 1;
+    } else {
+      while (index < openTag.length && /[^\s>]/.test(openTag[index] ?? "")) index += 1;
+    }
+    if (name === "src") {
+      return true;
+    }
   }
+  return false;
+}
+
+function extractInlineScripts(html) {
+  const scripts = [];
+  const lowerHtml = html.toLowerCase();
+  let searchFrom = 0;
+  while (true) {
+    const openStart = lowerHtml.indexOf("<script", searchFrom);
+    if (openStart < 0) break;
+    const openEnd = lowerHtml.indexOf(">", openStart);
+    if (openEnd < 0) break;
+    const closeStart = lowerHtml.indexOf("</script", openEnd + 1);
+    if (closeStart < 0) break;
+
+    const openTag = html.slice(openStart, openEnd + 1);
+    if (!hasSrcAttribute(openTag)) {
+      const body = html.slice(openEnd + 1, closeStart);
+      if (body.trim().length > 0) {
+        scripts.push(body);
+      }
+    }
+    searchFrom = closeStart + "</script".length;
+  }
+  return scripts;
 }
 
 function relPath(file) {

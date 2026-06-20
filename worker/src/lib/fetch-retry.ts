@@ -38,7 +38,7 @@ export async function fetchWithRetry(
   maxRetries = 2,
   options?: FetchWithRetryOptions,
 ): Promise<Response | null> {
-  const logUrl = redactProviderUrls(options?.logUrl ?? url);
+  const logUrl = options?.logUrl ?? redactProviderUrls(url);
   const passthrough404 = options?.passthrough404 ?? false;
   const passthroughStatuses = new Set<number>(options?.passthroughStatuses ?? []);
   if (passthrough404) passthroughStatuses.add(404);

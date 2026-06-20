@@ -117,6 +117,8 @@ describe("yield coordinator history", () => {
     await loadYieldHistorySnapshots(db, ["coin-a"], 1_700_100_000, 1_699_495_200);
 
     expect(sqlSeen).toHaveLength(3);
-    expect(sqlSeen.every((sql) => sql.includes("publication_state IS NULL OR publication_state = 'published'"))).toBe(true);
+    expect(sqlSeen.every((sql) =>
+      /\b(?:h\.|newer\.)?publication_state IS NULL OR (?:h\.|newer\.)?publication_state = 'published'/.test(sql)
+    )).toBe(true);
   });
 });

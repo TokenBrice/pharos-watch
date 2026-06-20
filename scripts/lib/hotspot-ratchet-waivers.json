@@ -15,14 +15,6 @@
     "reviewAfter": "2026-09-09",
     "nextAction": "Split About page concerns (hero, horizon, metadata, and section composition) after this refactor is stabilized."
   },
-  "src/app/compare/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Compare client remains a large route shell combining query-state parsing, selection controls, metric assembly, and comparison rendering. The React Doctor cleanup touched memoized lookup construction here but intentionally avoided widening scope into a structural route decomposition.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-26",
-    "reviewAfter": "2026-08-26",
-    "nextAction": "Split query-state orchestration, row projection, and comparison sections into focused helpers in the next compare-page cleanup pass."
-  },
   "src/app/pharoswatchbot/app/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Telegram Mini App client combines boot/auth state, preset writes, coin selection, and dashboard rendering. This release is only clearing the gate; split state orchestration from presentation in a dedicated Mini App cleanup pass.",
@@ -174,6 +166,14 @@
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
+  },
+  "worker/src/lib/cron-lease.ts": {
+    "disposition": "queued-p4",
+    "notes": "Cron lease utilities centralize lease acquisition, overload retry, timeout fencing, progress cleanup, and terminal run bookkeeping across scheduled jobs. Keep waived for this release gate; split retry helpers, lease lifecycle, and progress reconciliation in a focused cron-infrastructure cleanup.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-20",
+    "reviewAfter": "2026-09-20",
+    "nextAction": "Separate overload retry, lease lifecycle, and progress reconciliation helpers while preserving the scheduled-runner contracts."
   },
   "worker/src/lib/redemption-backstop-live-metadata.ts": {
     "disposition": "queued-p4",

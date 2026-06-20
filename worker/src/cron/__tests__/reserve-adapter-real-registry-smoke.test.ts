@@ -34,6 +34,7 @@ describe("reserve adapter real-registry smoke", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -45,6 +46,8 @@ describe("reserve adapter real-registry smoke", () => {
     expect(adapter).not.toBeNull();
 
     const sourceTimestamp = Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-11T23:22:16.007Z"));
     const fetchSpy = vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
         new Response(JSON.stringify(SAMPLE_PAYLOAD), {
@@ -81,6 +84,7 @@ describe("reserve adapter real-registry smoke", () => {
       breakerOutcome: true,
       hasWarnings: false,
     });
+    expect(result.warningMessages).toEqual([]);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(fetchSpy.mock.calls[0]?.[0]).toBe(
       "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve",

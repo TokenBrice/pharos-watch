@@ -216,8 +216,12 @@ export function findUnsafeRolloutStatements(sql) {
   const unsafeStatements = UNSAFE_ROLLOUT_SAFETY_PATTERNS.filter(({ pattern }) => pattern.test(normalizedSql)).map(
     ({ label }) => label,
   );
-  const addColumnStatements =
-    normalizedSql.match(/\bALTER\s+TABLE\b[\s\S]*?\bADD\b(?:\s+COLUMN\b)?[\s\S]*?(?:;|$)/gi) ?? [];
+  const addColumnStatements = normalizedSql
+    .split(";")
+    .filter((statement) => {
+      const tokens = statement.toUpperCase().split(/[^A-Z_]+/).filter(Boolean);
+      return tokens.includes("ALTER") && tokens.includes("TABLE") && tokens.includes("ADD");
+    });
   const hasUnsafeAddColumn = addColumnStatements.some(
     (statement) => /\bNOT\s+NULL\b/i.test(statement) && !/\bDEFAULT\b/i.test(statement),
   );

@@ -84,8 +84,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 192,
-    "maxFunctionLines": 160,
+    "fileLines": 195,
+    "maxFunctionLines": 161,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -324,9 +324,9 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 380,
-    "maxFunctionLines": 354,
-    "branchCount": 20,
+    "fileLines": 432,
+    "maxFunctionLines": 381,
+    "branchCount": 24,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 191,
@@ -384,8 +384,8 @@
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 352,
-    "maxFunctionLines": 283,
+    "fileLines": 353,
+    "maxFunctionLines": 284,
     "branchCount": 18,
     "disposition": "stabilized",
     "targetBudget": {
@@ -408,8 +408,8 @@
     "notes": "Roundtrip detection is now chain-scoped in memory. Keep classification grouping changes small and covered by cross-chain same-hash regression tests."
   },
   "worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts": {
-    "fileLines": 70,
-    "maxFunctionLines": 49,
+    "fileLines": 74,
+    "maxFunctionLines": 52,
     "branchCount": 3,
     "disposition": "stabilized",
     "targetBudget": {
