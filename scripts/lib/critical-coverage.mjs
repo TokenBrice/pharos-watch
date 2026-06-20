@@ -208,6 +208,7 @@ export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/lib/depeg-resolver-assessment-store.ts",
   "worker/src/lib/depeg-resolver-errata-store.ts",
   "worker/src/lib/depeg-resolver-incident-store.ts",
+  "worker/src/lib/depeg-resolver-methodology.ts",
   "worker/src/lib/depeg-resolver-publication-store.ts",
   "worker/src/lib/depeg-resolver-repair-store.ts",
   "worker/src/lib/depeg-resolver-review-snapshot-cache.ts",
@@ -391,6 +392,9 @@ function waiverReasonForFile(file) {
   }
   if (file.includes("/depeg-resolver/")) {
     return "DDR helper is covered by enrolled depeg-resolver cron tests, but is not a standalone critical-coverage target yet.";
+  }
+  if (file.endsWith("depeg-resolver-methodology.ts")) {
+    return "DDR methodology envelope helper is covered by enrolled depeg-resolver API tests that assert the public methodology payload.";
   }
   if (file.includes("/depeg-resolver-")) {
     return "DDR durable store or validator module is covered by depeg-resolver store/cron tests, but is tracked as a reviewed support surface until promoted to a standalone critical-coverage target.";
