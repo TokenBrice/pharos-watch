@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/parse-version-upload.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
-- ... 206 more files omitted; use `rg --files scripts` for the full list.
+- ... 207 more files omitted; use `rg --files scripts` for the full list.
