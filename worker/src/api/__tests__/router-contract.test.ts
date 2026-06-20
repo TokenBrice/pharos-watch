@@ -114,7 +114,7 @@ describe("router contract: strict frontend paths are routable", () => {
     await expect(response!.text()).resolves.toBe("Malformed URI");
   });
 
-  it("allows HEAD on dynamic OG routes without returning a body", async () => {
+  it("rejects HEAD on dynamic OG routes before entering the renderer", async () => {
     const malformedOgPath = "https://api.pharos.watch/api/og/stablecoin/%E0%A4%A";
     const response = await route(makeRouteCtx({
       url: new URL(malformedOgPath),
@@ -122,9 +122,10 @@ describe("router contract: strict frontend paths are routable", () => {
     }));
 
     expect(response).not.toBeNull();
-    expect(response!.status).toBe(400);
-    expect(response!.headers.get("Content-Type")).toBe("text/plain");
-    await expect(response!.text()).resolves.toBe("");
+    expect(response!.status).toBe(405);
+    expect(response!.headers.get("Allow")).toBe("GET");
+    expect(response!.headers.get("Content-Type")).toContain("application/json");
+    await expect(response!.json()).resolves.toEqual({ error: "Method not allowed" });
   });
 
   it("keeps router static paths registered in endpoint definitions", () => {
