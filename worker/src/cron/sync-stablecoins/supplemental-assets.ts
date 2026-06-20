@@ -12,7 +12,12 @@ import { fetchGoldTokens } from "./supplemental-assets/gold";
 import { fetchSilverTokens } from "./supplemental-assets/silver";
 
 export type { CoinGeckoMcapData } from "./supplemental-assets/shared";
-export { resolveLowVolumeCoinGeckoPrice, resolveSupplementalPrice } from "./supplemental-assets/shared";
+export {
+  getSupplementalDefiLlamaContractPriceKey,
+  resolveLowVolumeCoinGeckoPrice,
+  resolveSupplementalContractPrice,
+  resolveSupplementalPrice,
+} from "./supplemental-assets/shared";
 export {
   computeExcludedBalanceAdjustedSupplyRaw,
   selectSingleOnChainSupplyContract,

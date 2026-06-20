@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
+  getSupplementalDefiLlamaContractPriceKey,
   resolveLowVolumeCoinGeckoPrice,
+  resolveSupplementalContractPrice,
   resolveSupplementalPrice,
   selectSingleOnChainSupplyContract,
   selectSupplementalOnChainSupplyContract,
@@ -174,6 +176,53 @@ describe("resolveSupplementalPrice", () => {
     });
   });
 
+  it("resolves a fresh DefiLlama exact-contract quote for no-gecko supplemental assets", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const meta = makeMeta([
+      {
+        chain: "ethereum",
+        address: "0xBEEfFF209270748ddd194831b3fa287a5386f5bC",
+        decimals: 18,
+      },
+    ], "bbqusdc-steakhouse");
+
+    expect(getSupplementalDefiLlamaContractPriceKey(meta)).toBe(
+      "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc",
+    );
+    expect(resolveSupplementalContractPrice(
+      {
+        coins: {
+          "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
+            price: 1.114859,
+            timestamp: nowSec - 60,
+          },
+        },
+      },
+      meta,
+    )).toEqual({
+      price: 1.114859,
+      source: "defillama-contract",
+      observedAt: nowSec - 60,
+      observedAtMode: "upstream",
+    });
+  });
+
+  it("does not request exact-contract supplemental prices for assets with CoinGecko IDs", () => {
+    const meta = {
+      ...makeMeta([
+        {
+          chain: "ethereum",
+          address: "0x0000000000000000000000000000000000000001",
+          decimals: 18,
+        },
+      ]),
+      geckoId: "test",
+    } as StablecoinMeta;
+
+    expect(getSupplementalDefiLlamaContractPriceKey(meta)).toBeNull();
+    expect(resolveSupplementalContractPrice({ coins: {} }, meta)).toBeNull();
+  });
+
   it("accepts low-volume CoinGecko rows inside the relaxed freshness window", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -273,6 +322,42 @@ describe("fetchSupplementalPriceData", () => {
       state: "closed",
       consecutiveFailures: 0,
     });
+  });
+
+  it("fetches supplemental DefiLlama prices by exact contract for no-gecko assets", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const fetchMock = vi.fn(async (_url: string) =>
+      new Response(JSON.stringify({
+        coins: {
+          "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
+            price: 1.114859,
+            timestamp: nowSec,
+          },
+        },
+      }), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const meta = makeMeta([
+      {
+        chain: "ethereum",
+        address: "0xBEEfFF209270748ddd194831b3fa287a5386f5bC",
+        decimals: 18,
+      },
+    ], "bbqusdc-steakhouse");
+
+    await expect(fetchSupplementalPriceData([meta], "supplemental-test")).resolves.toEqual({
+      coins: {
+        "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
+          price: 1.114859,
+          timestamp: nowSec,
+        },
+      },
+    });
+
+    const [requestedUrl] = fetchMock.mock.calls[0] ?? [];
+    expect(String(requestedUrl)).toContain(
+      "/prices/current/ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc",
+    );
   });
 
   it("records malformed supplemental DefiLlama price payloads as DL coins failures", async () => {

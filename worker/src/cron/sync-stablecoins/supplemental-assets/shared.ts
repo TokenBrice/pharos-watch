@@ -1,4 +1,5 @@
 import { CHAIN_META } from "@shared/lib/chains";
+import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../../lib/response-body";
@@ -13,7 +14,7 @@ type SupplementalDefiLlamaPriceData = { coins: NonNullable<DefiLlamaCoinsPriceRe
 
 export interface SupplementalPriceResolution {
   price: number;
-  source: "coingecko-mirror" | "coingecko" | "coingecko-low-volume";
+  source: "defillama-contract" | "coingecko-mirror" | "coingecko" | "coingecko-low-volume";
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
 }
@@ -114,6 +115,37 @@ export function resolveSupplementalPrice(
   return null;
 }
 
+export function getSupplementalDefiLlamaContractPriceKey(meta: StablecoinMeta): string | null {
+  if (meta.geckoId) return null;
+
+  const contract = selectSupplementalOnchainSupplyProbeContract(meta);
+  if (!contract) return null;
+
+  const address = CHAIN_META[contract.chain]?.type === "evm" ? contract.address.toLowerCase() : contract.address;
+  return `${contract.chain}:${address}`;
+}
+
+export function resolveSupplementalContractPrice(
+  priceData: SupplementalDefiLlamaPriceData,
+  meta: StablecoinMeta,
+): SupplementalPriceResolution | null {
+  const priceKey = getSupplementalDefiLlamaContractPriceKey(meta);
+  if (!priceKey) return null;
+
+  const dlEntry = priceData.coins[priceKey];
+  const dlPrice = toPositiveFiniteNumber(dlEntry?.price);
+  if (dlPrice == null) return null;
+
+  const observedAt = toPositiveFiniteNumber(dlEntry?.timestamp) ?? null;
+  const resolution = {
+    price: dlPrice,
+    source: "defillama-contract" as const,
+    observedAt,
+    observedAtMode: observedAt != null ? "upstream" as const : null,
+  };
+  return normalizeFreshSupplementalPriceResolution(resolution, { requireObservedAt: true });
+}
+
 export function getSupplementalChainLabels(meta: StablecoinMeta): string[] {
   const labels = (meta.contracts ?? [])
     .map((contract) => CHAIN_META[contract.chain]?.name ?? contract.chain)
@@ -192,7 +224,15 @@ export async function fetchSupplementalPriceData(
 ): Promise<SupplementalDefiLlamaPriceData> {
   if (metas.length === 0) return { coins: {} };
 
-  const coinIds = metas.map((token) => token.geckoId).filter(Boolean).map((id) => `coingecko:${id}`).join(",");
+  const coinIds = metas
+    .flatMap((token) => {
+      const ids: string[] = [];
+      if (token.geckoId) ids.push(`coingecko:${token.geckoId}`);
+      const contractPriceKey = getSupplementalDefiLlamaContractPriceKey(token);
+      if (contractPriceKey) ids.push(contractPriceKey);
+      return ids;
+    })
+    .join(",");
   if (!coinIds) return { coins: {} };
 
   const dlAllowed = db ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS) : true;

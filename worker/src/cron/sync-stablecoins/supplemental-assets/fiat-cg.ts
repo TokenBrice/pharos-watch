@@ -10,6 +10,7 @@ import {
   getSupplementalChainLabels,
   pegTypeKey,
   resolveLowVolumeCoinGeckoPrice,
+  resolveSupplementalContractPrice,
   resolveSupplementalPrice,
   toPositiveFiniteNumber,
   type CoinGeckoMcapData,
@@ -54,6 +55,9 @@ export async function fetchFiatCoinGeckoTokens(
         // `priceSource: missing`. Diagnosis pattern: detailProvider="coingecko"
         // with llamaId=null + low volume → upstream last_updated_at exceeds 15min.
         let priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+        if (!priceResolution) {
+          priceResolution = resolveSupplementalContractPrice(priceData, meta);
+        }
         if (!priceResolution) {
           priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);
         }
