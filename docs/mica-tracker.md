@@ -4,7 +4,7 @@
 
 The tracker maps every tracked stablecoin to its standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing-non-goals).
 
-The data foundation already half-exists: 225 coins carry a `jurisdiction` block, EU regulators (ACPR, DNB, BaFin, MFSA, AMF) and `"EMI (MiCA)"` licenses appear as free text, and ~23 EUR-pegged coins plus the major USD coins are in scope. This feature **structures and classifies** that existing free text — it is not a green-field data collection effort.
+The data foundation already half-exists: 239 coins carry a `jurisdiction` block, EU regulators (ACPR, DNB, BaFin, MFSA, AMF) and 9 `"EMI (MiCA)"` licenses appear as free text, and 23 EUR-pegged coins plus the major USD coins are in scope. This feature **structures and classifies** that existing free text — it is not a green-field data collection effort.
 
 ---
 
@@ -183,7 +183,7 @@ This is the dominant cost, not the code.
 
 - **Sources of truth:** ESMA register of authorized entities; EBA registers of EMT/ART issuers; national authority registers (ACPR REGAFI, BaFin, DNB/AFM, MFSA, CBI, Bank of Lithuania).
 - **Mapping is manual:** token → issuer entity → authorization is not cleanly API-able. Treat like the existing `reserve-research` / `resilience-classify` editorial workflows.
-- **Backfill scope:** ~30–60 coins warrant real research (the ~23 EUR coins + major EU-traded USD coins). The remaining ~330 are `out-of-scope` or left unassessed. Start by normalizing the ~24 coins already mentioning MiCA and the 9 with `"EMI (MiCA)"` licenses into structured `mica`.
+- **Backfill scope:** ~30–60 coins warrant real research (the 23 EUR coins + major EU-traded USD coins). Forty tracked coins currently carry structured `mica` metadata; the remaining 367 are `out-of-scope` or left unassessed. Start refreshes from the coins already mentioning MiCA and the 9 with `"EMI (MiCA)"` licenses.
 - **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Recommend a `mica-research` skill (modeled on `reserve-research`) for periodic refresh against the registers.
 
 ### Worked reference examples (verify before entry)
