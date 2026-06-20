@@ -167,14 +167,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
   },
-  "worker/src/lib/cron-lease.ts": {
-    "disposition": "queued-p4",
-    "notes": "Cron lease utilities centralize lease acquisition, overload retry, timeout fencing, progress cleanup, and terminal run bookkeeping across scheduled jobs. Keep waived for this release gate; split retry helpers, lease lifecycle, and progress reconciliation in a focused cron-infrastructure cleanup.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-20",
-    "reviewAfter": "2026-09-20",
-    "nextAction": "Separate overload retry, lease lifecycle, and progress reconciliation helpers while preserving the scheduled-runner contracts."
-  },
   "worker/src/lib/redemption-backstop-live-metadata.ts": {
     "disposition": "queued-p4",
     "notes": "Live redemption-backstop metadata builder surfaced as a branch-count hotspot after the latest candidate scan. Keep queued rather than widening this release gate; split provider metadata normalization from live projection in a focused redemption-backstop cleanup pass.",
