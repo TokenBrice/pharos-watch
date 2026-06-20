@@ -16,6 +16,7 @@ export {
   decimalStringFromBigInt,
   isReserveRisk,
   normalizeSlices,
+  parseBoundedDecimals,
   parsePositiveNumericLike,
   slicesFromPercentages,
   slicesFromValues,

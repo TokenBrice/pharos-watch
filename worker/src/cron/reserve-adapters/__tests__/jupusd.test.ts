@@ -114,6 +114,20 @@ describe("adaptJupUsdData", () => {
     ]);
   });
 
+  it("ignores provider amounts with unsafe decimal scales", () => {
+    const result = adaptJupUsdData({
+      holdings: [
+        { name: "USDC", amount: "1000000", decimals: 6 },
+        { name: "USDtb", amount: "1", decimals: 1_000_000_000 },
+      ],
+    });
+
+    expect(result.metadata?.totalReserveUsd).toBe(1);
+    expect(result.slices).toEqual([
+      { name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+    ]);
+  });
+
   it("passes through extra warnings from the fetch layer", () => {
     const result = adaptJupUsdData(
       {

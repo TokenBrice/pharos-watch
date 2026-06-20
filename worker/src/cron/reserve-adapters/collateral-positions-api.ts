@@ -8,6 +8,7 @@ import {
   fetchJsonWithRetry,
   notApplicableFreshnessMetadata,
   normalizeSlices,
+  parseBoundedDecimals,
   requireJsonInput,
   reserveDegradedWarning,
   valueUsdFromBigIntPrice,
@@ -126,7 +127,7 @@ function inferDepType(symbol: string): ReserveSlice["depType"] | undefined {
 
 function parseCollateralBalance(raw: string | undefined, decimals: number): bigint {
   if (typeof raw !== "string" || !/^\d+$/.test(raw)) return 0n;
-  if (!Number.isInteger(decimals) || decimals < 0) return 0n;
+  if (parseBoundedDecimals(decimals) == null) return 0n;
   return BigInt(raw);
 }
 
