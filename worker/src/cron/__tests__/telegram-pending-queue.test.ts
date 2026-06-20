@@ -1250,7 +1250,7 @@ describe("drainPendingQueue", () => {
     expect(retryUpdates.every((entry) => entry.binds[0] === Math.floor(Date.now() / 1000) + 45)).toBe(true);
   });
 
-  it("keeps repeated pending 429s across distinct chats chat-scoped", async () => {
+  it("escalates repeated pending 429s across distinct chats to global backoff", async () => {
     const okResult = {
       ok: true, blocked: false, retryable: false, permanentFailure: false,
       statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
@@ -1279,12 +1279,12 @@ describe("drainPendingQueue", () => {
 
     const result = await drainPendingQueue(db, "bot-token", 20);
 
-    expect(result.attempted).toBe(5);
-    expect(result.sent).toBe(2);
+    expect(result.attempted).toBe(4);
+    expect(result.sent).toBe(1);
     expect(result.retryQueued).toBe(3);
     expect(result.rateLimited).toBe(true);
-    expect(mockSendToChat).toHaveBeenCalledTimes(5);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    expect(mockSendToChat).toHaveBeenCalledTimes(4);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(true);
   });
 
   it("stamps row-level backoff without setting global backoff on a chat-scoped 429", async () => {

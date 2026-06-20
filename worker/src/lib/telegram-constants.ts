@@ -98,6 +98,12 @@ export const TELEGRAM_MAX_MESSAGES_PER_RUN = 3600;
 /** Pending drain share reserved from the per-run Telegram send budget. */
 export const TELEGRAM_PENDING_DRAIN_BUDGET = Math.floor(TELEGRAM_MAX_MESSAGES_PER_RUN / 4);
 
+/** Ambiguous retry_after values at or above this are treated as bot-wide flood limits. */
+export const TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC = 30;
+
+/** Distinct chat-scoped 429s in one send loop that imply a bot-wide flood limit. */
+export const TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
+
 /**
  * Approximate alert lines that fit in one delivered message chunk. Used purely
  * as a cheap (no-format) chunk estimate when selecting which candidate chats to
