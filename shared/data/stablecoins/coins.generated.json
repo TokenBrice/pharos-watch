@@ -88594,6 +88594,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "dao-governance",
     "oracleRisk": {
@@ -88610,19 +88611,40 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Frankencoin reports ZCHF deployments across eight blockchains, but the reviewed Frankencoin source set does not resolve bridge mechanics or control assumptions for non-Ethereum deployments. Pharos marks the cross-chain route opaque until specific bridge or contract-route evidence is sourced.",
-      "reviewedAt": "2026-06-13",
+      "tier": "external-validated-network",
+      "summary": "ZCHF cross-chain deployments are reviewed through Chainlink CCIP Burn/Mint token pools. Frankencoin's CCIPAdmin contract manages token-pool configuration through qualified-voter governance proposals and vetoes, but cross-chain transfer execution still depends on Chainlink CCIP as an external validation and messaging network.",
+      "reviewedAt": "2026-06-20",
       "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "docs",
+          "name": "Chainlink CCIP",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/ZCHF",
+          "bridgeTypes": [
+            "burnAndMint",
+            "external-messaging",
+            "validated-network"
+          ],
+          "note": "Chainlink's CCIP directory lists ZCHF on eight mainnet networks with Burn/Mint token pools."
+        }
+      ],
       "sources": [
         {
-          "label": "Frankencoin website",
-          "url": "https://frankencoin.com/"
+          "label": "Chainlink ZCHF CCIP directory",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/ZCHF"
         },
         {
-          "label": "Frankencoin docs",
-          "url": "https://docs.frankencoin.com/"
+          "label": "Frankencoin CCIP governance proposal",
+          "url": "https://github.com/Frankencoin-ZCHF/Frankencoin/discussions/74"
+        },
+        {
+          "label": "Frankencoin CCIPAdmin source",
+          "url": "https://github.com/Frankencoin-ZCHF/Frankencoin/blob/main/contracts/bridge/CCIPAdmin.sol"
+        },
+        {
+          "label": "ChainSecurity Frankencoin CCIP bridge audit",
+          "url": "https://reports.chainsecurity.com/Frankencoin/ChainSecurity_Frankencoin_CCIPBridge_Audit.pdf"
         }
       ]
     },
