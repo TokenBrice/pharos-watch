@@ -634,7 +634,7 @@ describe("handleStressSignals contract tests", () => {
     expect(body.history[1].amplifiers).toEqual({ psi: 1.05, contagion: 1.2 });
   });
 
-  it("uses the newest aggregate row for freshness headers while exposing oldest body timestamp", async () => {
+  it("uses the oldest aggregate row for freshness headers while exposing newest body timestamp", async () => {
     const requestNowSec = Math.floor(Date.now() / 1000);
     const freshComputedAt = requestNowSec - 60;
     const staleComputedAt = requestNowSec - 15_000;
@@ -665,9 +665,9 @@ describe("handleStressSignals contract tests", () => {
     };
     expect(body.updatedAt).toBe(freshComputedAt);
     expect(body.oldestComputedAt).toBe(staleComputedAt);
-    expect(Number(res.headers.get("X-Data-Age"))).toBeLessThan(120);
-    expect(res.headers.get("Warning")).toBeNull();
-    expect(res.headers.get("Cache-Control")).toContain("s-maxage");
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(15_000);
+    expect(res.headers.get("Warning")).toContain("Response is stale");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body.signals["usdt-tether"].ageClassification).toBe("fresh");
     expect(body.signals["usdc-circle"].ageClassification).toBe("retainedLastValid");
   });
