@@ -47,6 +47,22 @@ describe("check-phishing-signatures", () => {
     ).not.toThrow();
   });
 
+  it("ignores commented fake external scripts before scanning real inline scripts", () => {
+    expect(() =>
+      runChecker(
+        `<html><body><!-- <script src="/ignored.js"> --><script>try { const params = new URLSearchParams(window.location.hash.slice(1)); window.__PHAROS_TOKEN__ = params.get("token"); history.replaceState(null, "", location.pathname); } catch (error) {}</script></body></html>`,
+      ),
+    ).toThrow(/Inline-script phishing-kit signatures detected/);
+  });
+
+  it("does not scan script-looking markup that only appears inside HTML comments", () => {
+    expect(() =>
+      runChecker(
+        `<html><body><!-- <script>window.__PHAROS_TOKEN__ = "comment-only";</script> --><script src="/bundle.js"></script></body></html>`,
+      ),
+    ).not.toThrow();
+  });
+
   it("detects inline phishing signatures when script end tags contain browser-accepted spacing", () => {
     expect(() =>
       runChecker(
