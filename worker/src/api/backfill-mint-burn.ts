@@ -4,6 +4,7 @@ import { createBudget, budgetExhausted } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { assertNotFrozen } from "../lib/frozen-guards";
 import type { TopicFilter } from "../lib/evm-logs";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
@@ -55,7 +56,9 @@ async function resolveBackfillConfig(
     };
   }
 
-  const eligibleConfigs = MINT_BURN_CONFIGS.filter((entry) => entry.enabled !== false);
+  const eligibleConfigs = MINT_BURN_CONFIGS.filter(
+    (entry) => entry.enabled !== false && !FROZEN_IDS.has(entry.stablecoinId),
+  );
   if (eligibleConfigs.length === 0) {
     return { ok: false, response: errorResponse(400, "No eligible mint/burn configs are enabled") };
   }
