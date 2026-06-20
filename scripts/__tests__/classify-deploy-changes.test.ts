@@ -146,6 +146,23 @@ diff --git a/package-lock.json b/package-lock.json
 `),
     ).toBe(true);
   });
+
+  it("falls back to Worker promotion for package-lock metadata hunks without enclosing package context", () => {
+    expect(
+      hasWorkerPackagePromotionImpact(`
+diff --git a/package-lock.json b/package-lock.json
+@@ -1123 +1123 @@
+-      "version": "4.3.6",
++      "version": "4.3.7",
+@@ -1124 +1124 @@
+-      "resolved": "https://registry.npmjs.org/zod/-/zod-4.3.6.tgz",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-4.3.7.tgz",
+@@ -1125 +1125 @@
+-      "integrity": "sha512-old",
++      "integrity": "sha512-new",
+`),
+    ).toBe(true);
+  });
 });
 
 describe("hasDeployImpact", () => {
