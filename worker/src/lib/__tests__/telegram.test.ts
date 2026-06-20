@@ -135,7 +135,7 @@ describe("sendToChat", () => {
     expect(fetchSpy.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("keeps ambiguous long retry-after 429s chat-scoped", async () => {
+  it("treats ambiguous long retry-after 429s as global", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response("Too Many Requests", {
         status: 429,
@@ -151,7 +151,7 @@ describe("sendToChat", () => {
       statusCode: 429,
       errorClass: "rate_limit",
       delivery: "retryable_failure",
-      rateLimitScope: "chat",
+      rateLimitScope: "global",
     });
     expect(result.retryAfterSec).toBe(30);
   });
@@ -371,7 +371,7 @@ describe("sendBatch", () => {
     expect(results.slice(3).every((result) => result.rateLimitScope === "global" && result.attempted === false)).toBe(true);
   });
 
-  it("keeps sending later batches after an ambiguous Telegram JSON retry_after", async () => {
+  it("stops later batches after an ambiguous long Telegram JSON retry_after", async () => {
     fetchSpy
       .mockResolvedValueOnce(
         new Response(
@@ -394,16 +394,17 @@ describe("sendBatch", () => {
 
     const results = await sendBatch(messages, "bot-token", 2);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(5);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(results).toHaveLength(5);
     expect(results[0]).toMatchObject({
       chatId: "chat-0",
       errorClass: "rate_limit",
       retryAfterSec: 38,
-      rateLimitScope: "chat",
+      rateLimitScope: "global",
       attempted: true,
     });
-    expect(results.slice(1).every((result) => result.ok && result.attempted === true)).toBe(true);
+    expect(results[1]).toMatchObject({ ok: true, attempted: true });
+    expect(results.slice(2).every((result) => result.rateLimitScope === "global" && result.attempted === false)).toBe(true);
   });
 
   it("marks the untouched tail as global retryable after a global rate limit stop", async () => {

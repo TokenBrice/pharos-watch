@@ -1,4 +1,8 @@
 import { drainResponseBody } from "./response-body";
+import {
+  TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD,
+  TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC,
+} from "./telegram-constants";
 
 export interface TelegramCreds {
   botToken: string;
@@ -150,15 +154,16 @@ export interface SendToChatResult {
   rateLimitScope?: "chat" | "global";
 }
 
-const GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
-
-function inferRateLimitScope(responseBody: string): "chat" | "global" {
+function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
   const lower = responseBody.toLowerCase();
   if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
     return "global";
   }
   if (lower.includes("chat") || lower.includes("group") || lower.includes("user")) {
     return "chat";
+  }
+  if (retryAfterSec != null && retryAfterSec >= TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC) {
+    return "global";
   }
   return "chat";
 }
@@ -178,7 +183,7 @@ function parseTelegramRetryAfter(responseBody: string): number | null {
   }
 }
 
-function buildResponseFailure(statusCode: number, responseBody = ""): SendToChatResult {
+function buildResponseFailure(statusCode: number, responseBody = "", retryAfterSec: number | null = null): SendToChatResult {
   if (statusCode === 403) {
     return {
       ok: false,
@@ -201,7 +206,7 @@ function buildResponseFailure(statusCode: number, responseBody = ""): SendToChat
       errorClass: "rate_limit",
       delivery: "retryable_failure",
       retryAfterSec: null,
-      rateLimitScope: inferRateLimitScope(responseBody),
+      rateLimitScope: inferRateLimitScope(responseBody, retryAfterSec),
     };
   }
   if (statusCode >= 500) {
@@ -315,7 +320,7 @@ export async function sendToChat(
       const body = await res.text().catch(() => "");
       const telegramRetryAfterSec = parseTelegramRetryAfter(body);
       const resolvedRetryAfterSec = telegramRetryAfterSec ?? (Number.isFinite(retryAfterSec) ? retryAfterSec : null);
-      const failure = buildResponseFailure(res.status, body);
+      const failure = buildResponseFailure(res.status, body, resolvedRetryAfterSec);
       return {
         ...failure,
         retryAfterSec: resolvedRetryAfterSec,
@@ -461,7 +466,7 @@ export async function sendBatch(
           chatRateLimitedUntil.set(result.chatId, result.retryAfterSec);
         }
       }
-      if (distinctRateLimitedChats.size >= GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
+      if (distinctRateLimitedChats.size >= TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
         escalatedGlobalRateLimitedResult = batchResults.find(
           (r) => r.errorClass === "rate_limit" && r.rateLimitScope !== "global" && r.attempted !== false,
         );

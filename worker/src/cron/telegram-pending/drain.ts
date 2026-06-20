@@ -8,6 +8,7 @@ import {
   PENDING_BACKOFF_SCHEDULE_SEC,
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
+  TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD,
   TELEGRAM_PENDING_PRIORITY,
 } from "../../lib/telegram-constants";
 import { recordTelegramDeliveryOutcomes } from "../../lib/telegram-usage-analytics";
@@ -523,6 +524,10 @@ export async function drainPendingQueue(
             } else {
               distinctRateLimitedChats.add(result.chatId);
               chatRateLimitedThisLoop.set(result.chatId, { notBeforeAt: classification.rateLimit.notBeforeAt });
+              if (distinctRateLimitedChats.size >= TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
+                globalRateLimited = true;
+                await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
+              }
             }
           }
           break;
