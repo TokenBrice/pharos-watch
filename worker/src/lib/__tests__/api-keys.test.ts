@@ -4,7 +4,6 @@ import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
 import {
   API_KEY_AUTH_CACHE_MAX_ENTRIES,
-  API_KEY_AUTH_CACHE_STALE_TTL_MS,
   API_KEY_AUTH_CACHE_TTL_MS,
   API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES,
   API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES,
@@ -532,7 +531,7 @@ describe("api key helpers", () => {
     });
   });
 
-  it("authenticates with a stale cached row when D1 lookup fails after a recent verification", async () => {
+  it("fails closed when D1 lookup fails instead of authenticating with stale cache", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
 
@@ -571,18 +570,11 @@ describe("api key helpers", () => {
       kind: "valid",
     });
 
-    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS + 1);
-
-    await expect(authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper)).resolves.toMatchObject({
-      kind: "valid",
-    });
-    expect(dbUnavailable.getHistory().filter((entry) => entry.sql.includes("FROM api_keys"))).toHaveLength(1);
-
-    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_STALE_TTL_MS - API_KEY_AUTH_CACHE_TTL_MS);
-
     await expect(authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper)).resolves.toEqual({
       kind: "unavailable",
     });
+    expect(dbUnavailable.getHistory().filter((entry) => entry.sql.includes("FROM api_keys"))).toHaveLength(1);
+    expect(getApiKeyRuntimeState().apiKeyCache.has(prefix)).toBe(false);
   });
 
   it("fails closed instead of using stale cache for self-serve keys when D1 is unavailable", async () => {

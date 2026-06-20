@@ -161,24 +161,7 @@ export async function authenticateApiKey(
       true,
     );
   } catch (err) {
-    const staleRow = getCachedApiKeyByPrefix(parsed.prefix, { allowStale: true });
-    if (staleRow) {
-      if (staleRow.tier === "self-serve") {
-        clearApiKeyCache(parsed.prefix);
-        console.warn("[api-keys] API key lookup unavailable; refusing stale self-serve key cache:", err);
-        return { kind: "unavailable" };
-      }
-      console.warn("[api-keys] API key lookup unavailable; using stale verified key cache:", err);
-      return authenticateLoadedApiKey(
-        staleRow,
-        parsed,
-        db,
-        effectivePepper,
-        pepperPrevious,
-        nowSec,
-        false,
-      );
-    }
+    clearApiKeyCache(parsed.prefix);
     console.warn("[api-keys] API key authentication dependency unavailable:", err);
     return { kind: "unavailable" };
   }

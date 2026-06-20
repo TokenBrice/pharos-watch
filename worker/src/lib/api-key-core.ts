@@ -23,8 +23,7 @@ const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 const API_KEY_TIER_MAX_LENGTH = 40;
 export const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
-export const API_KEY_AUTH_CACHE_TTL_MS = 300_000;
-export const API_KEY_AUTH_CACHE_STALE_TTL_MS = 900_000;
+export const API_KEY_AUTH_CACHE_TTL_MS = 5_000;
 export const API_KEY_AUTH_CACHE_MAX_ENTRIES = 2_048;
 export const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
 export const API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES = 4_096;
@@ -76,7 +75,6 @@ export type ApiKeyPublicRow = Omit<ApiKeyRow, "secret_hash">;
 
 interface CachedApiKeyEntry {
   freshUntilMs: number;
-  staleUntilMs: number;
   row: ApiKeyRow;
 }
 
@@ -206,7 +204,7 @@ function pruneOldestMapEntries<K, V>(map: Map<K, V>, maxEntries: number): void {
 function pruneExpiredApiKeyCache(nowMs: number): void {
   const cache = getApiKeyRuntimeState().apiKeyCache;
   for (const [keyPrefix, cached] of cache) {
-    if (cached.staleUntilMs <= nowMs) {
+    if (cached.freshUntilMs <= nowMs) {
       cache.delete(keyPrefix);
     }
   }
@@ -400,7 +398,7 @@ export function clearApiKeyCache(keyPrefix: string): void {
 
 export function getCachedApiKeyByPrefix(
   keyPrefix: string,
-  options: { allowStale?: boolean; nowMs?: number } = {},
+  options: { nowMs?: number } = {},
 ): ApiKeyRow | null {
   const nowMs = options.nowMs ?? Date.now();
   const cache = getApiKeyRuntimeState().apiKeyCache;
@@ -416,12 +414,7 @@ export function getCachedApiKeyByPrefix(
     cache.set(keyPrefix, cached);
     return cached.row;
   }
-  if (options.allowStale && cached.staleUntilMs > nowMs) {
-    cache.delete(keyPrefix);
-    cache.set(keyPrefix, cached);
-    return cached.row;
-  }
-  if (cached.staleUntilMs <= nowMs) {
+  if (cached.freshUntilMs <= nowMs) {
     cache.delete(keyPrefix);
   }
   return null;
@@ -429,11 +422,6 @@ export function getCachedApiKeyByPrefix(
 
 export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<ApiKeyRow | null> {
   const nowMs = Date.now();
-  const cached = getCachedApiKeyByPrefix(keyPrefix, { nowMs });
-  if (cached) {
-    return cached;
-  }
-
   const row = await db.prepare(buildPrivateApiKeySelectQueryWithPepper("WHERE key_prefix = ?"))
     .bind(keyPrefix)
     .first<ApiKeyRow>();
@@ -444,7 +432,6 @@ export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Pro
     state.apiKeyCache.delete(keyPrefix);
     state.apiKeyCache.set(keyPrefix, {
       freshUntilMs: nowMs + API_KEY_AUTH_CACHE_TTL_MS,
-      staleUntilMs: nowMs + API_KEY_AUTH_CACHE_STALE_TTL_MS,
       row,
     });
     pruneOldestMapEntries(state.apiKeyCache, API_KEY_AUTH_CACHE_MAX_ENTRIES);
