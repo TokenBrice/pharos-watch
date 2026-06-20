@@ -11,6 +11,7 @@ import {
   fetchJsonWithRetry,
   freshnessMetadataFromTimestamp,
   normalizeSlices,
+  parseBoundedDecimals,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
 } from "./helpers";
@@ -100,7 +101,8 @@ async function fetchJupUsdJson<T>(
 
 function parseAmount(amount: string | undefined, decimals: number | undefined): number {
   if (typeof amount !== "string" || !/^\d+$/.test(amount)) return 0;
-  const precision = Number.isInteger(decimals) && decimals != null && decimals >= 0 ? decimals : 0;
+  const precision = decimals == null ? 0 : parseBoundedDecimals(decimals);
+  if (precision == null) return 0;
   const parsed = decimalNumberFromBigInt(BigInt(amount), precision);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }

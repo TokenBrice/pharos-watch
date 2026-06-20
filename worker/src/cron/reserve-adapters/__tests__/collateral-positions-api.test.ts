@@ -290,4 +290,38 @@ describe("adaptCollateralPositions", () => {
       { name: "DAI (Dai Stablecoin)", pct: 50, risk: "low", coinId: "dai-makerdao" },
     ]);
   });
+
+  it("ignores provider positions with unsafe decimal scales", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xusdc": {
+          address: "0xUSDC",
+          name: "USD Coin",
+          symbol: "USDC",
+          decimals: 6,
+          positions: [{ collateralBalance: "1000000" }],
+        },
+        "0xunsafe": {
+          address: "0xUNSAFE",
+          name: "Unsafe Scale",
+          symbol: "DAI",
+          decimals: 1_000_000_000,
+          positions: [{ collateralBalance: "1" }],
+        },
+      },
+      {
+        "0xusdc": { price: { usd: 1 } },
+        "0xunsafe": { price: { usd: 1 } },
+      },
+      0,
+    );
+
+    expect(result.metadata).toMatchObject({
+      assetCount: 1,
+      activePositionCount: 1,
+    });
+    expect(result.slices).toEqual([
+      { name: "USDC (USD Coin)", pct: 100, risk: "low", coinId: "usdc-circle" },
+    ]);
+  });
 });
