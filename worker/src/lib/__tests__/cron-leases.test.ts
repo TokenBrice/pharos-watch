@@ -363,10 +363,11 @@ function makeLeaseDb(seed?: {
         },
         all: async () => {
           if (sql.includes("FROM cron_slot_executions") && sql.includes("ORDER BY slot_started_at ASC")) {
-            const [slotKey, staleBefore] = args as [string, number];
+            const [slotKey, excludeSlotStartedAt, staleBefore] = args as [string, number, number];
             return {
               results: [...slots.values()].filter((slot) =>
                 slot.slot_key === slotKey &&
+                slot.slot_started_at !== excludeSlotStartedAt &&
                 slot.state === "running" &&
                 slot.updated_at < staleBefore,
               ),
@@ -900,6 +901,40 @@ describe("runScheduledSlotWithFence", () => {
     );
 
     expect(result.status).toBe("skipped_running");
+  });
+
+
+  it("takes over a stale running row for the requested slot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const slotStartedAt = now - 3600;
+    const db = makeLeaseDb({
+      slots: [{
+        slot_key: "halfHourlyOffset",
+        slot_started_at: slotStartedAt,
+        state: "running",
+        result_status: null,
+        execution_owner: "owner-a",
+        started_at: slotStartedAt,
+        finished_at: null,
+        updated_at: now - 1800,
+        metadata: null,
+      }],
+    });
+    const fn = vi.fn(async () => ({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 }));
+
+    const result = await runScheduledSlotWithFence(
+      db,
+      "halfHourlyOffset",
+      fn,
+      { slotStartedAt, owner: "owner-b", staleAfterSec: 1200 },
+    );
+
+    expect(result.status).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(1);
+    const slot = db.getSlot("halfHourlyOffset", slotStartedAt);
+    expect(slot?.execution_owner).toBe("owner-b");
+    expect(slot?.result_status).toBe("ok");
+    expect(slot?.metadata).toBe(JSON.stringify({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 }));
   });
 
   it("marks stale running slots for the same schedule as expired before claiming a new slot", async () => {
