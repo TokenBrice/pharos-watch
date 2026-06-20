@@ -163,7 +163,7 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 
 ## Distribution
 
-After the digest is stored in D1, it is posted to the configured Telegram channel. Delivery is **non-fatal**: a delivery failure logs a warning but never prevents the digest from being stored.
+After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery is **non-fatal** after the digest row is stored: a delivery failure logs a warning and rolls back that channel's same-day sent marker, but never removes the D1 digest record.
 
 ### Web archive and sitemap policy
 
@@ -186,7 +186,7 @@ After the digest is stored in D1, it is posted to the configured Telegram channe
 | `TWITTER_ACCESS_TOKEN` | OAuth access token |
 | `TWITTER_ACCESS_TOKEN_SECRET` | OAuth access token secret |
 
-If any of the four are absent, Twitter posting is skipped silently.
+If any of the four are absent, Twitter posting is skipped silently. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically claims `daily-digest:twitter-sent:YYYY-MM-DD` before posting, skips later same-day retries as `already-sent`, and deletes the marker only when the post attempt itself fails. If the marker claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention.
 
 ### Telegram
 
@@ -216,7 +216,7 @@ Active tracked additions are queued earlier by `worker/src/cron/sync-stablecoins
 
 Appendix snapshots advance only after Telegram accepts the digest post, so a failed channel delivery does not lose pending additions.
 
-Telegram delivery is also replay-safe per UTC date. `daily-digest.ts` writes a `daily-digest:telegram-sent:YYYY-MM-DD` marker only after Telegram accepts the post; if the digest later re-runs the same day, Telegram delivery is skipped as `already-sent` while appendix state can still be committed. This prevents duplicate channel posts without dropping pending appendix changes on a failed earlier attempt.
+Telegram delivery is also replay-safe per UTC date. `daily-digest.ts` atomically claims a `daily-digest:telegram-sent:YYYY-MM-DD` marker before posting; if the digest later re-runs the same day, Telegram delivery is skipped as `already-sent` while appendix state remains uncommitted for an already-sent retry. If Telegram rejects the post, the marker is rolled back so a later run can retry. This prevents duplicate channel posts without dropping pending appendix changes on a failed earlier attempt.
 
 **Required secrets:**
 

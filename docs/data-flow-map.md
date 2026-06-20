@@ -41,7 +41,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/cron-jobs.ts`, and orchestrated by `worker/src/handlers/scheduled.ts`. `docs/worker-infrastructure.md` is the maintained schedule reference; this section is a compact flow map.
 
 - `*/15 * * * *`: sync-fx-rates (cooldown-gated to 30 min) first, then sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / report-card cache publish / DDRv2 incident lock/publication projection and DDRR review snapshot
-- `9,24,39,54 * * * *`: isolated status self-check, then cron-staleness-watchdog freshness alerting
+- `9,24,39,54 * * * *`: cron-slot-sweeper stale slot reconciliation, then isolated status self-check, then cron-staleness-watchdog freshness alerting
 - `3 */6 * * *`: blacklist sync (every 6h)
 - `4,34 * * * *`: mint/burn critical lane (every 30 minutes)
 - `6 */2 * * *`: DEX discovery staging (every 2h)
@@ -51,7 +51,7 @@ Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/c
 - `26,56 * * * *`: DEWS, then PSI, then tape projection on the DB-only decoupled lane
 - `20 * * * *`: core yield publication
 - `25 */4 * * *`: supplemental yield-source refresh
-- `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then collateral-drift checks/alerts (every 4h)
+- `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then named reserve-post-sync-watchdog drift/cache/stale-source checks and alerts (every 4h)
 - `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram command/profile/menu/webhook reconciliation, subscriber alerts (DEWS, depeg, safety, and launch promotions), degradation watchdog, expired disambiguation cleanup, and Telegram pulse snapshot publication
 - `*/5 * * * *`: manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
 - `0 3 * * *`: status-probe TTL prune + cron-history TTL prune + detail-cache prune + Telegram inactive cleanup + Telegram retention cleanup + mint/burn growth watchdog + cron-duration watchdog (daily housekeeping)

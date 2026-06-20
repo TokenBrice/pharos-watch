@@ -1763,6 +1763,8 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
 
 Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
 
+The writer fails closed for required cache/table reads and now also marks the cron run `degraded` without inserting a snapshot when the DEWS or DEX liquidity section read fails. Successful empty DEWS/DEX reads still publish empty `dewsRows` / `liquidityRows`; failed reads are not silently omitted from an `ok` snapshot.
+
 **Cache:** immutable-snapshot
 
 **Path parameters**

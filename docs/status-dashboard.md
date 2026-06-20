@@ -431,7 +431,9 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 
 ### Synthetic self-check
 
-`status-self-check` runs on its own isolated `9,24,39,54 * * * *` lane and:
+The isolated `9,24,39,54 * * * *` status lane runs `cron-slot-sweeper` before `status-self-check`. The sweeper closes stale `cron_slot_executions` across all slot keys, clears expired child leases/progress rows, writes `scheduled-slot-abandoned` event markers, and inserts synthetic child `cron_runs` error rows when an expired child lease had no terminal run row. It also sends a cooldown-gated alert when abandoned slots are reconciled, so a stopped heartbeat is visible before the next same schedule key fires.
+
+`status-self-check` then:
 
 1. Probes critical public reads and selected admin read endpoints in two explicit planes:
    - internal self-check probes use router-dispatched `GET` requests when a Worker `ExecutionContext` is available. They exercise handler routing and dependency hydration for app/router isolation, but bypass the Worker HTTP access gate, public rate-limit gate, custom-domain routing, and edge-cache path. If the cron is invoked without `ExecutionContext`, the same self-check set falls back to real HTTPS probes against `SELF_URL`.
