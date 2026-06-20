@@ -3,6 +3,7 @@ import { AA_FALCONX_MEV_CAPITAL_STABLECOIN_REDEEM_CONFIG } from "./aa-falconx-me
 import { AID_GAIB_STABLECOIN_REDEEM_CONFIG } from "./aid-gaib";
 import { AUTOUSD_AUTO_FINANCE_STABLECOIN_REDEEM_CONFIG } from "./autousd-auto-finance";
 import { APXUSD_APYX_STABLECOIN_REDEEM_CONFIG } from "./apxusd-apyx";
+import { BBQUSDC_STEAKHOUSE_STABLECOIN_REDEEM_CONFIG } from "./bbqusdc-steakhouse";
 import { CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG } from "./cusdo-openeden";
 import { DUSD_DTRINITY_STABLECOIN_REDEEM_CONFIG } from "./dusd-dtrinity";
 import { EEARN_EMBER_STABLECOIN_REDEEM_CONFIG } from "./eearn-ember";
@@ -96,6 +97,7 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "frxusd-frax": FRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG,
   "jupusd-jupiter": JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG,
   "msusd-main-street": MSUSD_MAIN_STREET_STABLECOIN_REDEEM_CONFIG,
+  "bbqusdc-steakhouse": BBQUSDC_STEAKHOUSE_STABLECOIN_REDEEM_CONFIG,
   "wm-m0": WM_M0_STABLECOIN_REDEEM_CONFIG,
   "ftusd-flying-tulip": FTUSD_FLYING_TULIP_STABLECOIN_REDEEM_CONFIG,
   "usdz-anzen": USDZ_ANZEN_STABLECOIN_REDEEM_CONFIG,

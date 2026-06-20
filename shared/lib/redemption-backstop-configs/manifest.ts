@@ -67,6 +67,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/aid-gaib.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/apxusd-apyx.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/autousd-auto-finance.ts",
+      "shared/lib/redemption-backstop-configs/stablecoin-redeem/bbqusdc-steakhouse.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/cusdo-openeden.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/dusd-dtrinity.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/eearn-ember.ts",
