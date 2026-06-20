@@ -29,7 +29,7 @@ import {
   resolveRotatedConfigs,
 } from "./mint-burn/run-state";
 import { excludeFrozenIds } from "./shared/exclude-frozen";
-import { throwIfAborted } from "../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { toErrorMessage } from "../lib/error-utils";
 
 const MAX_SCAN_RANGE = 50_000;
@@ -242,6 +242,7 @@ export async function syncMintBurn(
       try {
         await recalcAffectedHours(db, affectedHours, { signal });
       } catch (e) {
+        rethrowIfAborted(e, signal);
         recalcFailed = true;
         recalcError = toErrorMessage(e);
         console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", e);
