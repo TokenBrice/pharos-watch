@@ -477,7 +477,7 @@ describe("adaptAccountableDashboard", () => {
     )).toThrow(/bucket total 100 does not match total_reserves 1000/);
   });
 
-  it("allows configured Accountable buckets to be excluded from total_reserves reconciliation", async () => {
+  it("omits configured Accountable buckets from total_reserves reconciliation and reserve slices", async () => {
     const config = yusd.liveReservesConfig as LiveReservesConfig;
     const primary = config.inputs.primary;
     if (primary.kind !== "http-json") {
@@ -520,10 +520,11 @@ describe("adaptAccountableDashboard", () => {
       totalReserves: 36_193_106.94,
       totalReservesExcludedBuckets: ["Insurance Fund"],
     });
-    expect(result.slices).toContainEqual(expect.objectContaining({
+    expect(result.slices).not.toContainEqual(expect.objectContaining({
       name: "Insurance Fund",
-      risk: "low",
     }));
+    const totalPct = result.slices.reduce((sum, slice) => sum + slice.pct, 0);
+    expect(totalPct).toBeCloseTo(100, 1);
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 5, 20, 10) / 1000,
