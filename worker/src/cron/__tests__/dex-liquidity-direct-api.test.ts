@@ -158,7 +158,7 @@ describe("fetchFluidPools", () => {
     expect(mockFetch.mock.calls.some(([input]) => String(input) === "https://rpc.example")).toBe(true);
   });
 
-  it("isolates malformed Fluid pool IDs to a single pool enrichment failure", async () => {
+  it("skips malformed Fluid pool IDs while preserving valid pools", async () => {
     const malformedPoolAddress = "not-a-20-byte-hex-address";
     mockFetch.mockImplementation((input, init) => {
       const url = String(input);
@@ -216,12 +216,12 @@ describe("fetchFluidPools", () => {
 
     const pools = await fetchFluidPools(undefined, chainRpcs);
 
-    expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS, malformedPoolAddress]);
+    expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS]);
     expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
-    expect(pools.pools[1].balances).toBeNull();
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(true);
     expect(pools.errors[0]).toContain(malformedPoolAddress);
+    expect(pools.errors[0]).toContain("invalid EVM address");
     expect(mockFetch.mock.calls.filter(([input]) => String(input) === "https://rpc.example")).toHaveLength(3);
   });
 
@@ -234,7 +234,7 @@ describe("fetchFluidPools", () => {
         last_price: "1.0",
         base_volume: "50000",
         target_volume: "50000",
-        pool_id: "0xpool",
+        pool_id: "0x2222222222222222222222222222222222222222",
         liquidity_in_usd: "200000",
       },
     ]);
@@ -255,7 +255,7 @@ describe("fetchFluidPools", () => {
         last_price: "1.0",
         base_volume: "75000",
         target_volume: "25000",
-        pool_id: "0xp",
+        pool_id: "0x3333333333333333333333333333333333333333",
         liquidity_in_usd: "100000",
       },
     ]);
@@ -298,7 +298,7 @@ describe("fetchFluidPools", () => {
         last_price: "1.0",
         base_volume: "100",
         target_volume: "100",
-        pool_id: "0xp",
+        pool_id: "0x3333333333333333333333333333333333333333",
         liquidity_in_usd: "0",
       },
       {
@@ -308,7 +308,7 @@ describe("fetchFluidPools", () => {
         last_price: "1.0",
         base_volume: "100",
         target_volume: "100",
-        pool_id: "0xp2",
+        pool_id: "0x4444444444444444444444444444444444444444",
         liquidity_in_usd: "NaN",
       },
     ]);
@@ -328,7 +328,7 @@ describe("fetchFluidPools", () => {
         last_price: "not-a-number",
         base_volume: "100",
         target_volume: "100",
-        pool_id: "0xp",
+        pool_id: "0x3333333333333333333333333333333333333333",
         liquidity_in_usd: "100000",
       },
     ]);
@@ -346,7 +346,7 @@ describe("fetchFluidPools", () => {
         last_price: "1.0",
         base_volume: "100",
         target_volume: "100",
-        pool_id: "0xp",
+        pool_id: "0x3333333333333333333333333333333333333333",
         liquidity_in_usd: "100000",
       },
     ]);
