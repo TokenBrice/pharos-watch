@@ -128,6 +128,32 @@ describe("getPriceCache", () => {
 });
 
 describe("savePriceCache", () => {
+  it("bounds cache freshness timestamps to the local sync time", async () => {
+    const statements: Array<{ sql: string; bindings: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...bindings: unknown[]) => {
+          statements.push({ sql, bindings });
+          return { sql, bindings };
+        },
+      }),
+      batch: async () => [{ success: true, meta: { changes: 1 }, results: [] }],
+    } as unknown as D1Database;
+
+    await savePriceCache(db, [{
+      id: "future-priced-asset",
+      price: 1,
+      source: "coingecko",
+      confidence: "single-source",
+      observedAt: 1_800_003_700,
+      observedAtMode: "upstream",
+      syncedAt: 1_800_000_100,
+    }]);
+
+    expect(statements[0].bindings[2]).toBe(1_800_000_100);
+    expect(statements[0].bindings[5]).toBe(1_800_003_700);
+  });
+
   it("uses synced_at as the monotonic conflict guard while preserving observed_at as updated_at", async () => {
     const statements: Array<{ sql: string; bindings: unknown[] }> = [];
     const db = {

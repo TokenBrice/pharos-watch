@@ -218,6 +218,12 @@ export interface PriceCacheWriteEntry {
   consensusSources?: string[];
 }
 
+function resolvePriceCacheUpdatedAt(e: PriceCacheWriteEntry, now: number): number {
+  const syncedAt = e.syncedAt ?? now;
+  if (e.observedAt == null) return syncedAt;
+  return e.observedAt <= syncedAt ? e.observedAt : syncedAt;
+}
+
 export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEntry[]): Promise<void> {
   if (entries.length === 0) return;
   const now = Math.floor(Date.now() / 1000);
@@ -241,7 +247,7 @@ export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEnt
       .bind(
         e.id,
         e.price,
-        e.observedAt ?? e.syncedAt ?? now,
+        resolvePriceCacheUpdatedAt(e, now),
         e.source ?? null,
         e.confidence ?? null,
         e.observedAt ?? null,

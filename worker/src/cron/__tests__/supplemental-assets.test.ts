@@ -131,6 +131,28 @@ describe("resolveSupplementalPrice", () => {
     )).toBeNull();
   });
 
+  it("rejects future-skewed supplemental upstream timestamps", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    expect(resolveSupplementalPrice(
+      { coins: { "coingecko:vcred": { price: 1, timestamp: nowSec + 60 * 60 } } },
+      {},
+      "vcred",
+    )).toBeNull();
+
+    expect(resolveSupplementalPrice(
+      { coins: {} },
+      {
+        vcred: {
+          usd: 1,
+          usd_market_cap: 1_000_000,
+          last_updated_at: nowSec + 60 * 60,
+        },
+      },
+      "vcred",
+    )).toBeNull();
+  });
+
   it("preserves fresh supplemental CoinGecko upstream timestamps", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 

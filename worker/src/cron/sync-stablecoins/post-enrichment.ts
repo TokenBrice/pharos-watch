@@ -327,7 +327,7 @@ export async function runPostEnrichmentPricePipeline(
       const cached = priceCache.get(asset.id);
       if (!cached) continue;
       const maxAgeSec = getPriceCacheMaxAgeSec(cached.source, PRICE_CACHE_TTL);
-      if (now - cached.updatedAt >= maxAgeSec) continue;
+      if (cached.updatedAt > now || now - cached.updatedAt >= maxAgeSec) continue;
       const cachedAgreeSources =
         cached.agreeSources && cached.agreeSources.length > 0
           ? cached.agreeSources
