@@ -447,11 +447,23 @@ function pickWorstPeakRow(rows: DepegRow[], seed: DepegRow): DepegRow {
   return worst;
 }
 
-function summarizeSyntheticSplitGroup(rows: DepegRow[]): SyntheticSplitRepairSummary {
+function resolveSyntheticSplitAnchors(rows: DepegRow[]): {
+  keeper: DepegRow;
+  first: DepegRow;
+  tail: DepegRow;
+  worst: DepegRow;
+} {
   const keeper = pickSyntheticSplitKeeper(rows);
-  const first = rows[0];
-  const tail = rows[rows.length - 1];
-  const worst = pickWorstPeakRow(rows, keeper);
+  return {
+    keeper,
+    first: rows[0],
+    tail: rows[rows.length - 1],
+    worst: pickWorstPeakRow(rows, keeper),
+  };
+}
+
+function summarizeSyntheticSplitGroup(rows: DepegRow[]): SyntheticSplitRepairSummary {
+  const { keeper, first, tail, worst } = resolveSyntheticSplitAnchors(rows);
   const gapSeconds: number[] = [];
   for (let i = 1; i < rows.length; i++) {
     gapSeconds.push(Math.max(0, rows[i].started_at - (rows[i - 1].ended_at ?? rows[i].started_at)));
@@ -559,10 +571,7 @@ function projectSyntheticSplitDepegEvents(
   const updatedRows = new Map<number, PsiDepegEventRow>();
 
   for (const group of repairedGroups) {
-    const keeper = pickSyntheticSplitKeeper(group);
-    const first = group[0];
-    const tail = group[group.length - 1];
-    const worst = pickWorstPeakRow(group, keeper);
+    const { keeper, first, tail, worst } = resolveSyntheticSplitAnchors(group);
     for (const row of group) {
       if (row.id !== keeper.id) {
         removedIds.add(row.id);
@@ -752,10 +761,7 @@ function planSyntheticSplitRepair(
 
   for (const group of groups) {
     const summary = summarizeSyntheticSplitGroup(group);
-    const keeper = pickSyntheticSplitKeeper(group);
-    const first = group[0];
-    const tail = group[group.length - 1];
-    const worst = pickWorstPeakRow(group, keeper);
+    const { keeper, first, tail, worst } = resolveSyntheticSplitAnchors(group);
 
     statements.push(
       db

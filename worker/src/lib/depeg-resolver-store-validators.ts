@@ -30,6 +30,41 @@ export function lockStateInsertValuesSql(
   return `?, ?, ?, ?, ?, ?, ${deferralCountSql}, ${lastDeferralReasonSql}, ${lastStateSql}, ?, ?, ${DDR_LOCK_METADATA_PLACEHOLDERS_SQL}`;
 }
 
+export interface LockStateOnConflictOptions {
+  incrementDeferralCount: boolean;
+  preserveDeferralReason: boolean;
+  preserveMetadata: boolean;
+  lastStateSql: "excluded.last_state" | "'lock_deferred'";
+}
+
+function lockMetadataAssignment(column: string, preserve: boolean): string {
+  return preserve
+    ? `${column} = COALESCE(depeg_resolver_prediction_lock_state.${column}, excluded.${column})`
+    : `${column} = excluded.${column}`;
+}
+
+export function lockStateOnConflictUpdateSql(options: LockStateOnConflictOptions): string {
+  const assignments = [
+    "last_attempted_at = excluded.last_attempted_at",
+    ...(options.incrementDeferralCount
+      ? ["deferral_count = depeg_resolver_prediction_lock_state.deferral_count + 1"]
+      : []),
+    options.preserveDeferralReason
+      ? "last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason"
+      : "last_deferral_reason = excluded.last_deferral_reason",
+    `last_state = ${options.lastStateSql}`,
+    lockMetadataAssignment("lock_trigger", options.preserveMetadata),
+    lockMetadataAssignment("forecast_readiness_score", options.preserveMetadata),
+    lockMetadataAssignment("forecast_readiness_version", options.preserveMetadata),
+    lockMetadataAssignment("readiness_threshold", options.preserveMetadata),
+    lockMetadataAssignment("backstop_at", options.preserveMetadata),
+    lockMetadataAssignment("backstop_delay_sec", options.preserveMetadata),
+    "updated_at = excluded.updated_at",
+  ];
+  return `ON CONFLICT(incident_key) DO UPDATE SET
+           ${assignments.join(",\n           ")}`;
+}
+
 export function lockAuditInsertValuesSql(
   confirmationAtSql: "?" | "NULL",
   outcomeAtSql: "?" | "NULL",

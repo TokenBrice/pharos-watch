@@ -2,6 +2,7 @@ import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
+import { staleSlotEventCacheKey } from "../cron-lease";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 
@@ -30,16 +31,6 @@ const CRON_HISTORY_ROWS_PER_JOB = 10;
 const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 5;
 
 const CRON_HISTORY_SELECT_COLUMNS = "job, started_at, duration_ms, status, error, item_count, metadata";
-const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
-
-function cacheKeySegment(value: string): string {
-  const normalized = value.toLowerCase().replace(/[^a-z0-9:-]+/g, "-").replace(/^-+|-+$/g, "");
-  return (normalized || "unknown").slice(0, 96);
-}
-
-function staleSlotEventCacheKey(scheduleKey: string): string {
-  return `cron:event:${cacheKeySegment(scheduleKey)}:${cacheKeySegment(STALE_SLOT_ABANDONED_EVENT_TYPE)}`;
-}
 
 function parseMetadataObject(value: string | null | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;

@@ -12,6 +12,7 @@ import {
   assertPositiveInteger,
   bindLockMetadata,
   lockAuditInsertValuesSql,
+  lockStateOnConflictUpdateSql,
   lockStateInsertValuesSql,
 } from "./depeg-resolver-store-validators";
 import { sha256Hex } from "./hash";
@@ -1006,18 +1007,12 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
         `INSERT INTO depeg_resolver_prediction_lock_state
          (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
          VALUES (${lockStateInsertValuesSql("1", "?", "'lock_deferred'")})
-         ON CONFLICT(incident_key) DO UPDATE SET
-           last_attempted_at = excluded.last_attempted_at,
-           deferral_count = depeg_resolver_prediction_lock_state.deferral_count + 1,
-           last_deferral_reason = excluded.last_deferral_reason,
-           last_state = 'lock_deferred',
-           lock_trigger = excluded.lock_trigger,
-           forecast_readiness_score = excluded.forecast_readiness_score,
-           forecast_readiness_version = excluded.forecast_readiness_version,
-           readiness_threshold = excluded.readiness_threshold,
-           backstop_at = excluded.backstop_at,
-           backstop_delay_sec = excluded.backstop_delay_sec,
-           updated_at = excluded.updated_at`,
+         ${lockStateOnConflictUpdateSql({
+           incrementDeferralCount: true,
+           preserveDeferralReason: false,
+           preserveMetadata: false,
+           lastStateSql: "'lock_deferred'",
+         })}`,
       )
       .bind(
         input.incidentKey,
@@ -1078,17 +1073,12 @@ export async function recordLockOpportunity(
           `INSERT INTO depeg_resolver_prediction_lock_state
            (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
            VALUES (${lockStateInsertValuesSql("0", "?", "?")})
-           ON CONFLICT(incident_key) DO UPDATE SET
-             last_attempted_at = excluded.last_attempted_at,
-             last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason,
-             last_state = excluded.last_state,
-             lock_trigger = COALESCE(depeg_resolver_prediction_lock_state.lock_trigger, excluded.lock_trigger),
-             forecast_readiness_score = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_score, excluded.forecast_readiness_score),
-             forecast_readiness_version = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_version, excluded.forecast_readiness_version),
-             readiness_threshold = COALESCE(depeg_resolver_prediction_lock_state.readiness_threshold, excluded.readiness_threshold),
-             backstop_at = COALESCE(depeg_resolver_prediction_lock_state.backstop_at, excluded.backstop_at),
-             backstop_delay_sec = COALESCE(depeg_resolver_prediction_lock_state.backstop_delay_sec, excluded.backstop_delay_sec),
-             updated_at = excluded.updated_at`,
+           ${lockStateOnConflictUpdateSql({
+             incrementDeferralCount: false,
+             preserveDeferralReason: true,
+             preserveMetadata: true,
+             lastStateSql: "excluded.last_state",
+           })}`,
         )
         .bind(
           input.incidentKey,

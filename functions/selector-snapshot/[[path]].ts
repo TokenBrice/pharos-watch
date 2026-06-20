@@ -31,6 +31,13 @@ const STANDARD_RESPONSE_HEADERS = {
 } as const;
 const SNAPSHOT_BODY_ENCODER = new TextEncoder();
 
+function jsonOk(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: STANDARD_RESPONSE_HEADERS,
+  });
+}
+
 /**
  * Per-isolate hashed-IP sliding-window limiter for unauthenticated POSTs.
  * The origin gate is spoofable and the zone WAF rate limits only cover
@@ -215,10 +222,7 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
   try {
     const existing = await env.SELECTOR_SNAPSHOTS.get(kvKey, "text");
     if (existing !== null && existing !== "") {
-      return new Response(JSON.stringify({ sid }), {
-        status: 200,
-        headers: STANDARD_RESPONSE_HEADERS,
-      });
+      return jsonOk({ sid });
     }
   } catch {
     // Treat read failure as best-effort; proceed to write.
@@ -238,10 +242,7 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return jsonError(503, "Snapshot store temporarily unavailable");
   }
 
-  return new Response(JSON.stringify({ sid }), {
-    status: 200,
-    headers: STANDARD_RESPONSE_HEADERS,
-  });
+  return jsonOk({ sid });
 }
 
 async function handleGet(context: SelectorSnapshotContext, sid: string): Promise<Response> {

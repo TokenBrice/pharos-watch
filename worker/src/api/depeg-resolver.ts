@@ -1,10 +1,10 @@
 import { toErrorMessage } from "../lib/error-utils";
 import {
-  buildMethodologyEnvelope,
   cacheControlForDegradedPayload,
   jsonFreshResponse,
   withErrorHandler,
 } from "../lib/api-utils";
+import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildInClause, chunkArray } from "../lib/db";
 import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
@@ -24,9 +24,6 @@ import {
   DDR_DURATION_MODEL_VERSION,
   DDR_FORECAST_READINESS_VERSION,
   DDR_INCIDENT_GROUPING_VERSION,
-  DDR_METHODOLOGY_CHANGELOG_PATH,
-  DDR_METHODOLOGY_VERSION,
-  DDR_METHODOLOGY_VERSION_LABEL,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_RESOLUTION_RUBRIC_VERSION,
   DDR_SUPPORT_RULES_VERSION,
@@ -64,14 +61,7 @@ function degradedResponse(reason: string): DdrResponse {
       lineage: null,
     },
     rows: [],
-    methodology: buildMethodologyEnvelope({
-      version: DDR_METHODOLOGY_VERSION,
-      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-      asOf: nowSec,
-    }),
+    methodology: buildDdrMethodologyEnvelope(nowSec),
   };
 }
 

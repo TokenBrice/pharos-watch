@@ -42,6 +42,10 @@ const DEX_LIQUIDITY_ROW_COLUMNS = [
 
 const DEX_LIQUIDITY_ROW_COLUMN_SQL = DEX_LIQUIDITY_ROW_COLUMNS.join(", ");
 const DEX_LIQUIDITY_ROW_VALUE_PLACEHOLDERS = DEX_LIQUIDITY_ROW_COLUMNS.map(() => "?").join(", ");
+const DEX_LIQUIDITY_PUBLISH_CURRENT_SET_SQL = DEX_LIQUIDITY_ROW_COLUMNS
+  .filter((column) => column !== "stablecoin_id")
+  .map((column) => `${column} = excluded.${column}`)
+  .join(",\n  ");
 const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
   "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
 
@@ -74,32 +78,7 @@ SELECT ${DEX_LIQUIDITY_ROW_COLUMN_SQL}, generation_id, 'published'
 FROM dex_liquidity_run_rows
 WHERE generation_id = ?
 ON CONFLICT(stablecoin_id) DO UPDATE SET
-  symbol = excluded.symbol,
-  total_tvl_usd = excluded.total_tvl_usd,
-  total_volume_24h_usd = excluded.total_volume_24h_usd,
-  total_volume_7d_usd = excluded.total_volume_7d_usd,
-  pool_count = excluded.pool_count,
-  pair_count = excluded.pair_count,
-  chain_count = excluded.chain_count,
-  protocol_tvl_json = excluded.protocol_tvl_json,
-  chain_tvl_json = excluded.chain_tvl_json,
-  top_pools_json = excluded.top_pools_json,
-  liquidity_score = excluded.liquidity_score,
-  concentration_hhi = excluded.concentration_hhi,
-  avg_pool_stress = excluded.avg_pool_stress,
-  weighted_balance_ratio = excluded.weighted_balance_ratio,
-  organic_fraction = excluded.organic_fraction,
-  effective_tvl_usd = excluded.effective_tvl_usd,
-  durability_score = excluded.durability_score,
-  score_components_json = excluded.score_components_json,
-  locked_liquidity_pct = excluded.locked_liquidity_pct,
-  coverage_class = excluded.coverage_class,
-  coverage_confidence = excluded.coverage_confidence,
-  source_mix_json = excluded.source_mix_json,
-  balance_measured_tvl_usd = excluded.balance_measured_tvl_usd,
-  organic_measured_tvl_usd = excluded.organic_measured_tvl_usd,
-  methodology_version = excluded.methodology_version,
-  updated_at = excluded.updated_at,
+  ${DEX_LIQUIDITY_PUBLISH_CURRENT_SET_SQL},
   publication_generation_id = excluded.publication_generation_id,
   publication_state = excluded.publication_state
 WHERE dex_liquidity.updated_at <= excluded.updated_at`;

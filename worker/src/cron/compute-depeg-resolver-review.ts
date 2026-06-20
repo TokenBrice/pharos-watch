@@ -7,9 +7,7 @@ import {
   type DdrrV2InvalidatedPredictionInput,
 } from "@shared/lib/depeg-resolver-review";
 import {
-  DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION,
-  DDR_METHODOLOGY_VERSION_LABEL,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
 } from "@shared/lib/depeg-resolver-version";
@@ -28,9 +26,9 @@ import {
   type DdrrSummary,
 } from "@shared/types/depeg-resolver-review";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause, chunkArray } from "../lib/db";
+import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { toErrorMessage } from "../lib/error-utils";
 import { logWorkerEvent } from "../lib/structured-log";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
@@ -163,14 +161,7 @@ function buildDdrrResponseEnvelope(input: {
     },
     summary: input.summary,
     rows: publicRows,
-    methodology: buildMethodologyEnvelope({
-      version: DDR_METHODOLOGY_VERSION,
-      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-      asOf: input.nowSec,
-    }),
+    methodology: buildDdrMethodologyEnvelope(input.nowSec),
   };
 }
 

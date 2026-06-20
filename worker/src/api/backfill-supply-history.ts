@@ -45,6 +45,21 @@ const HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS = new Set([
   "eearn-ember",
 ]);
 
+function pushSupplyUpsert(
+  statements: D1PreparedStatement[],
+  db: D1Database,
+  stablecoinId: string,
+  snapshotDate: number,
+  circulating: number,
+  price: number | null,
+): void {
+  statements.push(
+    db
+      .prepare(SUPPLY_HISTORY_UPSERT_SQL)
+      .bind(stablecoinId, snapshotDate, circulating, price),
+  );
+}
+
 interface TokenEntry {
   date: number; // unix seconds
   circulating?: Record<string, number>;
@@ -420,11 +435,7 @@ async function backfillHistoricalOnChainSupply(
       continue;
     }
 
-    stmts.push(
-      db
-        .prepare(SUPPLY_HISTORY_UPSERT_SQL)
-        .bind(meta.id, snapshotDate, supply, null),
-    );
+    pushSupplyUpsert(stmts, db, meta.id, snapshotDate, supply, null);
   }
 
   if (stmts.length === 0) {
@@ -548,11 +559,7 @@ async function backfillHistoricalTotalSupply(
       continue;
     }
 
-    stmts.push(
-      db
-        .prepare(SUPPLY_HISTORY_UPSERT_SQL)
-        .bind(meta.id, snapshotDate, circulatingUsd, price),
-    );
+    pushSupplyUpsert(stmts, db, meta.id, snapshotDate, circulatingUsd, price);
   }
 
   if (stmts.length === 0) {
@@ -643,11 +650,7 @@ async function backfillCommodity(
       if (!Number.isFinite(resolvedMcap) || resolvedMcap <= 0) continue;
 
       seenSnapshotDates.add(snapshotDate);
-      stmts.push(
-        db
-          .prepare(SUPPLY_HISTORY_UPSERT_SQL)
-          .bind(id, snapshotDate, resolvedMcap, price),
-      );
+      pushSupplyUpsert(stmts, db, id, snapshotDate, resolvedMcap, price);
     }
 
     if (stmts.length > 0) {
@@ -718,11 +721,7 @@ async function backfillCommodity(
     const snapshotDate = Math.floor(point.date / DAY_SECONDS) * DAY_SECONDS;
     const price = findPrice(point.date);
     if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
-    stmts.push(
-      db
-        .prepare(SUPPLY_HISTORY_UPSERT_SQL)
-        .bind(id, snapshotDate, mcap, price),
-    );
+    pushSupplyUpsert(stmts, db, id, snapshotDate, mcap, price);
   }
 
   if (stmts.length > 0) {
@@ -998,11 +997,7 @@ async function executeBackfillSupplyHistory(
         marketCapUsd = rawSum;
       }
 
-      stmts.push(
-        db
-          .prepare(SUPPLY_HISTORY_UPSERT_SQL)
-          .bind(meta.id, snapshotDate, marketCapUsd, price),
-      );
+      pushSupplyUpsert(stmts, db, meta.id, snapshotDate, marketCapUsd, price);
     }
 
     if (stmts.length > 0) {

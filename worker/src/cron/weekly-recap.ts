@@ -157,6 +157,14 @@ interface WeeklyParsedRow {
   text: string;
 }
 
+interface DailyDigestSourceRow {
+  generated_at: number;
+  digest_title: string | null;
+  digest_text: string;
+  digest_extended?: string | null;
+  input_data: string;
+}
+
 interface ExistingWeeklyDigestRow {
   generated_at: number;
   digest_title: string | null;
@@ -454,7 +462,7 @@ function buildWeeklyRiskLeaderboard(params: {
 }
 
 function parseDailyRows(
-  dailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
+  dailyRows: DailyDigestSourceRow[],
 ): WeeklyParsedRow[] {
   const parsed: WeeklyParsedRow[] = [];
   for (const row of dailyRows) {
@@ -661,9 +669,14 @@ function buildWeeklySpikeMetrics(
     }),
     { maxDepegByBps: undefined, maxDepegByImpact: undefined },
   );
+  const minByScore = <T extends { score: number }>(observations: T[]): T | null =>
+    observations.reduce<T | null>(
+      (best, observation) => best == null || observation.score < best.score ? observation : best,
+      null,
+    );
   return {
-    minPsi: psiObservations.length > 0 ? [...psiObservations].sort((a, b) => a.score - b.score)[0] : null,
-    minGauge: gaugeObservations.length > 0 ? [...gaugeObservations].sort((a, b) => a.score - b.score)[0] : null,
+    minPsi: minByScore(psiObservations),
+    minGauge: minByScore(gaugeObservations),
     maxDepeg: toSpikeDepeg(maxDepegByBps),
     maxDepegImpact: toSpikeDepeg(maxDepegByImpact),
   };
@@ -694,8 +707,8 @@ function buildWeeklyWowDeltas(
 }
 
 function buildWeeklyInputData(
-  currentDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
-  priorDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[] = [],
+  currentDailyRows: DailyDigestSourceRow[],
+  priorDailyRows: DailyDigestSourceRow[] = [],
 ): WeeklyInputData | null {
   const parsed = parseDailyRows(currentDailyRows);
   const priorParsed = parseDailyRows(priorDailyRows);
@@ -1102,7 +1115,7 @@ export async function generateWeeklyRecap(
        LIMIT 15`,
     )
     .bind(cutoff)
-    .all<{ generated_at: number; digest_title: string | null; digest_text: string; digest_extended: string | null; input_data: string }>();
+    .all<DailyDigestSourceRow>();
 
   const allRows = dailyRows.results ?? [];
   // Snap the split to a UTC day boundary (= last Tuesday 00:00 UTC given

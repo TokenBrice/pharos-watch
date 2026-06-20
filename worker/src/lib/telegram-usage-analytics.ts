@@ -724,7 +724,29 @@ export async function recordTelegramReplyOutcome(
 ): Promise<void> {
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   try {
-    await db
+    await buildChatDeliveryDiagnosticsUpsert(db, {
+      ...input,
+      at: nowSec,
+      mode: "reply",
+    }).run();
+  } catch {
+    // Diagnostics must not block command replies.
+  }
+}
+
+function buildChatDeliveryDiagnosticsUpsert(
+  db: D1Database,
+  input: {
+    chatId: string;
+    ok: boolean;
+    errorClass?: string | null;
+    at: number;
+    mode: "reply" | "delivery";
+  },
+): D1PreparedStatement {
+  const failureClass = input.ok ? null : input.errorClass ?? "unknown";
+  if (input.mode === "reply") {
+    return db
       .prepare(
         `INSERT INTO telegram_chat_delivery_diagnostics (
            chat_id,
@@ -748,17 +770,30 @@ export async function recordTelegramReplyOutcome(
            recent_failure_class = excluded.recent_failure_class,
            updated_at = excluded.updated_at`,
       )
-      .bind(
-        input.chatId,
-        input.ok ? nowSec : null,
-        nowSec,
-        input.ok ? null : input.errorClass ?? "unknown",
-        nowSec,
-      )
-      .run();
-  } catch {
-    // Diagnostics must not block command replies.
+      .bind(input.chatId, input.ok ? input.at : null, input.at, failureClass, input.at);
   }
+
+  return db
+    .prepare(
+      `INSERT INTO telegram_chat_delivery_diagnostics (
+         chat_id,
+         last_successful_delivery_at,
+         last_successful_reply_at,
+         last_delivery_attempt_at,
+         recent_failure_class,
+         updated_at
+       )
+       VALUES (?, ?, NULL, ?, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         last_successful_delivery_at = COALESCE(
+           excluded.last_successful_delivery_at,
+           telegram_chat_delivery_diagnostics.last_successful_delivery_at
+         ),
+         last_delivery_attempt_at = excluded.last_delivery_attempt_at,
+         recent_failure_class = excluded.recent_failure_class,
+         updated_at = excluded.updated_at`,
+    )
+    .bind(input.chatId, input.ok ? input.at : null, input.at, failureClass, input.at);
 }
 
 export async function recordTelegramDeliveryOutcomes(
@@ -775,36 +810,15 @@ export async function recordTelegramDeliveryOutcomes(
   try {
     for (let offset = 0; offset < inputs.length; offset += DELIVERY_DIAGNOSTIC_BATCH_SIZE) {
       const chunk = inputs.slice(offset, offset + DELIVERY_DIAGNOSTIC_BATCH_SIZE);
-      await db.batch(chunk.map((input) => {
-        const at = input.nowSec ?? nowSec;
-        return db
-          .prepare(
-            `INSERT INTO telegram_chat_delivery_diagnostics (
-               chat_id,
-               last_successful_delivery_at,
-               last_successful_reply_at,
-               last_delivery_attempt_at,
-               recent_failure_class,
-               updated_at
-             )
-             VALUES (?, ?, NULL, ?, ?, ?)
-             ON CONFLICT(chat_id) DO UPDATE SET
-               last_successful_delivery_at = COALESCE(
-                 excluded.last_successful_delivery_at,
-                 telegram_chat_delivery_diagnostics.last_successful_delivery_at
-               ),
-               last_delivery_attempt_at = excluded.last_delivery_attempt_at,
-               recent_failure_class = excluded.recent_failure_class,
-               updated_at = excluded.updated_at`,
-          )
-          .bind(
-            input.chatId,
-            input.ok ? at : null,
-            at,
-            input.ok ? null : input.errorClass ?? "unknown",
-            at,
-          );
-      }));
+      await db.batch(
+        chunk.map((input) =>
+          buildChatDeliveryDiagnosticsUpsert(db, {
+            ...input,
+            at: input.nowSec ?? nowSec,
+            mode: "delivery",
+          }),
+        ),
+      );
     }
   } catch {
     // Diagnostics must not block alert delivery.

@@ -87,6 +87,13 @@ function ogErrorResponse(msg: string, status: number, extra?: Record<string, str
   });
 }
 
+function ogDataNotYetAvailable(): Response {
+  return ogErrorResponse("Data not yet available", 503, {
+    "Retry-After": "60",
+    "Cache-Control": "no-store",
+  });
+}
+
 // ---------------------------------------------------------------------------
 // SVG → PNG render pipeline
 // ---------------------------------------------------------------------------
@@ -259,10 +266,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   ]);
 
   if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {
-    return ogErrorResponse("Data not yet available", 503, {
-      "Retry-After": "60",
-      "Cache-Control": "no-store",
-    });
+    return ogDataNotYetAvailable();
   }
 
   const { peggedAssets, fxFallbackRates } = stablecoinsPayload.payload;
@@ -594,10 +598,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
 
   const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
   if (stablecoinsResult.kind !== "ok") {
-    return ogErrorResponse("Data not yet available", 503, {
-      "Retry-After": "60",
-      "Cache-Control": "no-store",
-    });
+    return ogDataNotYetAvailable();
   }
 
   const { peggedAssets, fxFallbackRates } = stablecoinsResult.payload;

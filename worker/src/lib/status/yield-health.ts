@@ -294,6 +294,30 @@ function sumKnown(values: Array<number | null>): number | null {
   return hasKnownValue ? total : null;
 }
 
+const COVERAGE_AUDIT_COUNT_FIELDS = [
+  ["manifestMissingCount", "manifestMissingIds"],
+  ["yieldBearingMissingFromRankingsCount", "yieldBearingMissingFromRankings"],
+  ["unmatchedHighTvlPoolCount", "unmatchedHighTvlPools"],
+  ["missingProtocolCount", "missingProtocols"],
+  ["nativeExactPoolRecommendationCount", "nativeExactPoolRecommendations"],
+  ["sourceFamilyAdapterRecommendationCount", "sourceFamilyAdapterRecommendations"],
+  ["lendingAllowlistRecommendationCount", "lendingAllowlistRecommendations"],
+  ["staleAutoLendingOverrideCount", "staleAutoLendingOverrides"],
+  ["staleVenueRiskScoreCount", "staleVenueRiskScores"],
+] as const;
+
+type CoverageAuditCountKey = typeof COVERAGE_AUDIT_COUNT_FIELDS[number][0];
+type CoverageAuditCounts = Record<CoverageAuditCountKey, number | null>;
+
+function buildCoverageAuditCounts(payload: Record<string, unknown> | null): CoverageAuditCounts {
+  return Object.fromEntries(
+    COVERAGE_AUDIT_COUNT_FIELDS.map(([countKey, arrayKey]) => [
+      countKey,
+      getCount(payload, countKey, arrayKey),
+    ]),
+  ) as CoverageAuditCounts;
+}
+
 function sanitizeQueueItem(value: unknown): YieldCoverageAuditQueueItem | null {
   const row = getObject(value);
   const kind = getQueueKind(row?.kind);
@@ -548,6 +572,17 @@ function buildSupplementalHealth(
       status,
     };
   });
+  const families = Object.fromEntries(
+    familyRows.map((row) => [
+      row.family,
+      {
+        updatedAt: row.updatedAt,
+        ageSec: row.ageSec,
+        sourceCount: row.sourceCount,
+        status: row.status,
+      },
+    ]),
+  );
 
   if (!familyRows.some((row) => row.updatedAt != null)) {
     return {
@@ -560,17 +595,7 @@ function buildSupplementalHealth(
       degradedFamilyCount: 0,
       staleFamilyCount: 0,
       missingFamilyCount: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
-      families: Object.fromEntries(
-        familyRows.map((row) => [
-          row.family,
-          {
-            updatedAt: row.updatedAt,
-            ageSec: row.ageSec,
-            sourceCount: row.sourceCount,
-            status: row.status,
-          },
-        ]),
-      ),
+      families,
     };
   }
 
@@ -588,17 +613,7 @@ function buildSupplementalHealth(
     degradedFamilyCount: familyRows.filter((row) => row.status === "degraded").length,
     staleFamilyCount: familyRows.filter((row) => row.status === "stale").length,
     missingFamilyCount: familyRows.filter((row) => row.status === "unknown").length,
-    families: Object.fromEntries(
-      familyRows.map((row) => [
-        row.family,
-        {
-          updatedAt: row.updatedAt,
-          ageSec: row.ageSec,
-          sourceCount: row.sourceCount,
-          status: row.status,
-        },
-      ]),
-    ),
+    families,
   };
 }
 
@@ -666,51 +681,19 @@ export async function loadYieldHealthSummary(
     STATUS_YIELD_HEALTH_THRESHOLDS.coverageAuditMaxAgeSec,
     { missingIs: "unknown", degradedAfterOne: true },
   );
-  const manifestMissingCount = getCount(coverageAuditPayload, "manifestMissingCount", "manifestMissingIds");
-  const yieldBearingMissingFromRankingsCount = getCount(
-    coverageAuditPayload,
-    "yieldBearingMissingFromRankingsCount",
-    "yieldBearingMissingFromRankings",
-  );
-  const unmatchedHighTvlPoolCount = getCount(coverageAuditPayload, "unmatchedHighTvlPoolCount", "unmatchedHighTvlPools");
-  const missingProtocolCount = getCount(coverageAuditPayload, "missingProtocolCount", "missingProtocols");
-  const nativeExactPoolRecommendationCount = getCount(
-    coverageAuditPayload,
-    "nativeExactPoolRecommendationCount",
-    "nativeExactPoolRecommendations",
-  );
-  const sourceFamilyAdapterRecommendationCount = getCount(
-    coverageAuditPayload,
-    "sourceFamilyAdapterRecommendationCount",
-    "sourceFamilyAdapterRecommendations",
-  );
-  const lendingAllowlistRecommendationCount = getCount(
-    coverageAuditPayload,
-    "lendingAllowlistRecommendationCount",
-    "lendingAllowlistRecommendations",
-  );
-  const staleAutoLendingOverrideCount = getCount(
-    coverageAuditPayload,
-    "staleAutoLendingOverrideCount",
-    "staleAutoLendingOverrides",
-  );
-  const staleVenueRiskScoreCount = getCount(
-    coverageAuditPayload,
-    "staleVenueRiskScoreCount",
-    "staleVenueRiskScores",
-  );
+  const coverageAuditCounts = buildCoverageAuditCounts(coverageAuditPayload);
   const headlineGapCount = sumKnown([
-    manifestMissingCount,
-    yieldBearingMissingFromRankingsCount,
-    staleAutoLendingOverrideCount,
-    unmatchedHighTvlPoolCount,
-    missingProtocolCount,
+    coverageAuditCounts.manifestMissingCount,
+    coverageAuditCounts.yieldBearingMissingFromRankingsCount,
+    coverageAuditCounts.staleAutoLendingOverrideCount,
+    coverageAuditCounts.unmatchedHighTvlPoolCount,
+    coverageAuditCounts.missingProtocolCount,
   ]);
   const recommendationCandidateCount = sumKnown([
-    nativeExactPoolRecommendationCount,
-    sourceFamilyAdapterRecommendationCount,
-    lendingAllowlistRecommendationCount,
-    staleVenueRiskScoreCount,
+    coverageAuditCounts.nativeExactPoolRecommendationCount,
+    coverageAuditCounts.sourceFamilyAdapterRecommendationCount,
+    coverageAuditCounts.lendingAllowlistRecommendationCount,
+    coverageAuditCounts.staleVenueRiskScoreCount,
   ]);
   const coverageAuditQueue = buildCoverageAuditQueue(coverageAuditPayload);
   const comparisonAnchorFreshness = buildComparisonAnchorFreshnessSummary(crons);
@@ -760,15 +743,7 @@ export async function loadYieldHealthSummary(
       status: coverageAuditStatus,
       headlineGapCount,
       recommendationCandidateCount,
-      manifestMissingCount,
-      yieldBearingMissingFromRankingsCount,
-      unmatchedHighTvlPoolCount,
-      missingProtocolCount,
-      nativeExactPoolRecommendationCount,
-      sourceFamilyAdapterRecommendationCount,
-      lendingAllowlistRecommendationCount,
-      staleAutoLendingOverrideCount,
-      staleVenueRiskScoreCount,
+      ...coverageAuditCounts,
       ...coverageAuditQueue,
     },
     sourceRiskCoverage,

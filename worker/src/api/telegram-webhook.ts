@@ -86,6 +86,15 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
 // compare against the lowercased canonical handle.
 const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
 
+function logWarn(message: string, fields: Record<string, unknown>, err: unknown): void {
+  logTelegramEvent({
+    level: "warn",
+    message,
+    ...fields,
+    err: toErrorMessage(err),
+  });
+}
+
 type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
   my_chat_member?: TelegramChatMemberUpdated;
 };
@@ -174,12 +183,9 @@ export const handleTelegramWebhook = withErrorHandler(
           });
         }
       } catch (err) {
-        logTelegramEvent({
-          level: "warn",
-          message: "processed webhook update prune failed",
+        logWarn("processed webhook update prune failed", {
           action: "processed-update-prune",
-          err: toErrorMessage(err),
-        });
+        }, err);
       }
     }
 
@@ -269,14 +275,11 @@ export const handleTelegramWebhook = withErrorHandler(
               text: "Action failed. Try again.",
             });
           } catch (ackErr) {
-            logTelegramEvent({
-              level: "warn",
-              message: "callback_query failure ack failed",
+            logWarn("callback_query failure ack failed", {
               chatId: update.callback_query.message?.chat?.id ?? null,
               userId: update.callback_query.from?.id ?? null,
               action: "callback_query",
-              err: toErrorMessage(ackErr),
-            });
+            }, ackErr);
           }
           logTelegramEvent({
             message: "callback_query failed",
@@ -679,15 +682,12 @@ async function enforceIngressFlood(
         break;
       }
     } catch (err) {
-      logTelegramEvent({
-        level: "warn",
-        message: "chat command flood check failed",
+      logWarn("chat command flood check failed", {
         chatId: input.chatId,
         userId: input.actorUserId,
         action: "command-flood",
         command: input.actionDetail,
-        err: toErrorMessage(err),
-      });
+      }, err);
     }
   }
 
@@ -697,15 +697,12 @@ async function enforceIngressFlood(
     try {
       await input.reply(input.noticeMessage);
     } catch (err) {
-      logTelegramEvent({
-        level: "warn",
-        message: "chat command flood notice reply failed",
+      logWarn("chat command flood notice reply failed", {
         chatId: input.chatId,
         userId: input.actorUserId,
         action: "command-flood",
         command: input.actionDetail,
-        err: toErrorMessage(err),
-      });
+      }, err);
     }
   }
 
@@ -717,15 +714,12 @@ async function enforceIngressFlood(
       failureClass: blocked.scope === "actor" ? "actor-flood" : "chat-flood",
     });
   } catch (err) {
-    logTelegramEvent({
-      level: "warn",
-      message: "chat command flood usage record failed",
+    logWarn("chat command flood usage record failed", {
       chatId: input.chatId,
       userId: input.actorUserId,
       action: "command-flood",
       command: input.actionDetail,
-      err: toErrorMessage(err),
-    });
+    }, err);
   }
 
   return false;
@@ -746,14 +740,11 @@ async function releaseCommandCooldownBestEffort(
       commandKey: input.commandKey,
     });
   } catch (err) {
-    logTelegramEvent({
-      level: "warn",
-      message: "command cooldown release failed",
+    logWarn("command cooldown release failed", {
       chatId: input.chatId,
       action: input.action,
       command: input.command,
-      err: toErrorMessage(err),
-    });
+    }, err);
   }
 }
 
@@ -780,14 +771,11 @@ async function enforceCommandCooldown(
       cooldownSec,
     });
   } catch (err) {
-    logTelegramEvent({
-      level: "warn",
-      message: "command cooldown check failed",
+    logWarn("command cooldown check failed", {
       chatId,
       action: "command-cooldown",
       command,
-      err: toErrorMessage(err),
-    });
+    }, err);
     await reply("Command traffic is busy. Please try again shortly.");
     return { allowed: false, commandKey, outcome: "failure", failureClass: "cooldown-store-error" };
   }
@@ -894,15 +882,12 @@ async function maybeGateNonAdminGroupActor(
       cooldownSec: GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
     });
   } catch (err) {
-    logTelegramEvent({
-      level: "warn",
-      message: "group admin diagnostic cooldown check failed",
+    logWarn("group admin diagnostic cooldown check failed", {
       chatId,
       userId: actorUserId,
       action: "group-admin-diagnostics",
       command,
-      err: toErrorMessage(err),
-    });
+    }, err);
     await reply("Group permission checks are busy. Please try again shortly.");
     return false;
   }

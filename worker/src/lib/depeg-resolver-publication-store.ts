@@ -20,6 +20,7 @@ import {
   assertPositiveInteger,
   bindLockMetadata,
   lockAuditInsertValuesSql,
+  lockStateOnConflictUpdateSql,
   lockStateInsertValuesSql,
 } from "./depeg-resolver-store-validators";
 
@@ -456,17 +457,12 @@ function lockStateStatement(
       `INSERT INTO depeg_resolver_prediction_lock_state
        (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
        VALUES (${lockStateInsertValuesSql("0", "NULL", "?")})
-       ON CONFLICT(incident_key) DO UPDATE SET
-         last_attempted_at = excluded.last_attempted_at,
-         last_state = excluded.last_state,
-         last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason,
-         lock_trigger = excluded.lock_trigger,
-         forecast_readiness_score = excluded.forecast_readiness_score,
-         forecast_readiness_version = excluded.forecast_readiness_version,
-         readiness_threshold = excluded.readiness_threshold,
-         backstop_at = excluded.backstop_at,
-         backstop_delay_sec = excluded.backstop_delay_sec,
-         updated_at = excluded.updated_at`,
+       ${lockStateOnConflictUpdateSql({
+         incrementDeferralCount: false,
+         preserveDeferralReason: true,
+         preserveMetadata: false,
+         lastStateSql: "excluded.last_state",
+       })}`,
     )
     .bind(
       input.incidentKey,

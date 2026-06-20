@@ -13,7 +13,7 @@ import { cancelResponseBodyQuietly } from "../lib/response-body";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
-import type { StatusProbeComparison, StatusProbePlaneSummary } from "@shared/types/status";
+import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import { evaluateStatusAndPersist } from "../lib/status-evaluation";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { route } from "../router";
@@ -49,6 +49,25 @@ interface ProbeLatencySummary {
   medianMs: number;
   p95Ms: number;
   maxMs: number;
+}
+
+interface ProbeRow {
+  path: string;
+  label: string;
+  plane: ProbeResult["plane"];
+  lane: ProbeResult["lane"];
+  origin: string;
+  status: number;
+  latencyMs: number;
+  error: string | null;
+}
+
+interface ProbeStats {
+  connectivityProbes: ProbeResult[];
+  passCount: number;
+  failCount: number;
+  latencySummary: ProbeLatencySummary;
+  status: StatusLevel;
 }
 
 interface ExternalProductionProbeTarget {
@@ -129,8 +148,7 @@ function buildLatencySummary(probes: ProbeResult[]): ProbeLatencySummary {
   };
 }
 
-function summarizeProbePlane(probes: ProbeResult[]): StatusProbePlaneSummary | null {
-  if (probes.length === 0) return null;
+function computeProbeStats(probes: ProbeResult[]): ProbeStats {
   const connectivityProbes = probes.filter((probe) => !probe.error?.startsWith("reported-"));
   const passCount = connectivityProbes.filter((probe) => probe.ok).length;
   const failCount = connectivityProbes.length - passCount;
@@ -140,15 +158,40 @@ function summarizeProbePlane(probes: ProbeResult[]): StatusProbePlaneSummary | n
     "healthy",
   );
   return {
+    connectivityProbes,
+    passCount,
+    failCount,
+    latencySummary,
     status: maxProbeStatus(
       classifyProbeStatus(connectivityProbes.length, failCount, latencySummary.p95Ms),
       semanticProbeStatus,
     ),
+  };
+}
+
+function summarizeProbePlane(probes: ProbeResult[]): StatusProbePlaneSummary | null {
+  if (probes.length === 0) return null;
+  const { passCount, failCount, latencySummary, status } = computeProbeStats(probes);
+  return {
+    status,
     sampleCount: probes.length,
     passCount,
     failCount,
     p95LatencyMs: latencySummary.p95Ms,
     origins: [...new Set(probes.map((probe) => probe.origin))],
+  };
+}
+
+function toProbeRow(probe: ProbeResult): ProbeRow {
+  return {
+    path: probe.path,
+    label: probe.label,
+    plane: probe.plane,
+    lane: probe.lane,
+    origin: probe.origin,
+    status: probe.status,
+    latencyMs: probe.latencyMs,
+    error: probe.error ?? null,
   };
 }
 
@@ -187,32 +230,11 @@ function buildInternalExternalDiscrepancy(
   };
 }
 
-function getSlowestProbes(
-  probes: ProbeResult[],
-  limit = 3,
-): Array<{
-  path: string;
-  label: string;
-  plane: ProbeResult["plane"];
-  lane: ProbeResult["lane"];
-  origin: string;
-  status: number;
-  latencyMs: number;
-  error: string | null;
-}> {
+function getSlowestProbes(probes: ProbeResult[], limit = 3): ProbeRow[] {
   return [...probes]
     .sort((a, b) => b.latencyMs - a.latencyMs)
     .slice(0, limit)
-    .map((probe) => ({
-      path: probe.path,
-      label: probe.label,
-      plane: probe.plane,
-      lane: probe.lane,
-      origin: probe.origin,
-      status: probe.status,
-      latencyMs: probe.latencyMs,
-      error: probe.error ?? null,
-    }));
+    .map(toProbeRow);
 }
 
 function uniquePaths(paths: string[]): string[] {
@@ -626,43 +648,41 @@ export async function runStatusSelfCheck(
 
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
-  // Exclude semantic-only errors (e.g. "reported-stale") from connectivity fail/latency counts
-  const connectivityProbes = probes.filter((probe) => !probe.error?.startsWith("reported-"));
-  const passCount = connectivityProbes.filter((probe) => probe.ok).length;
-  const failCount = connectivityProbes.length - passCount;
+  const { passCount, failCount, latencySummary, status: probeStatus } = computeProbeStats(probes);
   const hasProbeFailure = failCount > 0 || internalExternalDiscrepancy.hasDivergence;
-  const latencySummary = buildLatencySummary(connectivityProbes);
   const slowestProbes = getSlowestProbes(probes);
   const p95LatencyMs = latencySummary.p95Ms;
-  const semanticProbeStatus = probes.reduce<StatusLevel>(
-    (worst, probe) => (probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst),
-    "healthy",
-  );
-  const probeStatus = maxProbeStatus(
-    classifyProbeStatus(connectivityProbes.length, failCount, p95LatencyMs),
-    semanticProbeStatus,
-  );
-
-  const probePersistenceSucceeded = await writeStatusProbeRun(db, now, {
+  const planes = {
+    internal: internalSummary,
+    external: externalSummary,
+  };
+  const probeRotation = {
+    bucket: probeSelection.rotationBucket,
+    bucketCount: probeSelection.rotationBucketCount,
+    fullSweepWindowSec: probeSelection.fullSweepWindowSec,
+    deepProbeCount: probeSelection.deepProbeCount,
+    selectedDeepProbeCount: probeSelection.selectedDeepProbeCount,
+  };
+  const probeSummary = {
+    timestamp: now,
     status: probeStatus,
     sampleCount,
     passCount,
     failCount,
     p95LatencyMs,
+  } satisfies StatusProbeSummary;
+
+  const probePersistenceSucceeded = await writeStatusProbeRun(db, now, {
+    status: probeSummary.status,
+    sampleCount: probeSummary.sampleCount,
+    passCount: probeSummary.passCount,
+    failCount: probeSummary.failCount,
+    p95LatencyMs: probeSummary.p95LatencyMs ?? 0,
     details: {
       failed: probes
         .filter((probe) => !probe.ok)
         .slice(0, 10)
-        .map((probe) => ({
-          path: probe.path,
-          label: probe.label,
-          plane: probe.plane,
-          lane: probe.lane,
-          origin: probe.origin,
-          status: probe.status,
-          latencyMs: probe.latencyMs,
-          error: probe.error ?? null,
-        })),
+        .map(toProbeRow),
       bootstrapMisses: bootstrapMisses.map((probe) => ({
         path: probe.path,
         status: probe.status,
@@ -670,18 +690,9 @@ export async function runStatusSelfCheck(
       })),
       latencySummary,
       slowestProbes,
-      planes: {
-        internal: internalSummary,
-        external: externalSummary,
-      },
+      planes,
       internalExternalDiscrepancy,
-      probeRotation: {
-        bucket: probeSelection.rotationBucket,
-        bucketCount: probeSelection.rotationBucketCount,
-        fullSweepWindowSec: probeSelection.fullSweepWindowSec,
-        deepProbeCount: probeSelection.deepProbeCount,
-        selectedDeepProbeCount: probeSelection.selectedDeepProbeCount,
-      },
+      probeRotation,
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
     },
@@ -695,14 +706,7 @@ export async function runStatusSelfCheck(
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
   const discrepancyObserved = hasDivergence(
     effectiveStatus,
-    {
-      timestamp: now,
-      status: probeStatus,
-      sampleCount,
-      passCount,
-      failCount,
-      p95LatencyMs,
-    },
+    probeSummary,
     now,
   );
 
@@ -714,14 +718,7 @@ export async function runStatusSelfCheck(
   );
   const discrepancy = buildDiscrepancy(
     effectiveStatus,
-    {
-      timestamp: now,
-      status: probeStatus,
-      sampleCount,
-      passCount,
-      failCount,
-      p95LatencyMs,
-    },
+    probeSummary,
     now,
     discrepancyState.consecutiveDivergent,
   );
@@ -795,19 +792,10 @@ export async function runStatusSelfCheck(
       discrepancyPersistenceSucceeded: discrepancyState.persistenceSucceeded,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
-      probePlanes: {
-        internal: internalSummary,
-        external: externalSummary,
-      },
+      probePlanes: planes,
       internalExternalDiscrepancy,
       slowestProbes,
-      probeRotation: {
-        bucket: probeSelection.rotationBucket,
-        bucketCount: probeSelection.rotationBucketCount,
-        fullSweepWindowSec: probeSelection.fullSweepWindowSec,
-        deepProbeCount: probeSelection.deepProbeCount,
-        selectedDeepProbeCount: probeSelection.selectedDeepProbeCount,
-      },
+      probeRotation,
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
       probeFailureStreak: discrepancyState.consecutiveProbeFailures,

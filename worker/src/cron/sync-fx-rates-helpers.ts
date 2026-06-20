@@ -73,6 +73,45 @@ type FxCronEvent = Omit<CronEventInput, "job">;
 export type OpenExchangeRatesSourceStatus = "ok" | "partial" | "rate-limited" | "unavailable";
 export type ChainlinkSourceStatus = "ok" | "partial" | "unavailable";
 
+async function withFxOverlayCircuit<TStatus extends string>(
+  db: D1Database,
+  options: {
+    source: (typeof CIRCUIT_SOURCE)[keyof typeof CIRCUIT_SOURCE];
+    circuitOpenEvent: FxCronEvent;
+    failedEvent: FxCronEvent;
+    failureOutcomeLabel: string;
+    signal: AbortSignal | undefined;
+    runBestEffort: RunBestEffort;
+    run: () => Promise<TStatus>;
+  },
+): Promise<TStatus | "unavailable"> {
+  if (!(await shouldAttemptFetch(db, options.source))) {
+    await logCronEvent(db, {
+      job: "sync-fx-rates",
+      ...options.circuitOpenEvent,
+    });
+    return "unavailable";
+  }
+
+  try {
+    return await options.run();
+  } catch (err) {
+    if (options.signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    await logCronEvent(db, {
+      job: "sync-fx-rates",
+      ...options.failedEvent,
+      metadata: {
+        ...options.failedEvent.metadata,
+        error: toErrorMessage(err),
+      },
+    });
+    await options.runBestEffort(options.failureOutcomeLabel, async () => {
+      await recordOutcome(db, options.source, false);
+    });
+    return "unavailable";
+  }
+}
+
 export async function persistFxSyncResult(
   db: D1Database,
   state: FxSyncRunState,
@@ -741,16 +780,6 @@ export async function runOpenExchangeRatesOverlay(
     return "unavailable";
   }
 
-  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.FX_REALTIME))) {
-    await logCronEvent(db, {
-      job: "sync-fx-rates",
-      eventType: "openexchange-rates-circuit-open",
-      severity: "warning",
-      message: "Open Exchange Rates realtime circuit is open; skipping overlay.",
-    });
-    return "unavailable";
-  }
-
   const [lastAttempt, legacyLastFetch] = await Promise.all([
     db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LAST_ATTEMPT_KEY).first<{ value: string }>(),
     db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LEGACY_LAST_FETCH_KEY).first<{ value: string }>(),
@@ -771,49 +800,52 @@ export async function runOpenExchangeRatesOverlay(
     return "rate-limited";
   }
 
-  try {
-    const attemptedAt = Math.floor(Date.now() / 1000);
-    const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
-    if (realtimeFetch.completed) {
-      await runBestEffort("fx-oxr-last-fetch-write", async () => {
-        await setCache(db, OXR_LAST_ATTEMPT_KEY, String(attemptedAt));
-      });
-    }
-
-    const realtimeApplied = state.applyRealtimeOverlayRates(realtimeFetch.rates);
-    if (realtimeFetch.rates.size > 0) {
-      await runBestEffort("fx-oxr-last-success-write", async () => {
-        await setCache(db, OXR_LAST_SUCCESS_KEY, String(attemptedAt));
-      });
-    }
-
-    await logCronEvent(db, {
-      job: "sync-fx-rates",
-      eventType: "openexchange-rates-applied",
-      severity: realtimeApplied === realtimeFetch.rates.size ? "info" : "warning",
-      message: "Applied realtime FX overlay rates.",
-      metadata: { applied: realtimeApplied, available: realtimeFetch.rates.size },
-    });
-    await runBestEffort("recordOutcome:fx-realtime", async () => {
-      await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.rates.size > 0);
-    });
-    return realtimeFetch.rates.size > 0
-      ? (realtimeApplied === realtimeFetch.rates.size ? "ok" : "partial")
-      : "unavailable";
-  } catch (err) {
-    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    await logCronEvent(db, {
-      job: "sync-fx-rates",
+  return withFxOverlayCircuit(db, {
+    source: CIRCUIT_SOURCE.FX_REALTIME,
+    circuitOpenEvent: {
+      eventType: "openexchange-rates-circuit-open",
+      severity: "warning",
+      message: "Open Exchange Rates realtime circuit is open; skipping overlay.",
+    },
+    failedEvent: {
       eventType: "openexchange-rates-fetch-failed",
       severity: "warning",
       message: "Open Exchange Rates realtime fetch failed.",
-      metadata: { error: toErrorMessage(err) },
-    });
-    await runBestEffort("recordOutcome:fx-realtime-failure", async () => {
-      await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, false);
-    });
-    return "unavailable";
-  }
+    },
+    failureOutcomeLabel: "recordOutcome:fx-realtime-failure",
+    signal,
+    runBestEffort,
+    run: async () => {
+      const attemptedAt = Math.floor(Date.now() / 1000);
+      const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
+      if (realtimeFetch.completed) {
+        await runBestEffort("fx-oxr-last-fetch-write", async () => {
+          await setCache(db, OXR_LAST_ATTEMPT_KEY, String(attemptedAt));
+        });
+      }
+
+      const realtimeApplied = state.applyRealtimeOverlayRates(realtimeFetch.rates);
+      if (realtimeFetch.rates.size > 0) {
+        await runBestEffort("fx-oxr-last-success-write", async () => {
+          await setCache(db, OXR_LAST_SUCCESS_KEY, String(attemptedAt));
+        });
+      }
+
+      await logCronEvent(db, {
+        job: "sync-fx-rates",
+        eventType: "openexchange-rates-applied",
+        severity: realtimeApplied === realtimeFetch.rates.size ? "info" : "warning",
+        message: "Applied realtime FX overlay rates.",
+        metadata: { applied: realtimeApplied, available: realtimeFetch.rates.size },
+      });
+      await runBestEffort("recordOutcome:fx-realtime", async () => {
+        await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.rates.size > 0);
+      });
+      return realtimeFetch.rates.size > 0
+        ? (realtimeApplied === realtimeFetch.rates.size ? "ok" : "partial")
+        : "unavailable";
+    },
+  });
 }
 
 export async function runChainlinkOverlay(
@@ -825,50 +857,41 @@ export async function runChainlinkOverlay(
   etherscanApiKey: string | null | undefined,
   runBestEffort: RunBestEffort,
 ): Promise<ChainlinkSourceStatus> {
-  const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
-  if (!chainlinkAllowed) {
-    await logCronEvent(db, {
-      job: "sync-fx-rates",
+  return withFxOverlayCircuit(db, {
+    source: CIRCUIT_SOURCE.CHAINLINK_FEEDS,
+    circuitOpenEvent: {
       eventType: "chainlink-reference-feed-circuit-open",
       severity: "warning",
       message: "Chainlink reference-feed circuit is open; skipping overlay.",
-    });
-    return "unavailable";
-  }
-
-  const previousFailingRuns = await loadChainlinkFailingRuns(db);
-
-  try {
-    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
-      signal,
-      chainRpcs,
-      state.syncStartSec,
-      drpcApiKey,
-      etherscanApiKey,
-      previousFailingRuns,
-    );
-    const accepted = state.applyChainlinkQuotes(snapshot.quotes);
-    await runBestEffort("recordOutcome:chainlink-feeds", async () => {
-      await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, snapshot.quotes.size > 0);
-    });
-    await runBestEffort("setCache:chainlink-failing-runs", async () => {
-      await setCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY, JSON.stringify(snapshot.failingRuns));
-    });
-    return snapshot.quotes.size > 0
-      ? (accepted === snapshot.quotes.size ? "ok" : "partial")
-      : "unavailable";
-  } catch (err) {
-    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    await logCronEvent(db, {
-      job: "sync-fx-rates",
+    },
+    failedEvent: {
       eventType: "chainlink-reference-feeds-failed",
       severity: "warning",
       message: "Chainlink reference feeds failed.",
-      metadata: { error: toErrorMessage(err) },
-    });
-    await runBestEffort("recordOutcome:chainlink-feeds-failure", async () => {
-      await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, false);
-    });
-    return "unavailable";
-  }
+    },
+    failureOutcomeLabel: "recordOutcome:chainlink-feeds-failure",
+    signal,
+    runBestEffort,
+    run: async () => {
+      const previousFailingRuns = await loadChainlinkFailingRuns(db);
+      const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
+        signal,
+        chainRpcs,
+        state.syncStartSec,
+        drpcApiKey,
+        etherscanApiKey,
+        previousFailingRuns,
+      );
+      const accepted = state.applyChainlinkQuotes(snapshot.quotes);
+      await runBestEffort("recordOutcome:chainlink-feeds", async () => {
+        await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, snapshot.quotes.size > 0);
+      });
+      await runBestEffort("setCache:chainlink-failing-runs", async () => {
+        await setCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY, JSON.stringify(snapshot.failingRuns));
+      });
+      return snapshot.quotes.size > 0
+        ? (accepted === snapshot.quotes.size ? "ok" : "partial")
+        : "unavailable";
+    },
+  });
 }
