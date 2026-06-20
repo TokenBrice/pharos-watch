@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
-  estimateYieldHistoryCandidateCounts,
   loadYieldHistorySnapshots,
 } from "../yield-sync/history";
 
@@ -134,7 +133,7 @@ describe("loadYieldHistorySnapshots", () => {
     expect(snapshots.prevBestRows[0]?.recorded_at).toBe(100);
   });
 
-  it("counts previous-history candidates without materializing them", async () => {
+  it("bounds previous-history materialization without pre-counting old candidates", async () => {
     const fixture = createDb();
     sqlite = fixture.sqlite;
 
@@ -142,12 +141,20 @@ describe("loadYieldHistorySnapshots", () => {
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, isBest: 1, sourceTvlUsd: 20 });
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, isBest: 0, sourceTvlUsd: 30 });
 
-    await expect(
-      estimateYieldHistoryCandidateCounts(fixture.db, ["coin-a"], 1_000, 300),
-    ).resolves.toEqual({
-      previousTvlCandidates: 3,
-      previousBestCandidates: 2,
-      totalPreviousCandidates: 5,
-    });
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300);
+
+    expect(snapshots.prevTvlRows.map((row) => ({
+      sourceKey: row.source_key,
+      recordedAt: row.recorded_at,
+    }))).toEqual([
+      { sourceKey: "source-a", recordedAt: 200 },
+      { sourceKey: "source-b", recordedAt: 150 },
+    ]);
+    expect(snapshots.prevBestRows.map((row) => ({
+      sourceKey: row.source_key,
+      recordedAt: row.recorded_at,
+    }))).toEqual([
+      { sourceKey: "source-a", recordedAt: 200 },
+    ]);
   });
 });
