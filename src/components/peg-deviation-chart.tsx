@@ -9,7 +9,6 @@ import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range
 import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { computePegYAxis, ewma } from "@/lib/peg-chart-math";
 import { formatChartDate } from "@shared/lib/format";
-import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
   AnnotationDensityStrip,
   ChartAnnotationLegend,
@@ -17,13 +16,12 @@ import {
 } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
-import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
-import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
+import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { ChartFigure } from "@/components/chart-primitives/figure";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
 import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
-import { cn } from "@/lib/utils";
 
 function formatTooltip(value: number): [string, string] {
   const deviationBps = Math.round((value - 1) * 10000);
@@ -258,150 +256,141 @@ export function PegDeviationChart({
     },
   ] as const;
 
-  const chartBody =
-    visibleData.length > 0 ? (
-      <div className={cn("relative", chartHeightClass)}>
-        <div
-          ref={chartContainerRef}
-          className="h-full"
-          role="figure"
-          aria-label={`Peg deviation chart showing ${visibleData.length} data points`}
-        >
-          <ScreenReaderDataTable
-            data={visibleData}
-            columns={PEG_TABLE_COLUMNS}
-            caption={(rows, truncated, total) =>
-              truncated
-                ? `Peg deviation history — most recent ${rows.length} of ${total} data points`
-                : `Peg deviation history — ${total} data points`
+  const densityStrip =
+    showDensityStrip && xDomain ? (
+      <div
+        aria-label="Annotation event density by quarter"
+        className="absolute"
+        style={{
+          left: plotInsetLeft,
+          bottom: densityStripBottomPad,
+          width: plotAreaWidth,
+          height: densityStripHeight,
+        }}
+      >
+        <AnnotationDensityStrip
+          annotations={fullRangeAnnotations}
+          domain={xDomain}
+          width={plotAreaWidth}
+          height={densityStripHeight}
+        />
+      </div>
+    ) : null;
+
+  const chartBody = (
+    <ChartFigure
+      data={visibleData}
+      columns={PEG_TABLE_COLUMNS}
+      caption={(rows, truncated, total) =>
+        truncated
+          ? `Peg deviation history — most recent ${rows.length} of ${total} data points`
+          : `Peg deviation history — ${total} data points`
+      }
+      ariaLabel={`Peg deviation chart showing ${visibleData.length} data points`}
+      emptyMessage="No price history available"
+      heightClassName={chartHeightClass}
+      containerRef={chartContainerRef}
+      isReady={isChartReady}
+      crosshair={
+        sync
+          ? {
+              hoveredTs: sync.hoveredTs,
+              domain: xDomain,
+              plotInsetLeft,
+              plotInsetRight,
+              plotInsetTop,
+              plotInsetBottom,
             }
+          : null
+      }
+      overlay={densityStrip}
+      renderChart={() => (
+        <LineChart
+          width={width}
+          height={height}
+          data={smoothedData}
+          margin={margin}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+        >
+          <TimeGrid />
+          <TimeXAxis
+            dataKey="ts"
+            ticks={xTicks}
+            interval={range === "all" ? 0 : "preserveStartEnd"}
+            tick={<MarketDataXTick range={range} />}
+            height={range === "all" ? 44 : 30}
           />
-          {isChartReady ? (
-            <LineChart
-              width={width}
-              height={height}
-              data={smoothedData}
-              margin={margin}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-            >
-              <TimeGrid />
-              <TimeXAxis
-                dataKey="ts"
-                ticks={xTicks}
-                interval={range === "all" ? 0 : "preserveStartEnd"}
-                tick={<MarketDataXTick range={range} />}
-                height={range === "all" ? 44 : 30}
-              />
-              <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />
+          <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />
 
-              {/* Peg severity bands — calm in-band core, warning outside. ifOverflow="hidden" clips
-              bands that extend past the visible domain so they don't push the axis. */}
-              {pegSeverityBands.map((band) => (
-                <ReferenceArea
-                  key={band.id}
-                  y1={band.y1}
-                  y2={band.y2}
-                  fill={band.fill}
-                  fillOpacity={band.fillOpacity}
-                  ifOverflow="hidden"
-                  strokeOpacity={0}
-                />
-              ))}
-
-              {/* $1 peg reference line — solid, mono-weight, with inline label */}
-              <ReferenceLine
-                y={1}
-                stroke="var(--color-foreground)"
-                strokeOpacity={0.45}
-                strokeWidth={1}
-                label={{
-                  value: "$1.000",
-                  position: "insideLeft",
-                  fill: "var(--color-muted-foreground)",
-                  fontSize: 10,
-                  fontFamily: "var(--font-mono, monospace)",
-                  offset: 6,
-                }}
-              />
-
-              <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
-
-              {/* Raw line: full opacity when not smoothing, dimmed when smoothed overlay is drawn */}
-              <Line
-                type="monotone"
-                dataKey="price"
-                stroke={CHART_BLUE}
-                strokeWidth={showSmoothed ? 1 : 1.75}
-                strokeOpacity={showSmoothed ? 0.35 : 1}
-                dot={false}
-                isAnimationActive={false}
-              />
-              {showSmoothed ? (
-                <Line
-                  type="monotone"
-                  dataKey="priceSmoothed"
-                  stroke={CHART_BLUE}
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                  connectNulls
-                />
-              ) : null}
-
-              {readout ? (
-                <ReferenceDot
-                  x={readout.ts}
-                  y={readout.price}
-                  r={3.5}
-                  fill={readout.bandSvgColor}
-                  stroke="var(--color-background)"
-                  strokeWidth={1.5}
-                  ifOverflow="extendDomain"
-                />
-              ) : null}
-
-              <ChartAnnotationLines annotations={annotations} numbered />
-            </LineChart>
-          ) : (
-            <ChartSkeleton className="h-full w-full" />
-          )}
-        </div>
-        {sync ? (
-          <ChartCrosshairOverlay
-            hoveredTs={sync.hoveredTs}
-            domain={xDomain}
-            plotInsetLeft={plotInsetLeft}
-            plotInsetRight={plotInsetRight}
-            plotInsetTop={plotInsetTop}
-            plotInsetBottom={plotInsetBottom}
-          />
-        ) : null}
-        {showDensityStrip && xDomain ? (
-          <div
-            aria-label="Annotation event density by quarter"
-            className="absolute"
-            style={{
-              left: plotInsetLeft,
-              bottom: densityStripBottomPad,
-              width: plotAreaWidth,
-              height: densityStripHeight,
-            }}
-          >
-            <AnnotationDensityStrip
-              annotations={fullRangeAnnotations}
-              domain={xDomain}
-              width={plotAreaWidth}
-              height={densityStripHeight}
+          {/* Peg severity bands clip at the visible domain so they do not push the axis. */}
+          {pegSeverityBands.map((band) => (
+            <ReferenceArea
+              key={band.id}
+              y1={band.y1}
+              y2={band.y2}
+              fill={band.fill}
+              fillOpacity={band.fillOpacity}
+              ifOverflow="hidden"
+              strokeOpacity={0}
             />
-          </div>
-        ) : null}
-      </div>
-    ) : (
-      <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>
-        No price history available
-      </div>
-    );
+          ))}
+
+          <ReferenceLine
+            y={1}
+            stroke="var(--color-foreground)"
+            strokeOpacity={0.45}
+            strokeWidth={1}
+            label={{
+              value: "$1.000",
+              position: "insideLeft",
+              fill: "var(--color-muted-foreground)",
+              fontSize: 10,
+              fontFamily: "var(--font-mono, monospace)",
+              offset: 6,
+            }}
+          />
+
+          <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
+
+          <Line
+            type="monotone"
+            dataKey="price"
+            stroke={CHART_BLUE}
+            strokeWidth={showSmoothed ? 1 : 1.75}
+            strokeOpacity={showSmoothed ? 0.35 : 1}
+            dot={false}
+            isAnimationActive={false}
+          />
+          {showSmoothed ? (
+            <Line
+              type="monotone"
+              dataKey="priceSmoothed"
+              stroke={CHART_BLUE}
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+              connectNulls
+            />
+          ) : null}
+
+          {readout ? (
+            <ReferenceDot
+              x={readout.ts}
+              y={readout.price}
+              r={3.5}
+              fill={readout.bandSvgColor}
+              stroke="var(--color-background)"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+            />
+          ) : null}
+
+          <ChartAnnotationLines annotations={annotations} numbered />
+        </LineChart>
+      )}
+    />
+  );
 
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">

@@ -128,230 +128,74 @@ export default function sitemap(): MetadataRoute.Sitemap {
     return ms > 0 ? new Date(ms) : now;
   };
 
+  type StaticPageSpec = {
+    path: string;
+    lastModified: Date;
+    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
+    priority: number;
+  };
+  const staticPageSpecs: StaticPageSpec[] = [
+    { path: "/", lastModified: liveDataLastModified("/"), changeFrequency: "hourly", priority: 1.0 },
+    { path: "/coverage/", lastModified: lastEdited("/coverage/"), changeFrequency: "weekly", priority: 0.6 },
+    { path: "/alt-pegs/", lastModified: lastEdited("/alt-pegs/"), changeFrequency: "daily", priority: 0.7 },
+    { path: "/start/", lastModified: lastEdited("/start/"), changeFrequency: "monthly", priority: 0.6 },
+    { path: "/freezewatch/", lastModified: liveDataLastModified("/freezewatch/"), changeFrequency: "daily", priority: 0.85 },
+    { path: "/depeg/", lastModified: liveDataLastModified("/depeg/"), changeFrequency: "daily", priority: 0.8 },
+    { path: "/cemetery/", lastModified: lastEdited("/cemetery/"), changeFrequency: "monthly", priority: 0.7 },
+    { path: "/compare/", lastModified: lastEdited("/compare/"), changeFrequency: "weekly", priority: 0.7 },
+    { path: "/liquidity/", lastModified: liveDataLastModified("/liquidity/"), changeFrequency: "daily", priority: 0.8 },
+    { path: "/upcoming/", lastModified: lastEdited("/upcoming/"), changeFrequency: "daily", priority: 0.6 },
+    { path: "/digest/", lastModified: liveDataLastModified("/digest/"), changeFrequency: "daily", priority: 0.6 },
+    { path: "/safety-scores/", lastModified: liveDataLastModified("/safety-scores/"), changeFrequency: "daily", priority: 0.8 },
+    { path: "/stability-index/", lastModified: liveDataLastModified("/stability-index/"), changeFrequency: "daily", priority: 0.8 },
+    { path: "/dependency-map/", lastModified: liveDataLastModified("/dependency-map/"), changeFrequency: "daily", priority: 0.7 },
+    { path: "/yield/", lastModified: liveDataLastModified("/yield/"), changeFrequency: "daily", priority: 0.7 },
+    { path: "/screener/", lastModified: lastEdited("/screener/"), changeFrequency: "daily", priority: 0.7 },
+    { path: "/funding/", lastModified: fundingLastModified(), changeFrequency: "weekly", priority: 0.5 },
+    { path: "/status/", lastModified: liveDataLastModified("/status/"), changeFrequency: "daily", priority: 0.4 },
+    { path: "/flows/", lastModified: lastEdited("/flows/"), changeFrequency: "daily", priority: 0.7 },
+    { path: "/timeline/", lastModified: liveDataLastModified("/timeline/"), changeFrequency: "hourly", priority: 0.75 },
+    { path: "/compliance/", lastModified: lastEdited("/compliance/"), changeFrequency: "weekly", priority: 0.6 },
+    { path: "/pharoswatchbot/", lastModified: lastEdited("/pharoswatchbot/"), changeFrequency: "weekly", priority: 0.7 },
+    { path: "/methodology/", lastModified: lastEdited("/methodology/"), changeFrequency: "monthly", priority: 0.6 },
+  ];
+
+  const referencePageSpecs: StaticPageSpec[] = [
+    { path: "/changelog/", lastModified: changelogLastModified(), changeFrequency: "weekly", priority: 0.5 },
+    { path: "/about/", lastModified: lastEdited("/about/"), changeFrequency: "monthly", priority: 0.5 },
+    { path: "/about/api/", lastModified: lastEdited("/about/api/"), changeFrequency: "monthly", priority: 0.5 },
+    { path: "/about/bluechip/", lastModified: lastEdited("/about/bluechip/"), changeFrequency: "monthly", priority: 0.5 },
+    { path: "/learn/", lastModified: lastEdited("/learn/"), changeFrequency: "monthly", priority: 0.5 },
+    { path: "/learn/glossary/", lastModified: lastEdited("/learn/glossary/"), changeFrequency: "monthly", priority: 0.5 },
+    { path: "/sitemap-tree/", lastModified: lastEdited("/sitemap-tree/"), changeFrequency: "monthly", priority: 0.3 },
+    // eslint-disable-next-line no-restricted-syntax -- "/api/" here is the public docs page slug, not an API endpoint; LAST_EDITED is keyed by site URLs.
+    { path: "/api/", lastModified: lastEdited("/api/"), changeFrequency: "monthly", priority: 0.5 },
+    { path: "/stablecoins/", lastModified: lastEdited("/stablecoins/"), changeFrequency: "weekly", priority: 0.7 },
+    { path: "/stablecoins/backing/", lastModified: lastEdited("/stablecoins/backing/"), changeFrequency: "weekly", priority: 0.6 },
+    { path: "/stablecoins/governance/", lastModified: lastEdited("/stablecoins/governance/"), changeFrequency: "weekly", priority: 0.6 },
+    { path: "/stablecoins/infrastructure/", lastModified: lastEdited("/stablecoins/infrastructure/"), changeFrequency: "weekly", priority: 0.6 },
+    { path: "/privacy/", lastModified: lastEdited("/privacy/"), changeFrequency: "yearly", priority: 0.3 },
+  ];
+
   const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: `${SITE_URL}/`,
-      lastModified: liveDataLastModified("/"),
-      changeFrequency: "hourly",
-      priority: 1.0,
-    },
-    {
-      url: `${SITE_URL}/coverage/`,
-      lastModified: lastEdited("/coverage/"),
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/alt-pegs/`,
-      lastModified: lastEdited("/alt-pegs/"),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/start/`,
-      lastModified: lastEdited("/start/"),
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/freezewatch/`,
-      lastModified: liveDataLastModified("/freezewatch/"),
-      changeFrequency: "daily",
-      priority: 0.85,
-    },
-    {
-      url: `${SITE_URL}/depeg/`,
-      lastModified: liveDataLastModified("/depeg/"),
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/cemetery/`,
-      lastModified: lastEdited("/cemetery/"),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/compare/`,
-      lastModified: lastEdited("/compare/"),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/liquidity/`,
-      lastModified: liveDataLastModified("/liquidity/"),
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/upcoming/`,
-      lastModified: lastEdited("/upcoming/"),
-      changeFrequency: "daily",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/digest/`,
-      lastModified: liveDataLastModified("/digest/"),
-      changeFrequency: "daily",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/safety-scores/`,
-      lastModified: liveDataLastModified("/safety-scores/"),
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/stability-index/`,
-      lastModified: liveDataLastModified("/stability-index/"),
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/dependency-map/`,
-      lastModified: liveDataLastModified("/dependency-map/"),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/yield/`,
-      lastModified: liveDataLastModified("/yield/"),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/screener/`,
-      lastModified: lastEdited("/screener/"),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/funding/`,
-      lastModified: fundingLastModified(),
-      changeFrequency: "weekly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/status/`,
-      lastModified: liveDataLastModified("/status/"),
-      changeFrequency: "daily",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/flows/`,
-      lastModified: lastEdited("/flows/"),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/timeline/`,
-      lastModified: liveDataLastModified("/timeline/"),
-      changeFrequency: "hourly",
-      priority: 0.75,
-    },
-    {
-      url: `${SITE_URL}/compliance/`,
-      lastModified: lastEdited("/compliance/"),
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/pharoswatchbot/`,
-      lastModified: lastEdited("/pharoswatchbot/"),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/methodology/`,
-      lastModified: lastEdited("/methodology/"),
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
+    ...staticPageSpecs.map((entry) => ({
+      url: `${SITE_URL}${entry.path}`,
+      lastModified: entry.lastModified,
+      changeFrequency: entry.changeFrequency,
+      priority: entry.priority,
+    })),
     ...METHODOLOGY_CHANGELOG_SITEMAP_PATHS.map((path) => ({
       url: `${SITE_URL}${path}`,
       lastModified: lastEdited(path),
       changeFrequency: "monthly" as const,
       priority: 0.4,
     })),
-    {
-      url: `${SITE_URL}/changelog/`,
-      lastModified: changelogLastModified(),
-      changeFrequency: "weekly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/about/`,
-      lastModified: lastEdited("/about/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/about/api/`,
-      lastModified: lastEdited("/about/api/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/about/bluechip/`,
-      lastModified: lastEdited("/about/bluechip/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/learn/`,
-      lastModified: lastEdited("/learn/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/learn/glossary/`,
-      lastModified: lastEdited("/learn/glossary/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/sitemap-tree/`,
-      lastModified: lastEdited("/sitemap-tree/"),
-      changeFrequency: "monthly",
-      priority: 0.3,
-    },
-    {
-      url: `${SITE_URL}/api/`,
-      // eslint-disable-next-line no-restricted-syntax -- "/api/" here is the public docs page slug, not an API endpoint; LAST_EDITED is keyed by site URLs.
-      lastModified: lastEdited("/api/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/stablecoins/`,
-      lastModified: lastEdited("/stablecoins/"),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/stablecoins/backing/`,
-      lastModified: lastEdited("/stablecoins/backing/"),
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/stablecoins/governance/`,
-      lastModified: lastEdited("/stablecoins/governance/"),
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/stablecoins/infrastructure/`,
-      lastModified: lastEdited("/stablecoins/infrastructure/"),
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/privacy/`,
-      lastModified: lastEdited("/privacy/"),
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
+    ...referencePageSpecs.map((entry) => ({
+      url: `${SITE_URL}${entry.path}`,
+      lastModified: entry.lastModified,
+      changeFrequency: entry.changeFrequency,
+      priority: entry.priority,
+    })),
   ];
 
   const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map((coin) => ({

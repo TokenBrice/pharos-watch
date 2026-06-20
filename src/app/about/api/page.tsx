@@ -91,8 +91,36 @@ const ABOUT_API_FAQ: FaqItem[] = [
   },
 ];
 
+const INLINE_CODE_CLASS = "rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground";
+const METHOD_BADGE_CLASS =
+  "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight";
+const METHOD_BADGE_STYLES = {
+  section: {
+    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-400",
+    POST: "border-amber-500/25 bg-amber-500/15 text-amber-400",
+  },
+  directory: {
+    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-500",
+    POST: "border-amber-500/25 bg-amber-500/15 text-amber-500",
+  },
+} as const;
+
 function stripMarkdownHeadingFormatting(text: string) {
   return text.replaceAll("`", "");
+}
+
+function InlineCode({ children }: ComponentProps<"code">) {
+  return <code className={INLINE_CODE_CLASS}>{children}</code>;
+}
+
+function MethodBadge({
+  method,
+  tone,
+}: {
+  method: "GET" | "POST";
+  tone: keyof typeof METHOD_BADGE_STYLES;
+}) {
+  return <span className={cn(METHOD_BADGE_CLASS, METHOD_BADGE_STYLES[tone][method])}>{method}</span>;
 }
 
 const inlineMarkdownComponents = {
@@ -120,11 +148,7 @@ const inlineMarkdownComponents = {
       </a>
     );
   },
-  code: ({ children }: ComponentProps<"code">) => (
-    <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
-      {children}
-    </code>
-  ),
+  code: InlineCode,
   strong: ({ children }: ComponentProps<"strong">) => (
     <strong className="font-semibold text-foreground">{children}</strong>
   ),
@@ -259,17 +283,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
               className="rounded-[1.2rem] border border-border/60 bg-background/45 px-4 py-4"
             >
               <h3 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-                {subsection.method ? (
-                  <span
-                    className={cn(
-                      "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight",
-                      subsection.method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-400",
-                      subsection.method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-400",
-                    )}
-                  >
-                    {subsection.method}
-                  </span>
-                ) : null}
+                {subsection.method ? <MethodBadge method={subsection.method} tone="section" /> : null}
                 <code className="font-mono tabular-nums text-[0.92rem]">
                   {stripMarkdownHeadingFormatting(subsection.title).replace(/^(GET|POST)\s+/, "")}
                 </code>
@@ -325,17 +339,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
             href={`/docs/api-reference/#${endpoint.docAnchor}`}
             className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-xl border border-border/55 bg-background/45 px-3 py-2 text-sm hover:bg-muted/45"
           >
-            {endpoint.method ? (
-              <span
-                className={cn(
-                  "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight",
-                  endpoint.method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-500",
-                  endpoint.method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-500",
-                )}
-              >
-                {endpoint.method}
-              </span>
-            ) : null}
+            {endpoint.method ? <MethodBadge method={endpoint.method} tone="directory" /> : null}
             <code className="truncate font-mono tabular-nums text-[0.82rem] text-foreground">{endpoint.path}</code>
           </Link>
         ))}
@@ -403,8 +407,8 @@ export default async function AboutApiPage() {
               <p className="pharos-kicker">External Integrations</p>
               <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.3rem]">API Reference</h1>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                The public integration lane is <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">{PUBLIC_API_HOST}</code>.
-                In production, protected public routes require <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">{PUBLIC_API_KEY_HEADER}</code>.
+                The public integration lane is <InlineCode>{PUBLIC_API_HOST}</InlineCode>.
+                In production, protected public routes require <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>.
                 The website itself does not use that lane directly; it talks to the internal site-data proxy instead.
               </p>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
@@ -449,7 +453,7 @@ export default async function AboutApiPage() {
             <p className="pharos-kicker">Quick Facts</p>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <li>
-                <span className="font-semibold text-foreground">Public auth:</span> <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">{PUBLIC_API_KEY_HEADER}</code>
+                <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
               </li>
               <li>
                 <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, self-serve key request, Telegram webhook (Telegram secret)

@@ -76,6 +76,15 @@ function RiskSourceLinks({ links }: { links: readonly RiskSourceLink[] }) {
   );
 }
 
+function ScoreWithBand({ score, label, children }: { score: number; label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{gradeBandLabel(score, label)}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Shared wrapper for OracleRiskPanel and BridgeRouteRiskPanel.
  * Renders the border-left container, title/score header, a meta row
  * whose content is passed as `metaRow`, a summary paragraph, optional
@@ -262,15 +271,12 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <SafetyGradeBadge grade={dim.grade} size="sm" versionTopic="safetyScore" versionVariant="tooltip-only" />
             {dim.score !== null ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="pointer-events-auto w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">
-                    {dim.score}
-                    <span className="text-xs">/100</span>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{gradeBandLabel(dim.score, DIMENSION_LABELS[dimKey])}</TooltipContent>
-              </Tooltip>
+              <ScoreWithBand score={dim.score} label={DIMENSION_LABELS[dimKey]}>
+                <span className="pointer-events-auto w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">
+                  {dim.score}
+                  <span className="text-xs">/100</span>
+                </span>
+              </ScoreWithBand>
             ) : (
               <span className="w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">{"\u2014"}</span>
             )}
@@ -322,14 +328,11 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 {card.rawInputs.liquidityScore != null ? (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">DEX liquidity</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="tabular-nums text-foreground font-mono">
-                          {card.rawInputs.liquidityScore}/100
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{gradeBandLabel(card.rawInputs.liquidityScore, "DEX liquidity")}</TooltipContent>
-                    </Tooltip>
+                    <ScoreWithBand score={card.rawInputs.liquidityScore} label="DEX liquidity">
+                      <span className="tabular-nums text-foreground font-mono">
+                        {card.rawInputs.liquidityScore}/100
+                      </span>
+                    </ScoreWithBand>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between text-xs">
@@ -342,17 +345,12 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                     <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">
                       Redemption backstop
                     </MethodologyLabel>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="tabular-nums text-foreground font-mono">
-                          {card.rawInputs.redemptionBackstopScore}/100
-                          {!card.rawInputs.redemptionUsedForLiquidity ? " (not used)" : ""}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {gradeBandLabel(card.rawInputs.redemptionBackstopScore, "Redemption backstop")}
-                      </TooltipContent>
-                    </Tooltip>
+                    <ScoreWithBand score={card.rawInputs.redemptionBackstopScore} label="Redemption backstop">
+                      <span className="tabular-nums text-foreground font-mono">
+                        {card.rawInputs.redemptionBackstopScore}/100
+                        {!card.rawInputs.redemptionUsedForLiquidity ? " (not used)" : ""}
+                      </span>
+                    </ScoreWithBand>
                   </div>
                 )}
                 {card.rawInputs.effectiveExitScore != null && (
@@ -360,16 +358,11 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                     <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">
                       Effective exit
                     </MethodologyLabel>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="tabular-nums text-foreground font-mono">
-                          {card.rawInputs.effectiveExitScore}/100
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {gradeBandLabel(card.rawInputs.effectiveExitScore, "Effective exit")}
-                      </TooltipContent>
-                    </Tooltip>
+                    <ScoreWithBand score={card.rawInputs.effectiveExitScore} label="Effective exit">
+                      <span className="tabular-nums text-foreground font-mono">
+                        {card.rawInputs.effectiveExitScore}/100
+                      </span>
+                    </ScoreWithBand>
                   </div>
                 )}
               </div>
@@ -477,15 +470,12 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
         />
         <div className="flex min-w-0 flex-col">
           {card.overallScore !== null && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="font-mono text-3xl font-bold tracking-tight tabular-nums text-foreground">
-                  {card.overallScore}
-                  <span className="text-lg text-muted-foreground">/100</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{gradeBandLabel(card.overallScore, "Safety Score")}</TooltipContent>
-            </Tooltip>
+            <ScoreWithBand score={card.overallScore} label="Safety Score">
+              <span className="font-mono text-3xl font-bold tracking-tight tabular-nums text-foreground">
+                {card.overallScore}
+                <span className="text-lg text-muted-foreground">/100</span>
+              </span>
+            </ScoreWithBand>
           )}
           {card.baseScore != null && card.overallScore != null && (
             <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">

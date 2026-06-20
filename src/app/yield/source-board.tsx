@@ -53,40 +53,41 @@ const CONFIDENCE_SEGMENT_BG: Record<YieldSourceConfidenceTier, string> = {
   fallback: "bg-slate-500/40",
 };
 
+function nonZeroCountParts<T extends string>(
+  keys: readonly T[],
+  counts: Record<T, number>,
+  format: (key: T, count: number) => string,
+): string[] {
+  return keys
+    .filter((tier) => counts[tier] > 0)
+    .map((tier) => format(tier, counts[tier]));
+}
+
 function formatConfidenceSummary(
   counts: Record<YieldSourceConfidenceTier, number>,
   unknownCount: number,
 ): string {
-  const parts = YIELD_SOURCE_CONFIDENCE_ORDER
-    .filter((tier) => counts[tier] > 0)
-    .map((tier) => `${counts[tier]} ${tier}`);
+  const parts = nonZeroCountParts(YIELD_SOURCE_CONFIDENCE_ORDER, counts, (tier, count) => `${count} ${tier}`);
   const base = parts.join(" · ");
   return unknownCount > 0 ? `${base} (+${unknownCount} unknown)` : base;
 }
 
 function formatDepthSummary(counts: Record<YieldSourceDepthLens, number>): string {
-  return DEPTH_ORDER
-    .filter((lens) => counts[lens] > 0)
-    .map((lens) => `${counts[lens]} ${lens}`)
-    .join(" · ");
+  return nonZeroCountParts(DEPTH_ORDER, counts, (lens, count) => `${count} ${lens}`).join(" · ");
 }
 
 function buildConfidenceAriaLabel(
   counts: Record<YieldSourceConfidenceTier, number>,
   unknownCount: number,
 ): string {
-  const parts = YIELD_SOURCE_CONFIDENCE_ORDER
-    .filter((tier) => counts[tier] > 0)
-    .map((tier) => `${counts[tier]} ${tier}`);
+  const parts = nonZeroCountParts(YIELD_SOURCE_CONFIDENCE_ORDER, counts, (tier, count) => `${count} ${tier}`);
   const base = parts.join(", ");
   const suffix = unknownCount > 0 ? `, ${unknownCount} unknown` : "";
   return `Confidence tier mix: ${base}${suffix}`;
 }
 
 function buildDepthAriaLabel(counts: Record<YieldSourceDepthLens, number>): string {
-  const parts = DEPTH_ORDER
-    .filter((lens) => counts[lens] > 0)
-    .map((lens) => `${counts[lens]} ${lens}`);
+  const parts = nonZeroCountParts(DEPTH_ORDER, counts, (lens, count) => `${count} ${lens}`);
   return `Depth mix: ${parts.join(", ")}`;
 }
 

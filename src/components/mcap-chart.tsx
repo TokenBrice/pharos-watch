@@ -9,14 +9,13 @@ import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range
 import { usePreference } from "@/hooks/use-preferences";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
-import { ChartSkeleton } from "@/components/chart-skeleton";
 import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
-import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
-import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { ChartFigure } from "@/components/chart-primitives/figure";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
@@ -176,85 +175,76 @@ export function McapChart({
     </div>
   );
 
-  const chartBody =
-    visibleData.length > 0 ? (
-      <div className={`relative ${CHART_HEIGHT}`}>
-        <div
-          ref={chartContainerRef}
-          className="h-full"
-          role="figure"
-          aria-label={`Market cap chart showing ${visibleData.length} data points`}
-        >
-          <ScreenReaderDataTable
-            data={visibleData}
-            columns={MCAP_TABLE_COLUMNS}
-            caption={(rows, truncated, total) =>
-              truncated
-                ? `Market cap history — most recent ${rows.length} of ${total} data points`
-                : `Market cap history — ${total} data points`
+  const chartBody = (
+    <ChartFigure
+      data={visibleData}
+      columns={MCAP_TABLE_COLUMNS}
+      caption={(rows, truncated, total) =>
+        truncated
+          ? `Market cap history — most recent ${rows.length} of ${total} data points`
+          : `Market cap history — ${total} data points`
+      }
+      ariaLabel={`Market cap chart showing ${visibleData.length} data points`}
+      emptyMessage="No market cap data available"
+      heightClassName={CHART_HEIGHT}
+      containerRef={chartContainerRef}
+      isReady={isChartReady}
+      crosshair={
+        sync
+          ? {
+              hoveredTs: sync.hoveredTs,
+              domain: xDomain,
+              plotInsetLeft,
+              plotInsetRight,
+              plotInsetTop,
+              plotInsetBottom,
             }
+          : null
+      }
+      renderChart={() => (
+        <AreaChart
+          width={width}
+          height={height}
+          data={visibleData}
+          margin={margin}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+        >
+          <defs>
+            <ChartAreaGradient id={mcapGradientId} color={CHART_BLUE} />
+          </defs>
+          <TimeGrid />
+          <TimeXAxis
+            dataKey="ts"
+            ticks={xTicks}
+            interval={range === "all" ? 0 : "preserveStartEnd"}
+            tick={<MarketDataXTick range={range} />}
+            height={range === "all" ? 44 : 30}
           />
-          {isChartReady ? (
-            <AreaChart
-              width={width}
-              height={height}
-              data={visibleData}
-              margin={margin}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-            >
-              <defs>
-                <ChartAreaGradient id={mcapGradientId} color={CHART_BLUE} />
-              </defs>
-              <TimeGrid />
-              <TimeXAxis
-                dataKey="ts"
-                ticks={xTicks}
-                interval={range === "all" ? 0 : "preserveStartEnd"}
-                tick={<MarketDataXTick range={range} />}
-                height={range === "all" ? 44 : 30}
-              />
-              <MonoYAxis
-                tickFormatter={(val: number) => formatCurrency(val)}
-                domain={yDomain}
-                scale={useLog ? "log" : "auto"}
-                allowDataOverflow={useLog}
-              />
-              <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]} />
-              <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill={`url(#${mcapGradientId})`} strokeWidth={2} />
-              {readout ? (
-                <ReferenceDot
-                  x={readout.ts}
-                  y={readout.mcap}
-                  r={3.5}
-                  fill={CHART_BLUE}
-                  stroke="var(--color-background)"
-                  strokeWidth={1.5}
-                  ifOverflow="extendDomain"
-                />
-              ) : null}
-              <ChartAnnotationLines annotations={annotations} numbered />
-            </AreaChart>
-          ) : (
-            <ChartSkeleton className="h-full w-full" />
-          )}
-        </div>
-        {sync ? (
-          <ChartCrosshairOverlay
-            hoveredTs={sync.hoveredTs}
-            domain={xDomain}
-            plotInsetLeft={plotInsetLeft}
-            plotInsetRight={plotInsetRight}
-            plotInsetTop={plotInsetTop}
-            plotInsetBottom={plotInsetBottom}
+          <MonoYAxis
+            tickFormatter={(val: number) => formatCurrency(val)}
+            domain={yDomain}
+            scale={useLog ? "log" : "auto"}
+            allowDataOverflow={useLog}
           />
-        ) : null}
-      </div>
-    ) : (
-      <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
-        No market cap data available
-      </div>
-    );
+          <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]} />
+          <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill={`url(#${mcapGradientId})`} strokeWidth={2} />
+          {readout ? (
+            <ReferenceDot
+              x={readout.ts}
+              y={readout.mcap}
+              r={3.5}
+              fill={CHART_BLUE}
+              stroke="var(--color-background)"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+            />
+          ) : null}
+          <ChartAnnotationLines annotations={annotations} numbered />
+        </AreaChart>
+      )}
+    />
+  );
 
   const legend =
     !hideAnnotationLegend && annotations.length > 0 ? (

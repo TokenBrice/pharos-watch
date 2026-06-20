@@ -13,7 +13,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { CoinSelector } from "@/components/coin-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { Share2, X, Download } from "lucide-react";
+import { Share2, X, Download, type LucideIcon } from "lucide-react";
 import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -46,6 +46,39 @@ const FlowComparisonChart = dynamic(
   () => import("@/components/flow-comparison-chart").then((m) => ({ default: m.FlowComparisonChart })),
   { loading: () => <div className="h-[280px] rounded-xl animate-pulse bg-muted/20" /> },
 );
+
+const COMPARE_SHARE_BUTTON_CLASS =
+  "pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5";
+
+function CompareShareButton({
+  icon: Icon,
+  label,
+  title,
+  ariaLabel,
+  disabled,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  title: string;
+  ariaLabel: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={COMPARE_SHARE_BUTTON_CLASS}
+      aria-label={ariaLabel}
+      title={title}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+}
 
 interface CompareMobileSelectionControlsProps {
   selectedIds: readonly string[];
@@ -324,36 +357,30 @@ export function CompareClient() {
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">
           {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}
-          <button type="button"
-            onClick={handleTwitterShare}
-            disabled={shareLoading}
-            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
-            aria-label="Share comparison on Twitter"
+          <CompareShareButton
+            icon={X}
+            label="Tweet"
             title="Share on Twitter/X"
-          >
-            <X className="h-3.5 w-3.5" />
-            Tweet
-          </button>
-          <button type="button"
-            onClick={handleWebShare}
+            ariaLabel="Share comparison on Twitter"
             disabled={shareLoading}
-            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
-            aria-label="Share comparison link or image"
+            onClick={handleTwitterShare}
+          />
+          <CompareShareButton
+            icon={Share2}
+            label="Share"
             title="Share comparison"
-          >
-            <Share2 className="h-3.5 w-3.5" />
-            Share
-          </button>
-          <button type="button"
-            onClick={handleDownload}
+            ariaLabel="Share comparison link or image"
             disabled={shareLoading}
-            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
-            aria-label="Download comparison as image"
+            onClick={handleWebShare}
+          />
+          <CompareShareButton
+            icon={Download}
+            label="Image"
             title="Download comparison image"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Image
-          </button>
+            ariaLabel="Download comparison as image"
+            disabled={shareLoading}
+            onClick={handleDownload}
+          />
         </div>
       )}
       <CompareMobileSelectionControls

@@ -59,6 +59,14 @@ const DEWS_LOGO_SCALE_BY_BAND: Partial<Record<ElevatedCoin["band"], number>> = {
   WARNING: 2.7,
   DANGER: 3.24,
 };
+const DEWS_DOT_KEY_ACTIONS: Record<string, 1 | -1 | "first" | "last"> = {
+  ArrowRight: 1,
+  ArrowDown: 1,
+  ArrowLeft: -1,
+  ArrowUp: -1,
+  Home: "first",
+  End: "last",
+};
 
 function dewsLogoRadius(coin: ElevatedCoin): number {
   const scale = DEWS_LOGO_SCALE_BY_BAND[coin.band] ?? 1;
@@ -120,24 +128,10 @@ function DEWSDot({
           onClick(coin.id);
           return;
         }
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        const action = DEWS_DOT_KEY_ACTIONS[e.key];
+        if (action) {
           e.preventDefault();
-          onArrowKey(1);
-          return;
-        }
-        if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-          e.preventDefault();
-          onArrowKey(-1);
-          return;
-        }
-        if (e.key === "Home") {
-          e.preventDefault();
-          onArrowKey("first");
-          return;
-        }
-        if (e.key === "End") {
-          e.preventDefault();
-          onArrowKey("last");
+          onArrowKey(action);
         }
       }}
     >

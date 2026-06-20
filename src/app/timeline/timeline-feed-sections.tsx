@@ -216,6 +216,16 @@ export function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }
   const glyph = SEVERITY_GLYPH[maxSev];
   const isQuiet = day.totalCount <= 3;
   const quietTokens = isQuiet ? quietDayEventTokens(day) : [];
+  const classDigestRows = day.classes.map((digest) => (
+    <ClassDigestRow
+      key={`${day.dayKey}-${digest.classSlug}`}
+      digest={digest}
+      logos={logos}
+      highlightedId={highlightedId}
+      eventDomId={eventDomId}
+    />
+  ));
+
   return (
     <section aria-label={`${primary} ${secondary}`}>
       <div className="sticky top-0 z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -250,30 +260,10 @@ export function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }
               </span>
             ) : null}
           </summary>
-          <div className="border-t border-border/20">
-            {day.classes.map((digest) => (
-              <ClassDigestRow
-                key={`${day.dayKey}-${digest.classSlug}`}
-                digest={digest}
-                logos={logos}
-                highlightedId={highlightedId}
-                eventDomId={eventDomId}
-              />
-            ))}
-          </div>
+          <div className="border-t border-border/20">{classDigestRows}</div>
         </details>
       ) : (
-        <div>
-          {day.classes.map((digest) => (
-            <ClassDigestRow
-              key={`${day.dayKey}-${digest.classSlug}`}
-              digest={digest}
-              logos={logos}
-              highlightedId={highlightedId}
-              eventDomId={eventDomId}
-            />
-          ))}
-        </div>
+        <div>{classDigestRows}</div>
       )}
     </section>
   );

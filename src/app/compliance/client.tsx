@@ -56,6 +56,43 @@ import {
 } from "./model";
 
 const COMPLIANCE_TEXT_CELL_CLASS = "whitespace-normal break-words align-top leading-snug";
+const COMPLIANCE_TOGGLE_ITEM_CLASS = "min-h-[44px] text-xs md:min-h-0";
+
+function ComplianceToggleGroup<T extends string>({
+  value,
+  options,
+  ariaLabel,
+  className = "flex flex-wrap gap-1",
+  onChange,
+}: {
+  value: T;
+  options: readonly { value: T; label: string }[];
+  ariaLabel: string;
+  className?: string;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(nextValue) => nextValue && onChange(nextValue as T)}
+      className={className}
+      aria-label={ariaLabel}
+    >
+      {options.map((option) => (
+        <ToggleGroupItem
+          key={option.value}
+          value={option.value}
+          variant="outline"
+          size="sm"
+          className={COMPLIANCE_TOGGLE_ITEM_CLASS}
+        >
+          {option.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
 
 function hasGeniusRows(rows: readonly ComplianceRow[]): boolean {
   return rows.some((row) => row.regime === "genius");
@@ -164,86 +201,36 @@ export function ComplianceClient() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <ToggleGroup
-              type="single"
+            <ComplianceToggleGroup
               value={regimeFilter}
-              onValueChange={(v) => v && setRegimeFilter(v as ComplianceRegimeFilter)}
-              className="flex flex-wrap gap-1"
-              aria-label="Filter by compliance regime"
-            >
-              {COMPLIANCE_REGIME_FILTER_OPTIONS.map((f) => (
-                <ToggleGroupItem
-                  key={f.value}
-                  value={f.value}
-                  variant="outline"
-                  size="sm"
-                  className="min-h-[44px] text-xs md:min-h-0"
-                >
-                  {f.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              options={COMPLIANCE_REGIME_FILTER_OPTIONS}
+              ariaLabel="Filter by compliance regime"
+              onChange={setRegimeFilter}
+            />
             {regimeFilter !== "all" ? (
-              <ToggleGroup
-                type="single"
+              <ComplianceToggleGroup
                 value={statusFilter}
-                onValueChange={(v) => v && setStatusFilter(v as ComplianceStatusFilter)}
-                className="flex flex-wrap gap-1"
-                aria-label={`Filter by ${regimeFilter === "mica" ? "MiCA" : "GENIUS"} status`}
-              >
-                {statusOptions.map((f) => (
-                  <ToggleGroupItem
-                    key={f.value}
-                    value={f.value}
-                    variant="outline"
-                    size="sm"
-                    className="min-h-[44px] text-xs md:min-h-0"
-                  >
-                    {f.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+                options={statusOptions}
+                ariaLabel={`Filter by ${regimeFilter === "mica" ? "MiCA" : "GENIUS"} status`}
+                onChange={setStatusFilter}
+              />
             ) : null}
             {regimeFilter !== "genius" ? (
-              <ToggleGroup
-                type="single"
+              <ComplianceToggleGroup
                 value={tokenTypeFilter}
-                onValueChange={(v) => v && setTokenTypeFilter(v as MicaTokenType | "all")}
+                options={MICA_TOKEN_TYPE_FILTER_OPTIONS}
                 className="flex gap-1"
-                aria-label="Filter by MiCA token type"
-              >
-                {MICA_TOKEN_TYPE_FILTER_OPTIONS.map((f) => (
-                  <ToggleGroupItem
-                    key={f.value}
-                    value={f.value}
-                    variant="outline"
-                    size="sm"
-                    className="min-h-[44px] text-xs md:min-h-0"
-                  >
-                    {f.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+                ariaLabel="Filter by MiCA token type"
+                onChange={setTokenTypeFilter}
+              />
             ) : null}
-            <ToggleGroup
-              type="single"
+            <ComplianceToggleGroup
               value={pegFilter}
-              onValueChange={(v) => v && setPegFilter(v as PegCurrency | "all")}
+              options={PEG_FILTER_OPTIONS}
               className="flex gap-1"
-              aria-label="Filter by peg currency"
-            >
-              {PEG_FILTER_OPTIONS.map((f) => (
-                <ToggleGroupItem
-                  key={f.value}
-                  value={f.value}
-                  variant="outline"
-                  size="sm"
-                  className="min-h-[44px] text-xs md:min-h-0"
-                >
-                  {f.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              ariaLabel="Filter by peg currency"
+              onChange={setPegFilter}
+            />
             <FilterSearchInput
               value={searchInput}
               onValueChange={setSearchInput}

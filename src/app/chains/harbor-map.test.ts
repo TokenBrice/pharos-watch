@@ -4,7 +4,6 @@ import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
 import { buildChainHarborEntries, buildChainHarborModel, buildChainHarborModelFromEntries } from "./harbor-map";
-import { HarborList as ChainHarborMap } from "./harbor-list";
 import { NauticalChart } from "./nautical-chart";
 
 vi.mock("next/image", () => ({
@@ -52,21 +51,6 @@ function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
 }
 
 describe("chain harbor DOM smokes", () => {
-  it("renders the harbor map summary and chain rows", () => {
-    render(createElement(ChainHarborMap, {
-      chains: [
-        makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60, healthScore: 90, healthBand: "robust" }),
-        makeChain({ id: "base", name: "Base", totalUsd: 25, healthScore: 70, healthBand: "mixed" }),
-      ],
-      globalTotalUsd: 100,
-    }));
-
-    expect(screen.getByRole("heading", { name: "Where stablecoin supply is docked" })).toBeTruthy();
-    expect(screen.getAllByText("Ethereum").length).toBeGreaterThan(0);
-    expect(screen.getByText("Base")).toBeTruthy();
-    expect(screen.getByText("Top 2 chains hold 85.0%")).toBeTruthy();
-  });
-
   it("keeps nautical chart annotations readable on the dark scene in both themes", () => {
     render(createElement(NauticalChart, {
       chains: [

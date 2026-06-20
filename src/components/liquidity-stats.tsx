@@ -25,25 +25,23 @@ interface LiquidityStatsProps {
   liquidityMap: Record<string, DexLiquidityData>;
 }
 
-function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
-  const globalData = data[DEX_GLOBAL_KEY];
-  const { entries, total } = useMemo(() => {
-    return buildBreakdownEntries(globalData?.chainTvl ?? {}, {
-      labelForKey: normalizeChain,
-      colorForKey: (chain) => CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground",
-      logoForKey: (chain) => {
-        const meta = CHAIN_META[chain.toLowerCase()];
-        return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
-      },
-    });
-  }, [globalData]);
-
+function AggregateBreakdownCard({
+  title,
+  entries,
+  total,
+  logoClassName,
+}: {
+  title: string;
+  entries: BreakdownEntry[];
+  total: number;
+  logoClassName?: string;
+}) {
   if (total === 0) return null;
 
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">Chain TVL Breakdown</CardTitle>
+        <CardTitle className="pharos-kicker">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <BreakdownBar
@@ -61,12 +59,35 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
           className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
           itemClassName="flex items-center gap-2"
           markerClassName="h-3 w-3"
-          logoClassName="h-4 w-4 rounded-full object-contain shrink-0"
+          logoClassName={logoClassName}
           logoSize={16}
           valueFormatter={(entry) => formatCurrency(entry.value)}
         />
       </CardContent>
     </Card>
+  );
+}
+
+function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
+  const globalData = data[DEX_GLOBAL_KEY];
+  const { entries, total } = useMemo(() => {
+    return buildBreakdownEntries(globalData?.chainTvl ?? {}, {
+      labelForKey: normalizeChain,
+      colorForKey: (chain) => CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground",
+      logoForKey: (chain) => {
+        const meta = CHAIN_META[chain.toLowerCase()];
+        return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
+      },
+    });
+  }, [globalData]);
+
+  return (
+    <AggregateBreakdownCard
+      title="Chain TVL Breakdown"
+      entries={entries}
+      total={total}
+      logoClassName="h-4 w-4 rounded-full object-contain shrink-0"
+    />
   );
 }
 
@@ -84,35 +105,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
   }, [globalData]);
   const total = entries.reduce((sum, entry) => sum + entry.value, 0);
 
-  if (total === 0) return null;
-
-  return (
-    <Card className="rounded-xl">
-      <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">Protocol TVL Breakdown</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <BreakdownBar
-          entries={entries}
-          total={total}
-          minPercent={0.5}
-          className="flex h-4 w-full overflow-hidden rounded-full bg-muted"
-          titleFormatter={(entry, percent) => `${entry.label}: ${formatCurrency(entry.value)} (${percent.toFixed(1)}%)`}
-        />
-        <BreakdownLegend
-          entries={entries}
-          total={total}
-          minPercent={0}
-          variant="stacked"
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
-          itemClassName="flex items-center gap-2"
-          markerClassName="h-3 w-3"
-          logoSize={16}
-          valueFormatter={(entry) => formatCurrency(entry.value)}
-        />
-      </CardContent>
-    </Card>
-  );
+  return <AggregateBreakdownCard title="Protocol TVL Breakdown" entries={entries} total={total} />;
 }
 
 export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
