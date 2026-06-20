@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetchRetry } from "../../test-helpers/cron";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 
 vi.mock("@shared/lib/bluechip-slugs", () => ({
@@ -10,9 +11,7 @@ vi.mock("@shared/lib/bluechip-slugs", () => ({
   },
 }));
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../lib/circuit-breaker")>();
@@ -90,7 +89,10 @@ describe("syncBluechip", () => {
 
     const insert = getCacheInsert(db as MockD1Database);
     expect(insert).toBeDefined();
-    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string; slug: string; smidge: Record<string, string | null> }>;
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<
+      string,
+      { grade: string; slug: string; smidge: Record<string, string | null> }
+    >;
     expect(cached["usdt-tether"].grade).toBe("A");
     expect(cached["usdt-tether"].slug).toBe("tether");
     expect(cached["usdt-tether"].smidge.stability).toBe("stable");
@@ -142,7 +144,10 @@ describe("syncBluechip", () => {
     expect(result.itemCount).toBe(2);
 
     const insert = getCacheInsert(db as MockD1Database);
-    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string; smidge: Record<string, string | null> }>;
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<
+      string,
+      { grade: string; smidge: Record<string, string | null> }
+    >;
     expect(cached["usdc-circle"].grade).toBe("B+");
     expect(cached["usdc-circle"].smidge.implementation).toBeNull();
     expect(cached["usdc-circle"].smidge.externals).toBeNull();
@@ -197,10 +202,13 @@ describe("syncBluechip", () => {
     const usdcResponse = new Response(JSON.stringify({ error: "down" }), { status: 500 });
     const tetherCancel = vi.spyOn(tetherResponse.body!, "cancel");
     const usdcCancel = vi.spyOn(usdcResponse.body!, "cancel");
-    vi.stubGlobal("fetch", vi.fn(async (input: string | Request) => {
-      const url = typeof input === "string" ? input : input.url;
-      return url.includes("/coin-data/tether") ? tetherResponse : usdcResponse;
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | Request) => {
+        const url = typeof input === "string" ? input : input.url;
+        return url.includes("/coin-data/tether") ? tetherResponse : usdcResponse;
+      }),
+    );
 
     const db = mockD1();
     const result = await syncBluechip(db);

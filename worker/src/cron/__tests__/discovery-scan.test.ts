@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockCircuitBreaker, mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("@shared/lib/stablecoins/registry", () => ({
   ACTIVE_STABLECOINS: [
@@ -9,14 +10,9 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
   ],
 }));
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcome: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { filterDiscoveryCandidates, runDiscoveryScan, upsertDiscoveryCandidates } from "../discovery-scan";
@@ -45,9 +41,7 @@ describe("filterDiscoveryCandidates", () => {
   });
 
   it("filters out coins with null market cap", () => {
-    const cgCoins = [
-      { id: "no-mcap", name: "NoMcap", symbol: "NM", market_cap: null },
-    ];
+    const cgCoins = [{ id: "no-mcap", name: "NoMcap", symbol: "NM", market_cap: null }];
     const result = filterDiscoveryCandidates(cgCoins, TRACKED_GECKO_IDS, 5_000_000);
     expect(result).toHaveLength(0);
   });
@@ -100,7 +94,13 @@ describe("upsertDiscoveryCandidates", () => {
     try {
       const upserted = await upsertDiscoveryCandidates(db, [
         { geckoId: "good-one", name: "GoodOne", symbol: "GOOD", marketCap: 10_000_000, source: "coingecko" },
-        { geckoId: "bad-stable", name: null as unknown as string, symbol: "BAD", marketCap: 9_000_000, source: "coingecko" },
+        {
+          geckoId: "bad-stable",
+          name: null as unknown as string,
+          symbol: "BAD",
+          marketCap: 9_000_000,
+          source: "coingecko",
+        },
         { llamaId: 42, name: "LlamaStable", symbol: "LST", marketCap: 8_000_000, source: "defillama" },
       ]);
 

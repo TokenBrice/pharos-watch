@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import {
-  mockCircuitBreaker,
-  mockDbCache,
-  mockRegistry,
-} from "../../test-helpers/cron";
+import { mockCircuitBreaker, mockDbCache, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 
 // --- Module-level mocks ---
 
@@ -74,9 +70,7 @@ vi.mock("@shared/lib/stablecoins/registry", () =>
 );
 
 // Stub fetch-retry to delegate to global fetch
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 // Stub circuit-breaker
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
@@ -246,7 +240,7 @@ type YieldDataTestRow = {
 
 function getPublishedYieldRows(db: MockHistoryDb): YieldDataTestRow[] {
   const entry = db.getHistory().find((item) => item.sql.includes("INSERT OR REPLACE INTO yield_data"));
-  return entry ? JSON.parse(String(entry.binds[0] ?? "[]")) as YieldDataTestRow[] : [];
+  return entry ? (JSON.parse(String(entry.binds[0] ?? "[]")) as YieldDataTestRow[]) : [];
 }
 
 function findPublishedYieldRow(
@@ -258,9 +252,11 @@ function findPublishedYieldRow(
 }
 
 function getYieldRankingsCachePayload(db: MockHistoryDb): unknown {
-  const entry = db.getHistory().find(
-    (item) => item.sql.includes("INSERT INTO cache (key, value, updated_at)") && item.binds[0] === "yield-rankings",
-  );
+  const entry = db
+    .getHistory()
+    .find(
+      (item) => item.sql.includes("INSERT INTO cache (key, value, updated_at)") && item.binds[0] === "yield-rankings",
+    );
   return entry ? JSON.parse(String(entry.binds[1])) : undefined;
 }
 
@@ -311,12 +307,8 @@ describe("syncYieldData", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
-    (
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS
-    ).length = 0;
-    (
-      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS
-    ).length = 0;
+    (yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS).length = 0;
+    (yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS).length = 0;
     const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
     for (const key of Object.keys(poolMap)) delete poolMap[key];
     const explicitPoolMap =
@@ -387,12 +379,7 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(1);
     expect(getPublishedYieldRows(db)).toHaveLength(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
-    expect(writeFreshnessSentinel).toHaveBeenCalledWith(
-      db,
-      "yield-data",
-      Math.floor(Date.now() / 1000),
-      undefined,
-    );
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "yield-data", Math.floor(Date.now() / 1000), undefined);
   });
 
   it("reports writer-pause progress metadata before returning", async () => {
@@ -534,7 +521,7 @@ describe("syncYieldData", () => {
       status: "degraded",
       itemCount: 0,
     });
-    expect(result.metadata).toContain("\"writerPaused\":true");
+    expect(result.metadata).toContain('"writerPaused":true');
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
@@ -619,9 +606,9 @@ describe("syncYieldData", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("DELETE FROM yield_data")
-          && entry.sql.includes("stablecoin_id IN")
-          && !entry.sql.includes("updated_at <"),
+          entry.sql.includes("DELETE FROM yield_data") &&
+          entry.sql.includes("stablecoin_id IN") &&
+          !entry.sql.includes("updated_at <"),
       );
 
     expect(orphanDeleteCall).toBeDefined();
@@ -684,9 +671,9 @@ describe("syncYieldData", () => {
       .getHistory()
       .filter(
         (entry) =>
-          entry.sql.includes("DELETE FROM yield_data")
-          && entry.sql.includes("stablecoin_id IN")
-          && entry.sql.includes("updated_at <"),
+          entry.sql.includes("DELETE FROM yield_data") &&
+          entry.sql.includes("stablecoin_id IN") &&
+          entry.sql.includes("updated_at <"),
       );
 
     expect(staleDeleteCalls.length).toBeGreaterThan(1);
@@ -949,15 +936,19 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(2);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { sourceCoverage?: { supplementalFallbackMode?: string | null } };
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage?: { supplementalFallbackMode?: string | null };
+    };
     expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache-aggregate-merge");
     const rows = getPublishedYieldRows(db);
-    expect(rows.some((row) =>
-      row.stablecoin_id === "100" && row.source_key === "protocol-api:morpho-vault:ethereum:0xvault",
-    )).toBe(true);
-    expect(rows.some((row) =>
-      row.stablecoin_id === "100" && row.source_key === "protocol-api:beefy:ethereum:beefy-sdai",
-    )).toBe(true);
+    expect(
+      rows.some(
+        (row) => row.stablecoin_id === "100" && row.source_key === "protocol-api:morpho-vault:ethereum:0xvault",
+      ),
+    ).toBe(true);
+    expect(
+      rows.some((row) => row.stablecoin_id === "100" && row.source_key === "protocol-api:beefy:ethereum:beefy-sdai"),
+    ).toBe(true);
   });
 
   it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
@@ -1686,24 +1677,23 @@ describe("syncYieldData", () => {
     );
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/eth",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/eth",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
     const result = await syncYieldData(db, undefined, testChainRpcs);
 
     expect(result.itemCount).toBe(2);
     expect(maxActiveRpcCalls).toBe(1);
 
-    const bprotocolRow = findPublishedYieldRow(
-      db,
-      "lusd-liquity",
-      (row) => row.source_key === "onchain:lusd-liquity",
-    );
+    const bprotocolRow = findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "onchain:lusd-liquity");
     expect(bprotocolRow?.yield_source).toBe("B.Protocol Stability Pool (LQTY only)");
     expect(bprotocolRow?.yield_type).toBe("lending-vault");
     expect(bprotocolRow?.data_source).toBe("onchain");
@@ -1826,10 +1816,7 @@ describe("syncYieldData", () => {
       if (key === "yield-rankings") {
         return {
           value: JSON.stringify({
-            rankings: [
-              { id: "100" },
-              ...Array.from({ length: 10 }, () => ({ id: "usdc-circle" })),
-            ],
+            rankings: [{ id: "100" }, ...Array.from({ length: 10 }, () => ({ id: "usdc-circle" }))],
           }),
           updatedAt: nowSec,
         };
@@ -2112,7 +2099,8 @@ describe("syncYieldData", () => {
       { match: "yield_data", rows: [] },
       { match: "yield_history", rows: [] },
       {
-        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        match:
+          "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
         matchBinds: ["100"],
         rows: [],
         first: { price: 1.05, snapshot_date: nowSec },
@@ -2193,7 +2181,8 @@ describe("syncYieldData", () => {
       { match: "yield_data", rows: [] },
       { match: "yield_history", rows: [] },
       {
-        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        match:
+          "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
         matchBinds: ["100"],
         rows: [],
         first: { price: 1.05, snapshot_date: nowSec },
@@ -2271,7 +2260,8 @@ describe("syncYieldData", () => {
         ],
       },
       {
-        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        match:
+          "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
         matchBinds: ["100"],
         rows: [],
         first: { price: 1.05, snapshot_date: nowSec },
@@ -2527,13 +2517,16 @@ describe("syncYieldData", () => {
     );
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/eth",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/eth",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
     await syncYieldData(db, undefined, testChainRpcs);
 
@@ -2742,14 +2735,17 @@ describe("syncYieldData", () => {
     );
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/primary",
-        fallbackRpcUrl: "https://rpc.example/fallback",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/primary",
+          fallbackRpcUrl: "https://rpc.example/fallback",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
     const result = await syncYieldData(db, undefined, testChainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -2821,27 +2817,24 @@ describe("syncYieldData", () => {
     });
     mockFetch([]);
     const rawRpcSpy = vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock").mockResolvedValue(null);
-    const etherscanSpy = vi.spyOn(evmRpcModule, "fetchEtherscanUint256AtBlock").mockResolvedValue(
-      BigInt("1050000000000000000"),
-    );
+    const etherscanSpy = vi
+      .spyOn(evmRpcModule, "fetchEtherscanUint256AtBlock")
+      .mockResolvedValue(BigInt("1050000000000000000"));
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/primary",
-        fallbackRpcUrl: "https://rpc.example/fallback",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/primary",
+          fallbackRpcUrl: "https://rpc.example/fallback",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
-    const result = await syncYieldData(
-      db,
-      undefined,
-      testChainRpcs,
-      undefined,
-      "etherscan-key",
-    );
+    const result = await syncYieldData(db, undefined, testChainRpcs, undefined, "etherscan-key");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       fallbackMode?: string | null;
       sourceCoverage?: {
@@ -2861,9 +2854,9 @@ describe("syncYieldData", () => {
     expect(metadata.sourceCoverage?.onChainFailures).toBeNull();
     const deterministicRawRpcCalls = rawRpcSpy.mock.calls.filter(
       ([, contract, data]) =>
-        contract === "0x83F20F44975D03b1b09e64809B757c47f942BEeA"
-        && typeof data === "string"
-        && data.startsWith("0x07a2d13a"),
+        contract === "0x83F20F44975D03b1b09e64809B757c47f942BEeA" &&
+        typeof data === "string" &&
+        data.startsWith("0x07a2d13a"),
     );
     expect(deterministicRawRpcCalls).toHaveLength(2);
     expect(etherscanSpy).toHaveBeenCalledWith(
@@ -2934,22 +2927,19 @@ describe("syncYieldData", () => {
     vi.spyOn(evmRpcModule, "fetchEtherscanUint256AtBlock").mockResolvedValue(null);
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/primary",
-        fallbackRpcUrl: "https://rpc.example/fallback",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/primary",
+          fallbackRpcUrl: "https://rpc.example/fallback",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
-    const result = await syncYieldData(
-      db,
-      undefined,
-      testChainRpcs,
-      undefined,
-      "etherscan-key",
-    );
+    const result = await syncYieldData(db, undefined, testChainRpcs, undefined, "etherscan-key");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       fallbackMode?: string | null;
       sourceCoverage?: {
@@ -3050,13 +3040,16 @@ describe("syncYieldData", () => {
     );
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/eth",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/eth",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
     const result = await syncYieldData(db, undefined, testChainRpcs);
 
@@ -3157,21 +3150,20 @@ describe("syncYieldData", () => {
     );
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/eth",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/eth",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
     const result = await syncYieldData(db, undefined, testChainRpcs);
 
-    const onChainRow = findPublishedYieldRow(
-      db,
-      "lusd-liquity",
-      (row) => row.source_key === "onchain:lusd-liquity",
-    );
+    const onChainRow = findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "onchain:lusd-liquity");
     expect(onChainRow).toBeDefined();
     expect(onChainRow?.is_best).toBe(1);
 
@@ -3292,13 +3284,16 @@ describe("syncYieldData", () => {
     );
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/eth",
-        explorerUrl: "https://etherscan.io",
-      }],
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example/eth",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
     ]);
     await syncYieldData(db, undefined, testChainRpcs);
 
@@ -3346,13 +3341,13 @@ describe("syncYieldData", () => {
     vi.mocked(yieldHelpersModule.findBestLendingPool).mockImplementation((symbol) =>
       symbol === "sDAI"
         ? {
-          pool: "pool-sdai-aave",
-          apy: 3.25,
-          apyBase: 3.25,
-          apyReward: null,
-          tvlUsd: 5_000_000,
-          project: "aave-v3",
-        }
+            pool: "pool-sdai-aave",
+            apy: 3.25,
+            apyBase: 3.25,
+            apyReward: null,
+            tvlUsd: 5_000_000,
+            project: "aave-v3",
+          }
         : null,
     );
     mockFetch([]);
@@ -3414,9 +3409,9 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const usdcDiscoveryCall = vi.mocked(yieldHelpersModule.findBestLendingPool).mock.calls.find(
-      (call) => call[0] === "USDC",
-    );
+    const usdcDiscoveryCall = vi
+      .mocked(yieldHelpersModule.findBestLendingPool)
+      .mock.calls.find((call) => call[0] === "USDC");
     expect(usdcDiscoveryCall?.[2]).toEqual(expect.any(Set));
     expect(usdcDiscoveryCall?.[3]).toMatchObject({
       minApy: 0.5,
@@ -3585,17 +3580,17 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
-    const staleDeleteCall = db.getHistory().find(
-      (entry) =>
-        entry.sql.includes("DELETE FROM yield_data") &&
-        entry.sql.includes("updated_at <"),
-    );
-    const orphanDeleteCall = db.getHistory().find(
-      (entry) =>
-        entry.sql.includes("DELETE FROM yield_data") &&
-        entry.sql.includes("stablecoin_id IN") &&
-        !entry.sql.includes("updated_at <"),
-    );
+    const staleDeleteCall = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("DELETE FROM yield_data") && entry.sql.includes("updated_at <"));
+    const orphanDeleteCall = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("DELETE FROM yield_data") &&
+          entry.sql.includes("stablecoin_id IN") &&
+          !entry.sql.includes("updated_at <"),
+      );
 
     expect(staleDeleteCall).toBeUndefined();
     expect(orphanDeleteCall).toBeUndefined();

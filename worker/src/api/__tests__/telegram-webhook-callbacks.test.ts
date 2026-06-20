@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { lastSendMessageBody, telegramApiCallBody } from "../../test-helpers/__shared/telegram";
 
 // Stub the insights module so /why callback tests do not need to drive the
 // full report-cards snapshot pipeline. Coverage callback uses buildCoverageMessage
@@ -8,8 +9,8 @@ vi.mock("../telegram-webhook-insights", async (importOriginal) => {
   const original = (await importOriginal()) as Record<string, unknown>;
   return {
     ...original,
-    buildWhyMessage: vi.fn(async (_db: unknown, stablecoinId: string) =>
-      `<b>${stablecoinId} Safety Score</b>\nOverall: A`,
+    buildWhyMessage: vi.fn(
+      async (_db: unknown, stablecoinId: string) => `<b>${stablecoinId} Safety Score</b>\nOverall: A`,
     ),
   };
 });
@@ -21,9 +22,7 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
   const original = (await importOriginal()) as Record<string, unknown>;
   return {
     ...original,
-    sendAuditedTelegramReply: vi.fn(
-      original.sendAuditedTelegramReply as (...args: unknown[]) => Promise<void>,
-    ),
+    sendAuditedTelegramReply: vi.fn(original.sendAuditedTelegramReply as (...args: unknown[]) => Promise<void>),
   };
 });
 
@@ -40,17 +39,17 @@ function lastSentMessageBody(): {
     inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
   };
 } {
-  const sendCalls = fetchSpy.mock.calls.filter((call) => String(call[0]).includes("sendMessage"));
-  const last = sendCalls[sendCalls.length - 1];
-  if (!last) throw new Error("No sendMessage call recorded");
-  return JSON.parse(((last[1] as RequestInit).body as string) ?? "{}");
+  return lastSendMessageBody(fetchSpy);
 }
 
-function pendingRowFromSetup(payload: {
-  step: string;
-  alertTypes?: string[];
-  target?: unknown;
-}, options: { initiator_user_id?: string | null } = {}): Record<string, unknown> {
+function pendingRowFromSetup(
+  payload: {
+    step: string;
+    alertTypes?: string[];
+    target?: unknown;
+  },
+  options: { initiator_user_id?: string | null } = {},
+): Record<string, unknown> {
   return {
     action_type: "setup-step",
     action_payload: JSON.stringify(payload),
@@ -59,11 +58,13 @@ function pendingRowFromSetup(payload: {
   };
 }
 
-function pendingRowFromForget(options: {
-  initiator_user_id?: string | null;
-  expires_at?: number;
-  action_type?: string;
-} = {}): Record<string, unknown> {
+function pendingRowFromForget(
+  options: {
+    initiator_user_id?: string | null;
+    expires_at?: number;
+    action_type?: string;
+  } = {},
+): Record<string, unknown> {
   return {
     action_type: options.action_type ?? "forget-confirm",
     action_payload: "{}",
@@ -88,15 +89,11 @@ function makeCacheStablecoins(): string {
 }
 
 function lastAckBody(): { text?: string } {
-  const ackCall = [...fetchSpy.mock.calls].reverse().find((c) => String(c[0]).includes("answerCallbackQuery"));
-  if (!ackCall) throw new Error("No answerCallbackQuery call recorded");
-  return JSON.parse((ackCall[1] as RequestInit).body as string);
+  return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
 }
 
 function lastEditedMessageBody(): { text: string; reply_markup?: unknown } {
-  const editCall = [...fetchSpy.mock.calls].reverse().find((c) => String(c[0]).includes("editMessageText"));
-  if (!editCall) throw new Error("No editMessageText call recorded");
-  return JSON.parse(((editCall[1] as RequestInit).body as string) ?? "{}");
+  return telegramApiCallBody(fetchSpy, "editMessageText");
 }
 
 beforeEach(() => {
@@ -167,7 +164,9 @@ describe("handleCallbackQuery", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
     expect(
-      history.filter((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions")).map((entry) => entry.binds[1]),
+      history
+        .filter((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))
+        .map((entry) => entry.binds[1]),
     ).toEqual([ambiguous.matches[0].id, usdc.matches[0].id]);
     expect(lastAckBody().text).toBe("Selected.");
     const sent = lastSentMessageBody();
@@ -259,9 +258,7 @@ describe("handleCallbackQuery", () => {
       message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
     });
 
-    const upsert = db
-      .getHistory()
-      .find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
+    const upsert = db.getHistory().find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
     expect(upsert).toBeDefined();
     expect(upsert!.binds[1]).toBeNull();
   });
@@ -332,11 +329,13 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42 }, message_id: 999 },
       });
 
-      const upsert = db.getHistory().find(
-        (h) =>
-          /INSERT INTO telegram_subscriptions/.test(h.sql) &&
-          /alert_snooze_until_ts = excluded\.alert_snooze_until_ts/.test(h.sql),
-      );
+      const upsert = db
+        .getHistory()
+        .find(
+          (h) =>
+            /INSERT INTO telegram_subscriptions/.test(h.sql) &&
+            /alert_snooze_until_ts = excluded\.alert_snooze_until_ts/.test(h.sql),
+        );
       expect(upsert).toBeDefined();
       expect(upsert!.binds[0]).toBe("42");
       expect(upsert!.binds[1]).toBe("usdc-circle");
@@ -436,13 +435,11 @@ describe("handleCallbackQuery", () => {
 
       const history = db.getHistory();
       const persist = history.filter(
-        (h) =>
-          h.sql.includes("INSERT INTO telegram_pending_disambiguation") &&
-          h.binds.includes("setup-step"),
+        (h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation") && h.binds.includes("setup-step"),
       );
       expect(persist.length).toBeGreaterThan(0);
       const lastPersistPayload = String(persist[persist.length - 1].binds[2] ?? "{}");
-      expect(lastPersistPayload).toContain("\"step\":\"confirm-recommended\"");
+      expect(lastPersistPayload).toContain('"step":"confirm-recommended"');
       expect(lastPersistPayload).toContain("usd-top25");
       const body = lastSentMessageBody();
       expect(body.text).toContain("DEWS and Depeg alerts");
@@ -502,10 +499,7 @@ describe("handleCallbackQuery", () => {
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
-          first: pendingRowFromSetup(
-            { step: "branch", alertTypes: [], target: null },
-            { initiator_user_id: "7" },
-          ),
+          first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "7" }),
         },
       ]);
       await handleCallbackQuery(db, "fake-token", {
@@ -540,11 +534,9 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42 } },
       });
 
-      const persist = db
-        .getHistory()
-        .filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+      const persist = db.getHistory().filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
       const payload = String(persist[persist.length - 1].binds[2] ?? "");
-      expect(payload).toContain("\"safety\"");
+      expect(payload).toContain('"safety"');
     });
 
     it("setup:next refuses when no alert types are selected", async () => {
@@ -619,11 +611,9 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42 } },
       });
 
-      const persist = db
-        .getHistory()
-        .filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+      const persist = db.getHistory().filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
       const payload = String(persist[persist.length - 1].binds[2] ?? "");
-      expect(payload).toContain("\"step\":\"confirm-custom\"");
+      expect(payload).toContain('"step":"confirm-custom"');
       expect(payload).toContain("usd-top10");
       const body = lastSentMessageBody();
       expect(body.text).toContain("DEWS, Safety");
@@ -683,9 +673,7 @@ describe("handleCallbackQuery", () => {
 
       const history = db.getHistory();
       const subscriberUpsert = history.find(
-        (h) =>
-          h.sql.includes("INSERT INTO telegram_subscribers") &&
-          /global_alert_dews\s*=\s*MAX/.test(h.sql),
+        (h) => h.sql.includes("INSERT INTO telegram_subscribers") && /global_alert_dews\s*=\s*MAX/.test(h.sql),
       );
       expect(subscriberUpsert).toBeDefined();
       expect(history.some((h) => h.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
@@ -761,10 +749,7 @@ describe("handleCallbackQuery", () => {
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
-          first: pendingRowFromSetup(
-            { step: "branch", alertTypes: [], target: null },
-            { initiator_user_id: "111" },
-          ),
+          first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "111" }),
         },
       ]);
       await handleCallbackQuery(db, "fake-token", {
@@ -969,9 +954,12 @@ describe("handleCallbackQuery", () => {
       const sendBody = JSON.parse((sendCall?.[1] as RequestInit).body as string);
       expect(sendBody.text).toContain("usdc-circle Safety Score");
       const whyButtons = (sendBody.reply_markup?.inline_keyboard ?? []).flat();
-      expect(whyButtons.some((button: { text?: string; web_app?: { url?: string } }) =>
-        button.text === "Open in app" && button.web_app?.url?.includes("startapp=why_usdc-circle"),
-      )).toBe(true);
+      expect(
+        whyButtons.some(
+          (button: { text?: string; web_app?: { url?: string } }) =>
+            button.text === "Open in app" && button.web_app?.url?.includes("startapp=why_usdc-circle"),
+        ),
+      ).toBe(true);
       const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
       expect(ackCall).toBeDefined();
       const ackBody = JSON.parse((ackCall?.[1] as RequestInit).body as string);
@@ -994,9 +982,12 @@ describe("handleCallbackQuery", () => {
       const body = JSON.parse((sendCall?.[1] as RequestInit).body as string);
       expect(body.text).toContain("USDC coverage");
       const coverageButtons = (body.reply_markup?.inline_keyboard ?? []).flat();
-      expect(coverageButtons.some((button: { text?: string; web_app?: { url?: string } }) =>
-        button.text === "Open in app" && button.web_app?.url?.includes("startapp=coverage_usdc-circle"),
-      )).toBe(true);
+      expect(
+        coverageButtons.some(
+          (button: { text?: string; web_app?: { url?: string } }) =>
+            button.text === "Open in app" && button.web_app?.url?.includes("startapp=coverage_usdc-circle"),
+        ),
+      ).toBe(true);
       const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
       expect(JSON.parse((ackCall?.[1] as RequestInit).body as string).text).toBe("Coverage sent.");
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
@@ -1012,9 +1003,7 @@ describe("handleCallbackQuery", () => {
       });
 
       const history = db.getHistory();
-      const subscriberUpsert = history.find((h) =>
-        /INSERT INTO telegram_subscribers/.test(h.sql),
-      );
+      const subscriberUpsert = history.find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
       expect(subscriberUpsert).toBeDefined();
       // Per-coin alert bumps for dews + depeg are set to 1.
       expect(subscriberUpsert!.binds[2]).toBe(1); // alert_dews
@@ -1022,9 +1011,7 @@ describe("handleCallbackQuery", () => {
       expect(subscriberUpsert!.binds[4]).toBe(0); // alert_safety
       expect(subscriberUpsert!.binds[5]).toBe(0); // alert_launch
 
-      const subscriptionInsert = history.find((h) =>
-        /INSERT INTO telegram_subscriptions/.test(h.sql),
-      );
+      const subscriptionInsert = history.find((h) => /INSERT INTO telegram_subscriptions/.test(h.sql));
       expect(subscriptionInsert).toBeDefined();
       expect(subscriptionInsert!.binds[1]).toBe("usdc-circle");
       expect(subscriptionInsert!.binds[2]).toBe(1); // alert_dews
@@ -1035,7 +1022,11 @@ describe("handleCallbackQuery", () => {
       const confirmation = lastSentMessageBody();
       expect(confirmation.text).toContain("Subscribed to DEWS + depeg for USDC");
       const buttons = (confirmation.reply_markup?.inline_keyboard ?? []).flat();
-      expect(buttons.some((button) => button.text === "Open in app" && button.web_app?.url.includes("startapp=coin_usdc-circle"))).toBe(true);
+      expect(
+        buttons.some(
+          (button) => button.text === "Open in app" && button.web_app?.url.includes("startapp=coin_usdc-circle"),
+        ),
+      ).toBe(true);
     });
 
     it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {
@@ -1098,9 +1089,7 @@ describe("handleCallbackQuery", () => {
       });
 
       const history = db.getHistory();
-      const subscriberUpsert = history.find((h) =>
-        /INSERT INTO telegram_subscribers/.test(h.sql),
-      );
+      const subscriberUpsert = history.find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
       expect(subscriberUpsert).toBeDefined();
       // Group chats must not persist the tapping admin's personal username.
       expect(subscriberUpsert!.binds[1]).toBeNull();
@@ -1216,7 +1205,10 @@ describe("handleCallbackQuery", () => {
       };
     }
 
-    function editMessageBody(): { text: string; reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> } } {
+    function editMessageBody(): {
+      text: string;
+      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> };
+    } {
       const editCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("editMessageText"));
       if (!editCall) throw new Error("No editMessageText call recorded");
       return JSON.parse(((editCall[1] as RequestInit).body as string) ?? "{}");
@@ -1470,9 +1462,7 @@ describe("handleCallbackQuery", () => {
   });
   describe("settings dispatch", () => {
     it("settings:home routes to the settings handler and edits the message", async () => {
-      const db = mockD1([
-        { match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null },
-      ]);
+      const db = mockD1([{ match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null }]);
       await handleCallbackQuery(db, "fake-token", {
         id: "cb-settings",
         data: "settings:home",
@@ -1481,9 +1471,7 @@ describe("handleCallbackQuery", () => {
       });
 
       // editMessageText was called, not sendMessage.
-      const edits = fetchSpy.mock.calls.filter((c) =>
-        String(c[0]).includes("editMessageText"),
-      );
+      const edits = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("editMessageText"));
       expect(edits.length).toBe(1);
     });
 
@@ -1492,23 +1480,18 @@ describe("handleCallbackQuery", () => {
         { match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null },
         {
           match: "FROM telegram_subscriptions",
-          rows: [
-            "usdt-tether",
-            "usdc-circle",
-            "dai-makerdao",
-            "pyusd-paypal",
-            "usds-sky",
-            "usde-ethena",
-          ].map((stablecoinId) => ({
-            stablecoin_id: stablecoinId,
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            alert_launch: 0,
-            dews_min_band: "ALERT",
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          })),
+          rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
+            (stablecoinId) => ({
+              stablecoin_id: stablecoinId,
+              alert_dews: 1,
+              alert_depeg: 0,
+              alert_safety: 0,
+              alert_launch: 0,
+              dews_min_band: "ALERT",
+              safety_mode: null,
+              depeg_worsening_bps_step: null,
+            }),
+          ),
         },
       ]);
       await handleCallbackQuery(db, "fake-token", {
@@ -1529,9 +1512,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("settings:c:<id>:db:A writes the alert_dews flag", async () => {
-      const db = mockD1([
-        { match: "FROM telegram_subscriptions", rows: [] },
-      ]);
+      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
       await handleCallbackQuery(db, "fake-token", {
         id: "cb-coin",
         data: "settings:c:usdc-circle:db:A",
@@ -1542,8 +1523,7 @@ describe("handleCallbackQuery", () => {
       const history = db.getHistory();
       const insert = history.find(
         (h) =>
-          /INSERT INTO telegram_subscriptions/.test(h.sql) &&
-          /dews_min_band = excluded\.dews_min_band/.test(h.sql),
+          /INSERT INTO telegram_subscriptions/.test(h.sql) && /dews_min_band = excluded\.dews_min_band/.test(h.sql),
       );
       expect(insert).toBeDefined();
       expect(insert!.binds[2]).toBe(1); // alert_dews
@@ -1646,26 +1626,25 @@ describe("handleCallbackQuery", () => {
       const history = db.getHistory();
       const subscriptionUpsert = history.find(
         (entry) =>
-          entry.sql.includes("INSERT INTO telegram_subscriptions") &&
-          entry.sql.includes("depeg_worsening_bps_step"),
+          entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.sql.includes("depeg_worsening_bps_step"),
       );
       expect(subscriptionUpsert).toBeDefined();
       expect(subscriptionUpsert!.binds).toEqual(["42", "usdc-circle", 250]);
       expect(subscriptionUpsert!.sql).toContain("alert_depeg = 1");
       expect(subscriptionUpsert!.sql).toContain("depeg_worsening_bps_step = excluded.depeg_worsening_bps_step");
       expect(
-        history.some((entry) =>
-          entry.sql.includes("INSERT INTO telegram_subscribers") &&
-          entry.sql.includes("alert_depeg = MAX"),
+        history.some(
+          (entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.sql.includes("alert_depeg = MAX"),
         ),
       ).toBe(true);
 
       const usageRows = db
         .getHistory()
-        .filter((entry) =>
-          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-          entry.binds.includes("subscribe") &&
-          entry.binds.includes("depegstep"),
+        .filter(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+            entry.binds.includes("subscribe") &&
+            entry.binds.includes("depegstep"),
         );
       expect(usageRows).toHaveLength(1);
       // eventType=subscribe, actionDetail=depegstep, outcome=success
@@ -1685,27 +1664,25 @@ describe("handleCallbackQuery", () => {
 
       const history = db.getHistory();
       const subscriptionUpsert = history.find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO telegram_subscriptions") &&
-          entry.sql.includes("safety_mode"),
+        (entry) => entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.sql.includes("safety_mode"),
       );
       expect(subscriptionUpsert).toBeDefined();
       expect(subscriptionUpsert!.binds).toEqual(["42", "usdc-circle", 1, "downgrade-only"]);
       expect(subscriptionUpsert!.sql).toContain("alert_safety = excluded.alert_safety");
       expect(subscriptionUpsert!.sql).toContain("safety_mode = excluded.safety_mode");
       expect(
-        history.some((entry) =>
-          entry.sql.includes("INSERT INTO telegram_subscribers") &&
-          entry.sql.includes("alert_safety = MAX"),
+        history.some(
+          (entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.sql.includes("alert_safety = MAX"),
         ),
       ).toBe(true);
 
       const usageRows = db
         .getHistory()
-        .filter((entry) =>
-          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-          entry.binds.includes("subscribe") &&
-          entry.binds.includes("safetydown"),
+        .filter(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+            entry.binds.includes("subscribe") &&
+            entry.binds.includes("safetydown"),
         );
       expect(usageRows).toHaveLength(1);
       expect(usageRows[0].binds[1]).toBe("subscribe");
@@ -1714,9 +1691,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("unsub:<id> success records an unsubscribe usage event", async () => {
-      const db = mockD1([
-        { match: "FROM telegram_subscriptions", rows: [] },
-      ]);
+      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
       await handleCallbackQuery(db, "fake-token", {
         id: "cb-unsub-ok",
         data: "unsub:usdc-circle",
@@ -1726,10 +1701,11 @@ describe("handleCallbackQuery", () => {
 
       const usageRows = db
         .getHistory()
-        .filter((entry) =>
-          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-          entry.binds.includes("unsubscribe") &&
-          entry.binds.includes("callback_unsub"),
+        .filter(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+            entry.binds.includes("unsubscribe") &&
+            entry.binds.includes("callback_unsub"),
         );
       expect(usageRows).toHaveLength(1);
       expect(usageRows[0].binds[1]).toBe("unsubscribe");
@@ -1754,11 +1730,12 @@ describe("handleCallbackQuery", () => {
 
       const usageRows = db
         .getHistory()
-        .filter((entry) =>
-          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-          entry.binds.includes("subscribe") &&
-          entry.binds.includes("depegstep") &&
-          entry.binds.includes("failure"),
+        .filter(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+            entry.binds.includes("subscribe") &&
+            entry.binds.includes("depegstep") &&
+            entry.binds.includes("failure"),
         );
       expect(usageRows).toHaveLength(1);
       expect(usageRows[0].binds[1]).toBe("subscribe");
@@ -1826,11 +1803,9 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42, type: "private" }, message_id: 999 },
       });
 
-      const upsert = db.getHistory().find(
-        (h) =>
-          /INSERT INTO telegram_subscribers/.test(h.sql) &&
-          /timezone = excluded\.timezone/.test(h.sql),
-      );
+      const upsert = db
+        .getHistory()
+        .find((h) => /INSERT INTO telegram_subscribers/.test(h.sql) && /timezone = excluded\.timezone/.test(h.sql));
       expect(upsert).toBeDefined();
       expect(upsert!.binds).toContain("Europe/Paris");
 

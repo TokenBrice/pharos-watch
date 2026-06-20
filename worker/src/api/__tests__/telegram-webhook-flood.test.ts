@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeTelegramUpdateRequest } from "../../test-helpers/__shared/telegram";
 
 // The audited reply helper is mocked so the flood notice reply can throw;
 // the production helper swallows Telegram/D1 failures internally.
@@ -16,19 +17,12 @@ vi.stubGlobal("fetch", fetchSpy);
 const { handleTelegramWebhook } = await import("../telegram-webhook");
 
 function makeWebhookRequest(chatId: number, text: string): Request {
-  return new Request("https://x/api/telegram-webhook", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Telegram-Bot-Api-Secret-Token": "test-secret",
+  return makeTelegramUpdateRequest({
+    message: {
+      chat: { id: chatId, username: "testuser", type: "private" },
+      from: { id: 999, username: "requester" },
+      text,
     },
-    body: JSON.stringify({
-      message: {
-        chat: { id: chatId, username: "testuser", type: "private" },
-        from: { id: 999, username: "requester" },
-        text,
-      },
-    }),
   });
 }
 
@@ -53,12 +47,7 @@ describe("telegram webhook per-chat flood cap", () => {
       },
     ]);
 
-    const res = await handleTelegramWebhook(
-      db,
-      makeWebhookRequest(123, "/help"),
-      "test-secret",
-      "bot-token",
-    );
+    const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/help"), "test-secret", "bot-token");
 
     expect(res.status).toBe(200);
     // Only the failed flood notice — the /help handler never produced a reply.

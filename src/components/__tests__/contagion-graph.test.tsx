@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { makeReportCard } from "@/test/fixtures/safety-scores";
 import type { ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types";
 
 vi.mock("@/lib/contagion-layout", async () => {
@@ -27,32 +28,8 @@ const DIMENSION_STUB = {
   detail: "",
 };
 
-const RAW_INPUTS_STUB = {
-  pegScore: 95,
-  activeDepeg: false,
-  depegEventCount: 0,
-  lastEventAt: null,
-  liquidityScore: 60,
-  effectiveExitScore: null,
-  redemptionBackstopScore: null,
-  redemptionRouteFamily: null,
-  redemptionImmediateCapacityUsd: null,
-  redemptionImmediateCapacityRatio: null,
-  concentrationHhi: null,
-  bluechipGrade: null,
-  canBeBlacklisted: false as const,
-  chainTier: "ethereum" as const,
-  deploymentModel: "native-multichain" as const,
-  collateralQuality: "rwa" as const,
-  custodyModel: "institutional-regulated" as const,
-  governanceTier: "centralized" as const,
-  governanceQuality: "regulated-entity" as const,
-  dependencies: [],
-  navToken: false,
-};
-
 function makeCard(id: string, symbol: string, grade: ReportCardGrade = "B"): ReportCard {
-  return {
+  return makeReportCard({
     id,
     name: symbol,
     symbol,
@@ -67,9 +44,7 @@ function makeCard(id: string, symbol: string, grade: ReportCardGrade = "B"): Rep
       decentralization: DIMENSION_STUB,
       dependencyRisk: DIMENSION_STUB,
     },
-    rawInputs: RAW_INPUTS_STUB,
-    isDefunct: false,
-  };
+  });
 }
 
 const CARDS = [

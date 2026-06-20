@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { mockCircuitBreaker, mockDbCache, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 
 let latestMockDb: MockD1Database | null = null;
 
@@ -82,101 +83,88 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       },
     },
   ];
-  return {
-  TRACKED_STABLECOINS: stablecoins,
-  ACTIVE_STABLECOINS: stablecoins,
-  TRACKED_META_BY_ID: new Map([
-    [
-      "sdai-maker",
-      {
-        id: "sdai-maker",
-        name: "sDAI",
-        symbol: "sDAI",
-        geckoId: "savings-dai",
-        flags: {
-          pegCurrency: "USD",
-          backing: "crypto-backed",
-          yieldBearing: true,
-          navToken: true,
-          governance: "decentralized",
+  return mockRegistry({
+    stablecoins,
+    trackedMetaById: new Map([
+      [
+        "sdai-maker",
+        {
+          id: "sdai-maker",
+          name: "sDAI",
+          symbol: "sDAI",
+          geckoId: "savings-dai",
+          flags: {
+            pegCurrency: "USD",
+            backing: "crypto-backed",
+            yieldBearing: true,
+            navToken: true,
+            governance: "decentralized",
+          },
+          yieldConfig: {
+            yieldSource: "DSR",
+            yieldType: "nav-appreciation",
+          },
         },
-        yieldConfig: {
-          yieldSource: "DSR",
-          yieldType: "nav-appreciation",
+      ],
+      [
+        "usde-ethena",
+        {
+          id: "usde-ethena",
+          name: "USDe",
+          symbol: "USDe",
+          geckoId: "usde-ethena",
+          flags: {
+            pegCurrency: "USD",
+            backing: "crypto-backed",
+            yieldBearing: true,
+            navToken: false,
+            governance: "decentralized",
+          },
+          yieldConfig: {
+            yieldSource: "Ethena Staking",
+            yieldType: "governance-set",
+          },
         },
-      },
-    ],
-    [
-      "usde-ethena",
-      {
-        id: "usde-ethena",
-        name: "USDe",
-        symbol: "USDe",
-        geckoId: "usde-ethena",
-        flags: {
-          pegCurrency: "USD",
-          backing: "crypto-backed",
-          yieldBearing: true,
-          navToken: false,
-          governance: "decentralized",
+      ],
+      [
+        "usdc-circle",
+        {
+          id: "usdc-circle",
+          name: "USD Coin",
+          symbol: "USDC",
+          geckoId: "usd-coin",
+          flags: {
+            pegCurrency: "USD",
+            backing: "fiat-backed",
+            yieldBearing: false,
+            navToken: false,
+            governance: "centralized",
+          },
         },
-        yieldConfig: {
-          yieldSource: "Ethena Staking",
-          yieldType: "governance-set",
+      ],
+      [
+        "u-united-stables",
+        {
+          id: "u-united-stables",
+          name: "United Stables",
+          symbol: "U",
+          geckoId: "united-stables",
+          flags: {
+            pegCurrency: "USD",
+            backing: "rwa-backed",
+            yieldBearing: false,
+            navToken: false,
+            governance: "centralized",
+          },
         },
-      },
-    ],
-    [
-      "usdc-circle",
-      {
-        id: "usdc-circle",
-        name: "USD Coin",
-        symbol: "USDC",
-        geckoId: "usd-coin",
-        flags: {
-          pegCurrency: "USD",
-          backing: "fiat-backed",
-          yieldBearing: false,
-          navToken: false,
-          governance: "centralized",
-        },
-      },
-    ],
-    ["u-united-stables", {
-      id: "u-united-stables",
-      name: "United Stables",
-      symbol: "U",
-      geckoId: "united-stables",
-      flags: {
-        pegCurrency: "USD",
-        backing: "rwa-backed",
-        yieldBearing: false,
-        navToken: false,
-        governance: "centralized",
-      },
-    }],
-  ]),
-  FROZEN_IDS: new Set<string>(),
-  FROZEN_META_BY_ID: new Map<string, never>(),
-  FROZEN_STABLECOINS: [],
-  ACTIVE_IDS: new Set(stablecoins.map((s) => s.id)),
-  ACTIVE_META_BY_ID: new Map(stablecoins.map((s) => [s.id, s])),
-  READABLE_IDS: new Set(stablecoins.map((s) => s.id)),
-  READABLE_STABLECOINS: stablecoins,
-  READABLE_META_BY_ID: new Map(stablecoins.map((s) => [s.id, s])),
-  };
+      ],
+    ]),
+  });
 });
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) =>
-    fetch(url, init),
-  ),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcome: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 vi.mock("../../lib/db", async (importOriginal) => {
   const orig = await importOriginal<typeof import("../../lib/db")>();
@@ -187,12 +175,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/db-cache", () => ({
-  getCache: vi.fn(async () => null),
-  setCache: vi.fn(async () => {}),
-  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
-  writeFreshnessSentinel: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/db-cache", () => mockDbCache());
 
 vi.mock("../../lib/chain-registry", () => ({
   getChainRpc: vi.fn(() => null),
@@ -200,8 +183,7 @@ vi.mock("../../lib/chain-registry", () => ({
 
 // Keep real yield-helpers — we want to test the actual logic
 vi.mock("../yield-helpers", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../yield-helpers")>();
+  const actual = await importOriginal<typeof import("../yield-helpers")>();
   return {
     ...actual,
     // Keep all real implementations
@@ -309,26 +291,24 @@ function setupDefaultMocks() {
   vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue({ written: true, skippedBecauseNewer: false });
   vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
   vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-  vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(
-    {
-      kind: "ok",
-      mode: "map",
-      coveredCount: 4,
-      trackedCount: 4,
-      coverageRatio: 1,
-      scores: new Map([
-        ["sdai-maker", { score: 85, grade: "A-" }],
-        ["usde-ethena", { score: 70, grade: "B" }],
-        ["usdc-circle", { score: 90, grade: "A" }],
-        ["u-united-stables", { score: 75, grade: "B" }],
-      ]),
-    } as never,
-  );
+  vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
+    kind: "ok",
+    mode: "map",
+    coveredCount: 4,
+    trackedCount: 4,
+    coverageRatio: 1,
+    scores: new Map([
+      ["sdai-maker", { score: 85, grade: "A-" }],
+      ["usde-ethena", { score: 70, grade: "B" }],
+      ["usdc-circle", { score: 90, grade: "A" }],
+      ["u-united-stables", { score: 75, grade: "B" }],
+    ]),
+  } as never);
 }
 
 function parseBulkRows<T>(sqlPattern: string): T[] {
   const entry = latestMockDb?.getHistory().find((item) => item.sql.includes(sqlPattern));
-  return entry ? JSON.parse(String(entry.binds[0] ?? "[]")) as T[] : [];
+  return entry ? (JSON.parse(String(entry.binds[0] ?? "[]")) as T[]) : [];
 }
 
 function getWriteStatements() {
@@ -387,30 +367,20 @@ function getWriteStatements() {
   if (yieldDataRows.length > 0 || historyRows.length > 0) {
     return [...yieldDataRows, ...historyRows];
   }
-  return (
-    (vi.mocked(batchExecute).mock.calls[0]?.[1] as
-      | Array<{ boundValues?: unknown[] }>
-      | undefined) ?? []
-  );
+  return (vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined) ?? [];
 }
 
 function getYieldRankingsCachePayload(): unknown {
-  const entry = latestMockDb?.getHistory().find(
-    (item) => item.sql.includes("INSERT INTO cache (key, value, updated_at)") && item.binds[0] === "yield-rankings",
-  );
+  const entry = latestMockDb
+    ?.getHistory()
+    .find(
+      (item) => item.sql.includes("INSERT INTO cache (key, value, updated_at)") && item.binds[0] === "yield-rankings",
+    );
   return entry ? JSON.parse(String(entry.binds[1])) : undefined;
 }
 
-function findYieldDataRow(
-  stmts: Array<{ boundValues?: unknown[] }>,
-  stablecoinId: string,
-  sourceKey: string,
-) {
-  return stmts.find(
-    (stmt) =>
-      stmt.boundValues?.[0] === stablecoinId &&
-      stmt.boundValues?.[1] === sourceKey,
-  );
+function findYieldDataRow(stmts: Array<{ boundValues?: unknown[] }>, stablecoinId: string, sourceKey: string) {
+  return stmts.find((stmt) => stmt.boundValues?.[0] === stablecoinId && stmt.boundValues?.[1] === sourceKey);
 }
 
 // --- Tests ---
@@ -470,7 +440,10 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     expect(bestRow?.boundValues?.[12]).toBe("defillama");
 
     const rankingsPayload = getYieldRankingsCachePayload() as {
-      rankings: Array<{ id: string; sourceRisk?: { venueProtocol?: string | null; venueChain?: string | null } | null }>;
+      rankings: Array<{
+        id: string;
+        sourceRisk?: { venueProtocol?: string | null; venueChain?: string | null } | null;
+      }>;
     };
     expect(rankingsPayload).toBeDefined();
     expect(rankingsPayload.rankings.find((row) => row.id === "sdai-maker")?.sourceRisk).toMatchObject({
@@ -481,8 +454,7 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
 
   it("prefers deterministic rate-derived source over curated DeFiLlama when both available", async () => {
     // Inject a rate-derived config to produce a deterministic-tier source alongside curated DL
-    const configs =
-      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
     configs.push({
       stablecoinId: "sdai-maker",
       spreadBps: 25,
@@ -769,8 +741,7 @@ describe("rate-derived yield from T-bill rate", () => {
 
   it("computes rate-derived APY as riskFreeRate minus spread", async () => {
     // Inject a rate-derived config for sDAI
-    const configs =
-      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
     configs.push({
       stablecoinId: "sdai-maker",
       spreadBps: 50,
@@ -805,8 +776,7 @@ describe("rate-derived yield from T-bill rate", () => {
   });
 
   it("floors rate-derived APY at zero when spread exceeds T-bill rate", async () => {
-    const configs =
-      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
     configs.push({
       stablecoinId: "sdai-maker",
       spreadBps: 600,
@@ -1162,7 +1132,8 @@ describe("price-derived and auto-discovery yield paths", () => {
       { match: "yield_data", rows: [] },
       { match: "yield_history", rows: [] },
       {
-        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        match:
+          "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
         matchBinds: ["sdai-maker"],
         rows: [],
         first: { price: 1.05, snapshot_date: nowSec },
@@ -1202,7 +1173,8 @@ describe("price-derived and auto-discovery yield paths", () => {
       { match: "yield_data", rows: [] },
       { match: "yield_history", rows: [] },
       {
-        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        match:
+          "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
         matchBinds: ["sdai-maker"],
         rows: [],
         first: { price: 1.2, snapshot_date: nowSec },
@@ -1273,9 +1245,7 @@ describe("price-derived and auto-discovery yield paths", () => {
     await syncYieldData(db);
 
     const writeStatements = getWriteStatements();
-    const autoRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "u-united-stables",
-    );
+    const autoRow = writeStatements.find((stmt) => stmt.boundValues?.[0] === "u-united-stables");
     expect(autoRow).toBeDefined();
   });
 });
@@ -1367,9 +1337,9 @@ describe("on-chain rate bootstrapping seed", () => {
     );
     expect(historyRow).toBeDefined();
 
-    const anchorQuery = db.getHistory().find((entry) =>
-      entry.sql.includes("FROM yield_history") && entry.sql.includes("exchange_rate IS NOT NULL")
-    );
+    const anchorQuery = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("FROM yield_history") && entry.sql.includes("exchange_rate IS NOT NULL"));
     expect(anchorQuery?.sql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
 
     // Clean up
@@ -1528,9 +1498,11 @@ describe("tracked optional source anchors", () => {
 
     const anchorQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM yield_history"));
     expect(anchorQueries).toHaveLength(2);
-    expect(anchorQueries.every((entry) =>
-      entry.sql.includes("publication_generation_id IS NULL OR publication_state = 'published'")
-    )).toBe(true);
+    expect(
+      anchorQueries.every((entry) =>
+        entry.sql.includes("publication_generation_id IS NULL OR publication_state = 'published'"),
+      ),
+    ).toBe(true);
   });
 
   it("ignores unpublished Ondo oracle anchor rows when selecting prior exchange rates", async () => {
@@ -1554,9 +1526,30 @@ describe("tracked optional source anchors", () => {
         ) VALUES (?, ?, ?, ?, ?, ?)`,
       );
       const nowSec = 1_747_000_000;
-      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.09, nowSec - 8 * 86_400, "gen-failed", "failed");
-      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.08, nowSec - 9 * 86_400, "gen-staged", "staged");
-      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.07, nowSec - 10 * 86_400, "gen-published", "published");
+      insertHistory.run(
+        "usdy-ondo-finance",
+        "protocol-api:ondo-usdy-oracle",
+        1.09,
+        nowSec - 8 * 86_400,
+        "gen-failed",
+        "failed",
+      );
+      insertHistory.run(
+        "usdy-ondo-finance",
+        "protocol-api:ondo-usdy-oracle",
+        1.08,
+        nowSec - 9 * 86_400,
+        "gen-staged",
+        "staged",
+      );
+      insertHistory.run(
+        "usdy-ondo-finance",
+        "protocol-api:ondo-usdy-oracle",
+        1.07,
+        nowSec - 10 * 86_400,
+        "gen-published",
+        "published",
+      );
       insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.06, nowSec - 11 * 86_400, null, null);
 
       const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
@@ -1627,10 +1620,12 @@ describe("optional source budgets", () => {
         });
       }
 
-      return Promise.resolve(new Response(JSON.stringify({ error: "Not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
     });
     vi.stubGlobal("fetch", fetchSpy);
 
@@ -1690,10 +1685,7 @@ describe("appendOptionalYieldCandidate", () => {
         },
       }),
       meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([[
-        "usde-ethena",
-        2_000_000,
-      ]]),
+      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
     });
 
     expect(status).toBe("appended" as YieldCandidateAppendStatus);
@@ -1702,20 +1694,22 @@ describe("appendOptionalYieldCandidate", () => {
   });
 
   it("returns duplicate when an identical source key already exists", () => {
-    const resolved: ResolvedYieldEntry[] = [{
-      id: "usde-ethena",
-      symbol: "USDe",
-      yield: {
-        currentApy: 3.2,
-        apyBase: 3.2,
-        apyReward: null,
-        sourcePool: "pool-optional",
-        sourceTvlUsd: 1_000,
-        dataSource: "protocol-api",
-        exchangeRate: null,
-        sourceKey: "pool-optional",
+    const resolved: ResolvedYieldEntry[] = [
+      {
+        id: "usde-ethena",
+        symbol: "USDe",
+        yield: {
+          currentApy: 3.2,
+          apyBase: 3.2,
+          apyReward: null,
+          sourcePool: "pool-optional",
+          sourceTvlUsd: 1_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "pool-optional",
+        },
       },
-    }];
+    ];
 
     const status = appendOptionalYieldCandidate({
       resolved,
@@ -1728,10 +1722,7 @@ describe("appendOptionalYieldCandidate", () => {
         },
       }),
       meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([[
-        "usde-ethena",
-        2_000_000,
-      ]]),
+      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
     });
 
     expect(status).toBe("duplicate" as YieldCandidateAppendStatus);
@@ -1750,10 +1741,7 @@ describe("appendOptionalYieldCandidate", () => {
         },
       }),
       meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([[
-        "usde-ethena",
-        2_000_000,
-      ]]),
+      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
     });
 
     expect(status).toBe("size-gated" as YieldCandidateAppendStatus);
@@ -1775,10 +1763,7 @@ describe("appendOptionalYieldCandidate", () => {
         },
       }),
       meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([[
-        "usde-ethena",
-        2_000_000,
-      ]]),
+      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
     });
 
     expect(status).toBe("size-gated" as YieldCandidateAppendStatus);

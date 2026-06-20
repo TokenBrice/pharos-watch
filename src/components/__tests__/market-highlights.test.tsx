@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MarketHighlights } from "@/components/market-highlights";
+import { makeStablecoin as makeStablecoinFixture } from "@/test/fixtures/safety-scores";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 
 vi.mock("next/link", () => ({
@@ -99,8 +100,14 @@ describe("MarketHighlights copy (Task 1.2)", () => {
       }),
     ];
     const pegScores = new Map<string, PegSummaryCoin>([
-      ["usdt-tether", makePegSummaryCoin({ id: "usdt-tether", symbol: "USDT", activeDepeg: false, currentDeviationBps: -4919 })],
-      ["usdc-circle", makePegSummaryCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: -300 })],
+      [
+        "usdt-tether",
+        makePegSummaryCoin({ id: "usdt-tether", symbol: "USDT", activeDepeg: false, currentDeviationBps: -4919 }),
+      ],
+      [
+        "usdc-circle",
+        makePegSummaryCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: -300 }),
+      ],
     ]);
 
     const html = renderToStaticMarkup(<MarketHighlights data={data} pegScores={pegScores} />);
@@ -125,29 +132,16 @@ function makeStablecoin({
   currentSupply: number;
   previousWeekSupply: number;
 }): StablecoinData {
-  return {
+  return makeStablecoinFixture({
     id,
     name,
     symbol,
-    geckoId: null,
     pegType: "USD",
-    pegMechanism: "fiat-backed",
     price,
-    priceSource: "test",
     priceConfidence: "high",
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
     circulating: { peggedUSD: currentSupply },
-    circulatingPrevDay: {},
     circulatingPrevWeek: { peggedUSD: previousWeekSupply },
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  } as StablecoinData;
+  });
 }
 
 function makePegSummaryCoin(overrides: Partial<PegSummaryCoin>): PegSummaryCoin {

@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockCircuitBreaker } from "../../test-helpers/cron";
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcome: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
@@ -25,12 +23,7 @@ function makeDb() {
   };
 }
 
-function horizonResponse(
-  circulation: number,
-  mint: number,
-  redemption: number,
-  date = "2026-03-23T00:00:00Z",
-) {
+function horizonResponse(circulation: number, mint: number, redemption: number, date = "2026-03-23T00:00:00Z") {
   return new Response(
     JSON.stringify({
       history_latest_ledger: 42_691_026,
@@ -130,9 +123,7 @@ describe("syncKinesisSupply", () => {
   });
 
   it("skips a chain when its circuit breaker is open", async () => {
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
-      source !== "kinesis-kau-horizon",
-    );
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "kinesis-kau-horizon");
     vi.mocked(fetchWithRetry).mockResolvedValue(kagResponse());
 
     const { db } = makeDb();
@@ -193,9 +184,7 @@ describe("syncKinesisSupply", () => {
 
     const { db, bindFn } = makeDb();
     // Only test KAU by making KAG circuit open
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
-      source !== "kinesis-kag-horizon",
-    );
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "kinesis-kag-horizon");
     await syncKinesisSupply(db, AbortSignal.timeout(5000));
 
     // Should use the last element
@@ -209,9 +198,7 @@ describe("syncKinesisSupply", () => {
 
     const { db } = makeDb();
     // Only test KAU
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
-      source !== "kinesis-kag-horizon",
-    );
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "kinesis-kag-horizon");
     const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
 
     expect(result.itemCount).toBe(0);

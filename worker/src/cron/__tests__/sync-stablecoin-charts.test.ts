@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetchRetry } from "../../test-helpers/cron";
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncStablecoinCharts } from "../sync-stablecoin-charts";
 
-function makeRawChartPoints(count: number, nowSec: number): Array<{
+function makeRawChartPoints(
+  count: number,
+  nowSec: number,
+): Array<{
   date: number;
   totalCirculating: Record<string, number>;
   totalCirculatingUSD: Record<string, number>;
@@ -24,7 +26,10 @@ function makeRawChartPoints(count: number, nowSec: number): Array<{
   });
 }
 
-function makeRawChartPointsWithStringDates(count: number, nowSec: number): Array<{
+function makeRawChartPointsWithStringDates(
+  count: number,
+  nowSec: number,
+): Array<{
   date: string;
   totalCirculating: Record<string, number>;
   totalCirculatingUSD: Record<string, number>;
@@ -44,7 +49,10 @@ function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } |
 function getLastWriteMarker(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
   return db
     .getHistory()
-    .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "stablecoin-charts:last-write");
+    .find(
+      (entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "stablecoin-charts:last-write",
+    );
 }
 
 describe("syncStablecoinCharts", () => {
@@ -129,7 +137,10 @@ describe("syncStablecoinCharts", () => {
 
     expect(result.status).toBeUndefined();
     const insert = getCacheInsert(db as MockD1Database);
-    const cached = JSON.parse(String(insert?.binds[1])) as Array<{ date: number; totalCirculatingUSD: Record<string, number> }>;
+    const cached = JSON.parse(String(insert?.binds[1])) as Array<{
+      date: number;
+      totalCirculatingUSD: Record<string, number>;
+    }>;
     expect(cached.length).toBeGreaterThan(0);
     expect(typeof cached[0]?.date).toBe("number");
   });

@@ -8,20 +8,15 @@
  */
 
 export { mockRegistry } from "./mock-registry";
-export type {
-  MockRegistryOptions,
-  MockRegistryExports,
-  MockRegistryStablecoin,
-} from "./mock-registry";
+export type { MockRegistryOptions, MockRegistryExports, MockRegistryStablecoin } from "./mock-registry";
 
 export { mockDbCache } from "./mock-db-cache";
 export type { MockDbCacheOptions, MockDbCacheExports } from "./mock-db-cache";
 
 export { mockCircuitBreaker } from "./mock-circuit-breaker";
-export type {
-  MockCircuitBreakerOptions,
-  MockCircuitBreakerExports,
-} from "./mock-circuit-breaker";
+export type { MockCircuitBreakerOptions, MockCircuitBreakerExports } from "./mock-circuit-breaker";
+
+export { mockFetchRetry } from "./mock-fetch-retry";
 
 export { buildPendingAlertRow } from "./pending-row-builders";
 export type { PendingAlertRowOverrides } from "./pending-row-builders";

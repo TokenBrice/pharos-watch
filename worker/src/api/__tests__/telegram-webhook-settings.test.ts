@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { telegramApiCalls, telegramCallBody } from "../../test-helpers/__shared/telegram";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
@@ -17,20 +18,19 @@ const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);
 
 function jsonBody(call: unknown[]): Record<string, unknown> {
-  const init = call[1] as RequestInit | undefined;
-  return JSON.parse((init?.body as string | undefined) ?? "{}");
+  return telegramCallBody(call);
 }
 
 function sendCalls(): unknown[][] {
-  return fetchSpy.mock.calls.filter((c) => String(c[0]).includes("sendMessage"));
+  return telegramApiCalls(fetchSpy, "sendMessage");
 }
 
 function editCalls(): unknown[][] {
-  return fetchSpy.mock.calls.filter((c) => String(c[0]).includes("editMessageText"));
+  return telegramApiCalls(fetchSpy, "editMessageText");
 }
 
 function ackCalls(): unknown[][] {
-  return fetchSpy.mock.calls.filter((c) => String(c[0]).includes("answerCallbackQuery"));
+  return telegramApiCalls(fetchSpy, "answerCallbackQuery");
 }
 
 function subscriptionRow(stablecoinId: string): SubscriptionRow & Record<string, unknown> {
@@ -90,14 +90,9 @@ describe("handleSettingsCommand", () => {
       },
       {
         match: "FROM telegram_subscriptions",
-        rows: [
-          "usdt-tether",
-          "usdc-circle",
-          "dai-makerdao",
-          "pyusd-paypal",
-          "usds-sky",
-          "usde-ethena",
-        ].map(subscriptionRow),
+        rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
+          subscriptionRow,
+        ),
       },
     ]);
     await handleSettingsCommand(db, "fake-token", "42", null, "");
@@ -178,14 +173,9 @@ describe("handleSettingsCallback — chat-level", () => {
       },
       {
         match: "FROM telegram_subscriptions",
-        rows: [
-          "usdt-tether",
-          "usdc-circle",
-          "dai-makerdao",
-          "pyusd-paypal",
-          "usds-sky",
-          "usde-ethena",
-        ].map(subscriptionRow),
+        rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
+          subscriptionRow,
+        ),
       },
     ]);
     await handleSettingsCallback(
@@ -305,9 +295,7 @@ describe("handleSettingsCallback — chat-level", () => {
       "0",
     );
 
-    const upsert = db
-      .getHistory()
-      .find((h) => /quiet_hours_enabled = excluded\.quiet_hours_enabled/.test(h.sql));
+    const upsert = db.getHistory().find((h) => /quiet_hours_enabled = excluded\.quiet_hours_enabled/.test(h.sql));
     expect(upsert).toBeDefined();
     expect(upsert!.binds[10]).toBe(0);
   });
@@ -335,10 +323,7 @@ describe("handleSettingsCallback — chat-level", () => {
 
     const upsert = db
       .getHistory()
-      .find((h) =>
-        /INSERT INTO telegram_subscribers/.test(h.sql) &&
-        /alert_snooze_until_ts = NULL/.test(h.sql),
-      );
+      .find((h) => /INSERT INTO telegram_subscribers/.test(h.sql) && /alert_snooze_until_ts = NULL/.test(h.sql));
     expect(upsert).toBeDefined();
     expect(ackCalls().length).toBe(1);
     expect(jsonBody(ackCalls()[0]).text).toContain("Snooze cleared");
@@ -347,9 +332,7 @@ describe("handleSettingsCallback — chat-level", () => {
 
 describe("handleSettingsCallback — per-coin", () => {
   it("settings:o:<id> opens the coin view via editMessageText", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -365,13 +348,11 @@ describe("handleSettingsCallback — per-coin", () => {
 
     expect(editCalls().length).toBe(1);
     const body = jsonBody(editCalls()[0]);
-    expect((body.text as string)).toContain("USDC settings");
+    expect(body.text as string).toContain("USDC settings");
   });
 
   it("settings:c:<id>:db:W sets DEWS min band to WARNING", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -387,9 +368,7 @@ describe("handleSettingsCallback — per-coin", () => {
 
     const history = db.getHistory();
     const insert = history.find(
-      (h) =>
-        /INSERT INTO telegram_subscriptions/.test(h.sql) &&
-        /dews_min_band = excluded\.dews_min_band/.test(h.sql),
+      (h) => /INSERT INTO telegram_subscriptions/.test(h.sql) && /dews_min_band = excluded\.dews_min_band/.test(h.sql),
     );
     expect(insert).toBeDefined();
     expect(insert!.binds[1]).toBe("usdc-circle");
@@ -399,9 +378,7 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:db:0 turns DEWS off without losing the row's other settings", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -415,17 +392,13 @@ describe("handleSettingsCallback — per-coin", () => {
       "usdc-circle:db:0",
     );
 
-    const insert = db
-      .getHistory()
-      .find((h) => /alert_dews = excluded\.alert_dews/.test(h.sql));
+    const insert = db.getHistory().find((h) => /alert_dews = excluded\.alert_dews/.test(h.sql));
     expect(insert).toBeDefined();
     expect(insert!.binds[2]).toBe(0);
   });
 
   it("settings:c:<id>:sm:d sets safety mode to downgrade-only", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -439,18 +412,14 @@ describe("handleSettingsCallback — per-coin", () => {
       "usdc-circle:sm:d",
     );
 
-    const insert = db
-      .getHistory()
-      .find((h) => /safety_mode = excluded\.safety_mode/.test(h.sql));
+    const insert = db.getHistory().find((h) => /safety_mode = excluded\.safety_mode/.test(h.sql));
     expect(insert).toBeDefined();
     expect(insert!.binds[2]).toBe(1); // alert_safety
     expect(insert!.binds[3]).toBe("downgrade-only");
   });
 
   it("settings:c:<id>:ds:250 sets depeg-step to 250 bps", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -472,9 +441,7 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:ds:0 clears depeg-step and disables depeg for the coin", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -490,18 +457,17 @@ describe("handleSettingsCallback — per-coin", () => {
 
     const insert = db
       .getHistory()
-      .find((h) =>
-        /INSERT INTO telegram_subscriptions/.test(h.sql) &&
-        /depeg_worsening_bps_step = CASE WHEN excluded\.alert_depeg = 0 THEN NULL/.test(h.sql),
+      .find(
+        (h) =>
+          /INSERT INTO telegram_subscriptions/.test(h.sql) &&
+          /depeg_worsening_bps_step = CASE WHEN excluded\.alert_depeg = 0 THEN NULL/.test(h.sql),
       );
     expect(insert).toBeDefined();
     expect(insert!.binds[2]).toBe(0);
   });
 
   it("settings:c:<id>:lc:1 enables launch for the coin", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -517,18 +483,15 @@ describe("handleSettingsCallback — per-coin", () => {
 
     const insert = db
       .getHistory()
-      .find((h) =>
-        /INSERT INTO telegram_subscriptions/.test(h.sql) &&
-        /alert_launch = excluded\.alert_launch/.test(h.sql),
+      .find(
+        (h) => /INSERT INTO telegram_subscriptions/.test(h.sql) && /alert_launch = excluded\.alert_launch/.test(h.sql),
       );
     expect(insert).toBeDefined();
     expect(insert!.binds[2]).toBe(1);
   });
 
   it("unknown setting code under settings:c:<id>:?? acks gracefully without DB writes", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -608,10 +571,9 @@ describe("handleSettingsCallback — per-coin", () => {
     ]);
     fetchSpy.mockImplementation(async (url: string) => {
       if (String(url).includes("editMessageText")) {
-        return new Response(
-          JSON.stringify({ ok: false, description: "Bad Request: message is not modified" }),
-          { status: 400 },
-        );
+        return new Response(JSON.stringify({ ok: false, description: "Bad Request: message is not modified" }), {
+          status: 400,
+        });
       }
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     });
@@ -654,10 +616,9 @@ describe("callback_data size budget", () => {
       { subscriptions: [subscriptionRow(LONG_ID)] },
     );
     const coinKb = buildCoinKeyboard(LONG_ID, null);
-    const sizes = [
-      ...homeKb.inline_keyboard.flat(),
-      ...coinKb.inline_keyboard.flat(),
-    ].map((b) => new TextEncoder().encode(b.callback_data).length);
+    const sizes = [...homeKb.inline_keyboard.flat(), ...coinKb.inline_keyboard.flat()].map(
+      (b) => new TextEncoder().encode(b.callback_data).length,
+    );
     for (const size of sizes) {
       expect(size).toBeLessThanOrEqual(64);
     }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { lastSendMessageBody } from "../../../test-helpers/__shared/telegram";
 import { PAUSE_SENTINEL_TS } from "../../../lib/telegram-constants";
 import type { WebhookCommandContext } from "../context";
 import { handleCancel } from "../cancel";
@@ -44,11 +45,7 @@ function makeContext(overrides: Partial<WebhookCommandContext> = {}): WebhookCom
 }
 
 function latestSendMessageBody(): TelegramSendBody {
-  const call = [...fetchSpy.mock.calls].reverse().find((entry) =>
-    String(entry[0]).includes("sendMessage"),
-  );
-  if (!call) throw new Error("Expected a Telegram sendMessage call");
-  return JSON.parse((call[1]?.body as string) ?? "{}") as TelegramSendBody;
+  return lastSendMessageBody(fetchSpy);
 }
 
 function buttonsFromMarkup(markup: unknown): InlineButton[] {
@@ -61,11 +58,9 @@ function buttonsFromBody(body: TelegramSendBody): InlineButton[] {
 }
 
 function expectMiniAppButton(buttons: InlineButton[], text: string, startapp: string): void {
-  expect(
-    buttons.some(
-      (button) => button.text === text && button.web_app?.url?.includes(`startapp=${startapp}`),
-    ),
-  ).toBe(true);
+  expect(buttons.some((button) => button.text === text && button.web_app?.url?.includes(`startapp=${startapp}`))).toBe(
+    true,
+  );
 }
 
 function subscriptionRow(overrides: Record<string, unknown> = {}) {
@@ -111,19 +106,22 @@ describe("webhook command handlers", () => {
   });
 
   it("/subscribe persists a direct coin follow and returns a subscription summary", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [subscriptionRow()] },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [subscriptionRow()] }]);
     const ctx = makeContext({ db });
 
     await handleSubscribe(ctx, "dews USDC");
 
-    expect(db.getHistory().some((entry) =>
-      entry.sql.includes("INSERT INTO telegram_subscriptions") &&
-      entry.binds[0] === "42" &&
-      entry.binds[1] === "usdc-circle" &&
-      entry.binds[2] === 1,
-    )).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_subscriptions") &&
+            entry.binds[0] === "42" &&
+            entry.binds[1] === "usdc-circle" &&
+            entry.binds[2] === 1,
+        ),
+    ).toBe(true);
     const body = latestSendMessageBody();
     expect(body.text).toContain("Updated subscriptions");
     expect(body.text).toContain("USDC (usdc-circle)");
@@ -137,9 +135,9 @@ describe("webhook command handlers", () => {
     await handleSubscribe(ctx, "dews all");
 
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
-    const pendingInsert = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
-    );
+    const pendingInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
     expect(pendingInsert?.binds).toContain("confirm-bulk");
     expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
     const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
@@ -157,9 +155,7 @@ describe("webhook command handlers", () => {
 
     await handleUnsubscribe(ctx, "USDC");
 
-    const remove = db.getHistory().find((entry) =>
-      entry.sql.includes("DELETE FROM telegram_subscriptions"),
-    );
+    const remove = db.getHistory().find((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"));
     expect(remove?.binds).toEqual(["42", "usdc-circle"]);
     expect(latestSendMessageBody().text).toContain("Removed 1 coin subscription");
   });
@@ -172,10 +168,13 @@ describe("webhook command handlers", () => {
 
     await handleSet(ctx, "USDC dews WARNING");
 
-    expect(db.getHistory().some((entry) =>
-      entry.sql.includes("dews_min_band = excluded.dews_min_band") &&
-      entry.binds.includes("WARNING"),
-    )).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) => entry.sql.includes("dews_min_band = excluded.dews_min_band") && entry.binds.includes("WARNING"),
+        ),
+    ).toBe(true);
     const body = latestSendMessageBody();
     expect(body.text).toContain("Updated settings");
     expectMiniAppButton(buttonsFromBody(body), "Open in app", "coin_usdc-circle");
@@ -188,10 +187,11 @@ describe("webhook command handlers", () => {
 
     await handleTimezone(privateCtx, "Europe/Paris");
 
-    expect(db.getHistory().some((entry) =>
-      entry.sql.includes("timezone = excluded.timezone") &&
-      entry.binds.includes("Europe/Paris"),
-    )).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some((entry) => entry.sql.includes("timezone = excluded.timezone") && entry.binds.includes("Europe/Paris")),
+    ).toBe(true);
     const [, privateOptions] = privateReplyWithMarkup.mock.calls[0]!;
     expectMiniAppButton(buttonsFromMarkup(privateOptions.replyMarkup), "Open in app", "quiet-hours");
 
@@ -224,31 +224,38 @@ describe("webhook command handlers", () => {
     await handleUnmuteHours(ctx, "");
     await handleUnsnooze(ctx, "");
 
-    expect(db.getHistory().some((entry) =>
-      entry.sql.includes("quiet_hours_enabled = excluded.quiet_hours_enabled") &&
-      entry.binds.includes(22) &&
-      entry.binds.includes(7),
-    )).toBe(true);
-    expect(db.getHistory().some((entry) =>
-      entry.sql.includes("quiet_hours_enabled = excluded.quiet_hours_enabled") &&
-      entry.binds.includes(0),
-    )).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("quiet_hours_enabled = excluded.quiet_hours_enabled") &&
+            entry.binds.includes(22) &&
+            entry.binds.includes(7),
+        ),
+    ).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("quiet_hours_enabled = excluded.quiet_hours_enabled") && entry.binds.includes(0),
+        ),
+    ).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
     for (const [, options] of replyToChatWithMarkup.mock.calls) {
       const buttons = buttonsFromMarkup(options.replyMarkup);
       expect(buttons.some((button) => button.text === "Open in app" && button.web_app?.url)).toBe(true);
     }
-    const payloads = replyToChatWithMarkup.mock.calls.map(([, options]) =>
-      buttonsFromMarkup(options.replyMarkup)[0]?.web_app?.url ?? "",
+    const payloads = replyToChatWithMarkup.mock.calls.map(
+      ([, options]) => buttonsFromMarkup(options.replyMarkup)[0]?.web_app?.url ?? "",
     );
     expect(payloads.some((url) => url.includes("startapp=quiet-hours"))).toBe(true);
     expect(payloads.some((url) => url.includes("startapp=snooze"))).toBe(true);
   });
 
   it("/settings sends editable settings controls with a canonical Mini App label", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscribers", rows: [], first: null },
-    ]);
+    const db = mockD1([{ match: "FROM telegram_subscribers", rows: [], first: null }]);
     const ctx = makeContext({ db });
 
     await handleSettings(ctx, "");
@@ -275,18 +282,14 @@ describe("webhook command handlers", () => {
     const wizardCtx = makeContext({ db });
     await handleStart(wizardCtx, "");
 
-    const pendingInsert = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
-    );
+    const pendingInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
     expect(pendingInsert?.binds).toContain("setup-step");
     const body = latestSendMessageBody();
     const callbacks = buttonsFromBody(body).map((button) => button.callback_data);
     expect(callbacks).toEqual(
-      expect.arrayContaining([
-        "setup:branch:recommended",
-        "setup:branch:custom",
-        "setup:branch:skip",
-      ]),
+      expect.arrayContaining(["setup:branch:recommended", "setup:branch:custom", "setup:branch:skip"]),
     );
     expectMiniAppButton(buttonsFromBody(body), "Open control panel", "watchlist");
   });
@@ -316,7 +319,11 @@ describe("webhook command handlers", () => {
 
   it("/health renders delivery diagnostics and opens the contextual app view", async () => {
     const db = mockD1([
-      { match: "FROM telegram_subscribers", rows: [], first: subscriberRow({ quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7 }) },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: subscriberRow({ quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7 }),
+      },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 2 } },
       { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: 1 } },
@@ -372,7 +379,11 @@ describe("webhook command handlers", () => {
 
   it("/health renders the Paused sentinel distinctly", async () => {
     const db = mockD1([
-      { match: "FROM telegram_subscribers", rows: [], first: subscriberRow({ alert_snooze_until_ts: PAUSE_SENTINEL_TS }) },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: subscriberRow({ alert_snooze_until_ts: PAUSE_SENTINEL_TS }),
+      },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 0 } },
       { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: 0 } },
@@ -422,9 +433,7 @@ describe("webhook command handlers", () => {
 
     await handleList(ctx, "");
 
-    const subscriptionSelect = db.getHistory().find((entry) =>
-      entry.sql.includes("FROM telegram_subscriptions"),
-    );
+    const subscriptionSelect = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
     expect(subscriptionSelect?.sql).toContain("alert_snooze_until_ts");
     const [message] = replyToChatWithMarkup.mock.calls[0]!;
     expect(message).toContain("USDC (usdc-circle): DEWS · per-coin — snoozed for 2 h");
@@ -441,16 +450,15 @@ describe("webhook command handlers", () => {
   });
 
   it("mutating command handlers keep DB writes on their own chat id", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [subscriptionRow()] },
-    ]) as MockD1Database;
+    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [subscriptionRow()] }]) as MockD1Database;
     const ctx = makeContext({ db, chatId: "9001" });
 
     await handleSubscribe(ctx, "dews USDC");
 
-    expect(db.getHistory().some((entry) =>
-      entry.sql.includes("INSERT INTO telegram_subscriptions") &&
-      entry.binds[0] === "9001",
-    )).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.binds[0] === "9001"),
+    ).toBe(true);
   });
 });

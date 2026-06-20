@@ -1,10 +1,11 @@
-import type { DimensionKey, ReportCard, ReportCardDimension } from "@shared/types";
+import type { DimensionKey, ReportCard, ReportCardDimension, StablecoinData } from "@shared/types";
 
 type TestReportCardDimension = Omit<ReportCardDimension, "detail"> & { detail?: string };
 type TestReportCardDimensions = Record<DimensionKey, TestReportCardDimension>;
 type TestReportCardOverrides = Omit<Partial<ReportCard>, "dimensions"> & {
   dimensions?: TestReportCardDimensions;
 };
+type TestStablecoinOverrides = Partial<StablecoinData>;
 
 const DEFAULT_DIMENSIONS = {
   pegStability: { score: 95, grade: "A" },
@@ -21,10 +22,7 @@ const CORE_SETTLEMENT_DIMENSIONS = {
 
 function withDimensionDetails(dimensions: TestReportCardDimensions): ReportCard["dimensions"] {
   return Object.fromEntries(
-    Object.entries(dimensions).map(([key, dimension]) => [
-      key,
-      { ...dimension, detail: dimension.detail ?? "" },
-    ]),
+    Object.entries(dimensions).map(([key, dimension]) => [key, { ...dimension, detail: dimension.detail ?? "" }]),
   ) as ReportCard["dimensions"];
 }
 
@@ -34,7 +32,9 @@ export function makeReportCard(overrides: TestReportCardOverrides = {}): ReportC
     name: overrides.name ?? "USD Coin",
     symbol: overrides.symbol ?? "USDC",
     overallScore: overrides.overallScore !== undefined ? overrides.overallScore : 92,
+    baseScore: overrides.baseScore !== undefined ? overrides.baseScore : 92,
     overallGrade: overrides.overallGrade ?? "A",
+    ratedDimensions: overrides.ratedDimensions ?? 5,
     isDefunct: overrides.isDefunct ?? false,
     dimensions: withDimensionDetails(overrides.dimensions ?? DEFAULT_DIMENSIONS),
     rawInputs: overrides.rawInputs ?? {
@@ -72,4 +72,33 @@ export function makeCoreSettlementReportCard(overrides: TestReportCardOverrides 
     ...overrides,
     dimensions: overrides.dimensions ?? CORE_SETTLEMENT_DIMENSIONS,
   });
+}
+
+export function makeStablecoin(overrides: TestStablecoinOverrides = {}): StablecoinData {
+  const pegType = overrides.pegType ?? "peggedUSD";
+  return {
+    id: "usdc-circle",
+    name: "USD Coin",
+    symbol: "USDC",
+    geckoId: null,
+    pegType,
+    pegMechanism: "fiat-backed",
+    price: 1,
+    priceSource: "test",
+    priceConfidence: null,
+    priceUpdatedAt: null,
+    priceObservedAt: null,
+    priceObservedAtMode: null,
+    priceSyncedAt: null,
+    consensusSources: [],
+    agreeSources: [],
+    supplySource: undefined,
+    circulating: { [pegType]: 1_000_000 },
+    circulatingPrevDay: {},
+    circulatingPrevWeek: {},
+    circulatingPrevMonth: {},
+    chainCirculating: {},
+    chains: [],
+    ...overrides,
+  } as StablecoinData;
 }

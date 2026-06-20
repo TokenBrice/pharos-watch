@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  deriveComparisonCoins,
-  deriveSupplySeries,
-  deriveFlowSeries,
-  deriveFlowCardData,
-} from "@/lib/compare-derive";
+import { deriveComparisonCoins, deriveSupplySeries, deriveFlowSeries, deriveFlowCardData } from "@/lib/compare-derive";
 import { COMPARE_COLORS } from "@/lib/compare-config";
+import { makeStablecoin } from "@/test/fixtures/safety-scores";
 import type { StablecoinData, ReportCard } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
@@ -15,30 +11,12 @@ import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-b
 // ---------------------------------------------------------------------------
 
 function makeAsset(id: string, symbol = id.toUpperCase()): StablecoinData {
-  return {
+  return makeStablecoin({
     id,
     name: `${symbol} Name`,
     symbol,
-    geckoId: null,
-    pegType: "peggedUSD",
-    pegMechanism: "fiat-backed",
-    price: 1.0,
-    priceSource: "test",
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
-    supplySource: undefined,
     circulating: { peggedUSD: 1_000_000 },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  };
+  });
 }
 
 function makeMeta(id: string, symbol = id.toUpperCase()): StablecoinMeta {

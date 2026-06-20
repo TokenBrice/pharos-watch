@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { makeStablecoin } from "@/test/fixtures/safety-scores";
 import type { StablecoinData } from "@shared/types";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
 
@@ -10,30 +11,14 @@ function coin(overrides: {
   name?: string;
 }): StablecoinData {
   const { id, circulating = 1_000_000, pegType = "peggedEUR", symbol, name } = overrides;
-  return {
+  return makeStablecoin({
     id,
     name: name ?? id.toUpperCase(),
     symbol: symbol ?? id.slice(0, 4).toUpperCase(),
-    geckoId: null,
     pegType,
-    pegMechanism: "fiat-backed",
-    price: 1,
     priceSource: "defillama",
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
-    supplySource: undefined,
     circulating: { [pegType]: circulating },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  } as unknown as StablecoinData;
+  });
 }
 
 describe("buildPegDiversityHero", () => {

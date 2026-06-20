@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetchRetry } from "../../test-helpers/cron";
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { fetchBimaSusbdSource } from "../yield-sync/sources";
 

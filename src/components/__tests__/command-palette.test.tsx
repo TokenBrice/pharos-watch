@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandPalette } from "@/components/command-palette";
+import { makeStablecoin } from "@/test/fixtures/safety-scores";
 import type { StablecoinListResponse } from "@shared/types";
 
 const {
@@ -69,36 +70,14 @@ vi.mock("@/hooks/use-watchlist", () => ({
 
 type StablecoinAsset = StablecoinListResponse["peggedAssets"][number];
 
-function asset(
-  id: string,
-  name: string,
-  symbol: string,
-  price: number,
-  marketCapUsd: number,
-): StablecoinAsset {
-  return {
+function asset(id: string, name: string, symbol: string, price: number, marketCapUsd: number): StablecoinAsset {
+  return makeStablecoin({
     id,
     name,
     symbol,
-    geckoId: null,
-    pegType: "peggedUSD",
-    pegMechanism: "fiat-backed",
     price,
-    priceSource: "test",
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
     circulating: { peggedUSD: marketCapUsd },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  };
+  });
 }
 
 function stablecoinsPayload(): StablecoinListResponse {

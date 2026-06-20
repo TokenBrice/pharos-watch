@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
+import { makeStablecoin } from "@/test/fixtures/safety-scores";
 
 const refetchMock = vi.fn();
 
@@ -107,30 +108,14 @@ vi.mock("@/app/alt-pegs/alt-peg-cohort-history-chart", () => ({
 }));
 
 function makeCoin(id: string, marketCap: number) {
-  return {
+  return makeStablecoin({
     id,
     name: id,
     symbol: id.toUpperCase(),
-    geckoId: null,
-    pegType: "peggedUSD",
     pegMechanism: "",
-    price: 1,
-    priceSource: "test",
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
     supplySource: "test",
     circulating: { usd: marketCap },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  };
+  });
 }
 
 function expectFocusSearch(expected: { view?: string | null; chart?: string | null; range?: string | null }) {
@@ -215,7 +200,9 @@ describe("AltPegsClient", () => {
     render(<AltPegsClient />);
 
     expect(screen.getByRole("heading", { name: "Which Non-USD Pegs Matter Now" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "How Much Of The Total Stablecoin Market Sits Outside USD?" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "How Much Of The Total Stablecoin Market Sits Outside USD?" }),
+    ).toBeTruthy();
     expect(screen.getByTestId("non-usd-share-chart")).toBeTruthy();
     expect(screen.getByTestId("alt-peg-cohort-chart")).toBeTruthy();
     expect(screen.getByText(/share-chart default 1y/i)).toBeTruthy();

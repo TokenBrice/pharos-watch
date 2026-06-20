@@ -3,6 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
+import { makeStablecoin as makeStablecoinFixture } from "@/test/fixtures/safety-scores";
 import type { StablecoinData } from "@shared/types";
 
 const { useLogosMock, useStablecoinsMock } = vi.hoisted(() => ({
@@ -23,9 +24,7 @@ vi.mock("@/lib/stablecoin-static-data", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img alt={alt} {...props} />
-  ),
+  default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
 }));
 
 afterEach(() => {
@@ -83,27 +82,13 @@ function makeStablecoin({
   currentSupply: number;
   previousWeekSupply: number;
 }): StablecoinData {
-  return {
+  return makeStablecoinFixture({
     id,
     name: symbol,
     symbol,
-    geckoId: null,
     pegType: "USD",
-    pegMechanism: "fiat-backed",
-    price: 1,
-    priceSource: "test",
     priceConfidence: "high",
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
     circulating: { peggedUSD: currentSupply },
-    circulatingPrevDay: {},
     circulatingPrevWeek: { peggedUSD: previousWeekSupply },
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  } as StablecoinData;
+  });
 }

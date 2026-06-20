@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReportCardDetail } from "@/components/report-card";
+import { makeReportCard as makeReportCardFixture } from "@/test/fixtures/safety-scores";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import type { ReportCard } from "@shared/types";
 
@@ -11,7 +12,7 @@ vi.mock("@/components/radar-chart", () => ({
 }));
 
 function makeReportCard(): ReportCard {
-  return {
+  return makeReportCardFixture({
     id: "test-usd",
     name: "Test USD",
     symbol: "TUSD",
@@ -20,7 +21,6 @@ function makeReportCard(): ReportCard {
     baseScore: 78,
     ratedDimensions: 5,
     isDefunct: false,
-    dependencies: [],
     dimensions: {
       pegStability: {
         grade: "A",
@@ -55,7 +55,7 @@ function makeReportCard(): ReportCard {
       governanceQuality: "regulated-entity",
       custodyModel: "institutional-regulated",
     }),
-  };
+  });
 }
 
 describe("ReportCardDetail", () => {
@@ -191,12 +191,14 @@ describe("ReportCardDetail", () => {
             reviewedAt: "2026-06-12",
             reviewer: "Codex L2BEAT route review",
             confidence: "verified",
-            protocols: [{
-              name: "Chainlink CCIP",
-              slug: "ccip",
-              source: "l2beat",
-              bridgeTypes: ["lockAndMint", "burnAndMint"],
-            }],
+            protocols: [
+              {
+                name: "Chainlink CCIP",
+                slug: "ccip",
+                source: "l2beat",
+                bridgeTypes: ["lockAndMint", "burnAndMint"],
+              },
+            ],
             sources: [{ label: "CCIP on L2BEAT", url: "https://l2beat.com/interop/protocols/ccip" }],
           },
         }}

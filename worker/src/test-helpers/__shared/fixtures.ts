@@ -9,6 +9,7 @@ import type {
   BlacklistStablecoin,
   StablecoinData,
 } from "@shared/types/market";
+import type { DexLiquidityRow } from "../../api/dex-liquidity-response";
 import type { ApiKeyRow } from "../../lib/api-key-core";
 import { mockD1 } from "./mock-d1";
 
@@ -85,36 +86,6 @@ type MintBurnRow = {
   explorer_tx_url: string;
 };
 
-type DexLiquidityRow = {
-  stablecoin_id: string;
-  total_tvl_usd: number;
-  total_volume_24h_usd: number;
-  total_volume_7d_usd: number;
-  pool_count: number;
-  pair_count: number;
-  chain_count: number;
-  protocol_tvl_json: string | null;
-  chain_tvl_json: string | null;
-  top_pools_json: string | null;
-  liquidity_score: number | null;
-  concentration_hhi: number | null;
-  depth_stability: number | null;
-  updated_at: number;
-  effective_tvl_usd: number | null;
-  avg_pool_stress: number | null;
-  weighted_balance_ratio: number | null;
-  organic_fraction: number | null;
-  durability_score: number | null;
-  score_components_json: string | null;
-  locked_liquidity_pct: number | null;
-  coverage_class: string | null;
-  coverage_confidence: number | null;
-  source_mix_json: string | null;
-  balance_measured_tvl_usd: number | null;
-  organic_measured_tvl_usd: number | null;
-  methodology_version: string | null;
-};
-
 type YieldHistoryRow = {
   stablecoin_id: string;
   source_key: string;
@@ -155,6 +126,7 @@ type DigestRow = {
 };
 
 type ApiKeyFixtureRow = ApiKeyRow & Record<string, unknown>;
+type DexLiquidityFixtureRow = DexLiquidityRow & Record<string, unknown>;
 
 export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinData {
   const defaults: StablecoinData = {
@@ -314,7 +286,7 @@ export function makeMintBurnRow(overrides: Partial<MintBurnRow> = {}): MintBurnR
   return { ...defaults, ...overrides };
 }
 
-export function makeDexLiquidityRow(overrides: Partial<DexLiquidityRow> = {}): DexLiquidityRow {
+export function makeDexLiquidityRow(overrides: Partial<DexLiquidityRow> = {}): DexLiquidityFixtureRow {
   const defaults: DexLiquidityRow = {
     stablecoin_id: "usdt-tether",
     total_tvl_usd: 500_000_000,
@@ -344,7 +316,7 @@ export function makeDexLiquidityRow(overrides: Partial<DexLiquidityRow> = {}): D
     organic_measured_tvl_usd: 500_000_000,
     methodology_version: "3.2",
   };
-  return { ...defaults, ...overrides };
+  return { ...defaults, ...overrides } as DexLiquidityFixtureRow;
 }
 
 export function makeYieldHistoryRow(overrides: Partial<YieldHistoryRow> = {}): YieldHistoryRow {

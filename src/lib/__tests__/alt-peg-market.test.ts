@@ -1,36 +1,16 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinData } from "@shared/types";
-import {
-  buildAltPegLinkHubGroups,
-  buildAltPegSnapshot,
-  buildAltPegTrendStats,
-} from "@/lib/alt-peg-market";
+import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { buildAltPegLinkHubGroups, buildAltPegSnapshot, buildAltPegTrendStats } from "@/lib/alt-peg-market";
 
-function makeCoin(id: string, marketCap: number): StablecoinData {
-  return {
+function makeCoin(id: string, marketCap: number) {
+  return makeStablecoin({
     id,
     name: id,
     symbol: id.toUpperCase(),
-    geckoId: null,
-    pegType: "peggedUSD",
     pegMechanism: "",
-    price: 1,
-    priceSource: "test",
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    priceObservedAt: null,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
     supplySource: "test",
     circulating: { usd: marketCap },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: [],
-  };
+  });
 }
 
 describe("alt-peg-market", () => {
@@ -75,7 +55,7 @@ describe("alt-peg-market", () => {
         total: 1_000,
       },
       {
-        date: 1_700_000_000 + (366 * 86400),
+        date: 1_700_000_000 + 366 * 86400,
         commodityShare: 1.5,
         fiatNonUsdShare: 1.1,
         commodity: 20,

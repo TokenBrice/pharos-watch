@@ -4,10 +4,15 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
+import { makeReportCard } from "@/test/fixtures/safety-scores";
 import type { ReportCard } from "@shared/types";
 
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => <a href={href} {...props}>{children}</a>,
+  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("../radar-chart", () => ({
@@ -25,7 +30,7 @@ afterEach(() => {
 });
 
 function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
-  return {
+  return makeReportCard({
     id: overrides.id ?? "usdc-circle",
     name: overrides.name ?? "USD Coin",
     symbol: overrides.symbol ?? "USDC",
@@ -68,7 +73,7 @@ function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
       collateralFromLive: false,
     },
     isDefunct: overrides.isDefunct ?? false,
-  } as ReportCard;
+  });
 }
 
 describe("ReportCardMini", () => {
@@ -79,7 +84,11 @@ describe("ReportCardMini", () => {
   });
 
   it("does not render a detail link for defunct cards", () => {
-    render(<ReportCardMini card={makeCard({ id: "usdl-first-usdl-2024-01", isDefunct: true, name: "First USDL", symbol: "USDL" })} />);
+    render(
+      <ReportCardMini
+        card={makeCard({ id: "usdl-first-usdl-2024-01", isDefunct: true, name: "First USDL", symbol: "USDL" })}
+      />,
+    );
 
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Defunct")).toBeTruthy();

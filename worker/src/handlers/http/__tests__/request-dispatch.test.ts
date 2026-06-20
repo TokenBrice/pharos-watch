@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeExecutionContext } from "../../../test-helpers/__shared/auth";
 
 const mocks = vi.hoisted(() => ({
   flushPendingApiKeyPrunes: vi.fn(() => Promise.resolve()),
@@ -79,10 +80,7 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
 }
 
 function makeCtx() {
-  return {
-    waitUntil: vi.fn(),
-    passThroughOnException: vi.fn(),
-  } as unknown as ExecutionContext & { waitUntil: ReturnType<typeof vi.fn> };
+  return makeExecutionContext().ctx as ExecutionContext & { waitUntil: ReturnType<typeof vi.fn> };
 }
 
 describe("handleHttpRequestImpl", () => {
@@ -104,7 +102,10 @@ describe("handleHttpRequestImpl", () => {
     mocks.createRequestSourceRecorder.mockReturnValue(mocks.recordRequestSource);
     mocks.isApiKeyRequestAttributionDisabled.mockReturnValue(false);
     mocks.isRequestSourceAttributionDisabled.mockReturnValue(false);
-    mocks.createEdgeCacheContext.mockReturnValue({ cacheKey: new Request("https://api.pharos.watch/api/stablecoins"), skipCache: false });
+    mocks.createEdgeCacheContext.mockReturnValue({
+      cacheKey: new Request("https://api.pharos.watch/api/stablecoins"),
+      skipCache: false,
+    });
     mocks.readEdgeCache.mockResolvedValue(null);
     mocks.resolveRoute.mockReturnValue({
       methodValidation: null,

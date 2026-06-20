@@ -1,17 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetchRetry } from "../../test-helpers/cron";
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncUsdsStatus } from "../sync-usds-status";
 
 function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
-  return db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "usds-status");
+  return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "usds-status");
 }
 
 describe("syncUsdsStatus", () => {

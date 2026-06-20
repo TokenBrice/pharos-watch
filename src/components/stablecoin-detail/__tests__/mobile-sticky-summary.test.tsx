@@ -3,6 +3,7 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { createRef, type ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeReportCard, makeStablecoin } from "@/test/fixtures/safety-scores";
 import type { ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
 
 const { isMobileStickySummaryEnabledMock } = vi.hoisted(() => ({
@@ -33,32 +34,20 @@ const COIN: StablecoinMeta = {
   },
 };
 
-const COIN_DATA: StablecoinData = {
+const COIN_DATA: StablecoinData = makeStablecoin({
   id: "usdc-circle",
   name: "USD Coin",
   symbol: "USDC",
-  geckoId: null,
-  pegType: "peggedUSD",
-  pegMechanism: "fiat-backed",
-  price: 1,
   priceSource: "coingecko",
-  priceConfidence: null,
-  priceUpdatedAt: null,
-  priceObservedAt: null,
-  priceObservedAtMode: null,
-  priceSyncedAt: null,
-  consensusSources: [],
-  agreeSources: [],
   supplySource: "defillama",
   circulating: { peggedUSD: 1_000_000_000 },
   circulatingPrevDay: { peggedUSD: 995_000_000 },
   circulatingPrevWeek: { peggedUSD: 980_000_000 },
   circulatingPrevMonth: { peggedUSD: 970_000_000 },
-  chainCirculating: {},
   chains: ["ethereum"],
-};
+});
 
-const REPORT_CARD: ReportCard = {
+const REPORT_CARD: ReportCard = makeReportCard({
   id: "usdc-circle",
   name: "USD Coin",
   symbol: "USDC",
@@ -101,7 +90,7 @@ const REPORT_CARD: ReportCard = {
     collateralFromLive: false,
   },
   isDefunct: false,
-};
+});
 
 type IOTrigger = (isIntersecting: boolean) => void;
 
@@ -114,10 +103,7 @@ function makeObserverHook() {
     constructor(cb: IntersectionObserverCallback) {
       this.callback = cb;
       trigger = (isIntersecting: boolean) => {
-        this.callback(
-          [{ isIntersecting } as IntersectionObserverEntry],
-          this as unknown as IntersectionObserver,
-        );
+        this.callback([{ isIntersecting } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
       };
     }
     observe(target: Element) {

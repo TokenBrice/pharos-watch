@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockCircuitBreaker } from "../../test-helpers/cron";
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcome: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 vi.mock("../../lib/dexscreener", async () => {
   const actual = await vi.importActual<typeof import("../../lib/dexscreener")>("../../lib/dexscreener");
@@ -63,10 +61,13 @@ describe("getFallbackTargets", () => {
 
     const priceObservations = new Map([
       ["usdt-tether", [{ price: 1, tvl: 100_000, chain: "ethereum", protocol: "curve" }]],
-      ["dai-makerdao", [
-        { price: 1, tvl: 150_000, chain: "ethereum", protocol: "curve" },
-        { price: 1, tvl: 100_000, chain: "base", protocol: "uniswap-v3" },
-      ]],
+      [
+        "dai-makerdao",
+        [
+          { price: 1, tvl: 150_000, chain: "ethereum", protocol: "curve" },
+          { price: 1, tvl: 100_000, chain: "base", protocol: "uniswap-v3" },
+        ],
+      ],
     ]);
 
     const targetIds = new Set(
@@ -83,9 +84,7 @@ describe("getFallbackTargets", () => {
     const noGecko = initMetrics("rwausdi-multipli", "rwaUSDi");
     metrics.set("rwausdi-multipli", noGecko);
 
-    const targetIds = new Set(
-      getFallbackTargets(metrics, new Map(), { requireGeckoId: true }).map((meta) => meta.id),
-    );
+    const targetIds = new Set(getFallbackTargets(metrics, new Map(), { requireGeckoId: true }).map((meta) => meta.id));
 
     expect(targetIds.has("rwausdi-multipli")).toBe(false);
   });
@@ -107,8 +106,8 @@ describe("fetchDsFallbackPools circuit breaker", () => {
   });
 
   it("skips DexScreener when dexscreener-liquidity breaker is open", async () => {
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
-      source !== CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
+    vi.mocked(shouldAttemptFetch).mockImplementation(
+      async (_db, source) => source !== CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
     );
 
     // Seed metrics so the fallback has targets (zero pools triggers enrichment).
@@ -118,12 +117,7 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     metrics.set("usdt-tether", zeroPools);
 
     const db = createMockDb();
-    await fetchDsFallbackPools(
-      db,
-      metrics,
-      new Map(),
-      createKnownPoolIdentityIndex(),
-    );
+    await fetchDsFallbackPools(db, metrics, new Map(), createKnownPoolIdentityIndex());
 
     expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
     expect(recordOutcome).not.toHaveBeenCalled();
@@ -139,19 +133,10 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     metrics.set("usdt-tether", zeroPools);
 
     const db = createMockDb();
-    await fetchDsFallbackPools(
-      db,
-      metrics,
-      new Map(),
-      createKnownPoolIdentityIndex(),
-    );
+    await fetchDsFallbackPools(db, metrics, new Map(), createKnownPoolIdentityIndex());
 
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalled();
-    expect(recordOutcome).toHaveBeenCalledWith(
-      expect.anything(),
-      CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
-      true,
-    );
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, true);
     expect(recordOutcome).toHaveBeenCalledTimes(1);
   });
 
@@ -165,19 +150,10 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     metrics.set("usdt-tether", zeroPools);
 
     const db = createMockDb();
-    await fetchDsFallbackPools(
-      db,
-      metrics,
-      new Map(),
-      createKnownPoolIdentityIndex(),
-    );
+    await fetchDsFallbackPools(db, metrics, new Map(), createKnownPoolIdentityIndex());
 
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalled();
-    expect(recordOutcome).toHaveBeenCalledWith(
-      expect.anything(),
-      CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
-      false,
-    );
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
     expect(recordOutcome).toHaveBeenCalledTimes(1);
   });
 
@@ -197,12 +173,7 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     metrics.set("usdt-tether", zeroPools);
 
     const db = createMockDb();
-    await fetchDsFallbackPools(
-      db,
-      metrics,
-      new Map(),
-      createKnownPoolIdentityIndex(),
-    );
+    await fetchDsFallbackPools(db, metrics, new Map(), createKnownPoolIdentityIndex());
 
     expect(logCronEvent).toHaveBeenCalledWith(
       expect.anything(),
@@ -230,14 +201,7 @@ describe("fetchDsFallbackPools circuit breaker", () => {
 
     const db = createMockDb();
     // Deadline already in the past: the per-coin (outer) check fires before any request.
-    await fetchDsFallbackPools(
-      db,
-      metrics,
-      new Map(),
-      createKnownPoolIdentityIndex(),
-      undefined,
-      Date.now() - 1,
-    );
+    await fetchDsFallbackPools(db, metrics, new Map(), createKnownPoolIdentityIndex(), undefined, Date.now() - 1);
 
     expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
     expect(logCronEvent).toHaveBeenCalledWith(

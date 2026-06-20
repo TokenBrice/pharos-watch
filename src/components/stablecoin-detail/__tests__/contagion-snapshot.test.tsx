@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeReportCard } from "@/test/fixtures/safety-scores";
 import type { ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types";
 
 const { useReportCardsMock, useStablecoinsMock, useLogosMock } = vi.hoisted(() => ({
@@ -78,7 +79,7 @@ const RAW_INPUTS_STUB: ReportCard["rawInputs"] = {
 };
 
 function makeCard(id: string, symbol: string): ReportCard {
-  return {
+  return makeReportCard({
     id,
     name: symbol,
     symbol,
@@ -94,8 +95,7 @@ function makeCard(id: string, symbol: string): ReportCard {
       dependencyRisk: DIMENSION_STUB,
     },
     rawInputs: RAW_INPUTS_STUB,
-    isDefunct: false,
-  };
+  });
 }
 
 function makeReportCardsResponse(

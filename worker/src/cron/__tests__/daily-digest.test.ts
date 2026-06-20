@@ -3,6 +3,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { mockCircuitBreaker } from "../../test-helpers/cron";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
@@ -20,9 +21,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
         { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
         { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
       ],
-      tradedContracts: [
-        { chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 },
-      ],
+      tradedContracts: [{ chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 }],
     },
     {
       id: "usdc-circle",
@@ -38,74 +37,80 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       ],
     },
     {
-      id: "paxg-paxos",
-      symbol: "PAXG",
-      flags: { yieldBearing: false },
-      contracts: [
-        { chain: "ethereum", address: "0x45804880De22913dAFE09f4980848ECE6EcbAf78", decimals: 18 },
-      ],
-    },
-    {
-      id: "xaut-tether",
-      symbol: "XAUT",
-      flags: { yieldBearing: false },
-      contracts: [
-        { chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 },
-      ],
-    },
-  ];
-  const ids = new Set(["usdt-tether", "usdc-circle"]);
-  return {
-  TRACKED_STABLECOINS: stablecoins,
-  ACTIVE_STABLECOINS: stablecoins,
-  TRACKED_META_BY_ID: new Map([
-    ["usdt-tether", {
-      id: "usdt-tether",
-      symbol: "USDT",
-      flags: { yieldBearing: false },
-      contracts: [
-        { chain: "ethereum", address: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6 },
-        { chain: "tron", address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
-        { chain: "arbitrum", address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", decimals: 6 },
-        { chain: "optimism", address: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58", decimals: 6 },
-        { chain: "polygon", address: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", decimals: 6 },
-        { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
-        { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
-      ],
-      tradedContracts: [
-        { chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 },
-      ],
-    }],
-    ["usdc-circle", {
-      id: "usdc-circle",
-      symbol: "USDC",
-      flags: { yieldBearing: false },
-      contracts: [
-        { chain: "ethereum", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6 },
-        { chain: "arbitrum", address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6 },
-        { chain: "base", address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: 6 },
-        { chain: "optimism", address: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", decimals: 6 },
-        { chain: "polygon", address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6 },
-        { chain: "avalanche", address: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6 },
-      ],
-    }],
-    ["paxg-paxos", {
       id: "paxg-paxos",
       symbol: "PAXG",
       flags: { yieldBearing: false },
       contracts: [{ chain: "ethereum", address: "0x45804880De22913dAFE09f4980848ECE6EcbAf78", decimals: 18 }],
-    }],
-    ["xaut-tether", {
+    },
+    {
       id: "xaut-tether",
       symbol: "XAUT",
       flags: { yieldBearing: false },
       contracts: [{ chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 }],
-    }],
-  ]),
-  TRACKED_IDS: ids,
-  ACTIVE_IDS: ids,
-  FROZEN_IDS: new Set<string>(["usr-resolv"]),
-  FROZEN_META_BY_ID: new Map<string, never>(),
+    },
+  ];
+  const ids = new Set(["usdt-tether", "usdc-circle"]);
+  return {
+    TRACKED_STABLECOINS: stablecoins,
+    ACTIVE_STABLECOINS: stablecoins,
+    TRACKED_META_BY_ID: new Map([
+      [
+        "usdt-tether",
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          flags: { yieldBearing: false },
+          contracts: [
+            { chain: "ethereum", address: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6 },
+            { chain: "tron", address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
+            { chain: "arbitrum", address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", decimals: 6 },
+            { chain: "optimism", address: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58", decimals: 6 },
+            { chain: "polygon", address: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", decimals: 6 },
+            { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
+            { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
+          ],
+          tradedContracts: [{ chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 }],
+        },
+      ],
+      [
+        "usdc-circle",
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          flags: { yieldBearing: false },
+          contracts: [
+            { chain: "ethereum", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6 },
+            { chain: "arbitrum", address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6 },
+            { chain: "base", address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: 6 },
+            { chain: "optimism", address: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", decimals: 6 },
+            { chain: "polygon", address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6 },
+            { chain: "avalanche", address: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6 },
+          ],
+        },
+      ],
+      [
+        "paxg-paxos",
+        {
+          id: "paxg-paxos",
+          symbol: "PAXG",
+          flags: { yieldBearing: false },
+          contracts: [{ chain: "ethereum", address: "0x45804880De22913dAFE09f4980848ECE6EcbAf78", decimals: 18 }],
+        },
+      ],
+      [
+        "xaut-tether",
+        {
+          id: "xaut-tether",
+          symbol: "XAUT",
+          flags: { yieldBearing: false },
+          contracts: [{ chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 }],
+        },
+      ],
+    ]),
+    TRACKED_IDS: ids,
+    ACTIVE_IDS: ids,
+    FROZEN_IDS: new Set<string>(["usr-resolv"]),
+    FROZEN_META_BY_ID: new Map<string, never>(),
   };
 });
 
@@ -140,11 +145,7 @@ vi.mock("../../lib/telegram-digest-appendices", () => ({
   prepareTelegramDigestAppendices: vi.fn(),
 }));
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcome: vi.fn(async () => {}),
-  recordOutcomeSafe: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
 import {
@@ -175,13 +176,15 @@ import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
-function makeParsedFixture(opts: {
-  extended?: string;
-  text?: string;
-  lead?: string;
-  leadSignalId?: string;
-  tone?: string;
-} = {}): ParsedDigestResponse {
+function makeParsedFixture(
+  opts: {
+    extended?: string;
+    text?: string;
+    lead?: string;
+    leadSignalId?: string;
+    tone?: string;
+  } = {},
+): ParsedDigestResponse {
   return {
     digestTitle: "T",
     digestText: opts.text ?? "T.",
@@ -239,16 +242,26 @@ const ANTHROPIC_SOFT_WARNING_TEXT = JSON.stringify({
  */
 function mockAnthropicStreamResponse(text: string): Response {
   const events: Array<{ event: string; data: unknown }> = [
-    { event: "message_start", data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } } },
-    { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } } },
-    { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } } },
+    {
+      event: "message_start",
+      data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } },
+    },
+    {
+      event: "content_block_start",
+      data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+    },
+    {
+      event: "content_block_delta",
+      data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } },
+    },
     { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
-    { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null } } },
+    {
+      event: "message_delta",
+      data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null } },
+    },
     { event: "message_stop", data: { type: "message_stop" } },
   ];
-  const encoded = events
-    .map((ev) => `event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`)
-    .join("");
+  const encoded = events.map((ev) => `event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`).join("");
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -273,7 +286,8 @@ function makeBaseTables(): MockTableConfig[] {
       first: null,
     },
     {
-      match: "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
+      match:
+        "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
       rows: [],
     },
     {
@@ -283,7 +297,15 @@ function makeBaseTables(): MockTableConfig[] {
     },
     {
       match: "FROM depeg_events WHERE ended_at IS NULL",
-      rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: 150, started_at: nowSec - 3600 }],
+      rows: [
+        {
+          stablecoin_id: "usdt-tether",
+          symbol: "USDT",
+          direction: "below",
+          peak_deviation_bps: 150,
+          started_at: nowSec - 3600,
+        },
+      ],
     },
     {
       match: "FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1",
@@ -345,10 +367,7 @@ function makeBaseTables(): MockTableConfig[] {
 }
 
 function getInsertDigestBinds(db: MockD1Database): unknown[] | undefined {
-  return db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT INTO daily_digest"))
-    ?.binds;
+  return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"))?.binds;
 }
 
 describe("generateDailyDigest", () => {
@@ -356,64 +375,70 @@ describe("generateDailyDigest", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
 
-    vi.mocked(loadStablecoinsCache).mockReset().mockResolvedValue({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeAsset({
-            id: "usdt-tether",
-            symbol: "USDT",
-            price: 0.985,
-            circulating: { peggedUSD: 100_000_000 },
-            circulatingPrevWeek: { peggedUSD: 95_000_000 },
-          }),
-          makeAsset({
-            id: "usdc-circle",
-            symbol: "USDC",
-            circulating: { peggedUSD: 60_000_000 },
-            circulatingPrevWeek: { peggedUSD: 62_000_000 },
-          }),
+    vi.mocked(loadStablecoinsCache)
+      .mockReset()
+      .mockResolvedValue({
+        kind: "ok",
+        payload: {
+          peggedAssets: [
+            makeAsset({
+              id: "usdt-tether",
+              symbol: "USDT",
+              price: 0.985,
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevWeek: { peggedUSD: 95_000_000 },
+            }),
+            makeAsset({
+              id: "usdc-circle",
+              symbol: "USDC",
+              circulating: { peggedUSD: 60_000_000 },
+              circulatingPrevWeek: { peggedUSD: 62_000_000 },
+            }),
+          ],
+        },
+        updatedAt: Math.floor(Date.now() / 1000),
+      });
+
+    vi.mocked(computeSafetyScoresSnapshot)
+      .mockReset()
+      .mockResolvedValue({
+        kind: "ok",
+        mode: "full-grades",
+        coveredCount: 2,
+        trackedCount: 2,
+        coverageRatio: 1,
+        scores: new Map(),
+        grades: [
+          { id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 },
+          { id: "usdc-circle", symbol: "USDC", grade: "A", score: 85, pegScore: 93, liqScore: 87 },
         ],
-      },
-      updatedAt: Math.floor(Date.now() / 1000),
-    });
+      });
 
-    vi.mocked(computeSafetyScoresSnapshot).mockReset().mockResolvedValue({
-      kind: "ok",
-      mode: "full-grades",
-      coveredCount: 2,
-      trackedCount: 2,
-      coverageRatio: 1,
-      scores: new Map(),
-      grades: [
-        { id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 },
-        { id: "usdc-circle", symbol: "USDC", grade: "A", score: 85, pegScore: 93, liqScore: 87 },
-      ],
-    });
-
-    vi.mocked(fetchWithRetry).mockReset().mockImplementation(async () =>
-      mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT),
-    );
+    vi.mocked(fetchWithRetry)
+      .mockReset()
+      .mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT));
 
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
     vi.mocked(postDigestToTelegram).mockReset().mockResolvedValue(undefined);
     commitTelegramAppendices.mockReset().mockResolvedValue(undefined);
-    vi.mocked(prepareTelegramDigestAppendices).mockReset().mockResolvedValue({
-      appendixHtml: null,
-      metadata: {
-        hasAppendix: false,
-        cemeteryDetected: 0,
-        trackedDetected: 0,
-        preLaunchDetected: 0,
-        cemeterySymbols: [],
-        trackedSymbols: [],
-        preLaunchSymbols: [],
-        frozenDetected: 0,
-        frozenSymbols: [],
-        seededSnapshots: [],
-      },
-      commitSuccess: commitTelegramAppendices,
-    });
+    vi.mocked(prepareTelegramDigestAppendices)
+      .mockReset()
+      .mockResolvedValue({
+        appendixHtml: null,
+        metadata: {
+          hasAppendix: false,
+          cemeteryDetected: 0,
+          trackedDetected: 0,
+          preLaunchDetected: 0,
+          cemeterySymbols: [],
+          trackedSymbols: [],
+          preLaunchSymbols: [],
+          frozenDetected: 0,
+          frozenSymbols: [],
+          seededSnapshots: [],
+        },
+        commitSuccess: commitTelegramAppendices,
+      });
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
 
@@ -523,9 +548,7 @@ describe("generateDailyDigest", () => {
   });
 
   it("keeps soft-only digest quality issues out of cron degraded status", async () => {
-    vi.mocked(fetchWithRetry).mockImplementation(async () =>
-      mockAnthropicStreamResponse(ANTHROPIC_SOFT_WARNING_TEXT),
-    );
+    vi.mocked(fetchWithRetry).mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_SOFT_WARNING_TEXT));
     const db = mockD1(makeBaseTables());
 
     const result = await generateDailyDigest(
@@ -582,7 +605,7 @@ describe("generateDailyDigest", () => {
   });
 
   it("repairs malformed code-block JSON with one corrective retry", async () => {
-    const malformed = "```json\n{\"title\":\"Broken\", \"text\":\n```";
+    const malformed = '```json\n{"title":"Broken", "text":\n```';
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(mockAnthropicStreamResponse(malformed));
@@ -601,7 +624,7 @@ describe("generateDailyDigest", () => {
   });
 
   it("skips the corrective retry when first-pass elapsed exceeds 50% of the Anthropic budget", async () => {
-    const malformed = "```json\n{\"title\":\"Broken\", \"text\":\n```";
+    const malformed = '```json\n{"title":"Broken", "text":\n```';
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const CORRECTIVE_RETRY_THRESHOLD_MS = ANTHROPIC_TIMEOUT_MS * 0.5;
 
@@ -619,9 +642,7 @@ describe("generateDailyDigest", () => {
     // Only one Anthropic call — the corrective retry is skipped because
     // elapsed >= 50% of the budget, leaving no safe headroom for a second call.
     expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("skipping corrective retry"),
-    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("skipping corrective retry"));
     warnSpy.mockRestore();
   });
 
@@ -718,16 +739,40 @@ describe("generateDailyDigest", () => {
       {
         match: "SUM(mint_volume_usd)",
         rows: [
-          { stablecoin_id: "usdt-tether", chain_id: "ethereum", mint_24h: 500_000_000, burn_24h: 300_000_000, net_24h: 200_000_000 },
-          { stablecoin_id: "usdc-circle", chain_id: "ethereum", mint_24h: 100_000_000, burn_24h: 150_000_000, net_24h: -50_000_000 },
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            mint_24h: 500_000_000,
+            burn_24h: 300_000_000,
+            net_24h: 200_000_000,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            chain_id: "ethereum",
+            mint_24h: 100_000_000,
+            burn_24h: 150_000_000,
+            net_24h: -50_000_000,
+          },
         ],
       },
       // 30d baseline — match on "/ 30.0" which is unique to this query
       {
         match: "/ 30.0",
         rows: [
-          { stablecoin_id: "usdt-tether", chain_id: "ethereum", avg_daily_net: 50_000_000, avg_daily_abs: 200_000_000, data_days: 30 },
-          { stablecoin_id: "usdc-circle", chain_id: "ethereum", avg_daily_net: -10_000_000, avg_daily_abs: 80_000_000, data_days: 25 },
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            avg_daily_net: 50_000_000,
+            avg_daily_abs: 200_000_000,
+            data_days: 30,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            chain_id: "ethereum",
+            avg_daily_net: -10_000_000,
+            avg_daily_abs: 80_000_000,
+            data_days: 25,
+          },
         ],
       },
     ]);
@@ -750,7 +795,9 @@ describe("generateDailyDigest", () => {
       netUsd: expect.any(Number),
     });
 
-    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as { messages: { content: string }[] };
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
     expect(body.messages[0].content).toContain("Top chains by net flow");
   });
 
@@ -764,8 +811,20 @@ describe("generateDailyDigest", () => {
       {
         match: "FROM stress_signals",
         rows: [
-          { stablecoin_id: "usdt-tether", score: 8, band: "CALM", signals_json: '{"supply":{"value":5,"available":true}}', computed_at: nowSec - 600 },
-          { stablecoin_id: "usdc-circle", score: 62, band: "ALERT", signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}', computed_at: nowSec - 600 },
+          {
+            stablecoin_id: "usdt-tether",
+            score: 8,
+            band: "CALM",
+            signals_json: '{"supply":{"value":5,"available":true}}',
+            computed_at: nowSec - 600,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            score: 62,
+            band: "ALERT",
+            signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}',
+            computed_at: nowSec - 600,
+          },
         ],
       },
       // Yesterday's snapshot
@@ -802,8 +861,20 @@ describe("generateDailyDigest", () => {
       {
         match: "FROM stress_signals",
         rows: [
-          { stablecoin_id: "usdt-tether", score: 8, band: "CALM", signals_json: '{"supply":{"value":5,"available":true}}', computed_at: nowSec - 600 },
-          { stablecoin_id: "usdc-circle", score: 62, band: "ALERT", signals_json: '{"pool":', computed_at: nowSec - 600 },
+          {
+            stablecoin_id: "usdt-tether",
+            score: 8,
+            band: "CALM",
+            signals_json: '{"supply":{"value":5,"available":true}}',
+            computed_at: nowSec - 600,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            score: 62,
+            band: "ALERT",
+            signals_json: '{"pool":',
+            computed_at: nowSec - 600,
+          },
         ],
       },
       {
@@ -932,15 +1003,17 @@ describe("generateDailyDigest", () => {
 
   it("parses meta field from Claude response and stores in digest_meta", async () => {
     const responseWithMeta = {
-      content: [{
-        type: "text",
-        text: JSON.stringify({
-          title: "Alert Watch",
-          extended: VALID_DAILY_EXTENDED,
-          text: "FRAX hit ALERT while PSI slid to 88, the first STEADY reading in 47 days.",
-          meta: { lead: "dews-band-change", tone: "foreboding", coins: ["FRAX"] },
-        }),
-      }],
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            title: "Alert Watch",
+            extended: VALID_DAILY_EXTENDED,
+            text: "FRAX hit ALERT while PSI slid to 88, the first STEADY reading in 47 days.",
+            meta: { lead: "dews-band-change", tone: "foreboding", coins: ["FRAX"] },
+          }),
+        },
+      ],
     };
 
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(mockAnthropicStreamResponse(responseWithMeta.content[0].text));
@@ -975,7 +1048,10 @@ describe("generateDailyDigest", () => {
     expect(result.metadata).toContain("active-depegs-query");
 
     const insertBinds = getInsertDigestBinds(db as MockD1Database);
-    const storedInput = JSON.parse(String(insertBinds?.[3])) as { degradedSources?: string[]; activeDepegCount: number };
+    const storedInput = JSON.parse(String(insertBinds?.[3])) as {
+      degradedSources?: string[];
+      activeDepegCount: number;
+    };
     expect(storedInput.activeDepegCount).toBe(0);
     expect(storedInput.degradedSources).toContain("active-depegs-query");
   });
@@ -1010,16 +1086,12 @@ describe("generateDailyDigest", () => {
 
   it("persists the Twitter sent marker before sending on the happy path", async () => {
     const db = mockD1(makeBaseTables());
-    await generateDailyDigest(
-      db,
-      "anthropic-key",
-      {
-        apiKey: "x",
-        apiSecret: "y",
-        accessToken: "z",
-        accessTokenSecret: "w",
-      },
-    );
+    await generateDailyDigest(db, "anthropic-key", {
+      apiKey: "x",
+      apiSecret: "y",
+      accessToken: "z",
+      accessTokenSecret: "w",
+    });
 
     const markerKey = "daily-digest:twitter-sent:2026-03-06";
     const history = (db as MockD1Database).getHistory();
@@ -1038,16 +1110,12 @@ describe("generateDailyDigest", () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
 
     const db = mockD1(makeBaseTables());
-    const result = await generateDailyDigest(
-      db,
-      "anthropic-key",
-      {
-        apiKey: "x",
-        apiSecret: "y",
-        accessToken: "z",
-        accessTokenSecret: "w",
-      },
-    );
+    const result = await generateDailyDigest(db, "anthropic-key", {
+      apiKey: "x",
+      apiSecret: "y",
+      accessToken: "z",
+      accessTokenSecret: "w",
+    });
 
     expect(result.metadata).toContain("tweet: failed:");
 
@@ -1074,34 +1142,26 @@ describe("generateDailyDigest", () => {
       ...makeBaseTables(),
     ]);
 
-    const result = await generateDailyDigest(
-      db,
-      "anthropic-key",
-      {
-        apiKey: "x",
-        apiSecret: "y",
-        accessToken: "z",
-        accessTokenSecret: "w",
-      },
-    );
+    const result = await generateDailyDigest(db, "anthropic-key", {
+      apiKey: "x",
+      apiSecret: "y",
+      accessToken: "z",
+      accessTokenSecret: "w",
+    });
 
     expect(result.metadata).toContain("tweet: skipped: already-sent");
     expect(postDigestTweet).not.toHaveBeenCalled();
-    expect((db as MockD1Database).getHistory()).toContainEqual(expect.objectContaining({
-      sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
-      binds: expect.arrayContaining([markerKey]),
-    }));
+    expect((db as MockD1Database).getHistory()).toContainEqual(
+      expect.objectContaining({
+        sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
+        binds: expect.arrayContaining([markerKey]),
+      }),
+    );
   });
 
   it("persists the Telegram sent marker before sending on the happy path", async () => {
     const db = mockD1(makeBaseTables());
-    await generateDailyDigest(
-      db,
-      "anthropic-key",
-      null,
-      false,
-      { botToken: "tg-token", chatId: "tg-chat" },
-    );
+    await generateDailyDigest(db, "anthropic-key", null, false, { botToken: "tg-token", chatId: "tg-chat" });
 
     const markerKey = "daily-digest:telegram-sent:2026-03-06";
     const history = (db as MockD1Database).getHistory();
@@ -1121,13 +1181,10 @@ describe("generateDailyDigest", () => {
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
 
     const db = mockD1(makeBaseTables());
-    const result = await generateDailyDigest(
-      db,
-      "anthropic-key",
-      null,
-      false,
-      { botToken: "tg-token", chatId: "tg-chat" },
-    );
+    const result = await generateDailyDigest(db, "anthropic-key", null, false, {
+      botToken: "tg-token",
+      chatId: "tg-chat",
+    });
 
     expect(result.metadata).toContain("telegram: failed:");
 
@@ -1151,13 +1208,9 @@ describe("generateDailyDigest", () => {
       ...makeBaseTables(),
     ]);
 
-    await expect(generateDailyDigest(
-      db,
-      "anthropic-key",
-      null,
-      false,
-      { botToken: "tg-token", chatId: "tg-chat" },
-    )).rejects.toThrow("Telegram daily digest marker write failed");
+    await expect(
+      generateDailyDigest(db, "anthropic-key", null, false, { botToken: "tg-token", chatId: "tg-chat" }),
+    ).rejects.toThrow("Telegram daily digest marker write failed");
 
     expect(postDigestToTelegram).not.toHaveBeenCalled();
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
@@ -1182,16 +1235,10 @@ describe("generateDailyDigest", () => {
     });
 
     const db = mockD1(makeBaseTables());
-    const result = await generateDailyDigest(
-      db,
-      "anthropic-key",
-      null,
-      false,
-      {
-        botToken: "tg-token",
-        chatId: "tg-chat",
-      },
-    );
+    const result = await generateDailyDigest(db, "anthropic-key", null, false, {
+      botToken: "tg-token",
+      chatId: "tg-chat",
+    });
 
     expect(result.metadata).toContain("telegram: ok+appendix(");
     expect(postDigestToTelegram).toHaveBeenCalledWith(
@@ -1233,25 +1280,21 @@ describe("generateDailyDigest", () => {
       ...makeBaseTables(),
     ]);
 
-    const result = await generateDailyDigest(
-      db,
-      "anthropic-key",
-      null,
-      false,
-      {
-        botToken: "tg-token",
-        chatId: "tg-chat",
-      },
-    );
+    const result = await generateDailyDigest(db, "anthropic-key", null, false, {
+      botToken: "tg-token",
+      chatId: "tg-chat",
+    });
 
     expect(result.metadata).toContain("telegram: skipped: already-sent");
     expect(postDigestToTelegram).not.toHaveBeenCalled();
     expect(prepareTelegramDigestAppendices).not.toHaveBeenCalled();
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
-    expect((db as MockD1Database).getHistory()).toContainEqual(expect.objectContaining({
-      sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
-      binds: expect.arrayContaining([markerKey]),
-    }));
+    expect((db as MockD1Database).getHistory()).toContainEqual(
+      expect.objectContaining({
+        sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
+        binds: expect.arrayContaining([markerKey]),
+      }),
+    );
   });
 
   it("does not commit appendix state when Telegram delivery fails", async () => {
@@ -1274,16 +1317,10 @@ describe("generateDailyDigest", () => {
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
 
     const db = mockD1(makeBaseTables());
-    const result = await generateDailyDigest(
-      db,
-      "anthropic-key",
-      null,
-      false,
-      {
-        botToken: "tg-token",
-        chatId: "tg-chat",
-      },
-    );
+    const result = await generateDailyDigest(db, "anthropic-key", null, false, {
+      botToken: "tg-token",
+      chatId: "tg-chat",
+    });
 
     expect(result.metadata).toContain("telegram: failed:");
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
@@ -1367,7 +1404,9 @@ describe("forward-look voice guard", () => {
 
   it("does not flag when forward-look is present in extended", () => {
     const issues = validateDigestModelOutput(
-      makeParsedFixture({ extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nIf the gap holds next week, it is a rotation." }),
+      makeParsedFixture({
+        extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nIf the gap holds next week, it is a rotation.",
+      }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
@@ -1387,17 +1426,20 @@ describe("lead requirement validator", () => {
     const issues = validateDigestModelOutput(
       makeParsedFixture({
         leadSignalId: "market:usdc-circle:weekly-supply",
-        extended: "PMUSD stayed 5284 bps below peg on $65M.\n\nUSDC added $2B.\n\nIf PMUSD holds there next session, the peg stress remains the lead.",
+        extended:
+          "PMUSD stayed 5284 bps below peg on $65M.\n\nUSDC added $2B.\n\nIf PMUSD holds there next session, the peg stress remains the lead.",
       }),
       {
         kind: "daily",
         recentMeta: [],
-        leadRequirements: [{
-          candidateIds: ["depeg:pmusd-active"],
-          severity: "hard",
-          mentionTokens: ["PMUSD"],
-          reason: "PMUSD critical depeg must lead",
-        }],
+        leadRequirements: [
+          {
+            candidateIds: ["depeg:pmusd-active"],
+            severity: "hard",
+            mentionTokens: ["PMUSD"],
+            reason: "PMUSD critical depeg must lead",
+          },
+        ],
       },
     );
 
@@ -1408,17 +1450,20 @@ describe("lead requirement validator", () => {
     const issues = validateDigestModelOutput(
       makeParsedFixture({
         leadSignalId: "depeg:pmusd-active",
-        extended: "USDC added $2B.\n\nUSDT held steady.\n\nIf the flow reverses next session, the supply story changes.",
+        extended:
+          "USDC added $2B.\n\nUSDT held steady.\n\nIf the flow reverses next session, the supply story changes.",
       }),
       {
         kind: "daily",
         recentMeta: [],
-        leadRequirements: [{
-          candidateIds: ["depeg:pmusd-active"],
-          severity: "hard",
-          mentionTokens: ["PMUSD"],
-          reason: "PMUSD critical depeg must lead",
-        }],
+        leadRequirements: [
+          {
+            candidateIds: ["depeg:pmusd-active"],
+            severity: "hard",
+            mentionTokens: ["PMUSD"],
+            reason: "PMUSD critical depeg must lead",
+          },
+        ],
       },
     );
 
@@ -1443,7 +1488,9 @@ describe("opening-fingerprint voice guard", () => {
       { meta: null, title: "a", rawText: "PSI sits at 95." },
       { meta: null, title: "b", rawText: "PSI slipped to 93." },
     ];
-    const parsed = makeParsedFixture({ extended: "USDT just added $2B overnight.\n\nPSI drifted to 93.\n\nReal closer." });
+    const parsed = makeParsedFixture({
+      extended: "USDT just added $2B overnight.\n\nPSI drifted to 93.\n\nReal closer.",
+    });
     const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
     expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(false);
   });
@@ -1468,7 +1515,10 @@ describe("forbidden-tic voice guard", () => {
 
   it("does NOT flag 'worth watching' mid-paragraph when last sentence is different", () => {
     const issues = validateDigestModelOutput(
-      makeParsedFixture({ extended: "A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three." }),
+      makeParsedFixture({
+        extended:
+          "A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three.",
+      }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
@@ -1489,10 +1539,10 @@ describe("tone cluster validator", () => {
       meta: { lead: "depeg", tone: "foreboding" } as Record<string, unknown>,
       title: "prior",
     }));
-    const result = validateDigestModelOutput(
-      makeParsedFixture({ tone: "foreboding" }),
-      { kind: "daily", recentMeta: recent },
-    );
+    const result = validateDigestModelOutput(makeParsedFixture({ tone: "foreboding" }), {
+      kind: "daily",
+      recentMeta: recent,
+    });
     expect(result.some((i) => i.code === "tone-cluster")).toBe(true);
   });
 
@@ -1504,10 +1554,10 @@ describe("tone cluster validator", () => {
       { meta: { tone: "clinical" } as Record<string, unknown>, title: "d" },
       { meta: { tone: "wistful" } as Record<string, unknown>, title: "e" },
     ];
-    const result = validateDigestModelOutput(
-      makeParsedFixture({ tone: "foreboding" }),
-      { kind: "daily", recentMeta: recent },
-    );
+    const result = validateDigestModelOutput(makeParsedFixture({ tone: "foreboding" }), {
+      kind: "daily",
+      recentMeta: recent,
+    });
     expect(result.some((i) => i.code === "tone-cluster")).toBe(false);
   });
 });
@@ -1530,7 +1580,13 @@ describe("digest intelligence enrichment", () => {
     mcap7dDelta: 3_000_000,
     activeDepegCount: 1,
     topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -175, direction: "below", mcapUsd: 100_000_000 }],
-    biggestSupplyChange: { id: "usdc-circle", symbol: "USDC", name: "USD Coin", changeUsd: 40_000_000, currentMcap: 60_000_000 },
+    biggestSupplyChange: {
+      id: "usdc-circle",
+      symbol: "USDC",
+      name: "USD Coin",
+      changeUsd: 40_000_000,
+      currentMcap: 60_000_000,
+    },
     stabilityIndex: { score: 88, band: "STEADY", components: { severity: 4, breadth: 2, trend: -1 } },
     yesterdayIndex: { score: 90, band: "BEDROCK" },
     supplyVelocity: [{ coin: "USDC", change1d: 12_000_000, change7d: 40_000_000, signal: "accelerating" }],
@@ -1565,25 +1621,32 @@ describe("digest intelligence enrichment", () => {
   it("builds risk tape, next triggers, changes, and prior-trigger outcomes", () => {
     const previous: DigestInputData = {
       ...current,
-      dataQuality: { generatedAt: 1_772_668_800, stablecoinsCacheUpdatedAt: null, stablecoinsCacheAgeSec: null, windows: current.dataQuality?.windows ?? {
-        blacklistActivity: { label: "x", start: 0, end: 0 },
-        mintBurnFlows: { label: "x", start: 0, end: 0 },
-        supplyVelocity: { label: "x", dates: [] },
-        psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
-      } },
+      dataQuality: {
+        generatedAt: 1_772_668_800,
+        stablecoinsCacheUpdatedAt: null,
+        stablecoinsCacheAgeSec: null,
+        windows: current.dataQuality?.windows ?? {
+          blacklistActivity: { label: "x", start: 0, end: 0 },
+          mintBurnFlows: { label: "x", start: 0, end: 0 },
+          supplyVelocity: { label: "x", dates: [] },
+          psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
+        },
+      },
       topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -100, direction: "below", mcapUsd: 100_000_000 }],
       stabilityIndex: { score: 91, band: "BEDROCK", components: { severity: 2, breadth: 1, trend: 0 } },
-      nextTriggers: [{
-        id: "trigger:depeg:usdt",
-        label: "USDT depeg widening",
-        metric: "depeg-bps",
-        comparator: "abs-gte",
-        thresholdValue: 125,
-        thresholdLabel: "125 bps off peg",
-        symbol: "USDT",
-        rationale: "A wider deviation raises severity.",
-        detail: "If USDT reaches 125 bps off peg, severity rises.",
-      }],
+      nextTriggers: [
+        {
+          id: "trigger:depeg:usdt",
+          label: "USDT depeg widening",
+          metric: "depeg-bps",
+          comparator: "abs-gte",
+          thresholdValue: 125,
+          thresholdLabel: "125 bps off peg",
+          symbol: "USDT",
+          rationale: "A wider deviation raises severity.",
+          detail: "If USDT reaches 125 bps off peg, severity rises.",
+        },
+      ],
     };
 
     const intelligence = buildDigestIntelligence(current, previous);
@@ -1598,23 +1661,30 @@ describe("digest intelligence enrichment", () => {
   it("evaluates a supply-7d trigger against the coin's weekly change when no velocity signal is emitted", () => {
     const previous: DigestInputData = {
       ...current,
-      dataQuality: { generatedAt: 1_772_668_800, stablecoinsCacheUpdatedAt: null, stablecoinsCacheAgeSec: null, windows: current.dataQuality?.windows ?? {
-        blacklistActivity: { label: "x", start: 0, end: 0 },
-        mintBurnFlows: { label: "x", start: 0, end: 0 },
-        supplyVelocity: { label: "x", dates: [] },
-        psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
-      } },
-      nextTriggers: [{
-        id: "trigger:supply-7d:usdc",
-        label: "USDC weekly supply move",
-        metric: "supply-7d-usd",
-        comparator: "abs-gte",
-        thresholdValue: 30_000_000,
-        thresholdLabel: "$30M 7d move",
-        symbol: "USDC",
-        rationale: "The largest weekly mover stays useful only if the move keeps scaling.",
-        detail: "If USDC's 7d supply move clears $30M, the story has follow-through.",
-      }],
+      dataQuality: {
+        generatedAt: 1_772_668_800,
+        stablecoinsCacheUpdatedAt: null,
+        stablecoinsCacheAgeSec: null,
+        windows: current.dataQuality?.windows ?? {
+          blacklistActivity: { label: "x", start: 0, end: 0 },
+          mintBurnFlows: { label: "x", start: 0, end: 0 },
+          supplyVelocity: { label: "x", dates: [] },
+          psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
+        },
+      },
+      nextTriggers: [
+        {
+          id: "trigger:supply-7d:usdc",
+          label: "USDC weekly supply move",
+          metric: "supply-7d-usd",
+          comparator: "abs-gte",
+          thresholdValue: 30_000_000,
+          thresholdLabel: "$30M 7d move",
+          symbol: "USDC",
+          rationale: "The largest weekly mover stays useful only if the move keeps scaling.",
+          detail: "If USDC's 7d supply move clears $30M, the story has follow-through.",
+        },
+      ],
     };
     const today: DigestInputData = {
       ...current,
@@ -1633,28 +1703,41 @@ describe("digest intelligence enrichment", () => {
   it("evaluates a supply-7d trigger against the coin's own velocity even when a different coin is the biggest weekly mover", () => {
     const previous: DigestInputData = {
       ...current,
-      dataQuality: { generatedAt: 1_772_668_800, stablecoinsCacheUpdatedAt: null, stablecoinsCacheAgeSec: null, windows: current.dataQuality?.windows ?? {
-        blacklistActivity: { label: "x", start: 0, end: 0 },
-        mintBurnFlows: { label: "x", start: 0, end: 0 },
-        supplyVelocity: { label: "x", dates: [] },
-        psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
-      } },
-      nextTriggers: [{
-        id: "trigger:supply-7d:usdc",
-        label: "USDC weekly supply move",
-        metric: "supply-7d-usd",
-        comparator: "abs-gte",
-        thresholdValue: 30_000_000,
-        thresholdLabel: "$30M 7d move",
-        symbol: "USDC",
-        rationale: "The largest weekly mover stays useful only if the move keeps scaling.",
-        detail: "If USDC's 7d supply move clears $30M, the story has follow-through.",
-      }],
+      dataQuality: {
+        generatedAt: 1_772_668_800,
+        stablecoinsCacheUpdatedAt: null,
+        stablecoinsCacheAgeSec: null,
+        windows: current.dataQuality?.windows ?? {
+          blacklistActivity: { label: "x", start: 0, end: 0 },
+          mintBurnFlows: { label: "x", start: 0, end: 0 },
+          supplyVelocity: { label: "x", dates: [] },
+          psi: { label: "x", sampleAt: null, dailySnapshotAt: null },
+        },
+      },
+      nextTriggers: [
+        {
+          id: "trigger:supply-7d:usdc",
+          label: "USDC weekly supply move",
+          metric: "supply-7d-usd",
+          comparator: "abs-gte",
+          thresholdValue: 30_000_000,
+          thresholdLabel: "$30M 7d move",
+          symbol: "USDC",
+          rationale: "The largest weekly mover stays useful only if the move keeps scaling.",
+          detail: "If USDC's 7d supply move clears $30M, the story has follow-through.",
+        },
+      ],
     };
     // Current day: USDT is now the biggest weekly mover, but USDC still moved $40M over 7d.
     const today: DigestInputData = {
       ...current,
-      biggestSupplyChange: { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 90_000_000, currentMcap: 100_000_000 },
+      biggestSupplyChange: {
+        id: "usdt-tether",
+        symbol: "USDT",
+        name: "Tether",
+        changeUsd: 90_000_000,
+        currentMcap: 100_000_000,
+      },
     };
 
     const intelligence = buildDigestIntelligence(today, previous);
@@ -1707,9 +1790,7 @@ describe("totalMcapAth enrichment", () => {
       scores: new Map(),
       grades: [{ id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 }],
     });
-    vi.mocked(fetchWithRetry).mockImplementation(async () =>
-      mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT)
-    );
+    vi.mocked(fetchWithRetry).mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT));
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
 
     const baseTables = makeBaseTables();
@@ -1731,7 +1812,9 @@ describe("totalMcapAth enrichment", () => {
     expect(storedInput.totalMcapAth.daysAgo).toBe(7);
     expect(storedInput.totalMcapAth.date).toBe(todayTs - 7 * 86_400);
 
-    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as { messages: { content: string }[] };
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
     expect(body.messages[0].content).toContain("its Digest-window ATH");
   });
 });
@@ -1752,39 +1835,50 @@ describe("classifyRegime", () => {
   });
 
   it("returns CRISIS when FTQ is active", () => {
-    expect(classifyRegime({
-      ...baseData,
-      mintBurnFlows: { gaugeScore: -20, gaugeBand: "CAUTIOUS", flightToQuality: { active: true, safeNetUsd: 200_000_000, riskyNetUsd: -200_000_000 }, topPressure: [] },
-    })).toBe("CRISIS");
+    expect(
+      classifyRegime({
+        ...baseData,
+        mintBurnFlows: {
+          gaugeScore: -20,
+          gaugeBand: "CAUTIOUS",
+          flightToQuality: { active: true, safeNetUsd: 200_000_000, riskyNetUsd: -200_000_000 },
+          topPressure: [],
+        },
+      }),
+    ).toBe("CRISIS");
   });
 
   it("returns CRISIS when PSI band is TREMOR", () => {
-    expect(classifyRegime({
-      ...baseData,
-      stabilityIndex: { score: 65, band: "TREMOR", components: { severity: 30, breadth: 5, trend: -3 } },
-    })).toBe("CRISIS");
+    expect(
+      classifyRegime({
+        ...baseData,
+        stabilityIndex: { score: 65, band: "TREMOR", components: { severity: 30, breadth: 5, trend: -3 } },
+      }),
+    ).toBe("CRISIS");
   });
 
   it("returns TENSION when ALERT+ coins have material mcap", () => {
-    expect(classifyRegime({
-      ...baseData,
-      dewsStress: {
-        bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
-        yesterdayBandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
-        bandChanges: [],
-        elevatedCoins: [
-          { symbol: "USDT", band: "ALERT", score: 50, mcapUsd: 2_000_000_000 },
-        ],
-      },
-    })).toBe("TENSION");
+    expect(
+      classifyRegime({
+        ...baseData,
+        dewsStress: {
+          bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
+          yesterdayBandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
+          bandChanges: [],
+          elevatedCoins: [{ symbol: "USDT", band: "ALERT", score: 50, mcapUsd: 2_000_000_000 }],
+        },
+      }),
+    ).toBe("TENSION");
   });
 
   it("returns WATCHFUL when 1 unsuppressed active depeg is present", () => {
-    expect(classifyRegime({
-      ...baseData,
-      activeDepegCount: 1,
-      topDepegs: [{ symbol: "USDT", bps: 5, mcapUsd: 100_000_000_000 }],
-    })).toBe("WATCHFUL");
+    expect(
+      classifyRegime({
+        ...baseData,
+        activeDepegCount: 1,
+        topDepegs: [{ symbol: "USDT", bps: 5, mcapUsd: 100_000_000_000 }],
+      }),
+    ).toBe("WATCHFUL");
   });
 });
 
@@ -1828,7 +1922,15 @@ function makeCollectorCtx(db: D1Database): CollectorContext {
     ["dai-makerdao", 5_000_000],
   ]);
 
-  return { db: db as unknown as D1Database, trackedStablecoinAssets, stablecoinAssetById, mcapById, nowSec, todayTs, yesterdayTs };
+  return {
+    db: db as unknown as D1Database,
+    trackedStablecoinAssets,
+    stablecoinAssetById,
+    mcapById,
+    nowSec,
+    todayTs,
+    yesterdayTs,
+  };
 }
 
 describe("collectActiveDepegs", () => {
@@ -1881,10 +1983,34 @@ describe("collectActiveDepegs", () => {
       {
         match: "FROM depeg_events WHERE ended_at IS NULL",
         rows: [
-          { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: nowSec - 8 * 86_400 },
-          { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -25, started_at: nowSec - 3600 },
-          { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: -5200, started_at: nowSec - 10 * 86_400 },
-          { stablecoin_id: "dai-makerdao", symbol: "DAI2", direction: "above", peak_deviation_bps: 150, started_at: nowSec - 3600 },
+          {
+            stablecoin_id: "dai-makerdao",
+            symbol: "DAI",
+            direction: "above",
+            peak_deviation_bps: 500,
+            started_at: nowSec - 8 * 86_400,
+          },
+          {
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            peak_deviation_bps: -25,
+            started_at: nowSec - 3600,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            direction: "below",
+            peak_deviation_bps: -5200,
+            started_at: nowSec - 10 * 86_400,
+          },
+          {
+            stablecoin_id: "dai-makerdao",
+            symbol: "DAI2",
+            direction: "above",
+            peak_deviation_bps: 150,
+            started_at: nowSec - 3600,
+          },
         ],
       },
     ]);
@@ -2039,9 +2165,7 @@ describe("collectSupplyVelocity", () => {
 
     const result = await collectSupplyVelocity(makeCollectorCtx(db));
 
-    expect(result.value).toEqual([
-      expect.objectContaining({ coin: "USDT", signal: "decelerating" }),
-    ]);
+    expect(result.value).toEqual([expect.objectContaining({ coin: "USDT", signal: "decelerating" })]);
   });
 });
 
@@ -2196,7 +2320,17 @@ describe("collectYieldAnomalies", () => {
       );
       insertYield.run("usdt-tether", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed");
       insertYield.run("dai-makerdao", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged");
-      insertYield.run("usdc-circle", "USDC", 1, 5.1, 4.9, 4.5, JSON.stringify(["tvl-outflow"]), "gen-published", "published");
+      insertYield.run(
+        "usdc-circle",
+        "USDC",
+        1,
+        5.1,
+        4.9,
+        4.5,
+        JSON.stringify(["tvl-outflow"]),
+        "gen-published",
+        "published",
+      );
 
       const result = await collectYieldAnomalies(makeCollectorCtx(createSqliteD1(sqlite)));
 
@@ -2341,7 +2475,14 @@ describe("collectCrossDayTrends", () => {
         stabilityIndex: { score: psiScore, band, components: { severity: 0, breadth: 0, trend: 0 } },
         yesterdayIndex: null,
         ...(gaugeScore != null
-          ? { mintBurnFlows: { gaugeScore, gaugeBand: "STABLE", flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 }, topPressure: [] } }
+          ? {
+              mintBurnFlows: {
+                gaugeScore,
+                gaugeBand: "STABLE",
+                flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 },
+                topPressure: [],
+              },
+            }
           : {}),
       }),
     });
@@ -2387,9 +2528,15 @@ describe("collectCrossDayTrends", () => {
         biggestSupplyChange: null,
         stabilityIndex: { score: 90, band: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 } },
         yesterdayIndex: null,
-        mintBurnFlows: daysAgo === 0
-          ? { gaugeScore: -5, gaugeBand: "STABLE", flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 }, topPressure: [] }
-          : undefined,
+        mintBurnFlows:
+          daysAgo === 0
+            ? {
+                gaugeScore: -5,
+                gaugeBand: "STABLE",
+                flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 },
+                topPressure: [],
+              }
+            : undefined,
       }),
     });
 
@@ -2418,15 +2565,25 @@ describe("collectCrossDayTrends", () => {
           {
             generated_at: nowSec - 86_400,
             input_data: JSON.stringify({
-              totalMcapUsd: 200e9, mcap7dDelta: 0, activeDepegCount: 0, topDepegs: [],
-              biggestSupplyChange: null, stabilityIndex: null, yesterdayIndex: null,
+              totalMcapUsd: 200e9,
+              mcap7dDelta: 0,
+              activeDepegCount: 0,
+              topDepegs: [],
+              biggestSupplyChange: null,
+              stabilityIndex: null,
+              yesterdayIndex: null,
             }),
           },
           {
             generated_at: nowSec - 2 * 86_400,
             input_data: JSON.stringify({
-              totalMcapUsd: 199e9, mcap7dDelta: 0, activeDepegCount: 0, topDepegs: [],
-              biggestSupplyChange: null, stabilityIndex: null, yesterdayIndex: null,
+              totalMcapUsd: 199e9,
+              mcap7dDelta: 0,
+              activeDepegCount: 0,
+              topDepegs: [],
+              biggestSupplyChange: null,
+              stabilityIndex: null,
+              yesterdayIndex: null,
             }),
           },
         ],
@@ -2469,9 +2626,7 @@ describe("collectDewsStress — topSignals enrichment", () => {
       },
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
-        rows: [
-          { stablecoin_id: "usdt-tether", score: 25, band: "WATCH" },
-        ],
+        rows: [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }],
       },
     ]);
 

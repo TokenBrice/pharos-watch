@@ -1,20 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetchRetry } from "../../test-helpers/cron";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { fetchCurveScrvusdCurrentRateSource } from "../yield-sync/sources";
 
 const TEST_CHAIN_RPCS = new Map<string, ChainRpcConfig>([
-  ["ethereum", {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    type: "evm",
-    rpcUrl: "https://rpc.example/eth",
-    explorerUrl: "https://etherscan.io",
-  }],
+  [
+    "ethereum",
+    {
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example/eth",
+      explorerUrl: "https://etherscan.io",
+    },
+  ],
 ]);
 
 function uint256Hex(value: bigint): string {
@@ -71,11 +73,7 @@ describe("fetchCurveScrvusdCurrentRateSource", () => {
       "0x2d632692": 1776150466n,
     });
 
-    const result = await fetchCurveScrvusdCurrentRateSource(
-      1775891171,
-      undefined,
-      TEST_CHAIN_RPCS,
-    );
+    const result = await fetchCurveScrvusdCurrentRateSource(1775891171, undefined, TEST_CHAIN_RPCS);
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -103,11 +101,7 @@ describe("fetchCurveScrvusdCurrentRateSource", () => {
       "0x2d632692": 1775891170n,
     });
 
-    const result = await fetchCurveScrvusdCurrentRateSource(
-      1775891171,
-      undefined,
-      TEST_CHAIN_RPCS,
-    );
+    const result = await fetchCurveScrvusdCurrentRateSource(1775891171, undefined, TEST_CHAIN_RPCS);
 
     expect(result?.currentApy).toBe(0);
     expect(result?.apyBase).toBe(0);
