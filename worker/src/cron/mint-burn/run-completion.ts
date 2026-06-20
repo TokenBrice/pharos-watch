@@ -92,6 +92,8 @@ export async function completeMintBurnRun(input: {
     status = "degraded";
   }
 
+  throwIfAborted(input.signal);
+
   const nextConfigIndex = input.enabledConfigs.length > 0
     ? (input.startIndex + 1) % input.enabledConfigs.length
     : 0;

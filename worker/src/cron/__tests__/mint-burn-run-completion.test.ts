@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { completeMintBurnRun } from "../mint-burn/run-completion";
 import { setMintBurnRunState } from "../mint-burn/run-state";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
@@ -17,7 +17,7 @@ vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
   sweepRecentRoundtrips: vi.fn(),
 }));
 
-function buildRunInput(overrides: { apiErrors?: number } = {}): Parameters<typeof completeMintBurnRun>[0] {
+function buildRunInput(overrides: { apiErrors?: number; signal?: AbortSignal } = {}): Parameters<typeof completeMintBurnRun>[0] {
   return {
     db: {} as D1Database,
     budget: { limit: 200, count: 7 },
@@ -53,10 +53,15 @@ function buildRunInput(overrides: { apiErrors?: number } = {}): Parameters<typeo
     criticalContractsSatisfied: 0,
     criticalContractsUnsatisfied: 0,
     configBreakdown: [],
+    signal: overrides.signal,
   };
 }
 
 describe("completeMintBurnRun", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("keeps apiErrors separate from validationFailures metadata", async () => {
     vi.mocked(setMintBurnRunState).mockResolvedValue(true);
     vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
@@ -97,5 +102,18 @@ describe("completeMintBurnRun", () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it("does not persist run state when the run has already been aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("lease lost before completion"));
+
+    await expect(completeMintBurnRun(buildRunInput({ signal: controller.signal })))
+      .rejects.toThrow("lease lost before completion");
+
+    expect(setMintBurnRunState).not.toHaveBeenCalled();
+    expect(getNullPriceBacklog).not.toHaveBeenCalled();
+    expect(healNullPrices).not.toHaveBeenCalled();
+    expect(sweepRecentRoundtrips).not.toHaveBeenCalled();
   });
 });

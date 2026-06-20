@@ -8,9 +8,6 @@ import {
   type MintBurnContractConfig,
 } from "../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
-import {
-  recalcAffectedHours,
-} from "../lib/mint-burn-pipeline/persistence";
 import type { MintBurnAffectedHour, MintBurnLane, SyncMintBurnStatus } from "../lib/mint-burn-pipeline/types";
 import {
   ensureMintBurnSyncStateRows,
@@ -20,6 +17,7 @@ import {
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./mint-burn/chain-context";
+import { recalcMintBurnAffectedHours } from "./mint-burn/recalc";
 import { completeMintBurnRun } from "./mint-burn/run-completion";
 import { configKey, configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./mint-burn/run-configs";
 import {
@@ -30,7 +28,6 @@ import {
 } from "./mint-burn/run-state";
 import { excludeFrozenIds } from "./shared/exclude-frozen";
 import { throwIfAborted } from "../lib/abort";
-import { toErrorMessage } from "../lib/error-utils";
 
 const MAX_SCAN_RANGE = 50_000;
 const EVM_SAFETY_MARGIN_BLOCKS = 75; // Math.ceil(900s indexing safety / 12s block time)
@@ -238,15 +235,9 @@ export async function syncMintBurn(
       affectedHours,
     });
   } finally {
-    if (affectedHours.size > 0) {
-      try {
-        await recalcAffectedHours(db, affectedHours, { signal });
-      } catch (e) {
-        recalcFailed = true;
-        recalcError = toErrorMessage(e);
-        console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", e);
-      }
-    }
+    const recalcResult = await recalcMintBurnAffectedHours(db, affectedHours, signal);
+    recalcFailed = recalcResult.failed;
+    recalcError = recalcResult.error;
   }
 
   const {
