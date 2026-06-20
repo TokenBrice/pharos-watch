@@ -39,6 +39,14 @@ interface DepegEventSitemapEntry {
   peakDeviationBps: number;
 }
 
+type SitemapChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
+type StaticPageSpec = readonly [
+  path: string,
+  changeFrequency: SitemapChangeFrequency,
+  priority: number,
+  resolveLastModified?: (path: string) => Date,
+];
+
 export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = [
   "/methodology/scoring-changelog/",
   "/methodology/depeg-changelog/",
@@ -109,6 +117,18 @@ function comparisonLastModified(page: (typeof STATIC_COMPARISON_PAGES)[number]):
   );
 }
 
+function buildStaticSitemapEntries(
+  specs: readonly StaticPageSpec[],
+  defaultLastModified: (path: string) => Date,
+): MetadataRoute.Sitemap {
+  return specs.map(([path, changeFrequency, priority, resolveLastModified = defaultLastModified]) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: resolveLastModified(path),
+    changeFrequency,
+    priority,
+  }));
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
@@ -128,74 +148,57 @@ export default function sitemap(): MetadataRoute.Sitemap {
     return ms > 0 ? new Date(ms) : now;
   };
 
-  type StaticPageSpec = {
-    path: string;
-    lastModified: Date;
-    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
-    priority: number;
-  };
-  const staticPageSpecs: StaticPageSpec[] = [
-    { path: "/", lastModified: liveDataLastModified("/"), changeFrequency: "hourly", priority: 1.0 },
-    { path: "/coverage/", lastModified: lastEdited("/coverage/"), changeFrequency: "weekly", priority: 0.6 },
-    { path: "/alt-pegs/", lastModified: lastEdited("/alt-pegs/"), changeFrequency: "daily", priority: 0.7 },
-    { path: "/start/", lastModified: lastEdited("/start/"), changeFrequency: "monthly", priority: 0.6 },
-    { path: "/freezewatch/", lastModified: liveDataLastModified("/freezewatch/"), changeFrequency: "daily", priority: 0.85 },
-    { path: "/depeg/", lastModified: liveDataLastModified("/depeg/"), changeFrequency: "daily", priority: 0.8 },
-    { path: "/cemetery/", lastModified: lastEdited("/cemetery/"), changeFrequency: "monthly", priority: 0.7 },
-    { path: "/compare/", lastModified: lastEdited("/compare/"), changeFrequency: "weekly", priority: 0.7 },
-    { path: "/liquidity/", lastModified: liveDataLastModified("/liquidity/"), changeFrequency: "daily", priority: 0.8 },
-    { path: "/upcoming/", lastModified: lastEdited("/upcoming/"), changeFrequency: "daily", priority: 0.6 },
-    { path: "/digest/", lastModified: liveDataLastModified("/digest/"), changeFrequency: "daily", priority: 0.6 },
-    { path: "/safety-scores/", lastModified: liveDataLastModified("/safety-scores/"), changeFrequency: "daily", priority: 0.8 },
-    { path: "/stability-index/", lastModified: liveDataLastModified("/stability-index/"), changeFrequency: "daily", priority: 0.8 },
-    { path: "/dependency-map/", lastModified: liveDataLastModified("/dependency-map/"), changeFrequency: "daily", priority: 0.7 },
-    { path: "/yield/", lastModified: liveDataLastModified("/yield/"), changeFrequency: "daily", priority: 0.7 },
-    { path: "/screener/", lastModified: lastEdited("/screener/"), changeFrequency: "daily", priority: 0.7 },
-    { path: "/funding/", lastModified: fundingLastModified(), changeFrequency: "weekly", priority: 0.5 },
-    { path: "/status/", lastModified: liveDataLastModified("/status/"), changeFrequency: "daily", priority: 0.4 },
-    { path: "/flows/", lastModified: lastEdited("/flows/"), changeFrequency: "daily", priority: 0.7 },
-    { path: "/timeline/", lastModified: liveDataLastModified("/timeline/"), changeFrequency: "hourly", priority: 0.75 },
-    { path: "/compliance/", lastModified: lastEdited("/compliance/"), changeFrequency: "weekly", priority: 0.6 },
-    { path: "/pharoswatchbot/", lastModified: lastEdited("/pharoswatchbot/"), changeFrequency: "weekly", priority: 0.7 },
-    { path: "/methodology/", lastModified: lastEdited("/methodology/"), changeFrequency: "monthly", priority: 0.6 },
-  ];
+  const staticPageSpecs = [
+    ["/", "hourly", 1.0, liveDataLastModified],
+    ["/coverage/", "weekly", 0.6],
+    ["/alt-pegs/", "daily", 0.7],
+    ["/start/", "monthly", 0.6],
+    ["/freezewatch/", "daily", 0.85, liveDataLastModified],
+    ["/depeg/", "daily", 0.8, liveDataLastModified],
+    ["/cemetery/", "monthly", 0.7],
+    ["/compare/", "weekly", 0.7],
+    ["/liquidity/", "daily", 0.8, liveDataLastModified],
+    ["/upcoming/", "daily", 0.6],
+    ["/digest/", "daily", 0.6, liveDataLastModified],
+    ["/safety-scores/", "daily", 0.8, liveDataLastModified],
+    ["/stability-index/", "daily", 0.8, liveDataLastModified],
+    ["/dependency-map/", "daily", 0.7, liveDataLastModified],
+    ["/yield/", "daily", 0.7, liveDataLastModified],
+    ["/screener/", "daily", 0.7],
+    ["/funding/", "weekly", 0.5, fundingLastModified],
+    ["/status/", "daily", 0.4, liveDataLastModified],
+    ["/flows/", "daily", 0.7],
+    ["/timeline/", "hourly", 0.75, liveDataLastModified],
+    ["/compliance/", "weekly", 0.6],
+    ["/pharoswatchbot/", "weekly", 0.7],
+    ["/methodology/", "monthly", 0.6],
+  ] as const satisfies readonly StaticPageSpec[];
 
-  const referencePageSpecs: StaticPageSpec[] = [
-    { path: "/changelog/", lastModified: changelogLastModified(), changeFrequency: "weekly", priority: 0.5 },
-    { path: "/about/", lastModified: lastEdited("/about/"), changeFrequency: "monthly", priority: 0.5 },
-    { path: "/about/api/", lastModified: lastEdited("/about/api/"), changeFrequency: "monthly", priority: 0.5 },
-    { path: "/about/bluechip/", lastModified: lastEdited("/about/bluechip/"), changeFrequency: "monthly", priority: 0.5 },
-    { path: "/learn/", lastModified: lastEdited("/learn/"), changeFrequency: "monthly", priority: 0.5 },
-    { path: "/learn/glossary/", lastModified: lastEdited("/learn/glossary/"), changeFrequency: "monthly", priority: 0.5 },
-    { path: "/sitemap-tree/", lastModified: lastEdited("/sitemap-tree/"), changeFrequency: "monthly", priority: 0.3 },
-    // eslint-disable-next-line no-restricted-syntax -- "/api/" here is the public docs page slug, not an API endpoint; LAST_EDITED is keyed by site URLs.
-    { path: "/api/", lastModified: lastEdited("/api/"), changeFrequency: "monthly", priority: 0.5 },
-    { path: "/stablecoins/", lastModified: lastEdited("/stablecoins/"), changeFrequency: "weekly", priority: 0.7 },
-    { path: "/stablecoins/backing/", lastModified: lastEdited("/stablecoins/backing/"), changeFrequency: "weekly", priority: 0.6 },
-    { path: "/stablecoins/governance/", lastModified: lastEdited("/stablecoins/governance/"), changeFrequency: "weekly", priority: 0.6 },
-    { path: "/stablecoins/infrastructure/", lastModified: lastEdited("/stablecoins/infrastructure/"), changeFrequency: "weekly", priority: 0.6 },
-    { path: "/privacy/", lastModified: lastEdited("/privacy/"), changeFrequency: "yearly", priority: 0.3 },
-  ];
+  const referencePageSpecs = [
+    ["/changelog/", "weekly", 0.5, changelogLastModified],
+    ["/about/", "monthly", 0.5],
+    ["/about/api/", "monthly", 0.5],
+    ["/about/bluechip/", "monthly", 0.5],
+    ["/learn/", "monthly", 0.5],
+    ["/learn/glossary/", "monthly", 0.5],
+    ["/sitemap-tree/", "monthly", 0.3],
+    ["/api/", "monthly", 0.5],
+    ["/stablecoins/", "weekly", 0.7],
+    ["/stablecoins/backing/", "weekly", 0.6],
+    ["/stablecoins/governance/", "weekly", 0.6],
+    ["/stablecoins/infrastructure/", "weekly", 0.6],
+    ["/privacy/", "yearly", 0.3],
+  ] as const satisfies readonly StaticPageSpec[];
 
   const staticPages: MetadataRoute.Sitemap = [
-    ...staticPageSpecs.map((entry) => ({
-      url: `${SITE_URL}${entry.path}`,
-      lastModified: entry.lastModified,
-      changeFrequency: entry.changeFrequency,
-      priority: entry.priority,
-    })),
+    ...buildStaticSitemapEntries(staticPageSpecs, lastEdited),
     ...METHODOLOGY_CHANGELOG_SITEMAP_PATHS.map((path) => ({
       url: `${SITE_URL}${path}`,
       lastModified: lastEdited(path),
       changeFrequency: "monthly" as const,
       priority: 0.4,
     })),
-    ...referencePageSpecs.map((entry) => ({
-      url: `${SITE_URL}${entry.path}`,
-      lastModified: entry.lastModified,
-      changeFrequency: entry.changeFrequency,
-      priority: entry.priority,
-    })),
+    ...buildStaticSitemapEntries(referencePageSpecs, lastEdited),
   ];
 
   const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map((coin) => ({

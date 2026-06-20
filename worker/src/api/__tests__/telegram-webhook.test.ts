@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { lastSendMessageBody, makeTelegramUpdateRequest, telegramCallBody } from "../../test-helpers/__shared/telegram";
+import {
+  lastSendMessageBody,
+  makeTelegramUpdateRequest,
+  telegramApiCallBody,
+  telegramCallBody,
+} from "../../test-helpers/__shared/telegram";
 
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
@@ -1228,8 +1233,7 @@ describe("handleTelegramWebhook", () => {
     );
 
     expect(res.status).toBe(200);
-    const sendCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("sendMessage"));
-    const body = JSON.parse((sendCall?.[1] as RequestInit).body as string) as { text: string };
+    const body = lastSendMessageBody<{ text: string }>(fetchSpy);
     expect(body.text).toContain("Quick start");
     expect(body.text).toContain("/sample");
     expect(body.text).toContain("/settings");
@@ -3718,21 +3722,7 @@ describe("handleTelegramWebhook", () => {
       },
     ]);
 
-    const request = new Request("https://x/api/telegram-webhook", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Telegram-Bot-Api-Secret-Token": "test-secret",
-      },
-      body: JSON.stringify({
-        callback_query: {
-          id: "cb1",
-          data: "confirm:bulk",
-          from: { id: 999, username: "requester" },
-          message: { chat: { id: 123, type: "private" }, message_id: 1 },
-        },
-      }),
-    });
+    const request = makeCallbackRequest("confirm:bulk");
     await handleTelegramWebhook(db, request, "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -3889,10 +3879,8 @@ describe("handleTelegramWebhook", () => {
     const res = await handleTelegramWebhook(db, makeCallbackRequest("status:usdc-circle"), "test-secret", "bot-token");
 
     expect(res.status).toBe(200);
-    const answerCall = [...fetchSpy.mock.calls]
-      .reverse()
-      .find((call) => String(call[0]).includes("answerCallbackQuery"));
-    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toContain("Too many button taps");
+    const answerBody = telegramApiCallBody<{ text?: string }>(fetchSpy, "answerCallbackQuery");
+    expect(answerBody.text).toContain("Too many button taps");
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.binds.includes("callback:status"))).toBe(true);
     nowSpy.mockRestore();
@@ -3917,10 +3905,8 @@ describe("handleTelegramWebhook", () => {
     const res = await handleTelegramWebhook(db, makeCallbackRequest("status:usdc-circle"), "test-secret", "bot-token");
 
     expect(res.status).toBe(200);
-    const answerCall = [...fetchSpy.mock.calls]
-      .reverse()
-      .find((call) => String(call[0]).includes("answerCallbackQuery"));
-    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toContain("Please try /status again");
+    const answerBody = telegramApiCallBody<{ text?: string }>(fetchSpy, "answerCallbackQuery");
+    expect(answerBody.text).toContain("Please try /status again");
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.binds.includes("telegram:command-cooldown:123:/status"))).toBe(true);
     nowSpy.mockRestore();
@@ -3942,10 +3928,8 @@ describe("handleTelegramWebhook", () => {
             entry.binds.includes("telegram:command-cooldown:123:/status"),
         ),
     ).toBe(true);
-    const answerCall = [...fetchSpy.mock.calls]
-      .reverse()
-      .find((call) => String(call[0]).includes("answerCallbackQuery"));
-    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toBe("Action failed. Try again.");
+    const answerBody = telegramApiCallBody<{ text?: string }>(fetchSpy, "answerCallbackQuery");
+    expect(answerBody.text).toBe("Action failed. Try again.");
     warn.mockRestore();
   });
 
@@ -3960,10 +3944,8 @@ describe("handleTelegramWebhook", () => {
     );
 
     expect(res.status).toBe(200);
-    const answerCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("answerCallbackQuery"));
-    expect(JSON.parse((answerCall?.[1]?.body as string) ?? "{}").text).toBe(
-      "Channel-originated actions are not supported.",
-    );
+    const answerBody = telegramApiCallBody<{ text?: string }>(fetchSpy, "answerCallbackQuery", { last: false });
+    expect(answerBody.text).toBe("Channel-originated actions are not supported.");
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
   });
 
@@ -3991,21 +3973,7 @@ describe("handleTelegramWebhook", () => {
       },
     ]);
 
-    const request = new Request("https://x/api/telegram-webhook", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Telegram-Bot-Api-Secret-Token": "test-secret",
-      },
-      body: JSON.stringify({
-        callback_query: {
-          id: "cb1",
-          data: "confirm:bulk",
-          from: { id: 999, username: "requester" },
-          message: { chat: { id: 123, type: "private" }, message_id: 1 },
-        },
-      }),
-    });
+    const request = makeCallbackRequest("confirm:bulk");
     await handleTelegramWebhook(db, request, "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -4037,21 +4005,7 @@ describe("handleTelegramWebhook", () => {
       },
     ]);
 
-    const request = new Request("https://x/api/telegram-webhook", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Telegram-Bot-Api-Secret-Token": "test-secret",
-      },
-      body: JSON.stringify({
-        callback_query: {
-          id: "cb1",
-          data: "cancel:bulk",
-          from: { id: 999, username: "requester" },
-          message: { chat: { id: 123, type: "private" }, message_id: 1 },
-        },
-      }),
-    });
+    const request = makeCallbackRequest("cancel:bulk");
     await handleTelegramWebhook(db, request, "test-secret", "bot-token");
 
     const history = db.getHistory();

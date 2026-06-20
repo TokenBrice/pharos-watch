@@ -1,14 +1,14 @@
 import {
   PROTOCOL_COLORS,
   PROTOCOL_HEX,
-  PROTOCOL_LOGOS,
   EXTRA_COLORS,
-  CHAIN_COLORS,
   CHAIN_HEX,
+  chainColorClass,
+  chainLogo,
   prettifyProtocol,
   normalizeChain,
+  protocolLogo,
 } from "@/lib/dex-display-constants";
-import { CHAIN_META } from "@shared/lib/chains";
 import type { DexLiquidityData } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
@@ -383,20 +383,14 @@ export function buildLiquidityExitRouteModel(
     labelForKey: prettifyProtocol,
     colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
     colorHexForKey: (protocol) => PROTOCOL_HEX[protocol] ?? stableRouteAccentColor(`protocol:${protocol}`),
-    logoForKey: (protocol) => {
-      const path = PROTOCOL_LOGOS[protocol];
-      return path ? { path } : null;
-    },
+    logoForKey: protocolLogo,
     denominatorUsd: globalData.totalTvlUsd,
   });
   const chainRoutes = buildExitRouteItems(globalData.chainTvl ?? {}, {
     labelForKey: normalizeChain,
-    colorForKey: (chain) => CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground",
+    colorForKey: chainColorClass,
     colorHexForKey: (chain) => CHAIN_HEX[chain.toLowerCase()] ?? stableRouteAccentColor(`chain:${chain.toLowerCase()}`),
-    logoForKey: (chain) => {
-      const meta = CHAIN_META[chain.toLowerCase()];
-      return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
-    },
+    logoForKey: chainLogo,
     denominatorUsd: globalData.totalTvlUsd,
   });
   const concentrationHhi = globalData.concentrationHhi ?? computeHhi(globalData.protocolTvl ?? {});

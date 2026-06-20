@@ -65,7 +65,7 @@ export const EXTRA_COLORS = [
   "bg-fuchsia-500", "bg-yellow-500", "bg-purple-500", "bg-orange-400",
 ];
 
-export const CHAIN_COLORS: Record<string, string> = {
+const CHAIN_COLORS: Record<string, string> = {
   ethereum: "bg-blue-600",
   arbitrum: "bg-sky-500",
   base: "bg-blue-400",
@@ -117,6 +117,15 @@ export function normalizeChain(chain: string): string {
   return CHAIN_META[key]?.name ?? chain;
 }
 
+export function chainColorClass(chain: string): string {
+  return CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground";
+}
+
+export function chainLogo(chain: string): { path: string; darkInvert?: boolean } | null {
+  const meta = CHAIN_META[chain.toLowerCase()];
+  return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
+}
+
 /** Prettify a DeFiLlama project slug into a display name */
 export function prettifyProtocol(slug: string): string {
   if (PROTOCOL_NAMES[slug]) return PROTOCOL_NAMES[slug];
@@ -124,4 +133,9 @@ export function prettifyProtocol(slug: string): string {
     .split(/[-_]/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+export function protocolLogo(protocol: string): { path: string } | null {
+  const path = PROTOCOL_LOGOS[protocol];
+  return path ? { path } : null;
 }

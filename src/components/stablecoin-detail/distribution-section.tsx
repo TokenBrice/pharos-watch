@@ -19,9 +19,9 @@ import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import {
   CHAIN_HEX,
   PROTOCOL_HEX,
-  PROTOCOL_LOGOS,
   normalizeChain,
   prettifyProtocol,
+  protocolLogo,
 } from "@/lib/dex-display-constants";
 
 /* ── Types ── */
@@ -275,10 +275,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return buildDonutData(liq.protocolTvl, {
       labelForKey: prettifyProtocol,
       hexForKey: (key) => PROTOCOL_HEX[key],
-      logoForKey: (key) => {
-        const path = PROTOCOL_LOGOS[key];
-        return path ? { path } : null;
-      },
+      logoForKey: protocolLogo,
     });
   }, [liq]);
 

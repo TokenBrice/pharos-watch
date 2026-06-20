@@ -2,8 +2,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
-import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
+import { collectSourceFilesUnderRoot, runAsCli } from "../lib/source-files.mjs";
 
 export const DEFAULT_CRON_CONSOLE_ROOTS = ["worker/src/cron", "worker/src/handlers/scheduled.ts"];
 export const DEFAULT_STRUCTURED_LOG_ROOTS = [
@@ -218,10 +217,6 @@ export function checkCronConsoleUsage({
   return 0;
 }
 
-const isDirectRun = process.argv[1]
-  ? import.meta.url === pathToFileURL(process.argv[1]).href
-  : false;
-
-if (isDirectRun) {
-  process.exitCode = checkCronConsoleUsage({ updateBaseline: process.argv.includes("--update-baseline") });
-}
+runAsCli(import.meta.url, () =>
+  checkCronConsoleUsage({ updateBaseline: process.argv.includes("--update-baseline") }),
+);

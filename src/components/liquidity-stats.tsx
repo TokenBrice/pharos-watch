@@ -11,8 +11,13 @@ import {
 import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency, getNetColor } from "@shared/lib/format";
-import { PROTOCOL_LOGOS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-display-constants";
-import { CHAIN_META } from "@shared/lib/chains";
+import {
+  chainColorClass,
+  chainLogo,
+  prettifyProtocol,
+  normalizeChain,
+  protocolLogo,
+} from "@/lib/dex-display-constants";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
@@ -73,11 +78,8 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
   const { entries, total } = useMemo(() => {
     return buildBreakdownEntries(globalData?.chainTvl ?? {}, {
       labelForKey: normalizeChain,
-      colorForKey: (chain) => CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground",
-      logoForKey: (chain) => {
-        const meta = CHAIN_META[chain.toLowerCase()];
-        return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
-      },
+      colorForKey: chainColorClass,
+      logoForKey: chainLogo,
     });
   }, [globalData]);
 
@@ -100,7 +102,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
       label: protocol === "_other" ? "Other" : prettifyProtocol(protocol),
       value: tvl,
       colorClass: colorMap[protocol] ?? "bg-muted-foreground",
-      logoPath: protocol === "_other" ? undefined : PROTOCOL_LOGOS[protocol],
+      logoPath: protocol === "_other" ? undefined : protocolLogo(protocol)?.path,
     })) satisfies BreakdownEntry[];
   }, [globalData]);
   const total = entries.reduce((sum, entry) => sum + entry.value, 0);

@@ -11,13 +11,13 @@ import { formatCurrency, formatChartDate, getNetColor } from "@shared/lib/format
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import {
   PROTOCOL_COLORS,
-  PROTOCOL_LOGOS,
   EXTRA_COLORS,
-  CHAIN_COLORS,
+  chainColorClass,
+  chainLogo,
   prettifyProtocol,
   normalizeChain,
+  protocolLogo,
 } from "@/lib/dex-display-constants";
-import { CHAIN_META } from "@shared/lib/chains";
 import { getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import { formatFeeTierLabel, getPoolVariantLabel, formatBalanceDetails } from "@/components/dex-liquidity-card-model";
@@ -128,10 +128,7 @@ export function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, numbe
   const { entries, total } = buildBreakdownEntries(protocolTvl, {
     labelForKey: prettifyProtocol,
     colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
-    logoForKey: (protocol) => {
-      const path = PROTOCOL_LOGOS[protocol];
-      return path ? { path } : null;
-    },
+    logoForKey: protocolLogo,
   });
   if (total === 0) return null;
 
@@ -148,11 +145,8 @@ export function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, numbe
 export function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
   const { entries, total } = buildBreakdownEntries(chainTvl, {
     labelForKey: normalizeChain,
-    colorForKey: (chain) => CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground",
-    logoForKey: (chain) => {
-      const meta = CHAIN_META[chain.toLowerCase()];
-      return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
-    },
+    colorForKey: chainColorClass,
+    logoForKey: chainLogo,
   });
   if (total === 0 || entries.length <= 1) return null;
 

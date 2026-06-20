@@ -42,6 +42,15 @@ function lastSentMessageBody(): {
   return lastSendMessageBody(fetchSpy);
 }
 
+function firstSentMessageBody(): {
+  text: string;
+  reply_markup?: {
+    inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
+  };
+} {
+  return telegramApiCallBody(fetchSpy, "sendMessage", { last: false });
+}
+
 function pendingRowFromSetup(
   payload: {
     step: string;
@@ -90,6 +99,10 @@ function makeCacheStablecoins(): string {
 
 function lastAckBody(): { text?: string } {
   return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
+}
+
+function firstAckBody(): { text?: string } {
+  return telegramApiCallBody(fetchSpy, "answerCallbackQuery", { last: false });
 }
 
 function lastEditedMessageBody(): { text: string; reply_markup?: unknown } {
@@ -280,9 +293,7 @@ describe("handleCallbackQuery", () => {
     expect(usageRow!.binds[3]).toBe("unknown");
     expect(usageRow!.binds[4]).toBe("unknown");
 
-    const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-    expect(ackCall).toBeDefined();
-    const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
+    const body = firstAckBody();
     expect(body.text).toBe("Action not recognized.");
   });
 
@@ -314,8 +325,7 @@ describe("handleCallbackQuery", () => {
 
     const history = db.getHistory();
     expect(history).toHaveLength(0);
-    const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-    expect(ackCall).toBeDefined();
+    expect(firstAckBody()).toBeDefined();
   });
 
   describe("coinsnooze (P1-U10)", () => {
@@ -343,9 +353,7 @@ describe("handleCallbackQuery", () => {
       expect(until).toBeGreaterThanOrEqual(before + 4 * 3600 - 2);
       expect(until).toBeLessThanOrEqual(before + 4 * 3600 + 60);
 
-      const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(ackCall).toBeDefined();
-      const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
+      const body = firstAckBody();
       expect(body.text).toMatch(/Snoozed USDC for 4h/);
     });
 
@@ -949,9 +957,7 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42, type: "private" }, message_id: 1 },
       });
 
-      const sendCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("sendMessage"));
-      expect(sendCall).toBeDefined();
-      const sendBody = JSON.parse((sendCall?.[1] as RequestInit).body as string);
+      const sendBody = firstSentMessageBody();
       expect(sendBody.text).toContain("usdc-circle Safety Score");
       const whyButtons = (sendBody.reply_markup?.inline_keyboard ?? []).flat();
       expect(
@@ -960,10 +966,7 @@ describe("handleCallbackQuery", () => {
             button.text === "Open in app" && button.web_app?.url?.includes("startapp=why_usdc-circle"),
         ),
       ).toBe(true);
-      const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(ackCall).toBeDefined();
-      const ackBody = JSON.parse((ackCall?.[1] as RequestInit).body as string);
-      expect(ackBody.text).toBe("Why sent.");
+      expect(firstAckBody().text).toBe("Why sent.");
       // No subscriber mutations on read-only Why.
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
     });
@@ -977,9 +980,7 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42, type: "private" }, message_id: 1 },
       });
 
-      const sendCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("sendMessage"));
-      expect(sendCall).toBeDefined();
-      const body = JSON.parse((sendCall?.[1] as RequestInit).body as string);
+      const body = firstSentMessageBody();
       expect(body.text).toContain("USDC coverage");
       const coverageButtons = (body.reply_markup?.inline_keyboard ?? []).flat();
       expect(
@@ -988,8 +989,7 @@ describe("handleCallbackQuery", () => {
             button.text === "Open in app" && button.web_app?.url?.includes("startapp=coverage_usdc-circle"),
         ),
       ).toBe(true);
-      const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(JSON.parse((ackCall?.[1] as RequestInit).body as string).text).toBe("Coverage sent.");
+      expect(firstAckBody().text).toBe("Coverage sent.");
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
     });
 
@@ -1017,8 +1017,7 @@ describe("handleCallbackQuery", () => {
       expect(subscriptionInsert!.binds[2]).toBe(1); // alert_dews
       expect(subscriptionInsert!.binds[3]).toBe(1); // alert_depeg
 
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Subscribed/i);
+      expect(firstAckBody().text).toMatch(/Subscribed/i);
       const confirmation = lastSentMessageBody();
       expect(confirmation.text).toContain("Subscribed to DEWS + depeg for USDC");
       const buttons = (confirmation.reply_markup?.inline_keyboard ?? []).flat();
@@ -1057,8 +1056,7 @@ describe("handleCallbackQuery", () => {
       const history = db.getHistory();
       expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
       expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Only group admins/i);
+      expect(firstAckBody().text).toMatch(/Only group admins/i);
     });
 
     it("quicksub:<id> in a group with admin tapping writes the subscription", async () => {
@@ -1107,8 +1105,7 @@ describe("handleCallbackQuery", () => {
 
       const history = db.getHistory();
       expect(history.some((h) => /\bINSERT\b/i.test(h.sql))).toBe(false);
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Action not recognized.");
+      expect(firstAckBody().text).toBe("Action not recognized.");
     });
 
     it("status:<id> sends the current status card and acks", async () => {
@@ -1140,9 +1137,7 @@ describe("handleCallbackQuery", () => {
         // expected — what matters is that the ack still fired below.
       });
 
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(ack).toBeDefined();
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Status sent.");
+      expect(lastAckBody().text).toBe("Status sent.");
     });
 
     it("why:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
@@ -1155,9 +1150,7 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42, type: "private" }, message_id: 1 },
       }).catch(() => undefined);
 
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(ack).toBeDefined();
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Why sent.");
+      expect(firstAckBody().text).toBe("Why sent.");
     });
 
     it("coverage:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
@@ -1170,9 +1163,7 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42, type: "private" }, message_id: 1 },
       }).catch(() => undefined);
 
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(ack).toBeDefined();
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Coverage sent.");
+      expect(firstAckBody().text).toBe("Coverage sent.");
     });
 
     it("quicksub:<id> private-chat branch still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
@@ -1185,9 +1176,7 @@ describe("handleCallbackQuery", () => {
         message: { chat: { id: 42, type: "private" }, message_id: 1 },
       }).catch(() => undefined);
 
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(ack).toBeDefined();
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Subscribed/);
+      expect(firstAckBody().text).toMatch(/Subscribed/);
     });
   });
 
@@ -1283,8 +1272,7 @@ describe("handleCallbackQuery", () => {
       });
 
       expect(db.getHistory().some((h) => h.sql.includes("FROM telegram_subscriptions"))).toBe(false);
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Action not recognized.");
+      expect(firstAckBody().text).toBe("Action not recognized.");
     });
 
     it("unsub:<id> deletes the subscription and re-renders the same page", async () => {
@@ -1303,8 +1291,7 @@ describe("handleCallbackQuery", () => {
       expect(deleteRow).toBeDefined();
       expect(deleteRow!.binds).toContain("usdc-circle");
 
-      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Removed USDC/);
+      expect(firstAckBody().text).toMatch(/Removed USDC/);
 
       const body = editMessageBody();
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
