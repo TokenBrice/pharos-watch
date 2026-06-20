@@ -31,6 +31,14 @@ describe("check-phishing-signatures", () => {
     ).toThrow(/Inline-script phishing-kit signatures detected/);
   });
 
+  it("scans inline scripts when src-like text appears inside another attribute value", () => {
+    expect(() =>
+      runChecker(
+        `<html><body><script data-note=" src = not-an-attribute">try { const params = new URLSearchParams(window.location.hash.slice(1)); window.__PHAROS_TOKEN__ = params.get("token"); history.replaceState(null, "", location.pathname); } catch (error) {}</script></body></html>`,
+      ),
+    ).toThrow(/Inline-script phishing-kit signatures detected/);
+  });
+
   it("continues to skip external script tags that use a real src attribute", () => {
     expect(() =>
       runChecker(
