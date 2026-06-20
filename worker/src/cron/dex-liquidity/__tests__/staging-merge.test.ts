@@ -926,4 +926,47 @@ describe("mergeStagedPools", () => {
       },
     });
   });
+
+  it("does not exact-dedupe legacy exchange-only orderbook rows across stablecoins", async () => {
+    const now = 1710000000;
+    const makeOrderbookRow = (stablecoinId: string, symbol: string) => ({
+      pool_id: "orderbook:binance",
+      stablecoin_id: stablecoinId,
+      source: "cg_tickers",
+      chain: "orderbook",
+      protocol: "binance",
+      symbol,
+      tvl_usd: 500000,
+      volume_24h: 1000000,
+      fee_tier: null,
+      balance_ratio: null,
+      is_stable: 0,
+      base_token: null,
+      quote_token: null,
+      quote_symbol: "USD",
+      price_usd: 1.0001,
+      locked_liq_pct: null,
+      raw_json: JSON.stringify({
+        orderbookTvlBasis: "coingecko-depth-2pct-capped-by-volume",
+        orderbookDepthUsd: 500000,
+        orderbookDepthUpUsd: 700000,
+      }),
+      discovered_at: now - 86400 * 5,
+      refreshed_at: now,
+    });
+    const mockDb = createMockDb([
+      makeOrderbookRow("usdt-tether", "USDT/USD"),
+      makeOrderbookRow("usdc-circle", "USDC/USD"),
+    ]);
+    const metrics = new Map();
+    const knownPoolIndex = makeKnownPoolIndex();
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+
+    expect(result.mergedCount).toBe(2);
+    expect(result.skippedCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(metrics.get("usdt-tether")?.topPools).toHaveLength(1);
+    expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
+  });
 });
