@@ -211,7 +211,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/api-key-request-form-view-model.ts` - API_KEY_REQUEST_CADENCE_OPTIONS, API_KEY_REQUEST_ENDPOINT_OPTIONS, API_KEY_REQUEST_EXPIRY_DAYS, API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL, API_KEY_REQUEST_SAMPLE_PATH, ApiKeyRequestWorkflowAction
 - `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripQueryVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, verifyApiKeyRequestToken
 - `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
-- `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
+- `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceEndpointSummary, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock
 - `src/lib/api-url.ts` - API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase
 - `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, ApiRequestOptions
@@ -280,6 +280,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-primitives/annotations.tsx` - AnnotationDensityStrip, ChartAnnotationLegend, ChartAnnotationLines
 - `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartAreaGradient, ChartLegendChip, ChartMargin, DateTooltip, MONO_Y_AXIS_WIDTH
 - `src/components/chart-primitives/data-table.tsx` - ChartDataTable, ChartDataTableColumn, ScreenReaderDataTable, capDataForTable
+- `src/components/chart-primitives/figure.tsx` - ChartFigure
 - `src/components/chart-primitives/market-data-x-tick.tsx` - MarketDataXTick
 - `src/components/chart-primitives/scale-toggle.tsx` - ChartScale, ChartScaleToggle
 - `src/components/chart-primitives/shell.tsx` - ChartCardShell
@@ -290,8 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- `src/components/coin-notice.tsx` - CoinNotices
-- ... 379 more files omitted; use `rg --files src/components` for the full list.
+- ... 380 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -328,6 +328,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/api-endpoints/status.ts` - getStatusPageActions
 - `shared/lib/api-endpoints/validation.ts` - getEndpointAllowedMethods, getProbePaths, getPublicApiAccess, getSiteDataAccess, isAdminLikePath, isAdminPath
 - `shared/lib/api-freshness.ts` - API_FRESHNESS_MAX_AGE_SEC, CACHE_AVAILABILITY_MAX_AGE_SEC, CACHE_FRESHNESS_LANES, CacheFreshnessLaneConfig, CacheFreshnessLaneKey, FRESHNESS_SENTINEL_CACHE_KEYS
+- `shared/lib/base64url.ts` - base64UrlToBytes, base64UrlToString, bytesToBase64Url, stringToBase64Url
 - `shared/lib/blacklist-active-records.ts` - BlacklistActiveRecord, BlacklistActiveSummaryStats, BlacklistCurrentBalanceSnapshot, BlacklistTrackedSummaryStats, buildBlacklistActiveRecords, buildBlacklistIdentityLookupKeys
 - `shared/lib/blacklist-aggregates.ts` - BlacklistChartPoint, buildBlacklistQuarterlyChartFromSnapshots, sortKeyToLabel
 - `shared/lib/blacklist-tracker-version.ts`
@@ -376,8 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-version.ts`
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
 - `shared/lib/depeg-resolver/forecast-readiness.ts` - DdrForecastReadinessInput, buildForecastReadinessBackstop, forecastReadinessLockTrigger, forecastReadinessScore, meetsStrictEarlyLockReadiness
-- `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
-- ... 253 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 254 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -666,7 +666,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/backfill-fx.ts` - COMMODITY_PEGS, FxTimeSeries, OTHER_COIN_FX, PEG_TO_FX, SECONDARY_PEG_TO_FX, buildCommodityMedianSeriesFromCg
 - `worker/src/lib/backfill-query.ts` - noCoinsInBatchResponse, selectBackfillCoins
 - `worker/src/lib/backtest-anchors.ts` - BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS, BacktestAnchor, BacktestNegativeControl
-- `worker/src/lib/base64url.ts` - base64UrlToBytes, base64UrlToString, bytesToBase64Url, stringToBase64Url
+- `worker/src/lib/base64url.ts`
 - `worker/src/lib/bigint.ts` - decimalNumberFromBigInt, decimalStringFromBigInt, finiteDecimalNumberFromBigInt
 - `worker/src/lib/binary-search.ts` - binarySearchNearest
 - `worker/src/lib/blacklist-api.ts` - BlacklistEventRow, mapBlacklistEventRow
@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
 - `worker/src/lib/chain-config.ts` - ChainConfig, chainConfig
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
-- ... 234 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 239 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/parse-version-upload.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
-- ... 207 more files omitted; use `rg --files scripts` for the full list.
+- ... 208 more files omitted; use `rg --files scripts` for the full list.
