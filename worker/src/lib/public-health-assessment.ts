@@ -131,6 +131,19 @@ async function checkDbHealth(
   }
 }
 
+
+function readMintBurnWatchdogRowCount(row: { item_count: number | null; metadata: string | null } | null): number | null {
+  if (typeof row?.item_count === "number") return row.item_count;
+  if (!row?.metadata) return null;
+
+  try {
+    const metadata = JSON.parse(row.metadata) as { rowCount?: unknown };
+    return typeof metadata.rowCount === "number" ? metadata.rowCount : null;
+  } catch {
+    return null;
+  }
+}
+
 async function loadMintBurnHealth(
   db: D1Database,
   now: number,
@@ -161,13 +174,21 @@ async function loadMintBurnHealth(
         .first<{ started_at: number | null }>()
         .then((row) => row?.started_at ?? null)
         .catch(() => null),
-      // O(1) row count via sqlite_sequence — avoids the 283M-rows/day SUM scan
-      // the previous COALESCE(SUM(mint_count + burn_count)) hit.
+      // O(1) advisory row count from the daily growth watchdog's cron_runs
+      // result. Avoids public health scans of mint_burn_events/mint_burn_hourly
+      // while not relying on sqlite_sequence, which only tracks AUTOINCREMENT
+      // tables and therefore cannot track mint_burn_events' TEXT primary key.
       db
-        .prepare("SELECT seq FROM sqlite_sequence WHERE name = ?")
-        .bind("mint_burn_events")
-        .first<{ seq: number | null }>()
-        .then((row) => row?.seq ?? null)
+        .prepare(
+          `SELECT item_count, metadata
+           FROM cron_runs
+           WHERE job = ? AND status IN ('ok', 'degraded')
+           ORDER BY started_at DESC
+           LIMIT 1`,
+        )
+        .bind("mint-burn-growth-watchdog")
+        .first<{ item_count: number | null; metadata: string | null }>()
+        .then(readMintBurnWatchdogRowCount)
         .catch(() => null),
     ]);
 
