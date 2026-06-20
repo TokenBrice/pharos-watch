@@ -5,6 +5,7 @@ import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
+import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 
 const signal = AbortSignal.timeout(5_000);
@@ -476,6 +477,59 @@ describe("adaptAccountableDashboard", () => {
     )).toThrow(/bucket total 100 does not match total_reserves 1000/);
   });
 
+  it("allows configured Accountable buckets to be excluded from total_reserves reconciliation", async () => {
+    const config = yusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Aegis Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.002841,
+              ts: "1781948757311",
+              reserves: {
+                interval: "live",
+                verifiability: "100",
+                total_reserves: { value: 36_193_106.94, name: "Total Reserves" },
+                reserves_split: [
+                  { value: 26_197_666.041081343, name: "Copper" },
+                  { value: 9_990_180.9994548, name: "Fireblocks" },
+                  { value: 591_806.76, name: "Insurance Fund" },
+                  { value: 5_130.378053203912, name: "Binance" },
+                  { value: 122.0547387685523, name: "Ethereum Chain" },
+                  { value: 7.46933060805061, name: "BNB Smart Chain" },
+                ],
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      totalReserves: 36_193_106.94,
+      totalReservesExcludedBuckets: ["Insurance Fund"],
+    });
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "Insurance Fund",
+      risk: "low",
+    }));
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 5, 20, 10) / 1000,
+    }).valid).toBe(true);
+  });
+
   it("maps the current Yuzu Accountable exposure buckets without unknown exposure warnings", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const primary = config.inputs.primary;
@@ -540,6 +594,84 @@ describe("adaptAccountableDashboard", () => {
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 4, 12) / 1000,
+    }).valid).toBe(true);
+  });
+
+  it("records signed Yuzu Accountable exposure buckets as degraded warnings instead of failing the adapter", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Yuzu Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.06701,
+              ts: "1781945117382",
+              reserves: {
+                interval: "live",
+                verifiability: "100",
+                total_reserves: {
+                  value_rwa: 5_753_096.84,
+                  name: "Total Backing Assets",
+                  value: 44_273_802.48,
+                },
+                exposure_split: {
+                  "[Securitize]_VBILL_Loop": { "": 123_923.977512 },
+                  "[Superstate]_USTB_Loop": { "": 4_458_036.0056144 },
+                  "[Ethena]_USDe_Loop": { "": 4_801_152.47906593 },
+                  "[Ethena]_USDe": { "": 0.0000000952939047370631 },
+                  "[Strata]_srUSDe_Pendle_PT_Loop": { "": -1_500_946.168294 },
+                  "[Maple]_syrupUSDT_Loop": { "": 6_580_976.92964618 },
+                  "Liquidity_Buffer": { "": 1_050_466.213873575 },
+                  "[Paypal]_PYUSD_Loop": { "": 8_563_449.832375925 },
+                  "[Ethena]_sUSDe_Loop": { "": 11_062_254.975953272 },
+                  "[Aave]_USDT": { "": 491_369.244057127 },
+                  "[Maple]_syrupUSDC_Loop": { "": 1_378_418.93199401 },
+                  "[Aave]_RLUSD": { "": 62.3113133180608 },
+                  "Rest_of_Assets": { "": 870_168.7445106531 },
+                  "[Yuzu]_yzPRIME": { "": 3_016_917.24160501 },
+                },
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.warnings?.map((warning) => warning.code).sort()).toEqual([
+      "signed-negative-bucket",
+      "total-reserves-unreconciled",
+    ]);
+    expect(result.metadata).toMatchObject({
+      bucket: "exposure_split",
+      breakdownCount: 14,
+      mappedBucketCount: 13,
+      signedBucketNames: ["[Strata]_srUSDe_Pendle_PT_Loop"],
+      totalReservesValidationSkipped: true,
+    });
+    expect(result.metadata?.unknownBucketCount).toBeUndefined();
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    expect(result.slices).not.toContainEqual(expect.objectContaining({
+      name: "Strata srUSDe Pendle PT loop",
+    }));
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "PayPal PYUSD loop",
+      risk: "high",
+      coinId: "pyusd-paypal",
+      depType: "collateral",
+    }));
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 5, 20, 10) / 1000,
     }).valid).toBe(true);
   });
 });

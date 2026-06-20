@@ -124,6 +124,9 @@ const accountableParamsSchema = z
     renameMap: stringRecordSchema.optional(),
     coinIdMap: stringRecordSchema.optional(),
     depTypeMap: depTypeRecordSchema.optional(),
+    totalReservesExcludeBuckets: z.array(z.string().min(1)).optional(),
+    allowNegativeBuckets: z.array(z.string().min(1)).optional(),
+    skipTotalReservesValidation: z.boolean().optional(),
   })
   .strict();
 

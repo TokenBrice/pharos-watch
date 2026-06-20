@@ -10,7 +10,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
-- **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
+- **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and the named `reserve-post-sync-watchdog` child for collateral-drift cache updates and stale-source alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
 - **Current coverage:** 279 active live-enabled stablecoins across 59 registered adapters; 280 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 56 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
@@ -536,6 +536,9 @@ the `re-metrics` adapter parses Re Protocol's official metrics page and now extr
 `usdgo-transparency`, `solstice-attestation`, and `river-protocol-info` are proof-class reserve-sync adapters. They make current issuer/protocol telemetry visible on reserve detail and status surfaces, but their registry evidence class is `weak-live-probe`, so they do not override report-card collateral quality. USDGO currently parses BUIDL, STBXX, optional JLTXX, and cash buckets from the public transparency payload, and remains proof-class until source provenance, per-slice risk evidence, and date-only freshness semantics are methodology-approved; Solstice remains proof-class until its aggregate solvency feed exposes timestamped asset-category composition; River remains proof-class because its protocol-info endpoint exposes aggregate TVL/circulating-supply telemetry rather than asset-level collateral composition. River snapshots degrade when the aggregate TVL is below circulating satUSD, and timestampless protocol-info payloads remain freshness-unverified.
 
 `zephyr-scanner` consumes Zephyr's reserve snapshot API for `zsd-zephyr-protocol`, preserving the snapshot capture timestamp, ZEPH reserve value, ZSD supply, reserve ratio, moving-average reserve ratio, and ZSD yield-reserve metadata. It is proof-class because the feed is protocol-published native-chain telemetry over volatile ZEPH collateral rather than independently verified asset-level reserve evidence.
+
+Accountable note:
+`accountable` configs may exclude reviewed buckets from strict `total_reserves` reconciliation when the dashboard publishes auxiliary reserves outside the reported total. Configs may also allow reviewed signed exposure buckets; negative buckets are omitted from reserve slices, recorded in metadata, and degrade the snapshot instead of opening the breaker.
 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.

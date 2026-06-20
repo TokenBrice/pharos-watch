@@ -9023,7 +9023,7 @@
         }
       },
       "params": {
-        "oracleAddress": "0x6029F53A5Df21E5e70C460F5E4c9Aad20427B090",
+        "oracleAddress": "0x6B3A1CFFD3136cfF5C49F3379A4Da721Bc4f5d68",
         "tokenAddress": "0x7712c34205737192402172409a8f7ccef8aa2aec",
         "assetLabel": "U.S. Treasury Bills (BUIDL)",
         "assetRisk": "very-low",
@@ -87337,7 +87337,10 @@
           "BNB Smart Chain": "low",
           "Avalanche": "low",
           "Arbitrum": "low"
-        }
+        },
+        "totalReservesExcludeBuckets": [
+          "Insurance Fund"
+        ]
       }
     },
     "yieldConfig": {
@@ -87897,6 +87900,7 @@
           "[Aave]_GHO": "medium",
           "[Aave]_Gho": "medium",
           "[Aave]_Gho_Savings": "low",
+          "[Aave]_RLUSD": "medium",
           "[Cap]_stcUSD": "medium",
           "[Fluid]_Gho": "medium",
           "[Fluent]_fUSDnr": "medium",
@@ -87921,7 +87925,8 @@
           "[MegaEth]_USDm": "low",
           "[Paxos]_USDG": "low",
           "[Ethena]_sUSDe_Loop": "high",
-          "[Yuzu]_yzPRIME": "medium"
+          "[Yuzu]_yzPRIME": "medium",
+          "[Strata]_srUSDe_Pendle_PT_Loop": "high"
         },
         "renameMap": {
           "[Fluid]_fUSDT0": "Fluid fUSDT0",
@@ -87930,6 +87935,7 @@
           "[Aave]_GHO": "Aave GHO",
           "[Aave]_Gho": "Aave GHO",
           "[Aave]_Gho_Savings": "Aave GHO Savings",
+          "[Aave]_RLUSD": "Aave RLUSD",
           "[Cap]_stcUSD": "Cap stcUSD",
           "[Fluid]_Gho": "Fluid GHO",
           "[Fluent]_fUSDnr": "Fluent fUSDnr",
@@ -87954,7 +87960,8 @@
           "[MegaEth]_USDm": "MegaETH USDm",
           "[Paxos]_USDG": "Paxos USDG",
           "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop",
-          "[Yuzu]_yzPRIME": "Yuzu yzPRIME"
+          "[Yuzu]_yzPRIME": "Yuzu yzPRIME",
+          "[Strata]_srUSDe_Pendle_PT_Loop": "Strata srUSDe Pendle PT loop"
         },
         "coinIdMap": {
           "[Fluid]_fUSDT0": "usdt-tether",
@@ -87963,6 +87970,7 @@
           "[Aave]_GHO": "gho-aave",
           "[Aave]_Gho": "gho-aave",
           "[Aave]_Gho_Savings": "sgho-aave",
+          "[Aave]_RLUSD": "rlusd-ripple",
           "[Cap]_stcUSD": "stcusd-cap",
           "[GlobalDollar]_USDG": "usdg-paxos",
           "[Ripple]_Sentora_RLUSD": "rlusd-ripple",
@@ -87982,7 +87990,8 @@
           "[Paypal]_PYUSD_Loop": "pyusd-paypal",
           "[MegaEth]_USDm": "usdm-mega",
           "[Paxos]_USDG": "usdg-paxos",
-          "[Ethena]_sUSDe_Loop": "susde-ethena"
+          "[Ethena]_sUSDe_Loop": "susde-ethena",
+          "[Strata]_srUSDe_Pendle_PT_Loop": "srusde-strata"
         },
         "depTypeMap": {
           "[Fluid]_fUSDT0": "collateral",
@@ -87991,6 +88000,7 @@
           "[Aave]_GHO": "collateral",
           "[Aave]_Gho": "collateral",
           "[Aave]_Gho_Savings": "collateral",
+          "[Aave]_RLUSD": "collateral",
           "[Cap]_stcUSD": "collateral",
           "[GlobalDollar]_USDG": "collateral",
           "[Ripple]_Sentora_RLUSD": "collateral",
@@ -88010,8 +88020,13 @@
           "[Paypal]_PYUSD_Loop": "collateral",
           "[MegaEth]_USDm": "collateral",
           "[Paxos]_USDG": "collateral",
-          "[Ethena]_sUSDe_Loop": "collateral"
-        }
+          "[Ethena]_sUSDe_Loop": "collateral",
+          "[Strata]_srUSDe_Pendle_PT_Loop": "collateral"
+        },
+        "allowNegativeBuckets": [
+          "[Strata]_srUSDe_Pendle_PT_Loop"
+        ],
+        "skipTotalReservesValidation": true
       }
     },
     "yieldConfig": {

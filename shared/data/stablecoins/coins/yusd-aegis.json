@@ -227,7 +227,10 @@
         "BNB Smart Chain": "low",
         "Avalanche": "low",
         "Arbitrum": "low"
-      }
+      },
+      "totalReservesExcludeBuckets": [
+        "Insurance Fund"
+      ]
     }
   },
   "yieldConfig": {

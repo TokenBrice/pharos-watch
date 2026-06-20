@@ -9,6 +9,7 @@ import {
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
+  reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
 import { toFiniteNumber } from "../../lib/number-utils";
@@ -39,6 +40,9 @@ interface AccountableParams {
   renameMap?: Record<string, string>;
   coinIdMap?: Record<string, string>;
   depTypeMap?: Record<string, ReserveSlice["depType"]>;
+  totalReservesExcludeBuckets?: string[];
+  allowNegativeBuckets?: string[];
+  skipTotalReservesValidation?: boolean;
 }
 
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
@@ -66,13 +70,18 @@ function extractAccountableBucketValue(value: unknown, depth = 0): number | null
   }
 
   const childValues = Object.values(record).map((nested) => extractAccountableBucketValue(nested, depth + 1));
-  if (childValues.length === 0 || childValues.some((numeric) => numeric == null || numeric < 0)) return null;
+  if (childValues.length === 0 || childValues.some((numeric) => numeric == null)) return null;
   return (childValues as number[]).reduce((sum, numeric) => sum + numeric, 0);
 }
 
-function requireAccountableBucketValue(name: string, value: unknown, bucket: string): number {
+function requireAccountableBucketValue(
+  name: string,
+  value: unknown,
+  bucket: string,
+  options?: { allowNegative?: boolean },
+): number {
   const numeric = extractAccountableBucketValue(value);
-  if (numeric == null || numeric < 0) {
+  if (numeric == null || (!options?.allowNegative && numeric < 0)) {
     throw new Error(`Accountable ${bucket} bucket "${name}" has invalid value: ${String(value)}`);
   }
   return numeric;
@@ -81,10 +90,13 @@ function requireAccountableBucketValue(name: string, value: unknown, bucket: str
 function extractRecordBucketEntries(
   entries: Record<string, unknown> | undefined,
   bucket: string,
+  options?: { allowNegativeBuckets?: ReadonlySet<string> },
 ): Array<{ name: string; value: number }> {
   return Object.entries(entries ?? {}).map(([name, value]) => ({
     name,
-    value: requireAccountableBucketValue(name, value, bucket),
+    value: requireAccountableBucketValue(name, value, bucket, {
+      allowNegative: options?.allowNegativeBuckets?.has(name),
+    }),
   }));
 }
 
@@ -114,22 +126,23 @@ function extractReservesSplitEntries(
 function extractBucketEntries(
   reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
   bucket: NonNullable<AccountableParams["bucket"]>,
+  options?: { allowNegativeBuckets?: ReadonlySet<string> },
 ): Array<{ name: string; value: number }> {
   switch (bucket) {
     case "type":
-      return extractRecordBucketEntries(reserves.type, bucket);
+      return extractRecordBucketEntries(reserves.type, bucket, options);
     case "reserves_split":
       return extractReservesSplitEntries(reserves.reserves_split);
     case "deployment":
-      return extractRecordBucketEntries(reserves.deployment, bucket);
+      return extractRecordBucketEntries(reserves.deployment, bucket, options);
     case "type_split":
-      return extractRecordBucketEntries(reserves.type_split, bucket);
+      return extractRecordBucketEntries(reserves.type_split, bucket, options);
     case "stablecoin_split":
-      return extractRecordBucketEntries(reserves.stablecoin_split, bucket);
+      return extractRecordBucketEntries(reserves.stablecoin_split, bucket, options);
     case "exposure_split":
-      return extractRecordBucketEntries(reserves.exposure_split, bucket);
+      return extractRecordBucketEntries(reserves.exposure_split, bucket, options);
     case "protocol_split":
-      return extractRecordBucketEntries(reserves.protocol_split, bucket);
+      return extractRecordBucketEntries(reserves.protocol_split, bucket, options);
     default:
       return [];
   }
@@ -144,8 +157,12 @@ function extractTotalReserves(value: unknown): number | undefined {
   return numeric;
 }
 
-function validateMappedBucketValues(mapped: Array<{ name: string; value: number }>, bucket: string): void {
-  const invalid = mapped.filter((entry) => entry.value <= 0);
+function validateMappedBucketValues(
+  mapped: Array<{ name: string; value: number }>,
+  bucket: string,
+  options?: { allowNegativeBuckets?: ReadonlySet<string> },
+): void {
+  const invalid = mapped.filter((entry) => entry.value <= 0 && !options?.allowNegativeBuckets?.has(entry.name));
   if (invalid.length > 0) {
     throw new Error(`Accountable ${bucket} mapped bucket has non-positive value: ${invalid.map((entry) => entry.name).sort().join(", ")}`);
   }
@@ -155,13 +172,49 @@ function validateBucketTotalAgainstReserves(
   breakdown: Array<{ name: string; value: number }>,
   totalReserves: number | undefined,
   bucket: string,
+  options?: {
+    excludeBuckets?: ReadonlySet<string>;
+    skipValidation?: boolean;
+  },
 ): void {
   if (totalReserves == null) return;
-  const totalValue = breakdown.reduce((sum, entry) => sum + entry.value, 0);
+  const totalValue = breakdown
+    .filter((entry) => !(options?.excludeBuckets?.has(entry.name)))
+    .reduce((sum, entry) => sum + entry.value, 0);
   const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
+  if (options?.skipValidation) return;
   if (Math.abs(totalValue - totalReserves) > tolerance) {
     throw new Error(`Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`);
   }
+}
+
+function buildSignedBucketWarning(
+  signedBuckets: Array<{ name: string; value: number }>,
+  totalValue: number,
+) {
+  const signedValue = signedBuckets.reduce((sum, entry) => sum + Math.abs(entry.value), 0);
+  const exposurePct = computeUnknownExposurePct(signedValue, totalValue);
+  return reserveDegradedWarning(
+    "signed-negative-bucket",
+    `Accountable signed exposure buckets are omitted from reserve slices: ${
+      signedBuckets.map((entry) => entry.name).sort().join(", ")
+    } (${exposurePct.toFixed(2)}% of positive reserve buckets)`,
+  );
+}
+
+function buildSkippedTotalValidationWarning(
+  breakdown: Array<{ name: string; value: number }>,
+  totalReserves: number | undefined,
+  bucket: string,
+) {
+  if (totalReserves == null) return null;
+  const totalValue = breakdown.reduce((sum, entry) => sum + entry.value, 0);
+  const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
+  if (Math.abs(totalValue - totalReserves) <= tolerance) return null;
+  return reserveDegradedWarning(
+    "total-reserves-unreconciled",
+    `Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`,
+  );
 }
 
 export function adaptAccountableDashboard(
@@ -173,7 +226,8 @@ export function adaptAccountableDashboard(
   }
 
   const bucket = params.bucket ?? "type";
-  const breakdown = extractBucketEntries(payload.data.reserves, bucket);
+  const allowNegativeBuckets = new Set(params.allowNegativeBuckets ?? []);
+  const breakdown = extractBucketEntries(payload.data.reserves, bucket, { allowNegativeBuckets });
   if (breakdown.length === 0) {
     throw new Error(`Unsupported Accountable bucket: ${bucket}`);
   }
@@ -182,12 +236,22 @@ export function adaptAccountableDashboard(
   const renameMap = params.renameMap ?? {};
   const coinIdMap = params.coinIdMap ?? {};
   const depTypeMap = params.depTypeMap ?? {};
-  const mapped = breakdown.filter(({ name }) => name in riskMap);
-  validateMappedBucketValues(mapped, bucket);
+  const totalReservesExcludeBuckets = new Set(params.totalReservesExcludeBuckets ?? []);
+  const signedBuckets = breakdown.filter((entry) => entry.value < 0);
+  const positiveBreakdown = breakdown.filter((entry) => entry.value > 0);
+  const mappedForValidation = breakdown.filter(({ name }) => name in riskMap);
+  validateMappedBucketValues(mappedForValidation, bucket, { allowNegativeBuckets });
+  const mapped = positiveBreakdown.filter(({ name }) => name in riskMap);
   const totalReserves = extractTotalReserves(payload.data.reserves.total_reserves);
-  validateBucketTotalAgainstReserves(breakdown, totalReserves, bucket);
-  const unknown = breakdown.filter(({ name }) => !(name in riskMap));
-  const totalValue = breakdown.reduce((sum, entry) => sum + entry.value, 0);
+  validateBucketTotalAgainstReserves(breakdown, totalReserves, bucket, {
+    excludeBuckets: totalReservesExcludeBuckets,
+    skipValidation: params.skipTotalReservesValidation,
+  });
+  const totalValidationWarning = params.skipTotalReservesValidation
+    ? buildSkippedTotalValidationWarning(breakdown, totalReserves, bucket)
+    : null;
+  const unknown = positiveBreakdown.filter(({ name }) => !(name in riskMap));
+  const totalValue = positiveBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownValue = unknown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownExposurePct = computeUnknownExposurePct(unknownValue, totalValue);
 
@@ -220,13 +284,19 @@ export function adaptAccountableDashboard(
 
   return {
     slices,
-    ...(unknownExposurePct > 0
+    ...((unknownExposurePct > 0 || signedBuckets.length > 0 || totalValidationWarning)
       ? {
-          warnings: [buildUnknownExposureWarning({
-            code: "unmapped-bucket",
-            message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
-            unknownExposurePct,
-          })],
+          warnings: [
+            ...(unknownExposurePct > 0
+              ? [buildUnknownExposureWarning({
+                  code: "unmapped-bucket",
+                  message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
+                  unknownExposurePct,
+                })]
+              : []),
+            ...(signedBuckets.length > 0 ? [buildSignedBucketWarning(signedBuckets, totalValue)] : []),
+            ...(totalValidationWarning ? [totalValidationWarning] : []),
+          ],
         }
       : {}),
     metadata: {
@@ -240,6 +310,17 @@ export function adaptAccountableDashboard(
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
+      ...(totalReservesExcludeBuckets.size > 0
+        ? { totalReservesExcludedBuckets: Array.from(totalReservesExcludeBuckets).sort() }
+        : {}),
+      ...(params.skipTotalReservesValidation ? { totalReservesValidationSkipped: true } : {}),
+      ...(signedBuckets.length > 0
+        ? {
+            signedBucketCount: signedBuckets.length,
+            signedBucketNames: signedBuckets.map((entry) => entry.name).sort(),
+            signedBucketValue: signedBuckets.reduce((sum, entry) => sum + entry.value, 0),
+          }
+        : {}),
       dashboardTimestamp: payload.data.ts,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
