@@ -1056,6 +1056,12 @@ const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentratio
     note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
     reviewedAt: "2026-06-15",
   },
+  "bbqusdc-steakhouse": {
+    ecosystem: "Morpho (Steakhouse Smokehouse)",
+    severity: "low",
+    note: "All exposure is Morpho lending markets allocated by Steakhouse's Smokehouse curator line; apparent market diversification is bounded by one curator. The higher-risk collateral mix is carried in stablecoin reserve metadata while Morpho protocol risk is already priced by the venue tier.",
+    reviewedAt: "2026-06-20",
+  },
   "steakusdt-steakhouse": {
     ecosystem: "Morpho (Steakhouse)",
     severity: "low",

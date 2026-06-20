@@ -166,6 +166,15 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
+    stablecoinId: "bbqusdc-steakhouse",
+    chain: "ethereum",
+    contract: "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
     stablecoinId: "sgho-aave",
     chain: "ethereum",
     contract: "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",

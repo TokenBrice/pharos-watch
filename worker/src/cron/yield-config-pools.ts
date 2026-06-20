@@ -81,6 +81,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "susd-hedgecore": "89eba1e5-1b1b-47b6-958b-38138a04c244",
   // gtUSDC - morpho-blue Gauntlet USDC vault, Ethereum, $147M TVL, ~3.58% APY
   "gtusdc-gauntlet": "a306885c-001e-4479-9ae8-459a56527bc1",
+  // bbqUSDC - morpho-blue Smokehouse USDC vault, Ethereum, $18M TVL, ~4.3% APY
+  "bbqusdc-steakhouse": "36977448-9ad9-43ea-85f2-60ee1b92ecd0",
   // spUSDC - spark-savings USDC vault, Ethereum, $946M TVL, ~3.65% APY
   "susdc-spark": "c5c74dd1-995c-4445-9d84-3e710bad7d52",
   // spUSDT - spark-savings USDT vault, Ethereum, $1.18B TVL, ~2.50% APY

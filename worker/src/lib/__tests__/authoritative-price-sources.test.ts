@@ -1462,6 +1462,15 @@ describe("authoritative-price-sources", () => {
         expectedRatio: 1.01367,
       },
       {
+        id: "bbqusdc-steakhouse",
+        parentId: "usdc-circle",
+        parentSymbol: "USDC",
+        vault: "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+        chain: "ethereum",
+        outputRaw: 1_114_859n,
+        expectedRatio: 1.114859,
+      },
+      {
         id: "srusde-strata",
         parentId: "usde-ethena",
         parentSymbol: "USDe",

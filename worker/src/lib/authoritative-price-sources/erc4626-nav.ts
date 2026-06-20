@@ -58,6 +58,14 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     assetDecimals: 6,
   },
   {
+    id: "bbqusdc-steakhouse",
+    parentId: USDC_CIRCLE_ID,
+    chain: ETHEREUM_CHAIN,
+    vault: "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+    vaultDecimals: 18,
+    assetDecimals: 6,
+  },
+  {
     id: "srusde-strata",
     parentId: USDE_ETHENA_ID,
     chain: ETHEREUM_CHAIN,
