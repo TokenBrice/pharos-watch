@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
-import {
-  buildComparisonAnchorFreshnessMeta,
-  buildYieldSyncMetadata,
-} from "../yield-sync/coordinator-metadata";
+import { buildComparisonAnchorFreshnessMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator-metadata";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";
 
@@ -89,73 +86,77 @@ describe("buildYieldSyncMetadata", () => {
     });
     const envelopeRejections = Array.from({ length: 26 }, (_, index) => makeEnvelopeRejection(index));
 
-    const metadata = JSON.parse(buildYieldSyncMetadata({
-      rowsRead: 1,
-      rowsWritten: 1,
-      rowsRejected: 0,
-      divergenceFlags: 0,
-      sourceSwitches: 0,
-      defaultSafetyCoinCount: 0,
-      safetySnapshot: {
-        kind: "ok",
-        coverageRatio: 1,
-        coveredCount: 1,
-        trackedCount: 1,
-        reason: null,
-      },
-      resolvedYieldBearingCount: 1,
-      expectedYieldBearingCount: 1,
-      publishedYieldBearingCount: 1,
-      previousPublishedYieldBearingCount: 1,
-      publishedOpportunityCount: 0,
-      previousPublishedOpportunityCount: 0,
-      publishedRankingCount: 1,
-      previousPublishedRankingCount: 1,
-      dlPoolsMeta: {
-        mode: "dex-cache",
-        updatedAt: START_SEC,
-        ageSeconds: 0,
-        poolCount: 1,
+    const metadata = JSON.parse(
+      buildYieldSyncMetadata({
+        rowsRead: 1,
+        rowsWritten: 1,
+        rowsRejected: 0,
+        divergenceFlags: 0,
+        sourceSwitches: 0,
+        defaultSafetyCoinCount: 0,
+        safetySnapshot: {
+          kind: "ok",
+          coverageRatio: 1,
+          coveredCount: 1,
+          trackedCount: 1,
+          reason: null,
+        },
+        resolvedYieldBearingCount: 1,
+        expectedYieldBearingCount: 1,
+        publishedYieldBearingCount: 1,
+        previousPublishedYieldBearingCount: 1,
+        publishedOpportunityCount: 0,
+        previousPublishedOpportunityCount: 0,
+        publishedRankingCount: 1,
+        previousPublishedRankingCount: 1,
+        dlPoolsMeta: {
+          mode: "dex-cache",
+          updatedAt: START_SEC,
+          ageSeconds: 0,
+          poolCount: 1,
+          fallbackMode: null,
+        },
+        supplementalMeta: {
+          mode: "cache",
+          updatedAt: START_SEC,
+          ageSeconds: 0,
+          sourceCount: 0,
+          fallbackMode: null,
+        },
+        onChain: {
+          ratesResolved: 0,
+          ratesConfigured: 1,
+          envelopeRejections,
+          attempted: 1,
+          allDeterministicFailed: false,
+          explorerAttempted: 0,
+          explorerResolved: 0,
+          failureMaskedByAlternativeCoverage: false,
+          alternativeCoverageMissingIds: [],
+          failures: null,
+          skippedDueToCooldown: false,
+          cooldownActive: false,
+          cooldownTriggered: false,
+          cooldownUntil: null,
+          cooldownRemainingSec: 0,
+          consecutiveAllFailRuns: 0,
+          consecutiveMaskedAllFailRuns: 0,
+        },
         fallbackMode: null,
-      },
-      supplementalMeta: {
-        mode: "cache",
-        updatedAt: START_SEC,
-        ageSeconds: 0,
-        sourceCount: 0,
-        fallbackMode: null,
-      },
-      onChain: {
-        ratesResolved: 0,
-        ratesConfigured: 1,
-        envelopeRejections,
-        attempted: 1,
-        allDeterministicFailed: false,
-        explorerAttempted: 0,
-        explorerResolved: 0,
-        failureMaskedByAlternativeCoverage: false,
-        alternativeCoverageMissingIds: [],
-        failures: null,
-        skippedDueToCooldown: false,
-        cooldownActive: false,
-        cooldownTriggered: false,
-        cooldownUntil: null,
-        cooldownRemainingSec: 0,
-        consecutiveAllFailRuns: 0,
-        consecutiveMaskedAllFailRuns: 0,
-      },
-      fallbackMode: null,
-      validationFailures: 0,
-      riskFreeRate: 4,
-      cacheWriteSkipped: false,
-      comparisonAnchorFreshness,
-    })) as {
+        validationFailures: 0,
+        riskFreeRate: 4,
+        cacheWriteSkipped: false,
+        comparisonAnchorFreshness,
+        previousTvlRowsTruncated: true,
+      }),
+    ) as {
       sourceCoverage: {
         publishedRankingCountDelta: number;
         onChainEnvelopeRejectionCount: number;
         onChainEnvelopeRejections: YieldEnvelopeRejection[];
         onChainEnvelopeRejectionsTruncated: boolean;
         comparisonAnchorFreshness: typeof comparisonAnchorFreshness;
+        previousTvlRowsTruncated: boolean;
       };
     };
 
@@ -165,5 +166,6 @@ describe("buildYieldSyncMetadata", () => {
     expect(metadata.sourceCoverage.onChainEnvelopeRejections[0]).toEqual(envelopeRejections[0]);
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionsTruncated).toBe(true);
     expect(metadata.sourceCoverage.comparisonAnchorFreshness).toEqual(comparisonAnchorFreshness);
+    expect(metadata.sourceCoverage.previousTvlRowsTruncated).toBe(true);
   });
 });

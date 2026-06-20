@@ -7,18 +7,10 @@ import { getCache } from "../lib/db-cache";
 import { reportCronProgress } from "../lib/cron-progress";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import {
-  YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
-  parseYieldHistoryWriterPause,
-} from "../lib/yield-history-cleanup";
+import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY, parseYieldHistoryWriterPause } from "../lib/yield-history-cleanup";
 import { resolveYieldSources } from "./yield-sync/resolve";
-import {
-  loadYieldHistorySnapshots,
-  purgeYieldHistoryOwnershipHandoffs,
-} from "./yield-sync/history";
-import {
-  evaluateYieldSourcesCooperative,
-} from "./yield-sync/evaluation";
+import { loadYieldHistorySnapshots, purgeYieldHistoryOwnershipHandoffs } from "./yield-sync/history";
+import { evaluateYieldSourcesCooperative } from "./yield-sync/evaluation";
 import { buildYieldHistoryEvaluationInputsCooperative } from "./yield-sync/coordinator-history";
 import {
   buildComparisonAnchorFreshnessMeta,
@@ -26,22 +18,11 @@ import {
   buildYieldSafetySnapshotMeta,
   buildYieldSyncMetadata,
 } from "./yield-sync/coordinator-metadata";
-import {
-  loadYieldSyncState,
-} from "./yield-sync/state-loading";
-import {
-  buildPreviewYieldRankingsArtifacts,
-  publishYieldCoordinatorResults,
-} from "./yield-sync/coordinator-persist";
+import { loadYieldSyncState } from "./yield-sync/state-loading";
+import { buildPreviewYieldRankingsArtifacts, publishYieldCoordinatorResults } from "./yield-sync/coordinator-persist";
 import { repairPublishedYieldGenerationFromCache } from "./yield-sync/publication";
-import {
-  guardPublishedYieldCoverage,
-  guardTrackedYieldCoverage,
-} from "./yield-sync/coordinator-guards";
-import {
-  computeDeterministicOnChainHealth,
-  logYieldApyDivergences,
-} from "./yield-sync/coordinator-health";
+import { guardPublishedYieldCoverage, guardTrackedYieldCoverage } from "./yield-sync/coordinator-guards";
+import { computeDeterministicOnChainHealth, logYieldApyDivergences } from "./yield-sync/coordinator-health";
 // -- Main sync function ------------------------------------------------------
 
 export async function syncYieldData(
@@ -57,9 +38,7 @@ export async function syncYieldData(
   const yieldCoins = ACTIVE_YIELD_BEARING_STABLECOINS;
   const yieldCoinIdSet = new Set(yieldCoins.map((coin) => coin.id));
   const opportunityCoinIdSet = new Set(
-    ACTIVE_STABLECOINS
-      .map((coin) => coin.id)
-      .filter((id) => !yieldCoinIdSet.has(id)),
+    ACTIVE_STABLECOINS.map((coin) => coin.id).filter((id) => !yieldCoinIdSet.has(id)),
   );
   const progressTotal = yieldCoins.length + opportunityCoinIdSet.size;
   const reportYieldProgress = async (
@@ -98,9 +77,7 @@ export async function syncYieldData(
     return { itemCount: 0, metadata: "no yield-bearing coins" };
   }
 
-  const writerPause = parseYieldHistoryWriterPause(
-    await getCache(db, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY),
-  );
+  const writerPause = parseYieldHistoryWriterPause(await getCache(db, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY));
   if (writerPause) {
     await reportYieldProgress("writer-paused", "Yield publication is paused by operator", "yield", {
       itemsDone: 0,
@@ -131,7 +108,13 @@ export async function syncYieldData(
   await reportYieldProgress("state-loading", "Loading yield source state and safety snapshots", "yield-source-cache", {
     itemsDone: 0,
     metadata: {
-      providerFamilies: ["defillama-yields", "yield-supplemental", "on-chain-rates", "risk-free-rates", "safety-scores"],
+      providerFamilies: [
+        "defillama-yields",
+        "yield-supplemental",
+        "on-chain-rates",
+        "risk-free-rates",
+        "safety-scores",
+      ],
     },
   });
   const {
@@ -167,7 +150,13 @@ export async function syncYieldData(
   await reportYieldProgress("state-loaded", "Loaded yield source state", "yield-source-cache", {
     itemsDone: dlPools.length + supplementalCandidates.length + onChainRates.size,
     metadata: {
-      providerFamilies: ["defillama-yields", "yield-supplemental", "on-chain-rates", "risk-free-rates", "safety-scores"],
+      providerFamilies: [
+        "defillama-yields",
+        "yield-supplemental",
+        "on-chain-rates",
+        "risk-free-rates",
+        "safety-scores",
+      ],
       countTotals: {
         yieldBearingCoins: yieldCoins.length,
         opportunityCoins: opportunityCoinIdSet.size,
@@ -190,7 +179,7 @@ export async function syncYieldData(
   if (safetySnapshotDegraded) {
     console.warn(
       `[sync-yield-data] Safety snapshot coverage degraded: ${safetySnapshot.coveredCount}/${safetySnapshot.trackedCount} ` +
-      `(${(safetyCoverageRatio * 100).toFixed(1)}%)${safetySnapshot.reason ? ` reason=${safetySnapshot.reason}` : ""}`,
+        `(${(safetyCoverageRatio * 100).toFixed(1)}%)${safetySnapshot.reason ? ` reason=${safetySnapshot.reason}` : ""}`,
     );
   }
 
@@ -225,9 +214,7 @@ export async function syncYieldData(
 
   const resolvedWithYield = resolved.filter((entry) => entry.yield != null);
   const resolvedYieldBearingIds = new Set(
-    resolvedWithYield
-      .filter((entry) => yieldCoinIdSet.has(entry.id))
-      .map((entry) => entry.id),
+    resolvedWithYield.filter((entry) => yieldCoinIdSet.has(entry.id)).map((entry) => entry.id),
   );
   const resolvedIds = [...new Set(resolvedWithYield.map((entry) => entry.id))];
   await reportYieldProgress("source-resolution-complete", "Resolved yield source candidates", "yield", {
@@ -258,29 +245,31 @@ export async function syncYieldData(
     }
   }
 
-  const historySnapshots = resolvedIds.length > 0
-    ? await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec, {
-        signal,
-        sourceKeysByStablecoin: resolvedSourceKeysByCoin,
-        onProgress: async (progress) => {
-          await reportYieldProgress("history-loading", "Loading yield history snapshots", "yield-history", {
-            itemsDone: progress.resolvedIdsDone,
-            itemsTotal: progress.resolvedIdsTotal,
-            metadata: {
-              countTotals: {
-                resolvedSources: resolvedWithYield.length,
-                resolvedCoins: resolvedIds.length,
-                historyRows: progress.historyRows,
-                previousTvlRows: progress.prevTvlRows,
-                previousBestRows: progress.prevBestRows,
+  const historySnapshots =
+    resolvedIds.length > 0
+      ? await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec, {
+          signal,
+          sourceKeysByStablecoin: resolvedSourceKeysByCoin,
+          onProgress: async (progress) => {
+            await reportYieldProgress("history-loading", "Loading yield history snapshots", "yield-history", {
+              itemsDone: progress.resolvedIdsDone,
+              itemsTotal: progress.resolvedIdsTotal,
+              metadata: {
+                countTotals: {
+                  resolvedSources: resolvedWithYield.length,
+                  resolvedCoins: resolvedIds.length,
+                  historyRows: progress.historyRows,
+                  previousTvlRows: progress.prevTvlRows,
+                  previousBestRows: progress.prevBestRows,
+                  previousTvlRowsTruncated: progress.previousTvlRowsTruncated,
+                },
+                chunksDone: progress.chunksDone,
+                chunksTotal: progress.chunksTotal,
               },
-              chunksDone: progress.chunksDone,
-              chunksTotal: progress.chunksTotal,
-            },
-          });
-        },
-      })
-    : { historyRows: [], prevTvlRows: [], prevBestRows: [] };
+            });
+          },
+        })
+      : { historyRows: [], prevTvlRows: [], prevBestRows: [], previousTvlRowsTruncated: false };
   await reportYieldProgress("history-loaded", "Loaded yield history snapshots", "yield-history", {
     itemsDone: resolvedIds.length,
     itemsTotal: resolvedIds.length,
@@ -289,6 +278,7 @@ export async function syncYieldData(
         historyRows: historySnapshots.historyRows.length,
         previousTvlRows: historySnapshots.prevTvlRows.length,
         previousBestRows: historySnapshots.prevBestRows.length,
+        previousTvlRowsTruncated: historySnapshots.previousTvlRowsTruncated,
       },
     },
   });
@@ -304,18 +294,24 @@ export async function syncYieldData(
   } = await buildYieldHistoryEvaluationInputsCooperative(historySnapshots, {
     signal,
     onProgress: async (progress) => {
-      await reportYieldProgress("history-input-construction", "Preparing yield history evaluation inputs", "yield-history", {
-        itemsDone: progress.rowsDone,
-        itemsTotal: progress.rowsTotal,
-        metadata: {
-          phase: progress.phase,
-          countTotals: {
-            historyRows: historySnapshots.historyRows.length,
-            previousTvlRows: historySnapshots.prevTvlRows.length,
-            previousBestRows: historySnapshots.prevBestRows.length,
+      await reportYieldProgress(
+        "history-input-construction",
+        "Preparing yield history evaluation inputs",
+        "yield-history",
+        {
+          itemsDone: progress.rowsDone,
+          itemsTotal: progress.rowsTotal,
+          metadata: {
+            phase: progress.phase,
+            countTotals: {
+              historyRows: historySnapshots.historyRows.length,
+              previousTvlRows: historySnapshots.prevTvlRows.length,
+              previousBestRows: historySnapshots.prevBestRows.length,
+              previousTvlRowsTruncated: historySnapshots.previousTvlRowsTruncated,
+            },
           },
         },
-      });
+      );
     },
   });
 
@@ -336,42 +332,45 @@ export async function syncYieldData(
     divergenceFlags,
     sourceSwitches,
     medianApy,
-  } = await evaluateYieldSourcesCooperative({
-    resolved: resolvedWithYield,
-    startSec,
-    sevenDaysAgoSec,
-    safetyScores,
-    riskFreeRates,
-    tier1PrevRates,
-    sourceHistory,
-    onChainCompatibilityHistoryById,
-    legacyDeterministicOnChainHistoryById,
-    legacyHistoryById,
-    prevTvlBySource,
-    legacyPrevTvlById,
-    prevBestSourceKeyByCoin,
-    sourceSwitchCount30dByCoin,
-    stablecoinSupplyById,
-    dlPoolsMeta,
-  }, {
-    signal,
-    onProgress: async (progress) => {
-      await reportYieldProgress("evaluation", "Evaluating best yield sources and source risk", "yield", {
-        itemsDone: progress.coinsDone,
-        itemsTotal: progress.coinsTotal,
-        metadata: {
-          phase: progress.phase,
-          countTotals: {
-            evaluatedSources: progress.evaluatedSources,
-            bestSourceCoins: progress.bestSourceCoins,
-            rowsRejected: progress.rowsRejected,
-            divergenceFlags: progress.divergenceFlags,
-            sourceSwitches: progress.sourceSwitches,
-          },
-        },
-      });
+  } = await evaluateYieldSourcesCooperative(
+    {
+      resolved: resolvedWithYield,
+      startSec,
+      sevenDaysAgoSec,
+      safetyScores,
+      riskFreeRates,
+      tier1PrevRates,
+      sourceHistory,
+      onChainCompatibilityHistoryById,
+      legacyDeterministicOnChainHistoryById,
+      legacyHistoryById,
+      prevTvlBySource,
+      legacyPrevTvlById,
+      prevBestSourceKeyByCoin,
+      sourceSwitchCount30dByCoin,
+      stablecoinSupplyById,
+      dlPoolsMeta,
     },
-  });
+    {
+      signal,
+      onProgress: async (progress) => {
+        await reportYieldProgress("evaluation", "Evaluating best yield sources and source risk", "yield", {
+          itemsDone: progress.coinsDone,
+          itemsTotal: progress.coinsTotal,
+          metadata: {
+            phase: progress.phase,
+            countTotals: {
+              evaluatedSources: progress.evaluatedSources,
+              bestSourceCoins: progress.bestSourceCoins,
+              rowsRejected: progress.rowsRejected,
+              divergenceFlags: progress.divergenceFlags,
+              sourceSwitches: progress.sourceSwitches,
+            },
+          },
+        });
+      },
+    },
+  );
   await reportYieldProgress("evaluation-complete", "Completed yield source evaluation", "yield", {
     itemsDone: evaluatedSources.length,
     metadata: {
@@ -448,15 +447,20 @@ export async function syncYieldData(
     opportunityCoinIdSet,
   });
   if (publishedCoverageGuard.result) {
-    await reportYieldProgress("coverage-guard", "Yield published coverage guard deferred publication", "yield-publication", {
-      itemsDone: previewRankingsPayload.rankings.length,
-      metadata: {
-        guard: "published-coverage",
-        countTotals: {
-          previewRankings: previewRankingsPayload.rankings.length,
+    await reportYieldProgress(
+      "coverage-guard",
+      "Yield published coverage guard deferred publication",
+      "yield-publication",
+      {
+        itemsDone: previewRankingsPayload.rankings.length,
+        metadata: {
+          guard: "published-coverage",
+          countTotals: {
+            previewRankings: previewRankingsPayload.rankings.length,
+          },
         },
       },
-    });
+    );
     return publishedCoverageGuard.result;
   }
   const {
@@ -477,6 +481,7 @@ export async function syncYieldData(
     maskedAllDeterministicFailure,
     onChainSkippedDueToCooldown,
     onChainAlternativeCoverageMissingIds,
+    previousTvlRowsTruncated: historySnapshots.previousTvlRowsTruncated,
   });
   await reportYieldProgress("publication", "Publishing yield rankings generation", "yield-publication", {
     itemsDone: 0,
@@ -574,7 +579,8 @@ export async function syncYieldData(
         consecutiveAllFailRuns: nextOnChainHealthState.consecutiveAllFailRuns,
         consecutiveMaskedAllFailRuns: nextOnChainHealthState.consecutiveMaskedAllFailRuns,
       },
-      fallbackMode: publicationResult.degradationReasons.length > 0 ? publicationResult.degradationReasons.join(",") : null,
+      fallbackMode:
+        publicationResult.degradationReasons.length > 0 ? publicationResult.degradationReasons.join(",") : null,
       validationFailures: publicationResult.validationFailures,
       riskFreeRate,
       cacheWriteSkipped: publicationResult.cacheWriteSkipped,
@@ -582,6 +588,7 @@ export async function syncYieldData(
         evaluatedSources,
         startSec,
       }),
+      previousTvlRowsTruncated: historySnapshots.previousTvlRowsTruncated,
     }),
   };
 }

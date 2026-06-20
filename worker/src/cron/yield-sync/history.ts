@@ -13,6 +13,7 @@ export { isSuppressedYieldHistoryRow } from "../../lib/yield-history-ownership-h
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const YIELD_HISTORY_LOAD_CHUNK_SIZE = 30;
+export const MAX_PREVIOUS_TVL_HISTORY_ROWS = 5_000;
 
 export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promise<void> {
   for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
@@ -51,6 +52,7 @@ export interface YieldHistorySnapshotProgress {
   historyRows: number;
   prevTvlRows: number;
   prevBestRows: number;
+  previousTvlRowsTruncated: boolean;
 }
 
 export interface LoadYieldHistorySnapshotOptions {
@@ -59,6 +61,7 @@ export interface LoadYieldHistorySnapshotOptions {
   yieldToEventLoop?: (signal?: AbortSignal) => Promise<void>;
   onProgress?: (progress: YieldHistorySnapshotProgress) => void | Promise<void>;
   sourceKeysByStablecoin?: Map<string, ReadonlySet<string | null>>;
+  maxPreviousTvlRows?: number;
 }
 
 function appendRows<T>(target: T[], rows: readonly T[]): void {
@@ -94,14 +97,21 @@ async function loadPreviousTvlRowsForChunk(
   idChunk: readonly string[],
   sevenDaysAgoSec: number,
   sourceKeysByStablecoin: Map<string, ReadonlySet<string | null>> | undefined,
+  maxRows: number,
   signal?: AbortSignal,
-): Promise<YieldHistorySnapshotRow[]> {
-  if (!sourceKeysByStablecoin) return [];
+): Promise<{ rows: YieldHistorySnapshotRow[]; truncated: boolean }> {
+  if (!sourceKeysByStablecoin || maxRows <= 0) return { rows: [], truncated: false };
   const rows: YieldHistorySnapshotRow[] = [];
   const exclusion = buildSuppressedYieldHistoryExclusion("h");
+  let truncated = false;
 
+  outer:
   for (const stablecoinId of idChunk) {
     for (const sourceKey of getRequestedSourceKeys(stablecoinId, sourceKeysByStablecoin)) {
+      if (rows.length >= maxRows) {
+        truncated = true;
+        break outer;
+      }
       throwIfAborted(signal);
       const sourcePredicate = sourceKey == null ? "h.source_key IS NULL" : "h.source_key = ?";
       const sourceBinds = sourceKey == null ? [] : [sourceKey];
@@ -129,7 +139,7 @@ async function loadPreviousTvlRowsForChunk(
     throwIfAborted(signal);
   }
 
-  return rows;
+  return { rows, truncated };
 }
 
 async function loadPreviousBestRowsForChunk(
@@ -177,12 +187,18 @@ export async function loadYieldHistorySnapshots(
   historyRows: YieldHistorySnapshotRow[];
   prevTvlRows: YieldHistorySnapshotRow[];
   prevBestRows: YieldHistorySnapshotRow[];
+  previousTvlRowsTruncated: boolean;
 }> {
   const historyRows: YieldHistorySnapshotRow[] = [];
   const prevTvlRows: YieldHistorySnapshotRow[] = [];
   const prevBestRows: YieldHistorySnapshotRow[] = [];
 
-  const chunkSize = Math.max(1, Math.min(options.chunkSize ?? YIELD_HISTORY_LOAD_CHUNK_SIZE, D1_SAFE_SQL_IN_CHUNK_SIZE));
+  const chunkSize = Math.max(
+    1,
+    Math.min(options.chunkSize ?? YIELD_HISTORY_LOAD_CHUNK_SIZE, D1_SAFE_SQL_IN_CHUNK_SIZE),
+  );
+  const maxPreviousTvlRows = Math.max(1, Math.floor(options.maxPreviousTvlRows ?? MAX_PREVIOUS_TVL_HISTORY_ROWS));
+  let previousTvlRowsTruncated = false;
   const idChunks = chunkArray(resolvedIds, chunkSize);
   const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
 
@@ -195,6 +211,7 @@ export async function loadYieldHistorySnapshots(
       historyRows: historyRows.length,
       prevTvlRows: prevTvlRows.length,
       prevBestRows: prevBestRows.length,
+      previousTvlRowsTruncated,
     });
   };
 
@@ -220,42 +237,67 @@ export async function loadYieldHistorySnapshots(
     throwIfAborted(options.signal);
     await yieldToEventLoop(options.signal);
 
-    const prevTvlChunkRows = options.sourceKeysByStablecoin
-      ? await loadPreviousTvlRowsForChunk(db, idChunk, sevenDaysAgoSec, options.sourceKeysByStablecoin, options.signal)
-      : (await db
-          .prepare(
-            `SELECT /* pharos:yield-sync:previous-tvl */
-               h.stablecoin_id, h.source_key, h.source_tvl_usd, h.recorded_at
-             FROM yield_history h
-             WHERE h.stablecoin_id IN (${resolvedIdInClause.sql})
-               AND h.recorded_at <= ?
-               AND h.source_tvl_usd IS NOT NULL
-               AND (h.publication_state IS NULL OR h.publication_state = 'published')
-               AND ${currentExclusion.sql}
-               AND NOT EXISTS (
-                 SELECT 1
-                 FROM yield_history newer
-                 WHERE newer.stablecoin_id = h.stablecoin_id
-                   AND COALESCE(newer.source_key, '') = COALESCE(h.source_key, '')
-                   AND newer.recorded_at <= ?
-                   AND newer.source_tvl_usd IS NOT NULL
-                   AND (newer.publication_state IS NULL OR newer.publication_state = 'published')
-                   AND ${newerExclusion.sql}
-                   AND (
-                     newer.recorded_at > h.recorded_at
-                     OR (newer.recorded_at = h.recorded_at AND newer.rowid > h.rowid)
-                   )
-               )
-             ORDER BY h.stablecoin_id ASC, h.source_key ASC, h.recorded_at DESC`,
-          )
-          .bind(
-            ...resolvedIdInClause.binds,
-            sevenDaysAgoSec,
-            ...currentExclusion.binds,
-            sevenDaysAgoSec,
-            ...newerExclusion.binds,
-          )
-          .all<YieldHistorySnapshotRow>()).results ?? [];
+    const remainingPreviousTvlRows = Math.max(0, maxPreviousTvlRows - prevTvlRows.length);
+    if (remainingPreviousTvlRows === 0 && chunkIndex < idChunks.length) {
+      previousTvlRowsTruncated = true;
+    }
+    let prevTvlChunkRows: YieldHistorySnapshotRow[] = [];
+    if (remainingPreviousTvlRows > 0 && options.sourceKeysByStablecoin) {
+      const prevTvlResult = await loadPreviousTvlRowsForChunk(
+        db,
+        idChunk,
+        sevenDaysAgoSec,
+        options.sourceKeysByStablecoin,
+        remainingPreviousTvlRows,
+        options.signal,
+      );
+      prevTvlChunkRows = prevTvlResult.rows;
+      previousTvlRowsTruncated ||= prevTvlResult.truncated;
+    } else if (remainingPreviousTvlRows > 0) {
+      const prevTvlResult = await db
+        .prepare(
+          `SELECT /* pharos:yield-sync:previous-tvl */
+             h.stablecoin_id, h.source_key, h.source_tvl_usd, h.recorded_at
+           FROM yield_history h
+           WHERE h.stablecoin_id IN (${resolvedIdInClause.sql})
+             AND h.recorded_at <= ?
+             AND h.source_tvl_usd IS NOT NULL
+             AND (h.publication_state IS NULL OR h.publication_state = 'published')
+             AND ${currentExclusion.sql}
+             AND NOT EXISTS (
+               SELECT 1
+               FROM yield_history newer
+               WHERE newer.stablecoin_id = h.stablecoin_id
+                 AND COALESCE(newer.source_key, '') = COALESCE(h.source_key, '')
+                 AND newer.recorded_at <= ?
+                 AND newer.source_tvl_usd IS NOT NULL
+                 AND (newer.publication_state IS NULL OR newer.publication_state = 'published')
+                 AND ${newerExclusion.sql}
+                 AND (
+                   newer.recorded_at > h.recorded_at
+                   OR (newer.recorded_at = h.recorded_at AND newer.rowid > h.rowid)
+                 )
+             )
+           ORDER BY h.stablecoin_id ASC, h.source_key ASC, h.recorded_at DESC
+           LIMIT ?`,
+        )
+        .bind(
+          ...resolvedIdInClause.binds,
+          sevenDaysAgoSec,
+          ...currentExclusion.binds,
+          sevenDaysAgoSec,
+          ...newerExclusion.binds,
+          remainingPreviousTvlRows + 1,
+        )
+        .all<YieldHistorySnapshotRow>();
+      const filteredPrevTvlRows = (prevTvlResult.results ?? []).filter(
+        (row) => !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key),
+      );
+      if (filteredPrevTvlRows.length > remainingPreviousTvlRows) {
+        previousTvlRowsTruncated = true;
+      }
+      prevTvlChunkRows = filteredPrevTvlRows.slice(0, remainingPreviousTvlRows);
+    }
     throwIfAborted(options.signal);
     await yieldToEventLoop(options.signal);
 
@@ -271,19 +313,13 @@ export async function loadYieldHistorySnapshots(
     await yieldToEventLoop(options.signal);
   }
 
-  return { historyRows, prevTvlRows, prevBestRows };
+  return { historyRows, prevTvlRows, prevBestRows, previousTvlRowsTruncated };
 }
 
-export async function deleteStaleYieldRows(
-  db: D1Database,
-  managedYieldIds: string[],
-  startSec: number,
-): Promise<void> {
+export async function deleteStaleYieldRows(db: D1Database, managedYieldIds: string[], startSec: number): Promise<void> {
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
-    frozenIdsList.length > 0
-      ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
-      : "";
+    frozenIdsList.length > 0 ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})` : "";
   for (const idChunk of chunkArray(managedYieldIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
     const staleRowInClause = buildInClause(idChunk);
     await db
@@ -297,10 +333,7 @@ export async function deleteStaleYieldRows(
   }
 }
 
-export async function deleteOrphanYieldRows(
-  db: D1Database,
-  managedYieldIds: string[],
-): Promise<void> {
+export async function deleteOrphanYieldRows(db: D1Database, managedYieldIds: string[]): Promise<void> {
   const managedYieldIdSet = new Set(managedYieldIds);
   const existingIds = await db
     .prepare("SELECT /* pharos:yield-sync:yield-data-existing-ids */ DISTINCT stablecoin_id FROM yield_data")
