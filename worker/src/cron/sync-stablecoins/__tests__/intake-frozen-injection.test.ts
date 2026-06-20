@@ -28,6 +28,27 @@ describe("mergeFrozenSnapshots", () => {
     expect((merged.find((a) => (a as { id: string }).id === "fixture-frozen") as { name: string }).name).toBe("Fixture (live)");
   });
 
+  it("does not duplicate when an upstream DefiLlama id maps to the snapshot canonical id", () => {
+    const upstream = [
+      { id: "1", name: "Tether (live)", symbol: "USDT" } as never,
+    ];
+    const merged = mergeFrozenSnapshots(upstream, [
+      {
+        id: "usdt-tether",
+        capturedAt: "2026-04-27T00:00:00Z",
+        peggedAssetRow: { id: "usdt-tether", name: "Tether (snapshot)", symbol: "USDT" },
+      },
+    ]);
+    expect(merged).toHaveLength(1);
+    expect((merged[0] as { name: string }).name).toBe("Tether (live)");
+  });
+
+  it("deduplicates repeated snapshots before the canonical dedupe stage", () => {
+    const upstream = [{ id: "usdt-tether", name: "Tether", symbol: "USDT" } as never];
+    const merged = mergeFrozenSnapshots(upstream, [...snapshots, ...snapshots]);
+    expect(merged.filter((a) => (a as { id: string }).id === "fixture-frozen")).toHaveLength(1);
+  });
+
   it("returns input unchanged when no snapshots provided", () => {
     const upstream = [{ id: "usdt-tether", name: "Tether", symbol: "USDT" } as never];
     expect(mergeFrozenSnapshots(upstream, [])).toBe(upstream);

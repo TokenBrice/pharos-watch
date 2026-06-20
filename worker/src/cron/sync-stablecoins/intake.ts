@@ -124,7 +124,10 @@ async function fetchDefillamaStablecoinsPayload(
 }
 
 /**
- * Append captured frozen-coin rows for any id absent from the upstream payload.
+ * Append captured frozen-coin rows for any canonical id absent from the
+ * upstream payload. This is intentionally run before structural validation,
+ * chain-circulating normalization, canonical-id mapping, and dedupe so frozen
+ * snapshots pass through the same intake safeguards as live DefiLlama rows.
  * Upstream rows always win — if DefiLlama still serves the asset, that's the
  * authoritative copy. Returns the input array unchanged when there is nothing
  * to inject (so existing identity tests pass).
@@ -136,14 +139,20 @@ export function mergeFrozenSnapshots(
   if (snapshots.length === 0) {
     return upstream;
   }
-  const upstreamIds = new Set(upstream.map((a) => String((a as { id?: unknown }).id ?? "")));
+  const upstreamIds = new Set(
+    upstream.flatMap((a) => {
+      const id = String((a as { id?: unknown }).id ?? "");
+      const mapped = REGISTRY_BY_LLAMA_ID.get(id)?.id;
+      return mapped && mapped !== id ? [id, mapped] : [id];
+    }),
+  );
   const additions: PeggedAsset[] = [];
   for (const snapshot of snapshots) {
     if (upstreamIds.has(snapshot.id)) {
       continue;
     }
-    // Cast: PeggedAsset is a structural subset of the snapshot row; column projection elsewhere is the source of truth
     additions.push(snapshot.peggedAssetRow as unknown as PeggedAsset);
+    upstreamIds.add(snapshot.id);
   }
   if (additions.length === 0) {
     return upstream;
@@ -233,7 +242,11 @@ export async function loadStablecoinsIntake(
   // defined and valid by the guards above; the steps below reassign `assets`
   // rather than the upstream payload, so the original parsed response is left
   // intact and the transformation sequence is self-documenting.
-  let assets = llamaData.peggedAssets;
+  let assets = mergeFrozenSnapshots(llamaData.peggedAssets, FROZEN_SNAPSHOTS);
+  const injectedFrozenSnapshots = assets.length - llamaData.peggedAssets.length;
+  if (injectedFrozenSnapshots > 0) {
+    console.log(`[sync-stablecoins] Injected ${injectedFrozenSnapshots} frozen-snapshot row(s)`);
+  }
 
   const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(assets);
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
@@ -327,13 +340,6 @@ export async function loadStablecoinsIntake(
       "7d ceiling (publishing without restored supply): " +
       supplementalResolution.expiredRestoreIds.join(", "),
     );
-  }
-
-  const beforeFrozenInjection = assets.length;
-  assets = mergeFrozenSnapshots(assets, FROZEN_SNAPSHOTS);
-  const injected = assets.length - beforeFrozenInjection;
-  if (injected > 0) {
-    console.log(`[sync-stablecoins] Injected ${injected} frozen-snapshot row(s)`);
   }
 
   // Restore-or-degrade on tracked-id coverage: a DefiLlama list omission must
