@@ -194,7 +194,9 @@ describe("resolveSupplementalPrice", () => {
         coins: {
           "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
             price: 1.114859,
+            symbol: "TEST",
             timestamp: nowSec - 60,
+            confidence: 0.99,
           },
         },
       },
@@ -205,6 +207,52 @@ describe("resolveSupplementalPrice", () => {
       observedAt: nowSec - 60,
       observedAtMode: "upstream",
     });
+  });
+
+  it("rejects DefiLlama exact-contract quotes without matching symbol and confidence", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const meta = makeMeta([
+      {
+        chain: "ethereum",
+        address: "0xBEEfFF209270748ddd194831b3fa287a5386f5bC",
+        decimals: 18,
+      },
+    ], "bbqusdc-steakhouse");
+    const key = "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc";
+
+    expect(resolveSupplementalContractPrice(
+      { coins: { [key]: { price: 1.01, timestamp: nowSec - 60, symbol: "WRONG", confidence: 0.99 } } },
+      meta,
+    )).toBeNull();
+    expect(resolveSupplementalContractPrice(
+      { coins: { [key]: { price: 1.01, timestamp: nowSec - 60, symbol: "TEST", confidence: 0.79 } } },
+      meta,
+    )).toBeNull();
+  });
+
+  it("rejects unreasonable DefiLlama exact-contract quotes", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const meta = makeMeta([
+      {
+        chain: "ethereum",
+        address: "0xBEEfFF209270748ddd194831b3fa287a5386f5bC",
+        decimals: 18,
+      },
+    ], "bbqusdc-steakhouse");
+
+    expect(resolveSupplementalContractPrice(
+      {
+        coins: {
+          "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
+            price: 12345.67,
+            symbol: "TEST",
+            timestamp: nowSec - 60,
+            confidence: 0.99,
+          },
+        },
+      },
+      meta,
+    )).toBeNull();
   });
 
   it("does not request exact-contract supplemental prices for assets with CoinGecko IDs", () => {
@@ -331,7 +379,9 @@ describe("fetchSupplementalPriceData", () => {
         coins: {
           "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
             price: 1.114859,
+            symbol: "TEST",
             timestamp: nowSec,
+            confidence: 0.99,
           },
         },
       }), { status: 200 })
@@ -349,7 +399,9 @@ describe("fetchSupplementalPriceData", () => {
       coins: {
         "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
           price: 1.114859,
+          symbol: "TEST",
           timestamp: nowSec,
+          confidence: 0.99,
         },
       },
     });
