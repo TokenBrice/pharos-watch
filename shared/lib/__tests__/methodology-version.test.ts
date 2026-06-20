@@ -15,6 +15,11 @@ describe("compareMethodologyVersions", () => {
     expect(compareMethodologyVersions("6.10", "6.1")).toBe(0);
     expect(compareMethodologyVersions("6.16", "6.11")).toBeGreaterThan(0);
   });
+
+  it("orders multi-digit major versions numerically", () => {
+    expect(compareMethodologyVersions("10.0", "9.99")).toBeGreaterThan(0);
+    expect(compareMethodologyVersions("9.99", "10.0")).toBeLessThan(0);
+  });
 });
 
 describe("createMethodologyVersion", () => {
@@ -60,6 +65,37 @@ describe("createMethodologyVersion", () => {
     });
     expect(methodology.getVersionAt(1000)).toBe("3.9");
     expect(methodology.getVersionAt(999)).toBe("3.7");
+  });
+
+  it("selects a two-digit major version as the latest changelog entry", () => {
+    const methodology = createMethodologyVersion({
+      currentVersion: "10.0",
+      changelogPath: "/methodology/two-digit-major-test/",
+      changelog: [
+        {
+          version: "9.99",
+          title: "",
+          date: "",
+          effectiveAt: 2000,
+          summary: "",
+          impact: [],
+          commits: [],
+          reconstructed: false,
+        },
+        {
+          version: "10.0",
+          title: "",
+          date: "",
+          effectiveAt: 1000,
+          summary: "",
+          impact: [],
+          commits: [],
+          reconstructed: false,
+        },
+      ],
+    });
+
+    expect(methodology.versionLabels).toEqual(["v10.0", "v9.99"]);
   });
 
   it("throws in dev/test when currentVersion drifts from the latest changelog entry", () => {

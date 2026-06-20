@@ -60,10 +60,13 @@ export interface MethodologyVersion {
   getVersionAt: (unixSeconds: number) => string;
 }
 
-function normalizeMethodologyVersionSegment(segment: string, width: number): number {
-  const normalized = segment.padEnd(width, "0");
-  const value = Number.parseInt(normalized, 10);
+function parseMethodologyVersionSegment(segment: string): number {
+  const value = Number.parseInt(segment, 10);
   return Number.isFinite(value) ? value : 0;
+}
+
+function normalizeMethodologyMinorVersionSegment(segment: string, width: number): number {
+  return parseMethodologyVersionSegment(segment.padEnd(width, "0"));
 }
 
 export function compareMethodologyVersions(a: string, b: string): number {
@@ -76,8 +79,9 @@ export function compareMethodologyVersions(a: string, b: string): number {
     const bPart = bParts[index] ?? "0";
     const width = Math.max(aPart.length, bPart.length, 1);
     const diff =
-      normalizeMethodologyVersionSegment(aPart, width) -
-      normalizeMethodologyVersionSegment(bPart, width);
+      index === 0
+        ? parseMethodologyVersionSegment(aPart) - parseMethodologyVersionSegment(bPart)
+        : normalizeMethodologyMinorVersionSegment(aPart, width) - normalizeMethodologyMinorVersionSegment(bPart, width);
     if (diff !== 0) return diff;
   }
 
@@ -145,9 +149,7 @@ const METHODOLOGY_DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
 
 export function formatMethodologyDisplayDate(date: string): string {
   const parsed = new Date(`${date}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime())
-    ? METHODOLOGY_DISPLAY_DATE_FORMATTER.format(parsed)
-    : date;
+  return Number.isFinite(parsed.getTime()) ? METHODOLOGY_DISPLAY_DATE_FORMATTER.format(parsed) : date;
 }
 
 export function methodologyChangelogEntryId(version: string): string {
