@@ -1,5 +1,7 @@
 import { buildSyncMetadata } from "./shared";
 import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers";
+import { recordOutcome } from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { reportCronProgress } from "../../lib/cron-progress";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices";
@@ -16,6 +18,15 @@ export interface StablecoinsStalenessSummary {
   compared: number;
   identical: number;
   identicalRatio: number;
+}
+
+type StablecoinsStalenessBlockedReason = "abort" | "severe-staleness";
+
+interface StablecoinsStalenessCheckResult {
+  stalenessWarning: boolean;
+  stalenessSummary: StablecoinsStalenessSummary | null;
+  blockedResult?: CronResult;
+  blockedReason?: StablecoinsStalenessBlockedReason;
 }
 
 export async function reportStablecoinsStage(
@@ -94,11 +105,7 @@ export async function checkStablecoinsPriceStaleness(params: {
   warningLabel?: string;
   failureLabel?: string;
   blockedResultFactory: (summary: StablecoinsStalenessSummary) => CronResult;
-}): Promise<{
-  stalenessWarning: boolean;
-  stalenessSummary: StablecoinsStalenessSummary | null;
-  blockedResult?: CronResult;
-}> {
+}): Promise<StablecoinsStalenessCheckResult> {
   let stalenessWarning = false;
   let stalenessSummary: StablecoinsStalenessSummary | null = null;
 
@@ -115,6 +122,7 @@ export async function checkStablecoinsPriceStaleness(params: {
         stalenessWarning,
         stalenessSummary,
         blockedResult: stalenessAbort,
+        blockedReason: "abort",
       };
     }
     const staleness = await detectPriceStaleness(params.db, params.assets, params.signal);
@@ -140,6 +148,7 @@ export async function checkStablecoinsPriceStaleness(params: {
         stalenessWarning,
         stalenessSummary,
         blockedResult: params.blockedResultFactory(stalenessSummary),
+        blockedReason: "severe-staleness",
       };
     }
   } catch (error) {
@@ -148,6 +157,7 @@ export async function checkStablecoinsPriceStaleness(params: {
         stalenessWarning,
         stalenessSummary,
         blockedResult: abortResult(params.signal, params.abortStage),
+        blockedReason: "abort",
       };
     }
     const prefix = params.failureLabel ?? "Staleness check";
@@ -155,4 +165,13 @@ export async function checkStablecoinsPriceStaleness(params: {
   }
 
   return { stalenessWarning, stalenessSummary };
+}
+
+export async function recordStablecoinsStalenessBlockOutcome(
+  db: D1Database,
+  check: Pick<StablecoinsStalenessCheckResult, "blockedReason">,
+  alertWebhookUrl?: string | null,
+): Promise<void> {
+  if (check.blockedReason !== "severe-staleness") return;
+  await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false, alertWebhookUrl);
 }

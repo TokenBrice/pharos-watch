@@ -1629,6 +1629,30 @@ describe("syncStablecoins", () => {
     );
   });
 
+  it("does not record a DefiLlama circuit failure when aborted during the staleness check", async () => {
+    const dlData = makeDlResponse(60);
+    const controller = new AbortController();
+    const reportProgress = vi.fn(async (update: { stage?: string | null }) => {
+      if (update.stage === "staleness-check") {
+        controller.abort("test abort during staleness check");
+      }
+    });
+    const db = makeDb();
+
+    mockFetchWithRetry([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db, controller.signal, { reportProgress });
+
+    expect(result.aborted).toBe(true);
+    expect(vi.mocked(recordOutcome).mock.calls.some((call) => (
+      call[1] === CIRCUIT_SOURCE.DL_STABLECOINS && call[2] === false
+    ))).toBe(false);
+  });
+
   it("degrades cleanly when the previous stablecoins cache is malformed", async () => {
     const dlData = makeDlResponse(60);
     const db = mockD1([

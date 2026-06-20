@@ -9,6 +9,7 @@ import {
   abortResult,
   checkStablecoinsPriceStaleness,
   fillStablecoinsSupplyHistoryStage,
+  recordStablecoinsStalenessBlockOutcome,
   reportStablecoinsStage,
   returnIfAborted,
 } from "./sync-stablecoins/runtime";
@@ -17,8 +18,6 @@ import {
   runStablecoinsPricingStage,
 } from "./sync-stablecoins/stages";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { recordOutcome } from "../lib/circuit-breaker";
-import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
 
 export interface SyncStablecoinsOptions {
@@ -133,7 +132,7 @@ export async function syncStablecoins(
     }),
   });
   if (stalenessCheck.blockedResult) {
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false, alertWebhookUrl);
+    await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck, alertWebhookUrl);
     return stalenessCheck.blockedResult;
   }
   const { stalenessWarning, stalenessSummary } = stalenessCheck;
