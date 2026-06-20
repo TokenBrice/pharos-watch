@@ -40,6 +40,14 @@ function isUniswapV4PoolId(poolId: string, protocol?: string | null): boolean {
   return normalizeProtocol(protocol ?? "") === "uniswap-v4" && /^0x[a-f0-9]{64}$/i.test(poolId);
 }
 
+function isTrustworthyOrderbookPoolId(poolId: string): boolean {
+  if (poolId.startsWith("orderbook:")) {
+    const [, exchangeId, stablecoinId] = poolId.split(":");
+    return Boolean(exchangeId && stablecoinId);
+  }
+  return poolId.startsWith("orderbook-");
+}
+
 function canonicalizeExactPoolId(poolId: string, chain: string): string {
   const trimmed = poolId.trim();
   if (chain.toLowerCase() === "orderbook") return trimmed;
@@ -53,7 +61,7 @@ export function isTrustworthyExactPoolId(poolId: string | null | undefined, prot
   if (!poolId) return false;
   const trimmed = poolId.trim();
   if (!trimmed) return false;
-  if (trimmed.startsWith("orderbook-") || trimmed.startsWith("orderbook:")) return true;
+  if (trimmed.startsWith("orderbook-") || trimmed.startsWith("orderbook:")) return isTrustworthyOrderbookPoolId(trimmed);
   if (/^0x[a-f0-9]{40}$/i.test(trimmed)) return true;
   if (isUniswapV4PoolId(trimmed, protocol)) return true;
   return /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(trimmed);
