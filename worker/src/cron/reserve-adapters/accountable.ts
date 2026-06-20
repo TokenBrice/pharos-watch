@@ -238,7 +238,8 @@ export function adaptAccountableDashboard(
   const depTypeMap = params.depTypeMap ?? {};
   const totalReservesExcludeBuckets = new Set(params.totalReservesExcludeBuckets ?? []);
   const signedBuckets = breakdown.filter((entry) => entry.value < 0);
-  const positiveBreakdown = breakdown.filter((entry) => entry.value > 0);
+  const reconciledBreakdown = breakdown.filter((entry) => !(totalReservesExcludeBuckets.has(entry.name)));
+  const positiveBreakdown = reconciledBreakdown.filter((entry) => entry.value > 0);
   const mappedForValidation = breakdown.filter(({ name }) => name in riskMap);
   validateMappedBucketValues(mappedForValidation, bucket, { allowNegativeBuckets });
   const mapped = positiveBreakdown.filter(({ name }) => name in riskMap);

@@ -538,7 +538,7 @@ the `re-metrics` adapter parses Re Protocol's official metrics page and now extr
 `zephyr-scanner` consumes Zephyr's reserve snapshot API for `zsd-zephyr-protocol`, preserving the snapshot capture timestamp, ZEPH reserve value, ZSD supply, reserve ratio, moving-average reserve ratio, and ZSD yield-reserve metadata. It is proof-class because the feed is protocol-published native-chain telemetry over volatile ZEPH collateral rather than independently verified asset-level reserve evidence.
 
 Accountable note:
-`accountable` configs may exclude reviewed buckets from strict `total_reserves` reconciliation when the dashboard publishes auxiliary reserves outside the reported total. Configs may also allow reviewed signed exposure buckets; negative buckets are omitted from reserve slices, recorded in metadata, and degrade the snapshot instead of opening the breaker.
+`accountable` configs may exclude reviewed buckets from strict `total_reserves` reconciliation when the dashboard publishes auxiliary reserves outside the reported total. Those excluded buckets are also omitted from normalized reserve slices so auxiliary values cannot dilute or inflate the published collateral mix. Configs may also allow reviewed signed exposure buckets; negative buckets are omitted from reserve slices, recorded in metadata, and degrade the snapshot instead of opening the breaker.
 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
