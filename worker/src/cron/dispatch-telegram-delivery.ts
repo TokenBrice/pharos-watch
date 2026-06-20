@@ -137,16 +137,10 @@ async function loadActiveOverflowSubscriberPlanKeys(
                 CASE WHEN s.global_alert_launch = 1 OR EXISTS (
                   SELECT 1 FROM telegram_subscriptions sub
                    WHERE sub.chat_id = s.chat_id AND sub.alert_launch = 1
-                ) OR EXISTS (
-                  SELECT 1 FROM telegram_preset_subscriptions preset
-                   WHERE preset.chat_id = s.chat_id AND preset.alert_launch = 1
                 ) THEN 1 ELSE 0 END AS launch_active,
                 CASE WHEN s.global_alert_reserve = 1 OR EXISTS (
                   SELECT 1 FROM telegram_subscriptions sub
                    WHERE sub.chat_id = s.chat_id AND sub.alert_reserve = 1
-                ) OR EXISTS (
-                  SELECT 1 FROM telegram_preset_subscriptions preset
-                   WHERE preset.chat_id = s.chat_id AND preset.alert_reserve = 1
                 ) THEN 1 ELSE 0 END AS reserve_active
            FROM telegram_subscribers s
           WHERE s.chat_id IN (${inClause.sql})`,
