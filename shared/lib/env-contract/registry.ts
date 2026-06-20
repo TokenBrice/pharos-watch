@@ -2,7 +2,7 @@ import type {
   EnvBindingDefinition,
   EnvRuntimeName,
   EnvRuntimeStatus,
-} from "./types";
+} from "./types.ts";
 
 export const ENV_BINDINGS = [
   {
