@@ -47,6 +47,20 @@ interface FluidTicker {
   liquidity_in_usd: string;
 }
 
+const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+const INVALID_FLUID_POOL_ID_LOG_LIMIT = 80;
+
+function isEvmAddress(value: unknown): value is string {
+  return typeof value === "string" && EVM_ADDRESS_RE.test(value);
+}
+
+function formatInvalidFluidPoolId(value: unknown): string {
+  if (typeof value !== "string") return String(value);
+  return value.length > INVALID_FLUID_POOL_ID_LOG_LIMIT
+    ? `${value.slice(0, INVALID_FLUID_POOL_ID_LOG_LIMIT)}…(${value.length} chars)`
+    : value;
+}
+
 function bigintToDecimalNumber(value: bigint, decimals: number): number {
   if (decimals <= 0) return Number(value);
   const negative = value < 0n;
@@ -180,6 +194,10 @@ export async function fetchFluidPools(
         const baseVol = parseFloat(t.base_volume);
         const targetVol = parseFloat(t.target_volume);
         if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) return null;
+        if (!isEvmAddress(t.pool_id)) {
+          errors.push(`${chain} pool_id ${formatInvalidFluidPoolId(t.pool_id)} skipped: invalid EVM address`);
+          return null;
+        }
 
         return {
           source: "fluid",
