@@ -57,6 +57,11 @@ describe("handleHealth", () => {
       { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      {
+        match: "item_count, metadata",
+        rows: [],
+        first: { item_count: 4321, metadata: JSON.stringify({ rowCount: 4321 }) },
+      },
     ]);
     const res = await handleHealth(db);
     expect(res.status).toBe(200);
@@ -101,7 +106,7 @@ describe("handleHealth", () => {
       recentMissingAmounts: 0,
       missingRatio: 0,
     });
-    expect(body.mintBurn.totalEvents).toBeNull();
+    expect(body.mintBurn.totalEvents).toBe(4321);
     expect(body.warnings).toEqual([]);
     expect(body.mintBurn).toHaveProperty("latestEventTs");
     expect(body.mintBurn).toHaveProperty("latestHourlyTs");
@@ -112,6 +117,7 @@ describe("handleHealth", () => {
     expect(["healthy", "degraded", "stale"]).toContain(body.status);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_events"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("sqlite_sequence"))).toBe(false);
   });
 
   it("returns the bounded realtime Cache-Control profile", async () => {
