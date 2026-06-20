@@ -1,7 +1,7 @@
 import { getCacheImpactStatus } from "./cache-health";
-import type { CacheStatus, CircuitRecord, HealthResponse } from "../types/status";
+import type { CacheStatus, CircuitRecord, HealthResponse, StatusHealthValue } from "../types/status";
 
-export type PublicStatusTone = HealthResponse["status"];
+export type PublicStatusTone = StatusHealthValue;
 
 const STATUS_SEVERITY: Record<PublicStatusTone, number> = {
   healthy: 0,

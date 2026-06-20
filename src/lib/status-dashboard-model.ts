@@ -1,4 +1,4 @@
-import type { EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
+import type { EndpointProbeResult, HealthResponse, StatusCause, StatusHealthValue, StatusResponse } from "@shared/types";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
@@ -86,7 +86,7 @@ const SEVERITY_RANK = {
 
 function getProbeDisplayStatus(
   probe: EndpointProbeResult,
-): "healthy" | "degraded" | "stale" {
+): StatusHealthValue {
   if (probe.status == null || probe.status >= 400) return "stale";
   if (probe.semanticStatus) return probe.semanticStatus;
   return probe.status >= 200 && probe.status < 300 ? "healthy" : "stale";
@@ -148,7 +148,7 @@ export function buildBrowserProbeSummary(
   }
   const latencies = probes.map((probe) => probe.latencyMs).filter((latency) => Number.isFinite(latency));
   const failCount = degradedCount + staleCount;
-  const status: "healthy" | "degraded" | "stale" =
+  const status: StatusHealthValue =
     staleCount > 0 ? "stale" : degradedCount > 0 ? "degraded" : "healthy";
 
   return {

@@ -29,6 +29,28 @@ export type YieldSourceChangedFilter = "all" | "only" | "none";
 export type YieldTrendingFilter = "all" | "rising";
 export type YieldWatchlistFilter = "all" | "only";
 
+export interface YieldViewModelUrlParams {
+  peg?: string | null;
+  yieldType?: string | null;
+  q?: string | null;
+  warnings?: string | null;
+  minSafety?: string | null;
+  minTvl?: string | null;
+  sourceConfidence?: string | null;
+  benchmark?: string | null;
+  opportunity?: string | null;
+  depth?: string | null;
+  sourceChanged?: string | null;
+  trending?: string | null;
+  watchlist?: string | null;
+}
+
+export interface YieldFilterOption<T extends string = string> {
+  value: T;
+  label: string;
+  count: number;
+}
+
 export interface YieldViewModelFilters {
   peg: YieldPegFilter;
   yieldType: YieldType | "all";

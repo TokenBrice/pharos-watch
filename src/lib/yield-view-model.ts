@@ -29,9 +29,11 @@ import {
   type YieldSourceConfidenceFilter,
   type YieldTrendingFilter,
   type YieldViewModelFilters,
+  type YieldViewModelUrlParams,
   type YieldWarningsFilter,
   type YieldWatchlistFilter,
   type YieldRiskBudgetSpec,
+  type YieldFilterOption,
 } from "@/lib/yield-view-config";
 import { normalizeFilters } from "@/lib/yield-view-url";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
@@ -58,29 +60,9 @@ export type {
   YieldTrendingFilter,
   YieldWatchlistFilter,
   YieldViewModelFilters,
+  YieldViewModelUrlParams,
+  YieldFilterOption,
 };
-
-export interface YieldViewModelUrlParams {
-  peg?: string | null;
-  yieldType?: string | null;
-  q?: string | null;
-  warnings?: string | null;
-  minSafety?: string | null;
-  minTvl?: string | null;
-  sourceConfidence?: string | null;
-  benchmark?: string | null;
-  opportunity?: string | null;
-  depth?: string | null;
-  sourceChanged?: string | null;
-  trending?: string | null;
-  watchlist?: string | null;
-}
-
-export interface YieldFilterOption<T extends string = string> {
-  value: T;
-  label: string;
-  count: number;
-}
 
 export interface YieldViewModelOptions {
   peg: YieldFilterOption<YieldPegFilter>[];

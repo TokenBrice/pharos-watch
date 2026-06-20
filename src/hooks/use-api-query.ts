@@ -108,14 +108,7 @@ export function createApiPollingQueryOptions<T>(
     key,
     createApiQueryFn(path, opts?.schema, opts?.fetchInit, opts?.contractMode),
     cronInterval,
-    {
-      enabled: opts?.enabled,
-      retry: opts?.retry,
-      retryDelay: opts?.retryDelay,
-      staleTime: opts?.staleTime,
-      refetchInterval: opts?.refetchInterval,
-      keepPreviousData: opts?.keepPreviousData,
-    },
+    opts,
   );
 }
 
@@ -130,14 +123,7 @@ export function createApiPollingQueryOptionsWithMeta<T>(
     key,
     createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, metaMaxAgeSec, opts?.contractMode),
     cronInterval,
-    {
-      enabled: opts?.enabled,
-      retry: opts?.retry,
-      retryDelay: opts?.retryDelay,
-      staleTime: opts?.staleTime,
-      refetchInterval: opts?.refetchInterval,
-      keepPreviousData: opts?.keepPreviousData,
-    },
+    opts,
   );
 }
 

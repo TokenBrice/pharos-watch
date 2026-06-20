@@ -1,12 +1,9 @@
 import type {
   MintAuthorityConfidence,
   MintAuthorityControl,
-  MintAuthorityControlRole,
-  MintAuthorityDirectMintAbility,
   MintAuthorityMintPath,
   MintAuthorityPosture,
   MintAuthorityProfile,
-  MintAuthorityType,
   StablecoinLink,
   StablecoinMeta,
 } from "./core";
@@ -20,21 +17,22 @@ export type {
   MintAuthorityType,
 } from "./core";
 
-export interface MintAuthorityClientControlSummary {
-  chain?: string;
-  address?: string;
-  label: string;
-  role: MintAuthorityControlRole;
-  authorityType: MintAuthorityType;
-  directMintAbility: MintAuthorityDirectMintAbility;
-  threshold?: number;
-  signerCount?: number;
-  timelockDelaySec?: number;
-  capDescription?: string;
-  canRaiseCap?: MintAuthorityControl["canRaiseCap"];
-  modulesOrGuardsStatus?: MintAuthorityControl["modulesOrGuardsStatus"];
-  keyCustodyAttestation?: MintAuthorityControl["keyCustodyAttestation"];
-}
+export type MintAuthorityClientControlSummary = Pick<
+  MintAuthorityControl,
+  | "chain"
+  | "address"
+  | "label"
+  | "role"
+  | "authorityType"
+  | "directMintAbility"
+  | "threshold"
+  | "signerCount"
+  | "timelockDelaySec"
+  | "capDescription"
+  | "canRaiseCap"
+  | "modulesOrGuardsStatus"
+  | "keyCustodyAttestation"
+>;
 
 export interface MintAuthorityClientSummary {
   mintPath: MintAuthorityMintPath;

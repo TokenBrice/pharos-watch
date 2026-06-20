@@ -6,6 +6,7 @@ import type {
 import type { DependencyCoverageFact, DependencyCoverageKind } from "@/lib/dependency-coverage-facts";
 import {
   breakdownItem,
+  createBreakdownCounter,
   createDataUnavailableStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
@@ -124,19 +125,14 @@ function formatDependency(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const both = breakdownMap.get("both") ?? 0;
-  const dependent = breakdownMap.get("dependent") ?? 0;
-  const upstream = breakdownMap.get("upstream") ?? 0;
-  const resolvedNone = breakdownMap.get("resolved-none") ?? 0;
-  const unmappedGap = breakdownMap.get("unmapped-gap") ?? 0;
-  const unavailable = breakdownMap.get(DATA_UNAVAILABLE_KIND) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   return [
-    breakdownItem("both", "both", both),
-    breakdownItem("dependent", "dependent", dependent),
-    breakdownItem("upstream", "upstream", upstream),
-    breakdownItem("resolved-none", "resolved none", resolvedNone),
-    breakdownItem("gaps", "gaps", unmappedGap),
-    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", unavailable),
+    breakdownItem("both", "both", get("both")),
+    breakdownItem("dependent", "dependent", get("dependent")),
+    breakdownItem("upstream", "upstream", get("upstream")),
+    breakdownItem("resolved-none", "resolved none", get("resolved-none")),
+    breakdownItem("gaps", "gaps", get("unmapped-gap")),
+    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
   ];
 }
 

@@ -7,33 +7,13 @@ import type {
   YieldSourceChangedFilter,
   YieldSourceConfidenceFilter,
   YieldTrendingFilter,
+  YieldViewModelUrlParams,
   YieldViewModelFilters,
   YieldWatchlistFilter,
   YieldWarningsFilter,
+  YieldFilterOption,
 } from "@/lib/yield-view-config";
 import type { YieldType } from "@shared/types";
-
-interface YieldViewModelUrlParams {
-  peg?: string | null;
-  yieldType?: string | null;
-  q?: string | null;
-  warnings?: string | null;
-  minSafety?: string | null;
-  minTvl?: string | null;
-  sourceConfidence?: string | null;
-  benchmark?: string | null;
-  opportunity?: string | null;
-  depth?: string | null;
-  sourceChanged?: string | null;
-  trending?: string | null;
-  watchlist?: string | null;
-}
-
-interface YieldFilterOption<T extends string = string> {
-  value: T;
-  label: string;
-  count: number;
-}
 
 interface YieldViewModelOptions {
   peg: YieldFilterOption<YieldPegFilter>[];

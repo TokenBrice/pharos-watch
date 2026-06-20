@@ -1,3 +1,5 @@
+import type { StatusHealthValue } from "../types/status";
+
 // --- Data freshness ratio boundaries ---
 // Canonical thresholds for age/interval ratio. Used by worker buildFreshnessMeta
 // and frontend data-health.ts to classify cache freshness consistently.
@@ -46,7 +48,7 @@ export function getBlacklistGapStatus({
 }: {
   missingRatio: number;
   recentMissingAmounts: number;
-}): "healthy" | "degraded" | "stale" {
+}): StatusHealthValue {
   if (
     missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
     || recentMissingAmounts >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale

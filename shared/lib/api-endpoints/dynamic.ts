@@ -37,6 +37,46 @@ export interface DynamicEndpointDescriptor {
     | null;
 }
 
+type AdminDynamicInput<
+  Key extends DynamicEndpointDescriptorKey,
+  Methods extends readonly EndpointMethod[],
+> = {
+  key: Key;
+  pattern: RegExp;
+  methods: Methods;
+  routeDependencies: readonly EndpointDependency[];
+};
+
+type AdminDynamicDescriptor<
+  T extends AdminDynamicInput<DynamicEndpointDescriptorKey, readonly EndpointMethod[]>,
+> = T & {
+  readonly publicApiAccess: "exempt";
+  readonly siteDataAccess: "denied";
+  readonly adminRequired: true;
+  readonly requestAttribution: null;
+};
+
+function adminDynamic<const T extends AdminDynamicInput<DynamicEndpointDescriptorKey, readonly EndpointMethod[]>>(
+  descriptor: T,
+): AdminDynamicDescriptor<T> {
+  return {
+    ...descriptor,
+    publicApiAccess: "exempt",
+    siteDataAccess: "denied",
+    adminRequired: true,
+    requestAttribution: null,
+  } as AdminDynamicDescriptor<T>;
+}
+
+function adminDynamicPost<
+  const T extends Omit<AdminDynamicInput<DynamicEndpointDescriptorKey, readonly ["POST"]>, "methods">,
+>(descriptor: T): AdminDynamicDescriptor<T & { readonly methods: readonly ["POST"] }> {
+  return adminDynamic({
+    ...descriptor,
+    methods: ["POST"] as const,
+  });
+}
+
 export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   {
     key: "stablecoin-summary",
@@ -116,76 +156,42 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
       routePath: "/api/snapshot/:date/stablecoin/:id",
     },
   },
-  {
+  adminDynamicPost({
     key: "discovery-candidate-dismiss",
     pattern: /^\/api\/discovery-candidates\/(\d+)\/dismiss$/,
-    methods: ["POST"],
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
-    adminRequired: true,
     routeDependencies: [],
-    requestAttribution: null,
-  },
-  {
+  }),
+  adminDynamicPost({
     key: "api-key-update",
     pattern: /^\/api\/api-keys\/(\d+)\/update$/,
-    methods: ["POST"],
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
-    adminRequired: true,
     routeDependencies: ["apiKeyHashPepper"],
-    requestAttribution: null,
-  },
-  {
+  }),
+  adminDynamicPost({
     key: "api-key-deactivate",
     pattern: /^\/api\/api-keys\/(\d+)\/deactivate$/,
-    methods: ["POST"],
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
-    adminRequired: true,
     routeDependencies: [],
-    requestAttribution: null,
-  },
-  {
+  }),
+  adminDynamicPost({
     key: "api-key-rotate",
     pattern: /^\/api\/api-keys\/(\d+)\/rotate$/,
-    methods: ["POST"],
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
-    adminRequired: true,
     routeDependencies: ["apiKeyHashPepper"],
-    requestAttribution: null,
-  },
-  {
+  }),
+  adminDynamicPost({
     key: "api-key-request-reject",
     pattern: /^\/api\/api-key-requests-admin\/([^/]+)\/reject$/,
-    methods: ["POST"],
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
-    adminRequired: true,
     routeDependencies: [],
-    requestAttribution: null,
-  },
-  {
+  }),
+  adminDynamicPost({
     key: "api-key-request-release-claim",
     pattern: /^\/api\/api-key-requests-admin\/([^/]+)\/release-claim$/,
-    methods: ["POST"],
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
-    adminRequired: true,
     routeDependencies: [],
-    requestAttribution: null,
-  },
-  {
+  }),
+  adminDynamic({
     key: "admin-telegram-chat",
     pattern: /^\/api\/admin-telegram-chat\/(-?\d+)$/,
-    methods: ["GET"],
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
-    adminRequired: true,
+    methods: ["GET"] as const,
     routeDependencies: [],
-    requestAttribution: null,
-  },
+  }),
 ] as const satisfies readonly DynamicEndpointDescriptor[];
 
 export function findDynamicEndpointDescriptor(path: string): DynamicEndpointDescriptor | null {

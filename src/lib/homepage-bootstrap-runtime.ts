@@ -1,5 +1,4 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { isRecord } from "@shared/lib/type-guards";
 import { normalizeApiMeta, type ApiMeta } from "@/lib/api";
 import {
   FRONTEND_API_QUERY_RUNTIME_REGISTRY,
@@ -10,10 +9,7 @@ import {
 // Zod out of the inline-hydration bundle.
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
-  isSeedableQuery,
-  normalizeSource,
-  normalizeTimestamp,
-  queryUpdatedAtMs,
+  makeBootstrapCodec,
 } from "@/lib/homepage-bootstrap-shared";
 
 export const HOMEPAGE_BOOTSTRAP_SCRIPT_ID = "pharos-homepage-bootstrap";
@@ -49,71 +45,20 @@ export interface HomepageBootstrapPayload {
   queries: Partial<Record<HomepageBootstrapQueryId, HomepageBootstrapQuery>>;
 }
 
-function normalizeQuery(
-  id: HomepageBootstrapQueryId,
-  raw: unknown,
-  fallbackPath: string,
-): HomepageBootstrapQuery | null {
-  if (!isRecord(raw) || raw.id !== id) {
-    return null;
-  }
-
-  const fetchedAt = normalizeTimestamp(raw.fetchedAt);
-  if (fetchedAt == null || !("data" in raw)) {
-    return null;
-  }
-
-  return {
-    id,
-    path: typeof raw.path === "string" && raw.path ? raw.path : fallbackPath,
-    fetchedAt,
-    data: raw.data,
-    meta: raw.meta == null ? null : normalizeApiMeta(raw.meta),
-  };
-}
+const homepageBootstrapCodec = makeBootstrapCodec<HomepageBootstrapQueryId, ApiMeta>({
+  descriptors: HOMEPAGE_BOOTSTRAP_DESCRIPTORS,
+  normalizeMeta: normalizeApiMeta,
+});
 
 export function normalizeHomepageBootstrapPayload(raw: unknown): HomepageBootstrapPayload | null {
-  if (!isRecord(raw) || raw.version !== HOMEPAGE_BOOTSTRAP_VERSION) {
-    return null;
-  }
-
-  const generatedAt = normalizeTimestamp(raw.generatedAt);
-  if (generatedAt == null || !isRecord(raw.queries)) {
-    return null;
-  }
-
-  const queries: HomepageBootstrapPayload["queries"] = {};
-  for (const { id, descriptor } of HOMEPAGE_BOOTSTRAP_DESCRIPTORS) {
-    const normalized = normalizeQuery(id, raw.queries[id], descriptor.path);
-    if (normalized) {
-      queries[id] = normalized;
-    }
-  }
-
-  return {
-    version: HOMEPAGE_BOOTSTRAP_VERSION,
-    generatedAt,
-    source: normalizeSource(raw.source),
-    queries,
-  };
+  return homepageBootstrapCodec.normalizePayload(raw);
 }
 
 export function countSeedableHomepageBootstrapQueries(
   payload: HomepageBootstrapPayload | null,
   nowMs = Date.now(),
 ): number {
-  if (!payload) {
-    return 0;
-  }
-
-  let count = 0;
-  for (const { id, descriptor } of HOMEPAGE_BOOTSTRAP_DESCRIPTORS) {
-    const query = payload.queries[id];
-    if (query && isSeedableQuery(query, descriptor, nowMs)) {
-      count += 1;
-    }
-  }
-  return count;
+  return homepageBootstrapCodec.countSeedable(payload, nowMs);
 }
 
 export function seedHomepageBootstrapQueries(
@@ -121,27 +66,7 @@ export function seedHomepageBootstrapQueries(
   payload: HomepageBootstrapPayload | null,
   nowMs = Date.now(),
 ): number {
-  if (!payload) {
-    return 0;
-  }
-
-  let seeded = 0;
-  for (const { id, descriptor } of HOMEPAGE_BOOTSTRAP_DESCRIPTORS) {
-    const query = payload.queries[id];
-    if (!query) continue;
-    if (!isSeedableQuery(query, descriptor, nowMs)) continue;
-
-    queryClient.setQueryData(
-      descriptor.queryKey,
-      {
-        data: query.data,
-        meta: query.meta,
-      },
-      { updatedAt: queryUpdatedAtMs(query.fetchedAt) },
-    );
-    seeded += 1;
-  }
-  return seeded;
+  return homepageBootstrapCodec.seedQueries(queryClient, payload, nowMs);
 }
 
 export function readHomepageBootstrapPayloadFromDocument(): HomepageBootstrapPayload | null {

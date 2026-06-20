@@ -775,6 +775,14 @@ export function resolveL2BeatProjectId(chainId: string): keyof typeof L2BEAT_CHA
   return (L2BEAT_CHAIN_ALIASES as Partial<Record<string, keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT>>)[chainId] ?? null;
 }
 
+function resolveL2BeatSnapshot(
+  chainId: string,
+): { projectId: keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT; snapshot: L2BeatChainRiskSnapshot } | null {
+  const projectId = resolveL2BeatProjectId(chainId);
+  if (!projectId) return null;
+  return { projectId, snapshot: L2BEAT_CHAIN_RISK_SNAPSHOT[projectId] };
+}
+
 export function computeL2BeatRiskScore(snapshot: L2BeatChainRiskSnapshot): number {
   const total = L2BEAT_CHAIN_RISK_FIELDS.reduce((sum, field) => {
     return sum + L2BEAT_RISK_SENTIMENT_SCORES[snapshot.risks[field].sentiment];
@@ -789,13 +797,13 @@ export function computeL2BeatChainEnvironmentScore(snapshot: L2BeatChainRiskSnap
 }
 
 export function getL2BeatChainEnvironmentAssessment(chainId: string): L2BeatChainEnvironmentAssessment | null {
-  const projectId = resolveL2BeatProjectId(chainId);
-  if (!projectId) return null;
+  const resolved = resolveL2BeatSnapshot(chainId);
+  if (!resolved) return null;
 
-  const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
+  const { projectId, snapshot } = resolved;
   const stageScore = L2BEAT_STAGE_SCORES[snapshot.stage];
   const riskScore = computeL2BeatRiskScore(snapshot);
-  const score = Math.round(stageScore * L2BEAT_STAGE_WEIGHT + riskScore * L2BEAT_RISK_WEIGHT);
+  const score = computeL2BeatChainEnvironmentScore(snapshot);
 
   return {
     source: "l2beat",
@@ -813,10 +821,10 @@ export function getL2BeatChainEnvironmentAssessment(chainId: string): L2BeatChai
 }
 
 export function getL2BeatSafetyScoreAudit(chainId: string): L2BeatSafetyScoreAudit | null {
-  const projectId = resolveL2BeatProjectId(chainId);
-  if (!projectId) return null;
+  const resolved = resolveL2BeatSnapshot(chainId);
+  if (!resolved) return null;
 
-  const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
+  const { projectId, snapshot } = resolved;
   const stage: L2BeatStage = snapshot.stage;
   const chainEnvironmentScore = computeL2BeatChainEnvironmentScore(snapshot);
   const stageSupportsStage1Tier = L2BEAT_STAGE_SCORES[stage] >= L2BEAT_STAGE_SCORES["Stage 1"];

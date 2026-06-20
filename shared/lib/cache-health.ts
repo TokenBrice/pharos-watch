@@ -1,5 +1,5 @@
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "./status-thresholds";
-import type { CacheStatus } from "../types/status";
+import type { CacheStatus, StatusHealthValue } from "../types/status";
 
 export function getCacheFreshnessRatio(
   cache: Pick<CacheStatus, "ageSeconds" | "maxAge">,
@@ -12,7 +12,7 @@ export function getCacheFreshnessRatio(
 
 export function getCacheFreshnessStatus(
   cache: Pick<CacheStatus, "ageSeconds" | "maxAge">,
-): "healthy" | "degraded" | "stale" {
+): StatusHealthValue {
   const ratio = getCacheFreshnessRatio(cache);
   if (ratio == null) return "stale";
   if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale) return "stale";
@@ -20,7 +20,7 @@ export function getCacheFreshnessStatus(
   return "healthy";
 }
 
-export function getCacheImpactStatus(cache: CacheStatus): "healthy" | "degraded" | "stale" {
+export function getCacheImpactStatus(cache: CacheStatus): StatusHealthValue {
   const freshnessStatus = getCacheFreshnessStatus(cache);
   if (freshnessStatus === "stale") return "stale";
   if (freshnessStatus === "degraded" || cache.mode === "cached-fallback") {

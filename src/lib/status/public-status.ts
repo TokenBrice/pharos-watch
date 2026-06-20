@@ -1,6 +1,6 @@
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { getPublicMintBurnStatus, getStatusSeverity, type PublicStatusTone } from "@shared/lib/public-health";
-import type { HealthResponse } from "@shared/types";
+import type { HealthResponse, StatusHealthValue } from "@shared/types";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 
 export interface PublicCacheSummary {
@@ -88,8 +88,8 @@ export type PublicDivergenceNotice =
   | { kind: "both-degraded-different-severity"; detail: string };
 
 export function getPublicDivergenceNotice(
-  healthStatus: "healthy" | "degraded" | "stale",
-  probeStatus: "healthy" | "degraded" | "stale",
+  healthStatus: StatusHealthValue,
+  probeStatus: StatusHealthValue,
 ): PublicDivergenceNotice {
   const SEV = { healthy: 0, degraded: 1, stale: 2 } as const;
   const h = SEV[healthStatus];

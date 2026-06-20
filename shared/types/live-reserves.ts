@@ -185,48 +185,6 @@ export interface StablecoinReservesResponse {
   sync?: ReserveSyncStateView;
 }
 
-export interface ReserveCompositionHistoryWriteGap {
-  stablecoinId: string;
-  fetchedAt: number;
-  attemptId: string;
-  compositionHistoryMissing: boolean;
-  attemptHistoryMissing: boolean;
-}
-
-export interface ReserveCompositionOverview {
-  configuredCoins: number;
-  freshCoins: number;
-  staleCoins: number;
-  missingCoins: number;
-  degradedCoins: number;
-  errorCoins: number;
-  corruptCoins: number;
-  independentFreshEligible: number;
-  independentFreshUnverified: number;
-  staticValidatedFresh: number;
-  weakProbeFresh: number;
-  writeTimeoutUncertain: number;
-  deferredCoins: number;
-  runBudgetTruncated: boolean;
-  deferredAt: number | null;
-  nextCursorStablecoinId: string | null;
-  cursorTailState: "recording" | "incomplete" | "complete" | null;
-  cursorTailError: string | null;
-  cursorRecordedAt: number | null;
-  cursorTailCompletedAt: number | null;
-  cursorTailFailedAt: number | null;
-  runBudgetTruncationCount: number;
-  historyWriteGaps: ReserveCompositionHistoryWriteGap[];
-  /**
-   * Coins whose adapter is classified as `independent` but whose latest source
-   * has been stuck in `degraded` or `error` with the last successful snapshot
-   * older than the live-reserve persistent-stale threshold.
-   */
-  persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }>;
-  lastSuccessAt: number | null;
-  oldestFreshAgeSec: number | null;
-}
-
 const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
 
 export const ReserveCompositionHistoryWriteGapSchema = z.object({
@@ -235,7 +193,8 @@ export const ReserveCompositionHistoryWriteGapSchema = z.object({
   attemptId: z.string(),
   compositionHistoryMissing: z.boolean(),
   attemptHistoryMissing: z.boolean(),
-}) satisfies z.ZodType<ReserveCompositionHistoryWriteGap>;
+});
+export type ReserveCompositionHistoryWriteGap = z.infer<typeof ReserveCompositionHistoryWriteGapSchema>;
 
 export const ReserveCompositionOverviewSchema = z.object({
   configuredCoins: z.number(),
@@ -261,13 +220,19 @@ export const ReserveCompositionOverviewSchema = z.object({
   cursorTailFailedAt: z.number().nullable(),
   runBudgetTruncationCount: z.number(),
   historyWriteGaps: z.array(ReserveCompositionHistoryWriteGapSchema),
+  /**
+   * Coins whose adapter is classified as `independent` but whose latest source
+   * has been stuck in `degraded` or `error` with the last successful snapshot
+   * older than the live-reserve persistent-stale threshold.
+   */
   persistentlyStaleIndependentCoins: z.array(z.object({
     stablecoinId: z.string(),
     ageSec: z.number(),
   })),
   lastSuccessAt: z.number().nullable(),
   oldestFreshAgeSec: z.number().nullable(),
-}) satisfies z.ZodType<ReserveCompositionOverview>;
+});
+export type ReserveCompositionOverview = z.infer<typeof ReserveCompositionOverviewSchema>;
 
 export const LiveReserveRedemptionTelemetrySchema: z.ZodType<LiveReserveRedemptionTelemetry> = z
   .object({

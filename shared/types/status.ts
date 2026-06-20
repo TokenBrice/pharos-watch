@@ -38,7 +38,7 @@ export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
 export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
 const StatusHealthOrUnknownSchema = z.enum([...StatusHealthValueSchema.options, "unknown"]);
-export type StatusHealthOrUnknown = StatusHealthValue | "unknown";
+export type StatusHealthOrUnknown = z.infer<typeof StatusHealthOrUnknownSchema>;
 
 export const CRON_RUN_STATUS_VALUES = [
   "ok",

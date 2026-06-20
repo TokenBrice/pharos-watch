@@ -5,6 +5,8 @@
  * available in both Worker and Pages runtimes.
  */
 
+import { base64UrlToBytes } from "./base64url";
+
 export interface JwtVerifyOptions {
   token: string;
   aud: string;
@@ -56,22 +58,9 @@ export function _resetJwksCache(): void {
   jwksCache.clear();
 }
 
-function base64urlDecode(input: string): Uint8Array {
-  let base64 = input.replace(/-/g, "+").replace(/_/g, "/");
-  while (base64.length % 4 !== 0) {
-    base64 += "=";
-  }
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
 function decodeJsonPart<T>(part: string): T | null {
   try {
-    const decoded = base64urlDecode(part);
+    const decoded = base64UrlToBytes(part);
     const text = new TextDecoder().decode(decoded);
     return JSON.parse(text) as T;
   } catch {
@@ -218,7 +207,7 @@ export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolea
 
   try {
     const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
-    const signature = base64urlDecode(signatureB64);
+    const signature = base64UrlToBytes(signatureB64);
     return await crypto.subtle.verify(
       algorithm.name,
       cryptoKey,

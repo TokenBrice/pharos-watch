@@ -16,7 +16,7 @@ export function groupCostsByCategory(items: readonly CostLineItem[]): CostCatego
   return CATEGORY_ORDER.flatMap((category) => {
     const subset = items.filter((item) => item.category === category);
     if (subset.length === 0) return [];
-    const subtotal = subset.reduce((sum, item) => sum + item.usd_per_month, 0);
+    const subtotal = computeCostsTotal(subset);
     return [{ category, items: subset, subtotal }];
   });
 }
