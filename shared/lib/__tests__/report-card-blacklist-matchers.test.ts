@@ -256,6 +256,37 @@ describe("resolveBlacklistStatuses variant inheritance", () => {
     expect(resolved.get("child")).toBe("possible");
   });
 
+  it("uses the parent's live reserves when resolving variant inheritance", () => {
+    const metas = [
+      {
+        id: "parent",
+        name: "Parent",
+        symbol: "PAR",
+        flags: { governance: "centralized-dependent" as const },
+        reserves: [{ name: "ETH", pct: 100, risk: "very-low" as const }],
+      },
+      {
+        id: "child",
+        name: "Child",
+        symbol: "CHD",
+        flags: { governance: "centralized-dependent" as const, navToken: true },
+        variantOf: "parent",
+        variantKind: "savings-passthrough" as const,
+        pegReferenceId: "parent",
+        reserves: [{ name: "ETH", pct: 100, risk: "very-low" as const }],
+      },
+    ];
+    const reserveSlicesById = new Map([
+      ["parent", [{ name: "DAI reserves", pct: 100, risk: "low" as const }]],
+      ["child", [{ name: "ETH", pct: 100, risk: "very-low" as const }]],
+    ]);
+
+    const resolved = resolveBlacklistStatuses(metas as never, { reserveSlicesById });
+
+    expect(resolved.get("parent")).toBe("inherited");
+    expect(resolved.get("child")).toBe("inherited");
+  });
+
   it("does not coerce a variant to inherited when the parent is not blacklistable", () => {
     const metas = [
       {
