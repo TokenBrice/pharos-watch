@@ -5,6 +5,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-he
 import {
   CONFIGURED_COINS,
   SYNC_ORDERED_CONFIGURED_COINS,
+  breakerKeyForConfig,
   orderConfiguredCoinsForSync,
   type ConfiguredCoin,
 } from "../sync-live-reserves-shared";
@@ -53,6 +54,8 @@ interface RunMetadata {
   cursorRecordedAt?: number | null;
   cursorTailCompletedAt?: number | null;
   runBudgetTruncationCount?: number;
+  artifactCleanup?: { breakerCacheDeleted?: number };
+  breakerKeys?: string[];
 }
 
 function mockAdapterRegistry(
@@ -229,7 +232,15 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
 
     activeRun = 2;
     nowMs = 1_700_100_000_000;
-    const resumedDb = mockD1([cursorTable(cursorValue)]);
+    const headBreakerCacheKey = `circuit:${breakerKeyForConfig(SYNC_ORDERED_CONFIGURED_COINS[0]!.liveReservesConfig!)}`;
+    const staleBreakerCacheKey = "circuit:live-reserves:removed-adapter";
+    const resumedDb = mockD1([
+      cursorTable(cursorValue),
+      {
+        match: "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
+        rows: [{ key: headBreakerCacheKey }, { key: staleBreakerCacheKey }],
+      },
+    ]);
     const secondRun = await syncLiveReserves(resumedDb, new AbortController().signal, {}, undefined, TIGHT_BUDGET);
     const secondMetadata = parseMetadata(secondRun?.metadata);
 
@@ -242,6 +253,14 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(secondMetadata.synced).toBe(CONFIGURED_COIN_COUNT - cursorIndex);
     expect(secondMetadata.total).toBe(CONFIGURED_COIN_COUNT - cursorIndex);
     expect(secondMetadata.deferredCoins).toBe(0);
+    expect(secondMetadata.breakerKeys).not.toContain(headBreakerCacheKey.slice("circuit:".length));
+    expect(secondMetadata.artifactCleanup?.breakerCacheDeleted).toBe(1);
+
+    const breakerDeletes = resumedDb.getHistory().filter((entry) => (
+      entry.sql.includes("DELETE FROM cache WHERE key")
+    ));
+    expect(breakerDeletes.some((entry) => entry.binds.includes(headBreakerCacheKey))).toBe(false);
+    expect(breakerDeletes.some((entry) => entry.binds.includes(staleBreakerCacheKey))).toBe(true);
 
     // The evidence-class ordering keeps independents at the queue head, so a
     // truncation this early defers an independent coin — and the cursored

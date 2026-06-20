@@ -59,6 +59,9 @@ export function orderConfiguredCoinsForSync(
 }
 
 export const SYNC_ORDERED_CONFIGURED_COINS = orderConfiguredCoinsForSync(CONFIGURED_COINS);
+export const CONFIGURED_LIVE_RESERVE_BREAKER_KEYS = new Set(
+  CONFIGURED_COINS.map((coin) => breakerKeyForConfig(coin.liveReservesConfig!)),
+);
 
 export interface ReserveAttemptFailureSummary {
   source: "primary" | "fallback";
