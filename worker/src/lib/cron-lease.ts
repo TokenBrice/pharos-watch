@@ -277,6 +277,7 @@ async function listStaleScheduledSlotExecutions(
   db: D1Database,
   slotKey: string,
   staleBefore: number,
+  excludeSlotStartedAt: number,
 ): Promise<StaleSlotExecutionRow[]> {
   const rows = await runWithOverloadRetry(() =>
     db
@@ -284,11 +285,12 @@ async function listStaleScheduledSlotExecutions(
         `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at
            FROM cron_slot_executions
            WHERE slot_key = ?
+             AND slot_started_at != ?
              AND state = 'running'
              AND updated_at < ?
            ORDER BY slot_started_at ASC`,
       )
-      .bind(slotKey, staleBefore)
+      .bind(slotKey, excludeSlotStartedAt, staleBefore)
       .all<StaleSlotExecutionRow>(),
   );
   return rows.results ?? [];
@@ -505,7 +507,7 @@ async function claimScheduledSlotExecution(
 ): Promise<"claimed" | "duplicate" | "running"> {
   const nowSec = Math.floor(Date.now() / 1000);
   const staleBefore = nowSec - staleAfterSec;
-  const staleSlots = await listStaleScheduledSlotExecutions(db, slotKey, staleBefore);
+  const staleSlots = await listStaleScheduledSlotExecutions(db, slotKey, staleBefore, slotStartedAt);
   for (const staleSlot of staleSlots) {
     const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
     await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
