@@ -73,7 +73,13 @@ describe("loadYieldHistorySnapshots", () => {
     insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: null, recordedAt: 170, sourceTvlUsd: 40 });
     insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: null, recordedAt: 190, sourceTvlUsd: 50 });
 
-    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b"], 1_000, 300);
+    const sourceKeysByStablecoin = new Map<string, Set<string | null>>([
+      ["coin-a", new Set(["source-a", "source-b"])],
+      ["coin-b", new Set([null])],
+    ]);
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b"], 1_000, 300, {
+      sourceKeysByStablecoin,
+    });
 
     expect(snapshots.prevTvlRows.map((row) => ({
       stablecoinId: row.stablecoin_id,
@@ -141,14 +147,15 @@ describe("loadYieldHistorySnapshots", () => {
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, isBest: 1, sourceTvlUsd: 20 });
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, isBest: 0, sourceTvlUsd: 30 });
 
-    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300);
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300, {
+      sourceKeysByStablecoin: new Map([["coin-a", new Set(["source-a"])]]),
+    });
 
     expect(snapshots.prevTvlRows.map((row) => ({
       sourceKey: row.source_key,
       recordedAt: row.recorded_at,
     }))).toEqual([
       { sourceKey: "source-a", recordedAt: 200 },
-      { sourceKey: "source-b", recordedAt: 150 },
     ]);
     expect(snapshots.prevBestRows.map((row) => ({
       sourceKey: row.source_key,

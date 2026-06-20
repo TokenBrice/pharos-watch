@@ -243,13 +243,25 @@ export async function syncYieldData(
     },
   });
   const resolvedCountByCoin = new Map<string, number>();
+  const resolvedSourceKeysByCoin = new Map<string, Set<string | null>>();
   for (const entry of resolvedWithYield) {
+    const resolvedYield = entry.yield;
+    if (!resolvedYield) continue;
     resolvedCountByCoin.set(entry.id, (resolvedCountByCoin.get(entry.id) ?? 0) + 1);
+    const sourceKeySet = resolvedSourceKeysByCoin.get(entry.id) ?? new Set<string | null>();
+    sourceKeySet.add(resolvedYield.sourceKey);
+    resolvedSourceKeysByCoin.set(entry.id, sourceKeySet);
+  }
+  for (const [stablecoinId, sourceCount] of resolvedCountByCoin) {
+    if (sourceCount <= 1) {
+      resolvedSourceKeysByCoin.get(stablecoinId)?.add(null);
+    }
   }
 
   const historySnapshots = resolvedIds.length > 0
     ? await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec, {
         signal,
+        sourceKeysByStablecoin: resolvedSourceKeysByCoin,
         onProgress: async (progress) => {
           await reportYieldProgress("history-loading", "Loading yield history snapshots", "yield-history", {
             itemsDone: progress.resolvedIdsDone,

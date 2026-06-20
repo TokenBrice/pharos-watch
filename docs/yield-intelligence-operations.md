@@ -30,6 +30,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - `sync-yield-supplemental` metadata now reports raw candidate count, deduped candidate count, and dropped-row count so silent row loss is visible in cron history.
 - read-time `yield-rankings` freshness warnings are now source-cadence-aware: hourly families trip after three hourly publish cycles, supplemental protocol-API plus optional Aave/Compound rows wait 6 hours so they do not false-positive during their normal 4-hour cache cycle, `price-derived` rows wait 36 hours because their observations come from daily `supply_history` snapshots, and derived-source comparison anchors trip after 14 days.
 - hourly publication writes selected-source decision rows after D1 staging and before cache publication. The decision ledger is bounded to 4 KB per selected row and records compact selected, rejected, and retained-alternative reasons for operator debugging.
+- hourly publication loads previous-best and previous-TVL history through indexed point reads scoped to the coins and source keys resolved in the current run. It does not materialize broad previous-row candidate sets before evaluation.
 - Protocol API families use an 8 second per-request timeout, no retries, and a 25 second family budget:
   - `Morpho`
   - `Pendle`
