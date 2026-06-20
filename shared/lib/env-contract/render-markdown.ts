@@ -1,8 +1,8 @@
 import type {
   EnvBindingDefinition,
   EnvRuntimeName,
-} from "./types";
-import { ENV_BINDINGS } from "./registry";
+} from "./types.ts";
+import { ENV_BINDINGS } from "./registry.ts";
 
 function escapeMarkdownCell(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");

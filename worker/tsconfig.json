@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "types": ["@cloudflare/workers-types", "node"],
+    "allowImportingTsExtensions": true,
     "paths": {
       "@shared/*": ["../shared/*"],
       "@shared/data/*": ["../shared/data/*"]

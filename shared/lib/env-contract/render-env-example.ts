@@ -1,8 +1,8 @@
-import type { EnvExampleSection } from "./types";
+import type { EnvExampleSection } from "./types.ts";
 import {
   ENV_BINDINGS,
   compareRuntimeOrder,
-} from "./registry";
+} from "./registry.ts";
 
 const ENV_EXAMPLE_SECTION_ORDER: readonly {
   comments: readonly string[];

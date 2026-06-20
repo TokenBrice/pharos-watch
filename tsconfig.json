@@ -18,6 +18,7 @@
         "name": "next"
       }
     ],
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"],
       "@data/*": ["./data/*"],
