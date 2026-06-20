@@ -1,3 +1,8 @@
+import {
+  getScheduledSlotPlanBudgetEntries,
+  SCHEDULED_SLOT_PLANS,
+} from "@shared/lib/scheduled-runner-registry";
+import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
@@ -153,20 +158,31 @@ async function listStaleScheduledSlotExecutions(
 async function listProgressRowsForStaleSlot(
   db: D1Database,
   slotStartedAt: number,
+  jobs: readonly string[],
 ): Promise<StaleSlotProgressRow[]> {
+  if (jobs.length === 0) {
+    return [];
+  }
+  const jobPlaceholders = jobs.map(() => "?").join(", ");
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT job, started_at, updated_at, stage, lease_owner, slot_started_at
            FROM cron_run_progress
            WHERE slot_started_at = ?
+             AND job IN (${jobPlaceholders})
              AND lease_owner IS NOT NULL
            ORDER BY updated_at DESC`,
       )
-      .bind(slotStartedAt)
+      .bind(slotStartedAt, ...jobs)
       .all<StaleSlotProgressRow>(),
   );
   return (rows.results ?? []).filter((row) => typeof row.lease_owner === "string" && row.lease_owner.length > 0);
+}
+
+function getExpectedJobsForScheduledSlot(slotKey: string): readonly string[] {
+  const plan = SCHEDULED_SLOT_PLANS[slotKey as CronScheduleKey];
+  return plan ? getScheduledSlotPlanBudgetEntries(plan) : [];
 }
 
 async function getCronLeaseForJob(db: D1Database, job: string): Promise<StaleSlotLeaseRow | null> {
@@ -233,7 +249,11 @@ async function reconcileStaleSlotArtifacts(
     leasesCleared: 0,
     abandonedJobs: [],
   };
-  const progressRows = await listProgressRowsForStaleSlot(db, slot.slot_started_at);
+  const progressRows = await listProgressRowsForStaleSlot(
+    db,
+    slot.slot_started_at,
+    getExpectedJobsForScheduledSlot(slot.slot_key),
+  );
 
   for (const progress of progressRows) {
     const lease = await getCronLeaseForJob(db, progress.job);
