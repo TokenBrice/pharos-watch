@@ -11,6 +11,7 @@ vi.mock("../../lib/alchemy-logs", () => ({
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
 
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { handleBackfillMintBurn } from "../backfill-mint-burn";
 import {
   fetchAlchemyLogs,
@@ -44,8 +45,12 @@ function makeDb(): D1Database {
 }
 
 describe("handleBackfillMintBurn", () => {
+  const originalFrozenIds = new Set(FROZEN_IDS);
+
   beforeEach(() => {
     vi.clearAllMocks();
+    FROZEN_IDS.clear();
+    for (const id of originalFrozenIds) FROZEN_IDS.add(id);
   });
 
   it("requires admin auth", async () => {
@@ -83,6 +88,35 @@ describe("handleBackfillMintBurn", () => {
     };
     expect(body.configKey).toBe("ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7");
     expect(body.selectedSymbol).toBe("USDT");
+    expect(body.selectionMode).toBe("auto");
+    expect(body.autoSelectedReason).toBe("critical-first-most-behind");
+  });
+
+  it("skips frozen configs during automatic selection", async () => {
+    FROZEN_IDS.add("usdt-tether");
+
+    const response = await handleBackfillMintBurn(
+      makeDb(),
+      makeApiUrl("/api/backfill-mint-burn"),
+      true,
+      makeApiRequest("/api/backfill-mint-burn", {
+        method: "POST",
+        adminKey: "secret",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }),
+      "alchemy-key",
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      configKey: string;
+      selectedSymbol: string;
+      selectionMode: string;
+      autoSelectedReason: string | null;
+    };
+    expect(body.configKey).toBe("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+    expect(body.selectedSymbol).toBe("USDC");
     expect(body.selectionMode).toBe("auto");
     expect(body.autoSelectedReason).toBe("critical-first-most-behind");
   });
