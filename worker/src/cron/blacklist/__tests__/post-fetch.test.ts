@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import { D1_BATCH_SIZE } from "../../../lib/constants";
 import type { BlacklistRunBudget } from "../run-budget";
 import type { BlacklistRow } from "../shared";
 
@@ -114,6 +115,70 @@ describe("processFetchedBlacklistRows", () => {
       expect.objectContaining({
         assetPriceUsd: null,
         latestRows: [duplicateRow],
+      }),
+    );
+  });
+
+  it("chunks duplicate repair latest-state lookups at the D1 batch limit", async () => {
+    const duplicateRows = Array.from({ length: 101 }, (_, index) => makeBlacklistRow({
+      id: `ethereum-0xduplicate-chunk-${index}`,
+      stablecoin: "USDT",
+      chain_id: "ethereum",
+      chain_name: "Ethereum",
+      event_type: "blacklist",
+      address: `0x${(index + 1).toString(16).padStart(40, "0")}`,
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+    }) as BlacklistRow);
+    const db = mockD1([
+      {
+        match: "SELECT id FROM blacklist_events WHERE id IN",
+        rows: duplicateRows.map((row) => ({ id: row.id })),
+      },
+      {
+        match: "SELECT * FROM blacklist_events",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    const batchSizes: number[] = [];
+    const originalBatch = db.batch.bind(db);
+    db.batch = (async (statements: D1PreparedStatement[]) => {
+      batchSizes.push(statements.length);
+      if (statements.length > D1_BATCH_SIZE) {
+        throw new Error(`simulated D1 batch limit exceeded: ${statements.length} statements > ${D1_BATCH_SIZE}`);
+      }
+      return originalBatch(statements);
+    }) as D1Database["batch"];
+    vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
+      updated: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
+
+    const result = await processFetchedBlacklistRows({
+      db,
+      config,
+      rows: duplicateRows,
+      chainLabel: "evm",
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      trongridApiKey: null,
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget(),
+    });
+
+    expect(result.insertedRows).toBe(0);
+    expect(batchSizes).toEqual([D1_BATCH_SIZE, 1]);
+    expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(
+      db,
+      config,
+      duplicateRows,
+      expect.objectContaining({
+        assetPriceUsd: null,
       }),
     );
   });
