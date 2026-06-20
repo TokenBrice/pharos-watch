@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 43 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The digest-trigger poll is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 45 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The digest-trigger poll is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write. The `0 8 * * *` daily fallback additionally requires the `stablecoins` cache row to be written at or after that scheduled slot start before it can consume write-once daily artifacts.
 
@@ -1208,7 +1208,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, stale progress/lease artifacts, latest cron event markers, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 43 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections`. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, stale progress/lease artifacts, latest cron event markers, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 45 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections`. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
 
 Default reads use the raw status snapshot produced by `status-self-check` and recompute only the lightweight response wrappers, current status-state/probe/timeline views, and admin supplements. Snapshot age is bounded to 30 minutes; operators can force the previous live raw computation path with `GET /api/status?refresh=live`.
 
@@ -1224,6 +1224,7 @@ The `probe` object returned by `/api/status` is the latest `status_probe_runs` a
 | `stability-index`               | 1,800s (30min)   | `26,56 * * * *`                                   |
 | `compute-dews`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
 | `project-tape`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
+| `cron-slot-sweeper`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `status-self-check`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `cron-staleness-watchdog`       | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
@@ -1249,6 +1250,7 @@ The `probe` object returned by `/api/status` is the latest `status_probe_runs` a
 | `sync-live-reserves`            | 14,400s (4h)     | `11 */4 * * *`                                    |
 | `sync-redemption-backstops`     | 14,400s (4h)     | `11 */4 * * *`                                    |
 | `sync-kinesis-supply`           | 14,400s (4h)     | `11 */4 * * *`                                    |
+| `reserve-post-sync-watchdog`    | 14,400s (4h)     | `11 */4 * * *`                                    |
 | `sync-bluechip`                 | 86,400s (24h)    | `5 8 * * *`                                       |
 | `daily-digest`                  | 86,400s (24h)    | `5 8 * * *`                                       |
 | `weekly-recap`                  | 604,800s (7d)    | `5 8 * * *`                                       |

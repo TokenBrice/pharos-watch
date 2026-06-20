@@ -121,6 +121,7 @@ Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses 
 | -------------------------------- | ------------- | -------------------------------------------- |
 | `GET /api/stablecoins`           | 600           | `createCacheHandler`                         |
 | `GET /api/chains`                | 1800          | `worker/src/api/chains.ts`                   |
+| `GET /api/events`                | 600           | `worker/src/api/events.ts`                   |
 | `GET /api/bluechip-ratings`      | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`           | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`        | 3600          | Manual injection after live safety hydration |
@@ -2677,8 +2678,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.292",
-    "currentVersion": "8.292",
+    "version": "8.293",
+    "currentVersion": "8.293",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -3526,7 +3527,7 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 ```json
 {
   "profile": "treasury",
-  "engineVersion": "selector-v1.3",
+  "engineVersion": "selector-v1.9",
   "datasetHash": "<content hash>",
   "timestamp": 1715000000,
   "input": {
@@ -3592,7 +3593,7 @@ Stores a Stablecoin Picker output JSON under a server-recomputed `sid`. Idempote
 
 **Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
 
-Share-link privacy property: the stored payload contains the Picker answers and output rows with free-form selector prose removed, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact and that the KV entry is retained for 5 years.
+Share-link privacy property: the stored payload contains the Picker answers and output rows with free-form selector prose removed, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact. Unread KV entries expire after 90 days; the first successful read extends the entry to the full 5-year retention TTL.
 
 **Validation matrix:**
 
@@ -3612,9 +3613,10 @@ Share-link privacy property: the stored payload contains the Picker answers and 
 | 400    | Body parse error, unsupported JSON, missing required replay fields, malformed recommendation / coverage-warning basics, or semantic validation failure. |
 | 404    | Origin disallowed.                                                                                                                                      |
 | 405    | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment.                                                        |
+| 429    | Best-effort isolate-local write throttle exceeded (10 writes/minute/IP) or durable daily write quota exceeded (100 writes/day/IP).                      |
 | 413    | Payload exceeds 100 KB defensive cap.                                                                                                                   |
 | 500    | `SELECTOR_SNAPSHOTS` KV binding missing.                                                                                                                |
-| 503    | KV write throws transiently.                                                                                                                            |
+| 503    | KV write throws transiently, or the D1-backed daily quota store is missing/unavailable.                                                                  |
 
 ---
 

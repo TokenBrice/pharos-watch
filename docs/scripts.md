@@ -150,12 +150,13 @@ The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, a
 
 ## CI-Critical Scripts
 
-These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/safe-browsing-monitor.yml`) directly, or indirectly through `npm run build`:
+These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/safe-browsing-monitor.yml`, `.github/workflows/pharos-change-contract.yml`, and `.github/workflows/telegram-load.yml`) directly, or indirectly through `npm run build`:
 
 - `sync-digests.ts` in the consolidated Pages release job before the build artifact is created
 - `sync-depeg-events.ts` in the same Pages release path so `/depeg/<event>/` static params and feed/static exports use current confirmed events
 - `generate-public-datasets.ts` in the same Pages release path so `/datasets/*` and `/sheets/*` mirrors are generated from the selected API environment before `npm run build`
 - `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`
+- `generate-case-study-client-index.ts` via `npm run generate:case-study-client-index` / `npm run check:case-study-client-index` and `check:generated-artifacts`, so case-study client imports stay synchronized with authored case-study modules
 - `generate-docs-metadata.ts` via the same `prebuild` hook, immediately after `generate-sitemap-dates.ts`
 - `generate-depeg-event-search-data.ts` via the same `prebuild` hook, immediately after `generate-docs-metadata.ts`, so client command-palette search and related-incident rails use compact depeg indexes instead of bundling the full synced depeg archive
 - `generate-cemetery-dataset.ts` via the same `prebuild` hook, immediately after `generate-depeg-event-search-data.ts`
@@ -164,10 +165,10 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `generate-postman-collection.ts` via the same `prebuild` hook, immediately after `generate-homepage-bootstrap.ts`
 - `generate-openapi-spec.ts` via the same `prebuild` hook, immediately after `generate-postman-collection.ts`
 - `generate-llms-txt.ts` via the same `prebuild` hook, immediately after `generate-openapi-spec.ts`
-- `generate-markdown-exports.ts` via the `postbuild` hook, after `next build` creates `out/`
+- `generate-markdown-exports.ts` and `inline-homepage-critical-css.mjs` via the `postbuild` hook, after `next build` creates `out/`
 - `generate-stablecoin-per-coin-asset.ts --check` via `npm run check:stablecoin-data` when the stablecoin catalog guard validates generated per-coin source assets
 - `check:world-map` via `validate:prebuild` to fail if `public/maps/world-countries.svg` drifts from `scripts/maintenance/build-world-map-svg.ts`
-- `check:generated-artifacts` via `validate:prebuild` to fail if any generated artifact in `scripts/lib/automation-registry.mjs` drifts, including sitemap dates, docs metadata, depeg search data, Cemetery exports, homepage bootstrap payload shape, Postman exports, OpenAPI, `/llms.txt`, the stablecoin prevalidated registry, mechanism/editorial/case-study OG assets, and the generated block in `docs/api-reference.md`
+- `check:generated-artifacts` via `validate:prebuild` to fail if any generated artifact in `scripts/lib/automation-registry.mjs` drifts, including agent code map, sitemap dates, case-study client index, docs metadata, depeg search data, Cemetery exports, homepage bootstrap payload shape, Postman exports, OpenAPI, `/llms.txt`, stablecoin prevalidated registry, legacy stablecoin redirects, client registry, mechanism/editorial/case-study OG assets, and the generated block in `docs/api-reference.md`
 - `check:provider-resilience` via `validate:prebuild` to fail when a registered external-provider surface loses timeout, response-body, circuit, or test coverage, or when a new production Worker file adds raw `fetch(...)` without a registry entry
 - `check:agent-doc-sync` via `validate:prebuild` to fail if top-level agent guidance files drift out of sync
 - `check:agent-skill-symlinks` via `validate:prebuild` to fail broken skill symlinks and require waivers for external skill links
