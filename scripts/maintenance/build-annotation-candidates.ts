@@ -123,13 +123,17 @@ function mapDepegCandidate(event: TapeEventLite): Candidate | null {
   };
 }
 
-function buildCoinIdResolver(coins: readonly StablecoinMeta[]): (symbolOrName: unknown) => string | null {
+export function buildCoinIdResolver(coins: readonly StablecoinMeta[]): (symbolOrName: unknown) => string | null {
   const byLabel = new Map<string, string | null>();
   const add = (label: string, coinId: string) => {
     const key = label.trim().toLowerCase();
     if (!key) return;
+    if (!byLabel.has(key)) {
+      byLabel.set(key, coinId);
+      return;
+    }
     const existing = byLabel.get(key);
-    byLabel.set(key, existing && existing !== coinId ? null : coinId);
+    if (existing !== coinId) byLabel.set(key, null);
   };
   for (const coin of coins) {
     add(coin.id, coin.id);
@@ -370,4 +374,6 @@ async function main(): Promise<void> {
   );
 }
 
-void main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  void main();
+}
