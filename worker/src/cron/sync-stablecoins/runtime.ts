@@ -98,6 +98,7 @@ export async function checkStablecoinsPriceStaleness(params: {
   stalenessWarning: boolean;
   stalenessSummary: StablecoinsStalenessSummary | null;
   blockedResult?: CronResult;
+  blockedReason?: "abort" | "severe-staleness";
 }> {
   let stalenessWarning = false;
   let stalenessSummary: StablecoinsStalenessSummary | null = null;
@@ -115,6 +116,7 @@ export async function checkStablecoinsPriceStaleness(params: {
         stalenessWarning,
         stalenessSummary,
         blockedResult: stalenessAbort,
+        blockedReason: "abort",
       };
     }
     const staleness = await detectPriceStaleness(params.db, params.assets, params.signal);
@@ -140,6 +142,7 @@ export async function checkStablecoinsPriceStaleness(params: {
         stalenessWarning,
         stalenessSummary,
         blockedResult: params.blockedResultFactory(stalenessSummary),
+        blockedReason: "severe-staleness",
       };
     }
   } catch (error) {
@@ -148,6 +151,7 @@ export async function checkStablecoinsPriceStaleness(params: {
         stalenessWarning,
         stalenessSummary,
         blockedResult: abortResult(params.signal, params.abortStage),
+        blockedReason: "abort",
       };
     }
     const prefix = params.failureLabel ?? "Staleness check";

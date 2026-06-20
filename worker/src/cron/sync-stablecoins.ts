@@ -133,7 +133,9 @@ export async function syncStablecoins(
     }),
   });
   if (stalenessCheck.blockedResult) {
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false, alertWebhookUrl);
+    if (stalenessCheck.blockedReason === "severe-staleness") {
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false, alertWebhookUrl);
+    }
     return stalenessCheck.blockedResult;
   }
   const { stalenessWarning, stalenessSummary } = stalenessCheck;
