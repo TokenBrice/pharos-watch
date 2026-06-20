@@ -553,6 +553,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
 - `worker/src/cron/cron-duration-watchdog.ts` - runCronDurationWatchdog
+- `worker/src/cron/cron-slot-sweeper.ts` - runCronSlotSweeper
 - `worker/src/cron/cron-staleness-watchdog.ts` - CronStalenessObservation, DetailWriteFailureObservation, evaluateCronStaleness, loadDetailWriteFailures, runCronStalenessWatchdog
 - `worker/src/cron/daily-digest.ts` - classifyRegime, generateDailyDigest
 - `worker/src/cron/daily-digest/collectors-history.ts` - collectCrossDayTrends, collectHistoricalContext, collectPsiContributors, collectTotalMcapAth
@@ -616,8 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
-- `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- ... 331 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 332 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -643,7 +643,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/api-json-body.ts` - RequestJsonSchemaOptions, parseOptionalRequestJsonObject, parseRequestJsonWithSchema
 - `worker/src/lib/api-key-admin.ts` - TrustedApiKeyAuditInput, TrustedApiKeyCreateInput, activateTrustedApiKey, createApiKey, createTrustedApiKey, deactivateApiKey
 - `worker/src/lib/api-key-auth.ts` - authenticateApiKey, authenticateApiKeyFromFreshCache, parseApiKeyToken
-- `worker/src/lib/api-key-core.ts` - API_KEY_AUTH_CACHE_MAX_ENTRIES, API_KEY_AUTH_CACHE_STALE_TTL_MS, API_KEY_AUTH_CACHE_TTL_MS, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES, API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER, API_KEY_TOKEN_PATTERN
+- `worker/src/lib/api-key-core.ts` - API_KEY_AUTH_CACHE_MAX_ENTRIES, API_KEY_AUTH_CACHE_TTL_MS, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES, API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER, API_KEY_TOKEN_PATTERN, API_KEY_TRAFFIC_CLASS_DEFAULT
 - `worker/src/lib/api-key-rate-limit.ts` - ApiKeyRateLimitDependencyCircuitSnapshot, checkApiKeyRateLimit, checkIsolateLocalApiKeyRateLimit, flushPendingApiKeyPrunes, isApiKeyRateLimitDependencyCircuitOpen, recordApiKeyRateLimitDependencyFailure
 - `worker/src/lib/api-keys.ts`
 - `worker/src/lib/api-methodology.ts` - MethodologyEnvelopeInput, buildMethodologyEnvelope
