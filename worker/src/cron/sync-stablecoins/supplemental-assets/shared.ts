@@ -5,12 +5,17 @@ import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../../lib/response-body";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import {
+  buildPriceReasonablenessOptions,
+  isReasonablePrice,
+} from "../../../lib/price-validation";
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
 
 export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number; last_updated_at?: number }>;
 type SupplementalDefiLlamaPriceData = { coins: NonNullable<DefiLlamaCoinsPriceResponse["coins"]> };
+const SUPPLEMENTAL_DL_CONTRACT_MIN_CONFIDENCE = 0.8;
 
 export interface SupplementalPriceResolution {
   price: number;
@@ -128,6 +133,7 @@ export function getSupplementalDefiLlamaContractPriceKey(meta: StablecoinMeta): 
 export function resolveSupplementalContractPrice(
   priceData: SupplementalDefiLlamaPriceData,
   meta: StablecoinMeta,
+  fxRates?: Record<string, number>,
 ): SupplementalPriceResolution | null {
   const priceKey = getSupplementalDefiLlamaContractPriceKey(meta);
   if (!priceKey) return null;
@@ -135,6 +141,28 @@ export function resolveSupplementalContractPrice(
   const dlEntry = priceData.coins[priceKey];
   const dlPrice = toPositiveFiniteNumber(dlEntry?.price);
   if (dlPrice == null) return null;
+  if (dlEntry?.symbol?.trim().toUpperCase() !== meta.symbol.trim().toUpperCase()) return null;
+  if (
+    typeof dlEntry.confidence !== "number" ||
+    !Number.isFinite(dlEntry.confidence) ||
+    dlEntry.confidence < SUPPLEMENTAL_DL_CONTRACT_MIN_CONFIDENCE
+  ) {
+    return null;
+  }
+
+  if (
+    !isReasonablePrice(
+      dlPrice,
+      pegTypeKey(meta),
+      fxRates,
+      buildPriceReasonablenessOptions({
+        navToken: meta.flags.navToken,
+        commodityOunces: meta.commodityOunces,
+      }),
+    )
+  ) {
+    return null;
+  }
 
   const observedAt = toPositiveFiniteNumber(dlEntry?.timestamp) ?? null;
   const resolution = {

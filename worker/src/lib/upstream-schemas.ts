@@ -28,7 +28,9 @@ export const DefiLlamaCoinsPriceSchema = z.object({
       z.string(),
       z.object({
         price: z.number().optional(),
+        symbol: z.string().optional(),
         timestamp: z.number().optional(),
+        confidence: z.number().optional(),
       }),
     )
     .optional(),

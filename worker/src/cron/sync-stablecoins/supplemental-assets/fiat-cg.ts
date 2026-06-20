@@ -56,7 +56,7 @@ export async function fetchFiatCoinGeckoTokens(
         // with llamaId=null + low volume → upstream last_updated_at exceeds 15min.
         let priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
         if (!priceResolution) {
-          priceResolution = resolveSupplementalContractPrice(priceData, meta);
+          priceResolution = resolveSupplementalContractPrice(priceData, meta, fxFallbackRates);
         }
         if (!priceResolution) {
           priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);
