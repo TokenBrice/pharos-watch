@@ -42,6 +42,7 @@ function isUniswapV4PoolId(poolId: string, protocol?: string | null): boolean {
 
 function canonicalizeExactPoolId(poolId: string, chain: string): string {
   const trimmed = poolId.trim();
+  if (chain.toLowerCase() === "orderbook") return trimmed;
   const chainPrefix = `${chain.toLowerCase()}:`;
   return trimmed.toLowerCase().startsWith(chainPrefix)
     ? trimmed.slice(chainPrefix.length)

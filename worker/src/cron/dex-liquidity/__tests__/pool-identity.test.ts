@@ -19,6 +19,18 @@ describe("pool identity dedup", () => {
     expect(identity.exactPoolKey).toBe("ethereum:0xabc0000000000000000000000000000000000000");
   });
 
+  it("preserves synthetic orderbook prefixes for exact dedup identity", () => {
+    const identity = buildPoolIdentity({
+      chain: "orderbook",
+      protocol: "binance",
+      poolAddressOrId: "orderbook:binance",
+      tokenAddresses: [],
+    });
+
+    expect(identity.exactPoolKey).toBe("orderbook:orderbook:binance");
+    expect(identity.identitySource).toBe("native-id");
+  });
+
   it("can dedupe an identity-poor Uniswap v4 DL row against one staged exact-pool-id row", () => {
     const known = createKnownPoolIdentityIndex();
     registerKnownPoolIdentity(
