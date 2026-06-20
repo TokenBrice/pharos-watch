@@ -90,6 +90,18 @@ function hasSrcAttribute(openTag) {
   return false;
 }
 
+function isInsideHtmlComment(html, index) {
+  const commentStart = html.lastIndexOf("<!--", index);
+  if (commentStart < 0) return false;
+  const commentEnd = html.lastIndexOf("-->", index);
+  return commentEnd < commentStart;
+}
+
+function isScriptTagOpen(lowerHtml, openStart) {
+  const next = lowerHtml[openStart + "<script".length] ?? "";
+  return next === "" || /[\s/>]/.test(next);
+}
+
 function extractInlineScripts(html) {
   const scripts = [];
   const lowerHtml = html.toLowerCase();
@@ -97,6 +109,10 @@ function extractInlineScripts(html) {
   while (true) {
     const openStart = lowerHtml.indexOf("<script", searchFrom);
     if (openStart < 0) break;
+    if (isInsideHtmlComment(html, openStart) || !isScriptTagOpen(lowerHtml, openStart)) {
+      searchFrom = openStart + "<script".length;
+      continue;
+    }
     const openEnd = lowerHtml.indexOf(">", openStart);
     if (openEnd < 0) break;
     const closeStart = lowerHtml.indexOf("</script", openEnd + 1);
