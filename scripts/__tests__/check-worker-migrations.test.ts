@@ -11,6 +11,7 @@ import {
   parseRolloutSafetyPolicy,
   validateManifestMigrationParity,
   validateDuplicatePrefixAllowlist,
+  validateNoSqliteDotCommands,
   validateDuplicatePrefixes,
   validateRolloutSafetyAnnotation,
   validateRolloutSafetyPolicy,
@@ -216,6 +217,34 @@ describe("validateRolloutSafetyPolicy", () => {
         requiredMode: REQUIRED_ROLLOUT_SAFETY_MODE,
       }),
     ).toThrow("rollout-safety enforcement must stay frozen");
+  });
+});
+
+describe("validateNoSqliteDotCommands", () => {
+  it("rejects sqlite3 shell dot-commands before migration replay", () => {
+    expect(() =>
+      validateNoSqliteDotCommands(
+        "0071_shell_command.sql",
+        [
+          `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}`,
+          "CREATE TABLE example (id INTEGER PRIMARY KEY);",
+          ".shell echo migration-rce",
+        ].join("\n"),
+      ),
+    ).toThrow("contains a sqlite3 shell dot-command line");
+  });
+
+  it("accepts regular SQL and comments", () => {
+    expect(() =>
+      validateNoSqliteDotCommands(
+        "0071_safe.sql",
+        [
+          `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}`,
+          "-- .shell in a comment is documentation, not a sqlite3 metacommand",
+          "CREATE TABLE example (id INTEGER PRIMARY KEY);",
+        ].join("\n"),
+      ),
+    ).not.toThrow();
   });
 });
 
