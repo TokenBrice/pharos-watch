@@ -9,6 +9,7 @@ import {
 } from "../../cron/yield-config";
 import {
   YIELD_ADAPTER_MANIFEST_FAMILY_VALUES,
+  YieldAdapterManifestResponseSchema,
   type YieldAdapterManifestResponse,
 } from "@shared/types/yield";
 
@@ -19,6 +20,7 @@ describe("handleYieldAdapterManifest", () => {
     expect(res.headers.get("Content-Type")).toContain("application/json");
 
     const body = (await res.json()) as YieldAdapterManifestResponse;
+    expect(() => YieldAdapterManifestResponseSchema.parse(body)).not.toThrow();
     expect(body.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION_LABEL);
     expect(typeof body.updatedAt).toBe("number");
     expect(Array.isArray(body.entries)).toBe(true);

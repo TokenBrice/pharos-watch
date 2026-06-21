@@ -130,6 +130,7 @@ export const API_PATHS = {
     state?: string;
     limit?: number;
     decisionLimit?: number;
+    includePublicAlternatives?: boolean;
   }) =>
     buildQueryPath("/api/yield-source-decisions", {
       generationId: params?.generationId,
@@ -137,6 +138,7 @@ export const API_PATHS = {
       state: params?.state,
       limit: params?.limit,
       decisionLimit: params?.decisionLimit,
+      includePublicAlternatives: params?.includePublicAlternatives ? 1 : undefined,
     }),
   apiKeys: () => "/api/api-keys",
   apiKeyAuditLog: () => "/api/api-keys/audit-log",

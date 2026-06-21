@@ -2590,6 +2590,7 @@
               "issuer-savings",
               "lending-market",
               "strategy-vault",
+              "structured-tranche",
               "lp-or-dex",
               "rwa-fund",
               "reward-program",
@@ -2624,11 +2625,225 @@
             ],
             "description": "`unknown` remains neutral and should be treated as missing evidence."
           },
+          "venueRiskScores": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "audits": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "centralization": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "fundsManagement": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "liquidity": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "operational": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 5
+              }
+            },
+            "additionalProperties": false
+          },
+          "venueRiskWeighted": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 5
+          },
+          "venueRiskConfidence": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "verified",
+              "partial",
+              "low",
+              null
+            ]
+          },
+          "dependencyConcentration": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "ecosystem": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "note": {
+                "type": "string"
+              },
+              "reviewedAt": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
           "investabilityFlags": {
             "type": "array",
             "items": {
               "type": "string"
             }
+          },
+          "trancheSide": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "senior",
+              "junior",
+              null
+            ]
+          },
+          "trancheSafetyScore": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100
+          },
+          "trancheSafetyPenalty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "underlyingSafetyScore": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100
+          },
+          "marketCoverageRatio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "marketMinCoverageRatio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "marketUtilizationRatio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "marketUtilizationLimitRatio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "marketDrawdownRatio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "marketTotalDrawdowns": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "marketStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "normal",
+              "protected",
+              "unhealthy",
+              "critical",
+              null
+            ]
+          },
+          "marketTvlUsd": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "trancheTvlUsd": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "trancheShareTokenAddress": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trancheDepositTokenAddress": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "withdrawalDelaySeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "kycRequired": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "accessRestricted": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         },
         "additionalProperties": true

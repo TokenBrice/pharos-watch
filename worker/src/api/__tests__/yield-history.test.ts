@@ -492,6 +492,39 @@ describe("handleYieldHistory", () => {
       venueProtocol: "aave-v3",
       venueChain: "ethereum",
       venueRiskTier: "low",
+      venueRiskScores: {
+        audits: 2,
+        centralization: 2.5,
+        fundsManagement: 2,
+        liquidity: 1.5,
+        operational: 1,
+      },
+      venueRiskWeighted: 2.05,
+      venueRiskConfidence: "partial",
+      dependencyConcentration: {
+        ecosystem: "Sky",
+        severity: "medium",
+        note: "Funded debt is concentrated behind one governance ecosystem.",
+        reviewedAt: "2026-05-15",
+      },
+      trancheSide: "senior",
+      trancheSafetyScore: 76,
+      trancheSafetyPenalty: 4,
+      underlyingSafetyScore: 80,
+      marketCoverageRatio: 1.12,
+      marketMinCoverageRatio: 1,
+      marketUtilizationRatio: 0.82,
+      marketUtilizationLimitRatio: 0.9,
+      marketDrawdownRatio: 0.01,
+      marketTotalDrawdowns: 1,
+      marketStatus: "protected",
+      marketTvlUsd: 25_000_000,
+      trancheTvlUsd: 8_000_000,
+      trancheShareTokenAddress: "0xshare",
+      trancheDepositTokenAddress: "0xdeposit",
+      withdrawalDelaySeconds: 86_400,
+      kycRequired: false,
+      accessRestricted: true,
     });
     const generatedRow = {
       ...makeYieldHistoryRow({ recorded_at: publishedAt, source_key: "aave-v3:usdt" }),
@@ -545,10 +578,102 @@ describe("handleYieldHistory", () => {
       venueProtocol: "aave-v3",
       venueChain: "ethereum",
       venueRiskTier: "low",
+      venueRiskScores: {
+        audits: 2,
+        centralization: 2.5,
+        fundsManagement: 2,
+        liquidity: 1.5,
+        operational: 1,
+      },
+      venueRiskWeighted: 2.05,
+      venueRiskConfidence: "partial",
+      dependencyConcentration: {
+        ecosystem: "Sky",
+        severity: "medium",
+        note: "Funded debt is concentrated behind one governance ecosystem.",
+        reviewedAt: "2026-05-15",
+      },
+      trancheSide: "senior",
+      trancheSafetyScore: 76,
+      trancheSafetyPenalty: 4,
+      underlyingSafetyScore: 80,
+      marketCoverageRatio: 1.12,
+      marketMinCoverageRatio: 1,
+      marketUtilizationRatio: 0.82,
+      marketUtilizationLimitRatio: 0.9,
+      marketDrawdownRatio: 0.01,
+      marketTotalDrawdowns: 1,
+      marketStatus: "protected",
+      marketTvlUsd: 25_000_000,
+      trancheTvlUsd: 8_000_000,
+      trancheShareTokenAddress: "0xshare",
+      trancheDepositTokenAddress: "0xdeposit",
+      withdrawalDelaySeconds: 86_400,
+      kycRequired: false,
+      accessRestricted: true,
       investabilityFlags: ["reward-heavy"],
     });
     expect(body.history[0]?.sourceRisk).toEqual(body.current?.sourceRisk);
     expect((body.history[0] as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
+    expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
+  });
+
+  it("drops malformed nested source-risk fields without dropping valid siblings", async () => {
+    const publishedAt = SOURCE_RISK_GOLDEN_UPDATED_AT;
+    const generatedRow = {
+      ...makeYieldHistoryRow({ recorded_at: publishedAt, source_key: "aave-v3:usdt" }),
+      publication_generation_id: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [
+          {
+            key: "yield-rankings",
+            value: JSON.stringify({
+              updatedAt: publishedAt,
+              publication: {
+                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+                updatedAt: publishedAt,
+                cutoffAt: publishedAt,
+                schemaVersion: 1,
+                status: "published",
+              },
+              rankings: [
+                {
+                  id: "usdt-tether",
+                  publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+                  provenance: { sourceKey: "aave-v3:usdt" },
+                  sourceRisk: {
+                    sourceRiskPenalty: 1.2,
+                    venueRiskScores: { audits: 2, centralization: "bad" },
+                    venueRiskWeighted: 2.4,
+                    dependencyConcentration: {
+                      ecosystem: "Sky",
+                      severity: "unsupported",
+                      note: "Malformed legacy shorthand should not poison the whole object.",
+                      reviewedAt: "2026-05-15",
+                    },
+                  },
+                },
+              ],
+            }),
+            updated_at: publishedAt,
+          },
+        ],
+      },
+      { match: "yield_history", rows: [generatedRow] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as YieldHistoryResponse;
+    expect(body.current?.sourceRisk).toEqual({
+      sourceRiskPenalty: 1.2,
+      venueRiskWeighted: 2.4,
+    });
     expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
   });
 

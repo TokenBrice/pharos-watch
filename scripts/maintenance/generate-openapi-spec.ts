@@ -362,6 +362,7 @@ function render() {
                 "issuer-savings",
                 "lending-market",
                 "strategy-vault",
+                "structured-tranche",
                 "lp-or-dex",
                 "rwa-fund",
                 "reward-program",
@@ -377,9 +378,108 @@ function render() {
               enum: ["low", "medium", "high", "unknown", null],
               description: "`unknown` remains neutral and should be treated as missing evidence.",
             },
+            venueRiskScores: {
+              type: ["object", "null"],
+              properties: {
+                audits: { type: "number", minimum: 1, maximum: 5 },
+                centralization: { type: "number", minimum: 1, maximum: 5 },
+                fundsManagement: { type: "number", minimum: 1, maximum: 5 },
+                liquidity: { type: "number", minimum: 1, maximum: 5 },
+                operational: { type: "number", minimum: 1, maximum: 5 },
+              },
+              additionalProperties: false,
+            },
+            venueRiskWeighted: {
+              ...numberOrNull,
+              minimum: 1,
+              maximum: 5,
+            },
+            venueRiskConfidence: {
+              type: ["string", "null"],
+              enum: ["verified", "partial", "low", null],
+            },
+            dependencyConcentration: {
+              type: ["object", "null"],
+              properties: {
+                ecosystem: { type: "string" },
+                severity: {
+                  type: "string",
+                  enum: ["low", "medium", "high"],
+                },
+                note: { type: "string" },
+                reviewedAt: { type: "string" },
+              },
+              additionalProperties: true,
+            },
             investabilityFlags: {
               type: "array",
               items: { type: "string" },
+            },
+            trancheSide: {
+              type: ["string", "null"],
+              enum: ["senior", "junior", null],
+            },
+            trancheSafetyScore: {
+              ...numberOrNull,
+              minimum: 0,
+              maximum: 100,
+            },
+            trancheSafetyPenalty: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            underlyingSafetyScore: {
+              ...numberOrNull,
+              minimum: 0,
+              maximum: 100,
+            },
+            marketCoverageRatio: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            marketMinCoverageRatio: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            marketUtilizationRatio: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            marketUtilizationLimitRatio: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            marketDrawdownRatio: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            marketTotalDrawdowns: {
+              type: ["integer", "null"],
+              minimum: 0,
+            },
+            marketStatus: {
+              type: ["string", "null"],
+              enum: ["normal", "protected", "unhealthy", "critical", null],
+            },
+            marketTvlUsd: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            trancheTvlUsd: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            trancheShareTokenAddress: stringOrNull,
+            trancheDepositTokenAddress: stringOrNull,
+            withdrawalDelaySeconds: {
+              type: ["integer", "null"],
+              minimum: 0,
+            },
+            kycRequired: {
+              type: ["boolean", "null"],
+            },
+            accessRestricted: {
+              type: ["boolean", "null"],
             },
           },
           additionalProperties: true,

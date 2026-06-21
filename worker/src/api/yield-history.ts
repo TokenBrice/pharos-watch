@@ -21,7 +21,7 @@ import { isSuppressedYieldHistoryRow } from "../cron/yield-sync/history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isRecord } from "@shared/lib/type-guards";
 import {
-  YIELD_DEPLOYMENT_PLACE_VALUES,
+  normalizeYieldSourceRisk,
   type YieldPublicationMetadata,
   type YieldSourceRisk,
 } from "@shared/types/yield";
@@ -51,131 +51,9 @@ interface YieldHistoryRow {
 }
 
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
-const YIELD_VENUE_RISK_TIERS = new Set(["low", "medium", "high", "unknown"]);
-const YIELD_DEPLOYMENT_PLACES = new Set<string>(YIELD_DEPLOYMENT_PLACE_VALUES);
 
 function hasOwn(value: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, key);
-}
-
-function readNullableFiniteNumber(value: unknown): number | null | undefined {
-  if (value === null) return null;
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function readNullableString(value: unknown): string | null | undefined {
-  if (value === null) return null;
-  return typeof value === "string" ? value : undefined;
-}
-
-function readNullableDeploymentPlace(value: unknown): YieldSourceRisk["deploymentPlace"] | undefined {
-  if (value === null) return null;
-  return typeof value === "string" && YIELD_DEPLOYMENT_PLACES.has(value)
-    ? (value as YieldSourceRisk["deploymentPlace"])
-    : undefined;
-}
-
-function readNullableVenueRiskTier(value: unknown): YieldSourceRisk["venueRiskTier"] | undefined {
-  if (value === null) return null;
-  return typeof value === "string" && YIELD_VENUE_RISK_TIERS.has(value)
-    ? (value as YieldSourceRisk["venueRiskTier"])
-    : undefined;
-}
-
-function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
-  if (!isRecord(value)) return null;
-
-  const sourceRisk: YieldSourceRisk = {};
-  let hasKnownField = false;
-  const assignNumber = (key: keyof YieldSourceRisk) => {
-    if (!hasOwn(value, key)) return;
-    const parsed = readNullableFiniteNumber(value[key]);
-    if (parsed !== undefined) {
-      (sourceRisk as Record<string, unknown>)[key] = parsed;
-      hasKnownField = true;
-    }
-  };
-  const assignString = (key: keyof YieldSourceRisk) => {
-    if (!hasOwn(value, key)) return;
-    const parsed = readNullableString(value[key]);
-    if (parsed !== undefined) {
-      (sourceRisk as Record<string, unknown>)[key] = parsed;
-      hasKnownField = true;
-    }
-  };
-
-  assignNumber("sourceRiskScore");
-  assignNumber("sourceRiskPenalty");
-  assignNumber("sourceDepthRatio");
-  assignNumber("rewardShare");
-  assignNumber("sourceAgeSeconds");
-  assignNumber("observationCount30d");
-  assignNumber("sourceSwitchCount30d");
-  assignNumber("trancheSafetyScore");
-  assignNumber("trancheSafetyPenalty");
-  assignNumber("underlyingSafetyScore");
-  assignNumber("marketCoverageRatio");
-  assignNumber("marketMinCoverageRatio");
-  assignNumber("marketUtilizationRatio");
-  assignNumber("marketUtilizationLimitRatio");
-  assignNumber("marketDrawdownRatio");
-  assignNumber("marketTotalDrawdowns");
-  assignNumber("marketTvlUsd");
-  assignNumber("trancheTvlUsd");
-  assignNumber("withdrawalDelaySeconds");
-  assignString("venueProtocol");
-  assignString("venueChain");
-  assignString("trancheShareTokenAddress");
-  assignString("trancheDepositTokenAddress");
-
-  if (hasOwn(value, "deploymentPlace")) {
-    const deploymentPlace = readNullableDeploymentPlace(value.deploymentPlace);
-    if (deploymentPlace !== undefined) {
-      sourceRisk.deploymentPlace = deploymentPlace;
-      hasKnownField = true;
-    }
-  }
-  if (hasOwn(value, "venueRiskTier")) {
-    const venueRiskTier = readNullableVenueRiskTier(value.venueRiskTier);
-    if (venueRiskTier !== undefined) {
-      sourceRisk.venueRiskTier = venueRiskTier;
-      hasKnownField = true;
-    }
-  }
-  if (hasOwn(value, "trancheSide") && (value.trancheSide === "senior" || value.trancheSide === "junior")) {
-    sourceRisk.trancheSide = value.trancheSide;
-    hasKnownField = true;
-  }
-  if (
-    hasOwn(value, "marketStatus") &&
-    (
-      value.marketStatus === "normal" ||
-      value.marketStatus === "protected" ||
-      value.marketStatus === "unhealthy" ||
-      value.marketStatus === "critical"
-    )
-  ) {
-    sourceRisk.marketStatus = value.marketStatus;
-    hasKnownField = true;
-  }
-  if (hasOwn(value, "kycRequired") && typeof value.kycRequired === "boolean") {
-    sourceRisk.kycRequired = value.kycRequired;
-    hasKnownField = true;
-  }
-  if (hasOwn(value, "accessRestricted") && typeof value.accessRestricted === "boolean") {
-    sourceRisk.accessRestricted = value.accessRestricted;
-    hasKnownField = true;
-  }
-  if (hasOwn(value, "investabilityFlags")) {
-    if (Array.isArray(value.investabilityFlags)) {
-      sourceRisk.investabilityFlags = value.investabilityFlags.filter(
-        (flag): flag is string => typeof flag === "string",
-      );
-      hasKnownField = true;
-    }
-  }
-
-  return hasKnownField ? sourceRisk : null;
 }
 
 function buildSourceRiskLookupKey(generationId: string, stablecoinId: string, sourceKey: string): string {

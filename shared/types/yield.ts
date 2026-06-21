@@ -2,11 +2,13 @@ import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
 
-export type YieldAdapterLifecycle =
-  | "active"
-  | "quarantined"
-  | "intentional-gap"
-  | "experimental";
+export const YIELD_ADAPTER_LIFECYCLE_VALUES = [
+  "active",
+  "quarantined",
+  "intentional-gap",
+  "experimental",
+] as const;
+export type YieldAdapterLifecycle = (typeof YIELD_ADAPTER_LIFECYCLE_VALUES)[number];
 
 export interface YieldAdapterLifecycleReason {
   /** Canonical short code such as "convert-to-assets-empty" or "no-public-yield-source". */
@@ -106,7 +108,7 @@ const YieldPublicationMetadataSchema = z.object({
   status: z.enum(["staged", "published", "failed"]).nullable().optional(),
 });
 
-const YieldVenueRiskScoresSchema = z.object({
+export const YieldVenueRiskScoresSchema = z.object({
   audits: z.number().min(1).max(5),
   centralization: z.number().min(1).max(5),
   fundsManagement: z.number().min(1).max(5),
@@ -114,14 +116,14 @@ const YieldVenueRiskScoresSchema = z.object({
   operational: z.number().min(1).max(5),
 });
 
-const YieldDependencyConcentrationSchema = z.object({
+export const YieldDependencyConcentrationSchema = z.object({
   ecosystem: z.string(),
   severity: z.enum(["low", "medium", "high"]),
   note: z.string(),
   reviewedAt: z.string(),
 });
 
-const YieldSourceRiskSchema = z.object({
+export const YieldSourceRiskSchema = z.object({
   sourceRiskScore: z.number().min(0).max(100).nullable().optional(),
   sourceRiskPenalty: z.number().min(1).nullable().optional(),
   sourceDepthRatio: z.number().min(0).nullable().optional(),
@@ -157,6 +159,34 @@ const YieldSourceRiskSchema = z.object({
   accessRestricted: z.boolean().nullable().optional(),
   investabilityFlags: z.array(z.string()).optional(),
 });
+const YieldSourceRiskFieldSchemas = YieldSourceRiskSchema.shape;
+type YieldSourceRiskField = keyof typeof YieldSourceRiskFieldSchemas;
+const YIELD_SOURCE_RISK_FIELDS = Object.keys(YieldSourceRiskFieldSchemas) as YieldSourceRiskField[];
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
+  if (!isPlainRecord(value)) return null;
+
+  const normalized: Record<string, unknown> = {};
+  for (const field of YIELD_SOURCE_RISK_FIELDS) {
+    if (!hasOwn(value, field)) continue;
+    const parsed = YieldSourceRiskFieldSchemas[field].safeParse(value[field]);
+    if (parsed.success && parsed.data !== undefined) {
+      normalized[field] = parsed.data;
+    }
+  }
+
+  if (Object.keys(normalized).length === 0) return null;
+  const parsed = YieldSourceRiskSchema.safeParse(normalized);
+  return parsed.success ? parsed.data : null;
+}
 
 const YieldHistoryPointSchema = z.object({
   date: z.union([z.number(), z.string()]),
@@ -411,23 +441,25 @@ export const YIELD_ADAPTER_MANIFEST_FAMILY_VALUES = [
 ] as const;
 export type YieldAdapterManifestFamily = (typeof YIELD_ADAPTER_MANIFEST_FAMILY_VALUES)[number];
 
-export interface YieldAdapterManifestPublicEntry {
-  stablecoinId: string;
-  coinSymbol: string;
-  family: YieldAdapterManifestFamily;
-  sourceKey: string | null;
-  sourceKeyPattern?: string | null;
-  label: string;
-  chain?: string | null;
-  project?: string | null;
-  lifecycle: YieldAdapterLifecycle;
-  quarantineReason?: string | null;
-  methodologyVersion: string;
-  updatedAt: number;
-}
+export const YieldAdapterManifestPublicEntrySchema = z.object({
+  stablecoinId: z.string(),
+  coinSymbol: z.string(),
+  family: z.enum(YIELD_ADAPTER_MANIFEST_FAMILY_VALUES),
+  sourceKey: z.string().nullable(),
+  sourceKeyPattern: z.string().nullable().optional(),
+  label: z.string(),
+  chain: z.string().nullable().optional(),
+  project: z.string().nullable().optional(),
+  lifecycle: z.enum(YIELD_ADAPTER_LIFECYCLE_VALUES),
+  quarantineReason: z.string().nullable().optional(),
+  methodologyVersion: z.string(),
+  updatedAt: z.number(),
+});
+export type YieldAdapterManifestPublicEntry = z.infer<typeof YieldAdapterManifestPublicEntrySchema>;
 
-export interface YieldAdapterManifestResponse {
-  methodologyVersion: string;
-  updatedAt: number;
-  entries: YieldAdapterManifestPublicEntry[];
-}
+export const YieldAdapterManifestResponseSchema = z.object({
+  methodologyVersion: z.string(),
+  updatedAt: z.number(),
+  entries: z.array(YieldAdapterManifestPublicEntrySchema),
+});
+export type YieldAdapterManifestResponse = z.infer<typeof YieldAdapterManifestResponseSchema>;
