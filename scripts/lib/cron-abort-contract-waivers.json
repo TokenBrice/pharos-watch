@@ -1,6 +1,6 @@
 [
   {
-    "file": "worker/src/lib/cron-lease.ts",
+    "file": "worker/src/lib/cron-lease-primitives.ts",
     "lineIncludes": "releaseCronLease(db, job, owner)",
     "reason": "Lease release is wrapper cleanup and must still run after the job signal aborts."
   },
