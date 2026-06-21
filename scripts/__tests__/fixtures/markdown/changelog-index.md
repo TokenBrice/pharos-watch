@@ -6,6 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-06-15 to 2026-06-21
+
+Yield gains a Yearn-style venue-risk rubric (61 venues), Telegram adds reserve-drift alerts, and case studies reach 24.
+
+- **Yield venue-risk rubric**: A Yearn-style 5-category venue-risk rubric lands in the Protected Yield Score, growing the scored-venue registry from 12 to 61. Source-risk cards, confidence flags, and concentration chips surface it across yield views.
+- **Telegram alerting overhaul**: The bot becomes a real alerting surface: a reserve-drift alert family with mini-app, watchlist export/import, 24h net mint/burn on /status, durable /pause, and per-coin muting, atop a deep rate-limit and opt-out pass.
+- **Case studies & learn hub**: The case-study archive more than doubles from 11 to 24 retrospectives, each with social cards and timelines, now surfaced on mechanism, cemetery, and glossary pages. A content-rich /learn hub ties the surfaces together.
+- **Depeg engine hardening**: The depeg resolver and DEWS early-warning engine (v6.09) harden against stale and mixed-freshness rows: monotonic watermarks, bounded incident adoption, and DDRR scoring that waits for terminal evidence before recovery.
+- **Coverage & pricing**: Smokehouse USDC joins the tracked set and bbqUSDC gains NAV, yield, and redemption routing. Resupply gains live redemption-capacity telemetry, and supplemental pricing adds exact-contract sources with stricter freshness.
+- **Security hardening**: A security pass redacts provider URLs from worker logs, hardens phishing-signature extraction and supplemental price freshness, passes Access credentials to the release marker, and rejects future-dated price data.
+- **Reliability & code health**: Worker pipelines stop persisting aborted mint/burn and digest writes and bound yield-history reads. A broad refactor sweep dedups helpers and clears dead code across worker, frontend, scripts, and tests.
+
 ## 2026-06-07 to 2026-06-14
 
 Safety Score v8.0 folds in mint authority, report cards score chain and oracle risk, and a depeg control board ships.
