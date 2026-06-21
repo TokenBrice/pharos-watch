@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 380 more files omitted; use `rg --files src/components` for the full list.
+- ... 381 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -323,6 +323,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/api-endpoints/definitions.ts` - DynamicAdminEndpointMatch, ENDPOINT_DEFINITIONS, EndpointDefinition, EndpointDefinitionByKey, EndpointDependenciesForKey, EndpointDependency
 - `shared/lib/api-endpoints/dynamic.ts` - DYNAMIC_ENDPOINT_DESCRIPTORS, DynamicEndpointDescriptor, DynamicEndpointDescriptorKey, findDynamicEndpointDescriptor, getDynamicEndpointDescriptorByKey
 - `shared/lib/api-endpoints/index.ts` - API_PATHS, SNAPSHOT_DATE_PATTERN, buildQueryPath, getStatusPageActions
+- `shared/lib/api-endpoints/paths.test.ts`
 - `shared/lib/api-endpoints/paths.ts` - API_PATHS, buildQueryPath
 - `shared/lib/api-endpoints/snapshot.ts` - SNAPSHOT_DATE_PATTERN
 - `shared/lib/api-endpoints/status.ts` - getStatusPageActions
@@ -376,8 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
 - `shared/lib/depeg-resolver-version.ts`
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
-- `shared/lib/depeg-resolver/forecast-readiness.ts` - DdrForecastReadinessInput, buildForecastReadinessBackstop, forecastReadinessLockTrigger, forecastReadinessScore, meetsStrictEarlyLockReadiness
-- ... 254 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 255 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
