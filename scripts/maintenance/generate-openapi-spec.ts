@@ -26,6 +26,22 @@ function nullableRef(name: string) {
 
 const stringOrNull = { type: ["string", "null"] };
 const numberOrNull = { type: ["number", "null"] };
+const sourceConfidenceTierEnum = ["deterministic", "curated", "discovered", "fallback"];
+const yieldSourceRoleEnum = [
+  "canonical-holder",
+  "external-opportunity",
+  "fallback-proxy",
+  "audit-alternate",
+  "degraded-canonical",
+];
+const yieldDecisionRejectionReasonEnum = [
+  "thinner",
+  "stale",
+  "lower-confidence",
+  "rewards-only",
+  "smaller",
+  "unspecified",
+];
 
 const TAG_DESCRIPTIONS = {
   Health: "No-key canary and health probes for API availability checks.",
@@ -277,6 +293,7 @@ function render() {
               type: "array",
               items: schemaRef("AltYieldSource"),
             },
+            alternateSummary: nullableRef("YieldAlternateSummary"),
             provenance: {
               type: ["object", "null"],
               description: "Selected-source provenance, benchmark state, and source-switch metadata.",
@@ -286,12 +303,18 @@ function render() {
             publishedRank: numberOrNull,
             liveRank: numberOrNull,
             sourceRisk: nullableRef("YieldSourceRisk"),
+            sourceRole: {
+              type: "string",
+              enum: yieldSourceRoleEnum,
+              description: "Worker-derived role explaining how the selected source participates in arbitration.",
+            },
             rankChangeAttribution: {
               type: ["object", "null"],
               description:
                 "Optional rank-change attribution with previous rank/PYS, delta, primary driver, and driver contribution hints.",
               additionalProperties: true,
             },
+            decisionLedger: nullableRef("YieldPublicDecisionLedger"),
           },
           additionalProperties: true,
         },
@@ -317,6 +340,132 @@ function render() {
             sourceTvlUsd: numberOrNull,
             dataSource: { type: "string" },
             sourceRisk: nullableRef("YieldSourceRisk"),
+            sourceRole: {
+              type: "string",
+              enum: yieldSourceRoleEnum,
+            },
+            confidenceTier: {
+              type: "string",
+              enum: sourceConfidenceTierEnum,
+            },
+            selectionRank: {
+              type: "integer",
+              minimum: 1,
+              description: "Rank inside the worker's source-candidate ordering for this stablecoin.",
+            },
+            rejectionReasonCode: {
+              type: "string",
+              enum: yieldDecisionRejectionReasonEnum,
+            },
+          },
+          additionalProperties: true,
+        },
+        YieldAlternateSummary: {
+          type: "object",
+          description: "Deterministic summary of retained non-selected source rows.",
+          required: ["count", "bestAlternateByApy", "bestRiskAdjustedAlternate", "alternateApySpread"],
+          properties: {
+            count: {
+              type: "integer",
+              minimum: 0,
+            },
+            bestAlternateByApy: nullableRef("YieldAlternateSourceSummary"),
+            bestRiskAdjustedAlternate: nullableRef("YieldAlternateSourceSummary"),
+            alternateApySpread: numberOrNull,
+          },
+          additionalProperties: true,
+        },
+        YieldAlternateSourceSummary: {
+          type: "object",
+          description: "Compact alternate source summary used by ranking rows.",
+          required: [
+            "sourceKey",
+            "yieldSource",
+            "yieldType",
+            "dataSource",
+            "currentApy",
+            "apy30d",
+            "apy30dDelta",
+            "sourceTvlUsd",
+          ],
+          properties: {
+            sourceKey: { type: "string" },
+            yieldSource: { type: "string" },
+            yieldType: { type: "string" },
+            dataSource: { type: "string" },
+            currentApy: { type: "number" },
+            apy30d: { type: "number" },
+            apy30dDelta: { type: "number" },
+            sourceTvlUsd: numberOrNull,
+            confidenceTier: {
+              type: "string",
+              enum: sourceConfidenceTierEnum,
+            },
+            sourceRole: {
+              type: "string",
+              enum: yieldSourceRoleEnum,
+            },
+            sourceRiskPenalty: numberOrNull,
+            riskAdjustedUtility: numberOrNull,
+          },
+          additionalProperties: true,
+        },
+        YieldPublicDecisionLedger: {
+          type: "object",
+          description: "Bounded public source-selection decision evidence for a ranking row.",
+          properties: {
+            selectedReasonCode: {
+              type: "string",
+              enum: [
+                "best-by-confidence-and-apy",
+                "deterministic-preferred",
+                "curated-over-discovered",
+                "tier-preference",
+                "tvl-floor",
+                "freshness-tiebreaker",
+                "fallback",
+                "no-alternatives",
+              ],
+            },
+            previousBestSourceKey: stringOrNull,
+            sourceSwitch: { type: "boolean" },
+            apy30dDeltaFromPrevious: numberOrNull,
+            rejectedCount: {
+              type: "integer",
+              minimum: 0,
+            },
+            alternatives: {
+              type: "array",
+              maxItems: 2,
+              items: schemaRef("YieldPublicDecisionAlternative"),
+            },
+          },
+          additionalProperties: true,
+        },
+        YieldPublicDecisionAlternative: {
+          type: "object",
+          description: "Compact retained alternate inside a row decision ledger.",
+          required: ["sourceKey", "yieldSource", "apy30dDelta", "rejectionReasonCode"],
+          properties: {
+            sourceKey: { type: "string" },
+            yieldSource: { type: "string" },
+            apy30dDelta: { type: "number" },
+            rejectionReasonCode: {
+              type: "string",
+              enum: yieldDecisionRejectionReasonEnum,
+            },
+            confidenceTier: {
+              type: "string",
+              enum: sourceConfidenceTierEnum,
+            },
+            sourceRole: {
+              type: "string",
+              enum: yieldSourceRoleEnum,
+            },
+            selectionRank: {
+              type: "integer",
+              minimum: 1,
+            },
           },
           additionalProperties: true,
         },

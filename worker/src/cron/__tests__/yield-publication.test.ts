@@ -217,6 +217,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60);
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+    expect(payload.rankings[0]?.sourceRole).toBe("degraded-canonical");
   });
 
   it("does not add data-stale for healthy price-derived daily snapshots", () => {
@@ -454,17 +455,20 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       sourceKey: "defillama:best",
       yieldSource: "Shared Venue",
       currentApy: 6,
+      apy30d: 6,
       pharosYieldScore: 90,
     });
     const altA = makeEvaluatedSource({
       sourceKey: "defillama:alt-a",
       yieldSource: "Shared Venue",
       currentApy: 5,
+      apy30d: 7,
       apyReward: 2.5,
       pharosYieldScore: 80,
+      sourceRiskAdjustedUtility: 20,
       sourceRiskPenalty: 1.5,
       sourceRiskPenaltyReason: "provided",
-      sourceRiskPenaltyProvided: true,
+      sourceRiskPenaltyProvided: false,
       sourceDepthRatio: 0.0005,
       observationCount30d: 4,
     });
@@ -472,13 +476,22 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       sourceKey: "defillama:alt-b",
       yieldSource: "Shared Venue",
       currentApy: 4,
+      apy30d: 4.2,
       pharosYieldScore: 70,
+      sourceRiskAdjustedUtility: 40,
     });
 
     const payload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [best, altA, altB],
       bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
-      rankingProvenanceByKey: new Map(),
+      rankingProvenanceByKey: new Map([
+        [
+          buildHistoryKey(best.id, best.sourceKey),
+          {
+            sourceObservedAt: Math.floor(Date.now() / 1000),
+          },
+        ],
+      ]),
       riskFreeRate: benchmark.rate,
       riskFreeRateMeta: benchmark,
       riskFreeRateRegistry: { USD: benchmark, EUR: null, CHF: null },
@@ -494,6 +507,26 @@ describe("validateYieldRankingsPayloadForPublish", () => {
     ]);
     const ranking = payload.rankings[0];
     const firstAlt = ranking?.altSources[0];
+    expect(ranking?.sourceRole).toBe("canonical-holder");
+    expect(firstAlt).toMatchObject({
+      sourceRole: "audit-alternate",
+      confidenceTier: "curated",
+      selectionRank: 2,
+      rejectionReasonCode: "unspecified",
+    });
+    expect(ranking?.alternateSummary).toMatchObject({
+      count: 2,
+      alternateApySpread: 1,
+      bestAlternateByApy: {
+        sourceKey: "defillama:alt-a",
+        apy30dDelta: 1,
+        sourceRole: "audit-alternate",
+      },
+      bestRiskAdjustedAlternate: {
+        sourceKey: "defillama:alt-b",
+        riskAdjustedUtility: 40,
+      },
+    });
     expect(firstAlt?.sourceRisk).toMatchObject({
       sourceRiskPenalty: 1.5,
       sourceDepthRatio: 0.0005,
@@ -505,6 +538,64 @@ describe("validateYieldRankingsPayloadForPublish", () => {
     });
     expect((ranking as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
     expect((firstAlt as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
+  });
+
+  it("deduplicates alternate source keys using the richer current APY row", () => {
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    const best = makeEvaluatedSource({
+      sourceKey: "defillama:best",
+      yieldSource: "Best Source",
+      currentApy: 6,
+      apy30d: 6,
+      pharosYieldScore: 90,
+    });
+    const lowerRankedDuplicate = makeEvaluatedSource({
+      sourceKey: "defillama:alt",
+      yieldSource: "Alternate Source",
+      currentApy: 4,
+      apy30d: 4,
+      confidenceTier: "curated",
+      dataSource: "defillama",
+      pharosYieldScore: 80,
+    });
+    const richerDuplicate = makeEvaluatedSource({
+      sourceKey: "defillama:alt",
+      yieldSource: "Alternate Source",
+      currentApy: 8,
+      apy30d: 7,
+      confidenceTier: "discovered",
+      dataSource: "defillama-auto",
+      pharosYieldScore: 70,
+    });
+
+    const payload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources: [best, lowerRankedDuplicate, richerDuplicate],
+      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      rankingProvenanceByKey: new Map(),
+      riskFreeRate: benchmark.rate,
+      riskFreeRateMeta: benchmark,
+      riskFreeRateRegistry: { USD: benchmark, EUR: null, CHF: null },
+      dlPoolsMeta: makeYieldSourceMeta(),
+      safetySnapshot: makeSafetySnapshotMeta(),
+      medianApy: 4.5,
+      startSec,
+    });
+
+    const ranking = payload.rankings[0];
+    expect(ranking?.altSources).toHaveLength(1);
+    expect(ranking?.altSources[0]).toMatchObject({
+      sourceKey: "defillama:alt",
+      currentApy: 8,
+      apy30d: 7,
+      confidenceTier: "discovered",
+      selectionRank: 2,
+    });
+    expect(ranking?.alternateSummary?.bestAlternateByApy).toMatchObject({
+      sourceKey: "defillama:alt",
+      currentApy: 8,
+      apy30d: 7,
+    });
   });
 
   it("publishes golden source-risk rows only under nested public sourceRisk", () => {

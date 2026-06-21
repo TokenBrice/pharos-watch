@@ -1,5 +1,7 @@
 import type {
   AltYieldSource,
+  YieldAlternateSummary,
+  YieldAlternateSourceSummary,
   YieldBenchmarkMeta,
   YieldBenchmarkRegistry,
   YieldPublicDecisionLedger,
@@ -17,7 +19,11 @@ import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS, getRankingStaleThresholdMs } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates } from "./evaluation-arbitration";
-import { buildPublicDecisionLedger } from "./decision-public";
+import {
+  buildPublicDecisionLedger,
+  deriveRejectionReasonCode,
+  deriveYieldSourceRole,
+} from "./decision-public";
 import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
 
@@ -68,7 +74,9 @@ function evaluatedSourceToRanking(
     apyMax30d: source.apyMax30d,
     warningSignals: [...source.warnings],
     altSources: [] as AltYieldSource[],
+    alternateSummary: undefined as YieldAlternateSummary | null | undefined,
     sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: true }),
+    sourceRole: deriveYieldSourceRole(source, { isSelected: true }),
     ...(publicationGenerationId ? { publicationGenerationId } : {}),
     ...(publishedRank ? { publishedRank } : {}),
     ...(decisionLedger ? { decisionLedger } : {}),
@@ -78,6 +86,138 @@ function evaluatedSourceToRanking(
           safetyProvenance: source.safetyProvenance,
         }
       : null,
+  };
+}
+
+function buildSelectionRankBySourceKey(candidates: EvaluatedYieldSource[]): Map<string, number> {
+  const selectionRankBySourceKey = new Map<string, number>();
+  candidates.forEach((candidate, index) => {
+    if (!selectionRankBySourceKey.has(candidate.sourceKey)) {
+      selectionRankBySourceKey.set(candidate.sourceKey, index + 1);
+    }
+  });
+  return selectionRankBySourceKey;
+}
+
+function buildAltYieldSource(params: {
+  selected: EvaluatedYieldSource;
+  candidate: EvaluatedYieldSource;
+  provenance: Record<string, unknown> | null;
+  selectionRank: number | undefined;
+}): AltYieldSource {
+  return {
+    sourceKey: params.candidate.sourceKey,
+    yieldSource: params.candidate.yieldSource,
+    yieldSourceUrl: resolveYieldSourceUrl({
+      stablecoinId: params.candidate.id,
+      sourceKey: params.candidate.sourceKey,
+      yieldSource: params.candidate.yieldSource,
+    }),
+    yieldType: params.candidate.yieldType as AltYieldSource["yieldType"],
+    currentApy: params.candidate.currentApy,
+    apy30d: params.candidate.apy30d,
+    sourceTvlUsd: params.candidate.sourceTvlUsd,
+    dataSource: params.candidate.dataSource,
+    sourceRisk: buildYieldSourceRisk({
+      source: params.candidate,
+      provenance: params.provenance,
+      isBest: false,
+    }),
+    sourceRole: deriveYieldSourceRole(params.candidate, { isSelected: false }),
+    confidenceTier: params.candidate.confidenceTier,
+    selectionRank: params.selectionRank,
+    rejectionReasonCode: deriveRejectionReasonCode(params.selected, params.candidate),
+  };
+}
+
+function buildAltSourcesForRanking(params: {
+  selected: EvaluatedYieldSource;
+  candidates: EvaluatedYieldSource[];
+  rankingProvenanceByKey: Map<string, Record<string, unknown>>;
+}): AltYieldSource[] {
+  const selectionRankBySourceKey = buildSelectionRankBySourceKey(params.candidates);
+  const alts: AltYieldSource[] = [];
+  for (const candidate of buildUniqueAltCandidates(params.selected, params.candidates)) {
+    const key = buildHistoryKey(candidate.id, candidate.sourceKey);
+    const provenance = params.rankingProvenanceByKey.get(key) ?? null;
+    alts.push(
+      buildAltYieldSource({
+        selected: params.selected,
+        candidate,
+        provenance,
+        selectionRank: selectionRankBySourceKey.get(candidate.sourceKey),
+      }),
+    );
+  }
+  return alts;
+}
+
+function buildUniqueAltCandidates(
+  selected: EvaluatedYieldSource,
+  candidates: EvaluatedYieldSource[],
+): EvaluatedYieldSource[] {
+  const bySourceKey = new Map<string, EvaluatedYieldSource>();
+  for (const candidate of candidates) {
+    if (candidate.sourceKey === selected.sourceKey) {
+      continue;
+    }
+    const existing = bySourceKey.get(candidate.sourceKey);
+    if (!existing || candidate.currentApy > existing.currentApy) {
+      bySourceKey.set(candidate.sourceKey, candidate);
+    }
+  }
+  return [...bySourceKey.values()];
+}
+
+function toAlternateSourceSummary(
+  selected: EvaluatedYieldSource,
+  candidate: EvaluatedYieldSource,
+): YieldAlternateSourceSummary {
+  const sourceRiskPenalty = Number.isFinite(candidate.sourceRiskPenalty)
+    ? candidate.sourceRiskPenalty
+    : null;
+  const riskAdjustedUtility = Number.isFinite(candidate.sourceRiskAdjustedUtility)
+    ? candidate.sourceRiskAdjustedUtility
+    : null;
+  return {
+    sourceKey: candidate.sourceKey,
+    yieldSource: candidate.yieldSource,
+    yieldType: candidate.yieldType,
+    dataSource: candidate.dataSource,
+    currentApy: candidate.currentApy,
+    apy30d: candidate.apy30d,
+    apy30dDelta: candidate.apy30d - selected.apy30d,
+    sourceTvlUsd: candidate.sourceTvlUsd,
+    confidenceTier: candidate.confidenceTier,
+    sourceRole: deriveYieldSourceRole(candidate, { isSelected: false }),
+    sourceRiskPenalty,
+    riskAdjustedUtility,
+  };
+}
+
+function buildAlternateSummary(
+  selected: EvaluatedYieldSource,
+  altCandidates: EvaluatedYieldSource[],
+): YieldAlternateSummary | null {
+  if (altCandidates.length === 0) return null;
+  const bestAlternateByApy = [...altCandidates].sort((a, b) => {
+    if (b.apy30d !== a.apy30d) return b.apy30d - a.apy30d;
+    return compareCandidates(a, b);
+  })[0];
+  const bestRiskAdjustedAlternate = [...altCandidates].sort((a, b) => {
+    const utilityDiff = b.sourceRiskAdjustedUtility - a.sourceRiskAdjustedUtility;
+    if (utilityDiff !== 0) return utilityDiff;
+    return compareCandidates(a, b);
+  })[0];
+  return {
+    count: altCandidates.length,
+    bestAlternateByApy: bestAlternateByApy
+      ? toAlternateSourceSummary(selected, bestAlternateByApy)
+      : null,
+    bestRiskAdjustedAlternate: bestRiskAdjustedAlternate
+      ? toAlternateSourceSummary(selected, bestRiskAdjustedAlternate)
+      : null,
+    alternateApySpread: bestAlternateByApy ? bestAlternateByApy.apy30d - selected.apy30d : null,
   };
 }
 
@@ -118,39 +258,6 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     .filter((source) => input.bestSourceKeyByCoin.get(source.id) === source.sourceKey)
     .sort((a, b) => b.pharosYieldScore - a.pharosYieldScore);
 
-  const altSourcesByCoin = new Map<string, AltYieldSource[]>();
-  for (const source of input.evaluatedSources) {
-    if (input.bestSourceKeyByCoin.get(source.id) === source.sourceKey) continue;
-
-    const alts = altSourcesByCoin.get(source.id) ?? [];
-    const existingIdx = alts.findIndex((a) => a.sourceKey === source.sourceKey);
-    const key = buildHistoryKey(source.id, source.sourceKey);
-    const provenance = input.rankingProvenanceByKey.get(key) ?? null;
-    const alt: AltYieldSource = {
-      sourceKey: source.sourceKey,
-      yieldSource: source.yieldSource,
-      yieldSourceUrl: resolveYieldSourceUrl({
-        stablecoinId: source.id,
-        sourceKey: source.sourceKey,
-        yieldSource: source.yieldSource,
-      }),
-      yieldType: source.yieldType as AltYieldSource["yieldType"],
-      currentApy: source.currentApy,
-      apy30d: source.apy30d,
-      sourceTvlUsd: source.sourceTvlUsd,
-      dataSource: source.dataSource,
-      sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: false }),
-    };
-    if (existingIdx >= 0) {
-      if ((source.currentApy ?? 0) > (alts[existingIdx].currentApy ?? 0)) {
-        alts[existingIdx] = alt;
-      }
-    } else {
-      alts.push(alt);
-    }
-    altSourcesByCoin.set(source.id, alts);
-  }
-
   const publicationGenerationId = input.publication?.generationId ?? null;
   const rankings = bestRows.map((source, index) => {
     const key = buildHistoryKey(source.id, source.sourceKey);
@@ -185,7 +292,16 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       index + 1,
       decisionLedger,
     );
-    ranking.altSources = altSourcesByCoin.get(source.id) ?? [];
+    const altCandidates = buildUniqueAltCandidates(source, candidates);
+    ranking.altSources = buildAltSourcesForRanking({
+      selected: source,
+      candidates,
+      rankingProvenanceByKey: input.rankingProvenanceByKey,
+    });
+    const alternateSummary = buildAlternateSummary(source, altCandidates);
+    if (alternateSummary) {
+      ranking.alternateSummary = alternateSummary;
+    }
 
     const sourceObservedAt =
       provenance != null && typeof provenance.sourceObservedAt === "number"
@@ -205,6 +321,10 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
       }
     }
+    ranking.sourceRole = deriveYieldSourceRole(
+      { ...source, warnings: ranking.warningSignals },
+      { isSelected: true },
+    );
 
     return ranking;
   });

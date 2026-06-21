@@ -2421,6 +2421,16 @@
               "$ref": "#/components/schemas/AltYieldSource"
             }
           },
+          "alternateSummary": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldAlternateSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "provenance": {
             "type": [
               "object",
@@ -2457,6 +2467,17 @@
               }
             ]
           },
+          "sourceRole": {
+            "type": "string",
+            "enum": [
+              "canonical-holder",
+              "external-opportunity",
+              "fallback-proxy",
+              "audit-alternate",
+              "degraded-canonical"
+            ],
+            "description": "Worker-derived role explaining how the selected source participates in arbitration."
+          },
           "rankChangeAttribution": {
             "type": [
               "object",
@@ -2464,6 +2485,16 @@
             ],
             "description": "Optional rank-change attribution with previous rank/PYS, delta, primary driver, and driver contribution hints.",
             "additionalProperties": true
+          },
+          "decisionLedger": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldPublicDecisionLedger"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": true
@@ -2520,6 +2551,261 @@
                 "type": "null"
               }
             ]
+          },
+          "sourceRole": {
+            "type": "string",
+            "enum": [
+              "canonical-holder",
+              "external-opportunity",
+              "fallback-proxy",
+              "audit-alternate",
+              "degraded-canonical"
+            ]
+          },
+          "confidenceTier": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "curated",
+              "discovered",
+              "fallback"
+            ]
+          },
+          "selectionRank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Rank inside the worker's source-candidate ordering for this stablecoin."
+          },
+          "rejectionReasonCode": {
+            "type": "string",
+            "enum": [
+              "thinner",
+              "stale",
+              "lower-confidence",
+              "rewards-only",
+              "smaller",
+              "unspecified"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldAlternateSummary": {
+        "type": "object",
+        "description": "Deterministic summary of retained non-selected source rows.",
+        "required": [
+          "count",
+          "bestAlternateByApy",
+          "bestRiskAdjustedAlternate",
+          "alternateApySpread"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "bestAlternateByApy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldAlternateSourceSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bestRiskAdjustedAlternate": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldAlternateSourceSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "alternateApySpread": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldAlternateSourceSummary": {
+        "type": "object",
+        "description": "Compact alternate source summary used by ranking rows.",
+        "required": [
+          "sourceKey",
+          "yieldSource",
+          "yieldType",
+          "dataSource",
+          "currentApy",
+          "apy30d",
+          "apy30dDelta",
+          "sourceTvlUsd"
+        ],
+        "properties": {
+          "sourceKey": {
+            "type": "string"
+          },
+          "yieldSource": {
+            "type": "string"
+          },
+          "yieldType": {
+            "type": "string"
+          },
+          "dataSource": {
+            "type": "string"
+          },
+          "currentApy": {
+            "type": "number"
+          },
+          "apy30d": {
+            "type": "number"
+          },
+          "apy30dDelta": {
+            "type": "number"
+          },
+          "sourceTvlUsd": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "confidenceTier": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "curated",
+              "discovered",
+              "fallback"
+            ]
+          },
+          "sourceRole": {
+            "type": "string",
+            "enum": [
+              "canonical-holder",
+              "external-opportunity",
+              "fallback-proxy",
+              "audit-alternate",
+              "degraded-canonical"
+            ]
+          },
+          "sourceRiskPenalty": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "riskAdjustedUtility": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldPublicDecisionLedger": {
+        "type": "object",
+        "description": "Bounded public source-selection decision evidence for a ranking row.",
+        "properties": {
+          "selectedReasonCode": {
+            "type": "string",
+            "enum": [
+              "best-by-confidence-and-apy",
+              "deterministic-preferred",
+              "curated-over-discovered",
+              "tier-preference",
+              "tvl-floor",
+              "freshness-tiebreaker",
+              "fallback",
+              "no-alternatives"
+            ]
+          },
+          "previousBestSourceKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sourceSwitch": {
+            "type": "boolean"
+          },
+          "apy30dDeltaFromPrevious": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rejectedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "alternatives": {
+            "type": "array",
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/YieldPublicDecisionAlternative"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldPublicDecisionAlternative": {
+        "type": "object",
+        "description": "Compact retained alternate inside a row decision ledger.",
+        "required": [
+          "sourceKey",
+          "yieldSource",
+          "apy30dDelta",
+          "rejectionReasonCode"
+        ],
+        "properties": {
+          "sourceKey": {
+            "type": "string"
+          },
+          "yieldSource": {
+            "type": "string"
+          },
+          "apy30dDelta": {
+            "type": "number"
+          },
+          "rejectionReasonCode": {
+            "type": "string",
+            "enum": [
+              "thinner",
+              "stale",
+              "lower-confidence",
+              "rewards-only",
+              "smaller",
+              "unspecified"
+            ]
+          },
+          "confidenceTier": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "curated",
+              "discovered",
+              "fallback"
+            ]
+          },
+          "sourceRole": {
+            "type": "string",
+            "enum": [
+              "canonical-holder",
+              "external-opportunity",
+              "fallback-proxy",
+              "audit-alternate",
+              "degraded-canonical"
+            ]
+          },
+          "selectionRank": {
+            "type": "integer",
+            "minimum": 1
           }
         },
         "additionalProperties": true

@@ -5,7 +5,11 @@ import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates, getConfidencePriority } from "./evaluation-arbitration";
 import { publishYieldRowsAtomically } from "./publication-atomic-batch";
 import { buildYieldSourceProvenance } from "./provenance";
-import { buildPublicDecisionLedger } from "./decision-public";
+import {
+  buildPublicDecisionLedger,
+  deriveRejectionReasonCode,
+  deriveYieldSourceRole,
+} from "./decision-public";
 import { resolveApy30dDeltaFromPrevious } from "./publication-ranking-payload";
 
 const MAX_SOURCE_DECISION_ALTERNATIVES = 4;
@@ -112,13 +116,16 @@ function serializeBoundedDecisionAlternatives(
         .slice(0, maxAlternatives)
         .map((candidate) => ({
           sourceKey: truncateDecisionText(candidate.sourceKey),
+          selectionRank: candidates.findIndex((entry) => entry.sourceKey === candidate.sourceKey) + 1,
           confidenceTier: candidate.confidenceTier,
+          sourceRole: deriveYieldSourceRole(candidate, { isSelected: false }),
           dataSource: truncateDecisionText(candidate.dataSource, 80),
           apy30d: candidate.apy30d,
           pharosYieldScore: candidate.pharosYieldScore,
           sourceTvlUsd: candidate.sourceTvlUsd,
           sourceRiskPenalty: candidate.sourceRiskPenalty,
           rejected: candidate.rejected,
+          rejectionReasonCode: deriveRejectionReasonCode(selected, candidate),
           reason: buildAlternativeDecisionReason(selected, candidate),
           anomalies: candidate.anomalies
             .slice(0, maxAnomalies)

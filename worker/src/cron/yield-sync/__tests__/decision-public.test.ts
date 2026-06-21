@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPublicDecisionLedger } from "../decision-public";
+import { buildPublicDecisionLedger, deriveYieldSourceRole } from "../decision-public";
 import type { EvaluatedYieldSource } from "../evaluation-types";
 import type { YieldSourceRisk } from "@shared/types/yield";
 
@@ -156,12 +156,43 @@ describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)
 
   it("orders alternatives by absolute apy30d delta and caps at 2", () => {
     const sel = makeSource({ sourceKey: "selected", apy30d: 5 });
-    const near = makeSource({ sourceKey: "near", apy30d: 6 });
-    const far = makeSource({ sourceKey: "far", apy30d: 20 });
-    const mid = makeSource({ sourceKey: "mid", apy30d: 10 });
+    const near = makeSource({ sourceKey: "near", yieldType: "lending-vault", apy30d: 6 });
+    const far = makeSource({ sourceKey: "far", yieldType: "lending-vault", apy30d: 20 });
+    const mid = makeSource({ sourceKey: "mid", yieldType: "lending-vault", apy30d: 10 });
     const ledger = ledgerFor(sel, [near, far, mid]);
     expect(ledger.alternatives).toHaveLength(2);
     expect(ledger.alternatives.map((a) => a.sourceKey)).toEqual(["far", "mid"]);
+    expect(ledger.alternatives[0]).toMatchObject({
+      confidenceTier: "curated",
+      sourceRole: "audit-alternate",
+      selectionRank: 3,
+    });
+  });
+});
+
+describe("deriveYieldSourceRole", () => {
+  it("labels selected holder sources, retained holder alternates, fallback proxies, external opportunities, and degraded canonicals", () => {
+    expect(deriveYieldSourceRole(makeSource({ yieldType: "lending-vault" }), { isSelected: true })).toBe(
+      "canonical-holder",
+    );
+    expect(deriveYieldSourceRole(makeSource({ yieldType: "lending-vault" }), { isSelected: false })).toBe(
+      "audit-alternate",
+    );
+    expect(
+      deriveYieldSourceRole(
+        makeSource({ dataSource: "price-derived", confidenceTier: "fallback" }),
+        { isSelected: true },
+      ),
+    ).toBe("fallback-proxy");
+    expect(deriveYieldSourceRole(makeSource({ yieldType: "fixed-yield" }), { isSelected: false })).toBe(
+      "external-opportunity",
+    );
+    expect(
+      deriveYieldSourceRole(
+        makeSource({ yieldType: "lending-vault", anomalies: ["canonical-zero-vs-positive"] }),
+        { isSelected: true },
+      ),
+    ).toBe("degraded-canonical");
   });
 });
 

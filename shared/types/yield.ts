@@ -52,6 +52,21 @@ export type YieldPublicationStatus = "staged" | "published" | "failed";
 export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
 export type YieldTrancheSide = "senior" | "junior";
 export type YieldMarketStatus = "normal" | "protected" | "unhealthy" | "critical";
+export const YIELD_SOURCE_CONFIDENCE_TIER_VALUES = [
+  "deterministic",
+  "curated",
+  "discovered",
+  "fallback",
+] as const;
+export type YieldSourceConfidenceTier = (typeof YIELD_SOURCE_CONFIDENCE_TIER_VALUES)[number];
+export const YIELD_SOURCE_ROLE_VALUES = [
+  "canonical-holder",
+  "external-opportunity",
+  "fallback-proxy",
+  "audit-alternate",
+  "degraded-canonical",
+] as const;
+export type YieldSourceRole = (typeof YIELD_SOURCE_ROLE_VALUES)[number];
 export const YIELD_DEPLOYMENT_PLACE_VALUES = [
   "native-wrapper",
   "issuer-savings",
@@ -215,6 +230,9 @@ const YieldPublicDecisionAlternativeSchema = z.object({
   yieldSource: z.string(),
   apy30dDelta: z.number(),
   rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES),
+  confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES).optional(),
+  sourceRole: z.enum(YIELD_SOURCE_ROLE_VALUES).optional(),
+  selectionRank: z.number().int().positive().optional(),
 });
 
 const YieldPublicDecisionLedgerSchema = z.object({
@@ -257,6 +275,32 @@ const AltYieldSourceSchema = z.object({
   sourceTvlUsd: z.number().nullable(),
   dataSource: z.string(),
   sourceRisk: YieldSourceRiskSchema.nullable().optional(),
+  sourceRole: z.enum(YIELD_SOURCE_ROLE_VALUES).optional(),
+  confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES).optional(),
+  selectionRank: z.number().int().positive().optional(),
+  rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES).optional(),
+});
+
+const YieldAlternateSourceSummarySchema = z.object({
+  sourceKey: z.string(),
+  yieldSource: z.string(),
+  yieldType: YieldTypeSchema,
+  dataSource: z.string(),
+  currentApy: z.number(),
+  apy30d: z.number(),
+  apy30dDelta: z.number(),
+  sourceTvlUsd: z.number().nullable(),
+  confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES).optional(),
+  sourceRole: z.enum(YIELD_SOURCE_ROLE_VALUES).optional(),
+  sourceRiskPenalty: z.number().min(1).nullable().optional(),
+  riskAdjustedUtility: z.number().nullable().optional(),
+});
+
+const YieldAlternateSummarySchema = z.object({
+  count: z.number().int().min(0),
+  bestAlternateByApy: YieldAlternateSourceSummarySchema.nullable(),
+  bestRiskAdjustedAlternate: YieldAlternateSourceSummarySchema.nullable(),
+  alternateApySpread: z.number().nullable(),
 });
 
 const YieldBenchmarkMetaSchema = z.object({
@@ -348,6 +392,8 @@ export type YieldPublicDecisionAlternative = z.infer<typeof YieldPublicDecisionA
 export type YieldPublicDecisionLedger = z.infer<typeof YieldPublicDecisionLedgerSchema>;
 export type YieldRankChangeAttribution = z.infer<typeof YieldRankChangeAttributionSchema>;
 export type AltYieldSource = z.infer<typeof AltYieldSourceSchema>;
+export type YieldAlternateSourceSummary = z.infer<typeof YieldAlternateSourceSummarySchema>;
+export type YieldAlternateSummary = z.infer<typeof YieldAlternateSummarySchema>;
 export type YieldBenchmarkMeta = z.infer<typeof YieldBenchmarkMetaSchema>;
 export type YieldBenchmarkRegistry = z.infer<typeof YieldBenchmarkRegistrySchema>;
 export type YieldSourceInputMeta = z.infer<typeof YieldSourceInputMetaSchema>;
@@ -390,11 +436,13 @@ const YieldRankingSchema = z.object({
   apyMax30d: z.number().nullable(),
   warningSignals: z.array(z.string()),
   altSources: z.array(AltYieldSourceSchema).optional().default([]),
+  alternateSummary: YieldAlternateSummarySchema.nullable().optional(),
   provenance: YieldRankingProvenanceSchema.nullable().optional(),
   publicationGenerationId: z.string().nullable().optional(),
   publishedRank: z.number().int().positive().nullable().optional(),
   liveRank: z.number().int().positive().nullable().optional(),
   sourceRisk: YieldSourceRiskSchema.nullable().optional(),
+  sourceRole: z.enum(YIELD_SOURCE_ROLE_VALUES).optional(),
   rankChangeAttribution: YieldRankChangeAttributionSchema.nullable().optional(),
   decisionLedger: YieldPublicDecisionLedgerSchema.nullable().optional(),
 });

@@ -12,6 +12,7 @@ import type {
   YieldDecisionRejectionReasonCode,
   YieldPublicDecisionAlternative,
   YieldPublicDecisionLedger,
+  YieldSourceRole,
 } from "@shared/types/yield";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { getConfidencePriority } from "./evaluation-arbitration";
@@ -23,7 +24,45 @@ const STALE_RATIO = 2;
 const REWARDS_ONLY_SHARE = 0.5;
 const SMALLER_TVL_RATIO = 5;
 
-function deriveRejectionReasonCode(
+function isExternalOpportunitySource(source: EvaluatedYieldSource): boolean {
+  return (
+    source.yieldType === "lending-opportunity" ||
+    source.yieldType === "fixed-yield" ||
+    source.yieldType === "structured-tranche"
+  );
+}
+
+function hasCanonicalDegradation(source: EvaluatedYieldSource): boolean {
+  return (
+    source.rejected ||
+    source.anomalies.includes("source-zero-vs-history") ||
+    source.anomalies.includes("canonical-zero-vs-positive") ||
+    source.anomalies.includes("anchor-stale") ||
+    source.warnings.includes("zero-yield") ||
+    source.warnings.includes("data-stale")
+  );
+}
+
+export function deriveYieldSourceRole(
+  source: EvaluatedYieldSource,
+  options: { isSelected: boolean },
+): YieldSourceRole {
+  if (source.confidenceTier === "fallback" || source.dataSource === "price-derived") {
+    return "fallback-proxy";
+  }
+  if (isExternalOpportunitySource(source)) {
+    return "external-opportunity";
+  }
+  if (hasCanonicalDegradation(source)) {
+    return "degraded-canonical";
+  }
+  if (!options.isSelected) {
+    return "audit-alternate";
+  }
+  return "canonical-holder";
+}
+
+export function deriveRejectionReasonCode(
   selected: EvaluatedYieldSource,
   candidate: EvaluatedYieldSource,
 ): YieldDecisionRejectionReasonCode {
@@ -134,6 +173,12 @@ export function buildPublicDecisionLedger(params: {
   const competitors = params.candidates.filter(
     (candidate) => candidate.sourceKey !== params.selected.sourceKey,
   );
+  const selectionRankBySourceKey = new Map<string, number>();
+  params.candidates.forEach((candidate, index) => {
+    if (!selectionRankBySourceKey.has(candidate.sourceKey)) {
+      selectionRankBySourceKey.set(candidate.sourceKey, index + 1);
+    }
+  });
   const ranked = [...competitors].sort((a, b) => {
     const deltaA = Math.abs(a.apy30d - params.selected.apy30d);
     const deltaB = Math.abs(b.apy30d - params.selected.apy30d);
@@ -146,6 +191,9 @@ export function buildPublicDecisionLedger(params: {
       yieldSource: candidate.yieldSource,
       apy30dDelta: candidate.apy30d - params.selected.apy30d,
       rejectionReasonCode: deriveRejectionReasonCode(params.selected, candidate),
+      confidenceTier: candidate.confidenceTier,
+      sourceRole: deriveYieldSourceRole(candidate, { isSelected: false }),
+      selectionRank: selectionRankBySourceKey.get(candidate.sourceKey),
     }));
 
   return {
