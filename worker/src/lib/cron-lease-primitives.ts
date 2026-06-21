@@ -269,7 +269,7 @@ export async function runCronWithLease<T>(
     clearHeartbeat();
     if (shouldReleaseLease) {
       try {
-        await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2, leaseController.signal);
+        await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
       } catch (releaseErr) {
         // Best-effort release: lease expiry still guarantees eventual progress.
         console.error(`[cron-lease] Failed to release lease for ${job}:`, releaseErr);
