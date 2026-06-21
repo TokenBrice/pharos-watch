@@ -80,7 +80,7 @@ function isRuntimeBreaching(stats: JobDurationStats): boolean {
 function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats): boolean {
   if (stats.slots < MIN_SLOTS_FOR_ABANDONMENT_TREND) return false;
   return (
-    stats.abandonedSlots >= SLOT_ABANDONMENT_ALERT_COUNT ||
+    stats.abandonedSlots >= SLOT_ABANDONMENT_ALERT_COUNT &&
     stats.abandonmentRatio >= SLOT_ABANDONMENT_ALERT_RATIO
   );
 }
