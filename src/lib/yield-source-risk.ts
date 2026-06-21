@@ -303,11 +303,15 @@ export function isYieldSourceRiskMaterial(sourceRisk: YieldSourceRisk | null | u
 export function formatYieldSourceRiskSummary(sourceRisk: YieldSourceRisk | null | undefined): string | null {
   if (!isYieldSourceRiskMaterial(sourceRisk)) return null;
 
-  const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty);
+  return `Source risk ${formatYieldSourceRiskCompact(sourceRisk)}`;
+}
+
+export function formatYieldSourceRiskCompact(sourceRisk: YieldSourceRisk | null | undefined): string {
+  const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty) ?? 1;
   const sourceRiskScore = finiteNumber(sourceRisk?.sourceRiskScore);
   const scoreLabel = sourceRiskScore !== null ? `${Math.round(sourceRiskScore)}/100` : "n/a";
-  const penaltyLabel = sourceRiskPenalty !== null ? `${sourceRiskPenalty.toFixed(2)}x` : "n/a";
-  return `Source risk ${scoreLabel} | ${penaltyLabel}`;
+  const penaltyLabel = `${sourceRiskPenalty.toFixed(2)}x`;
+  return `${scoreLabel} | ${penaltyLabel}`;
 }
 
 export function formatYieldSourceRiskDriverSummary(drivers: readonly YieldSourceRiskDriver[]): string {

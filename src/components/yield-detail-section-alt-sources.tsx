@@ -9,10 +9,15 @@ import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
 import { ALT_SOURCE_INITIAL_COUNT } from "@/components/yield-detail-section-model";
-import type { YieldSourceExplorerSource } from "@/lib/yield-source-explorer-model";
+import {
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+  formatYieldSourceRiskCompact,
+} from "@/lib/yield-source-risk";
+import type { YieldSourceExplorerAlternate } from "@/lib/yield-source-explorer-model";
 
 export interface YieldDetailSectionAltSourcesProps {
-  altSources: YieldSourceExplorerSource[];
+  altSources: YieldSourceExplorerAlternate[];
   bestApy: number;
   bestSourceKey: string | null;
   totalSourceCount?: number;
@@ -99,6 +104,9 @@ export function YieldDetailSectionAltSources({
           const isBest = source.sourceKey === bestSourceKey;
           const delta = source.apy30d - bestApy;
           const deltaSign = delta >= 0 ? "+" : "";
+          const confidence = source.confidenceTier
+            ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null
+            : null;
           return (
             <li
               key={source.sourceKey}
@@ -132,6 +140,23 @@ export function YieldDetailSectionAltSources({
                     <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                       TVL {source.sourceTvlUsd !== null ? formatCurrency(source.sourceTvlUsd) : "—"}
                     </span>
+                    {confidence ? (
+                      <span className="text-[11px] text-muted-foreground">{confidence}</span>
+                    ) : null}
+                    <span
+                      className="text-[11px] text-muted-foreground"
+                      title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}
+                    >
+                      {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
+                    </span>
+                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                      Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
+                    </span>
+                    {source.rejectionHint ? (
+                      <span className="text-[11px] text-muted-foreground" title={source.rejectionHint.description}>
+                        Reason {source.rejectionHint.label}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
@@ -206,6 +231,9 @@ export function YieldDetailSectionAltSources({
             >
               Δ APY
             </TableHead>
+            <TableHead scope="col" className="h-auto px-0 pb-2 text-right font-medium">
+              Risk
+            </TableHead>
             <TableHead
               scope="col"
               aria-sort={getAriaSort("tvl")}
@@ -233,6 +261,9 @@ export function YieldDetailSectionAltSources({
             const isBest = source.sourceKey === bestSourceKey;
             const delta = source.apy30d - bestApy;
             const deltaSign = delta >= 0 ? "+" : "";
+            const confidence = source.confidenceTier
+              ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null
+              : null;
             return (
               <TableRow
                 key={source.sourceKey}
@@ -250,6 +281,15 @@ export function YieldDetailSectionAltSources({
                       <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                         Best
                       </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                    {confidence ? <span>{confidence}</span> : null}
+                    <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
+                      {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
+                    </span>
+                    {source.rejectionHint ? (
+                      <span title={source.rejectionHint.description}>Reason {source.rejectionHint.label}</span>
                     ) : null}
                   </div>
                 </TableCell>
@@ -274,6 +314,9 @@ export function YieldDetailSectionAltSources({
                     {deltaSign}
                     {formatPercent(delta)}
                   </span>
+                </TableCell>
+                <TableCell className="px-0 py-2 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+                  {formatYieldSourceRiskCompact(source.sourceRisk)}
                 </TableCell>
                 <TableCell className="px-0 py-2 text-right font-mono tabular-nums text-muted-foreground">
                   {source.sourceTvlUsd !== null ? formatCurrency(source.sourceTvlUsd) : "—"}

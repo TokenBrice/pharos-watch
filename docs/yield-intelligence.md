@@ -973,9 +973,10 @@ It reuses the cached `/api/yield-rankings` payload to find the coin's chosen sou
    - 2+ active signals: amber callout block listing every warning label
    - 1 active signal: compact inline alert row
 3. 30d Excess Yield callout plus four stat cards: Current APY, 30d APY, PYS (with click/focus disclosure for the score breakdown), Stability
-4. Source info row: clickable source name, normalized data-source badge, source TVL
-5. Retained alternates list when `altSources.length > 0`
-6. Shared `YieldHistoryChart`
+4. Compact `YieldSourceRiskCard` for the selected source, including posture, score, penalty, source depth, freshness, driver chips, venue tier/confidence, and dependency concentration when populated
+5. Source info row: clickable source name, normalized data-source badge, source TVL
+6. Retained alternates list when `altSources.length > 0`, with alternate confidence, depth, compact source-risk score/penalty, and rejection reason when inferred
+7. Shared `YieldHistoryChart`
 
 The section returns `null` once rankings have loaded and the coin is neither `yieldBearing` nor present in the rankings cache. If a coin is marked `yieldBearing` in metadata but has no ranking row yet, it renders an inline empty/error state instead of silently disappearing.
 
@@ -1008,9 +1009,9 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 **Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions and an actionable next check (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`, `low-source-tvl`).
 
-**Source inspection:** The table row delegates source inspection to the shared `YieldSourceSheet`, which opens from the retained source controls in the row/expanded state instead of the old inline `+N` popover.
+**Source inspection:** The table row delegates source inspection to the shared `YieldSourceSheet`, which opens from the retained source controls in the row/expanded state instead of the old inline `+N` popover. The sheet uses the same `YieldSourceRiskCard` as the detail surfaces. When a retained alternate is selected inside the sheet, the risk card follows that active source; otherwise it displays the canonical chosen-source risk.
 
-**Source-risk visibility:** Desktop and mobile rows show a labeled compact summary such as `Source risk 42/100 | 1.32x` when the nested source-risk penalty is material. This uses the published `sourceRisk.sourceRiskScore` and `sourceRisk.sourceRiskPenalty` fields and is a visibility change only; neutral or missing evidence stays visually quiet.
+**Source-risk visibility:** Desktop and mobile rows show a labeled compact summary such as `Source risk 42/100 | 1.32x` when the nested source-risk penalty is material. Stablecoin detail yield surfaces render a permanent `YieldSourceRiskCard`; the embedded detail section uses the compact variant, while `/stablecoin/<id>/yield/` keeps the full card and `VenueRiskBreakdown` when `sourceRisk.venueRiskScores` exists. These use the published `sourceRisk.sourceRiskScore` and `sourceRisk.sourceRiskPenalty` fields and are visibility changes only; neutral or missing evidence stays visually quiet.
 
 **Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the selected row benchmark, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
 

@@ -11,6 +11,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { PysBreakdown } from "@/components/pys-breakdown";
+import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
@@ -339,6 +340,18 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         sourceRiskDrivers={sourceExplorer?.sourceRiskDrivers ?? []}
         scalingFactor={rankingsQuery.data?.scalingFactor ?? null}
       />
+
+      {sourceExplorer ? (
+        <YieldSourceRiskCard
+          sourceLabel={sourceExplorer.selectedSource.displayLabel}
+          sourceRisk={sourceExplorer.selectedSource.sourceRisk}
+          sourceTvlUsd={sourceExplorer.selectedSource.sourceTvlUsd}
+          sourceDepthLens={sourceExplorer.selectedSource.depthLens}
+          sourceRiskDrivers={sourceExplorer.selectedSource.sourceRiskDrivers}
+          sourceChanged={sourceExplorer.sourceSwitch.changed}
+          confidenceTier={sourceExplorer.selectedSource.confidenceTier}
+        />
+      ) : null}
 
       {apyChangeAttribution ? (
         <YieldChangeAttributionCard attribution={apyChangeAttribution} />

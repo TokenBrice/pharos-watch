@@ -33,6 +33,7 @@ export interface YieldSourceExplorerSource {
   apy30d: number;
   sourceTvlUsd: number | null;
   dataSource: string;
+  confidenceTier: YieldSourceConfidenceTier | null;
   sourceRisk: YieldRanking["sourceRisk"];
   depthLens: YieldSourceDepthLens;
   sourceRiskDrivers: YieldSourceRiskDriver[];
@@ -174,6 +175,7 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       apy30d: ranking.apy30d,
       sourceTvlUsd: ranking.sourceTvlUsd,
       dataSource: ranking.dataSource,
+      confidenceTier: ranking.provenance?.confidenceTier ?? inferLaneConfidenceTier(ranking.dataSource),
       sourceRisk: ranking.sourceRisk ?? null,
       isChosen: true,
     },
@@ -186,6 +188,7 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       apy30d: source.apy30d,
       sourceTvlUsd: source.sourceTvlUsd,
       dataSource: source.dataSource,
+      confidenceTier: inferLaneConfidenceTier(source.dataSource),
       sourceRisk: source.sourceRisk ?? null,
       isChosen: false,
     })),

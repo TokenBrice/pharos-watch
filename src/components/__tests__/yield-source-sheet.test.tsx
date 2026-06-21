@@ -207,7 +207,11 @@ describe("YieldSourceSheet", () => {
       />,
     );
 
-    expect(screen.getByTestId("yield-source-risk-bar").textContent).toBe("72");
+    expect(screen.getAllByTestId("yield-source-risk-bar").map((node) => node.textContent)).toContain("72");
+    expect(screen.getByText("Score")).toBeTruthy();
+    expect(screen.getByText("72/100")).toBeTruthy();
+    expect(screen.getByText("Penalty")).toBeTruthy();
+    expect(screen.getAllByText("1.00x").length).toBeGreaterThan(0);
   });
 
   it("renders the sparkbar in the unavailable variant when sourceRiskScore is missing", () => {
@@ -223,7 +227,7 @@ describe("YieldSourceSheet", () => {
       />,
     );
 
-    expect(screen.getByTestId("yield-source-risk-bar").textContent).toBe("unavailable");
+    expect(screen.getAllByTestId("yield-source-risk-bar").some((node) => node.textContent === "unavailable")).toBe(true);
   });
 
   it("renders a freshness stamp when sourceAgeSeconds is provided", () => {
@@ -242,9 +246,10 @@ describe("YieldSourceSheet", () => {
       />,
     );
 
-    const stamp = screen.getByText("1h ago");
+    const stamp = screen.getAllByText("1h ago").find((node) =>
+      node.getAttribute("title") === "Source observed 1h ago (fresh)"
+    );
     expect(stamp).toBeTruthy();
-    expect(stamp.getAttribute("title")).toBe("Source observed 1h ago (fresh)");
   });
 
   it("does not render a freshness stamp when sourceAgeSeconds is missing", () => {
@@ -355,7 +360,7 @@ describe("YieldSourceSheet", () => {
       />,
     );
 
-    expect(screen.getByText("Source-risk drivers")).toBeTruthy();
+    expect(screen.getByText("Source risk")).toBeTruthy();
     for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
       expect(screen.getByText(label)).toBeTruthy();
     }
@@ -394,6 +399,8 @@ describe("YieldSourceSheet", () => {
     );
 
     expect(screen.getByText("thinner")).toBeTruthy();
+    expect(screen.getByText("Risk n/a | 1.00x")).toBeTruthy();
+    expect(screen.getByText("Moderate depth")).toBeTruthy();
   });
 
   it("does not render a rejection-hint chip when rejectionHint is null", () => {

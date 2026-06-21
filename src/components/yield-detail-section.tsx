@@ -15,7 +15,9 @@ import { useYieldHistory } from "@/hooks/api-hooks";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
+  formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
 import {
   YIELD_DECISION_REASON_LABELS,
@@ -29,6 +31,7 @@ import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-alt-sources";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { StatTile } from "@/components/stat-tile";
+import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { classifyApyChange, type YieldChangeAttributionResult } from "@/lib/yield-change-attribution";
 
 interface YieldDetailSectionProps {
@@ -262,6 +265,18 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
       <YieldRankMovementCard attribution={ranking.rankChangeAttribution ?? null} />
 
+      <YieldSourceRiskCard
+        sourceLabel={view.sourceExplorer.selectedSource.displayLabel}
+        sourceRisk={view.sourceExplorer.selectedSource.sourceRisk}
+        sourceTvlUsd={view.sourceExplorer.selectedSource.sourceTvlUsd}
+        sourceDepthLens={view.sourceExplorer.selectedSource.depthLens}
+        sourceRiskDrivers={view.sourceExplorer.selectedSource.sourceRiskDrivers}
+        sourceChanged={view.sourceExplorer.sourceSwitch.changed}
+        confidenceTier={view.sourceExplorer.selectedSource.confidenceTier}
+        compact
+        showVenueBreakdown={false}
+      />
+
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
           <span className="font-semibold text-foreground">
@@ -343,14 +358,30 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             {view.sourceExplorer.retainedAlternates.map((source) => (
               <div
                 key={source.sourceKey}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2"
+                className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
               >
-                <TableSourceLink href={source.url} className="max-w-full text-sm text-foreground">
-                  {source.displayLabel}
-                </TableSourceLink>
-                <span className="font-mono text-sm tabular-nums text-muted-foreground">
-                  {formatPercent(source.currentApy)}
-                </span>
+                <div className="flex items-center justify-between gap-3">
+                  <TableSourceLink href={source.url} className="max-w-full text-sm text-foreground">
+                    {source.displayLabel}
+                  </TableSourceLink>
+                  <span className="font-mono text-sm tabular-nums text-muted-foreground">
+                    {formatPercent(source.currentApy)}
+                  </span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                  {source.confidenceTier ? (
+                    <span>{YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label}</span>
+                  ) : null}
+                  <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
+                    {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
+                  </span>
+                  <span className="font-mono tabular-nums">
+                    Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
+                  </span>
+                  {source.rejectionHint ? (
+                    <span title={source.rejectionHint.description}>Reason {source.rejectionHint.label}</span>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

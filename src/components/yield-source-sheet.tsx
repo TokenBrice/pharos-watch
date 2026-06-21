@@ -16,9 +16,10 @@ import {
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   classifyYieldSourceFreshness,
+  formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
-import { VenueRiskBreakdown } from "@/components/venue-risk-breakdown";
+import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -59,6 +60,8 @@ function YieldSourceSheetBody({
   const effectiveSourceKey = selectedSourceKey ?? sourceExplorer.selectedSource.sourceKey;
   const totalSources = sourceExplorer.allSources.length;
   const { selectedSource } = sourceExplorer;
+  const activeSource =
+    sourceExplorer.allSources.find((source) => source.sourceKey === effectiveSourceKey) ?? selectedSource;
   const confidenceTier = ranking.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] ?? null : null;
   const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null : null;
@@ -170,34 +173,15 @@ function YieldSourceSheetBody({
           </dl>
         </div>
 
-        <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Source-risk drivers
-          </p>
-          {sourceExplorer.sourceRiskDrivers.length > 0 ? (
-            <ul className="mt-2 space-y-2 text-xs">
-              {sourceExplorer.sourceRiskDrivers.map((driver) => (
-                <li key={driver.key}>
-                  <span className="font-medium text-foreground">{driver.label}</span>
-                  <span className="block text-muted-foreground">{driver.description}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">
-              No populated source-risk driver is currently reducing this row beyond the neutral source penalty.
-            </p>
-          )}
-        </div>
-
-        {selectedSource.sourceRisk?.venueRiskScores ? (
-          <VenueRiskBreakdown
-            scores={selectedSource.sourceRisk.venueRiskScores}
-            tier={selectedSource.sourceRisk.venueRiskTier}
-            weighted={selectedSource.sourceRisk.venueRiskWeighted}
-            confidence={selectedSource.sourceRisk.venueRiskConfidence}
-          />
-        ) : null}
+        <YieldSourceRiskCard
+          sourceLabel={activeSource.displayLabel}
+          sourceRisk={activeSource.sourceRisk}
+          sourceTvlUsd={activeSource.sourceTvlUsd}
+          sourceDepthLens={activeSource.depthLens}
+          sourceRiskDrivers={activeSource.sourceRiskDrivers}
+          sourceChanged={activeSource.isChosen ? sourceExplorer.sourceSwitch.changed : false}
+          confidenceTier={activeSource.confidenceTier}
+        />
 
         {sourceExplorer.retainedAlternates.length > 0 && (
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
@@ -212,6 +196,9 @@ function YieldSourceSheetBody({
                   const isSelected = effectiveSourceKey === source.sourceKey;
                   const delta = source.apy30d - ranking.apy30d;
                   const deltaSign = delta >= 0 ? "+" : "";
+                  const confidence = source.confidenceTier
+                    ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null
+                    : null;
 
                   return (
                     <button
@@ -223,14 +210,30 @@ function YieldSourceSheetBody({
                         isSelected && "ring-1 ring-primary/40",
                       )}
                     >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm text-foreground">{source.displayLabel}</span>
-                        <Badge
-                          variant="outline"
-                          className={cn("shrink-0 text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
-                        >
-                          {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
-                        </Badge>
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-sm text-foreground">{source.displayLabel}</span>
+                          <Badge
+                            variant="outline"
+                            className={cn("shrink-0 text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
+                          >
+                            {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                          {confidence ? <span>{confidence}</span> : null}
+                          <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
+                            {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
+                          </span>
+                          <span className="font-mono tabular-nums">
+                            Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
+                          </span>
+                          {source.rejectionHint ? (
+                            <span title={source.rejectionHint.description}>
+                              Reason {source.rejectionHint.label}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2 text-xs">
                         <span className="font-mono tabular-nums text-foreground">
