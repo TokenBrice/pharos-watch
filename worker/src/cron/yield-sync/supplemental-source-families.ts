@@ -10,6 +10,7 @@ import {
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
   fetchYearnKongSources,
+  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
   type AaveV3SupplyRateRow,
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
@@ -30,6 +31,7 @@ const EMPTY_OPTIONAL_RPC_TELEMETRY: OptionalRpcFamilyTelemetry = {
   missingByChain: {},
   missingReasonCounts: {},
   missingTargets: [],
+  missingTargetsTruncated: false,
   budgetExhausted: false,
   endpointStrategy: "alternating-fallback-primary",
 };
@@ -67,6 +69,30 @@ export interface SupplementalSourceAccounting {
   malformedSourceDrops: SupplementalDropBucket;
   sizeGatedDrops: SupplementalDropBucket;
 }
+
+export interface SupplementalSourceFamilySummary {
+  status: SupplementalSourceFamilyStatus;
+  rawCandidateCount: number;
+  candidateCount: number;
+  malformedDropCount: number;
+  optionalRpc?: {
+    targetCount: number;
+    attemptedCount: number;
+    resolvedTargetCount: number;
+    emittedCount: number;
+    missingTargetCount: number;
+    budgetExhausted: boolean;
+    missingByChain: Record<string, number>;
+    missingReasonCounts: Record<string, number>;
+    missingTargetExamples: string[];
+    missingTargetExamplesTruncated: boolean;
+  };
+}
+
+type SupplementalSourceFamilySummaryRecord = Record<
+  SupplementalSourceFamilyKey,
+  SupplementalSourceFamilySummary
+>;
 
 const SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT = 5;
 export const SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY = 1;
@@ -193,6 +219,52 @@ function filterMalformedSupplementalCandidates(
   }
 
   return { ...result, candidates };
+}
+
+function buildOptionalRpcSummary(telemetry: OptionalRpcFamilyTelemetry): SupplementalSourceFamilySummary["optionalRpc"] {
+  return {
+    targetCount: telemetry.targetCount,
+    attemptedCount: telemetry.attemptedCount,
+    resolvedTargetCount: telemetry.resolvedTargetCount,
+    emittedCount: telemetry.emittedCount,
+    missingTargetCount: telemetry.missingTargetCount,
+    budgetExhausted: telemetry.budgetExhausted,
+    missingByChain: telemetry.missingByChain,
+    missingReasonCounts: telemetry.missingReasonCounts,
+    missingTargetExamples: telemetry.missingTargets.slice(0, OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT),
+    missingTargetExamplesTruncated:
+      telemetry.missingTargetsTruncated
+      || telemetry.missingTargets.length > OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
+  };
+}
+
+function buildSourceFamilySummaries(
+  familyResults: SupplementalSourceFamilyResult[],
+  malformedSourceDrops: SupplementalDropBucket,
+): SupplementalSourceFamilySummaryRecord {
+  const summaries = Object.fromEntries(
+    SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [family, {
+      status: "failed" as SupplementalSourceFamilyStatus,
+      rawCandidateCount: 0,
+      candidateCount: 0,
+      malformedDropCount: malformedSourceDrops.bySourceFamily[family],
+    }]),
+  ) as SupplementalSourceFamilySummaryRecord;
+
+  for (const result of familyResults) {
+    const summary: SupplementalSourceFamilySummary = {
+      status: result.status,
+      rawCandidateCount: result.sourceFamilyCount,
+      candidateCount: result.candidates.length,
+      malformedDropCount: malformedSourceDrops.bySourceFamily[result.key],
+    };
+    if (result.telemetry) {
+      summary.optionalRpc = buildOptionalRpcSummary(result.telemetry);
+    }
+    summaries[result.key] = summary;
+  }
+
+  return summaries;
 }
 
 function getTrackedContractAddress(stablecoinId: string, chain: string): string | null {
@@ -450,6 +522,7 @@ export async function loadSupplementalSourceFamilies(
   familyResults: SupplementalSourceFamilyResult[];
   sourceFamilyCounts: SourceFamilyCountRecord;
   supplementalSourceAccounting: SupplementalSourceAccounting;
+  sourceFamilySummaries: SupplementalSourceFamilySummaryRecord;
   optionalRpcTelemetry: {
     compoundV3: OptionalRpcFamilyTelemetry;
     aaveV3: OptionalRpcFamilyTelemetry;
@@ -478,6 +551,7 @@ export async function loadSupplementalSourceFamilies(
       malformedSourceDrops,
       sizeGatedDrops: buildDropBucket(),
     },
+    sourceFamilySummaries: buildSourceFamilySummaries(familyResults, malformedSourceDrops),
     optionalRpcTelemetry: {
       compoundV3:
         familyResults.find((result) => result.key === "compoundV3")?.telemetry

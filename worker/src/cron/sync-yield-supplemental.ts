@@ -93,7 +93,14 @@ export async function syncYieldSupplemental(
       },
     },
   });
-  const { candidates, familyResults, sourceFamilyCounts, supplementalSourceAccounting, optionalRpcTelemetry } =
+  const {
+    candidates,
+    familyResults,
+    sourceFamilyCounts,
+    supplementalSourceAccounting,
+    sourceFamilySummaries,
+    optionalRpcTelemetry,
+  } =
     await loadSupplementalSourceFamilies({
       startSec,
       signal,
@@ -108,6 +115,7 @@ export async function syncYieldSupplemental(
         successfulFamilies: familyResults.filter((family) => family.status === "ok").length,
       },
       sourceFamilyCounts,
+      sourceFamilySummaries,
     },
   });
 
@@ -132,6 +140,7 @@ export async function syncYieldSupplemental(
           rowsDropped: droppedCount,
         },
         fallbackMode: "empty-snapshot",
+        sourceFamilySummaries,
       },
     });
     return {
@@ -147,6 +156,7 @@ export async function syncYieldSupplemental(
           supplementalCandidatesWritten: 0,
           sourceFamilyCounts,
           supplementalSourceAccounting,
+          sourceFamilySummaries,
           optionalRpcTelemetry,
         },
         fallbackMode: "empty-snapshot",
@@ -225,6 +235,7 @@ export async function syncYieldSupplemental(
       },
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
       familyCacheResults,
+      sourceFamilySummaries,
     },
   });
 
@@ -240,6 +251,7 @@ export async function syncYieldSupplemental(
         supplementalCandidatesWritten: cacheResult.written ? dedupedCandidates.length : 0,
         sourceFamilyCounts,
         supplementalSourceAccounting,
+        sourceFamilySummaries,
         optionalRpcTelemetry,
       },
       fallbackMode: null,

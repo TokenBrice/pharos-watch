@@ -16,6 +16,7 @@ const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
 const OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS = 10_000;
 const OPTIONAL_PROTOCOL_RPC_MAX_RETRIES = 2;
 const ON_CHAIN_RATE_REQUEST_TIMEOUT_MS = 6_000;
+export const OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT = 20;
 
 export interface OptionalRpcFamilyTelemetry {
   targetCount: number;
@@ -26,6 +27,7 @@ export interface OptionalRpcFamilyTelemetry {
   missingByChain: Record<string, number>;
   missingReasonCounts: Record<string, number>;
   missingTargets: string[];
+  missingTargetsTruncated: boolean;
   budgetExhausted: boolean;
   endpointStrategy: "alternating-fallback-primary";
 }
@@ -40,6 +42,7 @@ function createOptionalRpcFamilyTelemetry(targetCount: number): OptionalRpcFamil
     missingByChain: {},
     missingReasonCounts: {},
     missingTargets: [],
+    missingTargetsTruncated: false,
     budgetExhausted: false,
     endpointStrategy: "alternating-fallback-primary",
   };
@@ -58,7 +61,11 @@ function recordOptionalRpcMiss(
   telemetry.missingTargetCount += 1;
   telemetry.missingByChain[chain] = (telemetry.missingByChain[chain] ?? 0) + 1;
   telemetry.missingReasonCounts[reason] = (telemetry.missingReasonCounts[reason] ?? 0) + 1;
-  telemetry.missingTargets.push(targetLabel);
+  if (telemetry.missingTargets.length < OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT) {
+    telemetry.missingTargets.push(targetLabel);
+  } else {
+    telemetry.missingTargetsTruncated = true;
+  }
 }
 
 function buildOptionalRpcUrls(rpc: ChainRpcConfig | undefined, rotationSeed = 0): string[] {

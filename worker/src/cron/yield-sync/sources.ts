@@ -16,6 +16,7 @@ export {
   fetchAaveV3SupplyRates,
   fetchCompoundV3SupplyRates,
   fetchOnChainRates,
+  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
   type AaveV3RateResult,
   type AaveV3RateTarget,
   type AaveV3SupplyRateRow,

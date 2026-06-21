@@ -10,6 +10,7 @@ const emptyTelemetry = {
   missingByChain: {},
   missingReasonCounts: {},
   missingTargets: [],
+  missingTargetsTruncated: false,
   budgetExhausted: false,
   endpointStrategy: "alternating-fallback-primary" as const,
 };
@@ -41,6 +42,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
 
 vi.mock("../yield-sync/sources", () => ({
   COMPOUND_V3_COMETS: [],
+  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT: 20,
   fetchMorphoVaultSources: vi.fn(async () => []),
   fetchPendleMarketSources: vi.fn(async () => []),
   fetchRoycoDawnSources: vi.fn(async () => []),
@@ -57,6 +59,7 @@ vi.mock("../yield-sync/sources", () => ({
       missingByChain: {},
       missingReasonCounts: {},
       missingTargets: [],
+      missingTargetsTruncated: false,
       budgetExhausted: false,
       endpointStrategy: "alternating-fallback-primary",
     },
@@ -73,6 +76,7 @@ vi.mock("../yield-sync/sources", () => ({
       missingByChain: {},
       missingReasonCounts: {},
       missingTargets: [],
+      missingTargetsTruncated: false,
       budgetExhausted: false,
       endpointStrategy: "alternating-fallback-primary",
     },
@@ -89,6 +93,7 @@ import {
   fetchBeefySources,
   fetchCompoundV3SupplyRates,
   fetchMorphoVaultSources,
+  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
   fetchYearnKongSources,
@@ -206,6 +211,20 @@ describe("syncYieldSupplemental", () => {
         rawSupplementalCandidates?: number;
         dedupedSupplementalCandidates?: number;
         sourceFamilyCounts?: { aaveV3?: number };
+        sourceFamilySummaries?: {
+          aaveV3?: {
+            status?: string;
+            rawCandidateCount?: number;
+            candidateCount?: number;
+            optionalRpc?: {
+              targetCount?: number;
+              attemptedCount?: number;
+              resolvedTargetCount?: number;
+              emittedCount?: number;
+              missingTargetExamplesTruncated?: boolean;
+            };
+          };
+        };
         optionalRpcTelemetry?: {
           aaveV3?: { resolvedTargetCount?: number; emittedCount?: number; missingTargetCount?: number };
         };
@@ -221,6 +240,18 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.resolvedTargetCount).toBe(3);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(3);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.missingTargetCount).toBe(0);
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.aaveV3).toMatchObject({
+      status: "ok",
+      rawCandidateCount: 3,
+      candidateCount: 3,
+      optionalRpc: {
+        targetCount: 3,
+        attemptedCount: 3,
+        resolvedTargetCount: 3,
+        emittedCount: 3,
+        missingTargetExamplesTruncated: false,
+      },
+    });
   });
 
   it("publishes empty family cache rows to clear previous non-empty caches", async () => {
@@ -272,6 +303,54 @@ describe("syncYieldSupplemental", () => {
     expect(morphoPayload.sourceCount).toBe(0);
     expect(morphoPayload.data).toEqual([]);
     expect(metadata.familyCacheResults?.morpho).toBe("empty-published");
+  });
+
+  it("bounds optional RPC missing-target examples in source family summaries", async () => {
+    const missingTargets = Array.from({ length: 30 }, (_, index) => `ethereum:T${index}`);
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
+      rates: new Map([
+        ["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }],
+      ]),
+      results: [],
+      telemetry: {
+        ...emptyTelemetry,
+        targetCount: 30,
+        attemptedCount: 4,
+        resolvedTargetCount: 1,
+        emittedCount: 1,
+        missingTargetCount: 29,
+        missingByChain: { ethereum: 29 },
+        missingReasonCounts: { "budget-exhausted": 29 },
+        missingTargets,
+        missingTargetsTruncated: true,
+        budgetExhausted: true,
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage?: {
+        sourceFamilySummaries?: {
+          aaveV3?: {
+            optionalRpc?: {
+              missingTargetExamples?: string[];
+              missingTargetExamplesTruncated?: boolean;
+              missingTargetCount?: number;
+              budgetExhausted?: boolean;
+            };
+          };
+        };
+      };
+    };
+
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.aaveV3?.optionalRpc).toMatchObject({
+      missingTargetCount: 29,
+      budgetExhausted: true,
+      missingTargetExamplesTruncated: true,
+    });
+    expect(
+      metadata.sourceCoverage?.sourceFamilySummaries?.aaveV3?.optionalRpc?.missingTargetExamples,
+    ).toHaveLength(OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT);
   });
 
   it("keeps same-asset Aave markets on different chains when per-target results are available", async () => {

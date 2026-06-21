@@ -57,7 +57,7 @@ ORDER BY rows DESC;
 ## Remediation
 
 - If the latest supplemental run is a single `empty-snapshot`, keep serving the previous snapshot and wait for the next 4-hour run unless optional coverage is business-critical for an incident.
-- If metadata shows one family dominating misses or budget exhaustion, isolate that upstream/provider before retrying. Do not move heavy family fetches onto the hourly publisher.
+- If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, budget flags, miss reasons, chain breakdowns, and bounded missing-target examples. Do not move heavy family fetches onto the hourly publisher.
 - If the job is stale due to a stuck lease, confirm no active progress row exists before clearing the stale `sync-yield-supplemental` lease through the standard admin reset-lease flow.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 
@@ -69,7 +69,7 @@ ORDER BY rows DESC;
 
 ## Validation
 
-- `sync-yield-supplemental` has a recent run with `rowsWritten > 0` or a documented `skipped-newer`.
+- `sync-yield-supplemental` has a recent run with `rowsWritten > 0` or a documented `skipped-newer`, and `sourceCoverage.sourceFamilySummaries` explains any empty, failed, or budget-exhausted family.
 - `cache['yield:supplemental-sources:v1']` and any `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows.
 - The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"` and a non-zero `supplementalSourceCount`.
 - Public rankings/source board show expected optional family rows or alternatives.

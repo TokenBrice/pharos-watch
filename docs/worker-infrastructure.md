@@ -532,7 +532,7 @@ While the run is leased, `cron_run_progress` now exposes DEX stage summaries for
 
 **Connection budget:** dedicated multi-hour trigger for the heavier optional yield families (Morpho, Pendle, Yearn/Kong, Beefy, Compound V3, Aave V3, Royco Dawn). It writes a cache snapshot that the hourly publisher consumes, so protocol-API stalls reduce optional coverage instead of blocking `yield-rankings`.
 
-`sync-yield-supplemental` reports source-family fetch, dedupe, aggregate-cache, per-family cache, and completion stages. Per-family cache stages include a `cursor.family` value plus source-family count totals, keeping optional-yield stalls diagnosable from `/api/status` while still relying on the same cache writes the job already performs.
+`sync-yield-supplemental` reports source-family fetch, dedupe, aggregate-cache, per-family cache, and completion stages. Per-family cache stages include a `cursor.family` value plus source-family count totals, and completion metadata includes `sourceCoverage.sourceFamilySummaries` with compact per-family status, emitted counts, budget flags, and bounded missing-target examples. This keeps optional-yield stalls diagnosable from `/api/status` while still relying on the same cache writes the job already performs.
 
 ### Trigger 13: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
