@@ -4,11 +4,11 @@ import { useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { useYieldRankings } from "@/hooks/api-hooks";
+import { useYieldAdapterManifest, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { StaleDataBanner } from "@/components/stale-data-banner";
+import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
@@ -32,6 +32,43 @@ import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
+
+interface YieldFreshnessBannerProps {
+  dataUpdatedAt: number;
+  error: unknown;
+  hasData: boolean;
+  meta: StaleQuery["meta"];
+}
+
+function YieldFreshnessBanner({
+  dataUpdatedAt,
+  error,
+  hasData,
+  meta,
+}: YieldFreshnessBannerProps) {
+  const {
+    data: adapterManifest,
+    meta: adapterManifestMeta,
+    dataUpdatedAt: adapterManifestUpdatedAt,
+    error: adapterManifestError,
+  } = useYieldAdapterManifest();
+
+  return (
+    <StaleDataBanner
+      queries={[
+        { preset: "yieldRankings", dataUpdatedAt, error, hasData, meta },
+        {
+          preset: "yieldRankings",
+          label: "Yield source roster",
+          dataUpdatedAt: adapterManifestUpdatedAt,
+          error: adapterManifestError,
+          hasData: !!adapterManifest,
+          meta: adapterManifestMeta,
+        },
+      ]}
+    />
+  );
+}
 
 export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
@@ -206,7 +243,7 @@ export function YieldClient() {
 
   return (
     <div className="space-y-6">
-      <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]} />
+      <YieldFreshnessBanner dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} />
       {data.warnings && data.warnings.length > 0 ? (
         <section aria-label="Yield API warnings" className="space-y-2">
           {data.warnings.map((warning) => (

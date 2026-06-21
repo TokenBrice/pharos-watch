@@ -15,6 +15,7 @@ import {
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   YIELD_SOURCE_POSTURE_ORDER,
+  formatYieldSourcePosture,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
   type YieldSourcePosture,
@@ -90,7 +91,7 @@ function formatPostureSummary(counts: Record<YieldSourcePosture, number>): strin
   return nonZeroCountParts(
     YIELD_SOURCE_POSTURE_ORDER,
     counts,
-    (posture, count) => `${count} ${YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label.toLowerCase()}`,
+    (posture, count) => `${count} ${formatYieldSourcePosture(posture).toLowerCase()}`,
   ).join(" · ");
 }
 
@@ -113,7 +114,7 @@ function buildPostureAriaLabel(counts: Record<YieldSourcePosture, number>): stri
   const parts = nonZeroCountParts(
     YIELD_SOURCE_POSTURE_ORDER,
     counts,
-    (posture, count) => `${count} ${YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label}`,
+    (posture, count) => `${count} ${formatYieldSourcePosture(posture)}`,
   );
   return `Source posture mix: ${parts.join(", ")}`;
 }
@@ -218,7 +219,7 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
     bg: POSTURE_SEGMENT_BG[posture],
     count: model.postureCounts[posture],
     description: YIELD_SOURCE_POSTURE_DEFINITIONS[posture].description,
-    label: YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label,
+    label: formatYieldSourcePosture(posture),
   }));
 
   return (

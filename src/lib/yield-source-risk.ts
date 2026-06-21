@@ -293,7 +293,7 @@ export function formatYieldSourcePosture(posture: YieldSourcePosture): string {
   return YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label;
 }
 
-export function isYieldSourceRiskMaterial(sourceRisk: YieldSourceRisk | null | undefined): boolean {
+function isYieldSourceRiskMaterial(sourceRisk: YieldSourceRisk | null | undefined): boolean {
   const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty);
   const sourceRiskScore = finiteNumber(sourceRisk?.sourceRiskScore);
   if (sourceRiskPenalty !== null) return sourceRiskPenalty > 1.05;

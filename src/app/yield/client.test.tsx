@@ -7,7 +7,15 @@ import { YieldClient } from "./client";
 import { makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
 import type { YieldRankingsResponse } from "@shared/types";
 
-const { useYieldRankingsMock, searchParamsMock, replaceParamsMock, setParamMock, pushMock } = vi.hoisted(() => ({
+const {
+  useYieldAdapterManifestMock,
+  useYieldRankingsMock,
+  searchParamsMock,
+  replaceParamsMock,
+  setParamMock,
+  pushMock,
+} = vi.hoisted(() => ({
+  useYieldAdapterManifestMock: vi.fn(),
   useYieldRankingsMock: vi.fn(),
   searchParamsMock: new URLSearchParams(),
   replaceParamsMock: vi.fn(),
@@ -20,6 +28,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
+  useYieldAdapterManifest: useYieldAdapterManifestMock,
   useYieldRankings: useYieldRankingsMock,
 }));
 
@@ -99,6 +108,12 @@ describe("YieldClient", () => {
       error: null,
       dataUpdatedAt: 1_776_000_000,
       refetch: vi.fn(),
+    });
+    useYieldAdapterManifestMock.mockReturnValue({
+      data: { adapters: [], generatedAt: 1_776_000_000 },
+      meta: null,
+      error: null,
+      dataUpdatedAt: 1_776_000_000,
     });
   });
 

@@ -9,6 +9,7 @@ import {
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   classifyYieldSourceFreshness,
   classifyYieldSourcePosture,
+  formatYieldSourcePosture,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
   type YieldSourceRiskDriver,
@@ -84,6 +85,7 @@ export function YieldSourceRiskCard({
     sourceChanged,
   });
   const postureMeta = YIELD_SOURCE_POSTURE_DEFINITIONS[posture];
+  const postureLabel = formatYieldSourcePosture(posture);
   const depthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[sourceDepthLens];
   const freshness = classifyYieldSourceFreshness(sourceRisk?.sourceAgeSeconds ?? null);
   const venueTier = sourceRisk?.venueRiskTier ?? null;
@@ -105,7 +107,7 @@ export function YieldSourceRiskCard({
             className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", POSTURE_TONE[posture])}
             title={postureMeta.description}
           >
-            {postureMeta.label}
+            {postureLabel}
           </span>
           <YieldSourceRiskBar score={sourceRisk?.sourceRiskScore ?? null} compact tooltip className="w-16" />
         </div>
