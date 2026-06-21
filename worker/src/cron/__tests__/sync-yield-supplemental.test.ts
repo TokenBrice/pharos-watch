@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 
+const OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT = 20;
+
 const emptyTelemetry = {
   targetCount: 0,
   attemptedCount: 0,
@@ -42,7 +44,6 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
 
 vi.mock("../yield-sync/sources", () => ({
   COMPOUND_V3_COMETS: [],
-  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT: 20,
   fetchMorphoVaultSources: vi.fn(async () => []),
   fetchPendleMarketSources: vi.fn(async () => []),
   fetchRoycoDawnSources: vi.fn(async () => []),
@@ -83,6 +84,10 @@ vi.mock("../yield-sync/sources", () => ({
   })),
 }));
 
+vi.mock("../yield-sync/sources-rpc", () => ({
+  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT: 20,
+}));
+
 vi.mock("../../lib/db-cache", () => ({
   setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
 }));
@@ -93,7 +98,6 @@ import {
   fetchBeefySources,
   fetchCompoundV3SupplyRates,
   fetchMorphoVaultSources,
-  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
   fetchYearnKongSources,

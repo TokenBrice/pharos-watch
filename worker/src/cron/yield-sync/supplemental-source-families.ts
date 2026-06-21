@@ -10,11 +10,11 @@ import {
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
   fetchYearnKongSources,
-  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
   type AaveV3SupplyRateRow,
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
 } from "./sources";
+import { OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT } from "./sources-rpc";
 import { runOptionalSourceFamily } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
 import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-keys";
