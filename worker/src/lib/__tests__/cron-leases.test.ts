@@ -395,10 +395,11 @@ function makeLeaseDb(seed?: {
             };
           }
           if (sql.includes("FROM cron_run_progress") && sql.includes("slot_started_at = ?")) {
-            const [slotStartedAt] = args as [number];
+            const [slotStartedAt, ...jobs] = args as [number, ...string[]];
             return {
               results: [...progressRows.values()].filter((progress) =>
                 progress.slot_started_at === slotStartedAt &&
+                (jobs.length === 0 || jobs.includes(progress.job)) &&
                 progress.lease_owner != null,
               ),
               success: true,
@@ -1000,7 +1001,7 @@ describe("runScheduledSlotWithFence", () => {
     const currentSlotStartedAt = now;
     const db = makeLeaseDb({
       slots: [{
-        slot_key: "hourlyYield",
+        slot_key: "hourlyYieldSync",
         slot_started_at: staleSlotStartedAt,
         state: "running",
         result_status: null,
@@ -1029,7 +1030,7 @@ describe("runScheduledSlotWithFence", () => {
 
     const result = await runScheduledSlotWithFence(
       db,
-      "hourlyYield",
+      "hourlyYieldSync",
       async () => undefined,
       { slotStartedAt: currentSlotStartedAt, owner: "slot-owner-b", staleAfterSec: 1200 },
     );
@@ -1045,7 +1046,7 @@ describe("runScheduledSlotWithFence", () => {
     ]);
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
     expect(db.getLease("sync-yield-data")).toBeUndefined();
-    const staleSlot = db.getSlot("hourlyYield", staleSlotStartedAt);
+    const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);
     expect(staleSlot?.result_status).toBe("error");
     expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
       error: "scheduled slot heartbeat stale; marked expired by later invocation",
@@ -1063,15 +1064,15 @@ describe("runScheduledSlotWithFence", () => {
         ],
       },
     });
-    const eventMarker = db.getCache("cron:event:hourlyyield:scheduled-slot-abandoned");
+    const eventMarker = db.getCache("cron:event:hourlyyieldsync:scheduled-slot-abandoned");
     expect(eventMarker).toBeDefined();
     expect(eventMarker?.value ? JSON.parse(eventMarker.value) : null).toMatchObject({
       event: "cron_event",
-      job: "hourlyYield",
+      job: "hourlyYieldSync",
       eventType: "scheduled-slot-abandoned",
       severity: "error",
       metadata: {
-        slotKey: "hourlyYield",
+        slotKey: "hourlyYieldSync",
         slotOwner: "slot-owner-a",
         staleSlotReconciliation: {
           abandonedJobs: [
@@ -1151,6 +1152,60 @@ describe("runScheduledSlotWithFence", () => {
     expect(db.getLease("sync-yield-data")).toBeUndefined();
     expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)?.result_status).toBe("error");
     expect(db.getCache("cron:event:hourlyyieldsync:scheduled-slot-abandoned")).toBeDefined();
+  });
+
+  it("does not reconcile child progress from a different schedule with a colliding slot timestamp", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 3600;
+    const db = makeLeaseDb({
+      slots: [{
+        slot_key: "quarterHourly",
+        slot_started_at: staleSlotStartedAt,
+        state: "running",
+        result_status: null,
+        execution_owner: "slot-owner-a",
+        started_at: staleSlotStartedAt,
+        finished_at: null,
+        updated_at: now - 1800,
+        metadata: null,
+      }],
+      leases: [{
+        job: "daily-digest",
+        lease_owner: "digest-owner-a",
+        lease_until: now - 60,
+        heartbeat_at: now - 1800,
+        updated_at: now - 1800,
+      }],
+      progress: [{
+        job: "daily-digest",
+        started_at: staleSlotStartedAt + 20,
+        updated_at: now - 1800,
+        stage: "digest-trigger-poll",
+        lease_owner: "digest-owner-a",
+        slot_started_at: staleSlotStartedAt,
+      }],
+    });
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+
+    expect(summary).toMatchObject({
+      candidateSlots: 1,
+      slotsReconciled: 1,
+      syntheticCronRuns: 0,
+      progressRowsCleared: 0,
+      leasesCleared: 0,
+    });
+    expect(summary.abandonedSlots).toEqual([
+      expect.objectContaining({
+        slotKey: "quarterHourly",
+        slotStartedAt: staleSlotStartedAt,
+        abandonedJobs: [],
+      }),
+    ]);
+    expect(db.getRuns()).toEqual([]);
+    expect(db.getProgress("daily-digest")).toBeDefined();
+    expect(db.getLease("daily-digest")).toBeDefined();
+    expect(db.getSlot("quarterHourly", staleSlotStartedAt)?.result_status).toBe("error");
   });
 
   it("does not synthesize a stale child cron run while the matching child lease is still active", async () => {
