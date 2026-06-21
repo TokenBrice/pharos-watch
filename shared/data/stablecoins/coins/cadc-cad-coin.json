@@ -18,11 +18,12 @@
   "detailProvider": "defillama",
   "geckoId": "cad-coin",
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://dune.com/cadc/stablecoin",
-    "provider": "Loon (on-chain Dune dashboard)",
-    "attestorTier": "self",
-    "cadence": "real-time"
+    "type": "independent-audit",
+    "url": "https://loon.finance/",
+    "provider": "Loon monthly third-party attestation for CAD reserves held at ATB Financial",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Canada"
   },
   "links": [
     {

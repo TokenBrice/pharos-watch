@@ -2,7 +2,7 @@
   "id": "reusd-re-protocol",
   "name": "Re Protocol reUSD",
   "symbol": "reUSD",
-  "oneLiner": "reUSD is Re Protocol's NAV-based yield token deploying USDC and USDe/sUSDe into delta-neutral ETH basis trades and short-duration U.S. T-bills (BVI-regulated).",
+  "oneLiner": "reUSD is Re Protocol's NAV-based yield token deploying USDC and USDe/sUSDe into delta-neutral ETH basis trades and short-duration U.S. T-bills (Cayman Islands).",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -19,11 +19,11 @@
   "geckoId": "re-protocol-reusd",
   "cmcSlug": "re-protocol-reusd",
   "proofOfReserves": {
-    "type": "real-time",
+    "type": "independent-audit",
     "url": "https://app.re.xyz/transparency",
-    "provider": "The Network Firm / Chainlink",
+    "provider": "The Network Firm",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "daily-nav"
   },
   "links": [
     {

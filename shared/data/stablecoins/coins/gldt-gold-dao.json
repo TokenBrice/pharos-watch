@@ -18,11 +18,11 @@
   "detailProvider": "commodity",
   "geckoId": "gold-token",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://gldt.org/",
-    "provider": "GLDT transparency page",
-    "attestorTier": "self",
-    "cadence": "ad-hoc",
+    "provider": "KPMG",
+    "attestorTier": "big4",
+    "cadence": "quarterly",
     "attestorJurisdiction": "Switzerland"
   },
   "bridgeRouteRisk": {
@@ -141,5 +141,5 @@
       ]
     }
   },
-  "launchDate": "2025-07-09"
+  "launchDate": "2024-10-30"
 }

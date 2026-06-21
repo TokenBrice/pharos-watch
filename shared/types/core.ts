@@ -75,6 +75,7 @@ export const PROOF_OF_RESERVES_CADENCE_VALUES = [
   "daily",
   "weekly",
   "monthly",
+  "semi-monthly",
   "quarterly",
   "semi-annual",
   "annual",

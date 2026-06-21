@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -112,10 +112,6 @@
         "Other": "Other reserve assets"
       }
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Neutrl savings (sNUSD)",
-    "yieldType": "nav-appreciation"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

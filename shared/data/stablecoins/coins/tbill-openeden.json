@@ -20,8 +20,8 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://openeden.com/tbill/transparency",
-    "provider": "Ernst & Young",
-    "attestorTier": "big4",
+    "provider": "TJ Assurance Partners PAC",
+    "attestorTier": "niche",
     "cadence": "daily-nav",
     "attestorJurisdiction": "British Virgin Islands",
     "attestorLicense": "BVI FSC Registered Professional Fund"
@@ -259,5 +259,5 @@
       "maxOracleAgeSec": 345600
     }
   },
-  "launchDate": "2023-10-18"
+  "launchDate": "2023-03-24"
 }

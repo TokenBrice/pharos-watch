@@ -19,7 +19,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://explorer.dgld.ch/",
-    "provider": "MKS PAMP (bar serial numbers + independent physical audits)",
+    "provider": "MKS PAMP bar registry",
     "attestorTier": "niche",
     "cadence": "real-time",
     "attestorJurisdiction": "Switzerland"

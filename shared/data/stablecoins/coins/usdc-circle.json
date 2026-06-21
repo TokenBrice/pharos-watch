@@ -277,19 +277,9 @@
       "decimals": 6
     },
     {
-      "chain": "bsc",
-      "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-      "decimals": 18
-    },
-    {
       "chain": "stellar",
       "address": "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
       "decimals": 7
-    },
-    {
-      "chain": "fantom",
-      "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
-      "decimals": 6
     },
     {
       "chain": "cronos",

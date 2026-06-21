@@ -184,7 +184,7 @@
       ]
     }
   },
-  "launchDate": "2025-09-16",
+  "launchDate": "2025-09-17",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "AxCNH is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",

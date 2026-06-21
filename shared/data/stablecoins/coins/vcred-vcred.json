@@ -7,13 +7,12 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
-    "navToken": false
+    "navToken": true
   },
   "collateral": "Hemi-based credit and crypto collateral backing vCRED",
   "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
-  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "vcred",
   "protocolSlug": "vcred",
@@ -78,7 +77,10 @@
         "threshold": 1,
         "signerCount": 2,
         "safe": {
-          "owners": ["0x29Aa2eD8712072e918632259780E587698Ef58df", "0x8b01d375e274213c860eF6ac013DBDd5286CD816"],
+          "owners": [
+            "0x29Aa2eD8712072e918632259780E587698Ef58df",
+            "0x8b01d375e274213c860eF6ac013DBDd5286CD816"
+          ],
           "threshold": 1,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
@@ -147,5 +149,9 @@
     "params": {
       "rpcUrl": "https://rpc.hemi.network/rpc"
     }
+  },
+  "yieldConfig": {
+    "yieldSource": "vCRED protocol vault share value",
+    "yieldType": "nav-appreciation"
   }
 }

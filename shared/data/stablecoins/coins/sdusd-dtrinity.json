@@ -70,7 +70,9 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["nonMinting"]
+        "bridgeTypes": [
+          "nonMinting"
+        ]
       }
     ],
     "sources": [
@@ -196,5 +198,5 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "launchDate": "2025-07-30"
+  "launchDate": "2025-10-13"
 }

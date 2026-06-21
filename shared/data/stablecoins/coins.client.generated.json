@@ -405,7 +405,7 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "tbill",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "gaib-aid",
     "launchDate": "2025-10-29",
     "genius": {
@@ -1018,7 +1018,7 @@
     "id": "audf-forte",
     "name": "Forte AUD",
     "symbol": "AUDF",
-    "oneLiner": "AUDF is Forte Tech Solutions' centralized Australian dollar stablecoin, redeemable 1:1 with AUD reserves and cash-equivalent assets held separately.",
+    "oneLiner": "AUDF is Forte Securities Australia's centralized Australian dollar stablecoin, redeemable 1:1 with AUD reserves held separately.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "AUD",
@@ -1081,7 +1081,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "macropod",
-    "launchDate": "2025-06-13",
+    "launchDate": "2025-10-08",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -1369,6 +1369,7 @@
     "name": "Alloy Tether",
     "symbol": "aUSD₮",
     "oneLiner": "aUSDT is Alloy by Tether's dollar stablecoin, minted by KYC-verified users depositing Tether Gold (XAUT) into Ethereum vaults at up to 75% LTV.",
+    "marketAvailability": "legacy-or-wind-down",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -1379,7 +1380,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "alloy-tether",
-    "launchDate": "2024-03-11",
+    "launchDate": "2024-06-17",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "non-payment-token",
@@ -1625,7 +1626,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "axcnh",
-    "launchDate": "2025-09-16",
+    "launchDate": "2025-09-17",
     "reserves": [
       {
         "name": "CNH cash reserves at regulated financial institutions",
@@ -1946,7 +1947,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "franklin-templeton-benji",
-    "launchDate": "2023-10-03",
+    "launchDate": "2021-04-06",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "excluded-security",
@@ -2302,7 +2303,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "liquity-bold-2",
-    "launchDate": "2025-05-14",
+    "launchDate": "2025-05-19",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -2583,7 +2584,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-real-creal",
-    "launchDate": "2021-11-30",
+    "launchDate": "2022-01-27",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -2946,7 +2947,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",
-    "launchDate": "2024-03-01",
+    "launchDate": "2024-03-20",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -3490,7 +3491,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "cetes",
-    "launchDate": "2025-05-28",
+    "launchDate": "2024-04-12",
     "yieldConfig": {
       "yieldSource": "Mexican government CETES bonds",
       "yieldType": "nav-appreciation"
@@ -3546,7 +3547,7 @@
       "navToken": false
     },
     "geckoId": "celo-euro",
-    "launchDate": "2021-03-15",
+    "launchDate": "2021-04-22",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -4024,7 +4025,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "compliant-naira",
-    "launchDate": "2024-12-16",
+    "launchDate": "2025-02-03",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -4343,7 +4344,7 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "cap-usd",
     "launchDate": "2025-07-08",
     "genius": {
@@ -4706,7 +4707,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "dai",
-    "launchDate": "2019-11-13",
+    "launchDate": "2019-11-18",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -5255,7 +5256,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "dtrinity-usd",
-    "launchDate": "2024-07-04",
+    "launchDate": "2024-12-18",
     "genius": {
       "applicability": "unclear",
       "applicabilityBasis": {
@@ -5461,7 +5462,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "standx-dusd",
-    "launchDate": "2025-03-14",
+    "launchDate": "2025-04-09",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -5736,7 +5737,7 @@
       "reserveDisclosurePresent": false,
       "redemptionPolicyPresent": false,
       "monthlyAttestationPresent": false,
-      "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository charter (final approval Nov 2025) and has publicly positioned itself as GENIUS Act-aligned through that framework. No GENIUS PPSI approval or filed application exists; the GENIUS Act is still in proposed-rules rulemaking and no state has been certified as substantially similar. The telco.in/digital-cash page states Telcoin will publish monthly attestations -- future tense as of June 2026; none have been located in public sources. No eMXN-specific reserve disclosure URL was found. The issuerPathway state-qualified reflects Telcoin's intended route (Nebraska co-designed to align with GENIUS requirements), not an achieved approval.",
+      "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository charter (final approval Nov 2025) and has publicly positioned itself as GENIUS Act-aligned through that framework. No GENIUS PPSI approval or filed application exists; the GENIUS Act is still in proposed-rules rulemaking and no state has been certified as substantially similar. The telco.in/digital-cash page states Telcoin will publish monthly attestations -- future tense as of June 2026; none have been located in public sources. No eMXN-specific reserve disclosure URL was found. The stored issuerPathway remains unknown; Telcoin frames Nebraska as its intended GENIUS-aligned route, but no achieved state-qualified approval was found.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -6026,7 +6027,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "allunity-eur",
-    "launchDate": "2025-07-03",
+    "launchDate": "2025-07-31",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -6093,7 +6094,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "euro-coin",
-    "launchDate": "2022-05-19",
+    "launchDate": "2022-06-30",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -6234,7 +6235,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "societe-generale-forge-eurcv",
-    "launchDate": "2023-10-25",
+    "launchDate": "2023-04-20",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -6321,13 +6322,8 @@
     },
     "reserves": [
       {
-        "name": "State Street EUR Liquidity LVNAV Fund (AAA-rated)",
-        "pct": 70,
-        "risk": "very-low"
-      },
-      {
-        "name": "EUR bank deposits (Arion Bank, LHV Bank)",
-        "pct": 30,
+        "name": "EUR reserves at State Street EUR Liquidity LVNAV Fund, Arion Bank, and LHV Bank",
+        "pct": 100,
         "risk": "very-low"
       }
     ],
@@ -6371,7 +6367,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "eurite",
-    "launchDate": "2024-07-02",
+    "launchDate": "2024-08-26",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -6461,7 +6457,7 @@
     "launchDate": "2023-11-01",
     "mica": {
       "status": "non-compliant",
-      "tokenType": "EMT",
+      "tokenType": "ART",
       "references": [
         {
           "label": "ESMA Interim MiCA Register – EMT issuers (EMTWP.csv, updated 2026-06-04): no entry for 3A DAO or EURO3",
@@ -7032,7 +7028,7 @@
       "navToken": true
     },
     "geckoId": "spiko-amundi-overnight-swap-fund-eur",
-    "launchDate": "2026-02-26",
+    "launchDate": "2026-03-19",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
@@ -7136,7 +7132,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
     "geckoId": "electronic-usd",
     "launchDate": "2023-02-23",
     "genius": {
@@ -7586,6 +7581,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "felix-feusd",
+    "launchDate": "2025-04-08",
     "canBeBlacklisted": true,
     "infrastructures": [
       "liquity-v2"
@@ -8457,9 +8453,11 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "freedom-dollar",
     "protocolSlug": "freedom-dollar",
+    "launchDate": "2025-05-01",
+    "canBeBlacklisted": false,
     "reserves": [
       {
         "name": "Zano ecosystem collateral and reserve mechanisms",
@@ -8534,7 +8532,7 @@
     "geckoId": "fx-usd-saving",
     "variantOf": "fxusd-f-x-protocol",
     "variantKind": "strategy-vault",
-    "launchDate": "2025-03-17",
+    "launchDate": "2025-04-02",
     "yieldConfig": {
       "yieldSource": "f(x) USD Saving",
       "yieldType": "nav-appreciation"
@@ -9001,7 +8999,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "cghs",
-    "launchDate": "2025-01-30",
+    "launchDate": "2025-02-21",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -9053,7 +9051,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gold-token",
-    "launchDate": "2025-07-09",
+    "launchDate": "2024-10-30",
     "commodityOunces": 0.000321507467,
     "reserves": [
       {
@@ -9150,7 +9148,7 @@
       "navToken": false
     },
     "geckoId": "gram-gold",
-    "launchDate": "2023-08-28",
+    "launchDate": "2022-11-01",
     "commodityOunces": 0.0321507466,
     "reserves": [
       {
@@ -9202,7 +9200,7 @@
       "navToken": false
     },
     "geckoId": "gram-silver",
-    "launchDate": "2023-08-28",
+    "launchDate": "2022-11-01",
     "commodityOunces": 0.0321507466,
     "reserves": [
       {
@@ -9359,7 +9357,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "gusd",
-    "launchDate": "2025-08-28",
+    "launchDate": "2025-08-29",
     "genius": {
       "applicability": "non-payment-token",
       "applicabilityBasis": {
@@ -9823,7 +9821,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "decentralized",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": false
     },
@@ -9831,6 +9829,10 @@
     "geckoId": "hive_dollar",
     "protocolSlug": "hive",
     "canBeBlacklisted": true,
+    "yieldConfig": {
+      "yieldSource": "Hive Savings interest rate",
+      "yieldType": "governance-set"
+    },
     "reserves": [
       {
         "name": "Hive protocol conversion capacity",
@@ -10246,7 +10248,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
-    "launchDate": "2024-12-19",
+    "launchDate": "2023-05-04",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Hamilton Lane SCOPE NAV",
@@ -10435,7 +10437,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "protocolSlug": "homecoin",
-    "launchDate": "2021-07-28",
+    "launchDate": "2021-09-28",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "yieldSource": "HomeCoin home-loan payment distributions",
@@ -10475,7 +10477,7 @@
     "id": "honey-berachain",
     "name": "Honey",
     "symbol": "HONEY",
-    "oneLiner": "HONEY is Berachain's dollar stablecoin, minted 1:1 from a basket of USDC, USDT0, pyUSD, and USDe with Basket Mode safety controls.",
+    "oneLiner": "Honey is Berachain's native overcollateralized dollar token, minted against a basket of approved stable assets where some routes carry mint/redeem fees.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -10660,7 +10662,7 @@
       "navToken": true
     },
     "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
-    "launchDate": "2025-07-24",
+    "launchDate": "2025-07-31",
     "reserves": [
       {
         "name": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
@@ -10935,7 +10937,7 @@
     "id": "ist-agoric",
     "name": "Inter Stable Token",
     "symbol": "IST",
-    "oneLiner": "IST is Inter Protocol's decentralized dollar on Agoric, minted from overcollateralized IBC ATOM vaults plus a PSM swapping IBC stablecoins 1:1.",
+    "oneLiner": "IST was Agoric's Inter Protocol stable token, formerly minted against vault collateral and PSM deposits before governance sunset the protocol in 2025.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -10946,6 +10948,8 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "inter-stable-token",
+    "status": "frozen",
+    "frozenAt": "2025-06-26",
     "reserves": [
       {
         "name": "Overcollateralized crypto vaults (IBC ATOM, stATOM)",
@@ -11229,7 +11233,7 @@
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
     "protocolSlug": "centrifuge",
-    "launchDate": "2025-04-18",
+    "launchDate": "2025-05-01",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Janus Henderson Anemoy AAA CLO Fund NAV",
@@ -11346,7 +11350,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "jpycoin",
-    "launchDate": "2025-06-03",
+    "launchDate": "2025-10-27",
     "reserves": [
       {
         "name": "JPY deposits & Japanese government bonds",
@@ -11646,6 +11650,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "jupusd",
+    "launchDate": "2026-01-05",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -12016,7 +12021,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "kyrgyz-som-stablecoin",
-    "launchDate": "2025-05-30",
+    "launchDate": "2025-10-24",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -12365,7 +12370,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "helio-protocol-hay",
-    "launchDate": "2022-08-10",
+    "launchDate": "2022-08-19",
     "reserves": [
       {
         "name": "BNB (native)",
@@ -12473,17 +12478,13 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": true
     },
     "mechanismArchetype": "algorithmic",
     "geckoId": "lumi-finance-luausd",
     "protocolSlug": "lumi-finance",
-    "yieldConfig": {
-      "yieldSource": "Lumi Finance LUAUSD NAV mechanics",
-      "yieldType": "nav-appreciation"
-    },
     "reserves": [
       {
         "name": "LUA floor-price collateral, protocol-owned liquidity, and stablecoin reserves",
@@ -12880,7 +12881,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "mezo-usd",
-    "launchDate": "2025-05-12",
+    "launchDate": "2025-05-28",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -12943,7 +12944,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mf-one",
-    "launchDate": "2025-05-08",
+    "launchDate": "2025-06-20",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas mF-ONE / Fasanara F-ONE NAV",
@@ -12995,7 +12996,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-fasanara-global",
-    "launchDate": "2026-04-03",
+    "launchDate": "2026-04-16",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas Fasanara Global NAV",
@@ -13340,7 +13341,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mnee-usd-stablecoin",
-    "launchDate": "2024-03-21",
+    "launchDate": "2024-07-18",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -13745,7 +13746,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "metronome-synth-usd",
-    "launchDate": "2022-12-15",
+    "launchDate": "2023-01-10",
     "reserves": [
       {
         "name": "USDC",
@@ -13990,7 +13991,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "metamask-usd",
-    "launchDate": "2025-08-12",
+    "launchDate": "2025-09-15",
     "infrastructures": [
       "m0"
     ],
@@ -14392,6 +14393,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "nectar",
+    "launchDate": "2025-02-07",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -14597,7 +14599,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -14605,10 +14607,6 @@
     "geckoId": "nusd-2",
     "launchDate": "2025-10-03",
     "canBeBlacklisted": true,
-    "yieldConfig": {
-      "yieldSource": "Neutrl savings (sNUSD)",
-      "yieldType": "nav-appreciation"
-    },
     "reserves": [
       {
         "name": "Stablecoin reserves",
@@ -14998,7 +14996,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "ousg",
-    "launchDate": "2022-12-21",
+    "launchDate": "2023-01-26",
     "genius": {
       "applicability": "excluded-security",
       "applicabilityBasis": {
@@ -15502,7 +15500,6 @@
     "mechanismArchetype": "cdp",
     "status": "pre-launch",
     "announcedDate": "2026-01",
-    "expectedLaunchDate": "2026-Q4",
     "launchPhase": "testnet",
     "milestones": [
       {
@@ -15558,7 +15555,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "puso",
-    "launchDate": "2024-05-17",
+    "launchDate": "2024-09-09",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -15869,7 +15866,7 @@
     },
     "geckoId": "polymarket-usd",
     "protocolSlug": "polymarket",
-    "launchDate": "2026-03-31",
+    "launchDate": "2026-04-28",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -15917,7 +15914,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "paypal-usd",
-    "launchDate": "2022-11-08",
+    "launchDate": "2023-08-07",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -16167,7 +16164,7 @@
     "id": "reusd-re-protocol",
     "name": "Re Protocol reUSD",
     "symbol": "reUSD",
-    "oneLiner": "reUSD is Re Protocol's NAV-based yield token deploying USDC and USDe/sUSDe into delta-neutral ETH basis trades and short-duration U.S. T-bills (BVI-regulated).",
+    "oneLiner": "reUSD is Re Protocol's NAV-based yield token deploying USDC and USDe/sUSDe into delta-neutral ETH basis trades and short-duration U.S. T-bills (Cayman Islands).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -17086,7 +17083,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "safo",
-    "launchDate": "2026-02-26",
+    "launchDate": "2026-03-03",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
@@ -17189,7 +17186,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "satoshi-stablecoin",
-    "launchDate": "2025-02-21",
+    "launchDate": "2025-02-12",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -17631,7 +17628,7 @@
     "geckoId": "sdola",
     "variantOf": "dola-inverse-finance",
     "variantKind": "savings-passthrough",
-    "launchDate": "2024-01-31",
+    "launchDate": "2024-02-08",
     "yieldConfig": {
       "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
       "yieldSource": "Inverse Finance sDOLA vault",
@@ -17681,7 +17678,7 @@
     "geckoId": "dtrinity-staked-dusd",
     "variantOf": "dusd-dtrinity",
     "variantKind": "strategy-vault",
-    "launchDate": "2025-07-30",
+    "launchDate": "2025-10-13",
     "yieldConfig": {
       "yieldSource": "dTRINITY dStake (sdUSD)",
       "yieldType": "lending-vault"
@@ -17793,7 +17790,7 @@
     "mechanismArchetype": "cdp",
     "variantOf": "gho-aave",
     "variantKind": "savings-passthrough",
-    "launchDate": "2026-05-05",
+    "launchDate": "2026-05-18",
     "yieldConfig": {
       "yieldSource": "Aave Savings GHO",
       "yieldType": "governance-set"
@@ -17897,7 +17894,7 @@
       "navToken": true
     },
     "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
-    "launchDate": "2025-07-24",
+    "launchDate": "2025-09-03",
     "reserves": [
       {
         "name": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
@@ -18114,7 +18111,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "spiko-digital-assets-cash-carry-fund",
-    "launchDate": "2025-07-16",
+    "launchDate": "2025-07-24",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Cash and Carry USD NAV",
@@ -18284,7 +18281,7 @@
     "geckoId": "strata-senior-usde",
     "variantOf": "usde-ethena",
     "variantKind": "risk-absorption",
-    "launchDate": "2025-10-02",
+    "launchDate": "2025-10-13",
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
       "yieldType": "nav-appreciation"
@@ -18379,7 +18376,7 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "staked-cap-usd",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault",
@@ -18689,6 +18686,7 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "esui-dollar",
     "protocolSlug": "sui",
+    "launchDate": "2026-02-11",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -18794,6 +18792,7 @@
     "mechanismArchetype": "tbill",
     "geckoId": "solayer-usd",
     "protocolSlug": "solayer-usd",
+    "launchDate": "2024-10-28",
     "genius": {
       "applicability": "unclear",
       "applicabilityBasis": {
@@ -18982,7 +18981,7 @@
     "geckoId": "staked-usd1",
     "variantOf": "usd1-world-liberty-financial",
     "variantKind": "strategy-vault",
-    "launchDate": "2025-07-12",
+    "launchDate": "2025-07-18",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Lorenzo USD1+ staking",
@@ -19098,7 +19097,7 @@
     "mechanismArchetype": "fiat-cash",
     "variantOf": "usdc-circle",
     "variantKind": "savings-passthrough",
-    "launchDate": "2025-10-01",
+    "launchDate": "2025-11-12",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spark Savings USDC",
@@ -19153,7 +19152,7 @@
     "geckoId": "savings-usdd",
     "variantOf": "usdd-tron-dao-reserve",
     "variantKind": "savings-passthrough",
-    "launchDate": "2025-09-02",
+    "launchDate": "2025-10-06",
     "yieldConfig": {
       "yieldSource": "USDD savings (sUSDD)",
       "yieldType": "nav-appreciation"
@@ -19304,7 +19303,7 @@
     "id": "susdt-spark",
     "name": "Spark Savings USDT",
     "symbol": "spUSDT",
-    "oneLiner": "spUSDT is Spark's ERC-4626 savings wrapper of USDT; share price compounds the Sky Savings Rate via Spark PSM routing while exits draw on vault USDT liquidity.",
+    "oneLiner": "sUSDT is Spark's yield-bearing USDT wrapper for Spark Liquidity Layer allocations, accruing protocol-set returns from SLL deployment routes.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -19315,7 +19314,7 @@
     },
     "variantOf": "usdt-tether",
     "variantKind": "savings-passthrough",
-    "launchDate": "2025-10-01",
+    "launchDate": "2025-11-12",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spark Savings USDT",
@@ -19373,7 +19372,7 @@
     "geckoId": "staked-usn",
     "variantOf": "usn-noon",
     "variantKind": "savings-passthrough",
-    "launchDate": "2024-11-06",
+    "launchDate": "2025-01-27",
     "yieldConfig": {
       "yieldSource": "Noon staking (sUSN)",
       "yieldType": "nav-appreciation"
@@ -19489,7 +19488,7 @@
     "geckoId": "syrupusdt",
     "variantOf": "usdt-tether",
     "variantKind": "strategy-vault",
-    "launchDate": "2024-08-01",
+    "launchDate": "2024-09-10",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Maple Finance lending",
@@ -19599,7 +19598,8 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "rwa-credit-fund",
+    "archetypeOverride": true,
     "geckoId": "staked-yuzu-usd",
     "variantOf": "yzusd-yuzu",
     "variantKind": "strategy-vault",
@@ -19653,7 +19653,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "openeden-tbill",
-    "launchDate": "2023-10-18",
+    "launchDate": "2023-03-24",
     "genius": {
       "applicability": "excluded-security",
       "applicabilityBasis": {
@@ -19756,7 +19756,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "tokenised-gbp",
-    "launchDate": "2025-08-01",
+    "launchDate": "2025-06-03",
     "reserves": [
       {
         "name": "GBP reserves and short-term UK government paper",
@@ -20065,7 +20065,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "true-usd",
-    "launchDate": "2018-12-31",
+    "launchDate": "2018-03-05",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -20297,7 +20297,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-uk-t-bills-money-market-fund",
-    "launchDate": "2025-07-16",
+    "launchDate": "2025-10-15",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko UK T-Bills MMF NAV",
@@ -20352,7 +20352,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usa",
-    "launchDate": "2025-12-12",
+    "launchDate": "2026-01-27",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -20474,7 +20474,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "usbd",
-    "launchDate": "2025-03-21",
+    "launchDate": "2025-04-09",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -20740,7 +20740,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usd1-wlfi",
-    "launchDate": "2025-01-28",
+    "launchDate": "2025-03-25",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -23338,7 +23338,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdkg",
-    "launchDate": "2025-03-12",
+    "launchDate": "2025-12-01",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -23457,7 +23457,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "megausd",
-    "launchDate": "2025-12-08",
+    "launchDate": "2026-02-09",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -23572,7 +23572,7 @@
     "id": "usdm-moneta",
     "name": "Moneta",
     "symbol": "USDM",
-    "oneLiner": "USDM is Moneta's MiCA-compliant dollar stablecoin on Cardano, redeemable 1:1 via Moneta (USA) or NBX (EEA) with reserves at Fidelity, Western Asset, and Amundi.",
+    "oneLiner": "USDM is Moneta's dollar stablecoin on Cardano, issued through U.S. and EEA routes with NBX EMI-license and MiCA-pending framing.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -23711,6 +23711,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "noble-dollar-usdn",
+    "launchDate": "2025-03-05",
     "infrastructures": [
       "m0"
     ],
@@ -24895,7 +24896,7 @@
       "reserveDisclosureUrl": "https://www.stablr.com/proof-of-reserve",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": false,
-      "notes": "StablR publishes reserve visibility and quarterly independent reviews, not a monthly public attestation cadence. The May 24 2026 multisig exploit caused a MiCA backing breach and MFSA settlement penalty (Ref: 2026-19, June 2 2026) — a MiCA/DORA matter with no U.S. GENIUS Act implications. No PPSI approval, state-qualified status, official application, or foreign exception found.",
+      "notes": "StablR publishes reserve visibility and quarterly independent reviews, not a monthly public attestation cadence. The May 24 2026 multisig exploit triggered public EFRI concerns and a StablR DORA/MiCA incident disclosure; Pharos removed a previously misattributed MFSA Ref. 2026-19 citation because that notice concerned an unrelated entity. No PPSI approval, state-qualified status, official application, or foreign exception found.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -24928,7 +24929,7 @@
           "OCC GENIUS Act proposed rule and public releases",
           "Issuer disclosures and token documentation",
           "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-          "MFSA settlement notice Ref: 2026-19 (June 2 2026)",
+          "EFRI public concerns and StablR cybersecurity incident disclosure for the May 2026 USDR/EURR exploit",
           "OCC Bulletin 2026-3 GENIUS proposed rule",
           "OCC Bulletin 2026-24 GENIUS reporting proposal",
           "OCC digital asset licensing applications tracker",
@@ -24937,7 +24938,7 @@
           "FDIC GENIUS Act NPRM",
           "NCUA PPSI application and standards proposals"
         ],
-        "summary": "MFSA/MiCA issuer evidence and StablR reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDR. The May 2026 exploit and MFSA settlement are MiCA/DORA matters with no U.S. GENIUS Act implications.",
+        "summary": "MFSA/MiCA issuer evidence and StablR reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDR. The May 2026 exploit is tracked through StablR incident disclosures and public EFRI concerns; the previously cited MFSA Ref. 2026-19 item was removed as unrelated.",
         "reviewer": "Pharos compliance research",
         "reviewedAt": "2026-06-18"
       },
@@ -25300,6 +25301,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdsui",
+    "launchDate": "2026-03-04",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -25577,7 +25579,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "usdtb",
-    "launchDate": "2024-11-28",
+    "launchDate": "2024-12-16",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -25858,7 +25860,7 @@
     "id": "usdx-hex-trust",
     "name": "Hex Trust USDX",
     "symbol": "USDX",
-    "oneLiner": "USDX is Hex Trust's U.S. dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under a TCSP license.",
+    "oneLiner": "USDX is Hex Trust's U.S. dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under Hong Kong issuer disclosures.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -25869,7 +25871,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "hex-trust-usdx",
-    "launchDate": "2024-10-28",
+    "launchDate": "2024-05-21",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -26185,7 +26187,7 @@
       "enforcementStatus": "no-public-action-found",
       "daspOfferSaleStatus": "not-yet-restricted",
       "reserveDisclosurePresent": true,
-      "reserveDisclosureUrl": "https://rwa.anzen.finance/transparency",
+      "reserveDisclosureUrl": "https://app.anzen.finance/transparency",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": false,
       "notes": "USDz is stablecoin-adjacent but backed by private credit; GENIUS payment-stablecoin applicability is unresolved. The ToS explicitly excludes US persons and states Anzen Group Ltd is not registered with any regulatory body in any jurisdiction. No GENIUS PPSI approval, state-qualified approval, application, or foreign-issuer exception evidence found.",
@@ -26292,7 +26294,7 @@
     },
     "mechanismArchetype": "cdp",
     "status": "active",
-    "launchDate": "2026-02-12",
+    "launchDate": "2026-05-07",
     "announcedDate": "2026-03",
     "launchPhase": "beta",
     "milestones": [
@@ -26515,7 +26517,7 @@
     "geckoId": "us-nerite-dollar",
     "status": "frozen",
     "frozenAt": "2026-05-10",
-    "launchDate": "2025-07-11",
+    "launchDate": "2025-07-14",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -26641,7 +26643,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "usp-yield-optimized-stablecoin",
-    "launchDate": "2025-08-22",
+    "launchDate": "2025-09-23",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "PikuDAO lending vault",
@@ -26925,7 +26927,7 @@
       },
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Superstate Trust (d/b/a Superstate Short Duration U.S. Government Securities Fund; pending rename to Invesco Short-Duration U.S. Government Securities Fund upon Invesco takeover, expected mid-2026)",
+      "issuerEntity": "Superstate Trust (d/b/a Invesco Short-Duration U.S. Government Securities Fund after the completed Invesco takeover in Q2 2026)",
       "issuerDomicile": "United States",
       "licensingRegulator": "SEC — private Section 3(c)(7) fund exempt from Investment Company Act registration; offered under Reg D Rule 506(c); N-1A pending for conversion to registered MMF",
       "foreignExceptionStatus": "not-applicable",
@@ -26934,7 +26936,7 @@
       "reserveDisclosurePresent": false,
       "redemptionPolicyPresent": false,
       "monthlyAttestationPresent": false,
-      "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco is taking over management (announced March 2026, expected mid-2026 close); the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization — this would not change the excluded-security classification.",
+      "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco completed the takeover in Q2 2026; the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization — this would not change the excluded-security classification.",
       "references": [
         {
           "label": "GENIUS Act S.1582 text — payment stablecoin definition (excludes securities)",
@@ -27122,6 +27124,7 @@
       "navToken": false
     },
     "geckoId": "usx",
+    "launchDate": "2025-09-30",
     "reserves": [
       {
         "name": "USDC",
@@ -27566,14 +27569,17 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
-      "navToken": false
+      "navToken": true
     },
-    "mechanismArchetype": "cdp",
     "geckoId": "vcred",
     "protocolSlug": "vcred",
     "canBeBlacklisted": false,
+    "yieldConfig": {
+      "yieldSource": "vCRED protocol vault share value",
+      "yieldType": "nav-appreciation"
+    },
     "reserves": [
       {
         "name": "Hemi credit and crypto collateral",
@@ -27684,7 +27690,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-british-pound",
-    "launchDate": "2025-06-02",
+    "launchDate": "2025-03-24",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -28591,7 +28597,7 @@
   },
   {
     "id": "wtgxx-wisdomtree",
-    "name": "WisdomTree Government Money Market Digital Fund",
+    "name": "WisdomTree Treasury Money Market Digital Fund",
     "symbol": "WTGXX",
     "oneLiner": "WTGXX is WisdomTree's SEC-registered '40 Act government money market fund tokenized at a stable $1 NAV, with reserves in Treasuries, repos, and cash.",
     "flags": {
@@ -28878,7 +28884,7 @@
       "navToken": false
     },
     "geckoId": "matrixdock-silver",
-    "launchDate": "2026-03-09",
+    "launchDate": "2026-03-17",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -29878,7 +29884,7 @@
     "mechanismArchetype": "cdp",
     "variantOf": "bold-liquity",
     "variantKind": "strategy-vault",
-    "launchDate": "2025-05-26",
+    "launchDate": "2025-06-02",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
@@ -30133,7 +30139,7 @@
     "launchDate": "2025-01-23",
     "yieldConfig": {
       "yieldSource": "Aegis delta-neutral strategy",
-      "yieldType": "lending-vault"
+      "yieldType": "governance-set"
     },
     "reserves": [
       {
@@ -30627,7 +30633,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
     "reserves": [
       {
         "name": "Goal3 sportsbook collateral pool (composition not disclosed)",

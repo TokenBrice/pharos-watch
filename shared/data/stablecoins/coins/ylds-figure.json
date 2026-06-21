@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodians UMB Bank NA and Flagstar Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
-  "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 50bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
+  "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 35bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
   "mechanismArchetype": "tbill",
   "llamaId": "272",
   "detailProvider": "defillama",

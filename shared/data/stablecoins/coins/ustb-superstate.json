@@ -52,7 +52,7 @@
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "Superstate Trust (d/b/a Superstate Short Duration U.S. Government Securities Fund; pending rename to Invesco Short-Duration U.S. Government Securities Fund upon Invesco takeover, expected mid-2026)",
+    "issuerEntity": "Superstate Trust (d/b/a Invesco Short-Duration U.S. Government Securities Fund after the completed Invesco takeover in Q2 2026)",
     "issuerDomicile": "United States",
     "licensingRegulator": "SEC — private Section 3(c)(7) fund exempt from Investment Company Act registration; offered under Reg D Rule 506(c); N-1A pending for conversion to registered MMF",
     "foreignExceptionStatus": "not-applicable",
@@ -61,7 +61,7 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco is taking over management (announced March 2026, expected mid-2026 close); the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization — this would not change the excluded-security classification.",
+    "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco completed the takeover in Q2 2026; the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization — this would not change the excluded-security classification.",
     "references": [
       {
         "label": "GENIUS Act S.1582 text — payment stablecoin definition (excludes securities)",

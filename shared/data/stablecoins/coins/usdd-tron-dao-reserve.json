@@ -219,7 +219,7 @@
             "url": "https://docs.usdd.io/developers/deployment-addresses"
           }
         ],
-        "evidence": "At Tron block 83506136 (2026-06-11): wards(TronJoin) on USDD token (TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz) = 1 (confirmed ward). Tron Vat (TH5dhX7o39afSbfDT2e3c9k4itWjNKD4D9) live() = 1 (active). All other queried addresses (Pause, PauseProxy, GovActionsProxy) have ward=0 on the token. The ETH-side system is caged: ETH Vat (0xff77f...) live()=0 and ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently disabled."
+        "evidence": "At Tron block 83506136 (2026-06-11): wards(TronJoin) on USDD token (TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz) = 1 (confirmed ward). Tron Vat (TH5dhX7o39afSbfDT2e3c9k4itWjNKD4D9) live() = 1 (active). All other queried addresses (Pause, PauseProxy, GovActionsProxy) have ward=0 on the token. The legacy ETH-side 1.0 Vat/Join queried in the June 2026 review was caged, but USDD 2.0 documentation later introduced an Ethereum PSM mint/redeem route; Pharos no longer treats Ethereum as permanently disabled."
       },
       {
         "chain": "tron",
@@ -264,7 +264,7 @@
           "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
         }
       ],
-      "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11): ETH Vat (0xff77f...) live()=0, ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently caged. Active minting is on Tron only: USDD Tron token (TXDk8m...) wards confirmed — only Tron Join (TUajR7...) has ward=1; Vat (TH5dhX...) live()=1. Governance chain: Tron Pause (TNq6E9...) delay=0, authority=GovActionsProxy (TXzhj9...). GovActionsProxy authority()=zero (no higher authority). The signer/operator of GovActionsProxy.cast() is not publicly identifiable from on-chain state alone. Phase 0c continuation resolved the final blocker: GovActionsProxy.owner() is a single-key Tron account (1-of-1 permissions) that is also the sole historical caller; with authority()=zero, only this owner can execute governance actions. Posture corrected to concentrated-admin (zero-delay Pause, single-key governance executor); the Ethereum system remains permanently caged (live()=0).",
+      "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11), the legacy ETH Vat/Join was caged while Tron Join remained an active ward. USDD 2.0 documentation later introduced an Ethereum PSM route for native USDD mint/redeem, so the profile no longer states that active minting is Tron-only. Tron governance remains concentrated: Pause delay=0, GovActionsProxy owner resolved to a single-key Tron account, and this owner is the sole historical governance caller.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }

@@ -198,7 +198,9 @@
         "source": "docs",
         "name": "Chainlink CCIP",
         "url": "https://allunity.com/news/allunity-enters-strategic-partnership-with-chainlink-to-power-cross-chain-stablecoin-payments-across-europe",
-        "bridgeTypes": ["burnAndMint"]
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -241,5 +243,5 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2025-07-03"
+  "launchDate": "2025-07-31"
 }

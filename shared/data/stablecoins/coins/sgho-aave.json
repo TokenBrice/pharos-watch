@@ -158,5 +158,5 @@
       "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and live reserve telemetry, and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
     }
   ],
-  "launchDate": "2026-05-05"
+  "launchDate": "2026-05-18"
 }

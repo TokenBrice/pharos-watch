@@ -20,8 +20,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://krwq.cash/transparency",
-    "attestorTier": "self",
-    "cadence": "real-time"
+    "attestorTier": "niche",
+    "cadence": "real-time",
+    "provider": "Chainlink Proof of Reserve"
   },
   "links": [
     {

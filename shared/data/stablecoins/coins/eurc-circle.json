@@ -248,7 +248,7 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "EURC is issued by Circle as a native euro stablecoin on supported chains; Circle's EURC material lists chain availability but does not identify a separate EURC bridge route comparable to USDC CCTP. Pharos treats EURC route risk as native issuance on each chain.",
+    "summary": "EURC uses Circle CCTP V2 native burn-and-mint transfers across supported networks including Ethereum, Avalanche, Base, and Solana, so durable cross-chain movement depends on Circle issuer-native mint/burn infrastructure rather than a third-party liquidity bridge.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
@@ -295,5 +295,5 @@
       "coinType": "eurc"
     }
   },
-  "launchDate": "2022-05-19"
+  "launchDate": "2022-06-30"
 }

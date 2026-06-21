@@ -206,5 +206,6 @@
   "yieldConfig": {
     "yieldSource": "Solayer sUSD T-bill yield",
     "yieldType": "rebase"
-  }
+  },
+  "launchDate": "2024-10-28"
 }

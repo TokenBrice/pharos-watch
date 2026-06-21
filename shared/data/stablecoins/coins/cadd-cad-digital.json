@@ -117,7 +117,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://tetradg.com/cadd-reserve-attestations/",
-    "provider": "Baker Tilly (monthly reserve attestations)",
+    "provider": "Baker Tilly monthly reserve AUP report",
     "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "Canada"

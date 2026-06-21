@@ -162,11 +162,6 @@
       "chain": "flow",
       "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
       "decimals": 6
-    },
-    {
-      "chain": "polygon",
-      "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
-      "decimals": 6
     }
   ],
   "blacklistabilityReview": {
@@ -335,5 +330,5 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2022-11-08"
+  "launchDate": "2023-08-07"
 }

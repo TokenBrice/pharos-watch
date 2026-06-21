@@ -240,5 +240,13 @@
       ]
     }
   },
-  "launchDate": "2024-03-11"
+  "launchDate": "2024-06-17",
+  "marketAvailability": "legacy-or-wind-down",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Wind-down in progress",
+      "message": "Tether announced on June 17, 2026 that Alloy by Tether minting is halted and holders should redeem aUSDT by September 17, 2026."
+    }
+  ]
 }

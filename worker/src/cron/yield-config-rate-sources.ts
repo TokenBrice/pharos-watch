@@ -346,6 +346,12 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-05-19",
     note: "pre-launch stability-pool yield with no reliable runtime APY source yet",
   },
+  "hbd-hive": {
+    code: "no-public-yield-source",
+    since: "2026-06-21",
+    nextReviewAt: "2026-07-21",
+    note: "reviewed Hive Savings interest semantics; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+  },
   "home-homecoin": {
     code: "issuer-distributed-yield",
     since: "2026-05-22",

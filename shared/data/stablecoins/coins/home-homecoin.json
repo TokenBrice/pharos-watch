@@ -31,7 +31,7 @@
     "reviewedAt": "2026-05-12"
   },
   "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
-  "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
+  "pegMechanism": "HOME is minted and redeemed 1:1 for USDC through Bacon Protocol's Pan contract subject to Pan liquidity. The mortgage-lien portfolio is collateral/backstop exposure rather than a direct user redemption asset.",
   "mechanismArchetype": "rwa-credit-fund",
   "protocolSlug": "homecoin",
   "links": [
@@ -169,5 +169,5 @@
       ]
     }
   },
-  "launchDate": "2021-07-28"
+  "launchDate": "2021-09-28"
 }

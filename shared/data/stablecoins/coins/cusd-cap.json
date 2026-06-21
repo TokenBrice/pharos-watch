@@ -229,7 +229,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "onchain",
   "reserves": [
     {
       "name": "USDC (Circle)",
@@ -293,5 +293,5 @@
     ]
   },
   "launchDate": "2025-07-08",
-  "mechanismArchetype": "cdp"
+  "mechanismArchetype": "fiat-cash"
 }

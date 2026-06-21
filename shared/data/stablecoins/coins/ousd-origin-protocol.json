@@ -42,11 +42,6 @@
       "chain": "ethereum",
       "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
       "decimals": 18
-    },
-    {
-      "chain": "astar",
-      "address": "0x29f6e49c6e3397c3a84f715885f9f233a441165c",
-      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

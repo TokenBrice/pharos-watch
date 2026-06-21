@@ -306,5 +306,66 @@
       ],
       "price": 0.9997566479873777
     }
+  },
+  {
+    "id": "ist-agoric",
+    "capturedAt": "2026-06-21T13:13:40Z",
+    "peggedAssetRow": {
+      "id": "ist-agoric",
+      "llamaId": "135",
+      "name": "Inter Stable Token",
+      "symbol": "IST",
+      "geckoId": "inter-stable-token",
+      "pegType": "peggedUSD",
+      "priceSource": "defillama",
+      "pegMechanism": "crypto-backed",
+      "circulating": {
+        "peggedUSD": 203490.8379397602
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 203490.8379397602
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 203490.83793976024
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 204228.94377635914
+      },
+      "chainCirculating": {
+        "Osmosis": {
+          "current": {
+            "peggedUSD": 61644.249349950354
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 61644.249349950354
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 61641.515253836085
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 62366.99682450052
+          }
+        },
+        "Agoric": {
+          "current": {
+            "peggedUSD": 141846.58858980986
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 141846.58858980986
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 141849.32268592413
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 141861.94695185864
+          }
+        }
+      },
+      "chains": [
+        "Agoric",
+        "Osmosis"
+      ],
+      "price": 0.9190696257398481
+    }
   }
 ]

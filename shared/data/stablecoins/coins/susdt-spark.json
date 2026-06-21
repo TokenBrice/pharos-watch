@@ -2,7 +2,7 @@
   "id": "susdt-spark",
   "name": "Spark Savings USDT",
   "symbol": "spUSDT",
-  "oneLiner": "spUSDT is Spark's ERC-4626 savings wrapper of USDT; share price compounds the Sky Savings Rate via Spark PSM routing while exits draw on vault USDT liquidity.",
+  "oneLiner": "sUSDT is Spark's yield-bearing USDT wrapper for Spark Liquidity Layer allocations, accruing protocol-set returns from SLL deployment routes.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,8 +22,8 @@
   "variantKind": "savings-passthrough",
   "canBeBlacklisted": true,
   "pegReferenceId": "usdt-tether",
-  "collateral": "USDT deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDT-denominated yield",
-  "pegMechanism": "Deposit USDT to mint spUSDT; the share price appreciates against USDT as the Sky Savings Rate accrues. Withdrawals burn spUSDT for USDT subject to Spark vault liquidity",
+  "collateral": "USDT deployed through Spark Liquidity Layer allocation routes.",
+  "pegMechanism": "Users deposit USDT into Spark Liquidity Layer routes and receive sUSDT, a yield-bearing receipt whose value reflects SLL-managed allocations rather than Spark Savings Rate or the DAI/USDS PSM.",
   "detailProvider": "coingecko",
   "links": [
     {
@@ -161,5 +161,5 @@
       }
     }
   },
-  "launchDate": "2025-10-01"
+  "launchDate": "2025-11-12"
 }

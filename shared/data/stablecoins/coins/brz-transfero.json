@@ -19,8 +19,8 @@
   "geckoId": "brz",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf",
-    "provider": "Transfero",
+    "url": "https://transfero.com/brz",
+    "provider": "Transfero BRZ reserve disclosure",
     "attestorTier": "self",
     "cadence": "daily"
   },
@@ -28,7 +28,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://transfero.com/stablecoins/brz/"
+      "url": "https://transfero.com/brz"
     },
     {
       "label": "Twitter",

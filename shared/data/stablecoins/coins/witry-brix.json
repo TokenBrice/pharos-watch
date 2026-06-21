@@ -217,5 +217,12 @@
         "url": "https://l2beat.com/scaling/projects/megaeth"
       }
     ]
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://accountable.brix.money/",
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   }
 }

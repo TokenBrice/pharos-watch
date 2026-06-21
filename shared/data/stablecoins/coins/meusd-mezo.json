@@ -261,7 +261,9 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "infrastructures": ["liquity-v1"],
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "reserves": [
     {
       "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
@@ -306,5 +308,5 @@
       ]
     }
   },
-  "launchDate": "2025-05-12"
+  "launchDate": "2025-05-28"
 }

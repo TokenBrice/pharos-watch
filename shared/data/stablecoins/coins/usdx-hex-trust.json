@@ -2,7 +2,7 @@
   "id": "usdx-hex-trust",
   "name": "Hex Trust USDX",
   "symbol": "USDX",
-  "oneLiner": "USDX is Hex Trust's U.S. dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under a TCSP license.",
+  "oneLiner": "USDX is Hex Trust's U.S. dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under Hong Kong issuer disclosures.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -29,8 +29,7 @@
   ],
   "jurisdiction": {
     "country": "Hong Kong",
-    "regulator": "Companies Registry",
-    "license": "TCSP License"
+    "regulator": "Companies Registry"
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
@@ -238,7 +237,7 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2024-10-28",
+  "launchDate": "2024-05-21",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USDX is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",

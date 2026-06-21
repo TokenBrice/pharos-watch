@@ -2,7 +2,7 @@
   "id": "honey-berachain",
   "name": "Honey",
   "symbol": "HONEY",
-  "oneLiner": "HONEY is Berachain's dollar stablecoin, minted 1:1 from a basket of USDC, USDT0, pyUSD, and USDe with Basket Mode safety controls.",
+  "oneLiner": "Honey is Berachain's native overcollateralized dollar token, minted against a basket of approved stable assets where some routes carry mint/redeem fees.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

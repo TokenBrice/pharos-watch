@@ -27,7 +27,7 @@
     },
     {
       "label": "Proof of Reserve",
-      "url": "https://fact.finance/en/reserves/brl1"
+      "url": "https://brl1.io/en/como_funciona"
     }
   ],
   "jurisdiction": {
@@ -59,10 +59,10 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://fact.finance/en/reserves/brl1",
-    "provider": "Fact Finance reserve report",
-    "attestorTier": "niche",
+    "type": "self-reported",
+    "url": "https://brl1.io/en/como_funciona",
+    "provider": "BRL1 self-published proof of reserves",
+    "attestorTier": "self",
     "cadence": "real-time",
     "attestorJurisdiction": "Brazil"
   },

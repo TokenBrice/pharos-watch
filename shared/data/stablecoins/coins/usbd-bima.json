@@ -104,7 +104,9 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "infrastructures": ["liquity-v1"],
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "reserves": [
     {
       "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
@@ -248,5 +250,5 @@
       ]
     }
   },
-  "launchDate": "2025-03-21"
+  "launchDate": "2025-04-09"
 }

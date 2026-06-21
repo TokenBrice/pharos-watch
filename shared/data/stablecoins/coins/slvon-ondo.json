@@ -18,7 +18,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-    "provider": "Ondo Global Markets collateral attestations",
+    "provider": "Ankura Trust Company",
     "attestorTier": "niche",
     "cadence": "daily-nav"
   },
@@ -207,7 +207,10 @@
         "name": "LayerZero",
         "slug": "layerzero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": ["Lock & Mint", "Burn & Mint"]
+        "bridgeTypes": [
+          "Lock & Mint",
+          "Burn & Mint"
+        ]
       }
     ],
     "sources": [
@@ -258,5 +261,5 @@
       "message": "Ondo GM Tokens provide economic exposure to the underlying ETF but do not give holders direct rights to hold or receive the underlying ETF shares; eligibility restrictions apply."
     }
   ],
-  "launchDate": "2025-07-24"
+  "launchDate": "2025-09-03"
 }

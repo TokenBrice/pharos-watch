@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "decentralized",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": false
   },
@@ -57,6 +57,10 @@
       "risk": "high"
     }
   ],
+  "yieldConfig": {
+    "yieldSource": "Hive Savings interest rate",
+    "yieldType": "governance-set"
+  },
   "notices": [
     {
       "type": "warning",

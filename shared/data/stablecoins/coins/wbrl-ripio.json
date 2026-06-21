@@ -14,7 +14,7 @@
     "navToken": false
   },
   "collateral": "Brazilian-real fiat cash deposited in a Brazilian bank account, backing Ripio wBRL one-to-one against the Brazilian real per Ripio's wFIAT token certifications",
-  "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
@@ -223,13 +223,6 @@
       "name": "Brazilian-real cash deposited in a Brazilian bank account",
       "pct": 100,
       "risk": "high"
-    }
-  ],
-  "notices": [
-    {
-      "type": "info",
-      "title": "No per-token attestation located",
-      "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WBRL during this addition. Curated reserves remain conservative until source coverage improves."
     }
   ],
   "launchDate": "2025-07-11"

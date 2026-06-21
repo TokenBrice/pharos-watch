@@ -20,7 +20,7 @@
     "type": "independent-audit",
     "url": "https://app.etherfuse.com/legal/proof-of-reserves",
     "attestorTier": "niche",
-    "cadence": "weekly",
+    "cadence": "ad-hoc",
     "provider": "Etherfuse third-party attestations"
   },
   "links": [
@@ -186,5 +186,5 @@
     "yieldType": "nav-appreciation"
   },
   "chainTier": "mature-alt-l1",
-  "launchDate": "2025-05-28"
+  "launchDate": "2024-04-12"
 }

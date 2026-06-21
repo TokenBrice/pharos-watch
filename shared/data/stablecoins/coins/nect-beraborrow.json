@@ -64,7 +64,9 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "reserves": [
     {
       "name": "iBGT (Infrared liquid staked BGT)",
@@ -328,5 +330,6 @@
         }
       ]
     }
-  }
+  },
+  "launchDate": "2025-02-07"
 }

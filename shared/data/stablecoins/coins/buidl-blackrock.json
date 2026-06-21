@@ -216,7 +216,7 @@
     "yieldSource": "BlackRock T-bill fund",
     "yieldType": "rebase"
   },
-  "launchDate": "2024-03-01",
+  "launchDate": "2024-03-20",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "BUIDL is issued through Securitize and has reviewed multichain transfer evidence through Wormhole for Securitize tokenized funds. The route is scored as an external validated network because Wormhole interoperability is a third-party validation layer for cross-chain fund-share movement.",

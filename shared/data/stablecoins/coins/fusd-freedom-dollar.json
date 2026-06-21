@@ -11,12 +11,13 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Privacy-chain stable asset collateral and reserve mechanisms on Zano; public reserve details are limited",
-  "pegMechanism": "Freedom Dollar targets $1 inside the Zano ecosystem through private-chain issuance and redemption mechanics",
-  "mechanismArchetype": "cdp",
+  "collateral": "FUSD is minted against ZANO reserves deposited into the Freedom Dollar DAO contract, with initial overcollateralization above 1000%. Reserves are staked on Zano and publicly visible on-chain.",
+  "pegMechanism": "Algorithmic Zano-backed mint/redemption design: users mint FUSD by depositing ZANO into the Freedom Dollar DAO, with very high initial overcollateralization and on-chain reserve visibility.",
+  "mechanismArchetype": "algorithmic",
   "detailProvider": "coingecko",
   "geckoId": "freedom-dollar",
   "protocolSlug": "freedom-dollar",
+  "canBeBlacklisted": false,
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Public docs reviewed for Freedom Dollar do not identify the collateral oracle setup or failure handling.",
@@ -46,8 +47,9 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: FUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
+    "sourceFreeRationale": "Resolved from the follow-up FreezeWatch audit: FUSD is a Zano Confidential Asset and the public project materials do not identify a direct token freeze, blacklist, pause, seize, or arbitrary-burn surface.",
+    "upstreamSuppressionRationale": "The text-based resolver can infer upstream exposure from ZANO reserve language, but ZANO reserve volatility is collateral risk, not an issuer or upstream stablecoin freeze surface under FreezeWatch semantics.",
+    "evidence": "Follow-up audit retained: FUSD resolves to No because existing metadata and public materials describe ZANO-backed minting without an identified direct or upstream freeze authority.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
@@ -79,5 +81,6 @@
         "Zano is a privacy-chain using Confidential Assets with no auditable EVM contract surface; the FUSD mint authority and admin-keyless claim cannot be verified remotely. Resolution requires Zano-native tooling or direct issuer disclosure of collateral contract parameters."
       ]
     }
-  }
+  },
+  "launchDate": "2025-05-01"
 }

@@ -23,7 +23,7 @@
     "url": "https://www.eurite.com/",
     "provider": "Ernst & Young",
     "attestorTier": "big4",
-    "cadence": "monthly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Luxembourg",
     "attestorLicense": "Credit Institution (MiCA)"
   },
@@ -208,7 +208,7 @@
       }
     }
   },
-  "launchDate": "2024-07-02",
+  "launchDate": "2024-08-26",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "EURI is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",

@@ -79,7 +79,10 @@
         "name": "LayerZero",
         "slug": "layerzero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": ["lockAndMint", "burnAndMint"]
+        "bridgeTypes": [
+          "lockAndMint",
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -199,5 +202,5 @@
       ]
     }
   },
-  "launchDate": "2025-07-24"
+  "launchDate": "2025-07-31"
 }

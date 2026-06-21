@@ -24,7 +24,7 @@
     "url": "https://maple.finance/insights/introducing-proof-of-reserves",
     "provider": "The Network Firm",
     "attestorTier": "niche",
-    "cadence": "monthly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "United States"
   },
   "links": [

@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "U.S. Treasury bills via tokenized TBILL and BUIDL tokens held in a bankruptcy-remote segregated account; 100% collateralization ratio maintained",
+  "collateral": "USDO is backed by OpenEden reserve assets including tokenized U.S. Treasury bill exposure through TBILL, BlackRock BUIDL, VBILL, and a liquidity buffer of RLUSD and USDC.",
   "pegMechanism": "Rebasing stablecoin fixed at $1; supply rebases daily to distribute yield; mint/redemption at 1:1 with USDC via OpenEden platform",
   "mechanismArchetype": "tbill",
   "llamaId": "241",

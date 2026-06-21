@@ -168,5 +168,6 @@
       "title": "Retail redemption gap and thin-liquidity depeg",
       "message": "USX traded as low as roughly $0.10 on Orca during a December 2025 thin-liquidity event. Solstice documents institutional/KYC redemption, so retail holders without direct redemption access depend on secondary-market liquidity during stress."
     }
-  ]
+  ],
+  "launchDate": "2025-09-30"
 }

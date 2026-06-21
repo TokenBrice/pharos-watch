@@ -156,7 +156,7 @@
     {
       "chain": "monad",
       "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
-      "decimals": 6
+      "decimals": 18
     },
     {
       "chain": "mantle",
@@ -365,5 +365,5 @@
       "fallbackRpcUrl": "https://eth.llamarpc.com"
     }
   },
-  "launchDate": "2025-01-28"
+  "launchDate": "2025-03-25"
 }

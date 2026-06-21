@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
-  "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
+  "pegMechanism": "DOLA is minted through Inverse Finance FiRM Fed and PSM Fed facilities, with legacy Frontier Fed liquidity winding down. Supply expands or contracts through governed lending-market and PSM rails rather than the old DEX Liquidity Fed model.",
   "mechanismArchetype": "cdp",
   "llamaId": "15",
   "detailProvider": "defillama",

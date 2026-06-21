@@ -40,8 +40,12 @@
         "label": "WETH branch",
         "tier": "redundant-with-failover",
         "summary": "WETH collateral uses Liquity V2 external feeds with response validation, last-good-price fallback, and branch shutdown if oracle checks fail.",
-        "collateralAssets": ["WETH"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "sources": [
           {
             "label": "Liquity BOLD contract docs",
@@ -54,8 +58,12 @@
         "label": "wstETH branch",
         "tier": "redundant-with-failover",
         "summary": "wstETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
-        "collateralAssets": ["wstETH"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "sources": [
           {
             "label": "Liquity V2 risk disclosure",
@@ -68,8 +76,12 @@
         "label": "rETH branch",
         "tier": "redundant-with-failover",
         "summary": "rETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
-        "collateralAssets": ["rETH"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "rETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "sources": [
           {
             "label": "Liquity V2 risk disclosure",
@@ -219,7 +231,9 @@
   "collateralQuality": "eth-lst",
   "custodyModel": "onchain",
   "governanceQuality": "immutable-code",
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "reserves": [
     {
       "name": "wstETH (Lido)",
@@ -293,5 +307,5 @@
       ]
     }
   },
-  "launchDate": "2025-05-14"
+  "launchDate": "2025-05-19"
 }

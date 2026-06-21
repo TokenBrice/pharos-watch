@@ -2,7 +2,7 @@
   "id": "audf-forte",
   "name": "Forte AUD",
   "symbol": "AUDF",
-  "oneLiner": "AUDF is Forte Tech Solutions' centralized Australian dollar stablecoin, redeemable 1:1 with AUD reserves and cash-equivalent assets held separately.",
+  "oneLiner": "AUDF is Forte Securities Australia's centralized Australian dollar stablecoin, redeemable 1:1 with AUD reserves held separately.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Australian dollar reserves and cash-equivalent reserve assets held separately from Forte's operational funds",
-  "pegMechanism": "Direct 1:1 redemption for AUD through Forte Tech Solutions for eligible account holders to approved bank accounts, with monthly independent reserve audits and daily reserve monitoring",
+  "pegMechanism": "Direct 1:1 redemption for AUD through Forte Securities Australia Pty Ltd for eligible account holders to approved bank accounts, with monthly independent reserve audits and daily reserve monitoring",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "forte-aud",
@@ -138,14 +138,20 @@
         "name": "LayerZero",
         "slug": "layerzero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": ["Lock & Mint", "Burn & Mint"]
+        "bridgeTypes": [
+          "Lock & Mint",
+          "Burn & Mint"
+        ]
       },
       {
         "source": "l2beat",
         "name": "Stargate",
         "slug": "stargate",
         "url": "https://l2beat.com/interop/protocols/stargate",
-        "bridgeTypes": ["Lock & Mint", "Non-minting"]
+        "bridgeTypes": [
+          "Lock & Mint",
+          "Non-minting"
+        ]
       }
     ],
     "sources": [

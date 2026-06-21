@@ -109,7 +109,7 @@
     "url": "https://docs.onre.finance/introduction/transparency-dashboard",
     "provider": "Apex Group",
     "attestorTier": "niche",
-    "cadence": "daily-nav"
+    "cadence": "monthly"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

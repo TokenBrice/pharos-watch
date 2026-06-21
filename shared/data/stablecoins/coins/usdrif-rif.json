@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "RIF tokens locked in the RIF On Chain protocol on Rootstock",
-  "pegMechanism": "USDRIF is minted against RIF collateral and can be redeemed for the same dollar value in RIF through the protocol, with smart-contract rules and scheduled settlement supporting the peg",
+  "collateral": "RIF tokens and DOC (Dollar on Chain) V3 multi-collateral reserves.",
+  "pegMechanism": "USDRIF is minted through RIF on Chain using RIF and DOC V3 collateral, with the peg supported by a multi-collateral CDP/redemption design rather than a fiat reserve account.",
   "mechanismArchetype": "cdp",
   "llamaId": "159",
   "detailProvider": "defillama",

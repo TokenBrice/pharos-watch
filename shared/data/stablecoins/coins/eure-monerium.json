@@ -22,7 +22,7 @@
     "type": "self-reported",
     "url": "https://monerium.com/financial-information/",
     "attestorTier": "self",
-    "cadence": "annual",
+    "cadence": "semi-annual",
     "attestorJurisdiction": "Iceland",
     "provider": "Monerium annual financial information"
   },
@@ -216,13 +216,8 @@
   "custodyModel": "institutional-top",
   "reserves": [
     {
-      "name": "State Street EUR Liquidity LVNAV Fund (AAA-rated)",
-      "pct": 70,
-      "risk": "very-low"
-    },
-    {
-      "name": "EUR bank deposits (Arion Bank, LHV Bank)",
-      "pct": 30,
+      "name": "EUR reserves at State Street EUR Liquidity LVNAV Fund, Arion Bank, and LHV Bank",
+      "pct": 100,
       "risk": "very-low"
     }
   ],

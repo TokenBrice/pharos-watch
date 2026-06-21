@@ -2,7 +2,7 @@
   "id": "ist-agoric",
   "name": "Inter Stable Token",
   "symbol": "IST",
-  "oneLiner": "IST is Inter Protocol's decentralized dollar on Agoric, minted from overcollateralized IBC ATOM vaults plus a PSM swapping IBC stablecoins 1:1.",
+  "oneLiner": "IST was Agoric's Inter Protocol stable token, formerly minted against vault collateral and PSM deposits before governance sunset the protocol in 2025.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Overcollateralized crypto vaults on Agoric accepting IBC-bridged ATOM and stATOM, plus a Parity Stability Module (PSM) that mints IST 1:1 against approved stablecoins (USDC, USDT, DAI) bridged from Ethereum via IBC",
-  "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
+  "pegMechanism": "IST was minted through Inter Protocol vaults and PSM facilities. Agoric governance approved a wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025.",
   "mechanismArchetype": "cdp",
   "llamaId": "135",
   "detailProvider": "defillama",
@@ -121,7 +121,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "IST is minted on Agoric two ways: Inter Protocol vaults against overcollateralized IBC crypto collateral, and the Parity Stability Module swapping approved IBC stablecoins 1:1; BLD stakers and an elected Economic Committee govern parameters, mint limits, and emergency pauses.",
+    "summary": "IST was minted through Agoric Inter Protocol vault and PSM contracts. Governance approved the protocol wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025.",
     "controls": [
       {
         "chain": "agoric",
@@ -165,5 +165,15 @@
         "Confirm the current Economic Committee member addresses and governance contract state via Agoric REST API (e.g. https://main.api.agoric.net) or a live Agoric node before raising confidence."
       ]
     }
+  },
+  "status": "frozen",
+  "frozenAt": "2025-06-26",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2025-06-26",
+    "epitaph": "Inter Protocol sunset by governance",
+    "obituary": "Agoric governance approved Inter Protocol's wind-down in mid-2025, disabled new IST minting, and completed the sunset process on June 26, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
+    "sourceUrl": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",
+    "sourceLabel": "Agoric community sunset proposal"
   }
 }

@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": true
   },
@@ -164,10 +164,6 @@
         "rpcMode": "public-rpc"
       }
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Lumi Finance LUAUSD NAV mechanics",
-    "yieldType": "nav-appreciation"
   },
   "notices": [
     {

@@ -235,7 +235,7 @@
   },
   "yieldConfig": {
     "yieldSource": "Aegis delta-neutral strategy",
-    "yieldType": "lending-vault"
+    "yieldType": "governance-set"
   },
   "launchDate": "2025-01-23"
 }

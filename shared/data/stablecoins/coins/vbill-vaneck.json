@@ -147,7 +147,7 @@
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
+    "tier": "external-validated-network",
     "summary": "VBILL fund shares are issued through Securitize across Avalanche, BNB Chain, Ethereum, and Solana investment rails. The reviewed evidence supports issuer/platform-native multichain issuance rather than a public external bridge route.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",

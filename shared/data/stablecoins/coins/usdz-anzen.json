@@ -19,7 +19,7 @@
   "geckoId": "anzen-usdz",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://rwa.anzen.finance/transparency",
+    "url": "https://app.anzen.finance/transparency",
     "provider": "Anzen transparency dashboard",
     "attestorTier": "self",
     "cadence": "real-time"
@@ -54,7 +54,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://rwa.anzen.finance/transparency",
+    "reserveDisclosureUrl": "https://app.anzen.finance/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
     "notes": "USDz is stablecoin-adjacent but backed by private credit; GENIUS payment-stablecoin applicability is unresolved. The ToS explicitly excludes US persons and states Anzen Group Ltd is not registered with any regulatory body in any jurisdiction. No GENIUS PPSI approval, state-qualified approval, application, or foreign-issuer exception evidence found.",
@@ -194,7 +194,7 @@
     "semantics": "single-asset",
     "breakerScope": "usdz-anzen",
     "display": {
-      "url": "https://rwa.anzen.finance/transparency",
+      "url": "https://app.anzen.finance/transparency",
       "label": "Anzen transparency"
     },
     "inputs": {

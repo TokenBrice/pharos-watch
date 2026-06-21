@@ -181,7 +181,7 @@
       ]
     }
   },
-  "launchDate": "2026-02-26",
+  "launchDate": "2026-03-03",
   "mechanismArchetype": "rwa-credit-fund",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -193,7 +193,9 @@
       {
         "source": "issuer",
         "name": "SAFO issuer-operated multichain issuance",
-        "bridgeTypes": ["issuer-native-mint-redeem"]
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
       }
     ],
     "sources": [

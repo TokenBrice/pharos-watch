@@ -23,7 +23,8 @@
   "pegReferenceId": "yzusd-yuzu",
   "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
   "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
-  "mechanismArchetype": "cdp",
+  "mechanismArchetype": "rwa-credit-fund",
+  "archetypeOverride": true,
   "detailProvider": "coingecko",
   "geckoId": "staked-yuzu-usd",
   "jurisdiction": {
@@ -148,29 +149,29 @@
         "evidence": "syzUSD is an ERC-4626 vault that mints/burns shares against yzUSD deposits (expected asset 0x6695c0f8706c5ace3bdf8995073179cca47926dc); share price appreciates as strategy yield accrues. The wrapper cannot create base yzUSD supply."
       },
       {
-      "label": "Inherited yzUSD permissioned mint authority",
-      "role": "direct-minter",
-      "authorityType": "issuer-backend",
-      "directMintAbility": "direct",
-      "canRaiseCap": "unknown",
-      "evidence": "Underlying yzUSD primary mint/redeem is gated to KYC'ed eligible investors 1:1 with USDT0, with collateral managed in a Fordefi MPC workspace. syzUSD inherits this concentrated-admin posture from the parent."
+        "label": "Inherited yzUSD permissioned mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying yzUSD primary mint/redeem is gated to KYC'ed eligible investors 1:1 with USDT0, with collateral managed in a Fordefi MPC workspace. syzUSD inherits this concentrated-admin posture from the parent."
       }
     ],
     "review": {
       "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is an ERC-4626 staked wrapper over yzUSD on Plasma and Monad. It inherits yzUSD's permissioned-minter mint path and concentrated-admin posture; the wrapper only mints/burns shares against yzUSD deposits.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
-    "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata and Yuzu docs; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
-    "sources": [
-      {
-        "label": "Yuzu syzUSD docs",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
-      },
-      {
-        "label": "Yuzu yzUSD docs",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
-      }
-    ],
+      "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata and Yuzu docs; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
+      "sources": [
+        {
+          "label": "Yuzu syzUSD docs",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+        },
+        {
+          "label": "Yuzu yzUSD docs",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+        }
+      ],
       "unresolvedQuestions": [
         "Plasma deployment 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6: transparent proxy confirmed (admin slot = ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0; ProxyAdmin owner = 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d, Safe masterCopy=0x29fcb43, no modules). HOWEVER vault owner() = EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 (code=0x). Per brief, an EOA owner is verifiable as authorityType:eoa — but this is a wrapper with a separate upgrade admin (the 4/5 Safe). Promote when the EOA role is clarified (operational vs upgrade) or if the project confirms EOA is an MPC/HSM wallet."
       ]

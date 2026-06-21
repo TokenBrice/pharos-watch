@@ -278,5 +278,6 @@
   "yieldConfig": {
     "yieldSource": "M0 T-bill rebase",
     "yieldType": "rebase"
-  }
+  },
+  "launchDate": "2025-03-05"
 }
