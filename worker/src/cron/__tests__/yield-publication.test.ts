@@ -601,6 +601,7 @@ describe("publishYieldCoordinatorResults", () => {
     previewRankingsPayload?: ReturnType<typeof buildPayloadWithObservedAt>;
     evaluatedSources?: EvaluatedYieldSource[];
     bestSourceKeyByCoin?: Map<string, string>;
+    degradationReasons?: string[];
   }) {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const source = makeEvaluatedSource();
@@ -614,7 +615,7 @@ describe("publishYieldCoordinatorResults", () => {
       startSec,
       medianApy: 4.5,
       dlPoolsMeta: makeYieldSourceMeta(),
-      degradationReasons: [],
+      degradationReasons: overrides.degradationReasons ?? [],
       resolvedCount: 1,
       rowsRejected: 0,
       divergenceFlags: 0,
@@ -811,6 +812,36 @@ describe("publishYieldCoordinatorResults", () => {
     expect(history.some((entry) => entry.sql.includes("pharos:yield-sync:history-retention-delete"))).toBe(false);
   });
 
+  it("runs ownership handoff cleanup only after successful non-degraded publication cleanup", async () => {
+    const db = makePublicationDb(1);
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+    expect(result).toMatchObject({ ok: true, degradationReasons: [] });
+
+    const history = db.getHistory();
+    const cacheWriteIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
+    const freshnessIndex = history.findIndex((entry) => entry.binds[0] === "freshness:yield-data");
+    const historyRetentionIndex = history.findIndex((entry) =>
+      entry.sql.includes("pharos:yield-sync:history-retention-delete")
+    );
+    const handoffCleanupIndex = history.findIndex((entry) =>
+      entry.sql.includes("pharos:yield-sync:ownership-handoff-delete")
+    );
+    expect(cacheWriteIndex).toBeGreaterThanOrEqual(0);
+    expect(freshnessIndex).toBeGreaterThan(cacheWriteIndex);
+    expect(historyRetentionIndex).toBeGreaterThan(freshnessIndex);
+    expect(handoffCleanupIndex).toBeGreaterThan(historyRetentionIndex);
+
+    const degradedDb = makePublicationDb(1);
+    const degradedResult = await publishYieldCoordinatorResults(makePublishParams({
+      db: degradedDb,
+      degradationReasons: ["safety-snapshot-degraded"],
+    }));
+    expect(degradedResult).toMatchObject({ ok: true, degradationReasons: ["safety-snapshot-degraded"] });
+    expect(
+      degradedDb.getHistory().some((entry) => entry.sql.includes("pharos:yield-sync:ownership-handoff-delete")),
+    ).toBe(false);
+  });
+
   it("emits a bounded public decisionLedger on the published rankings payload and persists alternatives + retention reason", async () => {
     const db = makePublicationDb(1);
     const best = makeEvaluatedSource({
@@ -984,6 +1015,7 @@ describe("pruneYieldTables", () => {
         );
         CREATE TABLE yield_history (
           stablecoin_id TEXT NOT NULL,
+          source_key TEXT,
           recorded_at INTEGER NOT NULL
         );
         CREATE TABLE yield_source_decisions (

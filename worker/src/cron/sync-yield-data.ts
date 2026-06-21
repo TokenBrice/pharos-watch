@@ -9,7 +9,7 @@ import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY, parseYieldHistoryWriterPause } from "../lib/yield-history-cleanup";
 import { resolveYieldSources } from "./yield-sync/resolve";
-import { loadYieldHistorySnapshots, purgeYieldHistoryOwnershipHandoffs } from "./yield-sync/history";
+import { loadYieldHistorySnapshots } from "./yield-sync/history";
 import { evaluateYieldSourcesCooperative } from "./yield-sync/evaluation";
 import { buildYieldHistoryEvaluationInputsCooperative } from "./yield-sync/coordinator-history";
 import {
@@ -100,7 +100,6 @@ export async function syncYieldData(
     };
   }
 
-  await purgeYieldHistoryOwnershipHandoffs(db);
   await repairPublishedYieldGenerationFromCache(db, startSec).catch((error: unknown) => {
     console.warn("[sync-yield-data] Failed to repair published yield generation before history load:", error);
   });

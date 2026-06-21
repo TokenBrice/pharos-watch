@@ -7,11 +7,12 @@
  * report to the cache for operator review.
  */
 
-import { logCronEvent, type CronResult } from "../lib/cron-logger";
+import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { toErrorMessage } from "../lib/error-utils";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
+import { reportCronProgress } from "../lib/cron-progress";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
 import {
@@ -75,6 +76,7 @@ const HIGH_CONFIDENCE_PROTOCOL_CATEGORIES = new Set([
   "rwa lending",
   "uncollateralized lending",
 ]);
+const YIELD_COVERAGE_AUDIT_PROGRESS_STAGES = 6;
 
 export interface ProtocolCategoryAuditMeta {
   cacheKey: typeof CIRCUIT_SOURCE.DL_PROTOCOLS;
@@ -814,12 +816,61 @@ export async function runYieldCoverageAudit(
   db: D1Database,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
+  const reportAuditProgress = async (
+    stage: string,
+    message: string,
+    itemsDone: number,
+    metadata: Record<string, unknown> = {},
+  ) => {
+    await reportCronProgress(reportProgress, {
+      stage,
+      message,
+      itemsDone,
+      itemsTotal: YIELD_COVERAGE_AUDIT_PROGRESS_STAGES,
+      metadata: {
+        providerFamily: "yield-coverage-audit",
+        phase: stage,
+        ...metadata,
+      },
+    });
+  };
+
   // Load DL stablecoin pools (uses cache written by dex-liquidity sync)
+  await reportAuditProgress("pool-load", "Loading DeFiLlama stablecoin yield pools", 0, {
+    providerFamilies: ["defillama-yields"],
+  });
   const { pools: dlPools, meta: poolMeta } = await loadDlStablecoinPools(db, signal);
+  await reportAuditProgress("pool-load", "Loaded DeFiLlama stablecoin yield pools", 1, {
+    providerFamilies: ["defillama-yields"],
+    countTotals: {
+      dlPools: dlPools.length,
+    },
+    poolMeta,
+  });
+
+  await reportAuditProgress("protocol-category-load", "Loading DeFiLlama protocol categories", 1, {
+    providerFamilies: ["defillama-protocols"],
+    cacheKey: CIRCUIT_SOURCE.DL_PROTOCOLS,
+  });
   const protocolCategoryLookup = await loadProtocolCategoryLookup(db);
+  await reportAuditProgress("protocol-category-load", "Loaded DeFiLlama protocol categories", 2, {
+    providerFamilies: ["defillama-protocols"],
+    cacheKey: protocolCategoryLookup.meta.cacheKey,
+    protocolCategoryStatus: protocolCategoryLookup.meta.status,
+    countTotals: {
+      protocols: protocolCategoryLookup.meta.protocolCount,
+      categorizedProtocols: protocolCategoryLookup.meta.categorizedProtocolCount,
+      highConfidenceCategories: protocolCategoryLookup.meta.highConfidenceCategoryCount,
+    },
+  });
 
   if (dlPools.length === 0) {
+    await reportAuditProgress("complete", "Yield coverage audit completed without DeFiLlama pools", 6, {
+      reason: "no-dl-pools",
+      poolMeta,
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -844,10 +895,23 @@ export async function runYieldCoverageAudit(
     LENDING_PROTOCOL_ALLOWLIST,
     protocolCategoryLookup.categoriesByProject,
   );
+  await reportAuditProgress("safety-supply-load", "Loading stablecoin supply and safety snapshots", 2, {
+    providerFamilies: ["stablecoins-cache", "safety-scores"],
+  });
   const stablecoinSupplyById = await loadStablecoinSupplyMapForAudit(db);
   const safetySnapshot = await computeSafetyScoresSnapshot(db, {
     includeNavTokens: true,
     outputMode: "map",
+  });
+  await reportAuditProgress("safety-supply-load", "Loaded stablecoin supply and safety snapshots", 3, {
+    providerFamilies: ["stablecoins-cache", "safety-scores"],
+    countTotals: {
+      stablecoinSupplyRows: stablecoinSupplyById.size,
+      safetyScoresComputed: safetySnapshot.coveredCount,
+      safetyScoresExpected: safetySnapshot.trackedCount,
+    },
+    safetySnapshotKind: safetySnapshot.kind,
+    safetySnapshotReason: safetySnapshot.reason ?? null,
   });
   const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools, {
     stablecoinSupplyById,
@@ -906,10 +970,26 @@ export async function runYieldCoverageAudit(
   const lifecycleBuckets = summarizeAdapterLifecycle(
     ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id),
   );
+  await reportAuditProgress("quarantine-probe", "Probing quarantined deterministic yield adapters", 3, {
+    providerFamilies: ["on-chain-rates"],
+    countTotals: {
+      quarantinedAdapters: lifecycleBuckets.quarantinedAdapters.length,
+    },
+  });
   const quarantineProbe = await probeQuarantinedDeterministicAdapters({
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
     chainRpcs,
     signal,
+  });
+  await reportAuditProgress("quarantine-probe", "Completed quarantined deterministic adapter probe", 4, {
+    providerFamilies: ["on-chain-rates"],
+    countTotals: {
+      quarantinedAdapters: lifecycleBuckets.quarantinedAdapters.length,
+      quarantineProbeConfigured: quarantineProbe.summary.configuredProbeCount,
+      quarantineProbeAttempted: quarantineProbe.summary.attemptedCount,
+      quarantineReadyToRestore: quarantineProbe.readyToRestore.length,
+    },
+    quarantineProbeSummary: quarantineProbe.summary,
   });
   const nowMs = Date.now();
   const staleVenueRiskScores = findStaleVenueRiskScores(nowMs);
@@ -974,7 +1054,27 @@ export async function runYieldCoverageAudit(
     poolMeta,
   };
 
+  await reportAuditProgress("cache-write", "Publishing yield coverage audit cache", 5, {
+    cacheKey: "yield-coverage-audit",
+    countTotals: {
+      ...auditCounts,
+      manifestMissing: manifestMissingIds.length,
+      yieldBearingMissingFromRankings: yieldBearingMissingFromRankings.length,
+      operatorHeadlineGaps: operatorQueue.headlineGaps.length,
+      operatorRecommendationCandidates: operatorQueue.recommendationCandidates.length,
+    },
+  });
   await setCache(db, "yield-coverage-audit", JSON.stringify(report));
+  await reportAuditProgress("complete", "Published yield coverage audit cache", 6, {
+    cacheKey: "yield-coverage-audit",
+    countTotals: {
+      ...auditCounts,
+      manifestMissing: manifestMissingIds.length,
+      yieldBearingMissingFromRankings: yieldBearingMissingFromRankings.length,
+      operatorHeadlineGaps: operatorQueue.headlineGaps.length,
+      operatorRecommendationCandidates: operatorQueue.recommendationCandidates.length,
+    },
+  });
 
   const itemCount =
     gaps.unmatchedHighTvlPools.length +

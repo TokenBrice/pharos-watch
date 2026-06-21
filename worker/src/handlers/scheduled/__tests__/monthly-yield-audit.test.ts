@@ -47,6 +47,6 @@ describe("runMonthlyYieldAuditSlot", () => {
     await runMonthlyYieldAuditSlot(runtime);
 
     expect(runLeasedCron).toHaveBeenCalledWith("yield-coverage-audit", expect.any(Function));
-    expect(runYieldCoverageAudit).toHaveBeenCalledWith(db, signal, chainRpcs);
+    expect(runYieldCoverageAudit).toHaveBeenCalledWith(db, signal, chainRpcs, expect.any(Function));
   });
 });

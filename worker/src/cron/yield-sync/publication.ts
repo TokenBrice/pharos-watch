@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { deleteOrphanYieldRows, deleteStaleYieldRows } from "./history";
+import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
 
 export {
   readPreviousYieldRankingsCount,
@@ -28,8 +28,9 @@ export async function pruneYieldTables(
     allowDestructiveCleanup?: boolean;
   },
 ): Promise<void> {
+  const allowDestructiveCleanup = options?.allowDestructiveCleanup ?? true;
   const managedYieldIds = ACTIVE_STABLECOINS.map((meta) => meta.id);
-  if ((options?.allowDestructiveCleanup ?? true) && managedYieldIds.length > 0) {
+  if (allowDestructiveCleanup && managedYieldIds.length > 0) {
     await deleteStaleYieldRows(db, managedYieldIds, startSec);
     await deleteOrphanYieldRows(db, managedYieldIds);
   }
@@ -45,7 +46,7 @@ export async function pruneYieldTables(
     .bind(pruneCutoff, ...frozenIdsList)
     .run();
 
-  if (options?.allowDestructiveCleanup ?? true) {
+  if (allowDestructiveCleanup) {
     const auditCutoffSec = startSec - AUDIT_DECISION_RETENTION_DAYS * DAY_SECONDS;
     await db
       .prepare(
@@ -106,5 +107,6 @@ export async function pruneYieldTables(
       )
       .bind(auditCutoffSec)
       .run();
+    await purgeYieldHistoryOwnershipHandoffs(db);
   }
 }

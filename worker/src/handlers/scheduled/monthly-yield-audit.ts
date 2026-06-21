@@ -6,6 +6,6 @@ export async function runMonthlyYieldAuditSlot(runtime: ScheduledRuntimeContext)
   return runSingleScheduledJob(runtime, "monthly yield audit slot", {
     job: "yield-coverage-audit",
     errorMessage: "[cron] yield-coverage-audit failed in monthly slot:",
-    run: (signal) => runYieldCoverageAudit(runtime.db, signal, runtime.chainRpcs),
+    run: (signal, reportProgress) => runYieldCoverageAudit(runtime.db, signal, runtime.chainRpcs, reportProgress),
   });
 }

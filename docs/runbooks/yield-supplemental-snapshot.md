@@ -11,7 +11,7 @@ The slower supplemental source snapshot is missing, malformed, empty, or older t
 
 ## Impact
 
-Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes a fresh non-empty snapshot. Stale or missing supplemental cache does not by itself degrade the hourly publisher.
+Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes a fresh aggregate snapshot or a fresh per-family snapshot. Stale or missing supplemental cache does not by itself degrade the hourly publisher.
 
 ## First Checks
 
@@ -46,8 +46,9 @@ ORDER BY rows DESC;
 
 ## Common Causes
 
-- All supplemental families emitted zero candidates, so the cron refused to overwrite the previous cache.
+- All supplemental families emitted zero candidates, so the cron refused to overwrite the previous aggregate cache.
 - One per-family cache is malformed or stale. The hourly publisher should still load other fresh family caches and report `partial-family-cache` metadata instead of dropping all optional coverage.
+- One successful per-family run emitted zero candidates. That family may intentionally publish an empty per-family cache to clear a previous non-empty family snapshot without overwriting the aggregate cache.
 - Optional protocol APIs timed out inside the family budget.
 - Optional RPC families exhausted their family budget or missed many chain targets.
 - The cache payload became malformed or older than the supplemental freshness window.
@@ -62,17 +63,17 @@ ORDER BY rows DESC;
 
 ## Abort Conditions
 
-- Do not write an empty supplemental snapshot over the last good cache.
+- Do not write an empty aggregate supplemental snapshot over the last good aggregate cache.
 - Do not increase Worker connection pressure by moving supplemental readers into `sync-yield-data`.
 - Do not hand-create supplemental candidate rows in `yield_data`; the hourly publisher owns evaluation and arbitration.
 
 ## Validation
 
 - `sync-yield-supplemental` has a recent run with `rowsWritten > 0` or a documented `skipped-newer`.
-- `cache['yield:supplemental-sources:v1']` and any `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A single malformed family row should not block other fresh family rows.
+- `cache['yield:supplemental-sources:v1']` and any `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows.
 - The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"` and a non-zero `supplementalSourceCount`.
 - Public rankings/source board show expected optional family rows or alternatives.
 
 ## Rollback Notes
 
-The supplemental lane rollback is last-good-cache retention. Empty snapshots are intentionally not published. If a code deploy caused persistent malformed snapshots or zero candidates, roll back the Worker version and allow the next supplemental cycle to repopulate the cache.
+The supplemental lane rollback is last-good aggregate-cache retention. All-family empty aggregate snapshots are intentionally not published; successful zero-candidate per-family snapshots may publish to clear stale family-owned rows. If a code deploy caused persistent malformed snapshots or zero aggregate candidates, roll back the Worker version and allow the next supplemental cycle to repopulate the cache.

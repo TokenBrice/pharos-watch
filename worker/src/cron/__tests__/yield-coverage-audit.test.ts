@@ -3,25 +3,48 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
 }));
+vi.mock("../yield-sync/sources", () => ({
+  loadDlStablecoinPools: vi.fn(),
+}));
+vi.mock("../../lib/db-cache", () => ({
+  getCache: vi.fn(),
+  setCache: vi.fn(),
+}));
+vi.mock("../../lib/safety-scores", () => ({
+  computeSafetyScoresSnapshot: vi.fn(),
+}));
 
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
+import { getCache, setCache } from "../../lib/db-cache";
+import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 import {
   buildProtocolCategoryLookupFromCachePayload,
   buildCoverageAuditOperatorQueue,
   identifyCoverageGaps,
   identifyStaleAutoLendingOverrides,
   isHighConfidenceProtocolCategory,
+  runYieldCoverageAudit,
   summarizeAdapterLifecycle,
 } from "../yield-coverage-audit";
 import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
+import { loadDlStablecoinPools } from "../yield-sync/sources";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { YieldAdapterLifecycleEntry } from "../yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
 
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
+const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);
+const mockGetCache = vi.mocked(getCache);
+const mockSetCache = vi.mocked(setCache);
+const mockComputeSafetyScoresSnapshot = vi.mocked(computeSafetyScoresSnapshot);
 
 afterEach(() => {
   mockFetchEvmUint256AtBlock.mockReset();
+  mockLoadDlStablecoinPools.mockReset();
+  mockGetCache.mockReset();
+  mockSetCache.mockReset();
+  mockComputeSafetyScoresSnapshot.mockReset();
 });
 
 function inferExpectedProtocolLabel(project: string): string {
@@ -57,6 +80,127 @@ describe("buildProtocolCategoryLookupFromCachePayload", () => {
     expect(isHighConfidenceProtocolCategory("Uncollateralized Lending")).toBe(true);
     expect(isHighConfidenceProtocolCategory("Yield Aggregator")).toBe(false);
     expect(isHighConfidenceProtocolCategory(null)).toBe(false);
+  });
+});
+
+describe("runYieldCoverageAudit", () => {
+  it("reports bounded progress stages through cache publication", async () => {
+    const dlPools: DlPool[] = [{
+      pool: "new-usdc",
+      chain: "Ethereum",
+      project: "new-lender",
+      symbol: "USDC",
+      tvlUsd: 12_000_000,
+      apy: 4,
+      apyBase: 4,
+      apyReward: null,
+      apyMean30d: 4,
+      stablecoin: true,
+      exposure: "single",
+      underlyingTokens: null,
+    }];
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: dlPools,
+      meta: {
+        mode: "dex-cache",
+        updatedAt: 1_774_526_300,
+        ageSeconds: 100,
+        poolCount: 1,
+        fallbackMode: null,
+      },
+    });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "defillama-protocols") {
+        return {
+          value: JSON.stringify({ protocols: [{ slug: "new-lender", category: "Lending" }] }),
+          updatedAt: 1_774_526_300,
+        };
+      }
+      if (key === "yield-rankings") {
+        return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
+      }
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map(),
+    } as never);
+
+    const progressUpdates: CronProgressUpdate[] = [];
+    const result = await runYieldCoverageAudit({} as D1Database, undefined, undefined, async (update) => {
+      progressUpdates.push(update);
+    });
+
+    expect(result.status).toBe("ok");
+    expect(mockSetCache).toHaveBeenCalledWith(
+      {} as D1Database,
+      "yield-coverage-audit",
+      expect.stringContaining('"reportedAt"'),
+    );
+    expect(progressUpdates.map((update) => update.stage)).toEqual(
+      expect.arrayContaining([
+        "pool-load",
+        "protocol-category-load",
+        "safety-supply-load",
+        "quarantine-probe",
+        "cache-write",
+        "complete",
+      ]),
+    );
+    expect(progressUpdates.every((update) => update.itemsTotal === 6)).toBe(true);
+    expect(progressUpdates.find((update) => update.stage === "pool-load" && update.itemsDone === 1)).toMatchObject({
+      metadata: {
+        providerFamily: "yield-coverage-audit",
+        phase: "pool-load",
+        countTotals: { dlPools: 1 },
+      },
+    });
+    expect(progressUpdates.find((update) => update.stage === "protocol-category-load" && update.itemsDone === 2))
+      .toMatchObject({
+        metadata: {
+          providerFamily: "yield-coverage-audit",
+          phase: "protocol-category-load",
+          protocolCategoryStatus: "ok",
+          countTotals: {
+            protocols: 1,
+            categorizedProtocols: 1,
+            highConfidenceCategories: 1,
+          },
+        },
+      });
+    expect(progressUpdates.find((update) => update.stage === "safety-supply-load" && update.itemsDone === 3))
+      .toMatchObject({
+        metadata: {
+          providerFamily: "yield-coverage-audit",
+          phase: "safety-supply-load",
+          countTotals: {
+            stablecoinSupplyRows: 0,
+            safetyScoresComputed: 1,
+            safetyScoresExpected: 1,
+          },
+        },
+      });
+    expect(progressUpdates.find((update) => update.stage === "quarantine-probe" && update.itemsDone === 4))
+      .toMatchObject({
+        metadata: {
+          providerFamily: "yield-coverage-audit",
+          phase: "quarantine-probe",
+          countTotals: {
+            quarantineProbeAttempted: 0,
+          },
+        },
+      });
+    expect(progressUpdates[progressUpdates.length - 1]).toMatchObject({
+      stage: "complete",
+      itemsDone: 6,
+      metadata: {
+        cacheKey: "yield-coverage-audit",
+      },
+    });
   });
 });
 
