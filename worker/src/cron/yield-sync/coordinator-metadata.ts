@@ -32,14 +32,16 @@ export function buildComparisonAnchorFreshnessMeta(input: {
     .flatMap((source) => {
       if (source.comparisonAnchorObservedAt == null) return [];
       const anchorAgeSeconds = Math.max(0, input.startSec - source.comparisonAnchorObservedAt);
-      return [{
-        stablecoinId: source.id,
-        symbol: source.symbol,
-        sourceKey: source.sourceKey,
-        dataSource: source.dataSource,
-        anchorAgeSeconds,
-        comparisonAnchorObservedAt: source.comparisonAnchorObservedAt,
-      }];
+      return [
+        {
+          stablecoinId: source.id,
+          symbol: source.symbol,
+          sourceKey: source.sourceKey,
+          dataSource: source.dataSource,
+          anchorAgeSeconds,
+          comparisonAnchorObservedAt: source.comparisonAnchorObservedAt,
+        },
+      ];
     })
     .sort((a, b) => b.anchorAgeSeconds - a.anchorAgeSeconds);
 
@@ -84,6 +86,7 @@ export function buildYieldDegradationReasons(params: {
   maskedAllDeterministicFailure: boolean;
   onChainSkippedDueToCooldown: boolean;
   onChainAlternativeCoverageMissingIds: string[];
+  previousTvlRowsTruncated: boolean;
 }): string[] {
   const degradationReasons: string[] = [];
 
@@ -104,6 +107,9 @@ export function buildYieldDegradationReasons(params: {
   }
   if (params.onChainSkippedDueToCooldown && params.onChainAlternativeCoverageMissingIds.length > 0) {
     degradationReasons.push("onchain-rates:cooldown-coverage-gap");
+  }
+  if (params.previousTvlRowsTruncated) {
+    degradationReasons.push("yield-history:previous-tvl-row-cap");
   }
 
   return degradationReasons;
@@ -158,6 +164,7 @@ export function buildYieldSyncMetadata(input: {
   riskFreeRate: number;
   cacheWriteSkipped: boolean;
   comparisonAnchorFreshness: YieldComparisonAnchorFreshnessMeta;
+  previousTvlRowsTruncated: boolean;
 }): string {
   const onChain = input.onChain;
   const onChainEnvelopeRejections = onChain.envelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
@@ -208,6 +215,7 @@ export function buildYieldSyncMetadata(input: {
       onChainConsecutiveAllFailRuns: onChain.consecutiveAllFailRuns,
       onChainConsecutiveMaskedAllFailRuns: onChain.consecutiveMaskedAllFailRuns,
       comparisonAnchorFreshness: input.comparisonAnchorFreshness,
+      previousTvlRowsTruncated: input.previousTvlRowsTruncated,
     },
     fallbackMode: input.fallbackMode,
     validationFailures: input.validationFailures,
