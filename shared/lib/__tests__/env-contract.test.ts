@@ -20,6 +20,7 @@ describe("env contract manifest", () => {
       "API_KEY_SELF_SERVE_EMAIL_FROM",
       "API_KEY_SELF_SERVE_EMAIL_REPLY_TO",
       "API_KEY_SELF_SERVE_PUBLIC_BASE_URL",
+      "BANXICO_TOKEN",
     ]);
   });
 

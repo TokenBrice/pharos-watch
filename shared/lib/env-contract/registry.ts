@@ -464,10 +464,10 @@ export const ENV_BINDINGS = [
   {
     key: "BANXICO_TOKEN",
     valueType: "string",
-    description: "Banxico SIE API token used for official MXN CETES 28-day benchmark rates; when absent/failing, MXN retains the last market benchmark when available or remains unavailable for USD fallback.",
-    example: { section: "workerOptional", value: "" },
+    description: "Banxico SIE API token required for official MXN CETES 28-day benchmark rates; when the feed fails, MXN retains the last market benchmark when available or remains unavailable for USD fallback.",
+    example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 38, status: "optional" },
+      worker: { order: 61, status: "required" },
     },
   },
   {

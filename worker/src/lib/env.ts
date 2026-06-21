@@ -67,6 +67,7 @@ export interface WorkerEnvIssue {
     | "api-key-self-serve-env-misconfigured"
     | "public-api-auth-pepper-missing"
     | "api-key-pepper-noop-rotation"
+    | "banxico-token-missing"
     | "telegram-env-misconfigured";
   message: string;
 }
@@ -139,6 +140,7 @@ export function validateWorkerEnvContract(
     | "API_KEY_SELF_SERVE_EMAIL_REPLY_TO"
     | "API_KEY_SELF_SERVE_PUBLIC_BASE_URL"
     | "RESEND_API_KEY"
+    | "BANXICO_TOKEN"
     | "CLOUDFLARE_ACCOUNT_ID"
     | "CLOUDFLARE_D1_STATUS_API_TOKEN"
     | "CLOUDFLARE_D1_DATABASE_ID"
@@ -218,6 +220,13 @@ export function validateWorkerEnvContract(
     issues.push({
       code: "api-key-pepper-noop-rotation",
       message: "API_KEY_HASH_PEPPER_PREVIOUS is identical to API_KEY_HASH_PEPPER — this is a no-op rotation.",
+    });
+  }
+
+  if (!hasConfiguredValue(env.BANXICO_TOKEN)) {
+    issues.push({
+      code: "banxico-token-missing",
+      message: "BANXICO_TOKEN must be configured; fetch-tbill-rate cannot refresh the official MXN CETES benchmark without it.",
     });
   }
 

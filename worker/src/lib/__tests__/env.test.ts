@@ -71,6 +71,21 @@ describe("validateWorkerEnvContract", () => {
     });
   });
 
+  it("flags a missing Banxico token", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: "pepper",
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "feedback",
+      BANXICO_TOKEN: undefined,
+    })).toContainEqual({
+      code: "banxico-token-missing",
+      message: "BANXICO_TOKEN must be configured; fetch-tbill-rate cannot refresh the official MXN CETES benchmark without it.",
+    });
+  });
+
   it("flags missing feedback submission bindings", () => {
     expect(validateWorkerEnvContract({
       CF_ACCESS_OPS_API_AUD: undefined,
