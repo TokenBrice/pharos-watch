@@ -38,6 +38,7 @@ import type {
   DdrSealedPublicPrediction,
   DdrV2StoreContracts,
 } from "./depeg-resolver-v2-contracts";
+import { normalizeErratumRecord } from "./depeg-resolver/public-projection";
 import { firstPublicationByPredictionId, publicPredictionIdOf } from "./depeg-resolver/storage-adapters";
 import { abortIf } from "./depeg-resolver/utils";
 
@@ -461,9 +462,9 @@ function latestErrataByPredictionId(
 ): Map<number, { latest: DdrPredictionErratum; history: DdrPredictionErratum[] }> {
   const out = new Map<number, { latest: DdrPredictionErratum; history: DdrPredictionErratum[] }>();
   for (const row of rows) {
-    const publicPredictionId = numberValue(row.publicPredictionId);
-    if (publicPredictionId == null) continue;
-    const erratum = row as DdrPredictionErratum;
+    const erratum = normalizeErratumRecord(row);
+    if (!erratum) continue;
+    const publicPredictionId = erratum.publicPredictionId;
     const current = out.get(publicPredictionId);
     const history = [...(current?.history ?? []), erratum].sort((left, right) => right.createdAt - left.createdAt || right.id - left.id);
     out.set(publicPredictionId, { latest: history[0], history });

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   buildEmptyDdrrSummary,
@@ -1401,7 +1402,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
       loadPredictionErrata: vi.fn(async () => [
         {
           id: 1,
-          state: "invalidated" as const,
           publicPredictionId: 10,
           incidentKey: incident.incidentKey,
           eventId: 43,
@@ -1430,11 +1430,12 @@ describe("buildDepegResolverReviewSnapshot", () => {
       predictionState: "invalidated",
       originalKind: "no_call",
       originalOutcome: originalNoCall,
-      latestErratum: expect.objectContaining({ reason: "event_identity_error" }),
+      latestErratum: expect.objectContaining({ state: "invalidated", reason: "event_identity_error" }),
       errataCount: 1,
     });
     expect(snapshot.summary.headline.invalidatedPredictionCount).toBe(1);
     expect(snapshot._meta.reviewedEventCount).toBe(1);
+    expect(DdrrResponseSchema.safeParse(snapshot)).toMatchObject({ success: true });
   });
 
   it("keeps headline stats complete while capping public review rows", async () => {
