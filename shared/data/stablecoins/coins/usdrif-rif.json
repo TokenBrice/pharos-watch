@@ -154,19 +154,45 @@
   },
   "launchDate": "2023-09-28",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "USDRIF is source-verified as a Rootstock RIF-backed stablecoin, but the checked Arbitrum deployment has no reviewed issuer documentation resolving bridge or mint-route controls. Pharos keeps the bridge route conservative pending route evidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
-    "sources": [
+    "tier": "external-lock-mint",
+    "summary": "USDRIF is native to Rootstock (a RIF/DOC-collateralized CDP stablecoin launched Sep 2023, contract 0x3a15461d..., a plain ERC-20 with no cross-chain code). Its sole cross-chain supply path is a LayerZero OFT route: a dedicated OFT Adapter (lockbox) on Rootstock (0xb2ee5502...) locks native USDRIF and a burn/mint OFT representation (the verified \"MyOFT\" contract 0x8eef5ed..., Endpoint V2) is minted on Arbitrum. On-chain checks confirm the lockbox (adapter token()=native USDRIF, approvalRequired=true) holds ~61,268 USDRIF locked, matching the Arbitrum OFT supply 1:1, and the OFT is peered only to Rootstock (EID 30333). Because the durable route is a third-party LayerZero OFT Adapter/lockbox control surface, it is classified external-lock-mint.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
       {
-        "label": "RIF on Chain docs",
-        "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
+        "source": "explorer",
+        "name": "LayerZero OFT (Arbitrum MyOFT contract)",
+        "slug": "layerzero",
+        "url": "https://arbiscan.io/token/0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "bridgeTypes": ["external-lock-mint", "oft"],
+        "note": "Verified Arbitrum contract named MyOFT, inherits LayerZero OFT standard, uses ILayerZeroEndpointV2 with lzSend/lzReceive. Mint/burn OFT representation on the destination chain."
       },
       {
-        "label": "Rootstock USDRIF launch",
+        "source": "issuer",
+        "name": "Rootstock LayerZero/Stargate OFT Adapter integration",
+        "slug": "rootstock-layerzero",
+        "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/",
+        "bridgeTypes": ["external-lock-mint", "oft-adapter-lockbox"],
+        "note": "Rootstock joined LayerZero (Mar 2025); native Rootstock assets go multichain via the OFT (Adapter/Lockbox) standard with Stargate as the first dApp. Home chain locks, destination mints."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Arbiscan: USDRIF Arbitrum token (verified MyOFT LayerZero OFT contract)",
+        "url": "https://arbiscan.io/token/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+      },
+      {
+        "label": "Rootstock blog: rBTC and RIF go multichain - LayerZero integrates with Rootstock (OFT standard)",
+        "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/"
+      },
+      {
+        "label": "Rootstock blog: Introducing USDRIF (native RIF-collateralized CDP, Sep 2023)",
         "url": "https://rootstock.io/blog/new-stablecoin-protocol-launched-on-rootstock-introducing-usdrif/"
+      },
+      {
+        "label": "Stargate docs: OFT internal routes (LayerZero OFT/Adapter lock-mint mechanism)",
+        "url": "https://docs.stargate.finance/primitives/routes/oft"
       }
     ]
   }

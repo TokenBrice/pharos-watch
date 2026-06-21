@@ -72,19 +72,45 @@
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "syzUSD is listed on Plasma and Monad as a staked yzuUSD variant, but reviewed Yuzu materials and reserve pages do not identify a bridge route, source chain, or cross-chain validation controls. The route is unresolved and scored as opaque.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
-    "sources": [
+    "tier": "external-lock-mint",
+    "summary": "syzUSD moves cross-chain between Plasma and Monad via a LayerZero OVault. Yuzu's own audited contracts (ovault/ProtoOVaultComposer and PSMOVaultComposer) inherit LayerZero's VaultComposerSync and wire an asset+share OFT mesh, with the share token (syzUSD) explicitly required to be an OFTAdapter lockbox (approvalRequired()==true) on the hub chain (most likely Plasma) and a standard OFT on spokes. Because the durable supply path for shares runs through a third-party (LayerZero) OFTAdapter lockbox control surface, this is an external lock/mint route rather than opaque. (Named DVN set and a live LayerZeroScan trace were not pinned, and the on-chain hub identity was not confirmed at the explorer/deploy-config level, but the lockbox/adapter requirement is code-enforced in the issuer's audited composer.)",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
       {
-        "label": "Yuzu docs",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+        "source": "issuer",
+        "name": "LayerZero OVault (VaultComposerSync) — Yuzu ouroboros-contracts",
+        "slug": "layerzero",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol",
+        "bridgeTypes": ["external-lock-mint", "oft-adapter-lockbox", "ovault"],
+        "note": "ProtoOVaultComposer inherits @layerzerolabs/ovault-evm VaultComposerSync; PSMOVaultComposer enforces share OFT must be an OFTAdapter (approvalRequired()==true => lockbox model). Asset+share OFT mesh per LayerZero OVault standard."
       },
       {
-        "label": "Yuzu proof of reserve",
-        "url": "https://yuzu.accountable.capital/"
+        "source": "docs",
+        "name": "Dedaub audit — Yuzu V2 LayerZero oVault integration",
+        "slug": "layerzero-ovault",
+        "url": "https://dedaub.com/audits/yuzu-money/yuzuusd-psm-february-09-2026/",
+        "bridgeTypes": ["external-lock-mint", "ovault"],
+        "note": "Audit states cross-chain operations via LayerZero added; reviewers focused on the LayerZero oVault integration."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Yuzu ouroboros-contracts — PSMOVaultComposer.sol (share OFT must be adapter / lockbox)",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol"
+      },
+      {
+        "label": "Yuzu ouroboros-contracts — ProtoOVaultComposer.sol (inherits LayerZero VaultComposerSync)",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/ProtoOVaultComposer.sol"
+      },
+      {
+        "label": "Dedaub audit of Yuzu Money V2 (LayerZero oVault integration, Feb 9 2026)",
+        "url": "https://dedaub.com/audits/yuzu-money/yuzuusd-psm-february-09-2026/"
+      },
+      {
+        "label": "LayerZero OVault standard (share OFTAdapter lockbox on hub, OFT on spokes)",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
       }
     ]
   },

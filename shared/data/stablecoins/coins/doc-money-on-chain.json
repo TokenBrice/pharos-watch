@@ -132,23 +132,53 @@
   "chainTier": "mature-alt-l1",
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "DOC is source-verified as a Rootstock Money on Chain stable asset, but the checked Arbitrum deployment does not have issuer documentation that resolves the bridge, lockbox, or mint-control route. Pharos keeps the route conservative until the Arbitrum path is documented.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "external-lock-mint",
+    "summary": "DOC is natively a Rootstock rBTC-collateralized CDP stablecoin; its Arbitrum deployment (0x2ad62eb9...) is a self-deployed LayerZero V2 OFT representation (contract name \"MyOFT\", canonical LZ endpoint 0x1a44076050125825900e736c501f859c50fE728c, ~37K DOC max supply). Money On Chain's own announcement (moneyonchain.com/doc-arbitrum) states DOC moves between Rootstock and Arbitrum via Stargate/LayerZero — a generic-OFT lock/mint route with a third-party (LayerZero) control surface, not the Arbitrum canonical bridge and not a Stargate canonical Hydra pool asset. This refutes the L2BEAT \"Arbitrum Canonical\" seed.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Money On Chain — DOC on Arbitrum announcement (Stargate route)",
+        "slug": "money-on-chain",
+        "url": "https://moneyonchain.com/doc-arbitrum/",
+        "bridgeTypes": ["external-lock-mint", "layerzero-oft", "stargate-hydra"],
+        "note": "Issuer states DOC moves Rootstock<>Arbitrum via Stargate (LayerZero), not a proprietary or canonical bridge."
+      },
+      {
+        "source": "explorer",
+        "name": "Arbiscan — DOC Arbitrum token contract (LayerZero V2 OFT)",
+        "slug": "arbiscan-doc-arbitrum",
+        "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
+        "bridgeTypes": ["layerzero-oft"],
+        "note": "Verified contract 'MyOFT' on LZ endpoint 0x1a44076050125825900e736c501f859c50fE728c; owner-controlled peers/delegates, cross-chain mint/burn. Arbitrum supply is a minted OFT representation."
+      },
+      {
+        "source": "docs",
+        "name": "Stargate Hydra docs (Pool-to-OFT lock/mint)",
+        "slug": "stargate-hydra",
+        "url": "https://stargateprotocol.gitbook.io/stargate/v2-user-docs/whats-new-in-stargate-v2/hydra",
+        "bridgeTypes": ["external-lock-mint", "oft-adapter"],
+        "note": "Hydra locks native asset on source chain (Protocol Locked Liquidity) and mints an OFT representation on the destination — an OFT-adapter lock/mint pattern."
+      }
+    ],
     "sources": [
       {
-        "label": "Money on Chain DOC",
-        "url": "https://moneyonchain.com/doc-stablecoin/"
+        "label": "Money On Chain — DOC on Arbitrum (issuer announcement naming Stargate)",
+        "url": "https://moneyonchain.com/doc-arbitrum/"
       },
       {
-        "label": "Money on Chain docs",
-        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+        "label": "Arbiscan — Arbitrum DOC token (LayerZero V2 OFT 'MyOFT', endpoint 0x1a44076050...)",
+        "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
       },
       {
-        "label": "Money on Chain main RBTC contract repository",
-        "url": "https://github.com/money-on-chain/main-RBTC-contract"
+        "label": "Rootstock — LayerZero integration (rBTC/RIF via OFT; Stargate Hydra)",
+        "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/"
+      },
+      {
+        "label": "Stargate Hydra docs — Pool-to-OFT lock/mint architecture",
+        "url": "https://stargateprotocol.gitbook.io/stargate/v2-user-docs/whats-new-in-stargate-v2/hydra"
       }
     ]
   },

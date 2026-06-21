@@ -128,19 +128,27 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "EURO3 is deployed on Polygon and Linea and uses issuer-controlled mintable token contracts, but the reviewed 3A documentation does not identify a bridge route, source chain, or cross-chain validation controls. The route is conservatively scored as opaque pending bridge-specific evidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "single-chain-or-native",
+    "summary": "EURO3 has no cross-chain bridge route. It is minted natively and independently on each chain (Polygon and Linea) by 3A's local CDP vault contracts: supply is created when users open EURO3 loans against that chain's whitelisted collateral and burned when they repay or redeem. Both token contracts are verified as a plain MintableToken (ERC20, Ownable) exposing only mint()/burn(), with the owner being a per-chain MintableTokenOwner that registers that chain's VaultFactory/vault minters. There is no OFT/CCIP/NTT/Hyperlane/Axelar or any cross-chain function in either contract, and the deployments use different addresses (ruling out deterministic omnichain-token patterns), so each chain's supply carries no cross-chain dependency. Holders can move EURO3 via third-party aggregators (Symbiosis, MetaMask Bridge, etc.), but that is not the durable issuance/supply path.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "EURO3 docs",
+        "label": "EURO3 MintableToken on Polygonscan (plain MintableToken ERC-20, no cross-chain functions)",
+        "url": "https://polygonscan.com/address/0xa0e4c84693266a9d3bbef2f394b33712c76599ab"
+      },
+      {
+        "label": "EURO3 MintableToken on Lineascan (plain MintableToken ERC-20, no cross-chain functions)",
+        "url": "https://lineascan.build/address/0x3f817b28da4940f018c6b5c0a11c555ebb1264f9"
+      },
+      {
+        "label": "3A docs: EURO3 coin (local mint-on-loan / burn-on-repay; no bridge described)",
         "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
       },
       {
-        "label": "3A smart contract docs",
-        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/api.md"
+        "label": "DefiLlama EURO3 (per-chain circulating supply breakdown across Polygon and Linea)",
+        "url": "https://defillama.com/stablecoin/euro3"
       }
     ]
   },

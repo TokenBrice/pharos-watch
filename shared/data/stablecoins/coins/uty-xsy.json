@@ -52,19 +52,37 @@
   ],
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "UTY is listed on Avalanche and Base, but reviewed YieldPoint/XSY public material does not clearly document whether the cross-chain supply path is canonical, issuer mint/burn, or external bridge infrastructure. The route remains conservative pending source documentation.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "external-lock-mint",
+    "summary": "UTY moves cross-chain via LayerZero's OFT standard in a hub-and-spoke design: Base is the hub holding the canonical UTY/yUTY ERC-7540 vault token, where a ShareOFTAdapter lockbox LOCKS tokens sent cross-chain (not burned); Avalanche and Katana are spoke chains where UTY is a mint/burn OFT against the locked hub balance. Each pathway is verified by at least 2 independent LayerZero DVNs (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind). On-chain confirmed: Base 0xBA515304... is the ERC4626/7540 vault; Avalanche 0xBA515304... (same CREATE2 address) is a LayerZero OFT spoke. Note: the registry's older Avalanche address 0xdbc5192a... is a separate legacy native-mint deployment, distinct from the live OFT spoke.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero (OFT Adapter lockbox on Base hub + mint/burn spoke OFTs)",
+        "slug": "layerzero",
+        "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations",
+        "bridgeTypes": ["oft-adapter-lockbox", "oft-mint-burn"],
+        "note": "Base ShareOFTAdapter locks the canonical UTY vault token; Avalanche/Katana spoke OFTs mint/burn. Threshold of >=2 independent DVNs per pathway (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind)."
+      }
+    ],
     "sources": [
       {
-        "label": "YieldPoint website",
-        "url": "https://yieldpoint.io/"
+        "label": "YieldPoint docs - bridge operations (OFT send/receive, lock/unlock on hub, named DVNs)",
+        "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
       },
       {
-        "label": "YieldPoint docs",
-        "url": "https://docs.yieldpoint.io/"
+        "label": "YieldPoint docs - tokens and fees (ShareOFTAdapter lockbox model vs spoke mint/burn OFTs)",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/tokens-and-fees"
+      },
+      {
+        "label": "YieldPoint docs - architecture overview (Base hub, Avalanche/Katana spokes, LayerZero, no custom bridge)",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/overview"
+      },
+      {
+        "label": "YieldPoint docs - contract addresses (Base ShareOFTAdapter 0xC6fE7C50...; UTY 0xBA515304... across Base/Avalanche/Katana)",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
       }
     ]
   },

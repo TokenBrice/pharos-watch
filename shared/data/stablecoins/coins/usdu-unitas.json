@@ -137,19 +137,60 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "USDU is tracked on BNB Chain and Solana, but reviewed Unitas docs do not identify a cross-chain bridge, canonical route, or issuer burn/mint control surface for moving supply between chains. The route is unresolved and scored as opaque.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "single-chain-or-native",
+    "summary": "USDU has independent native deployments on Solana and BSC, each minted/redeemed against USDC by whitelisted participants on that chain with no live cross-chain supply route between them. The BSC token is a plain BEP20 (Safe-controlled mint, no OFT/LayerZero interface) and the Solana Token-2022 mint is self-referential/effectively frozen. A LayerZero cross-chain USDU route is roadmapped (ETA Q4 2025, \"Design\" phase) but not yet live, so the durable mechanism today is native per-chain issuance, not a bridge.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Unitas roadmap — Cross-chain USDu (LayerZero), Design phase, ETA Q4 2025 (NOT live)",
+        "slug": "layerzero",
+        "url": "https://docs.unitas.so/",
+        "bridgeTypes": ["planned-omnichain-oft"],
+        "note": "Future route only; not the current durable mechanism"
+      },
+      {
+        "source": "explorer",
+        "name": "USDU BSC token — plain BEP20, mint()/burn() minter role, no OFT/LayerZero interface",
+        "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "bridgeTypes": ["native-mint"],
+        "note": "Gnosis Safe 3-of-5 sole minter (registry mintAuthority review)"
+      },
+      {
+        "source": "explorer",
+        "name": "USDU Solana Token-2022 mint — self-referential mintAuthority, effectively frozen",
+        "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+        "bridgeTypes": ["native-mint"]
+      },
+      {
+        "source": "docs",
+        "name": "Minting USDu — USDC mint/redeem by whitelisted/KYC participants, native per chain",
+        "url": "https://docs.unitas.so/solution-design/minting-usdu",
+        "bridgeTypes": ["native-mint"]
+      }
+    ],
     "sources": [
       {
-        "label": "Unitas docs",
+        "label": "Unitas docs (roadmap: cross-chain USDu via LayerZero, Design phase / Q4 2025, not live)",
         "url": "https://docs.unitas.so/"
       },
       {
-        "label": "Unitas website",
-        "url": "https://unitas.so/"
+        "label": "Unitas docs — Minting USDu (USDC mint/redeem, whitelisted, per chain)",
+        "url": "https://docs.unitas.so/solution-design/minting-usdu"
+      },
+      {
+        "label": "USDU BSC contract (verified plain BEP20, no OFT/LayerZero interface)",
+        "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882"
+      },
+      {
+        "label": "USDU Solana Token-2022 mint (self-referential mintAuthority)",
+        "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+      },
+      {
+        "label": "MEXC guide (Jan 2026) — LayerZero cross-chain still listed as planned",
+        "url": "https://blog.mexc.com/news/what-is-unitas-labs-a-complete-guide-to-usdu-and-cross-chain-yield-stablecoins/"
       }
     ]
   },

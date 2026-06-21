@@ -74,19 +74,31 @@
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "VNDC is tracked across Ethereum, Polygon, and BNB Chain, but the reviewed issuer/platform pages do not document a bridge route, source chain, or cross-chain validation model. The multichain route is unresolved and scored as opaque.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "single-chain-or-native",
+    "summary": "VNDC is issued natively and independently on each chain by Jade Labs via owner/whitelist-controlled mint and redeem - the Ethereum contract (VNDCToken, Solidity 0.4.11) uses owner issue()/burn(), and the BSC and Polygon contracts (both TokenVNDC, Solidity 0.8.18, byte-identical source) use mintWhitelist()/withdrawWhitelist(). None of the three deployments contain any OFT, LayerZero/CCIP/Wormhole/Axelar/Hyperlane messaging, lockbox, or bridge interface, and the addresses differ per chain (ruling out a deterministic-CREATE2 omnichain standard). The Polygon deployment is independent issuer mint, not a Polygon PoS bridge-minted token (no deposit/childChainManager/DEPOSITOR_ROLE). Cross-network movement is handled off-chain through the ONUS/VNDC Hub app (redeem on source, reissue on destination), with no autonomous on-chain bridge carrying the durable supply, so this is native multichain issuance rather than an opaque bridge route.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "VNDC website",
-        "url": "https://vndc.io/"
+        "label": "Etherscan VNDC token (VNDCToken ERC-20, owner issue/burn, no OFT/bridge)",
+        "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de"
       },
       {
-        "label": "ONUS issuer platform",
-        "url": "https://goonus.io/en/"
+        "label": "BscScan VNDC token (TokenVNDC BEP-20, owner mintWhitelist/withdrawWhitelist, no bridge)",
+        "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
+      },
+      {
+        "label": "PolygonScan VNDC token (owner-controlled issue() by issuer EOA, per mint-authority review)",
+        "url": "https://polygonscan.com/token/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa"
+      },
+      {
+        "label": "ONUS announcement: VNDC 2.0 on BEP20 and Polygon networks (per-network app deposit/withdraw)",
+        "url": "https://goonus.io/en/announcement-onus-supports-vndc-2-0-bep20-and-polygon-networks/"
+      },
+      {
+        "label": "VNDC blog: What is VNDC 2.0 (multi-network rollout via issuer protocol)",
+        "url": "https://blog.vndc.io/what-is-vndc-2-0-unique-digital-asset-for-the-era-of-on-chain-liquidity"
       }
     ]
   },

@@ -213,19 +213,53 @@
   },
   "launchDate": "2024-02-23",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "fxUSD is tracked on Ethereum and Base, but reviewed f(x) Protocol documentation explains the stablecoin mechanics without documenting a Base bridge or cross-chain mint route. Pharos keeps the bridge-route tier unresolved and conservative.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
-    "sources": [
+    "tier": "external-lock-mint",
+    "summary": "fxUSD crosses from its Ethereum home chain to Base via a LayerZero V2 OFT Adapter: the FxUSDOFTAdaptor lockbox (0xA07d8cc4...) locks canonical fxUSD ERC-20 on Ethereum while the Base deployment is a native LayerZero OFT that mints/burns 1:1. The durable cross-chain supply path is thus an external lock/mint bridge with a LayerZero control surface.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
       {
-        "label": "f(x) Protocol docs",
-        "url": "https://fxprotocol.gitbook.io/"
+        "source": "explorer",
+        "name": "FxUSDOFTAdaptor (LayerZero V2 OFT Adapter / lockbox) on Ethereum",
+        "slug": "layerzero",
+        "url": "https://etherscan.io/address/0xA07d8cc424421cC2bce0544a65481376f010A438",
+        "bridgeTypes": ["lock-mint", "oft-adapter", "layerzero"],
+        "note": "Verified contract FxUSDOFTAdaptor; wraps fxUSD ERC-20 0x085780...; LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c"
       },
       {
-        "label": "f(x) Protocol website",
-        "url": "https://fx.aladdin.club/"
+        "source": "explorer",
+        "name": "fxUSD native LayerZero OFT on Base",
+        "slug": "layerzero",
+        "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5",
+        "bridgeTypes": ["oft", "layerzero", "mint-burn"],
+        "note": "LayerZero OFT contract with endpoint + peer (EID) config; mints/burns on bridge, owner-controlled"
+      },
+      {
+        "source": "issuer",
+        "name": "AladdinDAO deployments (lists fxUSD OFTAdapter for Base + Tempo)",
+        "slug": "layerzero",
+        "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md",
+        "bridgeTypes": ["oft-adapter", "layerzero"],
+        "note": "Issuer repo: Base OFTAdapter 0xA07d8cc4..., Tempo OFTAdapter 0x06013F99..., Base listed as OFT standard"
+      }
+    ],
+    "sources": [
+      {
+        "label": "FxUSDOFTAdaptor (LayerZero OFT Adapter, lockbox) on Etherscan",
+        "url": "https://etherscan.io/address/0xA07d8cc424421cC2bce0544a65481376f010A438"
+      },
+      {
+        "label": "fxUSD LayerZero OFT on BaseScan",
+        "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5"
+      },
+      {
+        "label": "AladdinDAO deployments.mainnet.md (fxUSD OFTAdapter for Base/Tempo)",
+        "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"
+      },
+      {
+        "label": "f(x) Protocol contracts docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/more/resources/contracts"
       }
     ]
   }

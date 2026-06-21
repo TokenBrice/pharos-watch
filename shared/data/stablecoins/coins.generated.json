@@ -2010,19 +2010,55 @@
     "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Apyx lists apxUSD deployments on Ethereum, Base, and BNB Chain, but the reviewed issuer materials did not identify a burn/mint, lock/mint, canonical bridge, or external messaging route for supply movement. The route is therefore left in the opaque tier pending protocol-specific bridge-control documentation.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-validated-network",
+      "summary": "apxUSD moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard. The CCIP directory and on-chain pool contracts list apxUSD across all three deployments with matching token addresses: Ethereum is the home chain with a Lock/Release token pool (0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5), while Base (BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2) and BNB Chain (BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49) use Burn/Mint pools, so CCIP-locked Ethereum supply backs the destination-chain mints. Pool deployers tie back to Apyx (ETH pool labeled 'Apyx: Deployer'; BNB pool deployed by an apxUSD ROLE_MINTER Safe owner), confirming this is the issuer's own CCIP CCT deployment rather than a third-party bridge listing.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
         {
-          "label": "Apyx docs",
-          "url": "https://docs.apyx.fi"
+          "source": "docs",
+          "name": "Chainlink CCIP (Cross-Chain Token standard)",
+          "slug": "chainlink-ccip",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+          "bridgeTypes": [
+            "external-validated-network",
+            "burn-mint",
+            "lock-release"
+          ],
+          "note": "Ethereum Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 is the home/canonical lockbox; Base Burn/Mint pool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2 and BNB Chain Burn/Mint pool 0xFD957D7E27D239da5455b82303b2F618f73a9C49 mint against it. Token addresses match the Pharos coin file on all three chains."
         },
         {
-          "label": "Apyx EVM contracts",
-          "url": "https://apyx-labs.github.io/evm-contracts/"
+          "source": "issuer",
+          "name": "Apyx",
+          "slug": "apyx",
+          "url": "https://blog.apyx.fi/apyx-expands-to-base-with-chainlink-powered-cross-chain-support-2/",
+          "bridgeTypes": [
+            "external-validated-network"
+          ],
+          "note": "Issuer blog confirms Chainlink-powered cross-chain support for the Base expansion."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Chainlink CCIP Directory - apxUSD (3 networks, token pool types + addresses)",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+        },
+        {
+          "label": "Apyx blog: Expands to Base with Chainlink-Powered Cross-Chain Support",
+          "url": "https://blog.apyx.fi/apyx-expands-to-base-with-chainlink-powered-cross-chain-support-2/"
+        },
+        {
+          "label": "apxUSD Base token pool (Burn/Mint) on BaseScan",
+          "url": "https://basescan.org/address/0x49b577E70Fd22B482aaA94c3799F41f3443C24B2"
+        },
+        {
+          "label": "apxUSD BNB Chain token pool (Burn/Mint) on BscScan",
+          "url": "https://bscscan.com/address/0xFD957D7E27D239da5455b82303b2F618f73a9C49"
+        },
+        {
+          "label": "apxUSD Ethereum token pool (Lock/Release) on Etherscan",
+          "url": "https://etherscan.io/address/0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5"
         }
       ]
     },
@@ -5229,19 +5265,54 @@
     "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Mu Digital lists AZND on Ethereum and Monad, but the reviewed issuer pages and reserve dashboard do not describe a source-of-truth chain, bridge contracts, or burn/mint controls. The multichain route is unresolved and scored as opaque until issuer route controls are documented.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-validated-network",
+      "summary": "AZND moves between Ethereum and Monad as a native LayerZero V2 Omnichain Fungible Token (burn-on-source / mint-on-destination), confirmed by the verified Ethereum implementation (0x2E49c14A) inheriting @layerzerolabs/oft-evm-upgradeable OFTUpgradeable whose _debit burns and _credit mints, wired to the canonical LZ V2 EndpointV2, and by a live ETH<->Monad message flow on LayerZeroScan (15+ delivered, ~24 messages/24h). It is a pure OFT, not an OFT Adapter/lockbox. The OApp runs a custom (non-default) DVN security stack on the Monad pathway (EID 30390) using named LayerZero DVNs (Deutsche Telekom, LayerZero Labs, Canary, plus Frax/Horizen), placing it in the external-validated-network tier. (Exact required/optional DVN counts and threshold were not independently byte-confirmed from getConfig.)",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
         {
-          "label": "Mu Digital docs",
-          "url": "https://docs.mudigital.net"
+          "source": "explorer",
+          "name": "LayerZero V2 OFT (Omnichain Fungible Token)",
+          "slug": "layerzero",
+          "url": "https://etherscan.io/address/0x52c66B5E7f8Fde20843De900C5C8B4b0F23708A0#code",
+          "bridgeTypes": [
+            "burn-mint",
+            "external-validated-network"
+          ],
+          "note": "Ethereum AZND (0x52c66B5E...08A0) verified-source OFT importing @layerzerolabs/oft-evm-upgradeable; sends via LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fE728c. Standard OFT, not an Adapter/lockbox."
         },
         {
-          "label": "Mu Digital proof of reserve",
-          "url": "https://mu.accountable.capital/"
+          "source": "explorer",
+          "name": "DVN security stack (EndpointV2.getConfig, Monad EID 30390)",
+          "slug": "layerzero-dvn",
+          "url": "https://layerzeroscan.com/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "bridgeTypes": [
+            "external-validated-network"
+          ],
+          "note": "Required 3/3 DVNs: Deutsche Telekom, LayerZero Labs, Canary. Optional 1-of-2: Horizen, Frax. Custom ULN302 config (not LZDeadDVN default); confirmations 15 send / 4 receive. Peer set at eid 30390."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Etherscan AZND verified source (LayerZero OFT, oft-evm-upgradeable import, Endpoint V2)",
+          "url": "https://etherscan.io/address/0x52c66B5E7f8Fde20843De900C5C8B4b0F23708A0#code"
+        },
+        {
+          "label": "LayerZeroScan AZND OFT (104+ Delivered messages, active)",
+          "url": "https://layerzeroscan.com/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
+        },
+        {
+          "label": "LayerZero V2 metadata API (Monad mainnet EID 30390; DVN name resolution for Deutsche Telekom, LayerZero Labs, Canary, Horizen, Frax)",
+          "url": "https://metadata.layerzero-api.com/v1/metadata"
+        },
+        {
+          "label": "LayerZero V2 EndpointV2 (Ethereum) used for getSendLibrary/getReceiveLibrary/getConfig ULN reads",
+          "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts"
+        },
+        {
+          "label": "Mu Digital docs - Smart Contract Addresses (AZND on Ethereum + Monad; docs do not name the bridge)",
+          "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md"
         }
       ]
     },
@@ -15390,23 +15461,62 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "DOC is source-verified as a Rootstock Money on Chain stable asset, but the checked Arbitrum deployment does not have issuer documentation that resolves the bridge, lockbox, or mint-control route. Pharos keeps the route conservative until the Arbitrum path is documented.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "external-lock-mint",
+      "summary": "DOC is natively a Rootstock rBTC-collateralized CDP stablecoin; its Arbitrum deployment (0x2ad62eb9...) is a self-deployed LayerZero V2 OFT representation (contract name \"MyOFT\", canonical LZ endpoint 0x1a44076050125825900e736c501f859c50fE728c, ~37K DOC max supply). Money On Chain's own announcement (moneyonchain.com/doc-arbitrum) states DOC moves between Rootstock and Arbitrum via Stargate/LayerZero — a generic-OFT lock/mint route with a third-party (LayerZero) control surface, not the Arbitrum canonical bridge and not a Stargate canonical Hydra pool asset. This refutes the L2BEAT \"Arbitrum Canonical\" seed.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "issuer",
+          "name": "Money On Chain — DOC on Arbitrum announcement (Stargate route)",
+          "slug": "money-on-chain",
+          "url": "https://moneyonchain.com/doc-arbitrum/",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "layerzero-oft",
+            "stargate-hydra"
+          ],
+          "note": "Issuer states DOC moves Rootstock<>Arbitrum via Stargate (LayerZero), not a proprietary or canonical bridge."
+        },
+        {
+          "source": "explorer",
+          "name": "Arbiscan — DOC Arbitrum token contract (LayerZero V2 OFT)",
+          "slug": "arbiscan-doc-arbitrum",
+          "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
+          "bridgeTypes": [
+            "layerzero-oft"
+          ],
+          "note": "Verified contract 'MyOFT' on LZ endpoint 0x1a44076050125825900e736c501f859c50fE728c; owner-controlled peers/delegates, cross-chain mint/burn. Arbitrum supply is a minted OFT representation."
+        },
+        {
+          "source": "docs",
+          "name": "Stargate Hydra docs (Pool-to-OFT lock/mint)",
+          "slug": "stargate-hydra",
+          "url": "https://stargateprotocol.gitbook.io/stargate/v2-user-docs/whats-new-in-stargate-v2/hydra",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "oft-adapter"
+          ],
+          "note": "Hydra locks native asset on source chain (Protocol Locked Liquidity) and mints an OFT representation on the destination — an OFT-adapter lock/mint pattern."
+        }
+      ],
       "sources": [
         {
-          "label": "Money on Chain DOC",
-          "url": "https://moneyonchain.com/doc-stablecoin/"
+          "label": "Money On Chain — DOC on Arbitrum (issuer announcement naming Stargate)",
+          "url": "https://moneyonchain.com/doc-arbitrum/"
         },
         {
-          "label": "Money on Chain docs",
-          "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+          "label": "Arbiscan — Arbitrum DOC token (LayerZero V2 OFT 'MyOFT', endpoint 0x1a44076050...)",
+          "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
         },
         {
-          "label": "Money on Chain main RBTC contract repository",
-          "url": "https://github.com/money-on-chain/main-RBTC-contract"
+          "label": "Rootstock — LayerZero integration (rBTC/RIF via OFT; Stargate Hydra)",
+          "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/"
+        },
+        {
+          "label": "Stargate Hydra docs — Pool-to-OFT lock/mint architecture",
+          "url": "https://stargateprotocol.gitbook.io/stargate/v2-user-docs/whats-new-in-stargate-v2/hydra"
         }
       ]
     },
@@ -19056,19 +19166,27 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "EURO3 is deployed on Polygon and Linea and uses issuer-controlled mintable token contracts, but the reviewed 3A documentation does not identify a bridge route, source chain, or cross-chain validation controls. The route is conservatively scored as opaque pending bridge-specific evidence.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "single-chain-or-native",
+      "summary": "EURO3 has no cross-chain bridge route. It is minted natively and independently on each chain (Polygon and Linea) by 3A's local CDP vault contracts: supply is created when users open EURO3 loans against that chain's whitelisted collateral and burned when they repay or redeem. Both token contracts are verified as a plain MintableToken (ERC20, Ownable) exposing only mint()/burn(), with the owner being a per-chain MintableTokenOwner that registers that chain's VaultFactory/vault minters. There is no OFT/CCIP/NTT/Hyperlane/Axelar or any cross-chain function in either contract, and the deployments use different addresses (ruling out deterministic omnichain-token patterns), so each chain's supply carries no cross-chain dependency. Holders can move EURO3 via third-party aggregators (Symbiosis, MetaMask Bridge, etc.), but that is not the durable issuance/supply path.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "EURO3 docs",
+          "label": "EURO3 MintableToken on Polygonscan (plain MintableToken ERC-20, no cross-chain functions)",
+          "url": "https://polygonscan.com/address/0xa0e4c84693266a9d3bbef2f394b33712c76599ab"
+        },
+        {
+          "label": "EURO3 MintableToken on Lineascan (plain MintableToken ERC-20, no cross-chain functions)",
+          "url": "https://lineascan.build/address/0x3f817b28da4940f018c6b5c0a11c555ebb1264f9"
+        },
+        {
+          "label": "3A docs: EURO3 coin (local mint-on-loan / burn-on-repay; no bridge described)",
           "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
         },
         {
-          "label": "3A smart contract docs",
-          "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/api.md"
+          "label": "DefiLlama EURO3 (per-chain circulating supply breakdown across Polygon and Linea)",
+          "url": "https://defillama.com/stablecoin/euro3"
         }
       ]
     },
@@ -25125,19 +25243,64 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "fxUSD is tracked on Ethereum and Base, but reviewed f(x) Protocol documentation explains the stablecoin mechanics without documenting a Base bridge or cross-chain mint route. Pharos keeps the bridge-route tier unresolved and conservative.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-lock-mint",
+      "summary": "fxUSD crosses from its Ethereum home chain to Base via a LayerZero V2 OFT Adapter: the FxUSDOFTAdaptor lockbox (0xA07d8cc4...) locks canonical fxUSD ERC-20 on Ethereum while the Base deployment is a native LayerZero OFT that mints/burns 1:1. The durable cross-chain supply path is thus an external lock/mint bridge with a LayerZero control surface.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
         {
-          "label": "f(x) Protocol docs",
-          "url": "https://fxprotocol.gitbook.io/"
+          "source": "explorer",
+          "name": "FxUSDOFTAdaptor (LayerZero V2 OFT Adapter / lockbox) on Ethereum",
+          "slug": "layerzero",
+          "url": "https://etherscan.io/address/0xA07d8cc424421cC2bce0544a65481376f010A438",
+          "bridgeTypes": [
+            "lock-mint",
+            "oft-adapter",
+            "layerzero"
+          ],
+          "note": "Verified contract FxUSDOFTAdaptor; wraps fxUSD ERC-20 0x085780...; LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c"
         },
         {
-          "label": "f(x) Protocol website",
-          "url": "https://fx.aladdin.club/"
+          "source": "explorer",
+          "name": "fxUSD native LayerZero OFT on Base",
+          "slug": "layerzero",
+          "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5",
+          "bridgeTypes": [
+            "oft",
+            "layerzero",
+            "mint-burn"
+          ],
+          "note": "LayerZero OFT contract with endpoint + peer (EID) config; mints/burns on bridge, owner-controlled"
+        },
+        {
+          "source": "issuer",
+          "name": "AladdinDAO deployments (lists fxUSD OFTAdapter for Base + Tempo)",
+          "slug": "layerzero",
+          "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md",
+          "bridgeTypes": [
+            "oft-adapter",
+            "layerzero"
+          ],
+          "note": "Issuer repo: Base OFTAdapter 0xA07d8cc4..., Tempo OFTAdapter 0x06013F99..., Base listed as OFT standard"
+        }
+      ],
+      "sources": [
+        {
+          "label": "FxUSDOFTAdaptor (LayerZero OFT Adapter, lockbox) on Etherscan",
+          "url": "https://etherscan.io/address/0xA07d8cc424421cC2bce0544a65481376f010A438"
+        },
+        {
+          "label": "fxUSD LayerZero OFT on BaseScan",
+          "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5"
+        },
+        {
+          "label": "AladdinDAO deployments.mainnet.md (fxUSD OFTAdapter for Base/Tempo)",
+          "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"
+        },
+        {
+          "label": "f(x) Protocol contracts docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/more/resources/contracts"
         }
       ]
     },
@@ -26750,19 +26913,81 @@
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "dao-governance",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "GLDT is advertised across ICP, Ethereum, Base, and Arbitrum, but reviewed Gold DAO sources do not resolve the bridge protocol, validator/messaging assumptions, or route controls for the EVM deployments. Pharos marks the route opaque until route-level controls are sourced.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "external-lock-mint",
+      "summary": "GLDT is native to the Internet Computer (GLDT ledger canister 6c7su-kiaaa-aaaar-qaira-cai); its Ethereum/Base/Arbitrum deployments share address 0x86856814e74456893cfc8946bedcbb472b5fa856 via deterministic deployment, not an omnichain standard. The verified EVM source is a custom OpenZeppelin ERC20+Ownable+ERC20Permit token with an owner-only payable mint() (proven on-chain: non-owner calls revert with OwnableUnauthorizedAccount) plus withdrawEth and burn1-burn4 functions that emit bytes32 data encoding the ICP destination, with no LayerZero/Wormhole/Axelar/Hyperlane/CCIP imports (no OFT or CCIP selectors in the deployed bytecode). The contract was deployed by 0x475c65F3f34b069d3e8382090e6e17859b194a5e, which then transferred ownership; the live owner/minter on all three EVM chains is the active EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c, a Gold-DAO-controlled off-chain bridge signer. This makes GLDT's EVM supply a centralized issuer-operated lock/mint bridge with a single third-party off-chain control surface and no published settlement/attestation controls.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
+        {
+          "source": "explorer",
+          "name": "Custom Ownable ERC-20 minter (Ethereum)",
+          "slug": "custom-lock-mint",
+          "url": "https://etherscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856#code",
+          "bridgeTypes": [
+            "lock-mint",
+            "issuer-operated",
+            "owner-eoa"
+          ],
+          "note": "Verified source: OpenZeppelin ERC20+Ownable+ERC20Permit; owner-only payable mint(), batchMint, withdrawEth, burn1-burn4 emitting bytes32 ICP destination; no OFT/NTT/ITS/Hyperlane imports."
+        },
+        {
+          "source": "explorer",
+          "name": "Same custom contract on Base",
+          "slug": "custom-lock-mint-base",
+          "url": "https://basescan.org/token/0x86856814e74456893cfc8946bedcbb472b5fa856",
+          "bridgeTypes": [
+            "lock-mint",
+            "issuer-operated"
+          ],
+          "note": "Identical custom mint/batchMint/burn1-burn4 Ownable token; confirms deterministic same-address deployment across EVM chains, not an omnichain standard."
+        },
+        {
+          "source": "explorer",
+          "name": "Owner / minter EOA",
+          "slug": "gldt-owner-eoa",
+          "url": "https://etherscan.io/address/0x475c65F3f34b069d3e8382090e6e17859b194a5e",
+          "bridgeTypes": [
+            "off-chain-signer",
+            "single-eoa"
+          ],
+          "note": "EOA that deployed the EVM contracts and holds owner/mint rights; the off-chain bridge control surface."
+        },
+        {
+          "source": "issuer",
+          "name": "Gold DAO (issuer) docs name no bridge protocol",
+          "slug": "gold-dao-docs",
+          "url": "https://docs.gold-dao.org/gold-dao-whitepaper/technology/technology",
+          "bridgeTypes": [
+            "undocumented-route"
+          ],
+          "note": "Issuer materials describe cross-chain only as a roadmap goal and document no bridge protocol/validator; GoldDAO GitHub has no EVM/bridge repo."
+        }
+      ],
       "sources": [
+        {
+          "label": "GLDT Ethereum contract verified source (Etherscan #code)",
+          "url": "https://etherscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856#code"
+        },
+        {
+          "label": "GLDT Base deployment (BaseScan) - same custom contract",
+          "url": "https://basescan.org/token/0x86856814e74456893cfc8946bedcbb472b5fa856"
+        },
+        {
+          "label": "Owner/minter EOA 0x475c65F3... (Etherscan)",
+          "url": "https://etherscan.io/address/0x475c65F3f34b069d3e8382090e6e17859b194a5e"
+        },
+        {
+          "label": "Gold DAO GitHub org (ICP-only canisters, no EVM/bridge repo)",
+          "url": "https://github.com/GoldDAO/gold-dao"
+        },
+        {
+          "label": "Gold DAO knowledge hub / whitepaper technology page",
+          "url": "https://docs.gold-dao.org/gold-dao-whitepaper/technology/technology"
+        },
         {
           "label": "GLDT website",
           "url": "https://gldt.org/"
-        },
-        {
-          "label": "Gold DAO key canisters",
-          "url": "https://docs.gold-dao.org/other/key-canisters"
         }
       ]
     },
@@ -27276,19 +27501,55 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "GRAMS is listed as multichain in Pharos, but reviewed public issuer-facing material does not clearly document whether transfers use issuer mint/burn, canonical bridges, or a third-party bridge. The route is conservative until Token Teknoloji publishes route controls.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "issuer-native-burn-mint",
+      "summary": "GRAMS moves cross-chain through an issuer-operated burn/mint mechanism built into its own StableCoin contract: externalTransfer() routes tokens to the supply manager and burns them on the source chain, and externalTransferFrom() mints on the destination, both restricted to the issuer's onlySupplyManager role plus whenNotPaused and KYC/freeze compliance controls. There is no third-party bridge protocol (no LayerZero/OFT, Axelar ITS, Hyperlane, or Wormhole/NTT) and the identical multichain address reflects the same custom issuer contract (shared with Token Teknoloji's USDOT/EUROT/TRYT family), not an omnichain standard. The durable cross-chain supply path is issuer-native burn-mint.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
         {
-          "label": "Token Teknoloji website",
-          "url": "https://tokenteknoloji.com/"
+          "source": "explorer",
+          "name": "Snowtrace verified source - StableCoin (GRAMS) with ExternallyTransferable burn/mint",
+          "slug": "snowtrace-grams",
+          "url": "https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+          "bridgeTypes": [
+            "issuer-native-burn-mint"
+          ],
+          "note": "externalTransfer() burns on source, externalTransferFrom() mints on destination, both onlySupplyManager whenNotPaused; no third-party bridge protocol"
         },
         {
-          "label": "GRAMS market reference",
-          "url": "https://www.coingecko.com/en/coins/gram-silver"
+          "source": "explorer",
+          "name": "PolygonScan verified source - StableCoin (GRAMS), exact match, identical address",
+          "slug": "polygonscan-grams",
+          "url": "https://polygonscan.com/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+          "bridgeTypes": [
+            "issuer-native-burn-mint"
+          ],
+          "note": "Same StableCoin contract as Avalanche; verified exact source match"
+        },
+        {
+          "source": "issuer",
+          "name": "Token Teknoloji - Gram Silver (GRAMS) reserve token page",
+          "slug": "token-teknoloji-grams",
+          "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
+          "bridgeTypes": [
+            "issuer-native-burn-mint"
+          ],
+          "note": "Lists separate ETH/AVAX/Polygon contracts; describes issuer mint-and-burn against reserves; no bridge or omnichain standard documented"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Snowtrace verified source code - StableCoin (GRAMS), Avalanche",
+          "url": "https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0"
+        },
+        {
+          "label": "PolygonScan - StableCoin (GRAMS), verified exact match, Polygon",
+          "url": "https://polygonscan.com/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0"
+        },
+        {
+          "label": "Token Teknoloji - Gram Silver (GRAMS) issuer page",
+          "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
         }
       ]
     },
@@ -33348,19 +33609,49 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "JPYm is tracked on Celo and Monad, but Mento's reviewed docs describe Celo minting/usage and do not document a bridge route or cross-chain controls for the Monad deployment. The route is scored as opaque until Mento publishes bridge-specific evidence.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "external-validated-network",
+      "summary": "JPYm's durable cross-chain supply path is Wormhole Native Token Transfers (NTT), Mento's officially selected interoperability provider for its full stablecoin suite. Mento runs a hub-and-spoke model: issuance and risk management stay anchored on Celo (the CDP hub) while spoke chains like Monad hold NTT-Manager-minted deployments, with cross-chain supply attested by Wormhole's Guardian network and enforced by the NTT Global Accountant. This is an external-validated messaging-network route, not an opaque/undocumented one. (Probable, not verified: Monad launched with the GBPm/USDm pair first; JPYm's specific NTT-Manager wiring on Monad was not independently confirmed on-chain, though JPYm is already deployed there as a Mento-Safe-owned proxy.)",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
+        {
+          "source": "issuer",
+          "name": "Wormhole NTT (Native Token Transfers)",
+          "slug": "wormhole",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/from-other-chains",
+          "bridgeTypes": [
+            "external-validated-network",
+            "burn-mint",
+            "hub-and-spoke"
+          ],
+          "note": "Mento's officially selected interoperability provider; NTT standard for native cross-chain issuance/redemption with Celo as hub, Monad as spoke; attested by Wormhole Guardians + Global Accountant."
+        }
+      ],
       "sources": [
         {
-          "label": "Mento docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Mento docs — Getting Mento stables from other chains (names Wormhole NTT)",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/from-other-chains"
         },
         {
-          "label": "Mento smart contracts docs",
-          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+          "label": "Wormhole blog — Mento selects Wormhole as official interoperability provider (NTT)",
+          "url": "https://wormhole.com/blog/mento-selects-wormhole-as-its-official-interoperability-provider"
+        },
+        {
+          "label": "Mento blog — Mento selects Wormhole to power multichain FX",
+          "url": "https://www.mento.org/blog/mento-selects-wormhole-as-its-official-interoperability-provider-to-power-multichain-fx"
+        },
+        {
+          "label": "Mento blog — Mento is bringing onchain FX to the Monad ecosystem (Celo-anchored issuance, Monad liquidity)",
+          "url": "https://www.mento.org/blog/mento-is-bringing-onchain-fx-to-the-monad-ecosystem"
+        },
+        {
+          "label": "The Block — Mento launches on Monad, powered by Wormhole NTT (Mar 12 2026)",
+          "url": "https://www.theblock.co/press-releases/393188/mento-launches-on-monad-bringing-fx-markets-to-a-high-performance-l1"
+        },
+        {
+          "label": "Wormhole docs — Native Token Transfers overview (hub-and-spoke vs burn-mint, Manager/Transceiver, Guardian attestation)",
+          "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/"
         }
       ]
     },
@@ -43943,19 +44234,68 @@
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "nWISDOM is listed on Ethereum and Plume, and Nest documents the relevant Teller/Manager contract addresses, but reviewed materials do not identify whether supply moves through issuer mint/redeem, a canonical bridge, or a third-party route. The bridge route is therefore unresolved.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-lock-mint",
+      "summary": "nWISDOM is a Nest BoringVault share whose ERC20 (identical CREATE2 address 0x29bf...0240 on Plume and Ethereum) contains no LayerZero code itself. Cross-chain movement runs through Plume's SkyLink on LayerZero's OVault standard, orchestrated by the Plume-side NestVaultComposer (LayerZero OVaultComposer, 0x312a0219...). Plume is the canonical accounting/settlement hub. Per LayerZero's OVault Share mesh design, vault shares move via a ShareOFTAdapter (lockbox) on the hub chain plus standard ShareOFT mint/burn on spokes, with deposits/redemptions routed through the hub ERC-4626 vault (ABA pattern). This is an external LayerZero OFT-Adapter/lockbox route with a third-party control surface (composer + OFT peers), not a pure validated-network burn/mint, so it maps to external-lock-mint. The specific adapter contract and the named DVN set were not enumerated, hence probable rather than verified.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
         {
-          "label": "Nest docs",
-          "url": "https://docs.nest.credit/"
+          "source": "docs",
+          "name": "LayerZero OFT (Nest OVault / SkyLink)",
+          "slug": "layerzero",
+          "url": "https://docs.nest.credit/about/cross-chain",
+          "bridgeTypes": [
+            "burn-mint-oft",
+            "external-validated-network"
+          ],
+          "note": "Nest cross-chain doc: vault share movement via LayerZero OFT burn/mint messaging; Plume is the canonical accounting hub, Ethereum/Solana are spokes. No lock/mint adapter."
         },
         {
-          "label": "Nest smart contracts",
+          "source": "docs",
+          "name": "NestVaultComposer (LayerZero OVault Composer)",
+          "slug": "layerzero-ovault",
+          "url": "https://docs.nest.credit/developers/smart-contracts",
+          "bridgeTypes": [
+            "ovault-composer"
+          ],
+          "note": "Composer on Plume at 0x312a0219E8af66C4e8849a3fEF4047415c3b4974; Solana OFT store listed - LayerZero OVault/OFT terminology confirming the route."
+        },
+        {
+          "source": "explorer",
+          "name": "nWISDOM BoringVault share token",
+          "slug": "boringvault",
+          "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+          "bridgeTypes": [
+            "erc20-share"
+          ],
+          "note": "Ethereum token is a plain BoringVault ERC20 (enter()/exit(), authority access control, no LayerZero code in-token); identical CREATE2 address on Plume signals omnichain token standard with OFT logic in composer/peer layer."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Nest docs - Cross-Chain Architecture (LayerZero OFT burn/mint, Plume hub)",
+          "url": "https://docs.nest.credit/about/cross-chain"
+        },
+        {
+          "label": "Nest docs - Smart Contracts (NestVaultComposer on Plume, Solana OFT store)",
           "url": "https://docs.nest.credit/developers/smart-contracts"
+        },
+        {
+          "label": "Nest blog - How Nest vaults work (BoringVault + SkyLink/LayerZero cross-chain)",
+          "url": "https://nest.credit/blog/how-nest-vaults-work"
+        },
+        {
+          "label": "Plume blog - SkyLink x LayerZero (RWA yield streaming over LayerZero)",
+          "url": "https://plume.org/blog/skylink"
+        },
+        {
+          "label": "LayerZero - OVault standard (share OFT mesh: OFT burn/mint via Composer)",
+          "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
+        },
+        {
+          "label": "Etherscan - nWISDOM share token (BoringVault ERC20)",
+          "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
         }
       ]
     },
@@ -49840,15 +50180,63 @@
     "deploymentModel": "native-multichain",
     "custodyModel": "institutional-unregulated",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "RUSD is issued on Ethereum, BNB Chain, and Tron, and Royal Coins materials mention an R-Bridge settlement ecosystem, but the reviewed public source set does not resolve whether durable supply moves through issuer burn/mint, lock/mint, validator messaging, or liquidity routing. The route remains opaque pending route-control evidence.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "single-chain-or-native",
+      "summary": "RUSD deploys the same non-upgradeable Circle-style FiatToken (RoyalDollar) on Ethereum, BNB Chain, and Tron, with no cross-chain functions of any kind in the contract — no LayerZero OFT/CCIP/Wormhole/Axelar hooks, only mint/burn governed by MASTERMINTER/MINTER roles (independently confirmed by reading the verified Ethereum and BSC contracts). The identical Eth/BSC address is a deterministic vanity deploy, not an omnichain token standard. Each chain's supply is minted independently by the issuer's per-chain mint authority (Eth/BSC MASTERMINTER 0xc50ebe57; Tron 0x9a0c5f3a), so there is no durable cross-chain token bridge; the \"R-Bridge / RxBridge\" is a hybrid Bank–OTC–Exchange business settlement network, not an on-chain supply route.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "explorer",
+          "name": "RoyalDollar FiatToken (Ethereum) — Circle-style MASTERMINTER, non-upgradeable, no cross-chain functions",
+          "slug": "royaldollar-fiattoken",
+          "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285",
+          "bridgeTypes": [
+            "per-chain-native-mint"
+          ],
+          "note": "ERC-20 Burnable/Pausable/AccessControl; roles MASTERMINTER/MINTER/BLACKLISTER/PAUSER; no OFT/CCIP/Wormhole/Axelar/bridge functions"
+        },
+        {
+          "source": "explorer",
+          "name": "RoyalDollar FiatToken (BNB Chain) — same bytecode, non-upgradeable, no cross-chain functions",
+          "slug": "royaldollar-fiattoken-bsc",
+          "url": "https://bscscan.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285",
+          "bridgeTypes": [
+            "per-chain-native-mint"
+          ],
+          "note": "Identical RoyalDollar contract on BSC; no LayerZero/CCIP/Wormhole/Axelar/bridge functions detected"
+        },
+        {
+          "source": "issuer",
+          "name": "R-Bridge / RxBridge settlement ecosystem (business settlement network, not an on-chain token bridge)",
+          "slug": "rxbridge",
+          "url": "https://www.rcoins.digital/",
+          "bridgeTypes": [
+            "off-chain-settlement"
+          ],
+          "note": "Marketing-described hybrid bank–OTC–exchange settlement layer; no on-chain burn/mint or lock/mint token bridge documented"
+        }
+      ],
       "sources": [
         {
-          "label": "Royal RUSD page",
+          "label": "RUSD Ethereum contract (Etherscan) — RoyalDollar FiatToken, no bridge functions",
+          "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
+        },
+        {
+          "label": "RUSD BSC contract (BscScan) — same FiatToken, no bridge functions",
+          "url": "https://bscscan.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
+        },
+        {
+          "label": "RUSD Tron contract (Tronscan) — separate MASTERMINTER EOA",
+          "url": "https://tronscan.org/#/contract/TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1"
+        },
+        {
+          "label": "Issuer RUSD page — describes only per-chain deployment, no bridge protocol",
           "url": "https://www.rcoins.digital/RUSD.html"
+        },
+        {
+          "label": "Royal Stablecoins / RxBridge ecosystem overview",
+          "url": "https://www.rcoins.digital/"
         },
         {
           "label": "RUSD whitepaper",
@@ -57975,19 +58363,65 @@
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Maple confirms syrupUSDC expanded from Ethereum to Solana, Arbitrum, and Base, but the reviewed public sources do not specify a bridge, burn/mint, or lockbox topology for the receipt token. The route is left conservative pending clearer Maple route documentation.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-validated-network",
+      "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, Base, and Plasma are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
         {
-          "label": "Maple syrupUSDC multichain article",
-          "url": "https://maple.finance/insights/syrupusdc-and-syrupusdt-built-for-scale"
+          "source": "issuer",
+          "name": "Maple Finance — syrupUSDC Expands to Solana (CCIP native availability)",
+          "slug": "chainlink-ccip",
+          "url": "https://maple.finance/insights/syrupusdc-expands-to-solana",
+          "bridgeTypes": [
+            "external-validated-network",
+            "burn-mint"
+          ],
+          "note": "States syrupUSDC is natively available on Solana powered by Chainlink CCIP."
         },
         {
-          "label": "Maple syrupUSDC lender docs",
-          "url": "https://maplefinance.gitbook.io/maple/syrupusdc-for-lenders/introduction"
+          "source": "issuer",
+          "name": "Maple Finance — syrupUSDC Expands to Arbitrum (Transporter)",
+          "slug": "chainlink-ccip",
+          "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum",
+          "bridgeTypes": [
+            "external-validated-network"
+          ],
+          "note": "Directs users to bridge via Transporter, Chainlink's official CCIP bridge front-end."
+        },
+        {
+          "source": "docs",
+          "name": "Chainlink CCIP Token Directory — syrupUSDC",
+          "slug": "chainlink-ccip",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC",
+          "bridgeTypes": [
+            "external-validated-network",
+            "burn-mint"
+          ],
+          "note": "syrupUSDC registered as a Cross-Chain Token (CCT) across CCIP mainnet networks; JS-rendered table not machine-readable via fetch but listing confirmed by search and issuer/Chainlink statements."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
+          "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+        },
+        {
+          "label": "Maple — syrupUSDC Expands to Arbitrum (Transporter/CCIP)",
+          "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum"
+        },
+        {
+          "label": "Chainlink CCIP Token Directory — syrupUSDC",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+        },
+        {
+          "label": "Chainlink official announcement — Maple adopts CCIP CCT burn/mint",
+          "url": "https://x.com/chainlink/status/1930656909226315932"
+        },
+        {
+          "label": "CoinDesk — Maple Finance Expands to Solana With Chainlink",
+          "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
         }
       ]
     },
@@ -58164,19 +58598,88 @@
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "syrupUSDT is a Maple wrapper variant of USDT with tracked deployments on Ethereum, Plasma, and BNB Chain. Reviewed Maple materials did not identify the cross-chain route or whether supply is synchronized by issuer minting, wrapper vaults, or a bridge, so the route remains opaque.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-validated-network",
+      "summary": "syrupUSDT moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard: each chain (Ethereum canonical plus Plasma, BNB Chain, Arbitrum, Base, Solana) hosts a native syrupUSDT token paired with a BurnMintTokenPool, so circulating supply is burned on the source and minted on the destination over CCIP's validated DON messaging with the Risk Management Network backstop. Maple adopted CCT for its Syrup tokens and a dedicated CCIP directory entry exists for syrupUSDT, explaining the different per-chain addresses (no lockbox/wrapped model).",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
         {
-          "label": "Maple website",
-          "url": "https://maple.finance/"
+          "source": "docs",
+          "name": "Chainlink CCIP - syrupUSDT Cross-Chain Token directory entry",
+          "slug": "chainlink-ccip",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT",
+          "bridgeTypes": [
+            "external-validated-network",
+            "burn-mint",
+            "CCT"
+          ],
+          "note": "Dedicated CCIP mainnet directory page lists syrupUSDT as a Cross-Chain Token across 5 networks using the CCT (burn-and-mint) standard."
         },
         {
-          "label": "Maple proof of reserves",
-          "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+          "source": "docs",
+          "name": "Chainlink CCIP - syrupUSDC Cross-Chain Token directory entry (sibling, shared infra)",
+          "slug": "chainlink-ccip",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC",
+          "bridgeTypes": [
+            "external-validated-network",
+            "burn-mint",
+            "CCT"
+          ],
+          "note": "Sibling Syrup token on the same Maple CCIP/CCT infrastructure; 7 networks."
+        },
+        {
+          "source": "issuer",
+          "name": "Maple Finance - syrupUSDC/syrupUSDT Built for Scale + Solana CCT expansion",
+          "slug": "maple-finance",
+          "url": "https://maple.finance/insights/syrupusdc-expands-to-solana",
+          "bridgeTypes": [
+            "external-validated-network",
+            "CCT"
+          ],
+          "note": "Maple states syrupUSDC/syrupUSDT became natively interoperable via the CCT standard powered by Chainlink CCIP, not traditional bridges; deployments on Ethereum, Solana, Plasma, Arbitrum, Base."
+        },
+        {
+          "source": "manual",
+          "name": "TID Research syrupUSDC risk assessment",
+          "slug": "tid-research",
+          "url": "https://tidresearch.com/reports/syrupusdc/",
+          "bridgeTypes": [
+            "external-validated-network",
+            "burn-mint",
+            "CCT"
+          ],
+          "note": "Independent assessment: multi-chain bridging uses Chainlink CCIP with the CCT standard, burn-and-mint native deployments per chain, not a wrapped/lockbox model."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Chainlink CCIP directory - syrupUSDT (Cross-Chain Token, 5 mainnet networks)",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
+        },
+        {
+          "label": "Chainlink CCIP directory - syrupUSDC (sibling Syrup token, 7 networks)",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+        },
+        {
+          "label": "Maple Finance - syrupUSDC Expands to Solana (CCT standard via Chainlink CCIP)",
+          "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+        },
+        {
+          "label": "Maple Finance - syrupUSDC and syrupUSDT: Built for Scale (multichain deployments)",
+          "url": "https://maple.finance/insights/syrupusdc-and-syrupusdt-built-for-scale"
+        },
+        {
+          "label": "Chainlink (X) - Maple upgraded to CCIP via the CCT standard for native cross-chain Syrup tokens",
+          "url": "https://x.com/chainlink/status/1930656909226315932"
+        },
+        {
+          "label": "TID Research - syrupUSDC Risk Assessment (CCIP CCT burn-and-mint, not lockbox)",
+          "url": "https://tidresearch.com/reports/syrupusdc/"
+        },
+        {
+          "label": "Maple Finance - syrupUSDT on Plasma (cross-chain expansion)",
+          "url": "https://maple.finance/insights/syrupusdt-on-plasma"
         }
       ]
     },
@@ -58570,19 +59073,52 @@
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "syzUSD is listed on Plasma and Monad as a staked yzuUSD variant, but reviewed Yuzu materials and reserve pages do not identify a bridge route, source chain, or cross-chain validation controls. The route is unresolved and scored as opaque.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-lock-mint",
+      "summary": "syzUSD moves cross-chain between Plasma and Monad via a LayerZero OVault. Yuzu's own audited contracts (ovault/ProtoOVaultComposer and PSMOVaultComposer) inherit LayerZero's VaultComposerSync and wire an asset+share OFT mesh, with the share token (syzUSD) explicitly required to be an OFTAdapter lockbox (approvalRequired()==true) on the hub chain (most likely Plasma) and a standard OFT on spokes. Because the durable supply path for shares runs through a third-party (LayerZero) OFTAdapter lockbox control surface, this is an external lock/mint route rather than opaque. (Named DVN set and a live LayerZeroScan trace were not pinned, and the on-chain hub identity was not confirmed at the explorer/deploy-config level, but the lockbox/adapter requirement is code-enforced in the issuer's audited composer.)",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
         {
-          "label": "Yuzu docs",
-          "url": "https://yuzu-money.gitbook.io/yuzu-money"
+          "source": "issuer",
+          "name": "LayerZero OVault (VaultComposerSync) — Yuzu ouroboros-contracts",
+          "slug": "layerzero",
+          "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "oft-adapter-lockbox",
+            "ovault"
+          ],
+          "note": "ProtoOVaultComposer inherits @layerzerolabs/ovault-evm VaultComposerSync; PSMOVaultComposer enforces share OFT must be an OFTAdapter (approvalRequired()==true => lockbox model). Asset+share OFT mesh per LayerZero OVault standard."
         },
         {
-          "label": "Yuzu proof of reserve",
-          "url": "https://yuzu.accountable.capital/"
+          "source": "docs",
+          "name": "Dedaub audit — Yuzu V2 LayerZero oVault integration",
+          "slug": "layerzero-ovault",
+          "url": "https://dedaub.com/audits/yuzu-money/yuzuusd-psm-february-09-2026/",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "ovault"
+          ],
+          "note": "Audit states cross-chain operations via LayerZero added; reviewers focused on the LayerZero oVault integration."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Yuzu ouroboros-contracts — PSMOVaultComposer.sol (share OFT must be adapter / lockbox)",
+          "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol"
+        },
+        {
+          "label": "Yuzu ouroboros-contracts — ProtoOVaultComposer.sol (inherits LayerZero VaultComposerSync)",
+          "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/ProtoOVaultComposer.sol"
+        },
+        {
+          "label": "Dedaub audit of Yuzu Money V2 (LayerZero oVault integration, Feb 9 2026)",
+          "url": "https://dedaub.com/audits/yuzu-money/yuzuusd-psm-february-09-2026/"
+        },
+        {
+          "label": "LayerZero OVault standard (share OFTAdapter lockbox on hub, OFT on spokes)",
+          "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
         }
       ]
     },
@@ -61082,19 +61618,40 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "USBD is deployed across several chains with the same token address pattern, but reviewed Bima docs and existing contract review do not identify the bridge/messaging layer or source-of-truth chain. Until Bima documents the cross-chain route, the profile is kept in the opaque tier.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "external-lock-mint",
+      "summary": "USBD is a native LayerZero Omnichain Fungible Token (OFT): its verified Ethereum DebtToken source imports @layerzerolabs/oft-evm/contracts/OFT.sol and is declared `contract DebtToken is OFT`, taking a LayerZero V2 endpoint in its constructor (send/quoteSend/lzReceive/setPeer present), so supply moves via burn-on-source / mint-on-destination over LayerZero messaging — a regular OFT, not a lockbox adapter or a third-party liquidity bridge (the L2BEAT 'Across' reference is just a bridge that can route USBD, not its issuance path). The identical CREATE2 address across ethereum/hemi/plume/sonic/bsc/nibiru is the OFT pattern. Classified at external-lock-mint (40) rather than external-validated-network (65) because, while the OFT burn/mint mechanism is verified from primary contract source, the DVN security stack is neither named nor reviewed: LayerZeroScan was rate-limited and Bima publishes no LayerZero/OFT/DVN documentation, so this is a generic OFT with an unreviewed third-party control surface.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
+        {
+          "source": "explorer",
+          "name": "LayerZero OFT (verified contract source)",
+          "slug": "layerzero",
+          "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#code",
+          "bridgeTypes": [
+            "external-validated-network",
+            "oft-burn-mint"
+          ],
+          "note": "DebtToken imports @layerzerolabs/oft-evm/contracts/OFT.sol and inherits OFT; constructor takes _layerZeroEndpoint + _delegate; send/quoteSend/lzReceive/setPeer present; mint/burn (regular OFT, not Adapter)."
+        }
+      ],
       "sources": [
         {
-          "label": "Bima docs",
-          "url": "https://docs.bima.money/"
+          "label": "USBD DebtToken verified source on Etherscan (LayerZero OFT import + OFT constructor)",
+          "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#code"
         },
         {
-          "label": "Bima website",
-          "url": "https://bima.money/"
+          "label": "Bima docs - Mainnet Addresses (USBD = DebtToken, identical address across 9 chains)",
+          "url": "https://docs.bima.money/security/mainnet-addresses"
+        },
+        {
+          "label": "LayerZero OFT standard (burn-on-source / mint-on-destination, unified global supply)",
+          "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+        },
+        {
+          "label": "RootData - BIMA described as omni-chain stablecoin protocol",
+          "url": "https://www.rootdata.com/Projects/detail/BIMA"
         }
       ]
     },
@@ -68382,19 +68939,31 @@
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "USDKG is tracked on Tron and Ethereum, but reviewed issuer pages do not document whether supply is issuer-native on both chains or bridged through a lock/mint route. The bridge-route profile remains opaque pending issuer route-control evidence.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "single-chain-or-native",
+      "summary": "USDKG has no cross-chain bridge: it is a standalone Tether-style token issued and burned natively on each chain by the issuer (Gold Dollar / OJSC Virtual Asset Issuer) via issue()/redeem() functions, with separate, non-identical contract addresses on Ethereum (0xe820...45e3) and Tron (TXZo12...nwEG). Supply on each chain is independently issuer-minted against gold reserves with no cross-chain dependency, so the route is single-chain-or-native rather than opaque.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "USDKG website",
+          "label": "ConsenSys Diligence — USDKG smart contract audit (Jan 2025): standalone Tether-style token, issue()/redeem() mint/burn by owners, blacklist + destroyBlackFunds, no bridge in scope",
+          "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
+        },
+        {
+          "label": "USDKG official site — lists separate Ethereum and Tron addresses, no bridge/cross-chain mechanism documented; direct mint/redeem for institutional clients only",
           "url": "https://www.usdkg.com/"
         },
         {
-          "label": "USDKG transparency",
+          "label": "USDKG transparency page — Kreston Global reserve audit confirming issuer controls mint/burn wallets with test transactions on Ethereum and Tron",
           "url": "https://www.usdkg.com/transparency"
+        },
+        {
+          "label": "USDKG Ethereum token on Etherscan — non-upgradeable ERC-20, owner is 3-of-7 multisig, issue()/redeem() mint/burn",
+          "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
+        },
+        {
+          "label": "CryptoBriefing — Kyrgyzstan launches USDKG, Tron-first deployment with Ethereum next phase, supply growth via additional gold + minting",
+          "url": "https://cryptobriefing.com/kyrgyzstan-usdkg-gold-backed-stablecoin-tron/"
         }
       ]
     },
@@ -72243,19 +72812,51 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "USDRIF is source-verified as a Rootstock RIF-backed stablecoin, but the checked Arbitrum deployment has no reviewed issuer documentation resolving bridge or mint-route controls. Pharos keeps the bridge route conservative pending route evidence.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-lock-mint",
+      "summary": "USDRIF is native to Rootstock (a RIF/DOC-collateralized CDP stablecoin launched Sep 2023, contract 0x3a15461d..., a plain ERC-20 with no cross-chain code). Its sole cross-chain supply path is a LayerZero OFT route: a dedicated OFT Adapter (lockbox) on Rootstock (0xb2ee5502...) locks native USDRIF and a burn/mint OFT representation (the verified \"MyOFT\" contract 0x8eef5ed..., Endpoint V2) is minted on Arbitrum. On-chain checks confirm the lockbox (adapter token()=native USDRIF, approvalRequired=true) holds ~61,268 USDRIF locked, matching the Arbitrum OFT supply 1:1, and the OFT is peered only to Rootstock (EID 30333). Because the durable route is a third-party LayerZero OFT Adapter/lockbox control surface, it is classified external-lock-mint.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
         {
-          "label": "RIF on Chain docs",
-          "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
+          "source": "explorer",
+          "name": "LayerZero OFT (Arbitrum MyOFT contract)",
+          "slug": "layerzero",
+          "url": "https://arbiscan.io/token/0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "oft"
+          ],
+          "note": "Verified Arbitrum contract named MyOFT, inherits LayerZero OFT standard, uses ILayerZeroEndpointV2 with lzSend/lzReceive. Mint/burn OFT representation on the destination chain."
         },
         {
-          "label": "Rootstock USDRIF launch",
+          "source": "issuer",
+          "name": "Rootstock LayerZero/Stargate OFT Adapter integration",
+          "slug": "rootstock-layerzero",
+          "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "oft-adapter-lockbox"
+          ],
+          "note": "Rootstock joined LayerZero (Mar 2025); native Rootstock assets go multichain via the OFT (Adapter/Lockbox) standard with Stargate as the first dApp. Home chain locks, destination mints."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Arbiscan: USDRIF Arbitrum token (verified MyOFT LayerZero OFT contract)",
+          "url": "https://arbiscan.io/token/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+        },
+        {
+          "label": "Rootstock blog: rBTC and RIF go multichain - LayerZero integrates with Rootstock (OFT standard)",
+          "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/"
+        },
+        {
+          "label": "Rootstock blog: Introducing USDRIF (native RIF-collateralized CDP, Sep 2023)",
           "url": "https://rootstock.io/blog/new-stablecoin-protocol-launched-on-rootstock-introducing-usdrif/"
+        },
+        {
+          "label": "Stargate docs: OFT internal routes (LayerZero OFT/Adapter lock-mint mechanism)",
+          "url": "https://docs.stargate.finance/primitives/routes/oft"
         }
       ]
     },
@@ -73984,19 +74585,68 @@
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "USDU is tracked on BNB Chain and Solana, but reviewed Unitas docs do not identify a cross-chain bridge, canonical route, or issuer burn/mint control surface for moving supply between chains. The route is unresolved and scored as opaque.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "single-chain-or-native",
+      "summary": "USDU has independent native deployments on Solana and BSC, each minted/redeemed against USDC by whitelisted participants on that chain with no live cross-chain supply route between them. The BSC token is a plain BEP20 (Safe-controlled mint, no OFT/LayerZero interface) and the Solana Token-2022 mint is self-referential/effectively frozen. A LayerZero cross-chain USDU route is roadmapped (ETA Q4 2025, \"Design\" phase) but not yet live, so the durable mechanism today is native per-chain issuance, not a bridge.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
+        {
+          "source": "docs",
+          "name": "Unitas roadmap — Cross-chain USDu (LayerZero), Design phase, ETA Q4 2025 (NOT live)",
+          "slug": "layerzero",
+          "url": "https://docs.unitas.so/",
+          "bridgeTypes": [
+            "planned-omnichain-oft"
+          ],
+          "note": "Future route only; not the current durable mechanism"
+        },
+        {
+          "source": "explorer",
+          "name": "USDU BSC token — plain BEP20, mint()/burn() minter role, no OFT/LayerZero interface",
+          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882",
+          "bridgeTypes": [
+            "native-mint"
+          ],
+          "note": "Gnosis Safe 3-of-5 sole minter (registry mintAuthority review)"
+        },
+        {
+          "source": "explorer",
+          "name": "USDU Solana Token-2022 mint — self-referential mintAuthority, effectively frozen",
+          "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+          "bridgeTypes": [
+            "native-mint"
+          ]
+        },
+        {
+          "source": "docs",
+          "name": "Minting USDu — USDC mint/redeem by whitelisted/KYC participants, native per chain",
+          "url": "https://docs.unitas.so/solution-design/minting-usdu",
+          "bridgeTypes": [
+            "native-mint"
+          ]
+        }
+      ],
       "sources": [
         {
-          "label": "Unitas docs",
+          "label": "Unitas docs (roadmap: cross-chain USDu via LayerZero, Design phase / Q4 2025, not live)",
           "url": "https://docs.unitas.so/"
         },
         {
-          "label": "Unitas website",
-          "url": "https://unitas.so/"
+          "label": "Unitas docs — Minting USDu (USDC mint/redeem, whitelisted, per chain)",
+          "url": "https://docs.unitas.so/solution-design/minting-usdu"
+        },
+        {
+          "label": "USDU BSC contract (verified plain BEP20, no OFT/LayerZero interface)",
+          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882"
+        },
+        {
+          "label": "USDU Solana Token-2022 mint (self-referential mintAuthority)",
+          "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+        },
+        {
+          "label": "MEXC guide (Jan 2026) — LayerZero cross-chain still listed as planned",
+          "url": "https://blog.mexc.com/news/what-is-unitas-labs-a-complete-guide-to-usdu-and-cross-chain-yield-stablecoins/"
         }
       ]
     },
@@ -75987,19 +76637,68 @@
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Noon USN is tracked on Ethereum, Sophon, zkSync, and Starknet, but reviewed Noon docs do not document the cross-chain route, source chain, or validation controls. The deployment model is corrected to native-multichain and the route remains opaque pending issuer evidence.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
-      "sources": [
+      "tier": "external-validated-network",
+      "summary": "Noon USN is an omnichain token minted natively on Ethereum and carried to Sophon, zkSync Era, Starknet, TAC and others via native burn/mint over external validated messaging networks. The verified Ethereum implementation (USNUpgradeableHyperlane) inherits LayerZero V2 OFTUpgradeable -- the token itself is the OFT, so the home chain burns/mints rather than using a lockbox adapter -- and additionally integrates Hyperlane (configureHyperlane/configureISM/sendTokensViaHyperlane/handle/mailbox). Noon's contracts page labels the Sophon and zkSync deployments \"USN OFT,\" and its interoperability page documents Hyperlane burn-on-source/mint-on-destination as the cross-chain route. Supply therefore moves by external-validated-network burn/mint, not a third-party lockbox or lock/mint. The specific DVN security stack and Hyperlane ISM configuration were not retrievable, so the validation parameters are unreviewed.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
         {
-          "label": "Noon docs",
-          "url": "https://docs.noon.capital"
+          "source": "issuer",
+          "name": "LayerZero OFT (Omnichain Fungible Token)",
+          "slug": "layerzero",
+          "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
+          "bridgeTypes": [
+            "burn-mint",
+            "omnichain-token",
+            "external-messaging"
+          ],
+          "note": "Noon docs explicitly label Sophon and zkSync Era USN deployments as OFT; Ethereum is the native home chain."
         },
         {
-          "label": "Noon website",
-          "url": "https://noon.capital"
+          "source": "explorer",
+          "name": "USNUpgradeableHyperlane implementation (OFTUpgradeable + Hyperlane)",
+          "slug": "sourcify",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata",
+          "bridgeTypes": [
+            "burn-mint",
+            "layerzero-oft",
+            "hyperlane-warp"
+          ],
+          "note": "Verified impl inherits OFTUpgradeable + OAppPreCrimeSimulatorUpgradeable, native burn/mint, plus Hyperlane configureHyperlane/sendTokensViaHyperlane/handle/mailbox. Home chain is burn/mint, not a lockbox adapter."
+        },
+        {
+          "source": "docs",
+          "name": "Hyperlane interchain messaging",
+          "slug": "hyperlane",
+          "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
+          "bridgeTypes": [
+            "warp-route",
+            "external-validated"
+          ],
+          "note": "Dual integration alongside LayerZero; Hyperlane Mailbox dispatch present in contract internals."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Noon official contracts and addresses (USN/sUSN labeled OFT on Sophon + zkSync Era)",
+          "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+        },
+        {
+          "label": "Verified Ethereum USN implementation source (USNUpgradeableHyperlane: OFTUpgradeable + Hyperlane, burn/mint)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
+        },
+        {
+          "label": "Ethereum USN token proxy (TransparentUpgradeableProxy, LayerZero v2 imports)",
+          "url": "https://etherscan.io/address/0xda67b4284609d2d48e5d10cfac411572727dc1ed"
+        },
+        {
+          "label": "zkSync Era USN OFT contract",
+          "url": "https://explorer.zksync.io/address/0x0469d9d1dE0ee58fA1153ef00836B9BbCb84c0B6"
+        },
+        {
+          "label": "Starknet 2025 Year in Review (Noon USN+sUSN deployed via LayerZero OFT to Starknet)",
+          "url": "https://www.starknet.io/blog/starknet-2025-year-in-review/"
         }
       ]
     },
@@ -78350,19 +79049,40 @@
     "collateralQuality": "exotic",
     "custodyModel": "cex",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "UTY is listed on Avalanche and Base, but reviewed YieldPoint/XSY public material does not clearly document whether the cross-chain supply path is canonical, issuer mint/burn, or external bridge infrastructure. The route remains conservative pending source documentation.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "external-lock-mint",
+      "summary": "UTY moves cross-chain via LayerZero's OFT standard in a hub-and-spoke design: Base is the hub holding the canonical UTY/yUTY ERC-7540 vault token, where a ShareOFTAdapter lockbox LOCKS tokens sent cross-chain (not burned); Avalanche and Katana are spoke chains where UTY is a mint/burn OFT against the locked hub balance. Each pathway is verified by at least 2 independent LayerZero DVNs (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind). On-chain confirmed: Base 0xBA515304... is the ERC4626/7540 vault; Avalanche 0xBA515304... (same CREATE2 address) is a LayerZero OFT spoke. Note: the registry's older Avalanche address 0xdbc5192a... is a separate legacy native-mint deployment, distinct from the live OFT spoke.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "docs",
+          "name": "LayerZero (OFT Adapter lockbox on Base hub + mint/burn spoke OFTs)",
+          "slug": "layerzero",
+          "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations",
+          "bridgeTypes": [
+            "oft-adapter-lockbox",
+            "oft-mint-burn"
+          ],
+          "note": "Base ShareOFTAdapter locks the canonical UTY vault token; Avalanche/Katana spoke OFTs mint/burn. Threshold of >=2 independent DVNs per pathway (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind)."
+        }
+      ],
       "sources": [
         {
-          "label": "YieldPoint website",
-          "url": "https://yieldpoint.io/"
+          "label": "YieldPoint docs - bridge operations (OFT send/receive, lock/unlock on hub, named DVNs)",
+          "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
         },
         {
-          "label": "YieldPoint docs",
-          "url": "https://docs.yieldpoint.io/"
+          "label": "YieldPoint docs - tokens and fees (ShareOFTAdapter lockbox model vs spoke mint/burn OFTs)",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/tokens-and-fees"
+        },
+        {
+          "label": "YieldPoint docs - architecture overview (Base hub, Avalanche/Katana spokes, LayerZero, no custom bridge)",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/overview"
+        },
+        {
+          "label": "YieldPoint docs - contract addresses (Base ShareOFTAdapter 0xC6fE7C50...; UTY 0xBA515304... across Base/Avalanche/Katana)",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
         }
       ]
     },
@@ -80009,19 +80729,31 @@
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "VNDC is tracked across Ethereum, Polygon, and BNB Chain, but the reviewed issuer/platform pages do not document a bridge route, source chain, or cross-chain validation model. The multichain route is unresolved and scored as opaque.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "single-chain-or-native",
+      "summary": "VNDC is issued natively and independently on each chain by Jade Labs via owner/whitelist-controlled mint and redeem - the Ethereum contract (VNDCToken, Solidity 0.4.11) uses owner issue()/burn(), and the BSC and Polygon contracts (both TokenVNDC, Solidity 0.8.18, byte-identical source) use mintWhitelist()/withdrawWhitelist(). None of the three deployments contain any OFT, LayerZero/CCIP/Wormhole/Axelar/Hyperlane messaging, lockbox, or bridge interface, and the addresses differ per chain (ruling out a deterministic-CREATE2 omnichain standard). The Polygon deployment is independent issuer mint, not a Polygon PoS bridge-minted token (no deposit/childChainManager/DEPOSITOR_ROLE). Cross-network movement is handled off-chain through the ONUS/VNDC Hub app (redeem on source, reissue on destination), with no autonomous on-chain bridge carrying the durable supply, so this is native multichain issuance rather than an opaque bridge route.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "VNDC website",
-          "url": "https://vndc.io/"
+          "label": "Etherscan VNDC token (VNDCToken ERC-20, owner issue/burn, no OFT/bridge)",
+          "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de"
         },
         {
-          "label": "ONUS issuer platform",
-          "url": "https://goonus.io/en/"
+          "label": "BscScan VNDC token (TokenVNDC BEP-20, owner mintWhitelist/withdrawWhitelist, no bridge)",
+          "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
+        },
+        {
+          "label": "PolygonScan VNDC token (owner-controlled issue() by issuer EOA, per mint-authority review)",
+          "url": "https://polygonscan.com/token/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa"
+        },
+        {
+          "label": "ONUS announcement: VNDC 2.0 on BEP20 and Polygon networks (per-network app deposit/withdraw)",
+          "url": "https://goonus.io/en/announcement-onus-supports-vndc-2-0-bep20-and-polygon-networks/"
+        },
+        {
+          "label": "VNDC blog: What is VNDC 2.0 (multi-network rollout via issuer protocol)",
+          "url": "https://blog.vndc.io/what-is-vndc-2-0-unique-digital-asset-for-the-era-of-on-chain-liquidity"
         }
       ]
     },
@@ -81681,19 +82413,47 @@
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "WEUSD is deployed across multiple EVM chains and Movement, but reviewed PicWe docs describe mint/redeem behavior without enough bridge-control detail to verify whether routes are canonical, issuer-native, or external. The route is kept opaque pending protocol-specific evidence.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "issuer-native-burn-mint",
+      "summary": "WEUSD moves cross-chain via PicWe's own issuer-operated burn-on-source / mint-on-destination route. PicWe's cross-chain-transfer docs state \"Source chain burns, target chain mints\" over a self-built native bridge (\"No Wormhole. No LayerZero. No third-party risk\") with PicWe-operated keepers signing and verifying every cross-chain message. On-chain this is confirmed: the EVM token (identical CREATE2 address 0xdd73... on bsc/base/arbitrum/plume) is a plain ERC20 + AccessControl with no LayerZero/Wormhole/OFT interface, so cross-chain mints flow purely through MINTER_ROLE held by a PicWe admin EOA plus the mint/redeem contract, and on Movement through the weusd_cross_chain_gas cross_mint_role_contract relayer (batchMintWeUSDCrossChain). The durable supply path is therefore issuer-native burn/mint, not an external validated network, canonical bridge, or liquidity route. Trust posture is weak: keeper validation has no published external attestation or audit, control keys are concentrated PicWe EOAs with no multisig/timelock, and the token trades off-peg (~$0.91) under disputed backing.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "probable",
+      "protocols": [
+        {
+          "source": "docs",
+          "name": "PicWe proprietary cross-chain bridge (burn/mint + Keeper Network)",
+          "url": "https://docs.picwe.org/cross-chain-transfer",
+          "bridgeTypes": [
+            "issuer-native-burn-mint"
+          ],
+          "note": "Self-built burn-on-source/mint-on-destination relayer; docs explicitly disclaim LayerZero/Wormhole/CCIP; signed-and-verified messages executed by PicWe keepers/operators."
+        },
+        {
+          "source": "explorer",
+          "name": "Movement weusd_cross_chain_gas relayer (batchMintWeUSDCrossChain)",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources",
+          "bridgeTypes": [
+            "issuer-native-burn-mint"
+          ],
+          "note": "cross_mint_role_contract = 0x86e5136... (active PicWe relayer EOA) gates destination minting on Movement; EVM side uses MINTER_ROLE on identical CREATE2 token 0xdd73... held by PicWe admin EOA + mint/redeem contract 0x5D54...."
+        }
+      ],
       "sources": [
         {
-          "label": "PicWe WEUSD docs",
+          "label": "PicWe cross-chain transfer docs (burn/mint, self-built bridge, signed messages, no LayerZero/Wormhole)",
+          "url": "https://docs.picwe.org/cross-chain-transfer"
+        },
+        {
+          "label": "PicWe What is WEUSD docs (omni-chain native, no bridges)",
           "url": "https://docs.picwe.org/what-is-weusd"
         },
         {
-          "label": "PicWe website",
-          "url": "https://picwe.org/"
+          "label": "Movement Aptos REST — WEUSD weusd_cross_chain_gas / mint resources",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+        },
+        {
+          "label": "BscScan WEUSD token contract (identical CREATE2 EVM address, AccessControl MINTER_ROLE)",
+          "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
         }
       ]
     },
@@ -89075,19 +89835,62 @@
     },
     "custodyModel": "institutional-unregulated",
     "bridgeRouteRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Zoth describes ZeUSD as an omni-chain composable stable token and the registry tracks several chains, but the reviewed source set did not resolve the bridge protocol, validation model, or issuer controls. The route is intentionally marked opaque until Zoth publishes route-level controls.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "tier": "external-lock-mint",
+      "summary": "ZeUSD is issued only on Ethereum as a standard upgradeable ERC20 and bridged via a LayerZero OFT Adapter (lockbox) at 0xBf1060028b212896F799CFbaeA1eD4EEbd060978, which locks canonical ZeUSD on Ethereum (LayerZero Endpoint V2) and mints \"ZeUSD OFT\" representations on Manta, Metis, and Avalanche. The durable cross-chain supply path is a third-party LayerZero lock/mint Adapter, not an issuer-controlled or DVN-reviewed network.",
+      "reviewedAt": "2026-06-21",
+      "reviewer": "Pharos bridge-route re-verification",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "issuer",
+          "name": "LayerZero OFT Adapter (Zoth contract deployments)",
+          "slug": "layerzero",
+          "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "oft-adapter"
+          ],
+          "note": "Zoth docs explicitly list a 'Layer Zero Adapter' on Ethereum (0xBf1060028b212896F799CFbaeA1eD4EEbd060978) and 'ZeUSD OFT' contracts on Manta/Metis/Avalanche; marked as deprecated infrastructure but the documented cross-chain route."
+        },
+        {
+          "source": "explorer",
+          "name": "LayerZero OFTAdapter contract (Etherscan)",
+          "slug": "layerzero",
+          "url": "https://etherscan.io/address/0xBf1060028b212896F799CFbaeA1eD4EEbd060978#code",
+          "bridgeTypes": [
+            "external-lock-mint",
+            "oft-adapter",
+            "lockbox"
+          ],
+          "note": "Inherits OFTAdapter/OFTCore/IOAppCore, references LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, wraps inner ZeUSD via token(); send/quoteSend/lzReceive/setPeer present. Lock-on-Ethereum, mint-on-satellite pattern."
+        },
+        {
+          "source": "explorer",
+          "name": "ZeUSD token (plain upgradeable ERC20, not an OFT)",
+          "slug": "zeusd-token",
+          "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761#code",
+          "bridgeTypes": [
+            "erc20-proxy"
+          ],
+          "note": "ERC1967 proxy over an ERC20Upgradeable/AccessControl/UUPS impl with no LayerZero/OFT messaging functions — confirms the Adapter/lockbox (not native OFT) architecture."
+        }
+      ],
       "sources": [
         {
-          "label": "Zoth ZeUSD docs",
+          "label": "Zoth contract deployments (Layer Zero Adapter + ZeUSD OFT addresses)",
+          "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+        },
+        {
+          "label": "Zoth: ZeUSD omni-chain composable stable token docs",
           "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
         },
         {
-          "label": "Zoth website",
-          "url": "https://zoth.io/"
+          "label": "LayerZero OFTAdapter contract (Etherscan code)",
+          "url": "https://etherscan.io/address/0xBf1060028b212896F799CFbaeA1eD4EEbd060978#code"
+        },
+        {
+          "label": "ZeUSD token contract (Etherscan code — plain ERC20 proxy)",
+          "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761#code"
         }
       ]
     },

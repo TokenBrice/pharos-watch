@@ -145,19 +145,31 @@
   "governanceQuality": "single-entity",
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "USDKG is tracked on Tron and Ethereum, but reviewed issuer pages do not document whether supply is issuer-native on both chains or bridged through a lock/mint route. The bridge-route profile remains opaque pending issuer route-control evidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "single-chain-or-native",
+    "summary": "USDKG has no cross-chain bridge: it is a standalone Tether-style token issued and burned natively on each chain by the issuer (Gold Dollar / OJSC Virtual Asset Issuer) via issue()/redeem() functions, with separate, non-identical contract addresses on Ethereum (0xe820...45e3) and Tron (TXZo12...nwEG). Supply on each chain is independently issuer-minted against gold reserves with no cross-chain dependency, so the route is single-chain-or-native rather than opaque.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "USDKG website",
+        "label": "ConsenSys Diligence — USDKG smart contract audit (Jan 2025): standalone Tether-style token, issue()/redeem() mint/burn by owners, blacklist + destroyBlackFunds, no bridge in scope",
+        "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
+      },
+      {
+        "label": "USDKG official site — lists separate Ethereum and Tron addresses, no bridge/cross-chain mechanism documented; direct mint/redeem for institutional clients only",
         "url": "https://www.usdkg.com/"
       },
       {
-        "label": "USDKG transparency",
+        "label": "USDKG transparency page — Kreston Global reserve audit confirming issuer controls mint/burn wallets with test transactions on Ethereum and Tron",
         "url": "https://www.usdkg.com/transparency"
+      },
+      {
+        "label": "USDKG Ethereum token on Etherscan — non-upgradeable ERC-20, owner is 3-of-7 multisig, issue()/redeem() mint/burn",
+        "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
+      },
+      {
+        "label": "CryptoBriefing — Kyrgyzstan launches USDKG, Tron-first deployment with Ethereum next phase, supply growth via additional gold + minting",
+        "url": "https://cryptobriefing.com/kyrgyzstan-usdkg-gold-backed-stablecoin-tron/"
       }
     ]
   },

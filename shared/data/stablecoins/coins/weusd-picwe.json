@@ -67,19 +67,43 @@
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "WEUSD is deployed across multiple EVM chains and Movement, but reviewed PicWe docs describe mint/redeem behavior without enough bridge-control detail to verify whether routes are canonical, issuer-native, or external. The route is kept opaque pending protocol-specific evidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "issuer-native-burn-mint",
+    "summary": "WEUSD moves cross-chain via PicWe's own issuer-operated burn-on-source / mint-on-destination route. PicWe's cross-chain-transfer docs state \"Source chain burns, target chain mints\" over a self-built native bridge (\"No Wormhole. No LayerZero. No third-party risk\") with PicWe-operated keepers signing and verifying every cross-chain message. On-chain this is confirmed: the EVM token (identical CREATE2 address 0xdd73... on bsc/base/arbitrum/plume) is a plain ERC20 + AccessControl with no LayerZero/Wormhole/OFT interface, so cross-chain mints flow purely through MINTER_ROLE held by a PicWe admin EOA plus the mint/redeem contract, and on Movement through the weusd_cross_chain_gas cross_mint_role_contract relayer (batchMintWeUSDCrossChain). The durable supply path is therefore issuer-native burn/mint, not an external validated network, canonical bridge, or liquidity route. Trust posture is weak: keeper validation has no published external attestation or audit, control keys are concentrated PicWe EOAs with no multisig/timelock, and the token trades off-peg (~$0.91) under disputed backing.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "PicWe proprietary cross-chain bridge (burn/mint + Keeper Network)",
+        "url": "https://docs.picwe.org/cross-chain-transfer",
+        "bridgeTypes": ["issuer-native-burn-mint"],
+        "note": "Self-built burn-on-source/mint-on-destination relayer; docs explicitly disclaim LayerZero/Wormhole/CCIP; signed-and-verified messages executed by PicWe keepers/operators."
+      },
+      {
+        "source": "explorer",
+        "name": "Movement weusd_cross_chain_gas relayer (batchMintWeUSDCrossChain)",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources",
+        "bridgeTypes": ["issuer-native-burn-mint"],
+        "note": "cross_mint_role_contract = 0x86e5136... (active PicWe relayer EOA) gates destination minting on Movement; EVM side uses MINTER_ROLE on identical CREATE2 token 0xdd73... held by PicWe admin EOA + mint/redeem contract 0x5D54...."
+      }
+    ],
     "sources": [
       {
-        "label": "PicWe WEUSD docs",
+        "label": "PicWe cross-chain transfer docs (burn/mint, self-built bridge, signed messages, no LayerZero/Wormhole)",
+        "url": "https://docs.picwe.org/cross-chain-transfer"
+      },
+      {
+        "label": "PicWe What is WEUSD docs (omni-chain native, no bridges)",
         "url": "https://docs.picwe.org/what-is-weusd"
       },
       {
-        "label": "PicWe website",
-        "url": "https://picwe.org/"
+        "label": "Movement Aptos REST — WEUSD weusd_cross_chain_gas / mint resources",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+      },
+      {
+        "label": "BscScan WEUSD token contract (identical CREATE2 EVM address, AccessControl MINTER_ROLE)",
+        "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
       }
     ]
   },
