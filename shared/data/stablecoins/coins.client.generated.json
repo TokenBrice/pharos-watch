@@ -13679,7 +13679,7 @@
     "id": "msusd-main-street",
     "name": "Main Street USD",
     "symbol": "MSUSD",
-    "oneLiner": "msUSD is Main Street's USDC-backed dollar stablecoin minted 1:1 by KYC-verified users; delta-neutral options yield accrues separately via the msY token.",
+    "oneLiner": "msUSD is Main Street's dollar token; redemptions target USDC but are capacity-limited and currently carry unresolved reserve-verification risk.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -13688,18 +13688,17 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-usd",
     "launchDate": "2025-06-08",
     "reserves": [
       {
-        "name": "USDC backing for unstaked msUSD",
+        "name": "Unverified Main Street redemption reserve and strategy liquidity",
         "pct": 100,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "very-high"
       }
     ],
-    "collateralQuality": "rwa",
+    "collateralQuality": "exotic",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
@@ -13729,8 +13728,7 @@
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
-    },
-    "liveReserveAdapter": "single-asset"
+    }
   },
   {
     "id": "msusd-metronome",
@@ -13815,7 +13813,7 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-yield",
     "variantOf": "msusd-main-street",
     "variantKind": "strategy-vault",

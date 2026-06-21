@@ -186,6 +186,74 @@ describe("decideDepegAsset", () => {
     });
   });
 
+  it("opens a fresh independent multi-source extreme move for non-large-cap assets", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        id: "msusd-main-street",
+        symbol: "msUSD",
+        price: 0.2,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"],
+        priceUpdatedAt: 1_750_000_000 - 60,
+        circulating: { ethereum: 20_000_000 },
+      }),
+      meta: {
+        ...usdMeta,
+        id: "msusd-main-street",
+        name: "Main Street USD",
+        symbol: "msUSD",
+        geckoId: "main-street-usd",
+      },
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.trackedCoinId).toBe("msusd-main-street");
+    expect(decision.commands).toHaveLength(1);
+    expect(decision.commands[0]).toMatchObject({
+      type: "insert-live",
+      event: {
+        stablecoinId: "msusd-main-street",
+        direction: "below",
+        peakDeviationBps: -8000,
+        startPrice: 0.2,
+      },
+    });
+    expect(decision.diagnostics).toHaveLength(0);
+  });
+
+  it("keeps same-family extreme moves pending even when two source labels agree", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        price: 0.2,
+        priceSource: "coingecko+coingecko-low-volume",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "coingecko-low-volume"],
+        priceUpdatedAt: 1_750_000_000 - 60,
+        circulating: { ethereum: 20_000_000 },
+      }),
+      meta: usdMeta,
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.commands).toHaveLength(1);
+    expect(decision.commands[0]).toMatchObject({
+      type: "upsert-pending",
+      payload: {
+        stablecoinId: "usdt-tether",
+        direction: "below",
+        bps: -8000,
+        reason: "extreme-move+low-confidence",
+      },
+    });
+  });
+
   it("suppresses a live mutation when the native quote shows recovery", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,

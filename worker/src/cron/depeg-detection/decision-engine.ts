@@ -24,6 +24,7 @@ import {
 } from "../../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
+  getPrimaryDepegSourceFamilies,
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
   isTrustedDexPriceRow,
@@ -70,6 +71,7 @@ interface DecisionContext {
   dexSupportsSecondaryBarDirection: boolean;
   dexSupportsRecovery: boolean;
   primarySupportsRecovery: boolean;
+  primaryCorroboratesExtremeMove: boolean;
   requiresConfirmation: boolean;
   pendingReason: PendingDepegReason;
   nativeSignal: DepegSignal | null;
@@ -403,6 +405,11 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const primarySupportsRecovery =
     primaryTrust === "authoritative" ||
     hasFreshMultiSourcePrimaryAgreement(asset, now);
+  const primaryCorroboratesExtremeMove =
+    absBps >= DEPEG_EXTREME_MOVE_BPS &&
+    !tieredMarketCapRequiresConfirmation &&
+    hasFreshMultiSourcePrimaryAgreement(asset, now) &&
+    getPrimaryDepegSourceFamilies(asset).size >= 2;
   const reasonFlags: PendingDepegReasonFlag[] = [];
   if (absBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
   if (tieredMarketCapRequiresConfirmation) reasonFlags.push("large-cap");
@@ -438,6 +445,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       dexSupportsSecondaryBarDirection,
       dexSupportsRecovery,
       primarySupportsRecovery,
+      primaryCorroboratesExtremeMove,
       requiresConfirmation,
       pendingReason,
       nativeSignal,
@@ -613,6 +621,7 @@ function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "tracked
     dexAbsBps,
     dexSupportsDirection,
     dexSupportsRecovery,
+    primaryCorroboratesExtremeMove,
     requiresConfirmation,
     pendingReason,
   } = ctx;
@@ -630,7 +639,7 @@ function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "tracked
   }
 
   if (requiresConfirmation) {
-    if (isExtremeMovePending(pendingReason) && dexSupportsDirection) {
+    if (isExtremeMovePending(pendingReason) && (dexSupportsDirection || primaryCorroboratesExtremeMove)) {
       commands.push(buildLiveEventCommand(asset, now, direction, bps, ctx.price, pegRef));
     } else {
       commands.push(buildPendingCommand(asset, now, direction, bps, ctx.price, pegRef, pendingReason));

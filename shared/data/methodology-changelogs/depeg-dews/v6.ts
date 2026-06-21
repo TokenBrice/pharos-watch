@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.093",
+    title: "Independent primary-family severe moves can open immediately",
+    date: "2026-06-21",
+    effectiveAt: 1782000000,
+    summary:
+      "Non-large-cap extreme depeg moves no longer have to wait in pending confirmation when the current primary price is fresh and already spans independent source families.",
+    impact: [
+      "Single-source or same-family extreme prints still route through `depeg_pending` before public event creation",
+      "Fresh severe moves with at least two independent primary depeg source families, such as CoinGecko plus DefiLlama, can open a live event immediately below the $1B large-cap floor",
+      "Large-cap assets still require the existing pending-confirmation path even when the severe move is multi-source",
+      "The change prevents confirmed small- and mid-cap crashes from being hidden until DEX confirmation catches up",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.092",
     title: "Pool-challenged recoveries keep active depegs open",
     date: "2026-06-19",

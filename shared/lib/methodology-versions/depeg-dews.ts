@@ -7,7 +7,7 @@ import { DEPEG_DEWS_V6 } from "../../data/methodology-changelogs/depeg-dews/v6";
 import { createMethodologyVersion } from "./base";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "6.092",
+  currentVersion: "6.093",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
     ...DEPEG_DEWS_V6,

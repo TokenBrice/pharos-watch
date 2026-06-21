@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.092`
+- **Current methodology version:** `v6.093`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -178,7 +178,7 @@ direction = bps >= 0 ? "above" : "below"
 - If a supported direct native-peg quote is back inside threshold or shows the opposite side of the peg: suppress the new event for this cycle
 - If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific)
 - If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
-- If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement may still promote the move immediately for non-large-cap coins
+- If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement, or a fresh primary cluster spanning at least two independent depeg source families, may still promote the move immediately for non-large-cap coins
 - Otherwise (authoritative primary input, non-large-cap, non-extreme): use corroborated trusted DEX recovery suppression and insert into `depeg_events` immediately
 
 Whenever a row is written to `depeg_pending`, the worker now upserts directional state instead of treating the table as write-once:
@@ -307,7 +307,9 @@ Price crosses threshold
         |         |
         |         +-- Otherwise --> INSERT depeg_events (source='live')
         |
-        +-- Supply >= $1B, low-confidence primary, or extreme move --> INSERT depeg_pending
+        +-- Non-large-cap extreme move with fresh independent primary families --> INSERT depeg_events
+        |
+        +-- Supply >= $1B, low-confidence primary, or uncorroborated extreme move --> INSERT depeg_pending
                                                      |
                                           (next cycle, 15+ min later)
                                                      |

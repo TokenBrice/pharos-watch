@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.092` (2026-02-18 -> 2026-06-19).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.093` (2026-02-18 -> 2026-06-21).
+
+---
+
+## v6.093 — Independent primary-family severe moves can open immediately (Jun 21, 2026)
+
+Non-large-cap extreme depeg moves no longer have to wait in pending confirmation when the current primary price is fresh and already spans independent source families.
+
+- Single-source or same-family extreme prints still route through `depeg_pending` before public event creation
+- Fresh severe moves with at least two independent primary depeg source families, such as CoinGecko plus DefiLlama, can open a live event immediately below the $1B large-cap floor
+- Large-cap assets still require the existing pending-confirmation path even when the severe move is multi-source
+- The change prevents confirmed small- and mid-cap crashes from being hidden until DEX confirmation catches up
 
 ---
 

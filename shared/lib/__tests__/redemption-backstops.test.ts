@@ -141,7 +141,10 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("msusd-main-street")).toMatchObject({
       routeFamily: "stablecoin-redeem",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      accessModel: "whitelisted-onchain",
+      settlementModel: "days",
+      executionModel: "rules-based-nav",
+      capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "documented-bound" },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });

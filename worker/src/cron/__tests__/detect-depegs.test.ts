@@ -843,6 +843,38 @@ describe("detectDepegEvents", () => {
     expect(pending.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("opens fresh independent multi-source extreme downside moves below the large-cap floor", async () => {
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    const now = Math.floor(Date.now() / 1000);
+    const assets = [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 0.2,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"],
+        priceUpdatedAt: now - 60,
+        circulating: { ethereum: 20_000_000 },
+      }),
+    ];
+
+    await detectDepegEvents(db, assets);
+
+    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_events"))).toBe(true);
+    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_pending"))).toBe(false);
+  });
+
   it("allows legitimate depeg prices within bounds", async () => {
     const preparedSqls: string[] = [];
     const db = mockD1([

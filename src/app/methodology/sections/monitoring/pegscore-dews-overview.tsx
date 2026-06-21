@@ -36,6 +36,9 @@ export function PegScoreDewsOverview() {
             Pending confirmation chooses off-chain confirmers by source family from the primary <code className="mx-1 text-xs">agreeSources</code> set. CoinGecko-family primary evidence cannot be confirmed by CoinGecko again, DefiLlama-family evidence cannot be confirmed by DefiLlama again, and promoted rows store canonical keys such as <code className="mx-1 text-xs">coingecko-confirm</code>, <code className="mx-1 text-xs">dex:curve</code>, and <code className="mx-1 text-xs">pool:curve:gecko_terminal</code> for auditability.
           </p>
           <p>
+            Extreme moves of 50% or more still use the confirmation lane for large-cap assets and for single-source or same-family evidence. For non-large-cap assets, a fresh primary cluster that already spans independent source families can open the live event immediately, so severe confirmed crashes are not hidden while DEX confirmation catches up.
+          </p>
+          <p>
             Thin non-USD fiat peg groups also fail closed when the live peg reference would have to rely on a 1&ndash;2 coin peer median or an empty peer set instead of cached FX. The same authority gate covers the displayed deviation: while the reference is too thin to verify, peg surfaces report the current deviation as reference unavailable instead of quoting a self-referential number. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
           </p>
           <p>

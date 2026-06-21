@@ -2,7 +2,7 @@
   "id": "msusd-main-street",
   "name": "Main Street USD",
   "symbol": "MSUSD",
-  "oneLiner": "msUSD is Main Street's USDC-backed dollar stablecoin minted 1:1 by KYC-verified users; delta-neutral options yield accrues separately via the msY token.",
+  "oneLiner": "msUSD is Main Street's dollar token; redemptions target USDC but are capacity-limited and currently carry unresolved reserve-verification risk.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,9 +11,9 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
-  "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
-  "mechanismArchetype": "fiat-cash",
+  "collateral": "Main Street docs describe msUSD mint/redemption against USDC, but redemption capacity can be limited while positions are unwound and assets are converted; Pharos no longer treats the public wallet balance as verified USDC backing.",
+  "pegMechanism": "Verified users may request USDC redemption after the protocol cooldown, subject to dynamic capacity. The msY staking token is modeled separately as a strategy vault, but msUSD reserve segregation is not independently verified here.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "297",
   "detailProvider": "defillama",
   "geckoId": "main-street-usd",
@@ -185,37 +185,21 @@
       }
     ]
   },
-  "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "USDC backing for unstaked msUSD",
+      "name": "Unverified Main Street redemption reserve and strategy liquidity",
       "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "very-high"
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "msusd-main-street",
-    "display": {
-      "url": "https://mainstreet.finance/",
-      "label": "Main Street Finance"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "USDC backing for unstaked msUSD",
-      "risk": "low",
-      "coinId": "usdc-circle"
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Reserve segregation unverified",
+      "message": "Main Street describes msUSD redemptions to USDC, but public verification is not sufficient for Pharos to treat unstaked msUSD as fully segregated USDC backing. Redemptions may depend on capacity, cooldowns, asset conversion, and strategy unwinds."
     }
-  },
+  ],
   "launchDate": "2025-06-08"
 }
