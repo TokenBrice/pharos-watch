@@ -17,6 +17,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import type { StablecoinMeta } from "../../shared/types";
 
@@ -374,6 +375,10 @@ async function main(): Promise<void> {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+export function isDirectRun(moduleUrl: string, argvPath: string | undefined): boolean {
+  return argvPath != null && moduleUrl === pathToFileURL(argvPath).href;
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
   void main();
 }
