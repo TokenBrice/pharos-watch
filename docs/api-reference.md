@@ -3130,7 +3130,7 @@ Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 | `stablecoin` | `string`  | —       | Single coin mode: return latest + daily history |
 | `days`       | `integer` | `30`    | History lookback (max 365)                      |
 
-Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage. The aggregate response keeps `updatedAt` as the newest returned current row, but `X-Data-Age` / `Warning` freshness headers are based on `oldestComputedAt` so a stale per-coin row cannot be hidden by fresher rows for other coins.
+Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage. The aggregate response keeps `updatedAt` as the newest returned current row, and `X-Data-Age` / `Warning` freshness headers use that aggregate generation timestamp. `oldestComputedAt` remains a body-only lag diagnostic for consumers that need per-coin retained-last-valid detection.
 
 **Response (all coins)**
 
