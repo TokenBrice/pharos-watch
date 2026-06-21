@@ -3,8 +3,12 @@ import { getYieldDataSourceLabel } from "@/lib/yield-data-source";
 import {
   YIELD_SOURCE_CONFIDENCE_ORDER,
   classifyYieldSourceDepth,
+  classifyYieldSourcePosture,
+  getYieldSourceRiskDrivers,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
+  type YieldSourcePosture,
+  type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import type {
@@ -20,6 +24,7 @@ export { YIELD_SOURCE_CONFIDENCE_ORDER, type YieldSourceConfidenceTier };
 
 export type YieldSourceConfidenceCounts = Record<YieldSourceConfidenceTier, number>;
 export type YieldSourceDepthCounts = Record<YieldSourceDepthLens, number>;
+export type YieldSourcePostureCounts = Record<YieldSourcePosture, number>;
 
 export interface YieldSourceBoardApySummary {
   min: number;
@@ -30,6 +35,11 @@ export interface YieldSourceBoardApySummary {
 export interface YieldSourceBoardLabelCount {
   label: string;
   count: number;
+}
+
+export interface YieldSourceBoardRiskDriverCount extends YieldSourceBoardLabelCount {
+  key: YieldSourceRiskDriver["key"];
+  description: string;
 }
 
 export interface YieldSourceBoardGroup {
@@ -89,6 +99,8 @@ export interface YieldSourceBoardModel {
   selectedConfidenceCounts: YieldSourceConfidenceCounts;
   selectedConfidenceUnknownCount: number;
   depthCounts: YieldSourceDepthCounts;
+  postureCounts: YieldSourcePostureCounts;
+  topSourceRiskDrivers: YieldSourceBoardRiskDriverCount[];
   sourceSwitchCount: number;
   anomalyCount: number;
   sourceSwitchDetails: YieldSourceBoardSourceSwitchDetail[];
@@ -141,6 +153,14 @@ function emptyDepthCounts(): YieldSourceDepthCounts {
   };
 }
 
+function emptyPostureCounts(): YieldSourcePostureCounts {
+  return {
+    clean: 0,
+    watch: 0,
+    speculative: 0,
+  };
+}
+
 function addCount(map: Map<string, number>, key: string) {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
@@ -162,6 +182,14 @@ function summarizeApy(values: readonly number[]): YieldSourceBoardApySummary | n
 function sortedLabelCounts(labelCounts: Map<string, number>): YieldSourceBoardLabelCount[] {
   return Array.from(labelCounts.entries())
     .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+function sortedRiskDriverCounts(
+  driverCounts: Map<YieldSourceRiskDriver["key"], { label: string; count: number; description: string }>,
+): YieldSourceBoardRiskDriverCount[] {
+  return Array.from(driverCounts.entries())
+    .map(([key, value]) => ({ key, ...value }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
@@ -220,7 +248,13 @@ export function buildYieldSourceBoardModel(
 ): YieldSourceBoardModel {
   const selectedConfidenceCounts = emptyConfidenceCounts();
   const depthCounts = emptyDepthCounts();
+  const postureCounts = emptyPostureCounts();
   const benchmarkLabelCounts = new Map<string, number>();
+  const sourceRiskDriverCounts = new Map<YieldSourceRiskDriver["key"], {
+    label: string;
+    count: number;
+    description: string;
+  }>();
   const groupMap = new Map<string, MutableGroup>();
   const sourceRowApyValues: number[] = [];
   const representedDataSources = new Set<string>();
@@ -240,10 +274,32 @@ export function buildYieldSourceBoardModel(
     if (confidenceTier) selectedConfidenceCounts[confidenceTier] += 1;
     else selectedConfidenceUnknownCount += 1;
 
-    depthCounts[classifyYieldSourceDepth({
+    const sourceDepthLens = classifyYieldSourceDepth({
       sourceRisk: ranking.sourceRisk,
       sourceTvlUsd: ranking.sourceTvlUsd,
+    });
+    depthCounts[sourceDepthLens] += 1;
+    postureCounts[classifyYieldSourcePosture({
+      sourceRisk: ranking.sourceRisk,
+      sourceTvlUsd: ranking.sourceTvlUsd,
+      sourceDepthLens,
+      sourceChanged: ranking.provenance?.sourceSwitch ?? false,
+      warningSignals: ranking.warningSignals,
     })] += 1;
+
+    for (const driver of getYieldSourceRiskDrivers({
+      sourceRisk: ranking.sourceRisk,
+      sourceChanged: ranking.provenance?.sourceSwitch ?? false,
+      warningSignals: ranking.warningSignals,
+    })) {
+      const existing = sourceRiskDriverCounts.get(driver.key);
+      if (existing) existing.count += 1;
+      else sourceRiskDriverCounts.set(driver.key, {
+        label: driver.label,
+        count: 1,
+        description: driver.description,
+      });
+    }
 
     const yieldTypeLabel = YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType;
     const dataSourceLabel = getYieldDataSourceLabel(ranking.dataSource);
@@ -335,6 +391,8 @@ export function buildYieldSourceBoardModel(
     selectedConfidenceCounts,
     selectedConfidenceUnknownCount,
     depthCounts,
+    postureCounts,
+    topSourceRiskDrivers: sortedRiskDriverCounts(sourceRiskDriverCounts).slice(0, 4),
     sourceSwitchCount,
     anomalyCount,
     sourceSwitchDetails,

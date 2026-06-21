@@ -87,6 +87,7 @@ describe("buildYieldViewModel", () => {
       sourceConfidence: "fallback",
       benchmark: "JPY",
       opportunity: "venue",
+      sourcePosture: "reckless",
     });
 
     expect(model.filters).toMatchObject({
@@ -98,6 +99,7 @@ describe("buildYieldViewModel", () => {
       sourceConfidence: "all",
       benchmark: "all",
       opportunity: "all",
+      sourcePosture: "all",
     });
     expect(model.invalidParamKeys).toEqual([
       "peg",
@@ -108,6 +110,7 @@ describe("buildYieldViewModel", () => {
       "sourceConfidence",
       "benchmark",
       "opportunity",
+      "sourcePosture",
     ]);
     expect(model.visibleRows).toHaveLength(3);
   });
@@ -261,6 +264,68 @@ describe("buildYieldViewModel", () => {
       "eurc-circle",
       "usdt-tether",
     ]);
+  });
+
+  it("filters by source posture with watch as a clean-or-watch cap", () => {
+    const postureRows = [
+      makeYieldRanking({
+        id: "clean-row",
+        symbol: "CLN",
+        sourceRisk: {
+          sourceRiskPenalty: 1.05,
+          sourceDepthRatio: 0.005,
+          sourceAgeSeconds: 60,
+          venueRiskTier: "low",
+        },
+        sourceTvlUsd: 10_000_000,
+        warningSignals: [],
+        provenance: makeYieldProvenance({ sourceSwitch: false }),
+      }),
+      makeYieldRanking({
+        id: "watch-row",
+        symbol: "WCH",
+        sourceRisk: {
+          sourceRiskPenalty: 1.15,
+          sourceDepthRatio: 0.005,
+          sourceAgeSeconds: 60,
+          venueRiskTier: "medium",
+        },
+        sourceTvlUsd: 10_000_000,
+        warningSignals: [],
+        provenance: makeYieldProvenance({ sourceSwitch: false }),
+      }),
+      makeYieldRanking({
+        id: "spec-row",
+        symbol: "SPC",
+        sourceRisk: {
+          sourceRiskPenalty: 1.4,
+          sourceDepthRatio: 0.0005,
+          sourceAgeSeconds: 60,
+          venueRiskTier: "unknown",
+        },
+        sourceTvlUsd: 10_000_000,
+        warningSignals: [],
+        provenance: makeYieldProvenance({ sourceSwitch: false }),
+      }),
+    ];
+
+    const clean = buildYieldViewModel(postureRows, { sourcePosture: "clean" });
+    expect(clean.visibleRows.map((row) => row.id)).toEqual(["clean-row"]);
+    expect(clean.comparisonLabel).toBe("Clean source posture");
+
+    const watch = buildYieldViewModel(postureRows, { sourcePosture: "watch" });
+    expect(watch.visibleRows.map((row) => row.id)).toEqual(["clean-row", "watch-row"]);
+    expect(watch.comparisonLabel).toBe("Clean/watch source posture");
+
+    const speculative = buildYieldViewModel(postureRows, { sourcePosture: "speculative" });
+    expect(speculative.visibleRows.map((row) => row.id)).toEqual(["spec-row"]);
+    expect(speculative.options.sourcePosture).toEqual([
+      { value: "all", label: "All postures", count: 3 },
+      { value: "clean", label: "Clean", count: 1 },
+      { value: "watch", label: "Clean + watch", count: 2 },
+      { value: "speculative", label: "Speculative", count: 1 },
+    ]);
+    expect(speculative.visibleRows[0]?.sourcePosture).toBe("speculative");
   });
 
   it("filters rising rows by current vs 30d APY with observation floor", () => {
@@ -423,6 +488,7 @@ describe("buildYieldViewModel", () => {
     const conservative = buildYieldViewModel(rows, {
       minSafety: "80",
       depth: "hide-thin",
+      sourcePosture: "clean",
       warnings: "hide",
     });
     expect(conservative.riskBudget.matching).toBe("conservative");
@@ -430,6 +496,7 @@ describe("buildYieldViewModel", () => {
     const balanced = buildYieldViewModel(rows, {
       minSafety: "70",
       depth: "hide-thin",
+      sourcePosture: "watch",
       warnings: "hide",
     });
     expect(balanced.riskBudget.matching).toBe("balanced");

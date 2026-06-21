@@ -13,7 +13,7 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
-import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
+import { YIELD_SOURCE_DEPTH_DEFINITIONS, formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
 import type {
   YieldSourceConfidenceStyle,
   YieldSourceFreshnessLabel,
@@ -244,6 +244,7 @@ export function YieldSourceDetails({
   freshness: YieldSourceFreshnessLabel | null;
 }) {
   const depth = YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens];
+  const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
   return (
     <div className="min-w-0 text-sm text-muted-foreground" title={row.provenance?.selectionReason ?? row.yieldSource}>
       {/* Line 1: confidence dot · source name · source-changed chip · compact risk bar */}
@@ -270,6 +271,12 @@ export function YieldSourceDetails({
           it stays in the APY cell, the PYS tooltip, the expanded panel, and the
           page-level Reference Rates strip. */}
       <div className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+        {sourceRiskSummary ? (
+          <>
+            <span className="font-medium text-amber-700 dark:text-amber-300">{sourceRiskSummary}</span>
+            <span aria-hidden="true">·</span>
+          </>
+        ) : null}
         {freshness ? (
           <>
             <Tooltip>

@@ -50,6 +50,7 @@ describe("YieldSourceBoard", () => {
     expect(screen.getByText(/Counts every chosen source plus retained alternates/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: /1 source changed/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /1 chosen source with anomalies/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^source changed: 1 row$/i })).toBeTruthy();
 
     const laneList = screen.getByRole("list", { name: "Yield source lanes" });
     expect(within(laneList).getAllByRole("listitem").length).toBe(model.groups.length);
@@ -111,6 +112,8 @@ describe("YieldSourceBoard", () => {
     ]);
 
     expect(screen.getByText(/1 deterministic · 2 curated/)).toBeTruthy();
+    expect(screen.getByRole("group", { name: /Source posture mix:/i })).toBeTruthy();
+    expect(screen.getByText(/3 watch/)).toBeTruthy();
   });
 
   it("hides confidence and depth bars when there are no counts to show", () => {
@@ -122,12 +125,16 @@ describe("YieldSourceBoard", () => {
       selectedConfidenceCounts: { deterministic: 0, curated: 0, discovered: 0, fallback: 0 },
       selectedConfidenceUnknownCount: 0,
       depthCounts: { deep: 0, moderate: 0, thin: 0, unknown: 0 },
+      postureCounts: { clean: 0, watch: 0, speculative: 0 },
+      topSourceRiskDrivers: [],
     };
 
     render(<YieldSourceBoard model={zeroModel} />);
 
     expect(screen.queryByRole("group", { name: /Confidence tier mix/i })).toBeNull();
     expect(screen.queryByRole("group", { name: /Depth mix/i })).toBeNull();
+    expect(screen.queryByRole("group", { name: /Source posture mix/i })).toBeNull();
+    expect(screen.getByText(/No populated source-risk drivers/i)).toBeTruthy();
   });
 
   it("does not render an empty board", () => {

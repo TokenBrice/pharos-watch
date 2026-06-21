@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyYieldSourcePosture,
   classifyYieldSourceDepth,
   classifyYieldSourceFreshness,
+  formatYieldSourceRiskSummary,
   formatYieldSourceRiskDriverSummary,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
@@ -50,6 +52,75 @@ describe("yield source risk UI helpers", () => {
 
     // Unknown/low venue with no concentration is a no-op.
     expect(getYieldSourceRiskDrivers({ sourceRisk: { venueRiskTier: "unknown" } })).toEqual([]);
+  });
+
+  it("classifies source posture from source-risk, warnings, and provenance evidence", () => {
+    expect(classifyYieldSourcePosture({
+      sourceRisk: {
+        sourceRiskPenalty: 1.05,
+        sourceDepthRatio: 0.005,
+        sourceAgeSeconds: 60,
+        venueRiskTier: "low",
+      },
+      sourceTvlUsd: 10_000_000,
+    })).toBe("clean");
+
+    expect(classifyYieldSourcePosture({
+      sourceRisk: {
+        sourceRiskPenalty: 1.15,
+        sourceDepthRatio: 0.005,
+        sourceAgeSeconds: 60,
+        venueRiskTier: "unknown",
+      },
+      sourceTvlUsd: 10_000_000,
+    })).toBe("watch");
+
+    expect(classifyYieldSourcePosture({
+      sourceRisk: {
+        sourceRiskPenalty: 1,
+        sourceDepthRatio: 0.005,
+        sourceAgeSeconds: 60,
+        venueRiskTier: "high",
+      },
+      sourceTvlUsd: 10_000_000,
+    })).toBe("speculative");
+
+    expect(classifyYieldSourcePosture({
+      sourceRisk: {
+        sourceRiskPenalty: 1,
+        sourceDepthRatio: 0.005,
+        sourceAgeSeconds: 60,
+        venueRiskTier: "unknown",
+      },
+      sourceTvlUsd: 10_000_000,
+      sourceChanged: true,
+    })).toBe("watch");
+  });
+
+  it("uses source warning signals as posture drivers without treating unknown venue tier as high risk", () => {
+    expect(classifyYieldSourcePosture({
+      sourceRisk: { venueRiskTier: "unknown", sourceRiskPenalty: 1, sourceDepthRatio: 0.005, sourceAgeSeconds: 60 },
+      sourceTvlUsd: 10_000_000,
+      warningSignals: [],
+    })).toBe("watch");
+
+    expect(classifyYieldSourcePosture({
+      sourceRisk: { venueRiskTier: "unknown", sourceRiskPenalty: 1, sourceDepthRatio: 0.005, sourceAgeSeconds: 60 },
+      sourceTvlUsd: 10_000_000,
+      warningSignals: ["reward-heavy"],
+    })).toBe("speculative");
+
+    expect(getYieldSourceRiskDrivers({
+      sourceRisk: { venueRiskTier: "unknown" },
+      warningSignals: ["data-stale"],
+    }).map((driver) => driver.key)).toEqual(["stale-source"]);
+  });
+
+  it("formats material source-risk summaries for compact row cells", () => {
+    expect(formatYieldSourceRiskSummary({ sourceRiskScore: 42, sourceRiskPenalty: 1.32 })).toBe(
+      "Source risk 42/100 | 1.32x",
+    );
+    expect(formatYieldSourceRiskSummary({ sourceRiskScore: 2, sourceRiskPenalty: 1.01 })).toBeNull();
   });
 
   it("flags low/partial venue-score confidence without discounting the penalty", () => {

@@ -6,6 +6,7 @@ import type {
   YieldPegFilter,
   YieldSourceChangedFilter,
   YieldSourceConfidenceFilter,
+  YieldSourcePostureFilter,
   YieldTrendingFilter,
   YieldViewModelUrlParams,
   YieldViewModelFilters,
@@ -25,6 +26,7 @@ interface YieldViewModelOptions {
   opportunity: YieldFilterOption[];
   depth: YieldFilterOption[];
   sourceChanged: YieldFilterOption[];
+  sourcePosture: YieldFilterOption[];
 }
 
 function normalizeTextParam(value: string | null | undefined): string {
@@ -62,6 +64,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
   const validOpportunities = new Set(options.opportunity.map((option) => option.value));
   const validDepth = new Set(options.depth.map((option) => option.value));
   const validSourceChanged = new Set(options.sourceChanged.map((option) => option.value));
+  const validSourcePosture = new Set(options.sourcePosture.map((option) => option.value));
   const validTrending = new Set<YieldTrendingFilter>(["all", "rising"]);
   const validWatchlist = new Set<YieldWatchlistFilter>(["all", "only"]);
 
@@ -77,6 +80,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
     opportunity: normalizeOption(params.opportunity, validOpportunities, DEFAULT_FILTERS.opportunity) as YieldOpportunityFilter,
     depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth) as YieldDepthFilter,
     sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged) as YieldSourceChangedFilter,
+    sourcePosture: normalizeOption(params.sourcePosture, validSourcePosture, DEFAULT_FILTERS.sourcePosture) as YieldSourcePostureFilter,
     trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
     watchlist: normalizeOption(params.watchlist, validWatchlist, DEFAULT_FILTERS.watchlist),
   };
@@ -93,6 +97,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
     opportunity: filters.opportunity === DEFAULT_FILTERS.opportunity ? null : filters.opportunity,
     depth: filters.depth === DEFAULT_FILTERS.depth ? null : filters.depth,
     sourceChanged: filters.sourceChanged === DEFAULT_FILTERS.sourceChanged ? null : filters.sourceChanged,
+    sourcePosture: filters.sourcePosture === DEFAULT_FILTERS.sourcePosture ? null : filters.sourcePosture,
     trending: filters.trending === DEFAULT_FILTERS.trending ? null : filters.trending,
     watchlist: filters.watchlist === DEFAULT_FILTERS.watchlist ? null : filters.watchlist,
   };

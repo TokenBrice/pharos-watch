@@ -21,6 +21,7 @@ import {
   type StressSignalsAllResponse,
   type StressSignalDetailResponse,
   type UsdsStatusResponse,
+  type YieldAdapterManifestResponse,
   type YieldHistoryResponse,
   type YieldRankingsResponse,
 } from "@shared/types";
@@ -256,6 +257,12 @@ export function useYieldHistory(
 export function useYieldRankings() {
   return useRegisteredApiQueryWithMeta<YieldRankingsResponse>(
     FRONTEND_API_QUERY_REGISTRY.yieldRankings,
+  );
+}
+
+export function useYieldAdapterManifest() {
+  return useRegisteredApiQueryWithMeta<YieldAdapterManifestResponse>(
+    FRONTEND_API_QUERY_REGISTRY.yieldAdapterManifest,
   );
 }
 

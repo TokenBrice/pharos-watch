@@ -34,6 +34,7 @@ import {
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   classifyYieldSourceFreshness,
+  formatYieldSourceRiskSummary,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
@@ -356,6 +357,7 @@ export function YieldMobileCard({
   const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
   const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
   const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
+  const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
   const pysNullReasonText =
     row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
   const rankChip = buildRankChangeChipDisplay(row.rankChangeAttribution);
@@ -533,6 +535,11 @@ export function YieldMobileCard({
         <p className="mt-1" title={YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].description}>
           Depth: {YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label}
         </p>
+        {sourceRiskSummary ? (
+          <p className="mt-1 font-mono text-[11px] tabular-nums text-amber-700 dark:text-amber-300">
+            {sourceRiskSummary}
+          </p>
+        ) : null}
       </div>
 
       {warningCount > 0 ? (

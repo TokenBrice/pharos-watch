@@ -4,6 +4,7 @@ import type { YieldRanking, YieldRankChangeAttribution, YieldSourceRisk } from "
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
 export type YieldSourceDepthLens = "deep" | "moderate" | "thin" | "unknown";
+export type YieldSourcePosture = "clean" | "watch" | "speculative";
 
 export type YieldSourceRiskDriverKey =
   | "high-risk-venue"
@@ -20,6 +21,23 @@ export interface YieldSourceRiskDriver {
   label: string;
   description: string;
 }
+
+export const YIELD_SOURCE_POSTURE_ORDER: readonly YieldSourcePosture[] = ["clean", "watch", "speculative"];
+
+export const YIELD_SOURCE_POSTURE_DEFINITIONS: Record<YieldSourcePosture, { label: string; description: string }> = {
+  clean: {
+    label: "Clean",
+    description: "Non-thin, fresh source with no material source-risk penalty or source-change evidence.",
+  },
+  watch: {
+    label: "Watch",
+    description: "Medium or explainable source-risk evidence without severe venue, depth, staleness, or reward drivers.",
+  },
+  speculative: {
+    label: "Speculative",
+    description: "High venue risk, thin/stale/reward-heavy source evidence, multiple source-risk drivers, or a material penalty.",
+  },
+};
 
 export const YIELD_SOURCE_CONFIDENCE_ORDER: readonly YieldSourceConfidenceTier[] = [
   "deterministic",
@@ -85,9 +103,11 @@ export function classifyYieldSourceDepth(params: {
 export function getYieldSourceRiskDrivers(params: {
   sourceRisk?: YieldSourceRisk | null;
   sourceChanged?: boolean;
+  warningSignals?: readonly string[] | null;
 }): YieldSourceRiskDriver[] {
   const sourceRisk = params.sourceRisk ?? null;
-  if (!sourceRisk && !params.sourceChanged) return [];
+  const warningSignals = params.warningSignals ?? [];
+  if (!sourceRisk && !params.sourceChanged && warningSignals.length === 0) return [];
 
   const rewardShare = finiteNumber(sourceRisk?.rewardShare);
   const sourceDepthRatio = finiteNumber(sourceRisk?.sourceDepthRatio);
@@ -95,6 +115,7 @@ export function getYieldSourceRiskDrivers(params: {
   const observationCount30d = finiteNumber(sourceRisk?.observationCount30d);
   const sourceSwitchCount30d = finiteNumber(sourceRisk?.sourceSwitchCount30d);
   const drivers: YieldSourceRiskDriver[] = [];
+  const hasDriver = (key: YieldSourceRiskDriverKey) => drivers.some((driver) => driver.key === key);
 
   // Venue + concentration drivers lead because protocol risk outweighs data-quality
   // signals. Gated on populated evidence, so unknown/low venues stay a no-op.
@@ -142,6 +163,14 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
+  if (warningSignals.includes("reward-heavy") && !hasDriver("reward-heavy")) {
+    drivers.push({
+      key: "reward-heavy",
+      label: "reward-heavy",
+      description: "Most APY comes from incentives, not base yield.",
+    });
+  }
+
   if (sourceDepthRatio !== null && sourceDepthRatio < 0.001) {
     drivers.push({
       key: "thin-source-depth",
@@ -150,7 +179,23 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
+  if (warningSignals.includes("low-source-tvl") && !hasDriver("thin-source-depth")) {
+    drivers.push({
+      key: "thin-source-depth",
+      label: "thin source depth",
+      description: "Venue TVL is small relative to the stablecoin supply or row context.",
+    });
+  }
+
   if (sourceAgeSeconds !== null && sourceAgeSeconds > 6 * 60 * 60) {
+    drivers.push({
+      key: "stale-source",
+      label: "stale source",
+      description: "Latest source observation is older than expected for its family.",
+    });
+  }
+
+  if (warningSignals.includes("data-stale") && !hasDriver("stale-source")) {
     drivers.push({
       key: "stale-source",
       label: "stale source",
@@ -175,6 +220,94 @@ export function getYieldSourceRiskDrivers(params: {
   }
 
   return drivers;
+}
+
+const CLEAN_SOURCE_RISK_PENALTY_MAX = 1.1;
+const SPECULATIVE_SOURCE_RISK_PENALTY_MIN = 1.25;
+const SOURCE_POSTURE_WATCH_WARNING_SIGNALS = new Set([
+  "yield-spike",
+  "yield-divergence",
+  "negative-trend",
+  "tvl-outflow",
+  "zero-yield",
+]);
+
+function hasAnySignal(signals: readonly string[] | null | undefined, wanted: ReadonlySet<string>): boolean {
+  return signals?.some((signal) => wanted.has(signal)) ?? false;
+}
+
+export function classifyYieldSourcePosture(params: {
+  sourceRisk?: YieldSourceRisk | null;
+  sourceTvlUsd?: number | null;
+  sourceDepthLens?: YieldSourceDepthLens | null;
+  sourceChanged?: boolean;
+  warningSignals?: readonly string[] | null;
+}): YieldSourcePosture {
+  const sourceRisk = params.sourceRisk ?? null;
+  const warningSignals = params.warningSignals ?? [];
+  const sourceDepthLens = params.sourceDepthLens ?? classifyYieldSourceDepth({
+    sourceRisk,
+    sourceTvlUsd: params.sourceTvlUsd,
+  });
+  const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty) ?? 1;
+  const sourceSwitchCount30d = finiteNumber(sourceRisk?.sourceSwitchCount30d);
+  const sourceChanged = params.sourceChanged === true || (sourceSwitchCount30d !== null && sourceSwitchCount30d > 0);
+  const drivers = getYieldSourceRiskDrivers({ sourceRisk, sourceChanged, warningSignals });
+  const driverKeys = new Set(drivers.map((driver) => driver.key));
+  const hasSevereDriver =
+    driverKeys.has("high-risk-venue") ||
+    driverKeys.has("reward-heavy") ||
+    driverKeys.has("thin-source-depth") ||
+    driverKeys.has("stale-source") ||
+    sourceRisk?.dependencyConcentration?.severity === "high";
+  const hasMaterialPenalty = sourceRiskPenalty >= SPECULATIVE_SOURCE_RISK_PENALTY_MIN;
+  const hasMultipleDrivers = drivers.length >= 2;
+
+  if (hasSevereDriver || sourceDepthLens === "thin" || hasMaterialPenalty || hasMultipleDrivers) {
+    return "speculative";
+  }
+
+  const hasWatchDriver =
+    driverKeys.has("elevated-risk-venue") ||
+    driverKeys.has("concentrated-dependency") ||
+    driverKeys.has("limited-history") ||
+    driverKeys.has("source-changed");
+  const hasEvidenceDebt = sourceDepthLens === "unknown";
+  const hasUnknownVenueDebt = sourceRisk?.venueRiskTier === "unknown";
+  const hasWatchWarning = hasAnySignal(warningSignals, SOURCE_POSTURE_WATCH_WARNING_SIGNALS);
+
+  if (
+    hasWatchDriver ||
+    hasEvidenceDebt ||
+    hasUnknownVenueDebt ||
+    hasWatchWarning ||
+    sourceRiskPenalty > CLEAN_SOURCE_RISK_PENALTY_MAX
+  ) {
+    return "watch";
+  }
+
+  return "clean";
+}
+
+export function formatYieldSourcePosture(posture: YieldSourcePosture): string {
+  return YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label;
+}
+
+export function isYieldSourceRiskMaterial(sourceRisk: YieldSourceRisk | null | undefined): boolean {
+  const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty);
+  const sourceRiskScore = finiteNumber(sourceRisk?.sourceRiskScore);
+  if (sourceRiskPenalty !== null) return sourceRiskPenalty > 1.05;
+  return sourceRiskScore !== null && sourceRiskScore >= 10;
+}
+
+export function formatYieldSourceRiskSummary(sourceRisk: YieldSourceRisk | null | undefined): string | null {
+  if (!isYieldSourceRiskMaterial(sourceRisk)) return null;
+
+  const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty);
+  const sourceRiskScore = finiteNumber(sourceRisk?.sourceRiskScore);
+  const scoreLabel = sourceRiskScore !== null ? `${Math.round(sourceRiskScore)}/100` : "n/a";
+  const penaltyLabel = sourceRiskPenalty !== null ? `${sourceRiskPenalty.toFixed(2)}x` : "n/a";
+  return `Source risk ${scoreLabel} | ${penaltyLabel}`;
 }
 
 export function formatYieldSourceRiskDriverSummary(drivers: readonly YieldSourceRiskDriver[]): string {

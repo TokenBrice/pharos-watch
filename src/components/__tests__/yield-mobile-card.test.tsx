@@ -109,6 +109,31 @@ describe("YieldMobileCard", () => {
     expect(screen.getByRole("button", { name: /USDT.*watchlist/i })).toBeTruthy();
   });
 
+  it("renders a labeled source-risk summary when the source penalty is material", () => {
+    const riskRow = {
+      ...row,
+      sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty: 1.32, sourceAgeSeconds: 60 },
+    } as YieldViewModelRow;
+
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={riskRow}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          isCompared={false}
+          compareDisabled={false}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Source risk 42/100 | 1.32x")).toBeTruthy();
+  });
+
   it("falls back to bare em-dash when PYS is null without a reason", () => {
     const fallbackRow = { ...row, pharosYieldScore: null } as YieldViewModelRow;
     render(

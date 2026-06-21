@@ -54,6 +54,7 @@ export function YieldClient() {
       opportunity: searchParams.get("opportunity"),
       depth: searchParams.get("depth"),
       sourceChanged: searchParams.get("sourceChanged"),
+      sourcePosture: searchParams.get("sourcePosture"),
       trending: searchParams.get("trending"),
       watchlist: searchParams.get("watchlist"),
     }),

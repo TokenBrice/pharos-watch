@@ -32,7 +32,11 @@ import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsResponseSchema, SafetyScoreHistoryResponseSchema } from "@shared/types/report-cards";
 import { StabilityIndexResponseSchema, UsdsStatusResponseSchema } from "@shared/types/stability";
 import { HealthResponseSchema } from "@shared/types/status";
-import { YieldHistoryResponseSchema, YieldRankingsResponseSchema } from "@shared/types/yield";
+import {
+  YieldAdapterManifestResponseSchema,
+  YieldHistoryResponseSchema,
+  YieldRankingsResponseSchema,
+} from "@shared/types/yield";
 import {
   CRON_1H,
   CRON_1MIN,
@@ -305,6 +309,13 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     path: API_PATHS.yieldRankings(),
     producerIntervalMs: CRON_YIELD,
     schema: YieldRankingsResponseSchema,
+    metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
+  },
+  yieldAdapterManifest: {
+    queryKey: ["yield-adapter-manifest"],
+    path: API_PATHS.yieldAdapterManifest(),
+    producerIntervalMs: CRON_YIELD,
+    schema: YieldAdapterManifestResponseSchema,
     metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
   },
   stressSignals: {

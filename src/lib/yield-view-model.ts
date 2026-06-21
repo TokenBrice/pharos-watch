@@ -2,8 +2,11 @@ import { resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
+  YIELD_SOURCE_POSTURE_DEFINITIONS,
   classifyYieldSourceDepth,
+  classifyYieldSourcePosture,
   type YieldSourceDepthLens,
+  type YieldSourcePosture,
 } from "@/lib/yield-source-risk";
 import {
   BENCHMARK_ORDER,
@@ -27,6 +30,7 @@ import {
   type YieldPresetSpec,
   type YieldSourceChangedFilter,
   type YieldSourceConfidenceFilter,
+  type YieldSourcePostureFilter,
   type YieldTrendingFilter,
   type YieldViewModelFilters,
   type YieldViewModelUrlParams,
@@ -57,6 +61,7 @@ export type {
   YieldOpportunityFilter,
   YieldDepthFilter,
   YieldSourceChangedFilter,
+  YieldSourcePostureFilter,
   YieldTrendingFilter,
   YieldWatchlistFilter,
   YieldViewModelFilters,
@@ -76,6 +81,7 @@ export interface YieldViewModelOptions {
   opportunity: YieldFilterOption<YieldOpportunityFilter>[];
   depth: YieldFilterOption<YieldDepthFilter>[];
   sourceChanged: YieldFilterOption<YieldSourceChangedFilter>[];
+  sourcePosture: YieldFilterOption<YieldSourcePostureFilter>[];
   watchlist: YieldFilterOption<YieldWatchlistFilter>[];
 }
 
@@ -134,6 +140,7 @@ export type YieldViewModelRow = YieldRanking & {
   rankLabel: string;
   opportunity: Exclude<YieldOpportunityFilter, "all">;
   sourceDepthLens: YieldSourceDepthLens;
+  sourcePosture: YieldSourcePosture;
   cohortPercentile: YieldCohortPercentile | null;
 };
 
@@ -143,6 +150,7 @@ interface YieldRowFacet {
   benchmarkKey: YieldBenchmarkKey;
   opportunity: Exclude<YieldOpportunityFilter, "all">;
   sourceDepthLens: YieldSourceDepthLens;
+  sourcePosture: YieldSourcePosture;
   confidenceTier: Exclude<YieldSourceConfidenceFilter, "all"> | null;
   hasWarning: boolean;
   sourceChanged: boolean;
@@ -230,18 +238,30 @@ function getSourceDepthLens(row: YieldRanking): YieldSourceDepthLens {
   });
 }
 
+function getSourcePosture(row: YieldRanking, sourceDepthLens: YieldSourceDepthLens): YieldSourcePosture {
+  return classifyYieldSourcePosture({
+    sourceRisk: row.sourceRisk,
+    sourceTvlUsd: row.sourceTvlUsd,
+    sourceDepthLens,
+    sourceChanged: row.provenance?.sourceSwitch ?? false,
+    warningSignals: row.warningSignals,
+  });
+}
+
 function isRowRising(row: YieldRanking): boolean {
   const observations = row.sourceRisk?.observationCount30d;
   return row.currentApy > row.apy30d && observations != null && observations >= 7;
 }
 
 function buildYieldRowFacet(row: YieldRanking, watchlistIds: ReadonlySet<string> | null): YieldRowFacet {
+  const sourceDepthLens = getSourceDepthLens(row);
   return {
     row,
     peg: getYieldRankingPeg(row.id),
     benchmarkKey: getBenchmarkKey(row),
     opportunity: getOpportunity(row),
-    sourceDepthLens: getSourceDepthLens(row),
+    sourceDepthLens,
+    sourcePosture: getSourcePosture(row, sourceDepthLens),
     confidenceTier: row.provenance?.confidenceTier ?? null,
     hasWarning: row.warningSignals.length > 0,
     sourceChanged: row.provenance?.sourceSwitch === true,
@@ -339,6 +359,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
   let sourceUnchangedCount = 0;
   let watchlistCount = 0;
   const depthCounts = new Map<YieldSourceDepthLens, number>();
+  const sourcePostureCounts = new Map<YieldSourcePosture, number>();
   // Fold minSafety/minTvl/hide-thin threshold counts into the main loop to
   // avoid 8 redundant O(n) filter passes per buildOptions call (vm-3).
   const safetyCounts = new Map<number, number>();
@@ -366,6 +387,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
     if (facet.inWatchlist) watchlistCount += 1;
 
     depthCounts.set(facet.sourceDepthLens, (depthCounts.get(facet.sourceDepthLens) ?? 0) + 1);
+    sourcePostureCounts.set(facet.sourcePosture, (sourcePostureCounts.get(facet.sourcePosture) ?? 0) + 1);
 
     if (row.safetyScore !== null) {
       for (const threshold of MIN_SAFETY_OPTIONS) {
@@ -385,6 +407,9 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
 
   // hide-thin = all facets that are not "thin"; derive from depthCounts to avoid an extra pass.
   const hideThinCount = facets.length - (depthCounts.get("thin") ?? 0);
+  const cleanPostureCount = sourcePostureCounts.get("clean") ?? 0;
+  const watchPostureCount = sourcePostureCounts.get("watch") ?? 0;
+  const cleanOrWatchPostureCount = cleanPostureCount + watchPostureCount;
 
   return {
     peg: buildPegOptions(facets),
@@ -455,6 +480,16 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
       { value: "only", label: "Source changed", count: sourceChangedCount },
       { value: "none", label: "No source change", count: sourceUnchangedCount },
     ],
+    sourcePosture: [
+      { value: "all", label: "All postures", count: facets.length },
+      { value: "clean", label: YIELD_SOURCE_POSTURE_DEFINITIONS.clean.label, count: cleanPostureCount },
+      { value: "watch", label: "Clean + watch", count: cleanOrWatchPostureCount },
+      {
+        value: "speculative",
+        label: YIELD_SOURCE_POSTURE_DEFINITIONS.speculative.label,
+        count: sourcePostureCounts.get("speculative") ?? 0,
+      },
+    ],
     watchlist: [
       { value: "all", label: "All rows", count: facets.length },
       { value: "only", label: "Watchlist only", count: watchlistCount },
@@ -491,6 +526,9 @@ function getComparisonLabel(filters: YieldViewModelFilters): string {
   if (filters.depth !== "all") return `${YIELD_SOURCE_DEPTH_DEFINITIONS[filters.depth].label} source depth`;
   if (filters.sourceChanged === "only") return "Rows with source changed";
   if (filters.sourceChanged === "none") return "Rows without source changed";
+  if (filters.sourcePosture === "clean") return "Clean source posture";
+  if (filters.sourcePosture === "watch") return "Clean/watch source posture";
+  if (filters.sourcePosture === "speculative") return "Speculative source posture";
   if (filters.opportunity === "holder-yield") return "Holder yield";
   if (filters.opportunity === "lending-opportunity") return "External opportunities";
   return "Current view";
@@ -512,6 +550,7 @@ function rankRows(
       rankLabel: `#${rank} in ${comparisonLabel}`,
       opportunity: facet.opportunity,
       sourceDepthLens: facet.sourceDepthLens,
+      sourcePosture: facet.sourcePosture,
       cohortPercentile: computeRowCohortPercentile(row, cohortIndex),
     };
   });
@@ -772,6 +811,19 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
     describeActive: (f, o) => describeOption(o.sourceChanged, f.sourceChanged),
   },
   {
+    key: "sourcePosture",
+    isActive: (f) => f.sourcePosture !== DEFAULT_FILTERS.sourcePosture,
+    matches: (facet, f) => {
+      if (f.sourcePosture === "all") return true;
+      if (f.sourcePosture === "clean") return facet.sourcePosture === "clean";
+      if (f.sourcePosture === "watch") return facet.sourcePosture === "clean" || facet.sourcePosture === "watch";
+      return facet.sourcePosture === "speculative";
+    },
+    describeRelax: (f, o) => `Drop source posture filter (${describeOption(o.sourcePosture, f.sourcePosture)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Source: ${describeOption(o.sourcePosture, f.sourcePosture)}`,
+  },
+  {
     key: "sourceConfidence",
     isActive: (f) => f.sourceConfidence !== DEFAULT_FILTERS.sourceConfidence,
     matches: (facet, f) => f.sourceConfidence === "all" || facet.confidenceTier === f.sourceConfidence,
@@ -885,6 +937,7 @@ function buildPresets(
 const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] = [
   "minSafety",
   "depth",
+  "sourcePosture",
   "sourceConfidence",
   "warnings",
 ];

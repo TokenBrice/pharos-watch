@@ -456,6 +456,12 @@ export function YieldLeaderboardControls({
               options={options.sourceChanged}
               onChange={(value) => onFilterChange("sourceChanged", value)}
             />
+            <FilterSelect
+              label="Posture"
+              value={filters.sourcePosture}
+              options={options.sourcePosture}
+              onChange={(value) => onFilterChange("sourcePosture", value)}
+            />
           </FilterGroup>
           <FilterGroup label="Yield framing">
             <FilterSelect

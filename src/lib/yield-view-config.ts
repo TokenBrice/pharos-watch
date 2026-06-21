@@ -1,7 +1,7 @@
 import { PEG_BADGE_STYLES } from "@shared/lib/classification";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import { type PegCurrency, type YieldBenchmarkKey, type YieldType } from "@shared/types";
-import type { YieldSourceDepthLens } from "@/lib/yield-source-risk";
+import type { YieldSourceDepthLens, YieldSourcePosture } from "@/lib/yield-source-risk";
 
 export type YieldSourceConfidenceFilter =
   | "all"
@@ -26,6 +26,7 @@ export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
 export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
 export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
 export type YieldSourceChangedFilter = "all" | "only" | "none";
+export type YieldSourcePostureFilter = "all" | YieldSourcePosture;
 export type YieldTrendingFilter = "all" | "rising";
 export type YieldWatchlistFilter = "all" | "only";
 
@@ -41,6 +42,7 @@ export interface YieldViewModelUrlParams {
   opportunity?: string | null;
   depth?: string | null;
   sourceChanged?: string | null;
+  sourcePosture?: string | null;
   trending?: string | null;
   watchlist?: string | null;
 }
@@ -63,6 +65,7 @@ export interface YieldViewModelFilters {
   opportunity: YieldOpportunityFilter;
   depth: YieldDepthFilter;
   sourceChanged: YieldSourceChangedFilter;
+  sourcePosture: YieldSourcePostureFilter;
   trending: YieldTrendingFilter;
   watchlist: YieldWatchlistFilter;
 }
@@ -130,6 +133,7 @@ export const DEFAULT_FILTERS: YieldViewModelFilters = {
   opportunity: "all",
   depth: "all",
   sourceChanged: "all",
+  sourcePosture: "all",
   trending: "all",
   watchlist: "all",
 };
@@ -167,27 +171,29 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
     key: "conservative",
     label: "Conservative",
-    description: "A- safety, hide thin venues, hide warnings",
+    description: "A- safety, clean sources, hide thin venues, hide warnings",
     overrides: {
       minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.conservative,
       depth: "hide-thin",
+      sourcePosture: "clean",
       warnings: "hide",
     },
   },
   {
     key: "balanced",
     label: "Balanced",
-    description: "B- safety, hide thin venues, hide warnings",
+    description: "B- safety, clean/watch sources, hide thin venues, hide warnings",
     overrides: {
       minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.balanced,
       depth: "hide-thin",
+      sourcePosture: "watch",
       warnings: "hide",
     },
   },
   {
     key: "opportunistic",
     label: "Opportunistic",
-    description: "C+ safety, hide warnings",
+    description: "C+ safety, all source postures, hide warnings",
     overrides: {
       minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic,
       warnings: "hide",

@@ -186,6 +186,17 @@ describe("YieldInstrumentBoard", () => {
     expect(link.getAttribute("href")).toBe("/stablecoin/usdt-tether/yield");
   });
 
+  it("renders a labeled source-risk summary when the source penalty is material", () => {
+    const row = {
+      ...baseRow,
+      sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty: 1.32, sourceAgeSeconds: 60 },
+    } as YieldViewModelRow;
+
+    renderBoard(row);
+
+    expect(screen.getByText("Source risk 42/100 | 1.32x")).toBeTruthy();
+  });
+
   it("invokes onToggleCompare with the row id when the compare checkbox is clicked", () => {
     const onToggleCompare = vi.fn();
     renderBoard(baseRow, false, { onToggleCompare });

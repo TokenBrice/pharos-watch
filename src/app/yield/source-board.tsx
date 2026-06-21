@@ -13,14 +13,18 @@ import {
   YIELD_SOURCE_CONFIDENCE_ORDER,
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
+  YIELD_SOURCE_POSTURE_DEFINITIONS,
+  YIELD_SOURCE_POSTURE_ORDER,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
+  type YieldSourcePosture,
 } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type {
   YieldSourceBoardAnomalyDetail,
   YieldSourceBoardGroup,
   YieldSourceBoardModel,
+  YieldSourceBoardRiskDriverCount,
   YieldSourceBoardRowDetail,
   YieldSourceBoardSourceSwitchDetail,
 } from "@/app/yield/source-board-model";
@@ -53,6 +57,12 @@ const CONFIDENCE_SEGMENT_BG: Record<YieldSourceConfidenceTier, string> = {
   fallback: "bg-slate-500/40",
 };
 
+const POSTURE_SEGMENT_BG: Record<YieldSourcePosture, string> = {
+  clean: "bg-emerald-500/40",
+  watch: "bg-amber-500/40",
+  speculative: "bg-red-500/40",
+};
+
 function nonZeroCountParts<T extends string>(
   keys: readonly T[],
   counts: Record<T, number>,
@@ -76,6 +86,14 @@ function formatDepthSummary(counts: Record<YieldSourceDepthLens, number>): strin
   return nonZeroCountParts(DEPTH_ORDER, counts, (lens, count) => `${count} ${lens}`).join(" · ");
 }
 
+function formatPostureSummary(counts: Record<YieldSourcePosture, number>): string {
+  return nonZeroCountParts(
+    YIELD_SOURCE_POSTURE_ORDER,
+    counts,
+    (posture, count) => `${count} ${YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label.toLowerCase()}`,
+  ).join(" · ");
+}
+
 function buildConfidenceAriaLabel(
   counts: Record<YieldSourceConfidenceTier, number>,
   unknownCount: number,
@@ -89,6 +107,15 @@ function buildConfidenceAriaLabel(
 function buildDepthAriaLabel(counts: Record<YieldSourceDepthLens, number>): string {
   const parts = nonZeroCountParts(DEPTH_ORDER, counts, (lens, count) => `${count} ${lens}`);
   return `Depth mix: ${parts.join(", ")}`;
+}
+
+function buildPostureAriaLabel(counts: Record<YieldSourcePosture, number>): string {
+  const parts = nonZeroCountParts(
+    YIELD_SOURCE_POSTURE_ORDER,
+    counts,
+    (posture, count) => `${count} ${YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label}`,
+  );
+  return `Source posture mix: ${parts.join(", ")}`;
 }
 
 function StackBar({
@@ -157,8 +184,9 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
       0,
     ) + model.selectedConfidenceUnknownCount;
   const depthTotal = DEPTH_ORDER.reduce((sum, lens) => sum + model.depthCounts[lens], 0);
+  const postureTotal = YIELD_SOURCE_POSTURE_ORDER.reduce((sum, posture) => sum + model.postureCounts[posture], 0);
 
-  if (confidenceTotal === 0 && depthTotal === 0) return null;
+  if (confidenceTotal === 0 && depthTotal === 0 && postureTotal === 0) return null;
 
   const confidenceSegments = [
     ...YIELD_SOURCE_CONFIDENCE_ORDER.map((tier) => ({
@@ -185,8 +213,27 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
     label: YIELD_SOURCE_DEPTH_DEFINITIONS[lens].label,
   }));
 
+  const postureSegments = YIELD_SOURCE_POSTURE_ORDER.map((posture) => ({
+    key: posture,
+    bg: POSTURE_SEGMENT_BG[posture],
+    count: model.postureCounts[posture],
+    description: YIELD_SOURCE_POSTURE_DEFINITIONS[posture].description,
+    label: YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label,
+  }));
+
   return (
     <div className="space-y-3 rounded-md border border-border/60 bg-muted/10 p-3">
+      {postureTotal > 0 ? (
+        <div className="space-y-1.5">
+          <div className="flex items-baseline gap-3">
+            <span className="w-20 shrink-0 text-xs font-medium text-foreground">Posture</span>
+            <StackBar segments={postureSegments} ariaLabel={buildPostureAriaLabel(model.postureCounts)} />
+          </div>
+          <p className="pl-[5.75rem] text-xs text-muted-foreground">
+            {formatPostureSummary(model.postureCounts)}
+          </p>
+        </div>
+      ) : null}
       {confidenceTotal > 0 ? (
         <div className="space-y-1.5">
           <div className="flex items-baseline gap-3">
@@ -218,6 +265,40 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
           </p>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoardRiskDriverCount[] }) {
+  if (drivers.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        No populated source-risk drivers in the visible rows.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2" aria-label="Top source-risk drivers">
+      {drivers.map((driver) => (
+        <Tooltip key={driver.key}>
+          <TooltipTrigger asChild>
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={`${driver.label}: ${pluralize(driver.count, "row")}`}
+              className="pharos-focus-ring inline-flex cursor-help items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200"
+            >
+              <span>{driver.label}</span>
+              <span className="font-mono text-[10px] tabular-nums opacity-75">{driver.count}</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[260px] text-xs">
+            <span className="font-medium">{pluralize(driver.count, "visible row")}</span>
+            <span className="block text-muted-foreground">{driver.description}</span>
+          </TooltipContent>
+        </Tooltip>
+      ))}
     </div>
   );
 }
@@ -410,6 +491,7 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
           </div>
 
           <SourceQualityBars model={model} />
+          <SourceRiskDriverChips drivers={model.topSourceRiskDrivers} />
 
           {hasDisclosureBadges ? (
             <div className="flex flex-wrap gap-2">

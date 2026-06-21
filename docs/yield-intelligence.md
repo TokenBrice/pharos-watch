@@ -954,9 +954,11 @@ The board renders a minimal surface focused on which data families back the visi
 
 - header: kicker, "Source mix in the current view" heading, and a one-line helper noting the board counts every chosen source plus retained alternates
 - chips: chosen-source source-changed count and chosen-source anomaly count from row provenance, each with a tooltip explaining the meaning
+- source-quality bars: visible-row posture mix (`Clean`, `Watch`, `Speculative`), confidence tier mix, and source-depth mix
+- source-risk driver chips: the most common populated source-risk drivers in the current visible rows, with tooltips carrying the driver definitions
 - source lanes grouped by `yieldType` and `dataSource`, each row showing the yield-type badge, data-family label, total observation count (chosen + retained alternates), and up to three of the most-represented source labels with the long tail summarised as "+N more"
 
-The shared `buildYieldSourceBoardModel` continues to expose additional fields (APY min/median/max, confidence tiers, depth lens, benchmark labels) for any future consumer, but the visible board no longer renders them — those signals already live in per-row source sheets and the collapsed `Data Provenance` details below the leaderboard.
+`Clean` means a non-thin, fresh selected source with no material source-risk penalty or source-change evidence. `Watch` means medium or explainable source-risk evidence, including unknown venue evidence debt, while `Speculative` means high venue risk, thin/stale/reward-heavy evidence, multiple active source-risk drivers, or a material source-risk penalty. This board is presentation-only: it derives those groups from published ranking fields and does not change APY source resolution, source arbitration, PYS, or methodology versioning.
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 
@@ -996,7 +998,7 @@ Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scop
 
 Sortable, paginated leaderboard (25 rows/page). Default sort: PYS descending. From `md` upward it renders the dense table; below `md` it renders first-class mobile cards with the same sort and pagination state plus direct Detail, Provider, Source, and History actions. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
 
-The filter row above the table is backed by `YieldViewModel` and URL query keys for `q`, `peg`, `yieldType`, `warnings`, `minSafety`, `minTvl`, `depth`, `sourceChanged`, `sourceConfidence`, `benchmark`, and `opportunity`. The trust rail promotes body-level API warnings from `YieldRankingsResponse.warnings`, including degraded live safety hydration, before the table. Search and filters feed rows into the shared sort/pagination pipeline, with page index reset whenever controls change the visible row set.
+The filter row above the table is backed by `YieldViewModel` and URL query keys for `q`, `peg`, `yieldType`, `warnings`, `minSafety`, `minTvl`, `depth`, `sourceChanged`, `sourcePosture`, `sourceConfidence`, `benchmark`, and `opportunity`. `sourcePosture=clean` shows clean rows only, `sourcePosture=watch` is a clean-or-watch cap used by the Balanced risk budget, and `sourcePosture=speculative` isolates speculative rows. The trust rail promotes body-level API warnings from `YieldRankingsResponse.warnings`, including degraded live safety hydration, before the table. Search and filters feed rows into the shared sort/pagination pipeline, with page index reset whenever controls change the visible row set.
 
 **Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range, Signals, and a trailing chevron for row expansion.
 
@@ -1007,6 +1009,8 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 **Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions and an actionable next check (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`, `low-source-tvl`).
 
 **Source inspection:** The table row delegates source inspection to the shared `YieldSourceSheet`, which opens from the retained source controls in the row/expanded state instead of the old inline `+N` popover.
+
+**Source-risk visibility:** Desktop and mobile rows show a labeled compact summary such as `Source risk 42/100 | 1.32x` when the nested source-risk penalty is material. This uses the published `sourceRisk.sourceRiskScore` and `sourceRisk.sourceRiskPenalty` fields and is a visibility change only; neutral or missing evidence stays visually quiet.
 
 **Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the selected row benchmark, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
 
@@ -1031,6 +1035,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | ------------------ | ------------------------ | --------------------- | --------------------- |
 | `useYieldRankings` | `src/hooks/api-hooks.ts` | `/api/yield-rankings` | `CRON_YIELD` (1 hour) |
 | `useYieldHistory`  | `src/hooks/api-hooks.ts` | `/api/yield-history`  | `CRON_YIELD` (1 hour) |
+| `useYieldAdapterManifest` | `src/hooks/api-hooks.ts` | `/api/yield-adapter-manifest` | `CRON_YIELD` (1 hour) |
 
 ---
 

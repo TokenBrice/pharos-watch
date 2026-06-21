@@ -9,6 +9,14 @@ describe("buildYieldSourceBoardModel", () => {
       makeYieldRanking({
         id: "usdc-circle",
         apy30d: 5,
+        sourceRisk: {
+          sourceRiskPenalty: 1.4,
+          sourceRiskScore: 27,
+          sourceDepthRatio: 0.0005,
+          sourceAgeSeconds: 60,
+          venueRiskTier: "unknown",
+        },
+        warningSignals: ["low-source-tvl"],
         provenance: makeYieldProvenance({
           sourceKey: "compound-usdc",
           confidenceTier: "curated",
@@ -39,6 +47,14 @@ describe("buildYieldSourceBoardModel", () => {
         apy30d: 8,
         yieldSource: "Morpho EURC",
         dataSource: "protocol-api",
+        sourceTvlUsd: 20_000_000,
+        sourceRisk: {
+          sourceRiskPenalty: 1.05,
+          sourceRiskScore: 3,
+          sourceDepthRatio: 0.005,
+          sourceAgeSeconds: 60,
+          venueRiskTier: "low",
+        },
         benchmarkKey: "EUR",
         benchmarkLabel: "EUR 3M compounded ESTR",
         benchmarkCurrency: "EUR",
@@ -67,10 +83,21 @@ describe("buildYieldSourceBoardModel", () => {
     expect(model.selectedConfidenceUnknownCount).toBe(0);
     expect(model.depthCounts).toEqual({
       deep: 0,
-      moderate: 0,
-      thin: 0,
-      unknown: 2,
+      moderate: 1,
+      thin: 1,
+      unknown: 0,
     });
+    expect(model.postureCounts).toEqual({
+      clean: 1,
+      watch: 0,
+      speculative: 1,
+    });
+    expect(model.topSourceRiskDrivers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "source-changed", count: 1 }),
+        expect.objectContaining({ key: "thin-source-depth", count: 1 }),
+      ]),
+    );
     expect(model.sourceSwitchCount).toBe(1);
     expect(model.anomalyCount).toBe(1);
     expect(model.sourceRowApy).toEqual({ min: 4, median: 5.5, max: 8 });
@@ -219,6 +246,12 @@ describe("buildYieldSourceBoardModel", () => {
         thin: 0,
         unknown: 0,
       },
+      postureCounts: {
+        clean: 0,
+        watch: 0,
+        speculative: 0,
+      },
+      topSourceRiskDrivers: [],
       sourceSwitchCount: 0,
       anomalyCount: 0,
       sourceRowApy: null,
