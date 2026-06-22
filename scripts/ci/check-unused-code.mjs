@@ -106,6 +106,11 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/stablecoins/schema.ts::CanonicalOrderAssetSchema",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetSchema",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetArraySchema",
+  // Consumed by scripts/lib/stablecoin-catalog-sources.ts for per-coin
+  // catalog field ordering and domain sidecar validation.
+  "shared/lib/stablecoins/schema.ts::STABLECOIN_META_ASSET_FIELD_ORDER",
+  "shared/lib/stablecoins/schema.ts::STABLECOIN_SOURCE_DOMAIN_VALUES",
+  "shared/lib/stablecoins/schema.ts::StablecoinReservesSidecarSchema",
   "shared/types/stablecoin-meta-schemas.ts::OracleRiskBranchSchema",
   "shared/types/stablecoin-meta-schemas.ts::BridgeRouteProtocolEvidenceSchema",
   // Consumed by scripts/lib/stablecoin-catalog-sources.ts (out-of-scan-scope).

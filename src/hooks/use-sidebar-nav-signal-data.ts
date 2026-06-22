@@ -14,7 +14,7 @@ export interface LightApiQueryOptions {
 
 const DEFAULT_LIGHT_QUERY_OPTIONS: LightApiQueryOptions = { retry: 1 };
 
-export function useLightApiQuery<T>(
+function useLightApiQuery<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   options: LightApiQueryOptions = DEFAULT_LIGHT_QUERY_OPTIONS,
 ) {

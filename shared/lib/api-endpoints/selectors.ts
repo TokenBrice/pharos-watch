@@ -47,8 +47,6 @@ export interface DynamicEndpointAccessPolicy {
   siteDataAccess: EndpointSiteDataAccess;
 }
 
-export type EndpointAccessPolicy = StaticEndpointAccessPolicy | DynamicEndpointAccessPolicy;
-
 export interface StaticEndpointCachePolicy {
   scope: "static";
   key: string;
@@ -94,18 +92,12 @@ export function isStaticEndpointPath(path: string): boolean {
   return !path.includes(":") && !path.includes("*");
 }
 
-export function isStaticEndpointDefinition(endpoint: Pick<EndpointDefinition, "path">): boolean {
+function isStaticEndpointDefinition(endpoint: Pick<EndpointDefinition, "path">): boolean {
   return isStaticEndpointPath(endpoint.path);
 }
 
 export const STATIC_ENDPOINT_ROUTE_DEFINITIONS: readonly EndpointDefinition[] =
   ENDPOINT_DEFINITIONS.filter(isStaticEndpointDefinition);
-
-export const STATIC_ENDPOINT_ROUTE_DEFINITION_VIEWS: readonly StaticEndpointRouteDefinition[] =
-  STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
-    scope: "static",
-    endpoint,
-  }));
 
 export const DYNAMIC_ENDPOINT_ROUTE_DEFINITIONS: readonly DynamicEndpointRouteDefinition[] =
   DYNAMIC_ENDPOINT_DESCRIPTORS.map((descriptor) => ({
@@ -138,11 +130,6 @@ export const DYNAMIC_ENDPOINT_ACCESS_POLICIES: readonly DynamicEndpointAccessPol
     publicApiAccess: descriptor.publicApiAccess,
     siteDataAccess: descriptor.siteDataAccess,
   }));
-
-export const ENDPOINT_ACCESS_POLICIES: readonly EndpointAccessPolicy[] = [
-  ...STATIC_ENDPOINT_ACCESS_POLICIES,
-  ...DYNAMIC_ENDPOINT_ACCESS_POLICIES,
-];
 
 export const STATIC_ENDPOINT_CACHE_POLICIES: readonly StaticEndpointCachePolicy[] =
   STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
@@ -206,25 +193,9 @@ export const ENDPOINT_DEPENDENCY_HYDRATION_POLICIES: readonly EndpointDependency
   ...DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
 ];
 
-const STATIC_ENDPOINT_ROUTE_DEFINITION_BY_PATH = new Map<string, EndpointDefinition>(
-  STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => [endpoint.path, endpoint]),
-);
-
-const STATIC_ENDPOINT_ROUTE_DEFINITION_BY_KEY = new Map<string, EndpointDefinition>(
-  STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => [endpoint.key, endpoint]),
-);
-
 const STATIC_ENDPOINT_DEPENDENCIES_BY_KEY = new Map<string, readonly EndpointDependency[]>(
   STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.map((policy) => [policy.key, policy.dependencies]),
 );
-
-export function getStaticEndpointRouteDefinitionByPath(path: string): EndpointDefinition | undefined {
-  return STATIC_ENDPOINT_ROUTE_DEFINITION_BY_PATH.get(path);
-}
-
-export function getStaticEndpointRouteDefinitionByKey(key: EndpointKey | string): EndpointDefinition | undefined {
-  return STATIC_ENDPOINT_ROUTE_DEFINITION_BY_KEY.get(key);
-}
 
 export function getStaticEndpointDependenciesByKey(key: EndpointKey | string): readonly EndpointDependency[] | undefined {
   return STATIC_ENDPOINT_DEPENDENCIES_BY_KEY.get(key);
