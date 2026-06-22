@@ -3,6 +3,7 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
+import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 
@@ -307,7 +308,7 @@ describe("syncLiveReserves", () => {
     const db = mockD1([
       {
         match: "DELETE FROM cache WHERE key = ?",
-        matchBinds: ["live-reserves:run-cursor"],
+        matchBinds: [LIVE_RESERVE_RUN_CURSOR_CACHE_KEY],
         rows: [],
         throwError: new Error("cursor delete unavailable"),
       },
@@ -536,7 +537,7 @@ describe("syncLiveReserves", () => {
       runBudgetTruncationCount?: number;
     };
     const cursorWrites = db.getHistory().filter((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "live-reserves:run-cursor"
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY
     );
 
     expect(firstRunMetadata).toMatchObject({
@@ -565,7 +566,7 @@ describe("syncLiveReserves", () => {
     const resumedDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["live-reserves:run-cursor"],
+        matchBinds: [LIVE_RESERVE_RUN_CURSOR_CACHE_KEY],
         rows: [],
         first: {
           value: cursorValue,

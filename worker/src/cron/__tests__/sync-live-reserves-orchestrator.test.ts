@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters-definitions";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import {
   CONFIGURED_COINS,
   SYNC_ORDERED_CONFIGURED_COINS,
@@ -30,7 +31,7 @@ vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 
-const CURSOR_CACHE_KEY = "live-reserves:run-cursor";
+const CURSOR_CACHE_KEY = LIVE_RESERVE_RUN_CURSOR_CACHE_KEY;
 const CONFIGURED_COIN_COUNT = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
 
 // Tight budget seam values so the queue loop defers without real timers:

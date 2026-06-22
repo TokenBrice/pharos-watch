@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../operational-cache-keys";
 import {
   beginReserveSyncAttempt,
   computeReserveCompositionOverview,
@@ -1764,7 +1765,7 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["live-reserves:run-cursor"],
+        matchBinds: [LIVE_RESERVE_RUN_CURSOR_CACHE_KEY],
         rows: [],
         first: {
           value: JSON.stringify({

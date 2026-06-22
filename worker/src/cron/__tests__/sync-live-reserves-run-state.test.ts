@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ConfiguredCoin } from "../sync-live-reserves-shared";
 import { loadLiveReserveCursorState, recordDeferredTail } from "../sync-live-reserves-run-state";
+import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 
 function makeCoin(id: string): ConfiguredCoin {
   return {
@@ -82,7 +83,7 @@ describe("recordDeferredTail", () => {
 
     const cursorWrites = history.filter((entry) => (
       entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "live-reserves:run-cursor"
+      && entry.binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY
     ));
     const firstDeferredRowIndex = history.findIndex((entry) => (
       entry.sql.includes("INSERT INTO reserve_sync_state")
@@ -122,13 +123,13 @@ describe("recordDeferredTail", () => {
           run: async () => {
             if (
               sql.includes("INSERT OR REPLACE INTO cache")
-              && binds[0] === "live-reserves:run-cursor"
+              && binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY
               && cursorWriteAttempts === 0
             ) {
               cursorWriteAttempts++;
               throw new Error("D1 DB is overloaded");
             }
-            cursorWriteAttempts += sql.includes("INSERT OR REPLACE INTO cache") && binds[0] === "live-reserves:run-cursor"
+            cursorWriteAttempts += sql.includes("INSERT OR REPLACE INTO cache") && binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY
               ? 1
               : 0;
             history.push({ sql, binds });
@@ -156,7 +157,7 @@ describe("recordDeferredTail", () => {
     expect(cursorWriteAttempts).toBe(3);
     const cursorWrites = history.filter((entry) => (
       entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "live-reserves:run-cursor"
+      && entry.binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY
     ));
     expect(cursorWrites).toHaveLength(2);
   });
@@ -170,7 +171,7 @@ describe("recordDeferredTail", () => {
     await expect(recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000, controller.signal))
       .rejects.toThrow("cron timed out");
 
-    expect(history.some((entry) => entry.binds[0] === "live-reserves:run-cursor")).toBe(false);
+    expect(history.some((entry) => entry.binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY)).toBe(false);
   });
 
   it("records a durable event when previous cursor state cannot be read", async () => {
@@ -253,7 +254,7 @@ describe("recordDeferredTail", () => {
 
     const cursorWrites = history.filter((entry) => (
       entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "live-reserves:run-cursor"
+      && entry.binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY
     ));
     expect(cursorWrites).toHaveLength(2);
     expect(parseCursorWrite(cursorWrites[0])).toMatchObject({

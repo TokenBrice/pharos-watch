@@ -2,6 +2,7 @@ import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapte
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./live-reserves-store-shared";
 import { getCache } from "./db-cache";
+import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "./operational-cache-keys";
 import {
   getConfiguredLiveReserveCoins,
   LIVE_RESERVE_FRESHNESS_SEC,
@@ -318,7 +319,7 @@ export async function computeReserveCompositionOverview(
     loadReserveCompositionRowMap(db, coinIds),
   ]);
 
-  const cursor = parseCursorCacheState(await getCache(db, "live-reserves:run-cursor"));
+  const cursor = parseCursorCacheState(await getCache(db, LIVE_RESERVE_RUN_CURSOR_CACHE_KEY));
 
   let historyWriteGaps: NonNullable<ReserveCompositionOverview["historyWriteGaps"]> = [];
   try {

@@ -2,6 +2,7 @@ import { getCache } from "../lib/db-cache";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import { runWithOverloadRetry } from "../lib/cron-lease";
+import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../lib/operational-cache-keys";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
 import { toErrorMessage } from "../lib/error-utils";
 import {
@@ -9,8 +10,6 @@ import {
   buildReserveSyncRecordDeferredStatement,
 } from "../lib/live-reserves-store-statements";
 import { logCronEvent } from "../lib/cron-logger";
-
-const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
 
 export type LiveReserveCursorTailState = "recording" | "incomplete" | "complete";
 
@@ -65,7 +64,7 @@ export function selectConfiguredCoinRunQueue(
 }
 
 export async function loadLiveReserveCursorState(db: D1Database): Promise<LoadedLiveReserveCursorState | null> {
-  const cached = await getCache(db, RESERVE_SYNC_CURSOR_CACHE_KEY);
+  const cached = await getCache(db, LIVE_RESERVE_RUN_CURSOR_CACHE_KEY);
   if (!cached) return null;
   try {
     const parsed = JSON.parse(cached.value) as Partial<LiveReserveCursorState>;
@@ -107,7 +106,7 @@ async function writeLiveReserveCursorState(
         "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
       )
       .bind(
-        RESERVE_SYNC_CURSOR_CACHE_KEY,
+        LIVE_RESERVE_RUN_CURSOR_CACHE_KEY,
         JSON.stringify(state),
         updatedAt,
       )
@@ -121,7 +120,7 @@ async function writeLiveReserveCursorState(
 async function deleteLiveReserveCursorState(db: D1Database, signal?: AbortSignal): Promise<void> {
   throwIfAborted(signal);
   await runWithOverloadRetry(() =>
-    db.prepare("DELETE FROM cache WHERE key = ?").bind(RESERVE_SYNC_CURSOR_CACHE_KEY).run(),
+    db.prepare("DELETE FROM cache WHERE key = ?").bind(LIVE_RESERVE_RUN_CURSOR_CACHE_KEY).run(),
     3,
     signal,
   );
