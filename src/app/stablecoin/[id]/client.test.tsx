@@ -7,9 +7,14 @@ import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
-const { useStablecoinDetailViewModelMock } = vi.hoisted(() => ({
-  useStablecoinDetailViewModelMock: vi.fn(),
-}));
+const { lazyViewportValues, nearViewportValues, useNearViewportMock, useStablecoinDetailViewModelMock } = vi.hoisted(
+  () => ({
+    lazyViewportValues: [] as boolean[],
+    nearViewportValues: [] as boolean[],
+    useNearViewportMock: vi.fn(),
+    useStablecoinDetailViewModelMock: vi.fn(),
+  }),
+);
 
 vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<unknown>) => {
@@ -27,7 +32,13 @@ vi.mock("next/dynamic", () => ({
         return (
           <section id="reserves" data-testid="reserve-panel">
             <span>{reserves?.mode ?? "no-reserves"}</span>
-            <button type="button" disabled={isFetching} onClick={() => { void onRetry?.(); }}>
+            <button
+              type="button"
+              disabled={isFetching}
+              onClick={() => {
+                void onRetry?.();
+              }}
+            >
               Retry reserves
             </button>
           </section>
@@ -39,6 +50,26 @@ vi.mock("next/dynamic", () => ({
         return <div data-testid="report-card">{rightColumn}</div>;
       };
     }
+    if (source.includes("FlowHistorySection")) {
+      return function FlowHistorySectionStub() {
+        return <div data-testid="flow-history-section" />;
+      };
+    }
+    if (source.includes("FlowsSection")) {
+      return function FlowsSectionStub() {
+        return <div data-testid="flows-section" />;
+      };
+    }
+    if (source.includes("BlacklistHistorySection")) {
+      return function BlacklistHistorySectionStub() {
+        return <div data-testid="blacklist-history-section" />;
+      };
+    }
+    if (source.includes("BlacklistSection")) {
+      return function BlacklistSectionStub() {
+        return <div data-testid="blacklist-section" />;
+      };
+    }
     return function DynamicPlaceholder() {
       return <div data-testid="dynamic-detail-section" />;
     };
@@ -46,11 +77,19 @@ vi.mock("next/dynamic", () => ({
 }));
 
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => <a href={href} {...props}>{children}</a>,
+  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("@/hooks/use-stablecoin-detail-view-model", () => ({
   useStablecoinDetailViewModel: useStablecoinDetailViewModelMock,
+}));
+
+vi.mock("@/hooks/use-near-viewport", () => ({
+  useNearViewport: useNearViewportMock,
 }));
 
 vi.mock("@/hooks/use-depeg-events", () => ({
@@ -193,6 +232,16 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
 
 describe("StablecoinDetailClient", () => {
   beforeEach(() => {
+    lazyViewportValues.length = 0;
+    nearViewportValues.length = 0;
+    useNearViewportMock.mockReset();
+    useNearViewportMock.mockImplementation((rootMargin?: string) => {
+      const queue = rootMargin === "600px" ? nearViewportValues : lazyViewportValues;
+      return {
+        ref: { current: null },
+        near: queue.shift() ?? true,
+      };
+    });
     useStablecoinDetailViewModelMock.mockReset();
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
   });
@@ -220,6 +269,75 @@ describe("StablecoinDetailClient", () => {
     expect(container.textContent).toContain("Loading research dossier");
   });
 
+  it("passes near-viewport section gates into supplemental query controls", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    nearViewportValues.push(false, true, false);
+
+    render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        supplementalQueryControls: {
+          flows: true,
+          blacklist: true,
+          reserves: false,
+        },
+      }),
+    );
+  });
+
+  it("keeps supplemental query controls disabled before their sections are near", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    nearViewportValues.push(false, false, false);
+
+    render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        supplementalQueryControls: {
+          flows: false,
+          blacklist: false,
+          reserves: false,
+        },
+      }),
+    );
+  });
+
+  it("keeps activity flow and blacklist children behind their own lazy gates", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    nearViewportValues.push(true, true, true);
+    lazyViewportValues.push(
+      true, // DexLiquidityCard
+      false, // Activity FlowsSection
+      false, // Activity BlacklistSection
+      true, // SafetyScoreHistorySection
+      true, // DepegHistory
+      true, // FlowHistorySection
+      true, // BlacklistHistorySection
+    );
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        hasFlows: true,
+        hasBlacklist: true,
+        blacklistSymbol: "USDT",
+        supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1, supply: 100 }],
+      }),
+    );
+
+    render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    expect(screen.queryByTestId("flows-section")).toBeNull();
+    expect(screen.queryByTestId("blacklist-section")).toBeNull();
+    expect(screen.getByTestId("flow-history-section")).toBeTruthy();
+    expect(screen.getByTestId("blacklist-history-section")).toBeTruthy();
+  });
+
   it("renders the parent variants card outside the overview section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = render(
@@ -237,16 +355,18 @@ describe("StablecoinDetailClient", () => {
   it("renders reserve view in the overview stream when report-card data is unavailable", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const refetchReserves = vi.fn().mockResolvedValue({ status: "success" });
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      reportCard: null,
-      reserves: {
-        reserves: [{ name: "Curated reserve", pct: 100, risk: "low" }],
-        estimated: false,
-        mode: "curated-fallback",
-      },
-      refetchReserves,
-      isFetchingReserves: true,
-    }));
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        reportCard: null,
+        reserves: {
+          reserves: [{ name: "Curated reserve", pct: 100, risk: "low" }],
+          estimated: false,
+          mode: "curated-fallback",
+        },
+        refetchReserves,
+        isFetchingReserves: true,
+      }),
+    );
 
     const { container } = render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -262,29 +382,31 @@ describe("StablecoinDetailClient", () => {
 
   it("renders the underlying asset card outside the overview section for variants", () => {
     const coin = TRACKED_META_BY_ID.get("susds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      id: coin.id,
-      coin,
-      variantParent: TRACKED_META_BY_ID.get("usds-sky")!,
-      variantSiblings: [TRACKED_META_BY_ID.get("stusds-sky")!],
-      childVariants: [],
-      isVariant: true,
-      hasVariants: false,
-      coinData: {
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
         id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol,
-        pegType: "peggedUSD",
-        price: 1.01,
-        circulating: { peggedUSD: 100 },
-        circulatingPrevDay: { peggedUSD: 99 },
-        circulatingPrevWeek: { peggedUSD: 98 },
-        circulatingPrevMonth: { peggedUSD: 97 },
-        chainCirculating: {},
-        chains: ["ethereum"],
-      },
-      isNavToken: true,
-    }));
+        coin,
+        variantParent: TRACKED_META_BY_ID.get("usds-sky")!,
+        variantSiblings: [TRACKED_META_BY_ID.get("stusds-sky")!],
+        childVariants: [],
+        isVariant: true,
+        hasVariants: false,
+        coinData: {
+          id: coin.id,
+          name: coin.name,
+          symbol: coin.symbol,
+          pegType: "peggedUSD",
+          price: 1.01,
+          circulating: { peggedUSD: 100 },
+          circulatingPrevDay: { peggedUSD: 99 },
+          circulatingPrevWeek: { peggedUSD: 98 },
+          circulatingPrevMonth: { peggedUSD: 97 },
+          chainCirculating: {},
+          chains: ["ethereum"],
+        },
+        isNavToken: true,
+      }),
+    );
 
     const { container } = render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -299,9 +421,11 @@ describe("StablecoinDetailClient", () => {
 
   it("uses the market data section for non-yield-bearing USD assets with supply history", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1, supply: 100 }],
-    }));
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1, supply: 100 }],
+      }),
+    );
 
     const { container } = render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -322,11 +446,13 @@ describe("StablecoinDetailClient", () => {
         pegCurrency: "USD" as const,
       },
     };
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      coin: yieldBearingCoin,
-      isNavToken: false,
-      supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1.01, supply: 99 }],
-    }));
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        coin: yieldBearingCoin,
+        isNavToken: false,
+        supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1.01, supply: 99 }],
+      }),
+    );
 
     const { container } = render(
       <StablecoinDetailClient
@@ -342,11 +468,13 @@ describe("StablecoinDetailClient", () => {
 
   it("mounts redemption backstop data in the liquidity zone", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      redemptionBackstop: {
-        stablecoinId: coin.id,
-      },
-    }));
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        redemptionBackstop: {
+          stablecoinId: coin.id,
+        },
+      }),
+    );
 
     render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -360,9 +488,11 @@ describe("StablecoinDetailClient", () => {
 
   it("keeps the liquidity price panel when redemption backstop data is absent", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      redemptionBackstop: undefined,
-    }));
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        redemptionBackstop: undefined,
+      }),
+    );
 
     render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -374,25 +504,27 @@ describe("StablecoinDetailClient", () => {
 
   it("keeps redemption in the liquidity zone when price transparency data is absent", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      coinData: {
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol,
-        pegType: "peggedUSD",
-        price: null,
-        circulating: { peggedUSD: 100 },
-        circulatingPrevDay: { peggedUSD: 99 },
-        circulatingPrevWeek: { peggedUSD: 98 },
-        circulatingPrevMonth: { peggedUSD: 97 },
-        chainCirculating: {},
-        chains: ["ethereum"],
-      },
-      dexPriceCheck: null,
-      redemptionBackstop: {
-        stablecoinId: coin.id,
-      },
-    }));
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        coinData: {
+          id: coin.id,
+          name: coin.name,
+          symbol: coin.symbol,
+          pegType: "peggedUSD",
+          price: null,
+          circulating: { peggedUSD: 100 },
+          circulatingPrevDay: { peggedUSD: 99 },
+          circulatingPrevWeek: { peggedUSD: 98 },
+          circulatingPrevMonth: { peggedUSD: 97 },
+          chainCirculating: {},
+          chains: ["ethereum"],
+        },
+        dexPriceCheck: null,
+        redemptionBackstop: {
+          stablecoinId: coin.id,
+        },
+      }),
+    );
 
     const { container } = render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -406,23 +538,25 @@ describe("StablecoinDetailClient", () => {
 
   it("omits the liquidity detail grid when price transparency and redemption data are absent", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      coinData: {
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol,
-        pegType: "peggedUSD",
-        price: null,
-        circulating: { peggedUSD: 100 },
-        circulatingPrevDay: { peggedUSD: 99 },
-        circulatingPrevWeek: { peggedUSD: 98 },
-        circulatingPrevMonth: { peggedUSD: 97 },
-        chainCirculating: {},
-        chains: ["ethereum"],
-      },
-      dexPriceCheck: null,
-      redemptionBackstop: undefined,
-    }));
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        coinData: {
+          id: coin.id,
+          name: coin.name,
+          symbol: coin.symbol,
+          pegType: "peggedUSD",
+          price: null,
+          circulating: { peggedUSD: 100 },
+          circulatingPrevDay: { peggedUSD: 99 },
+          circulatingPrevWeek: { peggedUSD: 98 },
+          circulatingPrevMonth: { peggedUSD: 97 },
+          chainCirculating: {},
+          chains: ["ethereum"],
+        },
+        dexPriceCheck: null,
+        redemptionBackstop: undefined,
+      }),
+    );
 
     render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,

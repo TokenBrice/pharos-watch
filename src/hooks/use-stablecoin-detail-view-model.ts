@@ -14,6 +14,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -21,11 +22,18 @@ import {
 } from "@/lib/stablecoin-detail-view-model";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-authority-view-model";
 
+export interface StablecoinDetailSupplementalQueryControls {
+  flows?: boolean;
+  blacklist?: boolean;
+  reserves?: boolean;
+}
+
 interface UseStablecoinDetailViewModelParams {
   id: string;
   coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
+  supplementalQueryControls?: StablecoinDetailSupplementalQueryControls;
 }
 
 export type StablecoinDetailViewModel =
@@ -42,6 +50,7 @@ export function useStablecoinDetailViewModel({
   coin,
   summary,
   logoSrc,
+  supplementalQueryControls,
 }: UseStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   const {
     data: supplyData,
@@ -88,25 +97,45 @@ export function useStablecoinDetailViewModel({
   } = useRedemptionBackstops();
   const { data: yieldRankingsData } = useYieldRankings();
   const { data: stressSignalsData } = useStressSignals();
-  const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
-  const { data: blacklistSummary, isLoading: isBlacklistLoading } = useBlacklistSummary();
-  const reservesEnabled = !!coin?.liveReservesConfig;
+  const flowsEnabled = supplementalQueryControls?.flows ?? true;
+  const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
+  const blacklistEnabled = blacklistSupported && (supplementalQueryControls?.blacklist ?? true);
+  const reservesEnabled = !!coin?.liveReservesConfig && (supplementalQueryControls?.reserves ?? true);
+  const {
+    data: flowsData,
+    isLoading: isFlowsLoading,
+    refetch: refetchFlows,
+  } = useMintBurnFlows(24, { enabled: flowsEnabled });
+  const {
+    data: blacklistSummary,
+    isLoading: isBlacklistLoading,
+    refetch: refetchBlacklist,
+  } = useBlacklistSummary({ enabled: blacklistEnabled });
   const liveReserves = useStablecoinReserves(id, reservesEnabled);
 
   const handleRetryAll = useCallback(() => {
-    return refetchQueryGroup([
-      refetchSupply,
-      refetchList,
-      refetchPeg,
-      refetchLiquidity,
-      refetchReportCards,
-      refetchRedemptionBackstops,
-      ...(reservesEnabled ? [liveReserves.refetch] : []),
-    ], {
-      warnLabel: "[refetch] Some queries failed to refresh",
-    });
+    return refetchQueryGroup(
+      [
+        refetchSupply,
+        refetchList,
+        refetchPeg,
+        refetchLiquidity,
+        refetchReportCards,
+        refetchRedemptionBackstops,
+        ...(flowsEnabled ? [refetchFlows] : []),
+        ...(blacklistEnabled ? [refetchBlacklist] : []),
+        ...(reservesEnabled ? [liveReserves.refetch] : []),
+      ],
+      {
+        warnLabel: "[refetch] Some queries failed to refresh",
+      },
+    );
   }, [
     liveReserves.refetch,
+    blacklistEnabled,
+    flowsEnabled,
+    refetchBlacklist,
+    refetchFlows,
     refetchLiquidity,
     refetchList,
     refetchPeg,
@@ -167,16 +196,16 @@ export function useStablecoinDetailViewModel({
       yieldRankingsData,
       stressSignalsData,
       flows: {
-        data: flowsData,
-        isLoading: isFlowsLoading,
+        data: flowsEnabled ? flowsData : undefined,
+        isLoading: flowsEnabled && isFlowsLoading,
       },
       blacklist: {
-        summary: blacklistSummary,
-        isLoading: isBlacklistLoading,
+        summary: blacklistEnabled ? blacklistSummary : undefined,
+        isLoading: blacklistEnabled && isBlacklistLoading,
       },
       reserves: {
-        live: liveReserves.reserveResult,
-        error: liveReserves.error,
+        live: reservesEnabled ? liveReserves.reserveResult : null,
+        error: reservesEnabled ? liveReserves.error : null,
       },
     },
   });

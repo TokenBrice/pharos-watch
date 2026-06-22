@@ -31,6 +31,7 @@ import { CoinNotices } from "@/components/coin-notice";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
+import { useNearViewport } from "@/hooks/use-near-viewport";
 import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
@@ -241,7 +242,21 @@ export default function StablecoinDetailClient({
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [activeBannerId, setActiveBannerId] = useState<string>("overview");
   const heroRef = useRef<HTMLDivElement>(null);
-  const viewModel = useStablecoinDetailViewModel({ id, coin, summary, logoSrc });
+  const { ref: overviewGateRef, near: overviewNear } = useNearViewport<HTMLDivElement>("600px");
+  const { ref: activityGateRef, near: activityNear } = useNearViewport<HTMLDivElement>("600px");
+  const { ref: historyGateRef, near: historyNear } = useNearViewport<HTMLDivElement>("600px");
+  const activityOrHistoryNear = activityNear || historyNear;
+  const viewModel = useStablecoinDetailViewModel({
+    id,
+    coin,
+    summary,
+    logoSrc,
+    supplementalQueryControls: {
+      flows: activityOrHistoryNear,
+      blacklist: activityOrHistoryNear,
+      reserves: overviewNear,
+    },
+  });
   const hasCollateralUsage = staticCoin.hasCollateralUsage;
 
   if (viewModel.status === "loading") {
@@ -440,7 +455,7 @@ export default function StablecoinDetailClient({
           </div>
 
           {/* ── Overview ── */}
-          <div className="space-y-6">
+          <div ref={overviewGateRef} className="space-y-6">
             <SectionBanner id="overview" label="Overview" icon={Compass} active={activeBannerId === "overview"} />
             <section id="report-card">
               {viewModel.reportCard && (
@@ -530,25 +545,33 @@ export default function StablecoinDetailClient({
           </div>
 
           {/* ── Activity ── */}
-          <div className="space-y-6">
+          <div ref={activityGateRef} className="space-y-6">
             <SectionBanner id="activity" label="Activity" icon={Activity} active={activeBannerId === "activity"} />
             {viewModel.hasYieldSection ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
 
-            {viewModel.hasFlows ? frozenNote : null}
-            <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
+            {viewModel.hasFlows ? (
+              <>
+                {frozenNote}
+                <LazySection minHeight={320}>
+                  <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
+                </LazySection>
+              </>
+            ) : null}
 
             {viewModel.hasBlacklist && (
               <div>
                 {frozenNote}
                 <SectionErrorBoundary name="blacklist">
-                  <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
+                  <LazySection minHeight={320}>
+                    <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
+                  </LazySection>
                 </SectionErrorBoundary>
               </div>
             )}
           </div>
 
           {/* ── History ── */}
-          <div className="space-y-6">
+          <div ref={historyGateRef} className="space-y-6">
             <SectionBanner id="history" label="History" icon={HistoryIcon} active={activeBannerId === "history"} />
             {frozenNote}
             <section id="coin-timeline" aria-label="Coin event timeline">
@@ -574,13 +597,16 @@ export default function StablecoinDetailClient({
                 </LazySection>
               </section>
             ) : null}
-            {viewModel.hasFlows ? <FlowHistorySection stablecoinId={viewModel.id} /> : null}
+            {viewModel.hasFlows ? (
+              <LazySection minHeight={320}>
+                <FlowHistorySection stablecoinId={viewModel.id} />
+              </LazySection>
+            ) : null}
             {viewModel.hasBlacklist ? (
               <SectionErrorBoundary name="blacklist-history">
-                <BlacklistHistorySection
-                  stablecoinId={viewModel.id}
-                  symbol={viewModel.blacklistSymbol!}
-                />
+                <LazySection minHeight={320}>
+                  <BlacklistHistorySection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
+                </LazySection>
               </SectionErrorBoundary>
             ) : null}
           </div>
