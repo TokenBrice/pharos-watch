@@ -284,13 +284,15 @@ export function ScreenerClient() {
   );
   const exportRows = scoreFilterDataLoading ? [] : sortedRows;
 
+  const hasStablecoinRows = !!stablecoinsData?.peggedAssets?.length;
+
   const freshnessGroup = buildQueryFreshnessGroup([
     {
       preset: "stablecoins",
       data: stablecoinsData?.peggedAssets,
       dataUpdatedAt: stablecoinsUpdatedAt,
       error: stablecoinsError,
-      hasData: !!stablecoinsData?.peggedAssets?.length,
+      hasData: hasStablecoinRows,
       meta: stablecoinsMeta,
       refetch: refetchStablecoins,
     },
@@ -347,7 +349,7 @@ export function ScreenerClient() {
     <div className="space-y-6">
       <QueryFreshnessNotices
         error={freshnessGroup.globalError}
-        hasData={freshnessGroup.hasAnyData}
+        hasData={hasStablecoinRows}
         onRetry={freshnessGroup.refetchAll}
         queries={freshnessGroup.queries}
       />
