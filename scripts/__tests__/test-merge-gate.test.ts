@@ -27,7 +27,11 @@ import {
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
-import { buildValidatePrebuildExecutionUnits, runValidatePrebuild } from "../maintenance/run-validate-prebuild.mjs";
+import {
+  buildValidatePrebuildExecutionUnits,
+  printValidatePrebuildCommandPlan,
+  runValidatePrebuild,
+} from "../maintenance/run-validate-prebuild.mjs";
 import {
   buildDiscoveryExecutionGroups,
   getDiscoveryCommandEnv,
@@ -591,11 +595,75 @@ describe("validate:prebuild surface filtering", () => {
     );
   });
 
+  it("prints the exact prebuild command plan", () => {
+    const logs: string[] = [];
+    printValidatePrebuildCommandPlan(buildValidatePrebuildExecutionUnits("pages"), {
+      log: (line) => logs.push(line),
+    });
+
+    expect(logs).toEqual([
+      "[validate:prebuild] Command plan:",
+      ...buildValidatePrebuildCommandsForSurface("pages").map((cmd, index) => `${index + 1}. ${cmd}`),
+    ]);
+  });
+
+  it("prints a dry-run plan without executing prebuild units", async () => {
+    const logs: string[] = [];
+    let executed = false;
+
+    const result = await runValidatePrebuild({
+      argv: ["--dry-run"],
+      env: {
+        [VALIDATE_PREBUILD_SURFACE_ENV]: "worker",
+      },
+      log: (line) => logs.push(line),
+      runExecutionUnits: () => {
+        executed = true;
+        throw new Error("dry-run must not execute");
+      },
+    });
+
+    const expectedCommands = buildValidatePrebuildCommandsForSurface("worker");
+    expect(expectedCommands).toContain("npm run check:migrations");
+    expect(expectedCommands).not.toContain("npm run check:generated-artifacts");
+    expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
+    expect(executed).toBe(false);
+    expect(logs).toEqual([
+      `[validate:prebuild] Surface hint: worker; dry-run plan has ${expectedCommands.length} prebuild command(s).`,
+      "[validate:prebuild] Command plan:",
+      ...expectedCommands.map((cmd, index) => `${index + 1}. ${cmd}`),
+      "[validate:prebuild] Dry run enabled; commands not executed.",
+    ]);
+  });
+
+  it("uses the full prebuild command set by default in non-dry-run mode", async () => {
+    let receivedUnits: Array<{ commands: string[] }> = [];
+    let receivedOptions: { continueOnError?: boolean; label?: string; maxParallel?: number } | undefined;
+
+    await runValidatePrebuild({
+      argv: [],
+      env: {},
+      log: () => {},
+      runExecutionUnits: (units, options) => {
+        receivedUnits = units;
+        receivedOptions = options;
+        return Promise.resolve({ status: 0, failedCmd: null, aborted: false });
+      },
+    });
+
+    expect(receivedUnits.map((unit) => unit.commands[0])).toEqual(VALIDATE_PREBUILD_COMMANDS);
+    expect(receivedOptions).toMatchObject({
+      continueOnError: false,
+      label: "validate:prebuild",
+    });
+  });
+
   it("passes filtered runner units and continue-on-error through the prebuild runner", async () => {
     let receivedUnits: Array<{ commands: string[] }> = [];
     let receivedOptions: { continueOnError?: boolean; label?: string; maxParallel?: number } | undefined;
 
     await runValidatePrebuild({
+      argv: [],
       env: {
         [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
         VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
