@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.294",
+    title: "NY Fed EFFR Benchmark Source Hardening",
+    date: "2026-06-22",
+    effectiveAt: 1782086400,
+    summary:
+      "Yield Intelligence now resolves the optional USD_EFFR benchmark from the New York Fed Markets Data API first, retaining FRED DFF as a fallback feed for EFFR-linked products.",
+    impact: [
+      "USD_EFFR benchmark refreshes prefer the official New York Fed latest EFFR endpoint and record successful live observations with source `nyfed-effr`",
+      "FRED DFF remains wired as the secondary USD_EFFR source with provenance `fred-dff`, so a New York Fed endpoint outage can still publish a live market observation without marking the benchmark degraded",
+      "When both live EFFR feeds fail, the cron retains the prior market USD_EFFR benchmark when available and marks the fallback as `usd-effr-sources-failed-retained`; otherwise it reports `usd-effr-sources-failed`",
+      "PYS formula shape, source-risk calibration, benchmark selection semantics, history semantics, and publication guards are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.293",
     title: "Banxico-Only MXN Benchmark Hardening",
     date: "2026-06-19",

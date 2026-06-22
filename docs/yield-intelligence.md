@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.293`
+- **Current methodology version:** `v8.294`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.294 hardens the optional `USD_EFFR` benchmark source path. The daily benchmark cron now prefers the New York Fed Markets Data API latest EFFR endpoint (`nyfed-effr`) and retains FRED DFF (`fred-dff`) as a secondary market source. If both live EFFR feeds fail, the cron retains the prior market `USD_EFFR` benchmark when available and marks the fallback as `usd-effr-sources-failed-retained`; otherwise it reports `usd-effr-sources-failed`. PYS formula shape, source-risk calibration, benchmark selection semantics, history semantics, and publication guards are unchanged.
 
 Yield v8.293 hardens MXN benchmark integrity by removing the Etherfuse CETES issuer page from the shared benchmark fallback path. Etherfuse CETES current issuance remains the product APY source for `cetes-etherfuse`, but the global MXN benchmark now resolves from Banxico SIE `SF43936` or retained prior market data only. Fallback benchmark resolutions also stop refreshing `lastMarket*` metadata, so degraded proxy values cannot become the durable last-market source for later retained fallbacks. PYS formula shape, source-risk calibration, history semantics, and publication guards are otherwise unchanged.
 
@@ -336,7 +338,7 @@ For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token min
 apy = max(0, benchmarkRate - spreadBps / 100)
 ```
 
-Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native or product-specific benchmark when one exists. EUR rows use the ECB's official 3-month compounded €STR series. CHF rows use delayed public `SAR3MC` (3-month compounded SARON) from SIX. RUB rows use the Central Bank of Russia key rate from the DailyInfo `KeyRateXML` SOAP feed. TRY rows use CBRT EVDS BIST TLREF (`TP.BISTTLREF.ORAN`). USDGO uses `USD_EFFR`, sourced from FRED DFF, because OSL's public material describes the product against the Effective Federal Funds Rate net of fees. Rate-derived configs can also set `benchmarkOverrideKey`: APY is still computed from the configured product benchmark, but PYS/excess-yield benchmark selection and provenance use the override. USD tokenized T-bill/MMF-style proxies use this to compare against `USD_EFFR`; EUR and GBP treasury proxies carry explicit same-currency override keys; A7A5 uses `RUB` for both APY derivation and PYS/excess-yield provenance. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default. Because the public SIX compound-rate file is delayed, CHF benchmark `recordDate` can trail the fetch date by one business day even on a healthy run.
+Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native or product-specific benchmark when one exists. EUR rows use the ECB's official 3-month compounded €STR series. CHF rows use delayed public `SAR3MC` (3-month compounded SARON) from SIX. RUB rows use the Central Bank of Russia key rate from the DailyInfo `KeyRateXML` SOAP feed. TRY rows use CBRT EVDS BIST TLREF (`TP.BISTTLREF.ORAN`). USDGO uses `USD_EFFR`, sourced first from the New York Fed EFFR endpoint and then FRED DFF, because OSL's public material describes the product against the Effective Federal Funds Rate net of fees. Rate-derived configs can also set `benchmarkOverrideKey`: APY is still computed from the configured product benchmark, but PYS/excess-yield benchmark selection and provenance use the override. USD tokenized T-bill/MMF-style proxies use this to compare against `USD_EFFR`; EUR and GBP treasury proxies carry explicit same-currency override keys; A7A5 uses `RUB` for both APY derivation and PYS/excess-yield provenance. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default. Because the public SIX compound-rate file is delayed, CHF benchmark `recordDate` can trail the fetch date by one business day even on a healthy run.
 
 **Configured tokens:**
 
@@ -502,7 +504,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | Key | Label | Primary source | Notes |
 | --- | ----- | -------------- | ----- |
 | `USD` | USD 3M T-Bill | FRED `DGS3MO`, then Treasury.gov yield curve XML | Default benchmark and backward-compatible top-level `riskFreeRate`; Treasury.gov is used as a fallback when FRED is unavailable |
-| `USD_EFFR` | USD effective federal funds rate | FRED `DFF` | Optional product-specific benchmark for EFFR-linked products such as USDGO; not the default USD hurdle |
+| `USD_EFFR` | USD effective federal funds rate | New York Fed latest EFFR endpoint, then FRED `DFF` | Optional product-specific benchmark for EFFR-linked products such as USDGO; not the default USD hurdle |
 | `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
 | `GBP` | GBP 3M compounded SONIA | Bank of England IADB SONIA Compounded Index `IUDZOS2` CSV | Annualized from the trailing 90-day index change; metadata source `boe-sonia-compounded-index`, fallback mode `gbp-sonia-compounded-index-failed` |
@@ -519,6 +521,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 
 ```text
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
+https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF
 https://home.treasury.gov/sites/default/files/interest-rates/yield.xml
 https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata
@@ -749,7 +752,7 @@ It fetches those families, serializes the resolved candidate set into a cache sn
 Fetches the benchmark registry used by Yield Intelligence:
 
 - USD 3M Treasury yield from FRED `DGS3MO`, falling back to Treasury.gov yield XML when FRED is unavailable
-- USD Effective Federal Funds Rate from FRED `DFF`, stored as optional `USD_EFFR` for EFFR-linked products such as USDGO
+- USD Effective Federal Funds Rate from the New York Fed latest EFFR endpoint, with FRED `DFF` as fallback, stored as optional `USD_EFFR` for EFFR-linked products such as USDGO
 - EUR 3M compounded €STR from the ECB Data API (`EST/B.EU000A2QQF32.CR`)
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
 - GBP 3M compounded SONIA from the Bank of England IADB SONIA Compounded Index `IUDZOS2`, annualized from the trailing 90-day index change (v8.28)
@@ -867,8 +870,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.293",
-    "currentVersion": "8.293",
+    "version": "8.294",
+    "currentVersion": "8.294",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
@@ -1050,7 +1053,8 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
 | `RISK_FREE_RATE_FALLBACK`       | 3.75                                                        | Fallback T-bill rate (%)                         |
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
-| `FRED_EFFR_CSV_URL`             | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF` | FRED daily Effective Federal Funds Rate series used for EFFR-linked yield products |
+| `NYFED_EFFR_JSON_URL`           | `https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json` | New York Fed latest Effective Federal Funds Rate endpoint used for EFFR-linked yield products |
+| `FRED_EFFR_CSV_URL`             | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF` | FRED daily Effective Federal Funds Rate series retained as the USD_EFFR fallback feed |
 | `TREASURY_YIELD_XML_URL`        | `https://home.treasury.gov/sites/default/files/interest-rates/yield.xml` | Treasury.gov daily yield curve XML fallback for USD 3M |
 | `ECB_ESTR_3M_CSV_URL`           | `https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata` | Official ECB 3M compounded €STR feed |
 | `SIX_OAUTH_TOKEN_URL`           | `https://indexdata.six-group.com/pro/oauth/token` | Public SIX guest OAuth endpoint for delayed downloads |

@@ -1,10 +1,19 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.293`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.294`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent.
+
+## v8.294 - NY Fed EFFR Benchmark Source Hardening (June 22, 2026)
+
+- USD_EFFR benchmark refreshes now prefer the official New York Fed latest EFFR endpoint and record successful live observations with source `nyfed-effr`
+- FRED DFF remains wired as the secondary USD_EFFR source with provenance `fred-dff`, so a New York Fed endpoint outage can still publish a live market observation without marking the benchmark degraded
+- When both live EFFR feeds fail, the cron retains the prior market USD_EFFR benchmark when available and marks the fallback as `usd-effr-sources-failed-retained`; otherwise it reports `usd-effr-sources-failed`
+- PYS formula shape, source-risk calibration, benchmark selection semantics, history semantics, and publication guards are unchanged
+
+---
 
 ## v8.293 - Banxico-Only MXN Benchmark Hardening (June 19, 2026)
 
