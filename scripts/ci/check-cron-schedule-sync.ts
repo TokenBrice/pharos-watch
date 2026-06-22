@@ -1,81 +1,266 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  CRON_CONNECTION_BUDGET_ENTRIES,
-  CRON_JOB_DEFINITIONS,
-  CRON_SCHEDULES,
-} from "../../shared/lib/cron-jobs";
-import {
-  flattenScheduledSlotPlanJobs,
-  getScheduledSlotPlanBudgetEntries,
-  SCHEDULED_SLOT_PLANS,
-  SCHEDULED_SLOT_PLANS_BY_SCHEDULE,
-} from "../../shared/lib/scheduled-runner-registry";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-// Parse wrangler.toml cron triggers
-const wranglerToml = readFileSync(join(ROOT, "worker/wrangler.toml"), "utf-8");
-const cronMatches = wranglerToml.match(/crons\s*=\s*\[([\s\S]*?)\]/);
-if (!cronMatches) {
-  console.error("Could not find crons array in wrangler.toml");
-  process.exit(1);
+const SOURCE_OWNER = {
+  wrangler: "worker/wrangler.toml [triggers.crons]",
+  schedules: "shared/lib/cron-jobs.ts [CRON_SCHEDULES]",
+  jobDefinitions: "shared/lib/cron-jobs.ts [CRON_JOB_DEFINITIONS]",
+  budgetDefinitions: "shared/lib/cron-jobs.ts [CRON_CONNECTION_BUDGET_ENTRIES]",
+  slotPlans: "shared/lib/scheduled-runner-registry.ts [SCHEDULED_SLOT_PLANS]",
+} as const;
+
+interface CronJobDefinitionForCheck {
+  job: string;
 }
-const wranglerCrons = new Set(
-  cronMatches[1].match(/"([^"]+)"/g)?.map((s) => s.replace(/"/g, "")) ?? [],
-);
 
-const sharedCrons = new Set<string>(Object.values(CRON_SCHEDULES));
-const slotPlanCrons = new Set<string>(Object.keys(SCHEDULED_SLOT_PLANS_BY_SCHEDULE));
+interface CronConnectionBudgetEntryForCheck {
+  job: string;
+}
 
-// Compare
-const onlyInWrangler = [...wranglerCrons].filter((c) => !sharedCrons.has(c));
-const onlyInShared = [...sharedCrons].filter((c) => !wranglerCrons.has(c));
-const onlyInSlotPlans = [...slotPlanCrons].filter((c) => !sharedCrons.has(c));
-const missingSlotPlan = [...sharedCrons].filter((c) => !slotPlanCrons.has(c));
-const planKeys = new Set(Object.keys(SCHEDULED_SLOT_PLANS));
-const missingPlanKeys = Object.keys(CRON_SCHEDULES).filter((key) => !planKeys.has(key));
-const extraPlanKeys = [...planKeys].filter((key) => !(key in CRON_SCHEDULES));
+interface ScheduledSlotPlanForCheck {
+  schedule?: string;
+  jobChains: readonly (readonly string[])[];
+  budgetOnlyJobs?: readonly string[];
+}
 
-const runtimeJobs = new Set(Object.values(SCHEDULED_SLOT_PLANS).flatMap(flattenScheduledSlotPlanJobs));
-const expectedCronJobs = new Set(CRON_JOB_DEFINITIONS.map((definition) => definition.job));
-const missingRuntimeJobs = [...expectedCronJobs].filter((job) => !runtimeJobs.has(job));
-const unknownRuntimeJobs = [...runtimeJobs].filter((job) => !expectedCronJobs.has(job));
+export interface CronScheduleSyncReport {
+  extraPlanKeys: string[];
+  failed: boolean;
+  missingBudgetJobs: string[];
+  missingPlanKeys: string[];
+  missingRuntimeJobs: string[];
+  missingSlotPlanSchedules: string[];
+  onlyInSharedSchedules: string[];
+  onlyInSlotPlanSchedules: string[];
+  onlyInWranglerSchedules: string[];
+  scheduleKeyByExpression: Map<string, string>;
+  slotPlanKeyByExpression: Map<string, string>;
+  slotPlanTriggerCount: number;
+  unknownBudgetJobs: string[];
+  unknownRuntimeJobs: string[];
+  wranglerTriggerCount: number;
+}
 
-const scheduledBudgetJobs = new Set(
-  Object.values(SCHEDULED_SLOT_PLANS).flatMap(getScheduledSlotPlanBudgetEntries),
-);
-const expectedBudgetJobs = new Set(CRON_CONNECTION_BUDGET_ENTRIES.map((definition) => definition.job));
-const missingBudgetJobs = [...expectedBudgetJobs].filter((job) => !scheduledBudgetJobs.has(job));
-const unknownBudgetJobs = [...scheduledBudgetJobs].filter((job) => !expectedBudgetJobs.has(job));
+export function parseWranglerCronTriggers(wranglerToml: string): string[] {
+  const cronMatches = wranglerToml.match(/crons\s*=\s*\[([\s\S]*?)\]/);
+  if (!cronMatches) {
+    throw new Error("Could not find crons array in wrangler.toml");
+  }
 
-if (
-  onlyInWrangler.length ||
-  onlyInShared.length ||
-  onlyInSlotPlans.length ||
-  missingSlotPlan.length ||
-  missingPlanKeys.length ||
-  extraPlanKeys.length ||
-  missingRuntimeJobs.length ||
-  unknownRuntimeJobs.length ||
-  missingBudgetJobs.length ||
-  unknownBudgetJobs.length
-) {
+  return cronMatches[1].match(/"([^"]+)"/g)?.map((s) => s.replace(/"/g, "")) ?? [];
+}
+
+function keyByExpression(entries: Iterable<readonly [string, string]>): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const [key, schedule] of entries) {
+    if (!result.has(schedule)) {
+      result.set(schedule, key);
+    }
+  }
+  return result;
+}
+
+function formatSchedule(schedule: string, keyBySchedule: Map<string, string>): string {
+  const key = keyBySchedule.get(schedule);
+  return key ? `${key}: "${schedule}"` : `"${schedule}"`;
+}
+
+function formatList(values: readonly string[], format: (value: string) => string = (value) => value): string[] {
+  return values.map((value) => `  - ${format(value)}`);
+}
+
+function flattenScheduledJobs(plan: ScheduledSlotPlanForCheck): string[] {
+  return plan.jobChains.flatMap((chain) => chain);
+}
+
+function getScheduledBudgetEntries(plan: ScheduledSlotPlanForCheck): string[] {
+  return [...flattenScheduledJobs(plan), ...(plan.budgetOnlyJobs ?? [])];
+}
+
+export function evaluateCronScheduleSync(input: {
+  cronConnectionBudgetEntries?: readonly CronConnectionBudgetEntryForCheck[];
+  cronJobDefinitions?: readonly CronJobDefinitionForCheck[];
+  cronSchedules?: Record<string, string>;
+  scheduledSlotPlans?: Readonly<Record<string, ScheduledSlotPlanForCheck>>;
+  wranglerCronTriggers: Iterable<string>;
+}): CronScheduleSyncReport {
+  const cronSchedules = input.cronSchedules ?? CRON_SCHEDULES;
+  const scheduledSlotPlans = input.scheduledSlotPlans ?? SCHEDULED_SLOT_PLANS;
+  const cronJobDefinitions = input.cronJobDefinitions ?? CRON_JOB_DEFINITIONS;
+  const cronConnectionBudgetEntries = input.cronConnectionBudgetEntries ?? CRON_CONNECTION_BUDGET_ENTRIES;
+
+  const wranglerCrons = new Set(input.wranglerCronTriggers);
+  const sharedCrons = new Set<string>(Object.values(cronSchedules));
+  const scheduleKeyByExpression = keyByExpression(Object.entries(cronSchedules));
+  const slotPlanScheduleEntries = Object.entries(scheduledSlotPlans)
+    .map(([key, plan]) => [key, plan.schedule ?? cronSchedules[key] ?? ""] as const)
+    .filter(([, schedule]) => schedule.length > 0);
+  const slotPlanKeyByExpression = keyByExpression(slotPlanScheduleEntries);
+  const slotPlanCrons = new Set<string>(slotPlanScheduleEntries.map(([, schedule]) => schedule));
+
+  const onlyInWranglerSchedules = [...wranglerCrons].filter((schedule) => !sharedCrons.has(schedule));
+  const onlyInSharedSchedules = [...sharedCrons].filter((schedule) => !wranglerCrons.has(schedule));
+  const onlyInSlotPlanSchedules = [...slotPlanCrons].filter((schedule) => !sharedCrons.has(schedule));
+  const missingSlotPlanSchedules = [...sharedCrons].filter((schedule) => !slotPlanCrons.has(schedule));
+
+  const planKeys = new Set(Object.keys(scheduledSlotPlans));
+  const missingPlanKeys = Object.keys(cronSchedules).filter((key) => !planKeys.has(key));
+  const extraPlanKeys = [...planKeys].filter((key) => !(key in cronSchedules));
+
+  const runtimeJobs = new Set(Object.values(scheduledSlotPlans).flatMap(flattenScheduledJobs));
+  const expectedCronJobs = new Set(cronJobDefinitions.map((definition) => definition.job));
+  const missingRuntimeJobs = [...expectedCronJobs].filter((job) => !runtimeJobs.has(job));
+  const unknownRuntimeJobs = [...runtimeJobs].filter((job) => !expectedCronJobs.has(job));
+
+  const scheduledBudgetJobs = new Set(Object.values(scheduledSlotPlans).flatMap(getScheduledBudgetEntries));
+  const expectedBudgetJobs = new Set(cronConnectionBudgetEntries.map((definition) => definition.job));
+  const missingBudgetJobs = [...expectedBudgetJobs].filter((job) => !scheduledBudgetJobs.has(job));
+  const unknownBudgetJobs = [...scheduledBudgetJobs].filter((job) => !expectedBudgetJobs.has(job));
+
+  const failed = Boolean(
+    onlyInWranglerSchedules.length ||
+    onlyInSharedSchedules.length ||
+    onlyInSlotPlanSchedules.length ||
+    missingSlotPlanSchedules.length ||
+    missingPlanKeys.length ||
+    extraPlanKeys.length ||
+    missingRuntimeJobs.length ||
+    unknownRuntimeJobs.length ||
+    missingBudgetJobs.length ||
+    unknownBudgetJobs.length,
+  );
+
+  return {
+    extraPlanKeys,
+    failed,
+    missingBudgetJobs,
+    missingPlanKeys,
+    missingRuntimeJobs,
+    missingSlotPlanSchedules,
+    onlyInSharedSchedules,
+    onlyInSlotPlanSchedules,
+    onlyInWranglerSchedules,
+    scheduleKeyByExpression,
+    slotPlanKeyByExpression,
+    slotPlanTriggerCount: slotPlanCrons.size,
+    unknownBudgetJobs,
+    unknownRuntimeJobs,
+    wranglerTriggerCount: wranglerCrons.size,
+  };
+}
+
+export function printCronScheduleSyncReport(report: CronScheduleSyncReport): void {
+  if (!report.failed) {
+    console.log(
+      `Cron schedule check passed (${report.wranglerTriggerCount} triggers match, ${report.slotPlanTriggerCount} slot plans mapped).`,
+    );
+    return;
+  }
+
   console.error("Cron schedule mismatch detected!");
-  if (onlyInWrangler.length) console.error("In wrangler.toml only:", onlyInWrangler);
-  if (onlyInShared.length) console.error("In CRON_SCHEDULES only:", onlyInShared);
-  if (onlyInSlotPlans.length) console.error("In SCHEDULED_SLOT_PLANS_BY_SCHEDULE only:", onlyInSlotPlans);
-  if (missingSlotPlan.length) console.error("Missing slot plan(s) for CRON_SCHEDULES:", missingSlotPlan);
-  if (missingPlanKeys.length) console.error("Missing SCHEDULED_SLOT_PLANS keys:", missingPlanKeys);
-  if (extraPlanKeys.length) console.error("Unexpected SCHEDULED_SLOT_PLANS keys:", extraPlanKeys);
-  if (missingRuntimeJobs.length) console.error("CRON_JOB_DEFINITIONS absent from slot plans:", missingRuntimeJobs);
-  if (unknownRuntimeJobs.length) console.error("Unknown runtime jobs in slot plans:", unknownRuntimeJobs);
-  if (missingBudgetJobs.length) console.error("CRON_CONNECTION_BUDGET_ENTRIES absent from slot plans:", missingBudgetJobs);
-  if (unknownBudgetJobs.length) console.error("Unknown budget entries in slot plans:", unknownBudgetJobs);
-  process.exit(1);
+
+  if (report.onlyInWranglerSchedules.length || report.onlyInSharedSchedules.length) {
+    console.error(`\nConfigured trigger drift (${SOURCE_OWNER.wrangler} <-> ${SOURCE_OWNER.schedules}):`);
+    if (report.onlyInWranglerSchedules.length) {
+      console.error(`Extra in ${SOURCE_OWNER.wrangler}; no owner in ${SOURCE_OWNER.schedules}:`);
+      console.error(formatList(report.onlyInWranglerSchedules).join("\n"));
+    }
+    if (report.onlyInSharedSchedules.length) {
+      console.error(`Missing from ${SOURCE_OWNER.wrangler}; owned by ${SOURCE_OWNER.schedules}:`);
+      console.error(
+        formatList(report.onlyInSharedSchedules, (schedule) =>
+          formatSchedule(schedule, report.scheduleKeyByExpression),
+        ).join("\n"),
+      );
+    }
+  }
+
+  if (
+    report.onlyInSlotPlanSchedules.length ||
+    report.missingSlotPlanSchedules.length ||
+    report.missingPlanKeys.length ||
+    report.extraPlanKeys.length
+  ) {
+    console.error(`\nSlot plan drift (${SOURCE_OWNER.slotPlans} <-> ${SOURCE_OWNER.schedules}):`);
+    if (report.onlyInSlotPlanSchedules.length) {
+      console.error(`Extra schedule in ${SOURCE_OWNER.slotPlans}; no owner in ${SOURCE_OWNER.schedules}:`);
+      console.error(
+        formatList(report.onlyInSlotPlanSchedules, (schedule) =>
+          formatSchedule(schedule, report.slotPlanKeyByExpression),
+        ).join("\n"),
+      );
+    }
+    if (report.missingSlotPlanSchedules.length) {
+      console.error(`Missing schedule in ${SOURCE_OWNER.slotPlans}; owned by ${SOURCE_OWNER.schedules}:`);
+      console.error(
+        formatList(report.missingSlotPlanSchedules, (schedule) =>
+          formatSchedule(schedule, report.scheduleKeyByExpression),
+        ).join("\n"),
+      );
+    }
+    if (report.missingPlanKeys.length) {
+      console.error(`Missing key in ${SOURCE_OWNER.slotPlans}; owned by ${SOURCE_OWNER.schedules}:`);
+      console.error(formatList(report.missingPlanKeys).join("\n"));
+    }
+    if (report.extraPlanKeys.length) {
+      console.error(`Extra key in ${SOURCE_OWNER.slotPlans}; no owner in ${SOURCE_OWNER.schedules}:`);
+      console.error(formatList(report.extraPlanKeys).join("\n"));
+    }
+  }
+
+  if (report.missingRuntimeJobs.length || report.unknownRuntimeJobs.length) {
+    console.error(`\nRuntime job drift (${SOURCE_OWNER.slotPlans} jobChains <-> ${SOURCE_OWNER.jobDefinitions}):`);
+    if (report.missingRuntimeJobs.length) {
+      console.error(`Missing from ${SOURCE_OWNER.slotPlans} jobChains; owned by ${SOURCE_OWNER.jobDefinitions}:`);
+      console.error(formatList(report.missingRuntimeJobs).join("\n"));
+    }
+    if (report.unknownRuntimeJobs.length) {
+      console.error(`Unknown job in ${SOURCE_OWNER.slotPlans} jobChains; no owner in ${SOURCE_OWNER.jobDefinitions}:`);
+      console.error(formatList(report.unknownRuntimeJobs).join("\n"));
+    }
+  }
+
+  if (report.missingBudgetJobs.length || report.unknownBudgetJobs.length) {
+    console.error(
+      `\nConnection-budget drift (${SOURCE_OWNER.slotPlans} jobChains/budgetOnlyJobs <-> ${SOURCE_OWNER.budgetDefinitions}):`,
+    );
+    if (report.missingBudgetJobs.length) {
+      console.error(
+        `Missing from ${SOURCE_OWNER.slotPlans} jobChains/budgetOnlyJobs; owned by ${SOURCE_OWNER.budgetDefinitions}:`,
+      );
+      console.error(formatList(report.missingBudgetJobs).join("\n"));
+    }
+    if (report.unknownBudgetJobs.length) {
+      console.error(
+        `Unknown budget entry in ${SOURCE_OWNER.slotPlans} jobChains/budgetOnlyJobs; no owner in ${SOURCE_OWNER.budgetDefinitions}:`,
+      );
+      console.error(formatList(report.unknownBudgetJobs).join("\n"));
+    }
+  }
 }
 
-console.log(
-  `Cron schedule check passed (${wranglerCrons.size} triggers match, ${slotPlanCrons.size} slot plans mapped).`,
-);
+function isMainModule(): boolean {
+  const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
+  return import.meta.url === entry;
+}
+
+if (isMainModule()) {
+  try {
+    const wranglerToml = readFileSync(join(ROOT, "worker/wrangler.toml"), "utf-8");
+    const report = evaluateCronScheduleSync({
+      wranglerCronTriggers: parseWranglerCronTriggers(wranglerToml),
+    });
+    printCronScheduleSyncReport(report);
+    if (report.failed) {
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+}

@@ -702,6 +702,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-cron-abort-contract.test.ts` - helperDropsSignal, run, scheduled
 - `scripts/__tests__/check-cron-connection-budget.test.ts`
 - `scripts/__tests__/check-cron-console-usage.test.ts`
+- `scripts/__tests__/check-cron-schedule-sync.test.ts`
 - `scripts/__tests__/check-duplicate-exports.test.ts`
 - `scripts/__tests__/check-env-contract.test.ts` - After, Env
 - `scripts/__tests__/check-glossary-coverage.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/oracle-risk-coverage.test.ts`
 - `scripts/__tests__/parse-version-upload.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
-- `scripts/__tests__/public-api-artifact-catalog.test.ts`
-- ... 208 more files omitted; use `rg --files scripts` for the full list.
+- ... 209 more files omitted; use `rg --files scripts` for the full list.
