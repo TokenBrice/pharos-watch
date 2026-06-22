@@ -8,8 +8,11 @@ import {
   NONCRITICAL_TEST_SHARD_COUNT,
   VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_COMMANDS,
+  VALIDATE_PREBUILD_TIER_ENV,
+  VALIDATION_COMMAND_TIER_REGISTRY,
   WORKER_VALIDATE_COMMANDS,
   validateValidationCommandImpactRegistry,
+  validateValidationCommandTierRegistry,
 } from "../lib/validate-contract.mjs";
 import {
   GENERATED_ARTIFACT_REGISTRY,
@@ -336,11 +339,14 @@ describe("validate-ci parity", () => {
 
     expect(packageJson.devDependencies).not.toHaveProperty("npm-run-all2");
     expect(runner).toContain("runParallelExecutionUnits");
-    expect(runner).toContain("buildValidatePrebuildCommandsForSurface");
+    expect(runner).toContain("buildValidatePrebuildCommands");
     expect(runner).toContain("VALIDATE_PREBUILD_SURFACE_ENV");
+    expect(runner).toContain("resolveValidatePrebuildTier");
+    expect(runner).toContain("VALIDATE_PREBUILD_TIER_ENV");
     expect(runner).toContain("VALIDATE_PREBUILD_MAX_PARALLEL");
     expect(runner).not.toContain("run-p");
     expect(VALIDATE_PREBUILD_MAX_PARALLEL).toBe(8);
+    expect(VALIDATE_PREBUILD_TIER_ENV).toBe("VALIDATE_PREBUILD_TIER");
   });
 
   it("keeps critical and non-critical test runners derived from one critical test list", () => {
@@ -388,6 +394,32 @@ describe("validate-ci parity", () => {
 
   it("classifies every validation command in the deploy-impact registry", () => {
     expect(() => validateValidationCommandImpactRegistry()).not.toThrow();
+  });
+
+  it("classifies every validate:prebuild command in the tier registry", () => {
+    expect(() => validateValidationCommandTierRegistry()).not.toThrow();
+    expect(() =>
+      validateValidationCommandTierRegistry([...VALIDATE_PREBUILD_COMMANDS, "npm run check:future-guardrail"]),
+    ).toThrow("Missing validation tier classification for: npm run check:future-guardrail");
+
+    expect(
+      VALIDATION_COMMAND_TIER_REGISTRY.filter((entry) => entry.tier === "blocking").map((entry) => entry.command),
+    ).toEqual([
+      "npm run lint",
+      "npm run lint:typed",
+      "npm run typecheck",
+      "npm run check:client-registry-imports",
+      "npm run check:cron-connections",
+      "npm run check:cron-sync",
+      "npm run check:env-contract",
+      "npm run check:generated-artifacts",
+      "npm run check:migrations",
+      "npm run check:site-csp-sync",
+      "npm run check:sql-safety",
+      "npm run check:stablecoin-data",
+      "npm run check:supply-helper-usage",
+      "npm run check:worker-boundary",
+    ]);
   });
 
   it("derives the Worker root runtime package set from the lockfile", () => {

@@ -56,6 +56,64 @@ export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
 // package-level implementation delegates to the shared registry above.
 export const COMMON_VALIDATE_PREBUILD_COMMANDS = ["npm run validate:prebuild"];
 export const VALIDATE_PREBUILD_SURFACE_ENV = "VALIDATE_PREBUILD_SURFACE";
+export const VALIDATE_PREBUILD_TIER_ENV = "VALIDATE_PREBUILD_TIER";
+export const VALIDATE_PREBUILD_TIERS = ["blocking", "surface", "full"];
+
+const VALIDATE_PREBUILD_TIER_RANK = {
+  blocking: 0,
+  surface: 1,
+  full: 2,
+};
+
+export const VALIDATION_COMMAND_TIER_REGISTRY = [
+  { command: "npm run audit:deps", tier: "full" },
+  { command: "npm run audit:pricing-providers", tier: "surface" },
+  { command: "npm run check:provider-resilience", tier: "surface" },
+  { command: "npm run lint", tier: "blocking" },
+  { command: "npm run lint:typed", tier: "blocking" },
+  { command: "npm run typecheck", tier: "blocking" },
+  { command: "npm run check:agent-doc-sync", tier: "full" },
+  { command: "npm run check:agent-skill-symlinks", tier: "full" },
+  { command: "npm run check:attestor-tier-coverage", tier: "surface" },
+  { command: "npm run check:client-registry-imports", tier: "blocking" },
+  { command: "npm run check:cron-abort-contract", tier: "surface" },
+  { command: "npm run check:cron-console-usage", tier: "surface" },
+  { command: "npm run check:cron-connections", tier: "blocking" },
+  { command: "npm run check:cron-sync", tier: "blocking" },
+  { command: "npm run check:dependency-coverage", tier: "full" },
+  { command: "npm run check:doc-counts", tier: "full" },
+  { command: "npm run check:doc-source-paths", tier: "full" },
+  { command: "npm run check:doc-sync", tier: "full" },
+  { command: "npm run check:duplicate-exports", tier: "full" },
+  { command: "npm run check:env-contract", tier: "blocking" },
+  { command: "npm run check:frozen-invariants", tier: "surface" },
+  { command: "npm run check:generated-artifacts", tier: "blocking" },
+  { command: "npm run check:glossary-coverage", tier: "full" },
+  { command: "npm run check:one-liner-coverage", tier: "full" },
+  { command: "npm run check:mechanism-archetype-coverage", tier: "surface" },
+  { command: "npm run check:archetype-explainer-coverage", tier: "surface" },
+  { command: "npm run check:hook-polling-window", tier: "surface" },
+  { command: "npm run check:hotspot-ratchet", tier: "full" },
+  { command: "npm run check:migrations", tier: "blocking" },
+  { command: "npm run check:price-bounds-parity", tier: "surface" },
+  { command: "npm run check:redemption-backstops", tier: "surface" },
+  { command: "npm run check:redemption-coverage-audit", tier: "full" },
+  { command: "npm run check:reserve-fixture-freshness", tier: "full" },
+  { command: "npm run check:selector-banned-phrases", tier: "full" },
+  { command: "npm run check:site-csp-sync", tier: "blocking" },
+  { command: "npm run check:script-entrypoints", tier: "full" },
+  { command: "npm run check:shared-cycles", tier: "surface" },
+  { command: "npm run check:shared-types-imports", tier: "surface" },
+  { command: "npm run check:sql-safety", tier: "blocking" },
+  { command: "npm run check:stale-flags", tier: "full" },
+  { command: "npm run check:stablecoin-data", tier: "blocking" },
+  { command: "npm run check:oracle-risk-coverage:enforce", tier: "surface" },
+  { command: "npm run check:supply-helper-usage", tier: "blocking" },
+  { command: "npm run check:unused-code", tier: "full" },
+  { command: "npm run check:verified-doc-links", tier: "full" },
+  { command: "npm run check:world-map", tier: "full" },
+  { command: "npm run check:worker-boundary", tier: "blocking" },
+];
 
 export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
@@ -142,8 +200,36 @@ export function normalizeValidatePrebuildSurface(surface) {
   return "full";
 }
 
+export function normalizeValidatePrebuildTier(tier) {
+  if (tier === "blocking" || tier === "surface" || tier === "full") {
+    return tier;
+  }
+  return "full";
+}
+
+export function resolveValidatePrebuildTier(tier, { ci = process.env.CI } = {}) {
+  const requestedTier = normalizeValidatePrebuildTier(tier);
+  if (ci === "true" && requestedTier !== "full") {
+    return {
+      ciOverride: true,
+      effectiveTier: "full",
+      requestedTier,
+    };
+  }
+
+  return {
+    ciOverride: false,
+    effectiveTier: requestedTier,
+    requestedTier,
+  };
+}
+
 const validationCommandDeployImpactByCommand = new Map(
   VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY.map((entry) => [entry.command, entry.deployImpact]),
+);
+
+const validationCommandTierByCommand = new Map(
+  VALIDATION_COMMAND_TIER_REGISTRY.map((entry) => [entry.command, entry.tier]),
 );
 
 export function shouldRunValidatePrebuildCommandForSurface(command, surface) {
@@ -157,10 +243,35 @@ export function shouldRunValidatePrebuildCommandForSurface(command, surface) {
   return deployImpact === normalizedSurface;
 }
 
-export function buildValidatePrebuildCommandsForSurface(surface) {
-  return VALIDATE_PREBUILD_COMMANDS.filter((command) =>
-    shouldRunValidatePrebuildCommandForSurface(command, surface),
+export function shouldRunValidatePrebuildCommandForTier(command, tier) {
+  const normalizedTier = normalizeValidatePrebuildTier(tier);
+  if (normalizedTier === "full") {
+    return true;
+  }
+
+  const commandTier = validationCommandTierByCommand.get(normalizeValidationCommand(command)) ?? "full";
+  return VALIDATE_PREBUILD_TIER_RANK[commandTier] <= VALIDATE_PREBUILD_TIER_RANK[normalizedTier];
+}
+
+export function shouldRunValidatePrebuildCommand(command, { surface, tier } = {}) {
+  return (
+    shouldRunValidatePrebuildCommandForSurface(command, surface) &&
+    shouldRunValidatePrebuildCommandForTier(command, tier)
   );
+}
+
+export function buildValidatePrebuildCommands({ surface, tier } = {}) {
+  return VALIDATE_PREBUILD_COMMANDS.filter((command) =>
+    shouldRunValidatePrebuildCommand(command, { surface, tier }),
+  );
+}
+
+export function buildValidatePrebuildCommandsForSurface(surface) {
+  return buildValidatePrebuildCommands({ surface, tier: "full" });
+}
+
+export function buildValidatePrebuildCommandsForSurfaceAndTier(surface, tier) {
+  return buildValidatePrebuildCommands({ surface, tier });
 }
 
 export function validateValidationCommandImpactRegistry(commands = [
@@ -181,10 +292,43 @@ export function validateValidationCommandImpactRegistry(commands = [
   }
 }
 
+export function validateValidationCommandTierRegistry(commands = VALIDATE_PREBUILD_COMMANDS) {
+  const classifiedCommands = new Set();
+  const duplicates = [];
+  const invalid = [];
+
+  for (const entry of VALIDATION_COMMAND_TIER_REGISTRY) {
+    const normalizedCommand = normalizeValidationCommand(entry.command);
+    if (classifiedCommands.has(normalizedCommand)) {
+      duplicates.push(normalizedCommand);
+    }
+    classifiedCommands.add(normalizedCommand);
+    if (!VALIDATE_PREBUILD_TIERS.includes(entry.tier)) {
+      invalid.push(`${entry.command}=${entry.tier}`);
+    }
+  }
+
+  if (duplicates.length > 0) {
+    throw new Error(`Duplicate validation tier classification for: ${[...new Set(duplicates)].join(", ")}`);
+  }
+
+  if (invalid.length > 0) {
+    throw new Error(`Invalid validation tier classification for: ${invalid.join(", ")}`);
+  }
+
+  const missing = [...new Set(commands.map(normalizeValidationCommand))].filter(
+    (command) => !classifiedCommands.has(command),
+  );
+  if (missing.length > 0) {
+    throw new Error(`Missing validation tier classification for: ${missing.join(", ")}`);
+  }
+}
+
 // Self-validation is opt-in so that merely importing a constant (e.g. tests
 // pulling in NONCRITICAL_TEST_SHARD_COUNT) does not trigger the full registry
 // scan or throw. The validate-ci-parity test calls this explicitly, and CI can
 // force it via VALIDATE_CONTRACT_SELF_CHECK=1.
 if (process.env.VALIDATE_CONTRACT_SELF_CHECK === "1") {
   validateValidationCommandImpactRegistry();
+  validateValidationCommandTierRegistry();
 }

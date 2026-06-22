@@ -3,14 +3,16 @@
 import { pathToFileURL } from "node:url";
 import { createExecutionUnit, runParallelExecutionUnits } from "../lib/command-runner.mjs";
 import {
-  buildValidatePrebuildCommandsForSurface,
+  buildValidatePrebuildCommands,
   normalizeValidatePrebuildSurface,
+  resolveValidatePrebuildTier,
   VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_SURFACE_ENV,
+  VALIDATE_PREBUILD_TIER_ENV,
 } from "../lib/validate-contract.mjs";
 
-export function buildValidatePrebuildExecutionUnits(surface) {
-  return buildValidatePrebuildCommandsForSurface(surface).map((cmd) => createExecutionUnit([cmd]));
+export function buildValidatePrebuildExecutionUnits(surface, tier = "full") {
+  return buildValidatePrebuildCommands({ surface, tier }).map((cmd) => createExecutionUnit([cmd]));
 }
 
 export function isValidatePrebuildDryRun(argv = process.argv.slice(2)) {
@@ -28,6 +30,13 @@ export function printValidatePrebuildCommandPlan(units, { log = console.log } = 
   }
 }
 
+export function formatValidatePrebuildTier(tierState) {
+  if (tierState.ciOverride) {
+    return `${tierState.effectiveTier} (requested ${tierState.requestedTier} ignored because CI=true)`;
+  }
+  return tierState.effectiveTier;
+}
+
 export async function runValidatePrebuild({
   argv = process.argv.slice(2),
   env = process.env,
@@ -35,17 +44,21 @@ export async function runValidatePrebuild({
   runExecutionUnits = runParallelExecutionUnits,
 } = {}) {
   const surface = normalizeValidatePrebuildSurface(env[VALIDATE_PREBUILD_SURFACE_ENV]);
-  const units = buildValidatePrebuildExecutionUnits(surface);
+  const tierState = resolveValidatePrebuildTier(env[VALIDATE_PREBUILD_TIER_ENV], { ci: env.CI });
+  const units = buildValidatePrebuildExecutionUnits(surface, tierState.effectiveTier);
+  const tierLabel = formatValidatePrebuildTier(tierState);
   const dryRun = isValidatePrebuildDryRun(argv);
 
   if (dryRun) {
-    log(`[validate:prebuild] Surface hint: ${surface}; dry-run plan has ${units.length} prebuild command(s).`);
+    log(
+      `[validate:prebuild] Surface hint: ${surface}; tier: ${tierLabel}; dry-run plan has ${units.length} prebuild command(s).`,
+    );
     printValidatePrebuildCommandPlan(units, { log });
     log("[validate:prebuild] Dry run enabled; commands not executed.");
     return { status: 0, failedCmd: null, aborted: false };
   }
 
-  log(`[validate:prebuild] Surface hint: ${surface}; running ${units.length} prebuild command(s).`);
+  log(`[validate:prebuild] Surface hint: ${surface}; tier: ${tierLabel}; running ${units.length} prebuild command(s).`);
 
   return runExecutionUnits(units, {
     continueOnError: env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",
