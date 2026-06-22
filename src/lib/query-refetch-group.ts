@@ -24,7 +24,7 @@ export interface QueryFreshnessGroupEntry extends Omit<StaleQuery, "dataUpdatedA
   refetch?: QueryRefetchFn;
 }
 
-export interface QueryFreshnessGroupOptions extends QueryRefetchGroupOptions {}
+export type QueryFreshnessGroupOptions = QueryRefetchGroupOptions;
 
 export interface QueryFreshnessGroup {
   globalError: unknown | null;

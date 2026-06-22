@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-non-literal-fs-filename -- test scans checked-in Worker source files under worker/src only. */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
