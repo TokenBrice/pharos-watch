@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ConfiguredCoin } from "../sync-live-reserves-shared";
-import { loadLiveReserveCursorState, recordDeferredTail } from "../sync-live-reserves-run-state";
+import {
+  clearCursorStateIfComplete,
+  loadLiveReserveCursorState,
+  recordDeferredTail,
+  selectConfiguredCoinRunQueue,
+} from "../sync-live-reserves-run-state";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 
 function makeCoin(id: string): ConfiguredCoin {
@@ -50,6 +55,21 @@ function parseCursorWrite(entry: { binds: unknown[] } | undefined): Record<strin
   const value = entry?.binds[1];
   return typeof value === "string" ? JSON.parse(value) as Record<string, unknown> : null;
 }
+
+describe("selectConfiguredCoinRunQueue", () => {
+  it("starts from the saved cursor when the coin is still configured", () => {
+    const coins = [makeCoin("coin-a"), makeCoin("coin-b"), makeCoin("coin-c")];
+
+    expect(selectConfiguredCoinRunQueue(coins, "coin-b").map((coin) => coin.id)).toEqual(["coin-b", "coin-c"]);
+  });
+
+  it("falls back to the full queue when the cursor is absent or stale", () => {
+    const coins = [makeCoin("coin-a"), makeCoin("coin-b")];
+
+    expect(selectConfiguredCoinRunQueue(coins, null).map((coin) => coin.id)).toEqual(["coin-a", "coin-b"]);
+    expect(selectConfiguredCoinRunQueue(coins, "missing-coin").map((coin) => coin.id)).toEqual(["coin-a", "coin-b"]);
+  });
+});
 
 describe("recordDeferredTail", () => {
   it("chunks deferred tail writes through the shared D1 batch executor", async () => {
@@ -265,6 +285,29 @@ describe("recordDeferredTail", () => {
       nextStablecoinId: "coin-a",
       tailState: "incomplete",
       tailError: "batch unavailable",
+    });
+  });
+});
+
+describe("clearCursorStateIfComplete", () => {
+  it("keeps the cursor when a run still has a deferred tail", async () => {
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = makeBatchRecordingDb([], history);
+
+    await clearCursorStateIfComplete(db, 2, "coin-a");
+
+    expect(history).toEqual([]);
+  });
+
+  it("deletes the cursor after a complete run", async () => {
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = makeBatchRecordingDb([], history);
+
+    await clearCursorStateIfComplete(db, 0, null);
+
+    expect(history).toContainEqual({
+      sql: "DELETE FROM cache WHERE key = ?",
+      binds: [LIVE_RESERVE_RUN_CURSOR_CACHE_KEY],
     });
   });
 });

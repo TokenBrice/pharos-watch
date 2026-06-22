@@ -37,6 +37,10 @@ export function formatValidatePrebuildTier(tierState) {
   return tierState.effectiveTier;
 }
 
+function readEnvValue(env, key) {
+  return Object.prototype.hasOwnProperty.call(env, key) ? env[key] : undefined;
+}
+
 export async function runValidatePrebuild({
   argv = process.argv.slice(2),
   env = process.env,
@@ -44,7 +48,9 @@ export async function runValidatePrebuild({
   runExecutionUnits = runParallelExecutionUnits,
 } = {}) {
   const surface = normalizeValidatePrebuildSurface(env[VALIDATE_PREBUILD_SURFACE_ENV]);
-  const tierState = resolveValidatePrebuildTier(env[VALIDATE_PREBUILD_TIER_ENV], { ci: env.CI });
+  const tierState = resolveValidatePrebuildTier(env[VALIDATE_PREBUILD_TIER_ENV], {
+    ci: readEnvValue(env, "CI") ?? "",
+  });
   const units = buildValidatePrebuildExecutionUnits(surface, tierState.effectiveTier);
   const tierLabel = formatValidatePrebuildTier(tierState);
   const dryRun = isValidatePrebuildDryRun(argv);
