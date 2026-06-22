@@ -47,17 +47,17 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
   },
+  "src/app/yield/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Yield client combines URL filter normalization, ranking view-model wiring, source-board/reference-rate composition, and route rendering. It surfaced after the current complexity tranche; keep it explicitly owned for a focused yield route-shell decomposition pass rather than widening this release gate.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-22",
+    "reviewAfter": "2026-09-22",
+    "nextAction": "Split yield route state and cross-section composition from the presentation shell while preserving URL parameter behavior."
+  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/key-info-card.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after the May 2026 detail-page additions: mechanism schematic above peg-stability prose, tier-styled attestor badge with legacy fallback, and the matching utility helpers. Split mechanism-diagram renderer + attestor badge + peg-mechanism prose into focused children in a follow-up detail-page cleanup pass.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
