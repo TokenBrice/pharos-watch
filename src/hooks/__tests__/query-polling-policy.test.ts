@@ -22,6 +22,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 
 import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN, CRON_24H, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
+import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 import { useHealth } from "../api-hooks";
 import { useRequestSourceStats } from "../use-request-source-stats";
 import { useStatus } from "../use-status";
@@ -214,25 +215,28 @@ describe("query polling policy", () => {
       staleTime: number;
       refetchInterval: number;
       queryKey: unknown[];
+      retry: number;
     };
 
-    expect(options.queryKey).toEqual(["api", "daily-digest"]);
+    expect(options.queryKey).toEqual(FRONTEND_API_QUERY_REGISTRY.dailyDigest.queryKey);
     expect(options.staleTime).toBe(CRON_24H);
     expect(options.refetchInterval).toBe(2 * CRON_24H);
+    expect(options.retry).toBe(1);
   });
 
-  it("useStabilityIndexLight reuses light API polling without a retry override", () => {
+  it("useStabilityIndexLight reuses registered meta polling", () => {
     useStabilityIndexLight();
     const options = useQueryMock.mock.calls[0][0] as {
       staleTime: number;
       refetchInterval: number;
       queryKey: unknown[];
+      retry: number;
     };
 
-    expect(options.queryKey).toEqual(["api", "stability-index"]);
+    expect(options.queryKey).toEqual(FRONTEND_API_QUERY_REGISTRY.stabilityIndex.queryKey);
     expect(options.staleTime).toBe(CRON_30MIN);
     expect(options.refetchInterval).toBe(2 * CRON_30MIN);
-    expect(options).not.toHaveProperty("retry");
+    expect(options.retry).toBe(2);
   });
 
   it("useTelegramPulse derives polling from the telegram pulse snapshot cron", () => {
@@ -340,13 +344,14 @@ describe("query polling policy", () => {
 
   it("gives admin probes a longer timeout budget than public probes", async () => {
     vi.useFakeTimers();
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((_input: RequestInfo | URL, init?: RequestInit) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("aborted", "AbortError"));
-        });
-      })
-    ));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason ?? new DOMException("aborted", "AbortError"));
+          });
+        }),
+    );
 
     useEndpointProbes();
     const options = useQueryMock.mock.calls[0][0] as {
