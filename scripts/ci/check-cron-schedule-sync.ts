@@ -82,6 +82,10 @@ function getScheduledBudgetEntries(plan: ScheduledSlotPlanForCheck): string[] {
   return [...flattenScheduledJobs(plan), ...(plan.budgetOnlyJobs ?? [])];
 }
 
+function getCronScheduleByKey(cronSchedules: Readonly<Record<string, string>>, key: string): string | undefined {
+  return cronSchedules[key];
+}
+
 export function evaluateCronScheduleSync(input: {
   cronConnectionBudgetEntries?: readonly CronConnectionBudgetEntryForCheck[];
   cronJobDefinitions?: readonly CronJobDefinitionForCheck[];
@@ -98,7 +102,7 @@ export function evaluateCronScheduleSync(input: {
   const sharedCrons = new Set<string>(Object.values(cronSchedules));
   const scheduleKeyByExpression = keyByExpression(Object.entries(cronSchedules));
   const slotPlanScheduleEntries = Object.entries(scheduledSlotPlans)
-    .map(([key, plan]) => [key, plan.schedule ?? cronSchedules[key] ?? ""] as const)
+    .map(([key, plan]) => [key, plan.schedule ?? getCronScheduleByKey(cronSchedules, key) ?? ""] as const)
     .filter(([, schedule]) => schedule.length > 0);
   const slotPlanKeyByExpression = keyByExpression(slotPlanScheduleEntries);
   const slotPlanCrons = new Set<string>(slotPlanScheduleEntries.map(([, schedule]) => schedule));
