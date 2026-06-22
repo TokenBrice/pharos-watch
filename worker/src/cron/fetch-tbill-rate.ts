@@ -30,6 +30,7 @@ import type {
   StandardBenchmarkProviderKey,
 } from "./tbill-sources/shared";
 import { tryFredCsv } from "./tbill-sources/fred";
+import { tryNyFedEffr } from "./tbill-sources/nyfed";
 import { tryTreasuryXml } from "./tbill-sources/treasury";
 import { tryEcbCompoundedEstrCsv } from "./tbill-sources/ecb";
 import { tryBoeSoniaCompoundedIndex } from "./tbill-sources/boe";
@@ -45,6 +46,7 @@ import { tryCbrKeyRate } from "./tbill-sources/cbr";
 // Parsers live in ./tbill-sources/* alongside their fetch adapters; re-exported
 // here so the existing fetch-tbill-rate test suite can keep importing them.
 export { parseTreasuryYieldXml } from "./tbill-sources/treasury";
+export { parseNyFedEffrJson } from "./tbill-sources/nyfed";
 export { parseEcbCompoundedEstrCsv } from "./tbill-sources/ecb";
 export { parseBoeSoniaCsv, parseBoeSoniaCompoundedIndexCsv } from "./tbill-sources/boe";
 export { parseBojCallRateJson } from "./tbill-sources/boj";
@@ -232,6 +234,14 @@ interface ResolvedBenchmarkProvider {
   failureMode: string | null;
 }
 
+async function tryUsdEffrBenchmark(signal?: AbortSignal): Promise<BenchmarkFetchResult | null> {
+  const nyFed = await tryNyFedEffr(signal);
+  if (nyFed) return nyFed;
+
+  const fred = await tryFredCsv(FRED_EFFR_CSV_URL, signal);
+  return fred ? { ...fred, source: "fred-dff" } : null;
+}
+
 const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkProvider> = {
   EUR: {
     key: "EUR",
@@ -259,9 +269,9 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
   },
   USD_EFFR: {
     key: "USD_EFFR",
-    fetch: ({ signal }) => tryFredCsv(FRED_EFFR_CSV_URL, signal),
-    source: "fred-dff",
-    fallbackMode: "fred-dff-failed",
+    fetch: ({ signal }) => tryUsdEffrBenchmark(signal),
+    source: "nyfed-effr",
+    fallbackMode: "usd-effr-sources-failed",
   },
   AUD: {
     key: "AUD",
@@ -350,7 +360,7 @@ async function resolveBenchmarkProvider(params: {
       rate: parsed.rate,
       recordDate: parsed.recordDate,
       fetchedAt,
-      source: provider.source,
+      source: parsed.source ?? provider.source,
     })
     : buildRetainedBenchmark(previous[provider.key] ?? null, provider.fallbackMode);
 

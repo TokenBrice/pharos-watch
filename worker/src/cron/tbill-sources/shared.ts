@@ -4,7 +4,7 @@ import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 
-export type BenchmarkFetchResult = { rate: number; recordDate: string };
+export type BenchmarkFetchResult = { rate: number; recordDate: string; source?: string };
 export type BenchmarkProviderKey = Exclude<YieldBenchmarkKey, "USD" | "SGD">;
 export type StandardBenchmarkProviderKey = Exclude<BenchmarkProviderKey, "MXN">;
 

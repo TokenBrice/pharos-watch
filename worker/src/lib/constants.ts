@@ -86,7 +86,9 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = CACHE_AVAILABI
 export const RISK_FREE_RATE_FALLBACK = 3.75;
 /** FRED 3-month Treasury yield series (DGS3MO), used by fetch-tbill-rate cron. */
 export const FRED_TBILL_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO";
-/** FRED Effective Federal Funds Rate series (DFF), used for EFFR-linked yield products. */
+/** Official New York Fed latest Effective Federal Funds Rate endpoint, used for EFFR-linked yield products. */
+export const NYFED_EFFR_JSON_URL = "https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json";
+/** FRED Effective Federal Funds Rate series (DFF), retained as the USD_EFFR fallback feed. */
 export const FRED_EFFR_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF";
 /** Official ECB data API endpoint for 3-month compounded €STR. */
 export const ECB_ESTR_3M_CSV_URL = "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata";

@@ -26,6 +26,7 @@ import {
   parseCbrKeyRateXml,
   parseCbrtEvdsSeries,
   parseEcbCompoundedEstrCsv,
+  parseNyFedEffrJson,
   parseRbaF1MoneyMarketCsv,
   parseSixSar3mcCsv,
   parseTreasuryYieldXml,
@@ -70,6 +71,11 @@ const SIX_SAR3MC_CSV_SNIPPET = `date;end_date;start_date;symbol;value;day_count;
 `;
 
 const FRED_DFF_CSV_SNIPPET = "DATE,DFF\n2026-03-02,4.33\n";
+const NYFED_EFFR_JSON_SNIPPET = JSON.stringify({
+  refRates: [
+    { effectiveDate: "2026-03-02", type: "EFFR", percentRate: 4.33 },
+  ],
+});
 const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
 const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
   totalCount: 2,
@@ -142,6 +148,7 @@ function mockByUrl(mapping: Record<string, MockUrlResponse>, calls?: string[]) {
  *  isolate provider-specific test cases from added benchmark coverage. */
 function okExtendedBenchmarkMocks(): Record<string, Response> {
   return {
+    "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
     "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
     "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
     "stat-search.boj.or.jp": new Response(JSON.stringify({
@@ -249,7 +256,7 @@ describe("fetchTbillRate", () => {
     expect(metadata.fallbackMode).toBeNull();
     expect(metadata.usdSource).toBe("fred-dgs3mo");
     expect(metadata.usdRate).toBe(3.72);
-    expect(metadata.usdEffrSource).toBe("fred-dff");
+    expect(metadata.usdEffrSource).toBe("nyfed-effr");
     expect(metadata.usdEffrRate).toBe(4.33);
     expect(metadata.eurSource).toBe("ecb-estr-3m");
     expect(metadata.eurRate).toBe(1.9358);
@@ -282,7 +289,7 @@ describe("fetchTbillRate", () => {
     expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
       key: "USD_EFFR",
       rate: 4.33,
-      source: "fred-dff",
+      source: "nyfed-effr",
       isFallback: false,
       fallbackMode: null,
     });
@@ -319,6 +326,32 @@ describe("fetchTbillRate", () => {
       fallbackMode: null,
       isFallback: false,
       recordDate: "2026-03-13",
+    });
+  });
+
+  it("falls back to FRED DFF when the NY Fed EFFR feed fails", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      ...okExtendedBenchmarkMocks(),
+      "markets.newyorkfed.org": null,
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(metadata.fallbackMode).toBeNull();
+    expect(metadata.usdEffrSource).toBe("fred-dff");
+    expect(metadata.usdEffrRate).toBe(4.33);
+    expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
+      key: "USD_EFFR",
+      rate: 4.33,
+      source: "fred-dff",
+      isFallback: false,
+      fallbackMode: null,
     });
   });
 
@@ -469,11 +502,12 @@ describe("fetchTbillRate", () => {
     expect(metadata.fallbackMode).toBe("chf:six-saron-failed-retained");
   });
 
-  it("retains the last USD EFFR benchmark when the FRED DFF feed fails", async () => {
+  it("retains the last USD EFFR benchmark when both EFFR feeds fail", async () => {
     mockByUrl({
       "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
       "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
       ...okExtendedBenchmarkMocks(),
+      "markets.newyorkfed.org": null,
       "id=DFF": null,
       "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
       "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
@@ -535,13 +569,13 @@ describe("fetchTbillRate", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.usdEffrSource).toBe("fred-dff");
     expect(metadata.usdEffrRate).toBe(4.31);
-    expect(metadata.fallbackMode).toBe("usd_effr:fred-dff-failed-retained");
+    expect(metadata.fallbackMode).toBe("usd_effr:usd-effr-sources-failed-retained");
     expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
       key: "USD_EFFR",
       rate: 4.31,
       source: "fred-dff",
       isFallback: true,
-      fallbackMode: "fred-dff-failed-retained",
+      fallbackMode: "usd-effr-sources-failed-retained",
     });
   });
 
@@ -563,7 +597,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
+      "usd:all-sources-failed,usd_effr:usd-effr-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
     );
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
     expect(latestCachePayload()).toMatchObject({
@@ -621,7 +655,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
+      "usd:all-sources-failed-retained,usd_effr:usd-effr-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -672,7 +706,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
+      "usd:all-sources-failed-retained,usd_effr:usd-effr-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -708,6 +742,40 @@ describe("parseBoeSoniaCsv", () => {
       rate: 3.7291,
       recordDate: "2026-06-01",
     });
+  });
+});
+
+describe("parseNyFedEffrJson", () => {
+  it("extracts the latest NY Fed EFFR observation", () => {
+    const payload = JSON.stringify({
+      refRates: [
+        { effectiveDate: "2026-03-01", type: "EFFR", percentRate: 4.31 },
+        { effectiveDate: "2026-03-02", type: "EFFR", percentRate: 4.33 },
+      ],
+    });
+    expect(parseNyFedEffrJson(payload)).toEqual({
+      rate: 4.33,
+      recordDate: "2026-03-02",
+      source: "nyfed-effr",
+    });
+  });
+
+  it("skips invalid trailing NY Fed rows", () => {
+    const payload = JSON.stringify({
+      refRates: [
+        { effectiveDate: "2026-03-01", type: "EFFR", percentRate: 4.31 },
+        { effectiveDate: "2026-03-02", type: "EFFR", percentRate: "." },
+      ],
+    });
+    expect(parseNyFedEffrJson(payload)).toEqual({
+      rate: 4.31,
+      recordDate: "2026-03-01",
+      source: "nyfed-effr",
+    });
+  });
+
+  it("returns null for malformed JSON", () => {
+    expect(parseNyFedEffrJson("not json")).toBeNull();
   });
 });
 
@@ -1017,6 +1085,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     mockByUrl(
       {
         "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+        "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
         "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
         "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
         "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
@@ -1083,7 +1152,8 @@ describe("fetchTbillRate — new currency fetchers", () => {
     expect(metadata.cadRate).toBe(4.75);
     expect(metadata.rubRate).toBe(14.5);
     expect(metadata.tryRate).toBe(40);
-    expect(calls.some((u) => u.includes("id=DFF"))).toBe(true);
+    expect(calls.some((u) => u.includes("markets.newyorkfed.org"))).toBe(true);
+    expect(calls.some((u) => u.includes("id=DFF"))).toBe(false);
     expect(calls.some((u) => u.includes("bankofengland.co.uk") && u.includes("SeriesCodes=IUDZOS2"))).toBe(true);
     expect(calls.some((u) => u.includes("stat-search.boj.or.jp"))).toBe(true);
     expect(calls.some((u) => u.includes("rba.gov.au/statistics/tables/csv/f1-data.csv"))).toBe(true);
@@ -1099,6 +1169,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     mockByUrl(
       {
         "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+        "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
         "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
         "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
         "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
@@ -1198,6 +1269,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     });
     mockByUrl({
       "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
       "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
       "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
       "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
