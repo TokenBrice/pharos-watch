@@ -1,4 +1,7 @@
-import type { EndpointDependency } from "@shared/lib/api-endpoints";
+import {
+  ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
+  type EndpointDependency,
+} from "@shared/lib/api-endpoints";
 import { buildChainRpcs } from "../lib/chain-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
 import type { Env } from "../lib/env";
@@ -60,3 +63,16 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
     routeCtx.telegramBotTokenPrevious = env.TELEGRAM_BOT_TOKEN_PREVIOUS;
   },
 } satisfies Record<EndpointDependency, RouteDependencyHydrator>;
+
+function assertRouteDependencyHydratorsCoverPolicies(): void {
+  const declaredDependencies = new Set<EndpointDependency>(
+    ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.flatMap((policy) => policy.dependencies),
+  );
+
+  for (const dependency of declaredDependencies) {
+    if (Object.prototype.hasOwnProperty.call(ROUTE_DEPENDENCY_HYDRATORS, dependency)) continue;
+    throw new Error(`Route dependency "${dependency}" is declared but has no hydrator`);
+  }
+}
+
+assertRouteDependencyHydratorsCoverPolicies();

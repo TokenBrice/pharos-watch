@@ -5,9 +5,11 @@ import type { Env } from "../../lib/env";
 import type { TelegramCreds } from "../../lib/telegram";
 import { buildRouteContext } from "../../handlers/http/context";
 import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";
+import { getRouteDependencies } from "../registry";
 import { defineDynamicRoute, defineStaticRoute, type RouteContextFor } from "../shared";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
+  STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   getDynamicEndpointDescriptorByKey,
   type EndpointDependenciesForKey,
 } from "@shared/lib/api-endpoints";
@@ -144,6 +146,12 @@ describe("route context typing", () => {
     expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/reject")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/release-claim")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/admin-telegram-chat/-12345")?.dependencies).toEqual([]);
+  });
+
+  it("keeps static route dependency mapping centralized", () => {
+    for (const policy of STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES) {
+      expect(getRouteDependencies(policy.path), policy.key).toEqual(policy.dependencies);
+    }
   });
 
   it("keeps dynamic admin handler bindings exhaustive against shared descriptors", () => {

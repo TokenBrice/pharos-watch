@@ -1,4 +1,7 @@
-import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
+import {
+  STATIC_ENDPOINT_ROUTE_DEFINITIONS,
+  getStaticEndpointDependenciesByKey,
+} from "@shared/lib/api-endpoints";
 import { ADMIN_STATIC_ROUTES } from "./admin-routes";
 import { getDynamicRouteMatch } from "./dynamic-routes";
 import { MESSAGING_STATIC_ROUTES } from "./messaging-routes";
@@ -21,12 +24,20 @@ function getStaticRouteDefinition(path: string): StaticRouteDefinition | undefin
   return STATIC_ROUTE_DEFINITIONS.get(path);
 }
 
+function getStaticRouteDependencies(staticRoute: StaticRouteDefinition): readonly RouteDependency[] {
+  const dependencies = getStaticEndpointDependenciesByKey(staticRoute.endpoint.key);
+  if (!dependencies) {
+    throw new Error(`Endpoint "${staticRoute.endpoint.key}" is routed but has no static dependency policy`);
+  }
+  return dependencies;
+}
+
 export function getRouteMatch(path: string): RouteMatch | null {
   const staticRoute = getStaticRouteDefinition(path);
   if (staticRoute) {
     return {
       endpoint: staticRoute.endpoint,
-      dependencies: staticRoute.endpoint.routeDependencies ?? [],
+      dependencies: getStaticRouteDependencies(staticRoute),
       methods: staticRoute.endpoint.methods,
       handle: staticRoute.handler,
     };
@@ -42,8 +53,8 @@ export function getRouteDependencies(path: string): readonly RouteDependency[] |
 export const ROUTER_STATIC_PATHS = [...STATIC_ROUTE_DEFINITIONS.keys()];
 
 const STATIC_ROUTE_KEYS = new Set(STATIC_ROUTES.map((route) => route.endpoint.key));
-for (const endpoint of ENDPOINT_DEFINITIONS) {
-  if (!endpoint.path.includes(":") && !endpoint.path.includes("*") && !STATIC_ROUTE_KEYS.has(endpoint.key)) {
+for (const endpoint of STATIC_ENDPOINT_ROUTE_DEFINITIONS) {
+  if (!STATIC_ROUTE_KEYS.has(endpoint.key)) {
     throw new Error(`Endpoint "${endpoint.key}" is defined but has no handler in STATIC_ROUTES`);
   }
 }

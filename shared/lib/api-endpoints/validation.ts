@@ -10,6 +10,7 @@ import type {
 import { findDynamicEndpointDescriptor } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
 import { API_PATHS } from "./paths";
+import { getEndpointProbePaths } from "./selectors";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
@@ -217,7 +218,5 @@ export function validateEndpointMethod(url: URL, method: string): EndpointMethod
 }
 
 export function getProbePaths(group: EndpointProbeGroup): string[] {
-  return ENDPOINT_DEFINITIONS.filter((endpoint: EndpointDefinition) => endpoint.probeGroup === group).map(
-    (endpoint: EndpointDefinition) => endpoint.probePath ?? endpoint.path,
-  );
+  return getEndpointProbePaths(group);
 }
