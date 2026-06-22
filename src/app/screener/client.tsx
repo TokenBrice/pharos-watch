@@ -12,7 +12,7 @@ import { usePegSummary, useReportCards, useStressSignals, useDexLiquidity } from
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useSort } from "@/hooks/use-sort";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { refetchQueryGroup } from "@/lib/query-refetch-group";
+import { buildQueryFreshnessGroup } from "@/lib/query-refetch-group";
 import { decodeState, encodeState } from "@/lib/url-state";
 import {
   SCREENER_FILTER_DEFAULTS,
@@ -90,10 +90,7 @@ function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<num
 
 function buildPegDeviationSeries(pegCoin: PegSummaryCoin | undefined): ReadonlyArray<number | null> | undefined {
   if (pegCoin?.currentDeviationBps == null) return undefined;
-  return [
-    pegCoin.worstDeviationBps ?? pegCoin.currentDeviationBps,
-    pegCoin.currentDeviationBps,
-  ];
+  return [pegCoin.worstDeviationBps ?? pegCoin.currentDeviationBps, pegCoin.currentDeviationBps];
 }
 
 export function ScreenerClient() {
@@ -201,15 +198,18 @@ export function ScreenerClient() {
     for (const coin of pegData?.coins ?? []) {
       pegById.set(coin.id, coin);
     }
-    const reportById = new Map<string, {
-      grade: ReportCardGrade;
-      score: number | null;
-      pegStability: number | null;
-      liquidity: number | null;
-      resilience: number | null;
-      decentralization: number | null;
-      dependencyRisk: number | null;
-    }>();
+    const reportById = new Map<
+      string,
+      {
+        grade: ReportCardGrade;
+        score: number | null;
+        pegStability: number | null;
+        liquidity: number | null;
+        resilience: number | null;
+        decentralization: number | null;
+        dependencyRisk: number | null;
+      }
+    >();
     for (const card of reportData?.cards ?? []) {
       reportById.set(card.id, {
         grade: card.overallGrade,
@@ -270,30 +270,67 @@ export function ScreenerClient() {
     return rows;
   }, [stablecoinsData, pegData, reportData, stressData, dexData]);
 
-  const filteredRows = useMemo(
-    () => applyFilters(allRows, filters),
-    [allRows, filters],
-  );
+  const filteredRows = useMemo(() => applyFilters(allRows, filters), [allRows, filters]);
   const scoreFilterDataLoading = hasLoadingScoreFilterData(filters, {
     dewsLoading: isStressLoading,
     dewsHasData: stressData ? Object.keys(stressData.signals).length > 0 : false,
     reportLoading: isReportLoading,
     reportHasData: !!reportData?.cards?.length,
   });
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>(
-    "safetyScore",
-    "desc",
-  );
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>("safetyScore", "desc");
   const sortedRows = useMemo(
     () => sortScreenerRows(filteredRows, sortKey, sortDirection),
     [filteredRows, sortKey, sortDirection],
   );
   const exportRows = scoreFilterDataLoading ? [] : sortedRows;
 
-  const handleRetry = useCallback(
-    () => refetchQueryGroup([refetchStablecoins, refetchPeg, refetchReport, refetchStress, refetchDex]),
-    [refetchStablecoins, refetchPeg, refetchReport, refetchStress, refetchDex],
-  );
+  const freshnessGroup = buildQueryFreshnessGroup([
+    {
+      preset: "stablecoins",
+      data: stablecoinsData?.peggedAssets,
+      dataUpdatedAt: stablecoinsUpdatedAt,
+      error: stablecoinsError,
+      hasData: !!stablecoinsData?.peggedAssets?.length,
+      meta: stablecoinsMeta,
+      refetch: refetchStablecoins,
+    },
+    {
+      preset: "pegSummary",
+      data: pegData?.coins,
+      dataUpdatedAt: pegUpdatedAt,
+      error: pegError,
+      hasData: !!pegData?.coins?.length,
+      meta: pegMeta,
+      refetch: refetchPeg,
+    },
+    {
+      preset: "reportCards",
+      data: reportData?.cards,
+      dataUpdatedAt: reportUpdatedAt,
+      error: reportError,
+      hasData: !!reportData?.cards?.length,
+      meta: reportMeta,
+      refetch: refetchReport,
+    },
+    {
+      preset: "stressSignals",
+      data: stressData?.signals,
+      dataUpdatedAt: stressUpdatedAt,
+      error: stressError,
+      hasData: stressData ? Object.keys(stressData.signals).length > 0 : false,
+      meta: stressMeta,
+      refetch: refetchStress,
+    },
+    {
+      preset: "dexLiquidity",
+      data: dexData,
+      dataUpdatedAt: dexUpdatedAt,
+      error: dexError,
+      hasData: dexData ? Object.keys(dexData).length > 0 : false,
+      meta: dexMeta,
+      refetch: refetchDex,
+    },
+  ]);
 
   const totalTracked = CLIENT_TRACKED_META_BY_ID.size;
   const totalRows = allRows.length || totalTracked;
@@ -306,53 +343,13 @@ export function ScreenerClient() {
     ? `${matchingRows.toLocaleString("en-US")}/${totalRows.toLocaleString("en-US")} tracked stablecoins matching`
     : `All ${totalRows.toLocaleString("en-US")} tracked stablecoins — pre-launch and frozen included`;
 
-  // Surfaces a banner if the underlying queries error out; mirrors other
-  // multi-source surfaces.
-  const globalError = stablecoinsError ?? pegError ?? reportError ?? stressError ?? dexError;
-
   return (
     <div className="space-y-6">
       <QueryFreshnessNotices
-        error={globalError}
-        hasData={!!stablecoinsData?.peggedAssets?.length}
-        onRetry={handleRetry}
-        queries={[
-          {
-            preset: "stablecoins",
-            dataUpdatedAt: stablecoinsUpdatedAt,
-            error: stablecoinsError,
-            hasData: !!stablecoinsData?.peggedAssets?.length,
-            meta: stablecoinsMeta,
-          },
-          {
-            preset: "pegSummary",
-            dataUpdatedAt: pegUpdatedAt,
-            error: pegError,
-            hasData: !!pegData?.coins?.length,
-            meta: pegMeta,
-          },
-          {
-            preset: "reportCards",
-            dataUpdatedAt: reportUpdatedAt,
-            error: reportError,
-            hasData: !!reportData?.cards?.length,
-            meta: reportMeta,
-          },
-          {
-            preset: "stressSignals",
-            dataUpdatedAt: stressUpdatedAt,
-            error: stressError,
-            hasData: stressData ? Object.keys(stressData.signals).length > 0 : false,
-            meta: stressMeta,
-          },
-          {
-            preset: "dexLiquidity",
-            dataUpdatedAt: dexUpdatedAt,
-            error: dexError,
-            hasData: dexData ? Object.keys(dexData).length > 0 : false,
-            meta: dexMeta,
-          },
-        ]}
+        error={freshnessGroup.globalError}
+        hasData={freshnessGroup.hasAnyData}
+        onRetry={freshnessGroup.refetchAll}
+        queries={freshnessGroup.queries}
       />
 
       <SelectorCallout />

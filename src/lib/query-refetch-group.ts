@@ -1,4 +1,5 @@
 import { isCancelledError } from "@tanstack/react-query";
+import type { StaleQuery } from "@/components/stale-data-banner";
 
 export type QueryRefetchFn = () => Promise<unknown>;
 
@@ -16,8 +17,32 @@ interface QueryRefetchResultLike {
   status?: string;
 }
 
+export interface QueryFreshnessGroupEntry extends Omit<StaleQuery, "dataUpdatedAt" | "hasData"> {
+  data?: unknown;
+  dataUpdatedAt?: number;
+  hasData?: boolean;
+  refetch?: QueryRefetchFn;
+}
+
+export interface QueryFreshnessGroupOptions extends QueryRefetchGroupOptions {}
+
+export interface QueryFreshnessGroup {
+  globalError: unknown | null;
+  hasAnyData: boolean;
+  queries: StaleQuery[];
+  refetchAll: () => Promise<QueryRefetchGroupOutcome>;
+}
+
 function isAbortLikeError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === "AbortError");
+}
+
+function resolveHasData(entry: Pick<QueryFreshnessGroupEntry, "data" | "hasData">): boolean {
+  return entry.hasData ?? entry.data != null;
+}
+
+function firstQueryError(entries: readonly QueryFreshnessGroupEntry[]): unknown | null {
+  return entries.find((entry) => entry.error != null)?.error ?? null;
 }
 
 function collectRefetchFailure(result: PromiseSettledResult<unknown>): unknown | null {
@@ -55,4 +80,28 @@ export async function refetchQueryGroup(
   }
 
   return { failures, results };
+}
+
+export function buildQueryFreshnessGroup(
+  entries: readonly QueryFreshnessGroupEntry[],
+  options: QueryFreshnessGroupOptions = {},
+): QueryFreshnessGroup {
+  const refetchers = entries
+    .map((entry) => entry.refetch)
+    .filter((refetch): refetch is QueryRefetchFn => typeof refetch === "function");
+
+  return {
+    globalError: firstQueryError(entries),
+    hasAnyData: entries.some((entry) => resolveHasData(entry)),
+    queries: entries.map((entry) => ({
+      preset: entry.preset,
+      label: entry.label,
+      dataUpdatedAt: entry.dataUpdatedAt ?? 0,
+      staleTime: entry.staleTime,
+      hasData: resolveHasData(entry),
+      error: entry.error,
+      meta: entry.meta,
+    })),
+    refetchAll: () => refetchQueryGroup(refetchers, options),
+  };
 }
