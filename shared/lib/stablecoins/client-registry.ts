@@ -12,14 +12,14 @@ import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
  * `blacklistabilityReview`, obituary text, etc.
  *
  * Source-of-truth pipeline:
- *   `coins.generated.json` (1.37 MiB, full)
+ *   `coins.generated.json` (full generated registry)
  *     -> `scripts/build-data/build-client-registry.mjs`
- *     -> `coins.client.generated.json` (~790 KiB, client projection)
+ *     -> `coins.client.generated.json` (client projection)
  *     -> this module
  *
- * `validate-client-registry-fields` (CI) keeps the slim projection a strict
- * subset of the full asset; `build-client-registry.mjs --check` keeps the
- * checked-in slim JSON byte-identical to a fresh generation.
+ * `build-client-registry.mjs --check` keeps the checked-in slim JSON
+ * byte-identical to a fresh generation, and the client-registry field contract
+ * tests keep the projection aligned with the full asset.
  */
 
 const CLIENT_COINS_BY_ID = new Map<string, StablecoinClientMeta>();

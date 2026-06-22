@@ -94,8 +94,7 @@ export type GeniusClientProfile = Pick<
  *
  * The full server-side `StablecoinMeta` carries ~50 fields including heavy
  * arrays (`contracts`, `dependencies`, `blacklistabilityReview`,
- * `featuredContent`, `obituary` text, etc.). Shipping all of that to the
- * browser costs ~1.37 MiB of JSON. This client type keeps only the fields
+ * `featuredContent`, `obituary` text, etc.). This client type keeps only the fields
  * client surfaces actually read for routing, labels, filtering, basic
  * classification, reserve coverage summaries, mint-authority coverage
  * classification, compliance-table display, and portfolio exposure. Stablecoin

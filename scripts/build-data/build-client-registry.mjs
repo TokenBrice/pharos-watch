@@ -5,11 +5,10 @@
  * into a slim client-facing JSON consumed by
  * `shared/lib/stablecoins/client-registry.ts`.
  *
- * The full per-coin asset is ~1.37 MiB (391 entries × ~50 fields). Client
- * surfaces read a curated subset of those fields for routing, labels,
- * filtering, classification, reserve coverage summaries, mint-authority coverage
- * classification, and portfolio exposure. This generator drops fields that still
- * belong on server-only paths (`contracts`, `dependencies`,
+ * Client surfaces read a curated subset of the full generated registry fields
+ * for routing, labels, filtering, classification, reserve coverage summaries,
+ * mint-authority coverage classification, and portfolio exposure. This generator
+ * drops fields that still belong on server-only paths (`contracts`, `dependencies`,
  * `blacklistabilityReview`, mint-authority review evidence, `featuredContent`,
  * obituary prose, etc.) and emits an array with deterministic key ordering.
  *
