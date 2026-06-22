@@ -1,0 +1,15 @@
+{
+  "id": "pyusd-paypal",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Reverse Repos",
+      "pct": 97,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash Deposits",
+      "pct": 3,
+      "risk": "very-low"
+    }
+  ]
+}

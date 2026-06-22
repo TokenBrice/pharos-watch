@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 381 more files omitted; use `rg --files src/components` for the full list.
+- ... 384 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -325,6 +325,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/api-endpoints/index.ts` - API_PATHS, SNAPSHOT_DATE_PATTERN, buildQueryPath, getStatusPageActions
 - `shared/lib/api-endpoints/paths.test.ts`
 - `shared/lib/api-endpoints/paths.ts` - API_PATHS, buildQueryPath
+- `shared/lib/api-endpoints/selectors.ts` - DYNAMIC_ENDPOINT_ACCESS_POLICIES, DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES, DYNAMIC_ENDPOINT_ROUTE_DEFINITIONS, DynamicEndpointAccessPolicy, DynamicEndpointDependencyHydrationPolicy, DynamicEndpointRouteDefinition
 - `shared/lib/api-endpoints/snapshot.ts` - SNAPSHOT_DATE_PATTERN
 - `shared/lib/api-endpoints/status.ts` - getStatusPageActions
 - `shared/lib/api-endpoints/validation.ts` - getEndpointAllowedMethods, getProbePaths, getPublicApiAccess, getSiteDataAccess, isAdminLikePath, isAdminPath
@@ -376,8 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
 - `shared/lib/depeg-resolver-version.ts`
-- `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
-- ... 255 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 256 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -421,7 +421,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
 - `shared/data/stablecoins/coins/brla-brla-digital.json` - 27 keys
-- ... 377 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 382 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 

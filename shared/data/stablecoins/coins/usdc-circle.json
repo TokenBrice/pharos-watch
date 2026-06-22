@@ -491,23 +491,6 @@
     ]
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "U.S. Treasuries",
-      "pct": 75,
-      "risk": "very-low"
-    },
-    {
-      "name": "Overnight Repos",
-      "pct": 18,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash Deposits",
-      "pct": 7,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "circle-transparency",
     "version": 1,

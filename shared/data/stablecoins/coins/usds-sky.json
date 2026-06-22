@@ -260,43 +260,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "dao-governance",
-  "reserves": [
-    {
-      "name": "Stablecoins (PSM)",
-      "pct": 38,
-      "risk": "very-low"
-    },
-    {
-      "name": "Spark (lending)",
-      "pct": 28,
-      "risk": "low"
-    },
-    {
-      "name": "Grove (RWA)",
-      "pct": 23,
-      "risk": "low"
-    },
-    {
-      "name": "Obex",
-      "pct": 5,
-      "risk": "medium"
-    },
-    {
-      "name": "Core (crypto vaults)",
-      "pct": 4,
-      "risk": "medium"
-    },
-    {
-      "name": "Staking Engine",
-      "pct": 1,
-      "risk": "high"
-    },
-    {
-      "name": "Legacy RWA",
-      "pct": 1,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "sky-makercore",
     "version": 1,

@@ -3,12 +3,14 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  buildGeneratedPerCoinAsset,
   findCanonicalOrderIssues,
   findDuplicateStablecoinIds,
   findNonEmptyLegacyStablecoinShards,
   formatLegacyShardEntriesIssue,
   loadGeneratedPerCoinCoins,
   loadLegacyStablecoinEntries,
+  loadPerCoinStablecoinEntries,
   syncGeneratedPerCoinAsset,
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
@@ -67,6 +69,16 @@ function writeLegacyShards(rootDir: string, usdMajorCoins: unknown[] = []): void
   writeJson(rootDir, "shared/data/stablecoins/non-usd.json", []);
   writeJson(rootDir, "shared/data/stablecoins/commodity.json", []);
   writeJson(rootDir, "shared/data/stablecoins/pre-launch.json", []);
+}
+
+function makeReserves(): Array<Record<string, unknown>> {
+  return [
+    {
+      name: "Cash",
+      pct: 100,
+      risk: "very-low",
+    },
+  ];
 }
 
 afterEach(() => {
@@ -138,6 +150,125 @@ describe("stablecoin catalog source helpers", () => {
       "Legacy shards are read-only compatibility shells; edit shared/data/stablecoins/coins/<id>.json " +
       "and regenerate shared/data/stablecoins/coins.generated.json instead.",
     );
+  });
+
+  it("merges reserves sidecars into per-coin source entries", () => {
+    const rootDir = makeTempRoot();
+    const reserves = makeReserves();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/sidecar-usd.json", {
+      id: "sidecar-usd",
+      reserves,
+    });
+
+    const entries = loadPerCoinStablecoinEntries(rootDir);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.coin.reserves).toEqual(reserves);
+    expect(entries[0]?.sidecarFiles).toEqual([
+      "shared/data/stablecoins/domains/reserves/sidecar-usd.json",
+    ]);
+  });
+
+  it("rejects sidecars whose id does not match the sidecar file id", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/sidecar-usd.json", {
+      id: "other-usd",
+      reserves: makeReserves(),
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
+      /sidecar id "other-usd" must match file id "sidecar-usd"/,
+    );
+  });
+
+  it("rejects sidecars that duplicate a field still present in the base coin", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(
+      rootDir,
+      "shared/data/stablecoins/coins/sidecar-usd.json",
+      makeCoin("sidecar-usd", { reserves: makeReserves() }),
+    );
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/sidecar-usd.json", {
+      id: "sidecar-usd",
+      reserves: makeReserves(),
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
+      /field "reserves" already exists in shared\/data\/stablecoins\/coins\/sidecar-usd\.json/,
+    );
+  });
+
+  it("rejects unknown fields in strict sidecar schemas", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/sidecar-usd.json", {
+      id: "sidecar-usd",
+      reserves: makeReserves(),
+      notes: "not part of the reserves sidecar schema",
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/Unrecognized key/);
+  });
+
+  it("rejects unsupported sidecar domain directories", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/ratings/sidecar-usd.json", {
+      id: "sidecar-usd",
+      riskRating: "low",
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
+      /Unsupported stablecoin sidecar domain directories: shared\/data\/stablecoins\/domains\/ratings/,
+    );
+  });
+
+  it("keeps generated aggregate shape equivalent after splitting a sidecar field", () => {
+    const rootDir = makeTempRoot();
+    const reserves = makeReserves();
+    const expectedCoin = makeCoin("split-usd", { reserves });
+
+    writeLegacyShards(rootDir);
+    writeJson(rootDir, "shared/data/stablecoins/coins/split-usd.json", makeCoin("split-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/split-usd.json", {
+      id: "split-usd",
+      reserves,
+    });
+    writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
+
+    const result = syncGeneratedPerCoinAsset({ rootDir });
+    expect(result.changed).toBe(true);
+    expect(loadGeneratedPerCoinCoins(rootDir)).toEqual([expectedCoin]);
+  });
+
+  it("builds merged output in deterministic per-coin file order", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/zeta-usd.json", makeCoin("zeta-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/coins/alpha-usd.json", makeCoin("alpha-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/zeta-usd.json", {
+      id: "zeta-usd",
+      reserves: makeReserves(),
+    });
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/alpha-usd.json", {
+      id: "alpha-usd",
+      reserves: makeReserves(),
+    });
+
+    const entries = loadPerCoinStablecoinEntries(rootDir);
+    expect(entries.map((entry) => entry.id)).toEqual(["alpha-usd", "zeta-usd"]);
+    expect(entries.map((entry) => entry.sidecarFiles)).toEqual([
+      ["shared/data/stablecoins/domains/reserves/alpha-usd.json"],
+      ["shared/data/stablecoins/domains/reserves/zeta-usd.json"],
+    ]);
+    expect(Object.keys(entries[0]!.coin)).toEqual(["id", "name", "symbol", "flags", "reserves"]);
+    expect(buildGeneratedPerCoinAsset(entries).map((coin) => coin.id)).toEqual(["alpha-usd", "zeta-usd"]);
   });
 
   it("fails check mode when the generated per-coin aggregate is stale", () => {

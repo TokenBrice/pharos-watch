@@ -199,7 +199,21 @@ const StablecoinMetaAssetSchemaShape = {
   dateHistory: z.array(DateHistoryEntrySchema).optional(),
 } satisfies Record<keyof StablecoinMeta, z.ZodTypeAny>;
 
+export const STABLECOIN_META_ASSET_FIELD_ORDER = Object.keys(
+  StablecoinMetaAssetSchemaShape,
+) as Array<keyof StablecoinMeta>;
+
 const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).strict();
+
+export const STABLECOIN_SOURCE_DOMAIN_VALUES = ["reserves"] as const;
+export type StablecoinSourceDomain = typeof STABLECOIN_SOURCE_DOMAIN_VALUES[number];
+
+export const StablecoinReservesSidecarSchema = z
+  .object({
+    id: StablecoinIdSchema,
+    reserves: FullReserveCompositionSchema,
+  })
+  .strict();
 
 const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] as const;
 

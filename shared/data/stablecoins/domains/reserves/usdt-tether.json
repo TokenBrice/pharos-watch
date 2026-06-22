@@ -1,0 +1,25 @@
+{
+  "id": "usdt-tether",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bill exposure",
+      "pct": 73.5,
+      "risk": "very-low"
+    },
+    {
+      "name": "Physical gold",
+      "pct": 10.4,
+      "risk": "medium"
+    },
+    {
+      "name": "Bitcoin",
+      "pct": 3.7,
+      "risk": "high"
+    },
+    {
+      "name": "Other reserve assets and excess buffer",
+      "pct": 12.4,
+      "risk": "medium"
+    }
+  ]
+}

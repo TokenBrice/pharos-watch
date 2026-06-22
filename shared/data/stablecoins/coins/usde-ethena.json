@@ -386,23 +386,6 @@
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
-  "reserves": [
-    {
-      "name": "Liquid Stables (USDtb / USDC / USDT)",
-      "pct": 76,
-      "risk": "low"
-    },
-    {
-      "name": "BTC (delta-neutral)",
-      "pct": 16,
-      "risk": "medium"
-    },
-    {
-      "name": "ETH / ETH LSTs (delta-neutral)",
-      "pct": 8,
-      "risk": "medium"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "ethena",
     "version": 1,
