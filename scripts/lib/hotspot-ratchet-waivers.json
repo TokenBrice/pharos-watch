@@ -1,12 +1,4 @@
 {
-  "shared/lib/yield-source-risk-registry.ts": {
-    "disposition": "queued-p4",
-    "notes": "Reviewed venue-risk registry was moved from the worker source-risk module into shared runtime-neutral metadata so maintenance scripts and worker code can use the same registry without a boundary waiver. The file is intentionally data-heavy; keep it waived until venue-risk entries are split into generated data or family-specific registry shards.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-15",
-    "reviewAfter": "2026-09-15",
-    "nextAction": "Split reviewed venue-risk entries from registry helpers, preferably into generated/static data plus a narrow shared resolver API."
-  },
   "src/app/about/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Homepage About route was consolidated and now includes the legacy editorial/style/principles content paths and copy updates in a single shell. Keep this explicitly waived until the next About-route decomposition wave.",
@@ -62,6 +54,14 @@
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "src/components/depeg-resolver-reviewer-module.tsx": {
+    "disposition": "queued-p4",
+    "notes": "DDRR reviewer UI combines filter state, summary projection, table assembly, and source detail rendering. It surfaced after the latest review-surface additions; keep it explicitly owned for a focused UI split rather than widening this release gate.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-23",
+    "reviewAfter": "2026-09-23",
+    "nextAction": "Separate DDRR reviewer state/projection helpers from presentation rows and source-detail rendering."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
@@ -134,6 +134,14 @@
     "createdAt": "2026-06-12",
     "reviewAfter": "2026-09-12",
     "nextAction": "Extract progress telemetry and source-family orchestration from the main sync-yield-data runner."
+  },
+  "worker/src/cron/sync-fx-rates-helpers.ts": {
+    "disposition": "queued-p4",
+    "notes": "FX sync helpers intentionally centralize source probing, row normalization, diagnostics, and provider fallback behavior. The current release only touched surrounding health fixes; keep the helper hotspot queued for a dedicated FX provider decomposition pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-23",
+    "reviewAfter": "2026-09-23",
+    "nextAction": "Split FX provider probing/normalization and diagnostics aggregation into narrower helper modules."
   },
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",

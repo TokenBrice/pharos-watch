@@ -41,7 +41,7 @@ import { readDewsPublishedGeneration } from "../../../lib/dews-publication-point
 
 export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
-export const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
+const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
 const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 
 type PreviousStressSignalRow = {

@@ -604,7 +604,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dews/scoring.ts` - buildDewsScoringResult
 - `worker/src/cron/dews/source-state.ts` - loadDewsSourceState
 - `worker/src/cron/dews/source-state/fallback.ts` - isBootstrapAllowedMissingTableSource, resolveBootstrapAllowed
-- `worker/src/cron/dews/source-state/hydration.ts` - BlacklistHydration, DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC, DEWS_STALE_MINT_BURN_SEC, DewsSourceCoverage, DexLiquidityHistoryHydration
+- `worker/src/cron/dews/source-state/hydration.ts` - BlacklistHydration, DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC, DewsSourceCoverage, DexLiquidityHistoryHydration, DexLiquidityHydration
 - `worker/src/cron/dews/source-state/legacy-bridge.ts` - LegacyDecodeResult, decodeLegacyStressSignals, getBoolean, getNumber, getObject, getString
 - `worker/src/cron/dex-discovery/crawl-coingecko-pools.ts` - CoinGeckoPoolsStageDependencies, CoinGeckoPoolsStageResult, crawlCoinGeckoPoolsStage
 - `worker/src/cron/dex-discovery/crawl-coingecko-tickers.ts` - CoinGeckoTickersStageDependencies, crawlCoinGeckoTickersStage

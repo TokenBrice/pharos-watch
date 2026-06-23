@@ -108,8 +108,7 @@ export async function getCircuitRecord(db: D1Database, source: string): Promise<
   }
 
   const version = cache.versions.get(source) ?? 0;
-  let read: Promise<CircuitRecord>;
-  read = readCircuitRecordFromDb(db, source)
+  const read = readCircuitRecordFromDb(db, source)
     .then((record) => {
       if ((cache.versions.get(source) ?? 0) === version) {
         cache.records.set(source, {
