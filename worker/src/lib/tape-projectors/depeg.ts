@@ -2,7 +2,7 @@
  * depeg.* projectors. Source: `depeg_events` (explicit transition table).
  *
  *   - depeg.opened       : one row per newly opened depeg
- *   - depeg.resolved     : one row per row whose ended_at was filled in
+ *   - depeg.resolved     : one row per row whose ended_at was filled in by recovery evidence
  *   - depeg.peak_worsened: emitted when an OPEN row's |peak_deviation_bps| grows
  *
  * peak_worsened uses a JSON map in `cache` keyed `tape-projector:peak-worsened-seen`
@@ -24,8 +24,14 @@ import {
 import type { TapeEventInsert } from "../tape-event-types";
 import { DEFAULT_BATCH_LIMIT, resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
 import { formatDuration, formatPrice } from "@shared/lib/format";
+import type { DepegEventCloseReason } from "@shared/types/market";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
+const RECOVERY_CLOSE_REASONS = new Set<DepegEventCloseReason>([
+  "recovered-primary",
+  "recovered-dex",
+  "recovered-native",
+]);
 
 interface DepegSourceRow {
   id: number;
@@ -37,8 +43,10 @@ interface DepegSourceRow {
   started_at: number;          // epoch seconds
   ended_at: number | null;     // epoch seconds
   start_price: number | null;
+  recovery_price?: number | null;
   peg_reference: number;
   source: string;
+  close_reason?: string | null;
   methodology_version: string | null;
 }
 
@@ -63,7 +71,7 @@ async function fetchDepegRows(
          FROM depeg_events
          WHERE source = 'live' AND started_at > ?`
     : `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-              started_at, ended_at, start_price, peg_reference, source, methodology_version
+              started_at, ended_at, start_price, recovery_price, peg_reference, source, close_reason, methodology_version
          FROM depeg_events
          WHERE source = 'live' AND ended_at IS NOT NULL AND ended_at > ?`;
   const orderCol = variant === "opened" ? "started_at" : "ended_at";
@@ -78,10 +86,17 @@ async function fetchDepegRows(
     // The depeg_events.methodology_version column was added later; tolerate
     // its absence on older databases the same way other readers do.
     if (!isMissingColumnError(err)) throw err;
-    const fallbackSql = sql.replace(", methodology_version", "");
+    const fallbackSql = sql.replace(", close_reason", "").replace(", methodology_version", "");
     const result = await db.prepare(fallbackSql).bind(...binds).all<DepegSourceRow>();
     return result.results ?? [];
   }
+}
+
+function isRecoveryClosure(row: DepegSourceRow): boolean {
+  if (row.close_reason != null) {
+    return RECOVERY_CLOSE_REASONS.has(row.close_reason as DepegEventCloseReason);
+  }
+  return row.recovery_price != null;
 }
 
 async function projectDepegByVariant(
@@ -99,6 +114,9 @@ async function projectDepegByVariant(
   let maxCursor = since;
   for (const row of rows) {
     const tsSec = variant === "opened" ? row.started_at : (row.ended_at ?? row.started_at);
+    if (tsSec > maxCursor) maxCursor = tsSec;
+    if (variant === "resolved" && !isRecoveryClosure(row)) continue;
+
     const tsMs = tsSec * 1000;
     const absBps = Math.abs(row.peak_deviation_bps);
     const sign = row.direction === "below" ? "−" : "+";
@@ -146,7 +164,6 @@ async function projectDepegByVariant(
       sourceUrl: coinSourceUrl(row.stablecoin_id),
       methodologyVersion: row.methodology_version ?? null,
     });
-    if (tsSec > maxCursor) maxCursor = tsSec;
   }
 
   if (!dryRun) {

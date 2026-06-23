@@ -198,6 +198,7 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
     recovery_price: null,
     peg_reference: 1,
     source: "live",
+    close_reason: null,
     confirmation_sources: null,
     pending_reason: null,
   } satisfies DepegRow;
@@ -225,6 +226,7 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
       source: "live",
       confirmationSources: "DEX+CEX",
       pendingReason: "large-cap",
+      closeReason: null,
       provenance: null,
     });
     expect(bindCalls[0]).toContain("DEX+CEX");
@@ -238,13 +240,26 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
     });
     expect(event.confirmationSources).toBe("Pool");
     expect(event.pendingReason).toBe("large-cap+low-confidence");
+    expect(event.closeReason).toBeNull();
 
     const legacy = rowToDepegEvent({
       ...baseDepegRow,
       id: 2,
+      close_reason: undefined,
     });
     expect(legacy.confirmationSources).toBeNull();
     expect(legacy.pendingReason).toBeNull();
+    expect(legacy.closeReason).toBeNull();
+  });
+
+  it("rowToDepegEvent exposes validated close_reason values", () => {
+    const event = rowToDepegEvent({
+      ...baseDepegRow,
+      ended_at: 200,
+      recovery_price: 1,
+      close_reason: "recovered-primary",
+    });
+    expect(event.closeReason).toBe("recovered-primary");
   });
 
   it("rejects invalid stored direction values instead of coercing them", () => {
@@ -256,6 +271,12 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
   it("rejects invalid stored source values instead of coercing them", () => {
     expect(() => rowToDepegEvent({ ...baseDepegRow, source: "manual" })).toThrow(
       '[depeg-helpers] Invalid source "manual" for event 1',
+    );
+  });
+
+  it("rejects invalid stored close_reason values instead of coercing them", () => {
+    expect(() => rowToDepegEvent({ ...baseDepegRow, close_reason: "unknown" })).toThrow(
+      '[depeg-helpers] Invalid close_reason "unknown" for event 1',
     );
   });
 });

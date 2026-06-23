@@ -306,6 +306,17 @@ export interface DepegEventSearchEntry {
   startedAt: DepegEvent["startedAt"];
 }
 
+export const DEPEG_EVENT_CLOSE_REASON_VALUES = [
+  "recovered-primary",
+  "recovered-dex",
+  "recovered-native",
+  "coverage-lost-supply",
+  "superseded-direction",
+  "orphan-tracking-removed",
+] as const;
+export const DepegEventCloseReasonSchema = z.enum(DEPEG_EVENT_CLOSE_REASON_VALUES);
+export type DepegEventCloseReason = z.infer<typeof DepegEventCloseReasonSchema>;
+
 export const DepegEventSchema = z.object({
   id: z.number(),
   stablecoinId: z.string(),
@@ -322,6 +333,7 @@ export const DepegEventSchema = z.object({
   source: z.enum(["live", "backfill"]),
   confirmationSources: z.string().nullable().optional().default(null),
   pendingReason: z.string().nullable().optional().default(null),
+  closeReason: DepegEventCloseReasonSchema.nullable().optional().default(null),
   provenance: z
     .object({
       sourceKind: z.string().nullable().optional(),

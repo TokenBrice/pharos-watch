@@ -174,6 +174,7 @@ function buildLiveEventCommand(
     source: "live",
     confirmationSources: null,
     pendingReason: null,
+    closeReason: null,
     provenance: null,
   };
   return { type: "insert-live", event };
@@ -334,6 +335,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
         endedAt: now,
         recoveryPrice: null,
         recoveryPriceMode: "null",
+        closeReason: "coverage-lost-supply",
       });
       decision.diagnostics.push(withDiagnostic(
         "log",
@@ -487,6 +489,7 @@ function applyNativeQuoteVeto(
           endedAt: ctx.now,
           recoveryPrice: null,
           recoveryPriceMode: "null",
+          closeReason: "recovered-native",
         });
       }
       decision.diagnostics.push(buildNativeSuppressionWarning(ctx));
@@ -553,6 +556,7 @@ function decideExistingEvent(
         endedAt: now,
         recoveryPrice: price,
         recoveryPriceMode: "bind",
+        closeReason: "superseded-direction",
       });
       if (requiresConfirmation) {
         commands.push(buildPendingCommand(asset, now, direction, bps, price, pegRef, pendingReason));
@@ -704,6 +708,7 @@ function decideRecovery(
       endedAt: now,
       recoveryPrice: price,
       recoveryPriceMode: "bind",
+      closeReason: "recovered-primary",
     });
   } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery) {
     commands.push({
@@ -712,6 +717,7 @@ function decideRecovery(
       endedAt: now,
       recoveryPrice: dexRow.dex_price_usd,
       recoveryPriceMode: "bind",
+      closeReason: "recovered-dex",
     });
   } else {
     seenEventIds.push(existing.id);

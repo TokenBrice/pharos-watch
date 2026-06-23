@@ -494,7 +494,7 @@ If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `r
 - DEWS alert-band changes by comparing the current alertable band (`ALERT`/`WARNING`/`DANGER`) to the last alertable band snapshot, while still keeping the raw current-band snapshot for display context
 - New active depeg events by comparing current active-depeg snapshot to the prior snapshot
 - Depeg worsening milestones by comparing current active event severity to the prior snapshot
-- Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows
+- Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows; only rows with recovery close reasons (`recovered-primary`, `recovered-dex`, `recovered-native`) emit "Depeg Resolved"
 - Safety-grade changes by comparing the previous `alert:safety-snapshot` against the live safety source cache written by `publish-report-card-cache`
 - Safety-grade changes are emitted only when the live safety source cache is generation-valid; fallback-to-history no longer rewrites the alert snapshot as if it were a valid live source
 - Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
@@ -547,7 +547,7 @@ Filtering is subscription-aware:
 - DEWS compares `newBand` against the coin's `dews_min_band`
 - Per-coin safety changes respect the coin's `safety_mode`
 - Global all-stablecoin safety follows accept downgrades only, with a materiality filter when scores are present (`oldScore - newScore >= 3`; scoreless downgrades still pass through)
-- Fresh depeg and resolution notifications with a configured `depeg_worsening_bps_step` require the event's deviation to meet that bps threshold
+- Fresh depeg and recovery-resolution notifications with a configured `depeg_worsening_bps_step` require the event's deviation to meet that bps threshold; coverage-lost, orphan, and superseded closures update the depeg snapshot but do not notify as recovered
 - Depeg worsening follows the coin's `depeg_worsening_bps_step`
 - Global depeg uses the subscriber's `global_depeg_worsening_bps_step` for both the initial severity gate and worsening follow-ups
 - Quiet hours force `disable_notification = true`
@@ -557,7 +557,7 @@ Filtering is subscription-aware:
 
 When the same chat has both a global alert type and a per-coin subscription for the same alert type, the per-coin row wins. This lets coin-specific thresholds or modes override the global default, and it lets `/set <ticker> <type> off` silence that coin even when the chat follows a preset or all-stablecoin alert family.
 
-If a depeg closes and reopens for the same coin between two dispatch snapshots, the alert is framed as the new detected event with the just-ended recovery duration. The dispatcher suppresses the separate resolved line for that same coin in the same message so users do not receive contradictory "resolved" and "detected" sections at once.
+If a depeg closes with a recovery reason and reopens for the same coin between two dispatch snapshots, the alert is framed as the new detected event with the just-ended recovery duration. If the prior row closed for coverage-loss, orphan cleanup, or superseded direction, the new row is framed as a fresh detected event without a recovery-duration claim. The dispatcher suppresses the separate resolved line for that same coin in the same message so users do not receive contradictory "resolved" and "detected" sections at once.
 
 ### Message Formatting and Limits
 

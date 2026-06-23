@@ -58,7 +58,14 @@ describe("buildDuplicateOpenEventRepair", () => {
     expect(result.commands).toEqual([
       { type: "delete-event", id: 2 },
       { type: "update-peak", id: 1, peakDeviationBps: -300, peakPrice: 0.97 },
-      { type: "close-event", id: 1, endedAt: 300, recoveryPrice: null, recoveryPriceMode: "null" },
+      {
+        type: "close-event",
+        id: 1,
+        endedAt: 300,
+        recoveryPrice: null,
+        recoveryPriceMode: "null",
+        closeReason: "superseded-direction",
+      },
     ]);
   });
 });
@@ -78,7 +85,14 @@ describe("buildOrphanCloseRepair", () => {
     });
 
     expect(result.commands).toEqual([
-      { type: "close-event", id: 10, endedAt: 1_000, recoveryPrice: null, recoveryPriceMode: "null" },
+      {
+        type: "close-event",
+        id: 10,
+        endedAt: 1_000,
+        recoveryPrice: null,
+        recoveryPriceMode: "null",
+        closeReason: "orphan-tracking-removed",
+      },
     ]);
     expect(result.diagnostics).toEqual([
       { level: "log", message: "[depeg] Closing orphan event for retired-coin (id=10)" },

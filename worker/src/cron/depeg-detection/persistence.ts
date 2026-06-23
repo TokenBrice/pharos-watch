@@ -16,12 +16,12 @@ function buildDepegPersistenceStatements(
       case "close-event":
         if (command.recoveryPriceMode === "null") {
           return db
-            .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL WHERE id = ?")
-            .bind(command.endedAt, command.id);
+            .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ? WHERE id = ?")
+            .bind(command.endedAt, command.closeReason, command.id);
         }
         return db
-          .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?")
-          .bind(command.endedAt, command.recoveryPrice, command.id);
+          .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ? WHERE id = ?")
+          .bind(command.endedAt, command.recoveryPrice, command.closeReason, command.id);
       case "update-peak":
         return db
           .prepare("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?")

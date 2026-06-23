@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS depeg_events (
   peg_reference REAL NOT NULL,
   source TEXT NOT NULL DEFAULT 'live',  -- "live" | "backfill"
   confirmation_sources TEXT,            -- JSON/provenance for promoted pending rows
-  pending_reason TEXT                   -- reason flags carried from depeg_pending
+  pending_reason TEXT,                  -- reason flags carried from depeg_pending
+  close_reason TEXT                     -- why the row closed, NULL for open/legacy rows
 );
 
 CREATE INDEX idx_depeg_stablecoin ON depeg_events(stablecoin_id);
@@ -68,6 +69,13 @@ Uniqueness and open-event indexes:
 CREATE UNIQUE INDEX idx_depeg_unique ON depeg_events(stablecoin_id, started_at, source);
 CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NULL;
 ```
+
+`close_reason` distinguishes real recovery from non-recovery terminal boundaries:
+
+- `recovered-primary`, `recovered-dex`, `recovered-native`
+- `coverage-lost-supply`
+- `superseded-direction`
+- `orphan-tracking-removed`
 
 ### depeg_pending
 
@@ -94,7 +102,7 @@ CREATE TABLE IF NOT EXISTS depeg_pending (
 CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 ```
 
-One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema, the `reason` column (distinguishes large-cap confirmations from ambiguous-price and extreme-move confirmations), and the original uniqueness/open-event indexes were all squashed into `0000_baseline.sql` (migrations 0001–0071, squashed 2026-03-25), so their pre-squash migration files no longer exist. The still-extant follow-on migrations layer on top: migration `0091` adds last-seen and peak-seen tracking columns so pending rows preserve current and worst observed evidence while they await promotion or expiry, and migration `0105` adds `confirmation_sources` and `pending_reason` to promoted `depeg_events` rows for ex-post provenance.
+One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema, the `reason` column (distinguishes large-cap confirmations from ambiguous-price and extreme-move confirmations), and the original uniqueness/open-event indexes were all squashed into `0000_baseline.sql` (migrations 0001–0071, squashed 2026-03-25), so their pre-squash migration files no longer exist. The still-extant follow-on migrations layer on top: migration `0091` adds last-seen and peak-seen tracking columns so pending rows preserve current and worst observed evidence while they await promotion or expiry, migration `0105` adds `confirmation_sources` and `pending_reason` to promoted `depeg_events` rows for ex-post provenance, and migration `0164` adds nullable `close_reason` values for terminal semantics.
 
 ### depeg_event_provenance (migration 0127)
 
@@ -128,11 +136,11 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 1. Load PSI-eligible stablecoins into `metaById` map
 2. Derive peg rates (handles FX lookups once)
 3. Load DEX prices from `dex_prices` table (silently skip if table missing)
-4. Merge duplicate open events: same-direction duplicates keep the earliest row and absorb only same-direction peaks; if opposite directions are open, the newest direction remains live and older direction rows close with `recovery_price = NULL`
+4. Merge duplicate open events: same-direction duplicates keep the earliest row and absorb only same-direction peaks; if opposite directions are open, the newest direction remains live and older direction rows close with `close_reason = 'superseded-direction'` and `recovery_price = NULL`
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
-The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a new `depeg_events` row. If the coin already had an open live row from a period above the floor, the row closes as coverage-lost with `recovery_price = NULL` instead of remaining live indefinitely.
+The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a new `depeg_events` row. If the coin already had an open live row from a period above the floor, the row closes as coverage-lost with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` instead of remaining live indefinitely.
 
 ### Per-Asset Processing
 
@@ -141,7 +149,7 @@ Validation gates (skip if any fail):
 - Must be in `PSI_ELIGIBLE_STABLECOINS`
 - Not a NAV token (`meta.flags.navToken`)
 - Price valid: non-null, is a number, not NaN, > 0
-- Supply >= $1M (via `sumPegBuckets`) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
+- Supply >= $1M (via `sumPegBuckets`) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians and empty live peer sets fail closed for that cycle
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh direct native-peg quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle
@@ -165,7 +173,7 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path A -- Deviation >= threshold AND event already open**
 
-- If a fresh direct native-peg quote is back inside threshold: close the live row immediately as recovered, but leave `recovery_price = NULL` because the stored USD price still contradicts the native close
+- If a fresh direct native-peg quote is back inside threshold: close the live row immediately with `close_reason = 'recovered-native'`, but leave `recovery_price = NULL` because the stored USD price still contradicts the native close
 - If a fresh direct native-peg quote still shows a depeg but in a conflicting direction: fail closed and keep the existing row unchanged
 - If direction changed and the primary price is authoritative (or a trusted aggregate DEX row is corroborated by at least 2 protocol-level DEX groups in the replacement direction): close the old event and open the replacement immediately
 - If direction changed but the primary price is `confirm_required`: retire the stale live row immediately and route the replacement move through `depeg_pending` instead of leaving the wrong direction active
@@ -197,7 +205,7 @@ Whenever a row is written to `depeg_pending`, the worker now upserts directional
 
 ### Orphan Cleanup
 
-After the main loop, load all open events. Close any that were not in the `seen` set and were not created during the current run. These are true "orphans" -- the coin was removed from tracking or exited the PSI-eligible set. Tracked coins are intentionally kept open through transient missing-price or ambiguous-input cycles and are **not** force-closed just because one run lacked a trusted recovery signal. Orphans are closed with `recovery_price = NULL`.
+After the main loop, load all open events. Close any that were not in the `seen` set and were not created during the current run. These are true "orphans" -- the coin was removed from tracking or exited the PSI-eligible set. Tracked coins are intentionally kept open through transient missing-price or ambiguous-input cycles and are **not** force-closed just because one run lacked a trusted recovery signal. Orphans are closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL`.
 
 ## Stage 2 -- Confirmation
 
@@ -335,7 +343,7 @@ While event is open:
   - Price recovers below threshold: close only when the primary recovery is authoritative, or when trusted aggregate DEX recovery has enough protocol corroboration and no challenger veto; otherwise keep the event open
 
 Orphan cleanup:
-  - Open event for a coin no longer tracked by Pharos: close with recovery_price=NULL
+  - Open event for a coin no longer tracked by Pharos: close with `close_reason='orphan-tracking-removed'` and `recovery_price=NULL`
   - Open event for a tracked coin not observed in the current run: keep open to avoid false recoveries during upstream gaps
 ```
 
@@ -347,6 +355,7 @@ Orphan cleanup:
 
 - `direction` must be `"above"` or `"below"` (defaults to `"below"`)
 - `source` must be `"live"` or `"backfill"` (defaults to `"live"`)
+- `closeReason` is `null` for open/legacy rows or one of the validated terminal reason strings above
 
 Frontend type (defined in `shared/types/market.ts`, re-exported through `shared/types/index.ts`):
 
@@ -495,11 +504,11 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 |----------|----------|
 | Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + run-start repair; same-direction rows merge, opposite-direction rows close older directions without absorbing opposite-sign peaks |
 | NAV tokens | Skipped (expected to appreciate, depeg detection N/A) |
-| Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note |
+| Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note; existing rows close with `close_reason = 'coverage-lost-supply'` |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |
 | Peg reference validation | Must be finite and > 0 |
 | DEX freshness | Prices > 35 min old ignored |
-| Orphaned events | Closed with `recovery_price = NULL` when coin drops off tracking |
+| Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
 
 ## File Index

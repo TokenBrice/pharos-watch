@@ -96,7 +96,7 @@ Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project
 
 | Projector                       | Source                                                  | Emits                                                                |
 | ------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |
-| `depeg.opened` / `.resolved` / `.peak_worsened` | `depeg_events`                          | Confirmed peg deviations and their resolution / peak transitions     |
+| `depeg.opened` / `.resolved` / `.peak_worsened` | `depeg_events`                          | Confirmed peg deviations, recovery-backed resolutions, and peak transitions |
 | `freeze.blocked` / `.unblocked` / `.destroyed`  | `blacklist_events`                      | Issuer freeze, unblock, and fund-destroy actions                     |
 | `score.upgraded` / `.downgraded`                | `safety_grade_history`                  | Stablecoin Safety Score grade transitions                            |
 | `psi.band_changed`                              | `stability_index_samples`               | PSI regime-band transitions                                          |
@@ -122,7 +122,7 @@ Reserved classes (`reserve`, `redemption`, `liquidity`) are listed in `TAPE_CLAS
 - **Page-seam merging:** `digestPage(...)` digests each infinite-query page independently and `mergeDigestedPages(...)` re-merges adjacent pages that share a UTC day, preserving day grouping across pagination seams.
 - **Collapse-by-coin-class:** within an expanded digest, consecutive events of the same `(coin, class)` further collapse into a single card with a count badge via `collapseByCoinClass(...)`.
 - **Per-class tints:** every `EventCard` and digest recap row carries a class background tint (`bg-{rose|cyan|indigo|…}-500/[0.08]` for rows; `/10` for marquee chips). The tint scheme is `src/lib/tape-class-style.ts` and is shared with `src/components/homepage-tape.tsx`. Class is signaled by hue; severity stays text-color (Aesthetic Lock).
-- **Open incidents banner:** active `depeg.opened` events whose `sourceRowId` has not yet been seen as `depeg.resolved` in the visible window render in a separate amber band above the day groups. Deduped per coin.
+- **Open incidents banner:** active `depeg.opened` events whose `sourceRowId` has not yet been seen as recovery-backed `depeg.resolved` in the visible window render in a separate amber band above the day groups. Deduped per coin.
 - **`?event=<id>` permalink:** if the linked event isn't in the current filter window, a 200-row latest buffer (`useLatestEvents({ limit: 200 })`) is queried in parallel and the event is rendered as a pinned block inside `#tape-feed`, above the day groups. Resolved permalinks scroll into view and pulse-highlight for `HIGHLIGHT_DURATION_MS` (2000 ms).
 - **Infinite scroll:** the first `Load more` click flips a sentinel `IntersectionObserver` on, after which subsequent pages auto-load.
 - **End-of-feed footer:** when the cursor is exhausted, the page prints a mono terminal footer (`END OF TAPE · N EVT · WINDOW ... · CURSOR: NULL · LAST FILE: ...`) instead of a generic sentence.

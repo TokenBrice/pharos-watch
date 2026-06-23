@@ -1,4 +1,8 @@
-import type { DepegEvent } from "@shared/types/market";
+import {
+  DEPEG_EVENT_CLOSE_REASON_VALUES,
+  type DepegEvent,
+  type DepegEventCloseReason,
+} from "@shared/types/market";
 import {
   loadPublishedDexPoolChallengers,
   type DexPriceChallengerLoadRow,
@@ -29,6 +33,7 @@ export interface DepegRow {
   recovery_price: number | null;
   peg_reference: number;
   source: string;
+  close_reason?: string | null;
   confirmation_sources: string | null;
   pending_reason: string | null;
   provenance_json?: string | null;
@@ -359,10 +364,18 @@ function parseDepegSource(row: DepegRow): DepegEvent["source"] {
   throw new Error(`[depeg-helpers] Invalid source "${row.source}" for event ${row.id}`);
 }
 
+function parseDepegCloseReason(row: DepegRow): DepegEventCloseReason | null {
+  if (row.close_reason == null) return null;
+  const reasons = DEPEG_EVENT_CLOSE_REASON_VALUES as readonly string[];
+  if (reasons.includes(row.close_reason)) return row.close_reason as DepegEventCloseReason;
+  throw new Error(`[depeg-helpers] Invalid close_reason "${row.close_reason}" for event ${row.id}`);
+}
+
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
 export function rowToDepegEvent(row: DepegRow): DepegEvent {
   const direction = parseDepegDirection(row);
   const source = parseDepegSource(row);
+  const closeReason = parseDepegCloseReason(row);
   let provenance: DepegEvent["provenance"] = null;
   if (row.provenance_json) {
     try {
@@ -399,6 +412,7 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     source,
     confirmationSources: row.confirmation_sources ?? null,
     pendingReason: row.pending_reason ?? null,
+    closeReason,
     provenance,
   };
 }

@@ -19,6 +19,7 @@ function event(overrides: Partial<DepegEvent> = {}): DepegEvent {
     source: "live",
     confirmationSources: "CoinGecko",
     pendingReason: null,
+    closeReason: null,
     provenance: null,
     ...overrides,
   };

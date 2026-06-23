@@ -575,9 +575,9 @@ describe("detectDepegEvents", () => {
     ]);
 
     const closeCall = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL WHERE id = ?"),
+      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ? WHERE id = ?"),
     );
-    expect(closeCall?.binds).toEqual([now, 1]);
+    expect(closeCall?.binds).toEqual([now, "coverage-lost-supply", 1]);
     const inserts = db.getHistory().filter((entry) =>
       entry.sql.includes("INSERT INTO depeg_events") || entry.sql.includes("INSERT INTO depeg_pending"),
     );
@@ -743,7 +743,7 @@ describe("detectDepegEvents", () => {
       { peggedREAL: 0.18765951 },
     );
 
-    expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL"))).toBe(true);
+    expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?"))).toBe(true);
   });
 
   it("skips NAV tokens", async () => {
@@ -1320,7 +1320,7 @@ describe("detectDepegEvents", () => {
     ]);
 
     const orphanClosures = preparedSqls.filter((sql) =>
-      sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL")
+      sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?")
     );
     expect(orphanClosures).toHaveLength(0);
   });
@@ -1350,7 +1350,7 @@ describe("detectDepegEvents", () => {
     ]);
 
     const orphanClosures = db.getHistory().filter((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL")
+      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?")
     );
     expect(orphanClosures).toHaveLength(0);
   });
@@ -1380,8 +1380,8 @@ describe("detectDepegEvents", () => {
     ]);
 
     const orphanClosure = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL")
+      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?")
     );
-    expect(orphanClosure?.binds).toEqual([now, 99]);
+    expect(orphanClosure?.binds).toEqual([now, "orphan-tracking-removed", 99]);
   });
 });

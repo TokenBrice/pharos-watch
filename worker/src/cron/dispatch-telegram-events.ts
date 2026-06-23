@@ -1,4 +1,5 @@
 import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { DepegEventCloseReason } from "@shared/types/market";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";
@@ -28,6 +29,21 @@ import type {
 
 type DispatchSourceData = Awaited<ReturnType<typeof loadDispatchSourceData>>;
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
+type ClosedDepegResolutionRow = {
+  stablecoin_id: string;
+  symbol: string;
+  peak_deviation_bps: number;
+  started_at: number;
+  ended_at: number;
+  recovery_price: number | null;
+  close_reason: string | null;
+};
+
+const RECOVERY_CLOSE_REASONS = new Set<DepegEventCloseReason>([
+  "recovered-primary",
+  "recovered-dex",
+  "recovered-native",
+]);
 
 export interface TelegramDispatchEvents {
   dewsChanges: ReturnType<typeof buildDewsChanges>;
@@ -56,6 +72,13 @@ export function countSuppressedSafetyChangesAtSeed(
         getSymbol,
       ).changes.length
     : 0;
+}
+
+function isRecoveryClosure(row: Pick<ClosedDepegResolutionRow, "close_reason" | "recovery_price">): boolean {
+  if (row.close_reason != null) {
+    return RECOVERY_CLOSE_REASONS.has(row.close_reason as DepegEventCloseReason);
+  }
+  return row.recovery_price != null;
 }
 
 export async function buildTelegramDispatchEvents(
@@ -141,20 +164,13 @@ export async function buildTelegramDispatchEvents(
   });
   if (resolvedCandidateIds.length > 0) {
     throwIfAborted(signal);
-    const resolvedRows: Array<{
-      stablecoin_id: string;
-      symbol: string;
-      peak_deviation_bps: number;
-      started_at: number;
-      ended_at: number;
-      recovery_price: number | null;
-    }> = [];
+    const resolvedRows: ClosedDepegResolutionRow[] = [];
     for (const idChunk of chunkArray(resolvedCandidateIds)) {
       throwIfAborted(signal);
       const inClause = buildInClause(idChunk);
       const chunkRows = await db
         .prepare(
-          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price
+          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price, event.close_reason
              FROM depeg_events event
              JOIN (
                SELECT stablecoin_id, MAX(ended_at) as ended_at
@@ -167,14 +183,7 @@ export async function buildTelegramDispatchEvents(
               AND latest.ended_at = event.ended_at`,
         )
         .bind(...inClause.binds)
-        .all<{
-          stablecoin_id: string;
-          symbol: string;
-          peak_deviation_bps: number;
-          started_at: number;
-          ended_at: number;
-          recovery_price: number | null;
-        }>();
+        .all<ClosedDepegResolutionRow>();
       resolvedRows.push(...(chunkRows.results ?? []));
     }
     const resolvedByStablecoinId = new Map(
@@ -185,6 +194,7 @@ export async function buildTelegramDispatchEvents(
       throwIfAborted(signal);
       const resolved = resolvedByStablecoinId.get(stablecoinId);
       if (!resolved || resolved.ended_at == null || resolved.started_at == null) continue;
+      if (!isRecoveryClosure(resolved)) continue;
 
       const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
       const previous = safeDepegSnapshot[stablecoinId];
@@ -201,7 +211,7 @@ export async function buildTelegramDispatchEvents(
         symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
         durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
         peakDeviationBps: Math.abs(Number(resolved.peak_deviation_bps ?? 0)),
-        recoveryPrice: resolved.recovery_price ?? previous?.price ?? previous?.pegReference ?? 1,
+        recoveryPrice: resolved.recovery_price ?? null,
       });
     }
   }

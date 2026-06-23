@@ -98,6 +98,7 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
         endedAt: keeper.started_at,
         recoveryPrice: null,
         recoveryPriceMode: "null",
+        closeReason: "superseded-direction",
       });
     }
     openEvents.set(coinId, keeper);
@@ -131,6 +132,7 @@ export function buildOrphanCloseRepair(input: {
       endedAt: input.now,
       recoveryPrice: null,
       recoveryPriceMode: "null",
+      closeReason: "orphan-tracking-removed",
     });
     diagnostics.push({
       level: "log",

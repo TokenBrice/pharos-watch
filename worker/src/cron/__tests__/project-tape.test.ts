@@ -132,8 +132,10 @@ describe("projectTape", () => {
           peak_deviation_bps: -800,
           started_at: SEC,
           ended_at: SEC + 600,
+          recovery_price: 1,
           peg_reference: 1,
           source: "live",
+          close_reason: "recovered-primary",
           methodology_version: "5.0",
         },
       ],
@@ -142,6 +144,32 @@ describe("projectTape", () => {
     const inserts = extractInsertBindsForType(db, "depeg.resolved");
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("info");
+  });
+
+  it("does not project depeg.resolved for non-recovery closures", async () => {
+    const db = dbWithOverride({
+      match: MATCH_DEPEG_RESOLVED,
+      rows: [
+        {
+          id: 1,
+          stablecoin_id: "usdt-tether",
+          symbol: "USDT",
+          peg_type: "peggedUSD",
+          direction: "below",
+          peak_deviation_bps: -800,
+          started_at: SEC,
+          ended_at: SEC + 600,
+          recovery_price: null,
+          peg_reference: 1,
+          source: "live",
+          close_reason: "coverage-lost-supply",
+          methodology_version: "5.0",
+        },
+      ],
+    });
+
+    await projectTape(db);
+    expect(extractInsertBindsForType(db, "depeg.resolved")).toHaveLength(0);
   });
 
   it("emits depeg.peak_worsened when an open row's magnitude exceeds the last-seen peak", async () => {

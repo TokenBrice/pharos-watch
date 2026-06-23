@@ -37,8 +37,28 @@ describe("handleDepegEvents", () => {
     expect(event).toHaveProperty("peakDeviationBps");
     expect(event).toHaveProperty("startedAt");
     expect(event).toHaveProperty("pegReference");
+    expect(event).toHaveProperty("closeReason", null);
     expect(event).not.toHaveProperty("stablecoin_id");
     expect(event).not.toHaveProperty("peak_deviation_bps");
+  });
+
+  it("exposes closeReason for terminal depeg rows", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      {
+        match: "depeg_events",
+        rows: [
+          makeDepegRow({
+            ended_at: 1_800_000_000,
+            recovery_price: null,
+            close_reason: "coverage-lost-supply",
+          }),
+        ],
+      },
+    ]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+    const body = DepegEventsResponseSchema.parse(await res.json());
+    expect(body.events[0]?.closeReason).toBe("coverage-lost-supply");
   });
 
   it("maps optional provenance JSON while preserving legacy rows", async () => {

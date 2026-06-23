@@ -422,6 +422,7 @@ describe("decideDepegAsset", () => {
         endedAt: 1_780_630_000,
         recoveryPrice: 1.0006,
         recoveryPriceMode: "bind",
+        closeReason: "recovered-primary",
       },
     ]);
   });

@@ -56,6 +56,7 @@ type DepegRow = {
   recovery_price: number | null;
   ended_at: number | null;
   source: "live" | "backfill";
+  close_reason?: string | null;
 };
 
 type SupplyRow = {

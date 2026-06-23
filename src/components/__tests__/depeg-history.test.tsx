@@ -32,6 +32,7 @@ function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
     source: "live",
     confirmationSources: null,
     pendingReason: null,
+    closeReason: null,
     provenance: null,
     ...overrides,
   };

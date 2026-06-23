@@ -50,7 +50,7 @@ export interface DepegResolved {
   symbol: string;
   durationMinutes: number;
   peakDeviationBps: number;
-  recoveryPrice: number;
+  recoveryPrice: number | null;
   contextLine?: string;
 }
 
@@ -163,7 +163,10 @@ export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
   const duration = formatDurationMinutes(e.durationMinutes);
-  return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\nRecovery price: $${e.recoveryPrice.toFixed(4)}${formatContextLine(e.contextLine)}`;
+  const recoveryLine = e.recoveryPrice != null
+    ? `Recovery price: $${e.recoveryPrice.toFixed(4)}`
+    : "Recovery evidence: native peg quote";
+  return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\n${recoveryLine}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegWorseningLine(e: DepegWorsening): string {

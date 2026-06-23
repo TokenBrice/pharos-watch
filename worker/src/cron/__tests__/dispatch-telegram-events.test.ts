@@ -223,4 +223,104 @@ describe("buildTelegramDispatchEvents", () => {
     expect(events.depegTriggered).toHaveLength(1);
     expect(events.depegTriggered[0].reopenedAfterMinutes).toBe(10);
   });
+
+  it("does not emit resolved lines for coverage-loss closures", async () => {
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          all: vi.fn(async () => ({
+            results: [{
+              stablecoin_id: "coin-depeg",
+              symbol: "DPG",
+              peak_deviation_bps: 310,
+              started_at: 1_000,
+              ended_at: 1_600,
+              recovery_price: null,
+              close_reason: "coverage-lost-supply",
+            }],
+          })),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const events = await buildTelegramDispatchEvents(
+      db,
+      { dewsRows: [], activeDepegRows: [] } as never,
+      {
+        currentSafetySnapshot: {},
+        previousSafetySnapshot: null,
+        safeSafetySnapshot: {},
+        safeDewsAlertable: {},
+        safeDewsSnapshot: {},
+        safeDepegSnapshot: {
+          "coin-depeg": {
+            symbol: "DPG",
+            direction: "below",
+            deviationBps: 310,
+            price: 0.969,
+            pegReference: 1,
+            eventId: 1,
+          },
+        },
+        safetySnapshotNeedsSeed: false,
+        dewsSnapshotNeedsSeed: false,
+        depegSnapshotNeedsSeed: false,
+        launchSnapshotNeedsSeed: false,
+      } as never,
+      () => "DPG",
+    );
+
+    expect(events.depegResolved).toEqual([]);
+    expect(events.depegTriggered).toEqual([]);
+  });
+
+  it("allows native-quote recoveries without fabricating a recovery price", async () => {
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          all: vi.fn(async () => ({
+            results: [{
+              stablecoin_id: "coin-depeg",
+              symbol: "DPG",
+              peak_deviation_bps: 310,
+              started_at: 1_000,
+              ended_at: 1_600,
+              recovery_price: null,
+              close_reason: "recovered-native",
+            }],
+          })),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const events = await buildTelegramDispatchEvents(
+      db,
+      { dewsRows: [], activeDepegRows: [] } as never,
+      {
+        currentSafetySnapshot: {},
+        previousSafetySnapshot: null,
+        safeSafetySnapshot: {},
+        safeDewsAlertable: {},
+        safeDewsSnapshot: {},
+        safeDepegSnapshot: {
+          "coin-depeg": {
+            symbol: "DPG",
+            direction: "below",
+            deviationBps: 310,
+            price: 0.969,
+            pegReference: 1,
+            eventId: 1,
+          },
+        },
+        safetySnapshotNeedsSeed: false,
+        dewsSnapshotNeedsSeed: false,
+        depegSnapshotNeedsSeed: false,
+        launchSnapshotNeedsSeed: false,
+      } as never,
+      () => "DPG",
+    );
+
+    expect(events.depegResolved).toHaveLength(1);
+    expect(events.depegResolved[0].recoveryPrice).toBeNull();
+  });
 });
