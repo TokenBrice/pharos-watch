@@ -30,6 +30,11 @@ function Probe({ rootMargin }: { rootMargin?: string }) {
   return <div ref={ref} data-testid="probe" data-near={String(near)} />;
 }
 
+function DelayedProbe({ show }: { show: boolean }) {
+  const { ref, near } = useNearViewport<HTMLDivElement>();
+  return show ? <div ref={ref} data-testid="probe" data-near={String(near)} /> : <span data-testid="loading" />;
+}
+
 const originalIO = window.IntersectionObserver;
 
 beforeEach(() => {
@@ -66,6 +71,20 @@ describe("useNearViewport", () => {
     // No IO available -> the effect short-circuits and sets near=true so the
     // consumer renders content rather than waiting forever.
     expect(getByTestId("probe").dataset.near).toBe("true");
+  });
+
+  it("observes an element that is attached after the initial hook effect", () => {
+    window.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
+
+    const { getByTestId, rerender } = render(<DelayedProbe show={false} />);
+
+    expect(getByTestId("loading")).toBeTruthy();
+    expect(lastObserverInstance).toBeNull();
+
+    rerender(<DelayedProbe show />);
+
+    expect(getByTestId("probe").dataset.near).toBe("false");
+    expect(lastObserverInstance?.observe).toHaveBeenCalledTimes(1);
   });
 
   it("flips near=true and disconnects the observer when the element intersects", () => {
