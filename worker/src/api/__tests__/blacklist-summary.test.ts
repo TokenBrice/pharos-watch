@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary";
@@ -64,6 +64,53 @@ describe("handleBlacklistSummary", () => {
 
     expect(body.totalEvents).toBe(0);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
+  });
+
+  it("serves a stale producer snapshot and refreshes it in the background", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleAt = now - 24 * 60 * 60;
+    const payload = {
+      stats: { usdtBlacklisted: 9 },
+      chart: [],
+      chains: [],
+      coverage: { counts: { supportedConfigs: 0 } },
+      freezeLedgerMeta: { gaps: { recoverable: 0 } },
+      dataQuality: { status: "ok" },
+      totalEvents: 9,
+      methodology: { asOf: staleAt },
+    };
+    const waitUntilPromises: Promise<unknown>[] = [];
+    const execCtx = {
+      waitUntil: (promise: Promise<unknown>) => {
+        waitUntilPromises.push(promise);
+      },
+    } as unknown as ExecutionContext;
+    const db = mockD1([
+      {
+        match: "blacklist-summary-snapshot-read",
+        rows: [{
+          key: "blacklist:summary:producer:v1",
+          value: JSON.stringify({
+            version: 1,
+            materializedAt: staleAt,
+            freshnessTs: staleAt,
+            payload,
+          }),
+          updated_at: staleAt,
+        }],
+      },
+    ]) as MockD1Database;
+
+    const res = await handleBlacklistSummary(db, execCtx);
+    const body = await res.json() as typeof payload;
+
+    expect(body).toEqual(payload);
+    expect(waitUntilPromises).toHaveLength(1);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-summary-snapshot-read"))).toHaveLength(2);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(false);
+
+    await Promise.all(waitUntilPromises);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
   });
 
   it("falls back from corrupt producer snapshots and counts other provider coverage", async () => {

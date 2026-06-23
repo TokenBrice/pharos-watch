@@ -1007,7 +1007,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(slot?.metadata).toBe(JSON.stringify({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 }));
   });
 
-  it("marks stale running slots for the same schedule as expired before claiming a new slot", async () => {
+  it("claims a new slot without sweeping stale previous slots", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
     const currentSlotStartedAt = now;
@@ -1036,13 +1036,9 @@ describe("runScheduledSlotWithFence", () => {
     expect(result.status).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(1);
 
-    const staleRetry = await runScheduledSlotWithFence(
-      db,
-      "halfHourlyOffset",
-      async () => undefined,
-      { slotStartedAt: staleSlotStartedAt, owner: "owner-c", staleAfterSec: 1200 },
-    );
-    expect(staleRetry.status).toBe("skipped_duplicate");
+    const staleSlot = db.getSlot("halfHourlyOffset", staleSlotStartedAt);
+    expect(staleSlot?.state).toBe("running");
+    expect(staleSlot?.result_status).toBeNull();
   });
 
   it("reconciles stale slot progress into a synthetic child cron run and clears expired ownership", async () => {
@@ -1078,14 +1074,9 @@ describe("runScheduledSlotWithFence", () => {
       }],
     });
 
-    const result = await runScheduledSlotWithFence(
-      db,
-      "hourlyYieldSync",
-      async () => undefined,
-      { slotStartedAt: currentSlotStartedAt, owner: "slot-owner-b", staleAfterSec: 1200 },
-    );
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: currentSlotStartedAt, staleAfterSec: 1200 });
 
-    expect(result.status).toBe("ok");
+    expect(summary.slotsReconciled).toBe(1);
     expect(db.getRuns()).toEqual([
       expect.objectContaining({
         job: "sync-yield-data",
@@ -1261,7 +1252,6 @@ describe("runScheduledSlotWithFence", () => {
   it("does not synthesize a stale child cron run while the matching child lease is still active", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
-    const currentSlotStartedAt = now;
     const db = makeLeaseDb({
       slots: [{
         slot_key: "hourlyYield",
@@ -1291,14 +1281,9 @@ describe("runScheduledSlotWithFence", () => {
       }],
     });
 
-    const result = await runScheduledSlotWithFence(
-      db,
-      "hourlyYield",
-      async () => undefined,
-      { slotStartedAt: currentSlotStartedAt, owner: "slot-owner-b", staleAfterSec: 1200 },
-    );
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
 
-    expect(result.status).toBe("ok");
+    expect(summary.slotsReconciled).toBe(1);
     expect(db.getRuns()).toEqual([]);
     expect(db.getProgress("sync-yield-data")).toBeDefined();
     expect(db.getLease("sync-yield-data")).toBeDefined();

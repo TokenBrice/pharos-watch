@@ -32,6 +32,8 @@ const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
 // Audit history is capped at 25 events per request (default and max are the same).
 const AUDIT_DEPEG_HISTORY_LIMIT = 25;
 const DELETE_ID_PATTERN = /^\d+$/;
+const AUDIT_CG_FETCH_START_INTERVAL_MS = 200;
+const AUDIT_CG_FETCH_CONCURRENCY = 4;
 // If at least this fraction of attempted CG fetches fail, treat it as an
 // upstream outage rather than genuine per-event errors: mark the result
 // upstreamReachable=false and refuse to persist provenance for the batch.
@@ -156,6 +158,61 @@ interface ParsedAuditRequest extends AuditPaginatedRequest {
 interface AuditMutationPlan {
   statements: D1PreparedStatement[];
   affectedDays: Set<number>;
+}
+
+interface AuditEventOutcome {
+  event: DepegRow;
+  auditedEvent: AuditedEvent;
+  attemptedCgFetch: boolean;
+  upstreamError: boolean;
+  rejectedByValidationCount: number;
+  falsePositiveFound: boolean;
+  provenanceVerdict: Verdict | null;
+  invalidatesProvenance: boolean;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createFetchStartLimiter(intervalMs: number): () => Promise<void> {
+  let nextStartAt = 0;
+  let tail = Promise.resolve();
+
+  return async () => {
+    const previous = tail;
+    let release!: () => void;
+    tail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    const now = Date.now();
+    const waitMs = Math.max(0, nextStartAt - now);
+    nextStartAt = Math.max(now, nextStartAt) + intervalMs;
+    release();
+    if (waitMs > 0) {
+      await sleep(waitMs);
+    }
+  };
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await mapper(items[index] as T, index);
+    }
+  }));
+
+  return results;
 }
 
 function getDeviationSignal(price: number | null | undefined, pegReference: number) {
@@ -958,6 +1015,174 @@ export interface AuditEventsOptions {
   dryRun: boolean;
 }
 
+type PriceValidationReferences = Awaited<ReturnType<typeof loadPriceValidationReferences>>;
+
+async function auditSingleEventWithCoinGecko(
+  event: DepegRow,
+  validationReferences: PriceValidationReferences | undefined,
+  waitForCgFetchStart: () => Promise<void>,
+): Promise<AuditEventOutcome> {
+  const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
+  const geckoId = meta?.geckoId;
+
+  if (!geckoId) {
+    return {
+      event,
+      auditedEvent: toAuditedEvent(event, "skipped", { cgMaxBps: null }),
+      attemptedCgFetch: false,
+      upstreamError: false,
+      rejectedByValidationCount: 0,
+      falsePositiveFound: false,
+      provenanceVerdict: null,
+      invalidatesProvenance: false,
+    };
+  }
+
+  const threshold = getDepegThresholdBps(event.peg_type);
+  const falsePositiveBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
+  const validationContext = buildPriceValidationContext({
+    stablecoinId: event.stablecoin_id,
+    pegType: event.peg_type,
+  });
+
+  const from = event.started_at - 3600;
+  const to = (event.ended_at ?? event.started_at) + 3600;
+  let rejectedByValidationCount = 0;
+
+  try {
+    await waitForCgFetchStart();
+
+    const cgEndpoint = cgUrl(
+      `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
+    );
+    const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
+    const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
+
+    if (!cgRes?.ok) {
+      console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
+      return {
+        event,
+        auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
+        attemptedCgFetch: true,
+        upstreamError: true,
+        rejectedByValidationCount,
+        falsePositiveFound: false,
+        provenanceVerdict: null,
+        invalidatesProvenance: false,
+      };
+    }
+
+    const cgData = (await cgRes.json()) as { prices?: [number, number][] };
+    const rawPrices = cgData.prices ?? [];
+    const validatedPrices = rawPrices.filter(([, cgPrice]) => {
+      if (typeof cgPrice !== "number" || !Number.isFinite(cgPrice) || cgPrice <= 0) {
+        rejectedByValidationCount++;
+        return false;
+      }
+      const verdict = validatePriceCandidate(
+        cgPrice,
+        validationContext,
+        "historical_backfill",
+        validationReferences,
+      );
+      if (!verdict.accepted) {
+        rejectedByValidationCount++;
+        return false;
+      }
+      return true;
+    });
+
+    if (validatedPrices.length === 0) {
+      return {
+        event,
+        auditedEvent: toAuditedEvent(event, "no_data", { cgMaxBps: null }),
+        attemptedCgFetch: true,
+        upstreamError: false,
+        rejectedByValidationCount,
+        falsePositiveFound: false,
+        provenanceVerdict: "no_data",
+        invalidatesProvenance: true,
+      };
+    }
+
+    let maxCgBps = 0;
+    let maxSameDirectionBps = 0;
+    let maxOppositeDirectionBps = 0;
+    for (const [, cgPrice] of validatedPrices) {
+      const cgSignal = getDeviationSignal(cgPrice, event.peg_reference);
+      if (cgSignal == null) continue;
+      const cgBps = cgSignal.absBps;
+      if (cgBps > maxCgBps) maxCgBps = cgBps;
+      if (cgSignal.direction === event.direction) {
+        if (cgBps > maxSameDirectionBps) maxSameDirectionBps = cgBps;
+      } else if (cgBps > maxOppositeDirectionBps) {
+        maxOppositeDirectionBps = cgBps;
+      }
+    }
+
+    if (maxSameDirectionBps >= falsePositiveBar) {
+      return {
+        event,
+        auditedEvent: toAuditedEvent(event, "confirmed", {
+          cgMaxBps: maxCgBps,
+          cgMaxSameDirectionBps: maxSameDirectionBps,
+          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
+        }),
+        attemptedCgFetch: true,
+        upstreamError: false,
+        rejectedByValidationCount,
+        falsePositiveFound: false,
+        provenanceVerdict: "confirmed",
+        invalidatesProvenance: false,
+      };
+    }
+
+    if (maxOppositeDirectionBps >= falsePositiveBar) {
+      return {
+        event,
+        auditedEvent: toAuditedEvent(event, "disputed", {
+          cgMaxBps: maxCgBps,
+          cgMaxSameDirectionBps: maxSameDirectionBps,
+          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
+        }),
+        attemptedCgFetch: true,
+        upstreamError: false,
+        rejectedByValidationCount,
+        falsePositiveFound: false,
+        provenanceVerdict: "disputed",
+        invalidatesProvenance: true,
+      };
+    }
+
+    return {
+      event,
+      auditedEvent: toAuditedEvent(event, "false_positive", {
+        cgMaxBps: maxCgBps,
+        cgMaxSameDirectionBps: maxSameDirectionBps,
+        cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
+      }),
+      attemptedCgFetch: true,
+      upstreamError: false,
+      rejectedByValidationCount,
+      falsePositiveFound: true,
+      provenanceVerdict: "false_positive",
+      invalidatesProvenance: true,
+    };
+  } catch (err) {
+    console.warn(`[audit] Error auditing ${event.symbol}:`, err);
+    return {
+      event,
+      auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
+      attemptedCgFetch: true,
+      upstreamError: true,
+      rejectedByValidationCount,
+      falsePositiveFound: false,
+      provenanceVerdict: null,
+      invalidatesProvenance: false,
+    };
+  }
+}
+
 /**
  * @internal exported for tests. Runs the standard CG-backed audit loop against
  * a pre-loaded set of closed depeg events.
@@ -1030,129 +1255,28 @@ export async function auditEvents(
   const nowSec = Math.floor(Date.now() / 1000);
   let attemptedCgFetches = 0;
 
-  for (const event of paginatedEvents) {
-    const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
-    const geckoId = meta?.geckoId;
+  // Analyst plan: 500 req/min. A 200ms shared start interval gives ~300
+  // req/min with headroom while allowing validation/fetch waits to overlap.
+  const waitForCgFetchStart = createFetchStartLimiter(AUDIT_CG_FETCH_START_INTERVAL_MS);
+  const outcomes = await mapWithConcurrency(
+    paginatedEvents,
+    AUDIT_CG_FETCH_CONCURRENCY,
+    (event) => auditSingleEventWithCoinGecko(event, validationReferences, waitForCgFetchStart),
+  );
 
-    if (!geckoId) {
-      result.auditedEvents.push(toAuditedEvent(event, "skipped", { cgMaxBps: null }));
-      continue;
-    }
+  for (const outcome of outcomes) {
+    result.auditedEvents.push(outcome.auditedEvent);
+    if (outcome.attemptedCgFetch) attemptedCgFetches++;
+    if (outcome.upstreamError) result.upstreamErrorCount++;
+    result.rejectedByValidationCount += outcome.rejectedByValidationCount;
+    if (outcome.falsePositiveFound) result.falsePositivesFound++;
 
-    const threshold = getDepegThresholdBps(event.peg_type);
-    const falsePositiveBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
-    const validationContext = buildPriceValidationContext({
-      stablecoinId: event.stablecoin_id,
-      pegType: event.peg_type,
-    });
-
-    // Fetch CoinGecko historical data for the event window
-    // precision=full gives maximum decimal places — critical for stablecoin prices near $1.000
-    const from = event.started_at - 3600;
-    const to = (event.ended_at ?? event.started_at) + 3600;
-
-    attemptedCgFetches++;
-    try {
-      // Analyst plan: 500 req/min. 200ms delay ≈ 300 req/min with headroom.
-      await new Promise((r) => setTimeout(r, 200));
-
-      const cgEndpoint = cgUrl(
-        `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
-      );
-      const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
-      const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
-
-      if (!cgRes?.ok) {
-        console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
-        result.upstreamErrorCount++;
-        result.auditedEvents.push(toAuditedEvent(event, "error", { cgMaxBps: null }));
-        continue;
+    if (!dryRun && outcome.provenanceVerdict != null) {
+      provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, outcome.event, outcome.provenanceVerdict, nowSec));
+      if (outcome.invalidatesProvenance) {
+        invalidatingProvenanceEventIds.push(outcome.event.id);
+        addAffectedDays(affectedDays, outcome.event.started_at, outcome.event.ended_at ?? outcome.event.started_at);
       }
-
-      const cgData = (await cgRes.json()) as { prices?: [number, number][] };
-      const rawPrices = cgData.prices ?? [];
-      const validatedPrices = rawPrices.filter(([, cgPrice]) => {
-        if (typeof cgPrice !== "number" || !Number.isFinite(cgPrice) || cgPrice <= 0) {
-          result.rejectedByValidationCount++;
-          return false;
-        }
-        const verdict = validatePriceCandidate(
-          cgPrice,
-          validationContext,
-          "historical_backfill",
-          validationReferences,
-        );
-        if (!verdict.accepted) {
-          result.rejectedByValidationCount++;
-          return false;
-        }
-        return true;
-      });
-
-      if (validatedPrices.length === 0) {
-        if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "no_data", nowSec));
-          invalidatingProvenanceEventIds.push(event.id);
-          addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
-        }
-        result.auditedEvents.push(toAuditedEvent(event, "no_data", { cgMaxBps: null }));
-        continue;
-      }
-
-      // Find max deviation in CG data during the event window
-      let maxCgBps = 0;
-      let maxSameDirectionBps = 0;
-      let maxOppositeDirectionBps = 0;
-      for (const [, cgPrice] of validatedPrices) {
-        const cgSignal = getDeviationSignal(cgPrice, event.peg_reference);
-        if (cgSignal == null) continue;
-        const cgBps = cgSignal.absBps;
-        if (cgBps > maxCgBps) maxCgBps = cgBps;
-        if (cgSignal.direction === event.direction) {
-          if (cgBps > maxSameDirectionBps) maxSameDirectionBps = cgBps;
-        } else if (cgBps > maxOppositeDirectionBps) {
-          maxOppositeDirectionBps = cgBps;
-        }
-      }
-
-      if (maxSameDirectionBps >= falsePositiveBar) {
-        if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "confirmed", nowSec));
-        }
-        result.auditedEvents.push(toAuditedEvent(event, "confirmed", {
-          cgMaxBps: maxCgBps,
-          cgMaxSameDirectionBps: maxSameDirectionBps,
-          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-        }));
-      } else if (maxOppositeDirectionBps >= falsePositiveBar) {
-        if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "disputed", nowSec));
-          invalidatingProvenanceEventIds.push(event.id);
-          addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
-        }
-        result.auditedEvents.push(toAuditedEvent(event, "disputed", {
-          cgMaxBps: maxCgBps,
-          cgMaxSameDirectionBps: maxSameDirectionBps,
-          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-        }));
-      } else {
-        // CoinGecko data was available but did not confirm this direction.
-        result.falsePositivesFound++;
-        if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "false_positive", nowSec));
-          invalidatingProvenanceEventIds.push(event.id);
-          addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
-        }
-        result.auditedEvents.push(toAuditedEvent(event, "false_positive", {
-          cgMaxBps: maxCgBps,
-          cgMaxSameDirectionBps: maxSameDirectionBps,
-          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-        }));
-      }
-    } catch (err) {
-      console.warn(`[audit] Error auditing ${event.symbol}:`, err);
-      result.upstreamErrorCount++;
-      result.auditedEvents.push(toAuditedEvent(event, "error", { cgMaxBps: null }));
     }
   }
 

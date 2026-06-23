@@ -312,25 +312,12 @@ async function loadTapeTerminalEvidenceByStablecoinId(
   return evidenceByStablecoinId;
 }
 
-function materializeTerminalEvidenceForEvent(evidence: TerminalEvidence | null): TerminalEvidence {
-  if (!evidence) {
-    return {
-      terminalEvidenceAt: null,
-      terminalEvidenceInterval: null,
-      terminalEvidencePrecision: null,
-      terminalEvidenceSourceDate: null,
-    };
-  }
-
-  // Keep terminalEvidenceAt anchored to the interval start unconditionally; the
-  // eligibility comparison in terminalEvidenceAtForEligibility() is the single
-  // place that decides whether the evidence is relevant to a given prediction
-  // lock. Previously a post-recovery interval (interval.end > ended_at) zeroed
-  // terminalEvidenceAt while still propagating the interval, which made
-  // sourceEventState() and coverageStateForIncident() disagree for
-  // month-precision death dates. (audit Q-169)
-  return evidence;
-}
+const EMPTY_TERMINAL_EVIDENCE: TerminalEvidence = {
+  terminalEvidenceAt: null,
+  terminalEvidenceInterval: null,
+  terminalEvidencePrecision: null,
+  terminalEvidenceSourceDate: null,
+};
 
 function toIqrRemainingSec(row: AssessmentDbRow): DdrrAssessment["iqrRemainingSec"] {
   if (row.iqr_low_remaining_sec == null || row.iqr_high_remaining_sec == null) return null;
@@ -437,7 +424,10 @@ async function loadActualEventsByEventIds(
     const rawEvidence = registryEvidenceByStablecoinId.get(row.stablecoin_id)
       ?? tapeEvidenceByStablecoinId.get(row.stablecoin_id)
       ?? null;
-    const terminalEvidence = materializeTerminalEvidenceForEvent(rawEvidence);
+    // Keep terminalEvidenceAt anchored to the interval start. The eligibility
+    // comparison below is the single place that decides whether interval
+    // evidence is relevant to a prediction lock. (audit Q-169)
+    const terminalEvidence = rawEvidence ?? EMPTY_TERMINAL_EVIDENCE;
     const terminalObserved = isTerminalStablecoinStatus(meta?.status) || rawEvidence != null;
     actualEventsById.set(row.id, {
       eventId: row.id,

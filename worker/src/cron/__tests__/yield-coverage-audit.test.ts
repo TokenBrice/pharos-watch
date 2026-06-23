@@ -202,6 +202,59 @@ describe("runYieldCoverageAudit", () => {
       },
     });
   });
+
+  it("returns degraded when protocol-category cache is unavailable", async () => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [{
+        pool: "new-usdc",
+        chain: "Ethereum",
+        project: "new-lender",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyReward: null,
+        apyMean30d: 4,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: null,
+      }],
+      meta: {
+        mode: "dex-cache",
+        updatedAt: 1_774_526_300,
+        ageSeconds: 100,
+        poolCount: 1,
+        fallbackMode: null,
+      },
+    });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") {
+        return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
+      }
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map(),
+    } as never);
+
+    const result = await runYieldCoverageAudit({} as D1Database);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason?: string;
+      protocolCategoryStatus?: string;
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata).toMatchObject({
+      reason: "protocol-category-cache-missing",
+      protocolCategoryStatus: "missing",
+    });
+    expect(mockSetCache).toHaveBeenCalled();
+  });
 });
 
 describe("identifyCoverageGaps", () => {

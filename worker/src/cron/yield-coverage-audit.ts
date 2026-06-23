@@ -60,6 +60,7 @@ const HIGH_CONFIDENCE_TVL_USD = 10_000_000;
 /** Minimum pool count for a protocol to reach the high-confidence recommendation tier. */
 const HIGH_CONFIDENCE_MIN_POOL_COUNT = 3;
 const OPERATOR_QUEUE_ITEM_LIMIT = 20;
+const REPORT_HEADLINE_ITEM_LIMIT = 50;
 const ALLOWLIST_AUDIT_QUEUE_ANCHOR = "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR";
 const DEFILLAMA_PROTOCOLS_SOURCE_URL = "https://api.llama.fi/protocols";
 const DEFILLAMA_YIELD_POOL_CHART_URL = "https://yields.llama.fi/chart";
@@ -897,7 +898,7 @@ export function identifyStaleAutoLendingOverrides(
 }
 
 /**
- * Async cron function: loads DL pools from cache/API, loads the existing yield
+ * Async cron function: loads DL pools from cache, loads the existing yield
  * coverage state from the DB, computes gaps, and persists a summary report.
  */
 export async function runYieldCoverageAudit(
@@ -1118,16 +1119,16 @@ export async function runYieldCoverageAudit(
     exactPoolOverrideYieldBearingCount: exactPoolOverrideYieldBearingIds.length,
     exactPoolOverrideYieldBearingIds,
     exactPoolOverrideNonYieldBearingOpportunityIds,
-    exactPoolOverrides: explicitPoolOverrides,
-    unmatchedHighTvlPools: gaps.unmatchedHighTvlPools.slice(0, 50),
-    missingProtocols: gaps.missingProtocols.slice(0, 50),
-    protocolRecommendations: gaps.protocolRecommendations,
-    nativeExactPoolRecommendations: gaps.nativeExactPoolRecommendations,
-    sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations,
-    lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
-    venueRiskConfigMissing: gaps.venueRiskConfigMissing,
-    staleAutoLendingOverrides,
-    staleVenueRiskScores,
+    exactPoolOverrides: explicitPoolOverrides.slice(0, REPORT_HEADLINE_ITEM_LIMIT),
+    unmatchedHighTvlPools: gaps.unmatchedHighTvlPools.slice(0, REPORT_HEADLINE_ITEM_LIMIT),
+    missingProtocols: gaps.missingProtocols.slice(0, REPORT_HEADLINE_ITEM_LIMIT),
+    protocolRecommendations: gaps.protocolRecommendations.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    nativeExactPoolRecommendations: gaps.nativeExactPoolRecommendations.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    venueRiskConfigMissing: gaps.venueRiskConfigMissing.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    staleAutoLendingOverrides: staleAutoLendingOverrides.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    staleVenueRiskScores: staleVenueRiskScores.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
     operatorQueue,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
@@ -1179,15 +1180,19 @@ export async function runYieldCoverageAudit(
     manifestMissingIds.length +
     yieldBearingMissingFromRankings.length;
 
+  const protocolCategoryStatus = protocolCategoryLookup.meta.status;
+  const degradedReason = protocolCategoryStatus === "ok" ? null : `protocol-category-cache-${protocolCategoryStatus}`;
+
   return {
-    status: "ok",
+    status: protocolCategoryStatus === "ok" ? "ok" : "degraded",
     itemCount,
     metadata: JSON.stringify({
+      ...(degradedReason ? { reason: degradedReason } : {}),
       ...auditCounts,
       manifestMissingCount: manifestMissingIds.length,
       intentionalGapCount: intentionalGapIds.length,
       yieldBearingMissingFromRankingsCount: yieldBearingMissingFromRankings.length,
-      protocolCategoryStatus: protocolCategoryLookup.meta.status,
+      protocolCategoryStatus,
       protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
       quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,
       quarantineProbeAttemptedCount: quarantineProbe.summary.attemptedCount,

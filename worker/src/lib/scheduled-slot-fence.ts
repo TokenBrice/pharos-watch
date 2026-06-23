@@ -429,12 +429,6 @@ async function claimScheduledSlotExecution(
 ): Promise<"claimed" | "duplicate" | "running"> {
   const nowSec = Math.floor(Date.now() / 1000);
   const staleBefore = nowSec - staleAfterSec;
-  await sweepStaleScheduledSlotExecutions(db, {
-    slotKey,
-    staleAfterSec,
-    nowSec,
-    excludeSlotStartedAt: slotStartedAt,
-  });
   const inserted = await runWithOverloadRetry(() =>
     db
       .prepare(

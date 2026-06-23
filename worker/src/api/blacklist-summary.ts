@@ -440,12 +440,14 @@ function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySna
 async function readBlacklistSummarySnapshot(
   db: D1Database,
   now: number,
+  options?: { allowStale?: boolean },
 ): Promise<CachedBlacklistSummarySnapshot | null> {
   const row = await db
     .prepare("/* blacklist-summary-snapshot-read */ SELECT value, updated_at FROM cache WHERE key = ?")
     .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY)
     .first<{ value: string; updated_at: number }>();
-  if (!row || now - row.updated_at > BLACKLIST_SUMMARY_PRODUCER_SNAPSHOT_TTL_SEC) return null;
+  if (!row) return null;
+  if (!options?.allowStale && now - row.updated_at > BLACKLIST_SUMMARY_PRODUCER_SNAPSHOT_TTL_SEC) return null;
   return parseBlacklistSummarySnapshot(row.value);
 }
 
@@ -668,11 +670,21 @@ function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
 
 export const handleBlacklistSummary = withErrorHandler(
   "blacklist-summary",
-  async (db: D1Database): Promise<Response> => {
+  async (db: D1Database, execCtx?: ExecutionContext): Promise<Response> => {
     const now = Math.floor(Date.now() / 1000);
     const snapshot = await readBlacklistSummarySnapshot(db, now);
     if (snapshot) {
       return jsonResponse(snapshot.payload, blacklistSummaryHeaders(snapshot.freshnessTs));
+    }
+
+    const staleSnapshot = await readBlacklistSummarySnapshot(db, now, { allowStale: true });
+    if (staleSnapshot) {
+      execCtx?.waitUntil(
+        materializeBlacklistSummarySnapshot(db, now).catch((error) => {
+          console.warn("[blacklist-summary] Background snapshot refresh failed:", error);
+        }),
+      );
+      return jsonResponse(staleSnapshot.payload, blacklistSummaryHeaders(staleSnapshot.freshnessTs));
     }
 
     const built = await buildBlacklistSummaryPayload(db, now);

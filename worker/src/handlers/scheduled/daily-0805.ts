@@ -1,9 +1,9 @@
 /**
  * Daily 08:05 UTC trigger (5 8 * * *):
- *   sync-bluechip (3)          ← parallel waitUntil
+ *   sync-bluechip (3)          ← parallel chain
  *   daily-digest (1) → weekly-digest (1)  ← chained to share connection pool
  *
- * Digests are chained; bluechip runs as an independent waitUntil promise.
+ * Digests are chained; bluechip runs as an independent parallel chain.
  * Worst case peak is bluechip batch (3) + digest chain (1).
  * Connection budget: 4/6 peak.
  */
