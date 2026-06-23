@@ -24,7 +24,7 @@ export interface ScheduledSlotExecutionResult {
 }
 
 const SLOT_EXECUTION_RUNNING_STALE_SEC = 20 * 60;
-const SLOT_EXECUTION_HEARTBEAT_SEC = 30;
+const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
 
 type SlotExecutionRow = {
   state: string;
