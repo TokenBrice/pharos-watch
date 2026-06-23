@@ -286,6 +286,36 @@ describe("sortStablecoins — price", () => {
     });
     expect(result[0].id).toBe("b");
   });
+
+  it("reads the selected sort value once per row", () => {
+    let priceReads = 0;
+    const withCountedPrice = (id: string, name: string, price: number): StablecoinData => {
+      const coin = makeCoin(id, name);
+      Object.defineProperty(coin, "price", {
+        get() {
+          priceReads += 1;
+          return price;
+        },
+        configurable: true,
+      });
+      return coin;
+    };
+    const coins = [
+      withCountedPrice("a", "A", 1.05),
+      withCountedPrice("b", "B", 0.98),
+      withCountedPrice("c", "C", 1.01),
+    ];
+
+    const result = sortStablecoins({
+      filtered: coins,
+      sort: sortAsc("price"),
+      effectiveSortKey: "price",
+      pegRates: {},
+    });
+
+    expect(result.map((coin) => coin.id)).toEqual(["b", "c", "a"]);
+    expect(priceReads).toBe(coins.length);
+  });
 });
 
 describe("sortStablecoins — mcap", () => {

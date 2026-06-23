@@ -72,4 +72,23 @@ describe("useNavPrefetch", () => {
     expect(apiFetchMock).not.toHaveBeenCalled();
     expect(routerPrefetchMock).toHaveBeenCalledWith("/flows/");
   });
+
+  it("allows later hovers to prefetch the same route again", async () => {
+    const { result } = renderHook(() => useNavPrefetch(), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      result.current.prefetch("/docs/");
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    await act(async () => {
+      result.current.prefetch("/docs/");
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(routerPrefetchMock).toHaveBeenCalledTimes(2);
+    expect(routerPrefetchMock).toHaveBeenNthCalledWith(1, "/docs/");
+    expect(routerPrefetchMock).toHaveBeenNthCalledWith(2, "/docs/");
+  });
 });

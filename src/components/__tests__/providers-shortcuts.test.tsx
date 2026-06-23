@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { Providers, SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
+import { createPharosQueryClient, Providers, SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import { setSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
 vi.mock("next/dynamic", () => ({
@@ -41,6 +41,12 @@ afterEach(() => {
 });
 
 describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
+  it("does not refetch cached queries on window focus by default", () => {
+    const client = createPharosQueryClient();
+
+    expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(false);
+  });
+
   it("broadcasts numeric column sort when single-key shortcuts are enabled", () => {
     const onSort = vi.fn();
     window.addEventListener(SORT_COLUMN_EVENT, onSort as EventListener);

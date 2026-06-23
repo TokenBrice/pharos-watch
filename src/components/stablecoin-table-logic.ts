@@ -164,6 +164,8 @@ interface SortStablecoinsParams {
   reportCards?: Record<string, ReportCard>;
 }
 
+type StablecoinSortValue = number | string | null | undefined;
+
 export function sortStablecoins({
   filtered,
   sort,
@@ -175,7 +177,7 @@ export function sortStablecoins({
 }: SortStablecoinsParams): StablecoinData[] {
   const metaById = TRACKED_META_BY_ID;
 
-  const compare = createTableComparator<StablecoinTableSortKey, StablecoinData>({
+  const extractors: Record<StablecoinTableSortKey, (row: StablecoinData) => StablecoinSortValue> = {
     name: (r) => r.name.toLowerCase(),
     price: (r) => r.price ?? 0,
     mcap: (r) => getCirculatingRaw(r),
@@ -208,11 +210,19 @@ export function sortStablecoins({
       const price = r.price;
       return price != null && ref > 0 ? Math.abs(price / ref - 1) * 10_000 : null;
     },
+  };
+  const extractSortValue = extractors[effectiveSortKey];
+  const compare = createTableComparator<"value", { value: StablecoinSortValue; index: number }>({
+    value: (r) => r.value,
   });
 
-  return [...filtered].sort((a, b) =>
-    compare(a, b, { key: effectiveSortKey, direction: sort.direction }),
-  );
+  return filtered
+    .map((row, index) => ({ row, index, value: extractSortValue(row) }))
+    .sort((a, b) => {
+      const compared = compare(a, b, { key: "value", direction: sort.direction });
+      return compared || a.index - b.index;
+    })
+    .map(({ row }) => row);
 }
 
 export function exportStablecoinsCsv(

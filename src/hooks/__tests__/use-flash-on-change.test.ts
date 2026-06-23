@@ -28,7 +28,7 @@ describe("useFlashOnChange", () => {
 
     rerender({ value: 12 });
 
-    expect(result.current).toBe("pharos-data-fresh-up");
+    expect(result.current).toContain("pharos-data-fresh-up");
 
     act(() => {
       vi.advanceTimersByTime(250);
@@ -45,7 +45,35 @@ describe("useFlashOnChange", () => {
 
     rerender({ value: 8 });
 
-    expect(result.current).toBe("pharos-data-fresh-down");
+    expect(result.current).toContain("pharos-data-fresh-down");
+  });
+
+  it("restarts same-direction flashes on repeated numeric increases", () => {
+    const { result, rerender } = renderHook(
+      ({ value }) => useFlashOnChange(value, { durationMs: 250 }),
+      { initialProps: { value: 10 } },
+    );
+
+    rerender({ value: 11 });
+    const firstClassName = result.current;
+
+    act(() => {
+      vi.advanceTimersByTime(125);
+    });
+    rerender({ value: 12 });
+
+    expect(result.current).toContain("pharos-data-fresh-up");
+    expect(result.current).not.toBe(firstClassName);
+
+    act(() => {
+      vi.advanceTimersByTime(249);
+    });
+    expect(result.current).toContain("pharos-data-fresh-up");
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current).toBe("");
   });
 
   it("suppresses flashes when reduced motion is preferred", () => {

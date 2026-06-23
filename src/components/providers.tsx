@@ -49,6 +49,19 @@ export function useToastContext() {
   return ctx;
 }
 
+export function createPharosQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        retry: 2,
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+      },
+    },
+  });
+}
+
 // Inner component that has access to theme
 function AppProviders({ children }: { children: React.ReactNode }) {
   const { toasts, addToast, removeToast } = useToast();
@@ -153,20 +166,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () => {
-      const client = new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 5 * 60 * 1000,
-            retry: 2,
-            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
-          },
-        },
-      });
-      return client;
-    }
-  );
+  const [queryClient] = useState(createPharosQueryClient);
 
   useEffect(() => {
     if (!document.getElementById(HOMEPAGE_BOOTSTRAP_SCRIPT_ID)) {

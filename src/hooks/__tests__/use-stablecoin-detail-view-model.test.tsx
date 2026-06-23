@@ -181,6 +181,31 @@ describe("useStablecoinDetailViewModel", () => {
     expect(mocks.useStablecoinReserves).toHaveBeenCalledWith(coin.id, false);
   });
 
+  it("reuses the built view model when inputs have not changed", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const supplementalQueryControls = {
+      flows: true,
+      blacklist: true,
+      reserves: true,
+    };
+    const { rerender } = renderHook(
+      ({ controls }) =>
+        useStablecoinDetailViewModel({
+          id: coin.id,
+          coin,
+          summary: null,
+          supplementalQueryControls: controls,
+        }),
+      { initialProps: { controls: supplementalQueryControls } },
+    );
+
+    expect(mocks.buildStablecoinDetailViewModel).toHaveBeenCalledTimes(1);
+
+    rerender({ controls: supplementalQueryControls });
+
+    expect(mocks.buildStablecoinDetailViewModel).toHaveBeenCalledTimes(1);
+  });
+
   it("masks cached supplemental data while controls are disabled", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     mocks.useMintBurnFlows.mockReturnValue({

@@ -16,8 +16,10 @@ export interface UseRowCursorOptions<T> {
 
 export interface UseRowCursorResult {
   cursorIndex: number;
+  activeCursorIndex: number | null;
   cursorId: string | null;
   setCursorIndex: (i: number) => void;
+  activateCursorAtIndex: (i: number) => void;
   getRowProps: (index: number, rowId: string) => {
     "data-cursor"?: "true";
     tabIndex?: number;
@@ -63,6 +65,14 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
       });
     },
     [rowsLength],
+  );
+
+  const activateCursorAtIndex = useCallback(
+    (index: number) => {
+      if (!enabled) return;
+      setCursorIndex(index);
+    },
+    [enabled, setCursorIndex],
   );
 
   // Scroll virtualizer to the cursor when it moves.
@@ -159,19 +169,18 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
       const isCursor = cursorActive && index === cursorIndexBounded;
       return {
         ...(isCursor ? { "data-cursor": "true" as const, tabIndex: 0 } : {}),
-        onMouseEnter: () => {
-          setCursorActive(true);
-          setCursorIndex(index);
-        },
+        onMouseEnter: () => activateCursorAtIndex(index),
       };
     },
-    [cursorActive, cursorIndexBounded, enabled, setCursorIndex],
+    [activateCursorAtIndex, cursorActive, cursorIndexBounded, enabled],
   );
 
   return {
     cursorIndex: cursorIndexBounded,
+    activeCursorIndex: cursorActive ? cursorIndexBounded : null,
     cursorId,
     setCursorIndex,
+    activateCursorAtIndex,
     getRowProps,
   };
 }

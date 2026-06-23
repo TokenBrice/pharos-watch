@@ -66,6 +66,15 @@ function resolveApiRequestTimeoutMs(options?: ApiRequestOptions): number | null 
   return Math.max(1, Math.ceil(options.timeoutMs));
 }
 
+function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): number {
+  const dateHeader = headers.get("Date");
+  const serverDateMs = dateHeader ? Date.parse(dateHeader) : Number.NaN;
+  const referenceNowSec = Number.isFinite(serverDateMs)
+    ? Math.floor(serverDateMs / 1000)
+    : Math.floor(Date.now() / 1000);
+  return Math.max(0, Math.floor(referenceNowSec - ageSeconds));
+}
+
 export async function apiRequest(path: string, init?: RequestInit, options?: ApiRequestOptions): Promise<Response> {
   const parentSignal = resolveApiRequestSignal(init, options);
   const requestInit = withPublicApiAcceptMarker(path, {
@@ -299,7 +308,7 @@ export async function apiFetchWithMeta<T>(
       const age = Number(ageHeader);
       if (Number.isFinite(age) && age >= 0) {
         meta = {
-          updatedAt: Math.floor(Date.now() / 1000) - age,
+          updatedAt: resolveResponseUpdatedAtSec(res.headers, age),
           ageSeconds: age,
           status: classifyFreshnessRatio(age / maxAgeSec),
         };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   useDexLiquidity,
   usePegSummary,
@@ -145,70 +145,116 @@ export function useStablecoinDetailViewModel({
     reservesEnabled,
   ]);
 
-  const viewModel = buildStablecoinDetailViewModel({
-    core: {
+  const viewModel = useMemo(
+    () =>
+      buildStablecoinDetailViewModel({
+        core: {
+          id,
+          coin,
+          summary,
+          logoSrc,
+          handleRetryAll,
+        },
+        queries: {
+          supplyHistory: {
+            data: supplyData,
+            isLoading: supplyLoading,
+            error: supplyError,
+          },
+          stablecoinList: {
+            data: listData,
+            isLoading: listLoading,
+            isError: isListError,
+            error: listError,
+            dataUpdatedAt: listUpdatedAt,
+            meta: listMeta,
+          },
+          pegSummary: {
+            data: pegSummaryData,
+            dataUpdatedAt: pegUpdatedAt,
+            error: pegError,
+            meta: pegMeta,
+          },
+          dexLiquidity: {
+            data: liquidityMap,
+            dataUpdatedAt: liqUpdatedAt,
+            error: liquidityError,
+            meta: liquidityMeta,
+          },
+          reportCards: {
+            data: reportCardsData,
+            dataUpdatedAt: rcUpdatedAt,
+            error: reportCardsError,
+            meta: reportCardsMeta,
+          },
+          redemptionBackstops: {
+            data: redemptionBackstopsData,
+            dataUpdatedAt: rbUpdatedAt,
+            error: redemptionBackstopsError,
+            meta: redemptionBackstopsMeta,
+          },
+        },
+        supplemental: {
+          yieldRankingsData,
+          stressSignalsData,
+          flows: {
+            data: flowsEnabled ? flowsData : undefined,
+            isLoading: flowsEnabled && isFlowsLoading,
+          },
+          blacklist: {
+            summary: blacklistEnabled ? blacklistSummary : undefined,
+            isLoading: blacklistEnabled && isBlacklistLoading,
+          },
+          reserves: {
+            live: reservesEnabled ? liveReserves.reserveResult : null,
+            error: reservesEnabled ? liveReserves.error : null,
+          },
+        },
+      }),
+    [
       id,
       coin,
       summary,
       logoSrc,
       handleRetryAll,
-    },
-    queries: {
-      supplyHistory: {
-        data: supplyData,
-        isLoading: supplyLoading,
-        error: supplyError,
-      },
-      stablecoinList: {
-        data: listData,
-        isLoading: listLoading,
-        isError: isListError,
-        error: listError,
-        dataUpdatedAt: listUpdatedAt,
-        meta: listMeta,
-      },
-      pegSummary: {
-        data: pegSummaryData,
-        dataUpdatedAt: pegUpdatedAt,
-        error: pegError,
-        meta: pegMeta,
-      },
-      dexLiquidity: {
-        data: liquidityMap,
-        dataUpdatedAt: liqUpdatedAt,
-        error: liquidityError,
-        meta: liquidityMeta,
-      },
-      reportCards: {
-        data: reportCardsData,
-        dataUpdatedAt: rcUpdatedAt,
-        error: reportCardsError,
-        meta: reportCardsMeta,
-      },
-      redemptionBackstops: {
-        data: redemptionBackstopsData,
-        dataUpdatedAt: rbUpdatedAt,
-        error: redemptionBackstopsError,
-        meta: redemptionBackstopsMeta,
-      },
-    },
-    supplemental: {
+      supplyData,
+      supplyLoading,
+      supplyError,
+      listData,
+      listLoading,
+      isListError,
+      listError,
+      listUpdatedAt,
+      listMeta,
+      pegSummaryData,
+      pegUpdatedAt,
+      pegError,
+      pegMeta,
+      liquidityMap,
+      liqUpdatedAt,
+      liquidityError,
+      liquidityMeta,
+      reportCardsData,
+      rcUpdatedAt,
+      reportCardsError,
+      reportCardsMeta,
+      redemptionBackstopsData,
+      rbUpdatedAt,
+      redemptionBackstopsError,
+      redemptionBackstopsMeta,
       yieldRankingsData,
       stressSignalsData,
-      flows: {
-        data: flowsEnabled ? flowsData : undefined,
-        isLoading: flowsEnabled && isFlowsLoading,
-      },
-      blacklist: {
-        summary: blacklistEnabled ? blacklistSummary : undefined,
-        isLoading: blacklistEnabled && isBlacklistLoading,
-      },
-      reserves: {
-        live: reservesEnabled ? liveReserves.reserveResult : null,
-        error: reservesEnabled ? liveReserves.error : null,
-      },
-    },
-  });
+      flowsEnabled,
+      flowsData,
+      isFlowsLoading,
+      blacklistEnabled,
+      blacklistSummary,
+      isBlacklistLoading,
+      reservesEnabled,
+      liveReserves.reserveResult,
+      liveReserves.error,
+    ],
+  );
 
   if (viewModel.status !== "ready") {
     return viewModel;

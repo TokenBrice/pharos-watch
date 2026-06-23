@@ -277,8 +277,18 @@
     0% { background-color: oklch(0.7 0.15 145 / 0.3); }
     100% { background-color: transparent; }
   }
+
+  @keyframes pharos-flash-up-alt {
+    0% { background-color: oklch(0.7 0.15 145 / 0.3); }
+    100% { background-color: transparent; }
+  }
   
   @keyframes pharos-flash-down {
+    0% { background-color: oklch(0.7 0.15 25 / 0.3); }
+    100% { background-color: transparent; }
+  }
+
+  @keyframes pharos-flash-down-alt {
     0% { background-color: oklch(0.7 0.15 25 / 0.3); }
     100% { background-color: transparent; }
   }
@@ -286,9 +296,17 @@
   .pharos-data-fresh-up {
     animation: pharos-flash-up 1.5s ease-out;
   }
+
+  .pharos-data-fresh-up-b {
+    animation-name: pharos-flash-up-alt;
+  }
   
   .pharos-data-fresh-down {
     animation: pharos-flash-down 1.5s ease-out;
+  }
+
+  .pharos-data-fresh-down-b {
+    animation-name: pharos-flash-down-alt;
   }
   
   @media (prefers-reduced-motion: reduce) {

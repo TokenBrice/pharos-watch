@@ -742,4 +742,26 @@ describe("api contract validation policy", () => {
     expect(result.meta?.status).toBe("fresh");
     expect(result.meta?.ageSeconds).toBe(1122);
   });
+
+  it("derives X-Data-Age updatedAt from the server Date header when available", async () => {
+    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          Date: "Tue, 23 Jun 2026 10:00:00 GMT",
+          "X-Data-Age": "30",
+        },
+      }),
+    );
+
+    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);
+
+    expect(result.meta).toMatchObject({
+      updatedAt: Date.parse("2026-06-23T09:59:30.000Z") / 1000,
+      ageSeconds: 30,
+      status: "fresh",
+    });
+  });
 });

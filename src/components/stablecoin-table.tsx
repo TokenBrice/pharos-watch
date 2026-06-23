@@ -479,7 +479,7 @@ export function StablecoinTable({
     typeof virtualizer.scrollToIndex === "function"
       ? (virtualizer as unknown as Virtualizer<HTMLElement, Element>)
       : null;
-  const { getRowProps } = useRowCursor<StablecoinData>({
+  const { activateCursorAtIndex, activeCursorIndex } = useRowCursor<StablecoinData>({
     rows: displayed,
     virtualizer: cursorVirtualizer,
     getRowId: (coin) => coin.id,
@@ -597,7 +597,8 @@ export function StablecoinTable({
                   showPinnedControl={showPinnedControls}
                   isPinned={pinnedStablecoinSet.has(coin.id)}
                   onTogglePinned={onTogglePinnedStablecoin}
-                  rowProps={getRowProps(virtualRow.index, coin.id)}
+                  isCursor={virtualRow.index === activeCursorIndex}
+                  onCursorMouseEnter={activateCursorAtIndex}
                   onNavigate={handleNavigate}
                   onPrefetch={prefetch}
                   measureElement={measureVirtualRow}

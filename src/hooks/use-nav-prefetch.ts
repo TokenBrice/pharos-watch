@@ -74,14 +74,13 @@ const ROUTE_WARMERS = Object.fromEntries(
 
 /**
  * Pre-warms the Next.js route bundle plus the TanStack Query cache for the
- * top sidebar links on first hover/focus. Subsequent hovers on the same href
- * in the same session are no-ops, so we never thrash the cache. Calls are
- * debounced by 100ms to absorb cursor sweeps across the nav.
+ * top sidebar links on hover/focus. Calls are debounced by 100ms to absorb
+ * cursor sweeps across the nav; TanStack Query handles freshness/deduping for
+ * already-warm API data.
  */
 export function useNavPrefetch() {
   const router = useRouter();
   const qc = useQueryClient();
-  const visited = useRef(new Set<string>());
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -96,7 +95,6 @@ export function useNavPrefetch() {
 
   const prefetch = useCallback(
     (href: string) => {
-      if (visited.current.has(href)) return;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         router.prefetch(href);
@@ -106,7 +104,6 @@ export function useNavPrefetch() {
           // don't await it, so a slow network never blocks the UI.
           warmer(qc);
         }
-        visited.current.add(href);
       }, PREFETCH_DEBOUNCE_MS);
     },
     [router, qc],

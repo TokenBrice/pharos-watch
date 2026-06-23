@@ -34,7 +34,6 @@ import { DeviationIcon } from "@/components/severity-icon";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import type { TableDensity } from "@/hooks/use-table-density";
-import type { UseRowCursorResult } from "@/hooks/use-row-cursor";
 
 interface StablecoinVirtualRowProps {
   coin: StablecoinData;
@@ -57,7 +56,8 @@ interface StablecoinVirtualRowProps {
   onTogglePinned?: (coinId: string) => void;
   onNavigate: (coinId: string) => void;
   onPrefetch: (coinId: string) => void;
-  rowProps?: ReturnType<UseRowCursorResult["getRowProps"]>;
+  isCursor?: boolean;
+  onCursorMouseEnter?: (index: number) => void;
   measureElement?: (element: HTMLTableRowElement | null) => void;
 }
 
@@ -114,7 +114,8 @@ function StablecoinVirtualRowBase({
   onTogglePinned,
   onNavigate,
   onPrefetch,
-  rowProps,
+  isCursor = false,
+  onCursorMouseEnter,
   measureElement,
 }: StablecoinVirtualRowProps) {
   const circulating = getCirculatingRaw(coin);
@@ -179,19 +180,20 @@ function StablecoinVirtualRowBase({
 
   return (
     <TableRow
-      {...rowProps}
       ref={measureElement}
       key={coin.id}
       className={`group cursor-pointer data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)] ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
+      data-cursor={isCursor ? "true" : undefined}
       data-index={virtualIndex}
       data-row-striped={isStriped ? "true" : undefined}
+      tabIndex={isCursor ? 0 : undefined}
       onClick={(event) => {
         if (isNestedInteractiveTarget(event.target, event.currentTarget)) return;
         onNavigate(coin.id);
       }}
       onMouseEnter={() => {
-        rowProps?.onMouseEnter?.();
+        if (virtualIndex != null) onCursorMouseEnter?.(virtualIndex);
         onPrefetch(coin.id);
       }}
     >
