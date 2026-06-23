@@ -348,7 +348,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chains/aggregator.ts` - ChainAggregatorAsset, ChainAggregatorInput, aggregateChains
 - `shared/lib/chains/circulating.ts` - ChainCirculatingPoint, RawChainCirculating, canonicalizeChainCirculating, findCanonicalChainData
 - `shared/lib/chains/health-version.ts`
-- `shared/lib/chains/health.ts` - ACTIVE_BACKING_DIVERSITY_TYPES, BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CONCENTRATION_WEIGHT, HEALTH_METHODOLOGY_VERSION
+- `shared/lib/chains/health.ts` - ACTIVE_BACKING_DIVERSITY_TYPES, BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CHAIN_HEALTH_METHODOLOGY_VERSION, CONCENTRATION_WEIGHT
 - `shared/lib/chains/index.ts` - ALCHEMY_CHAIN_MAP, BIRDEYE_CHAIN_MAP, CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_META, CHAIN_RESILIENCE_TIER
 - `shared/lib/chains/l2beat-audit.ts` - L2BeatAliasIntegrityIssue, L2BeatAliasIntegrityIssueKind, L2BeatBridgeRouteReviewAudit, L2BeatBridgeRouteReviewReason, L2BeatBridgeRouteReviewRow, L2BeatChainCoverageAudit
 - `shared/lib/chains/l2beat-interop.ts` - L2BEAT_INTEROP_PROTOCOLS, L2BEAT_INTEROP_SNAPSHOT_META, L2BeatInteropBridgeType, L2BeatInteropProtocolId, L2BeatInteropProtocolSnapshot, L2BeatInteropProtocolType

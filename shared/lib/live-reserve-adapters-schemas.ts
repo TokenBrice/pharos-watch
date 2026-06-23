@@ -321,6 +321,14 @@ const singleAssetProbeSchema = z
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
+    redemptionLiquidity: z
+      .object({
+        source: z.literal("morpho-vault-v2"),
+        chainId: z.number().int().positive(),
+        apiUrl: AbsoluteUrlSchema.optional(),
+      })
+      .strict()
+      .optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   })

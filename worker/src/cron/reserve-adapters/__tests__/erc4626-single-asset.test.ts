@@ -16,6 +16,14 @@ function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReserv
   return cloned;
 }
 
+function cloneConfigWithMorphoVaultV2Liquidity(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params: { redemptionLiquidity?: { source: "morpho-vault-v2"; chainId: number } };
+  };
+  cloned.params.redemptionLiquidity = { source: "morpho-vault-v2", chainId: 1 };
+  return cloned;
+}
+
 describe("fetchErc4626SingleAssetReserves", () => {
   beforeEach(() => {
     resetRpcMocks();
@@ -294,6 +302,176 @@ describe("fetchErc4626SingleAssetReserves", () => {
         routeStatus: "unknown",
       },
     });
+  });
+
+  it("uses validated Morpho V2 vault liquidity when it exceeds idle underlying balance", async () => {
+    const morphoVariables: unknown[] = [];
+    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as {
+        params?: [{ data: string }];
+        variables?: Record<string, unknown>;
+      };
+      if (url === "https://api.morpho.org/graphql") {
+        morphoVariables.push(body.variables);
+        return jsonResponse({
+          data: {
+            vaultV2ByAddress: {
+              address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+              listed: true,
+              asset: {
+                address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+              },
+              chain: { id: 1 },
+              liquidity: "30000000",
+              liquidityUsd: 30,
+              forceDeallocatableLiquidity: "35000000",
+              forceDeallocatableLiquidityUsd: 35,
+              warnings: [],
+            },
+          },
+        });
+      }
+      const call = body.params?.[0];
+      if (!call) return null;
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithMorphoVaultV2Liquidity(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "0",
+      redemptionCapacityRaw: "30000000",
+      redemptionCapacitySource: "morpho-vault-v2-liquidity",
+      morphoVaultV2LiquidityRaw: "30000000",
+      morphoVaultV2LiquidityUsd: 30,
+      morphoVaultV2ForceDeallocatableLiquidityRaw: "35000000",
+      morphoVaultV2ForceDeallocatableLiquidityUsd: 35,
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 30,
+        capacityRatioOfSupply: 0.3,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-api",
+        routeStatus: "unknown",
+        routeStatusSource: "protocol-api",
+      },
+    });
+    expect(morphoVariables).toEqual([
+      {
+        address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        chainId: 1,
+      },
+    ]);
+  });
+
+  it("falls back to idle capacity and degrades when Morpho V2 identity validation fails", async () => {
+    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as {
+        params?: [{ data: string }];
+      };
+      if (url === "https://api.morpho.org/graphql") {
+        return jsonResponse({
+          data: {
+            vaultV2ByAddress: {
+              address: "0x000000000000000000000000000000000000dead",
+              listed: true,
+              asset: {
+                address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+              },
+              chain: { id: 1 },
+              liquidity: "90000000",
+              liquidityUsd: 90,
+              warnings: [],
+            },
+          },
+        });
+      }
+      const call = body.params?.[0];
+      if (!call) return null;
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(25_000_000n) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithMorphoVaultV2Liquidity(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "morpho-vault-v2-identity-mismatch",
+        severity: "warning",
+      }),
+    ]);
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "25000000",
+      redemptionCapacityRaw: "25000000",
+      redemptionCapacitySource: "erc4626-idle-underlying",
+      redemption: {
+        capacityUsd: 25,
+        capacityRatioOfSupply: 0.25,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "degraded",
+        routeStatusSource: "onchain",
+      },
+    });
+    expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityRaw");
   });
 
   it("skips NAV ratio when totalSupply is zero but still emits readable idle capacity USD", async () => {

@@ -139,6 +139,10 @@
         "coinId": "usdt-tether",
         "depType": "wrapper",
         "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
       }
     }
   },

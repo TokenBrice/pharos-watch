@@ -10,9 +10,11 @@ import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
   decimalNumberFromBigInt,
+  fetchJsonPostWithRetry,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
+  reserveDegradedWarning,
 } from "./helpers";
 import {
   ERC4626_ASSET_SELECTOR,
@@ -28,16 +30,87 @@ interface SingleAssetSliceConfig {
   coinId?: string;
   depType?: ReserveSlice["depType"];
   expectedAssetAddress?: string;
+  redemptionLiquidity?: MorphoVaultV2RedemptionLiquidityConfig;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
 }
 
+interface MorphoVaultV2RedemptionLiquidityConfig {
+  source: "morpho-vault-v2";
+  chainId: number;
+  apiUrl?: string;
+}
+
+interface MorphoVaultV2LiquidityTelemetry {
+  liquidityRaw: bigint;
+  liquidityUsd?: number;
+  forceDeallocatableLiquidityRaw?: bigint;
+  forceDeallocatableLiquidityUsd?: number;
+}
+
 interface RedemptionCapacityTelemetry {
   capacityUsd: number;
-  idleUnderlyingBalanceRaw: string;
+  capacityRaw: string;
+  capacitySource: "erc4626-idle-underlying" | "morpho-vault-v2-liquidity";
+  freshnessKind: "same-run-onchain" | "same-run-api";
+  routeStatusSource: "onchain" | "protocol-api";
+  idleUnderlyingBalanceRaw?: string;
   underlyingDecimals: number;
   capacityRatioOfSupply?: number;
+  morphoVaultV2LiquidityRaw?: string;
+  morphoVaultV2LiquidityUsd?: number;
+  morphoVaultV2ForceDeallocatableLiquidityRaw?: string;
+  morphoVaultV2ForceDeallocatableLiquidityUsd?: number;
 }
+
+interface MorphoVaultV2LiquidityResponse {
+  data?: {
+    vaultV2ByAddress?: {
+      address?: unknown;
+      listed?: unknown;
+      asset?: {
+        address?: unknown;
+      } | null;
+      chain?: {
+        id?: unknown;
+      } | null;
+      liquidity?: unknown;
+      liquidityUsd?: unknown;
+      forceDeallocatableLiquidity?: unknown;
+      forceDeallocatableLiquidityUsd?: unknown;
+      warnings?: Array<{
+        type?: unknown;
+        level?: unknown;
+      }> | null;
+    } | null;
+  };
+  errors?: unknown;
+}
+
+const DEFAULT_MORPHO_GRAPHQL_URL = "https://api.morpho.org/graphql";
+
+const MORPHO_VAULT_V2_LIQUIDITY_QUERY = `
+query PharosVaultV2Liquidity($address: String!, $chainId: Int!) {
+  vaultV2ByAddress(address: $address, chainId: $chainId) {
+    address
+    listed
+    asset {
+      address
+    }
+    chain {
+      id
+    }
+    liquidity
+    liquidityUsd
+    forceDeallocatableLiquidity
+    forceDeallocatableLiquidityUsd
+    warnings {
+      type
+      level
+    }
+  }
+}
+`;
 
 function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
   const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
@@ -49,6 +122,7 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
     ...(params.slice.expectedAssetAddress
       ? { expectedAssetAddress: params.slice.expectedAssetAddress.toLowerCase() }
       : {}),
+    ...(params.redemptionLiquidity ? { redemptionLiquidity: params.redemptionLiquidity } : {}),
     ...(params.rpcUrl ? { rpcUrl: params.rpcUrl } : {}),
     ...(params.fallbackRpcUrl ? { fallbackRpcUrl: params.fallbackRpcUrl } : {}),
   };
@@ -58,24 +132,249 @@ function decodeErc20Decimals(raw: bigint | null): number | null {
   return raw == null ? null : parseBoundedDecimals(raw);
 }
 
+function parseMorphoAddress(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.toLowerCase();
+  return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
+}
+
+function parseNonNegativeBigIntLike(value: unknown): bigint | null {
+  if (typeof value === "bigint") {
+    return value >= 0n ? value : null;
+  }
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value >= 0 ? BigInt(value) : null;
+  }
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const parsed = BigInt(trimmed);
+  return parsed >= 0n ? parsed : null;
+}
+
+function parseOptionalNonNegativeNumber(value: unknown): number | undefined {
+  if (value == null) return undefined;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function parseMorphoChainId(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function describeMorphoWarning(value: { type?: unknown; level?: unknown }): string {
+  const type = typeof value.type === "string" ? value.type : "unknown";
+  const level = typeof value.level === "string" ? value.level : "unknown";
+  return `${type}/${level}`;
+}
+
+async function fetchMorphoVaultV2LiquidityTelemetry(args: {
+  coinId: string;
+  contractAddress: string;
+  assetAddress: string;
+  config: MorphoVaultV2RedemptionLiquidityConfig;
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+}): Promise<{ telemetry: MorphoVaultV2LiquidityTelemetry | null; warnings: LiveReserveWarning[] }> {
+  const apiUrl = args.config.apiUrl ?? DEFAULT_MORPHO_GRAPHQL_URL;
+  try {
+    const payload = await fetchJsonPostWithRetry<MorphoVaultV2LiquidityResponse>(
+      apiUrl,
+      {
+        query: MORPHO_VAULT_V2_LIQUIDITY_QUERY,
+        variables: {
+          address: args.contractAddress,
+          chainId: args.config.chainId,
+        },
+      },
+      args.signal,
+      12_000,
+      args.ctx,
+      { headers: { Accept: "application/json" } },
+    );
+    if (payload.errors != null) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-liquidity-unavailable",
+            `Morpho V2 liquidity query returned GraphQL errors for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const vault = payload.data?.vaultV2ByAddress;
+    if (!vault) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-liquidity-unavailable",
+            `Morpho V2 liquidity query returned no vault for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const reportedVaultAddress = parseMorphoAddress(vault.address);
+    if (reportedVaultAddress !== args.contractAddress.toLowerCase()) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-identity-mismatch",
+            `Morpho V2 liquidity vault address mismatch for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const reportedAssetAddress = parseMorphoAddress(vault.asset?.address);
+    if (reportedAssetAddress !== args.assetAddress.toLowerCase()) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-asset-mismatch",
+            `Morpho V2 liquidity asset mismatch for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const reportedChainId = parseMorphoChainId(vault.chain?.id);
+    if (reportedChainId !== args.config.chainId) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-chain-mismatch",
+            `Morpho V2 liquidity chain mismatch for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    if (vault.listed !== true) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-unlisted",
+            `Morpho V2 liquidity vault is not listed for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    if (vault.warnings?.length) {
+      const warningList = vault.warnings.map(describeMorphoWarning).join(", ");
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-warning",
+            `Morpho V2 liquidity vault warnings for ${args.coinId}: ${warningList}`,
+          ),
+        ],
+      };
+    }
+
+    const liquidityRaw = parseNonNegativeBigIntLike(vault.liquidity);
+    if (liquidityRaw == null) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "morpho-vault-v2-liquidity-invalid",
+            `Morpho V2 liquidity payload has invalid liquidity for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const liquidityUsd = parseOptionalNonNegativeNumber(vault.liquidityUsd);
+    const forceDeallocatableLiquidityRaw = parseNonNegativeBigIntLike(vault.forceDeallocatableLiquidity);
+    const forceDeallocatableLiquidityUsd = parseOptionalNonNegativeNumber(vault.forceDeallocatableLiquidityUsd);
+
+    return {
+      telemetry: {
+        liquidityRaw,
+        ...(liquidityUsd != null ? { liquidityUsd } : {}),
+        ...(forceDeallocatableLiquidityRaw != null ? { forceDeallocatableLiquidityRaw } : {}),
+        ...(forceDeallocatableLiquidityUsd != null ? { forceDeallocatableLiquidityUsd } : {}),
+      },
+      warnings: [],
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      telemetry: null,
+      warnings: [
+        reserveDegradedWarning(
+          "morpho-vault-v2-liquidity-unavailable",
+          `Morpho V2 liquidity fetch failed for ${args.coinId}: ${message}`,
+        ),
+      ],
+    };
+  }
+}
+
 function buildRedemptionCapacityTelemetry(
   idleUnderlyingBalanceRaw: bigint | null,
   underlyingDecimalsRaw: bigint | null,
   supplyAssetsRaw: bigint,
+  morphoVaultV2Liquidity: MorphoVaultV2LiquidityTelemetry | null,
 ): RedemptionCapacityTelemetry | null {
-  if (idleUnderlyingBalanceRaw == null) return null;
   const underlyingDecimals = decodeErc20Decimals(underlyingDecimalsRaw);
   if (underlyingDecimals == null) return null;
 
-  const capacityUsd = decimalNumberFromBigInt(idleUnderlyingBalanceRaw, underlyingDecimals);
+  const idleCapacityRaw = idleUnderlyingBalanceRaw ?? 0n;
+  const morphoCapacityRaw = morphoVaultV2Liquidity?.liquidityRaw ?? 0n;
+  const capacitySource = morphoCapacityRaw > idleCapacityRaw
+    ? "morpho-vault-v2-liquidity"
+    : "erc4626-idle-underlying";
+  const uncappedCapacityRaw = morphoCapacityRaw > idleCapacityRaw ? morphoCapacityRaw : idleCapacityRaw;
+  if (uncappedCapacityRaw === 0n && idleUnderlyingBalanceRaw == null && morphoVaultV2Liquidity == null) {
+    return null;
+  }
+
+  const capacityRaw = uncappedCapacityRaw > supplyAssetsRaw ? supplyAssetsRaw : uncappedCapacityRaw;
+  const capacityUsd = decimalNumberFromBigInt(capacityRaw, underlyingDecimals);
   if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
 
-  const capacityRatioOfSupply = ratioFromRaw(idleUnderlyingBalanceRaw, supplyAssetsRaw);
+  const capacityRatioOfSupply = ratioFromRaw(capacityRaw, supplyAssetsRaw);
   return {
     capacityUsd,
-    idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString(),
+    capacityRaw: capacityRaw.toString(),
+    capacitySource,
+    freshnessKind: capacitySource === "morpho-vault-v2-liquidity" ? "same-run-api" : "same-run-onchain",
+    routeStatusSource: capacitySource === "morpho-vault-v2-liquidity" ? "protocol-api" : "onchain",
+    ...(idleUnderlyingBalanceRaw != null ? { idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString() } : {}),
     underlyingDecimals,
     ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
+    ...(morphoVaultV2Liquidity
+      ? {
+          morphoVaultV2LiquidityRaw: morphoVaultV2Liquidity.liquidityRaw.toString(),
+          ...(morphoVaultV2Liquidity.liquidityUsd != null
+            ? { morphoVaultV2LiquidityUsd: morphoVaultV2Liquidity.liquidityUsd }
+            : {}),
+          ...(morphoVaultV2Liquidity.forceDeallocatableLiquidityRaw != null
+            ? {
+                morphoVaultV2ForceDeallocatableLiquidityRaw:
+                  morphoVaultV2Liquidity.forceDeallocatableLiquidityRaw.toString(),
+              }
+            : {}),
+          ...(morphoVaultV2Liquidity.forceDeallocatableLiquidityUsd != null
+            ? {
+                morphoVaultV2ForceDeallocatableLiquidityUsd:
+                  morphoVaultV2Liquidity.forceDeallocatableLiquidityUsd,
+              }
+            : {}),
+        }
+      : {}),
   };
 }
 
@@ -175,10 +474,24 @@ export async function fetchErc4626SingleAssetReserves(
         timeoutMs: timeout,
       }),
     ]);
+    let morphoVaultV2Liquidity: MorphoVaultV2LiquidityTelemetry | null = null;
+    if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v2") {
+      const morphoResult = await fetchMorphoVaultV2LiquidityTelemetry({
+        coinId: coin.id,
+        contractAddress,
+        assetAddress,
+        config: sliceConfig.redemptionLiquidity,
+        signal,
+        ctx: _ctx,
+      });
+      warnings.push(...morphoResult.warnings);
+      morphoVaultV2Liquidity = morphoResult.telemetry;
+    }
     redemptionCapacity = buildRedemptionCapacityTelemetry(
       idleUnderlyingBalanceRaw,
       underlyingDecimalsRaw,
       convertToAssetsRaw ?? totalAssetsRaw,
+      morphoVaultV2Liquidity,
     );
   }
 
@@ -206,8 +519,30 @@ export async function fetchErc4626SingleAssetReserves(
       ...(assetAddress ? { assetAddress } : {}),
       ...(redemptionCapacity
         ? {
-            idleUnderlyingBalanceRaw: redemptionCapacity.idleUnderlyingBalanceRaw,
+            redemptionCapacityRaw: redemptionCapacity.capacityRaw,
+            redemptionCapacitySource: redemptionCapacity.capacitySource,
+            ...(redemptionCapacity.idleUnderlyingBalanceRaw != null
+              ? { idleUnderlyingBalanceRaw: redemptionCapacity.idleUnderlyingBalanceRaw }
+              : {}),
             underlyingDecimals: redemptionCapacity.underlyingDecimals,
+            ...(redemptionCapacity.morphoVaultV2LiquidityRaw != null
+              ? { morphoVaultV2LiquidityRaw: redemptionCapacity.morphoVaultV2LiquidityRaw }
+              : {}),
+            ...(redemptionCapacity.morphoVaultV2LiquidityUsd != null
+              ? { morphoVaultV2LiquidityUsd: redemptionCapacity.morphoVaultV2LiquidityUsd }
+              : {}),
+            ...(redemptionCapacity.morphoVaultV2ForceDeallocatableLiquidityRaw != null
+              ? {
+                  morphoVaultV2ForceDeallocatableLiquidityRaw:
+                    redemptionCapacity.morphoVaultV2ForceDeallocatableLiquidityRaw,
+                }
+              : {}),
+            ...(redemptionCapacity.morphoVaultV2ForceDeallocatableLiquidityUsd != null
+              ? {
+                  morphoVaultV2ForceDeallocatableLiquidityUsd:
+                    redemptionCapacity.morphoVaultV2ForceDeallocatableLiquidityUsd,
+                }
+              : {}),
           }
         : {}),
       ...(totalSupplyRaw != null ? { totalSupplyRaw: totalSupplyRaw.toString() } : {}),
@@ -227,9 +562,9 @@ export async function fetchErc4626SingleAssetReserves(
           : {
               capacityKind: "documented-eventual" as const,
             }),
-        freshnessKind: "same-run-onchain" as const,
+        freshnessKind: redemptionCapacity?.freshnessKind ?? "same-run-onchain" as const,
         routeStatus: warnings.length > 0 ? "degraded" as const : "unknown" as const,
-        routeStatusSource: "onchain" as const,
+        routeStatusSource: redemptionCapacity?.routeStatusSource ?? "onchain" as const,
       },
     },
   };
