@@ -100,7 +100,7 @@ Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project
 | `freeze.blocked` / `.unblocked` / `.destroyed`  | `blacklist_events`                      | Issuer freeze, unblock, and fund-destroy actions                     |
 | `score.upgraded` / `.downgraded`                | `safety_grade_history`                  | Stablecoin Safety Score grade transitions                            |
 | `psi.band_changed`                              | `stability_index_samples`               | PSI regime-band transitions                                          |
-| `dews.escalated` / `.deescalated`               | `stress_signals`                        | DEWS stress-level changes                                            |
+| `dews.band_transitions` (emits `.escalated` / `.deescalated`) | `stress_signals`                        | DEWS stress-level changes                                            |
 | `mint_burn.large_flow` (emits `.large_mint` / `.large_burn`)          | `mint_burn_events`                      | Large single-transaction mint or burn flows (one event per direction) |
 | `yield.warning_emitted` / `.pys_dropped`        | `yield_history` (warning_emitted) / `yield_source_decisions` (pys_dropped) | Yield-risk warnings and PYS drops                                    |
 | `methodology.bumped` (emits `:<domain>`)                   | `shared/lib/*-version` modules          | Methodology version bumps (first-observation pattern)                |

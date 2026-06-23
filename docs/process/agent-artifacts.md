@@ -51,5 +51,6 @@ Current saved workflows:
 - `mixed-verify` — reusable mixed-model verification harness for static-data checks, audits, and reviews.
 - `docs-verify` — verify the whole `/docs` corpus against actual code and adjudicate doc-vs-code discrepancies.
 - `docs-verify-remediate` — apply the adjudicated doc-vs-code fixes from `findings.json`, one agent per doc.
+- `docs-audit` — change-aware full-corpus docs-vs-code audit: verify every doc, opus-tier the docs owning the last 24h of code changes, adversarially adjudicate, and synthesize.
 
 Generated reports from these workflows should stay under ignored scratch paths such as `/agents/` unless their durable rules are distilled into `/docs/`.

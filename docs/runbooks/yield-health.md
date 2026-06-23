@@ -2,7 +2,7 @@
 
 Triggered by `/api/status` field:
 - `yieldHealth.statusImpact="public-critical"` when `yield-rankings` is missing or stale
-- `yieldHealth.status="degraded"` for admin-watch yield diagnostics such as sparse safety coverage, stale supplemental cache, benchmark fallback, old coverage audit, or low source-risk evidence coverage; stale comparison anchors are exposed as field-level watch signals, but do not by themselves change the aggregate `yieldHealth.status`
+- `yieldHealth.status` is `"degraded"` (or `"stale"` once a supplemental, benchmark, or coverage-audit surface passes its stale threshold) while `statusImpact` stays `"admin-watch"` for admin-watch yield diagnostics such as sparse safety coverage, stale supplemental cache, benchmark fallback, old coverage audit, or low source-risk evidence coverage; stale comparison anchors are exposed as field-level watch signals, but do not by themselves change the aggregate `yieldHealth.status`
 
 ## Symptom
 

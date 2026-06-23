@@ -90,7 +90,7 @@ Commit/push according to current repo guidance. Open a PR only when explicitly r
 ### 7. Post-deploy verification (within 24h)
 
 - Visit `/cemetery/` — confirm the coin appears with a "View archived data →" link.
-- Visit `/stablecoin/<id>/` — confirm the frozen banner above the hero, and the "Data frozen on YYYY-MM-DD" footer above each chart section.
+- Visit `/stablecoin/<id>/` — confirm the frozen banner below the hero (within the identity zone), and the "Data frozen on YYYY-MM-DD" footer above each chart section.
 - Inspect Worker logs — confirm no INSERT/UPDATE for the coin's id from any cron.
 - Confirm the next daily Telegram digest fires a cemetery appendix line.
 - Test OG: `https://api.pharos.watch/api/og/stablecoin/<id>` returns 200.

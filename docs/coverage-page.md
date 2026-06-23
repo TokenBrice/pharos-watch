@@ -86,7 +86,7 @@ Additional page-level sources:
 
 | Page element                                                                               | Source                                                                                                                                |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Base coin universe                                                                         | `ACTIVE_STABLECOINS` from `@shared/lib/stablecoins/registry`                                                                          |
+| Base coin universe                                                                         | `ACTIVE_STABLECOINS` (the `CLIENT_ACTIVE_STABLECOINS` alias) from `@shared/lib/stablecoins/client-registry`                           |
 | Market-cap weights                                                                         | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRaw()` on the cached list payload                                     |
 | Peg/backing/governance labels in each row                                                  | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps                                 |
 | Pricing-source tiles                                                                       | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |

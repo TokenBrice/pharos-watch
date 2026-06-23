@@ -240,6 +240,7 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `susdc-spark`            | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `steakusdt-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
 | `steakusdc-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `bbqusdc-steakhouse`     | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `srusde-strata`          | ERC-4626 `convertToAssets(1 share)` × tracked `usde-ethena` price               |
 | `gtusdc-gauntlet`        | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `gtusdcp-gauntlet`       | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
@@ -318,7 +319,7 @@ The DefiLlama `/coins` contract-address fallback, supplemental CoinGecko-id mirr
 
 Tracked DefiLlama rows that collapse to zero supply are repaired before pricing when the row has no usable chart-history repair or its chart-history value is below the tracked repair floor. The repair remains scoped to source-reviewed deployments for CADD and the Mento JPY/ZAR/XOF stables, reads every configured chain successfully before publishing, converts total supply through the current fresh/static FX reference, and tags the result `supplySource = "onchain-total-supply"`.
 
-Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes and self-stops once its clipped 90-second budget is exhausted. Protocol overrides run under a 30-second wall-clock budget, and external live RPC-backed `protocol-redeem` providers share a grouped breaker; local par and inherited tracked-base overrides remain cache/local decisions.
+Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes and self-stops once its clipped 90-second budget is exhausted. Protocol overrides run under a 10-second wall-clock budget, and external live RPC-backed `protocol-redeem` providers share a grouped breaker; local par and inherited tracked-base overrides remain cache/local decisions.
 
 Provider attempt diagnostics for fallback providers are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, parse or rejection reason counts, and short non-OK snippets so operators can distinguish provider transport failures from schema drift, rejected quotes, and successful responses that simply carry no usable tracked prices.
 

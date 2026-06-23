@@ -767,7 +767,7 @@ The watchdog is wired through `runBestEffortScheduledJob` so its own failures ne
 ### Per-alert-type delivery breakdown
 
 The dispatch metadata also exposes a `perAlertType` map covering each of the five
-alert categories: `dews`, `depeg`, `safety`, `launch`. Each entry reports the
+alert categories: `dews`, `depeg`, `safety`, `launch`, `reserve`. Each entry reports the
 delivery outcome for that category in the latest run so operators can spot
 "DEWS delivery fine but safety alerts stalled" at a glance:
 
@@ -781,7 +781,7 @@ delivery outcome for that category in the latest run so operators can spot
 
 A consolidated message can mix multiple alert categories for a single chat.
 Attribution uses the chat's "dominant" alert type with priority order
-`depeg > dews > safety > launch`, since depeg is the most time-sensitive
+`depeg > dews > safety > launch > reserve`, since depeg is the most time-sensitive
 event. Pending-queue replays are not attributed because the persisted row
 stores only the rendered HTML.
 

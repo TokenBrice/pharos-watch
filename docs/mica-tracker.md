@@ -49,7 +49,7 @@ export interface MicaProfile {
   competentAuthority?: string;   // e.g. "ACPR" — the supervising national authority
   authorizedEntity?: string;     // legal issuer entity named on the authorization
   significant?: boolean;         // EBA-supervised "significant" EMT/ART
-  references?: StablecoinLink[]; // ESMA/EBA/NCA register links (required to assert "authorized")
+  references?: StablecoinLink[]; // ESMA/EBA/NCA register links (required for any non-out-of-scope status)
 }
 ```
 
@@ -61,7 +61,7 @@ export interface MicaProfile {
 
 ### Zod — `shared/types/stablecoin-meta-schemas.ts`
 
-Zod validation lives in `shared/types/stablecoin-meta-schemas.ts` and mirrors the `JurisdictionSchema` pattern, `.strict()`. A cross-field rule enforces sourcing for the strongest claim:
+Zod validation lives in `shared/types/stablecoin-meta-schemas.ts` and mirrors the `JurisdictionSchema` pattern, `.strict()`. A cross-field rule enforces sourcing for any non-out-of-scope status:
 
 ```ts
 export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({

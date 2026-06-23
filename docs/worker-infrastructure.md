@@ -390,7 +390,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 | --- | --- | --- | --- |
 | `shared/lib/cloudflare-access-jwt.ts` | `jwksCache` | Cloudflare Access signing-key cache | 1-hour TTL; auth still re-fetches when cold or expired |
 | `worker/src/lib/rate-limit.ts` | `IsolateLocalState` limiter/prune state | Public API limiter emergency counters and pending prune coordination | Resets on isolate recycle/deploy; D1 remains source of truth |
-| `worker/src/lib/api-key-core.ts` | API-key cache, last-used throttle, per-key prune state | Short-lived key lookup cache and write-throttling for API-key metadata | 5-minute fresh / 15-minute stale key cache TTL; usage updates are best-effort and D1 remains source of truth |
+| `worker/src/lib/api-key-core.ts` | API-key cache, last-used throttle, per-key prune state | Short-lived key lookup cache and write-throttling for API-key metadata | 5-second fresh key cache TTL (entries are deleted on expiry, no stale window); usage updates are best-effort and D1 remains source of truth |
 | `worker/src/lib/request-source-attribution.ts` | Worker route/source and per-key attribution buffers plus prune bucket/promise | Collapses same-route and same-key Worker attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Worker isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
 | `functions/lib/request-attribution.ts` | Pages attribution buffer plus prune bucket/promise | Collapses same-route site-data attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Pages Functions isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
 
@@ -1037,7 +1037,7 @@ The three crons below were previously only listed by filename in [Architecture](
 | --------------------- | ------------------------------------------------------------------------------- |
 | `USDS_PROXY`          | `0xdC035D45d973E3EC169d2276DDab16f1e407384F`                                    |
 | `IMPL_SLOT`           | `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc` (ERC-1967) |
-| `NO_FREEZE_IMPL`      | `0x1923dfee706a8e78157416c29cbccfde7cdf4102`                                    |
+| `NO_FREEZE_IMPLS`     | `0x1923dfee706a8e78157416c29cbccfde7cdf4102` (Set)                              |
 | `IS_BLOCKED_SELECTOR` | `0xe4c0aaf4` (keccak256 of `isBlocked(address)`)                                |
 | `STALE_HOURS`         | 20                                                                              |
 
@@ -1045,9 +1045,9 @@ The three crons below were previously only listed by filename in [Architecture](
 
 1. Check cache freshness: if `usds-status` cache is <20 hours old, skip
 2. Read implementation address from ERC-1967 storage slot via `eth_getStorageAt`
-3. If implementation matches `NO_FREEZE_IMPL`: `freezeCapabilityPresent = false` (known safe impl)
+3. If implementation is in `NO_FREEZE_IMPLS`: `freezeCapabilityPresent = false` (known safe impl)
 4. Otherwise: probe the proxy with `eth_call` using `isBlocked(address(0))` selector
-   - If call returns ≥32 bytes: freeze function exists (`freezeCapabilityPresent = true`)
+   - If call returns exactly 32 bytes (a valid ABI-encoded word): freeze function exists (`freezeCapabilityPresent = true`)
    - If call reverts: no freeze function (`freezeCapabilityPresent = false`)
    - If probe fails entirely: preserve cached status, don't update
 5. Store `{ freezeCapabilityPresent, freezeActive, implementationAddress, lastChecked }` via `setCacheIfNewer()` (`freezeActive` is a backward-compatible alias)

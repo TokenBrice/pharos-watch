@@ -82,7 +82,7 @@ The visible policy must enumerate every Telegram-owned D1 table, its purpose, an
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
 | `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies, setup wizard, bulk confirms | 5-minute TTL (`DISAMBIGUATION_TTL_SEC`); swept ≥10 min after expiry |
-| `telegram_pending_alerts` | Overflow and retry delivery queue | Severity-based TTL: 1 h for depeg/dews/safety/legacy, 30 min for launch and admin broadcasts |
+| `telegram_pending_alerts` | Overflow and retry delivery queue | Severity-based TTL: 1 h for depeg/dews/safety/reserve/legacy, 30 min for launch and admin broadcasts |
 | `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable discovery manifests and per-target delivery audit | 90-day audit retention |
 | `telegram_alert_dead_letters` | Expired or permanently failed pending-send audit trail | 90-day audit retention |
 | `telegram_processed_updates` | Retry-safe webhook idempotency claims (`update_id`, status, error class) | 7-day prune |
@@ -99,7 +99,7 @@ The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutat
 ### Telemetry Contract
 
 - `src/app/layout.tsx` injects the GA4 script only when `NEXT_PUBLIC_GA_ID` is set. When that env var is unset, Pharos does not load Google Analytics and `src/lib/analytics.ts` becomes a no-op wrapper around `window.gtag`.
-- `src/lib/analytics.ts` is the typed event catalog for custom telemetry. Current events cover feature adoption (`stress_test_run`, `comparison_*`), engagement (`search_performed`, `filter_applied`, `time_range_changed`, `sort_changed`, `contract_copied`), portfolio actions, and UI toggles (`theme_toggled`, `panel_toggled`).
+- `src/lib/analytics.ts` is the typed event catalog for custom telemetry. Current events cover feature adoption (`stress_test_run`, `comparison_*`), engagement (`search_performed`, `filter_applied`, `time_range_changed`, `sort_changed`, `contract_copied`), portfolio actions, UI toggles (`theme_toggled`, `panel_toggled`), and Web Vitals (`web_vital` — CLS, FCP, INP, LCP, TTFB, FID, and Next.js render metrics).
 - The policy page is static and frontend-only, but its analytics claims must stay aligned with both `src/app/layout.tsx` and `src/lib/analytics.ts`.
 
 ---

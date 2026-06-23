@@ -481,7 +481,7 @@ Response includes:
 
 Source: `src/hooks/use-endpoint-probes.ts`
 
-- Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s only for `/api/status` and `/api/status-history`; other admin proxy paths can return `504` after the default 10s upstream timeout.
+- Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s for `/api/status` and `/api/status-history`, 45s for `/api/audit-depeg-history`, and the default 10s for all other admin proxy paths (which can return `504` once that 10s upstream timeout elapses).
 - Bounded browser probing uses a worker pool capped at 6 concurrent requests (`ENDPOINT_PROBE_CONCURRENCY`), with `Promise.all` only coordinating those workers rather than fanning out every endpoint at once.
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`

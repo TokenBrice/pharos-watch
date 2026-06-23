@@ -1,4 +1,4 @@
-# Risk Lab
+# Safety Scores
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. The API normally serves the cron-published report-card snapshot and computes the same response shape on read only when that snapshot is missing, invalid, or pinned to an older Safety Score methodology generation.
 

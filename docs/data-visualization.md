@@ -189,7 +189,7 @@ DEWS reads `matchMedia("(hover: hover) and (pointer: fine)")` and runs two inter
 
 Below the breakpoint where the scene becomes unreadable, render a screen-reader-friendly list that presents the same data:
 
-- Harbor: `harbor-list.tsx` — stacked harbor cards with logo, supply, health band, dominant cargo, 7d wake, berth progress bar.
+- Harbor: no dedicated fallback list ships; small-screen data is served by the always-on horizontally-scrollable `DataTableShell` leaderboard table in `src/app/chains/client.tsx` (the prior `harbor-list.tsx` component was removed as unused).
 - Atlas: current mobile strategy is scale-first. One responsive `PegDiversityHeroLive` scene adjusts CSS scale variables per breakpoint and offers fullscreen inspection; there is no shipped `mobile-region-list.tsx` or production `CelestialBand` fallback.
 
 The list is not a degraded experience — it is a first-class surface for small screens and assistive tech. Feature parity is required.

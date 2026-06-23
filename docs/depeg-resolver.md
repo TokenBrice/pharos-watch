@@ -100,7 +100,7 @@ Each anchor is rated `weak` or `strong`.
 | **R2** | Hard collateral + live redemption | Native or very-low-risk collateral, redemption capacity above threshold, functioning route — arbitrage redemption works |
 | **R3** | No supply / flow anomaly | Flat supply, no mint surge, calm supply and flow sub-signals — a pure market dislocation |
 | **R4** | No single freeze point | Decentralized governance, on-chain custody, not blacklistable — nobody can block recovery |
-| **R5** | Proven mean-reversion | Strong historical peg quality, prior depegs all recovered — demonstrated resilience |
+| **R5** | Proven mean-reversion | `Strong safety score` — a high safety/peg-quality track-record proxy (safetyScore ≥ 85) |
 
 ### Verdict mapping
 
@@ -108,7 +108,7 @@ The ordinal tiers are `recovery_likely` › `at_risk` › `recovery_unlikely`, p
 
 ```
 if key inputs missing (no MA review, no usable supply history, or no live price), AND coin not frozen  → insufficient_signal
-else if coin is frozen (below-peg), OR any K severe, OR (>= 2 K elevated AND no strong R among R1, R2)  → recovery_unlikely
+else if coin is frozen/terminal (any direction), OR any K severe, OR (>= 2 K elevated AND no strong R among R1, R2)  → recovery_unlikely
 else if no K elevated AND >= 2 strong R, including >= 1 of {R1, R2}                → recovery_likely
 else                                                                              → at_risk
 ```
@@ -131,7 +131,7 @@ Stage 2 is computed only when Stage 1 is `recovery_likely` or `at_risk`. For `re
 
 Stage 2 is an empirical **landmark survival** estimate over the clean corpus of *recovered* incidents.
 
-1. **Incident grouping + quarantine.** Event fragments for the same coin and direction are collapsed into incidents (reopens within 6h of the prior source event closing are merged even when the original incident start is days old; 6–24h reopens are flagged). Training inclusion is **not** verdict-gated — the depeg provenance side-table is unpopulated in production, so audit-verdict filtering would drop 100% of the corpus. Quality instead comes from incident grouping, a minimum-severity/duration floor that drops microstructure noise, and quarantine of flappy high-frequency coins (the rule that catches susd-synthetix, gusd-gemini, dola, and similar high-count flappers).
+1. **Incident grouping + quarantine.** Event fragments for the same coin and direction are collapsed into incidents (reopens within 6h of the prior source event closing are merged even when the original incident start is days old). Training inclusion is **not** verdict-gated — the depeg provenance side-table is unpopulated in production, so audit-verdict filtering would drop 100% of the corpus. Quality instead comes from incident grouping, a minimum-severity/duration floor that drops microstructure noise, and quarantine of flappy high-frequency coins (the rule that catches susd-synthetix, gusd-gemini, dola, and similar high-count flappers).
 
 2. **Stratification, most-dependable-first.** A dependable wide band beats a precise band built on three incidents. The MVP strata, in order of how readily they are dropped:
    - **direction** (`above` vs `below`) — overpeg and underpeg resolve on different clocks and are never pooled.

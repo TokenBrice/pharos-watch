@@ -197,8 +197,8 @@ Cron result statuses:
 | Status     | When                                                                               |
 | ---------- | ---------------------------------------------------------------------------------- |
 | `ok`       | At least one configured coin synced, and `failed + skipped <= ceil(total * 0.1)`   |
-| `degraded` | At least one configured coin synced, and `failed + skipped > ceil(total * 0.1)`    |
-| `error`    | No configured coin synced successfully and at least one coin failed or was skipped |
+| `degraded` | At least one configured coin synced and `failed + skipped > ceil(total * 0.1)`; OR no coin synced but every skip was a circuit-breaker hold (no real failures, no budget-deferred tail) |
+| `error`    | No configured coin synced and at least one coin truly failed or was budget-deferred (`failed > 0` or `deferredSkipped > 0`) |
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
@@ -431,8 +431,8 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `liquity-native-active-pool` | `onchain-evm`                                   | `collateral-mix`                                      | 1                |
 | `liquity-v2-branches`      | `onchain-evm`                                    | `collateral-mix`                                      | 7                |
 | `lista`                    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `m0`                       | `http-json`                                      | `protocol-reserve`                                    | 8                |
-| `m0-wrapper-underlying`    | `onchain-evm`                                    | `single-asset`                                        | 2                |
+| `m0`                       | `http-json`                                      | `protocol-reserve`                                    | 7                |
+| `m0-wrapper-underlying`    | `onchain-evm`                                    | `single-asset`                                        | 3                |
 | `mento`                    | `http-json`                                      | `collateral-mix`                                      | 13               |
 | `nest-vault-positions`     | `http-json`                                      | `collateral-mix`                                      | 5                |
 | `openeden-usdo`            | `http-json`                                      | `collateral-mix`                                      | 1                |
@@ -579,7 +579,7 @@ To register a new adapter for a coin's `liveReservesConfig.adapter`, edit these 
 
 1. **Adapter fetch function** — add `worker/src/cron/reserve-adapters/<key>.ts` exporting `async function fetch<Name>Reserves(coin, config, signal, ctx?): Promise<AdapterResult>`. Adapter contract lives in `worker/src/cron/reserve-adapters/types.ts` (`AdapterFn`, `AdapterContext`, `AdapterResult`). Use helpers from `./helpers` rather than rebuilding fetch/parse/freshness primitives.
 2. **Registry wiring** — import the fetch function and add it to `ADAPTER_FNS` in `worker/src/cron/reserve-adapters/index.ts`.
-3. **Adapter key union** — append the new key to `LIVE_RESERVE_ADAPTER_KEYS` in `shared/types/live-reserve-adapter-keys.ts:1` (re-exported from `shared/types/live-reserves.ts`). The `LiveReserveAdapterKey` union (`live-reserve-adapter-keys.ts:61`) is derived from this array.
+3. **Adapter key union** — append the new key to `LIVE_RESERVE_ADAPTER_KEYS` in `shared/types/live-reserve-adapter-keys.ts:1` (re-exported from `shared/types/live-reserves.ts`). The `LiveReserveAdapterKey` union (`live-reserve-adapter-keys.ts:63`) is derived from this array.
 4. **Adapter definition** — add an entry to `LIVE_RESERVE_ADAPTER_DEFINITIONS` in `shared/lib/live-reserve-adapters-definitions.ts` declaring `sourceModel`, `evidenceClass`, `sharedSourceMode`, `redemptionTelemetry`, and optional `validation`. Determines whether the adapter renders as `Live`, `Curated-Validated`, or `Proof` and which freshness invariants run.
 5. **Provenance entry** — add the adapter to `LIVE_RESERVE_ADAPTER_PROVENANCE` in `shared/lib/live-reserve-adapter-provenance.ts` (source URLs, license, review cadence, parked/active state).
 6. **Params schema** — add a Zod schema to `adapterParamsSchemas` in `shared/lib/live-reserve-adapters-schemas.ts`. `parseLiveReserveAdapterParams("<key>", config.params)` resolves to this schema in the adapter body. Also extend `LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS` in the same file if the adapter takes a primary input kind not yet declared.

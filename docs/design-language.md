@@ -63,7 +63,7 @@ Public pages use this shell:
       {/* route content */}
     </main>
 
-    <footer className="border-t border-border/70 py-8 sm:py-10" />
+    <footer className="border-t border-border/70 py-6 sm:py-8" />
   </div>
 </div>
 ```
@@ -527,8 +527,8 @@ From production rendered charts:
 
 Common chart skeletons:
 
-- `rounded-lg bg-muted/30 animate-pulse relative overflow-hidden h-[250px] sm:h-[350px] w-full`
-- `bg-accent animate-pulse h-[250px] sm:h-[350px] w-full rounded-xl`
+- Default chart skeleton (`ChartSkeleton`): `pharos-chart-stage pharos-crossfade-layer skeleton-shimmer relative w-full overflow-hidden`, with `h-[250px] sm:h-[350px]` applied via the `className` prop (the shared `CHART_HEIGHT` default)
+- Bare shimmer placeholder (`Skeleton variant="default"`): `rounded-md bg-accent animate-pulse`
 - Blacklist hero chart uses `h-[220px] sm:h-[280px]`
 - Yield scatter plot uses `h-[420px]` (compact) or `h-[600px] sm:h-[850px]` (full) inside a bordered chart stage
 

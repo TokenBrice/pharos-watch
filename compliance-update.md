@@ -56,7 +56,7 @@ The MiCA authorized classifications are well supported by the current ESMA EMT r
 
 The largest issue is not MiCA status accuracy; it is GENIUS semantics and page projection. Several GENIUS rows encode a likely or announced pathway as if it were an achieved pathway. Because implementing regulations and state-certification mechanics remain proposed as of 2026-06-18, these should either move to a separate "intended pathway" field or be reset to `unknown` unless a public application, approval, or registration supports the pathway.
 
-The `/compliance` page does not expose every authored GENIUS data point. The source schema and `StablecoinClientMeta` type include fields such as `primaryFederalRegulator`, `foreignExceptionStatus`, `enforcementStatus`, `daspOfferSaleStatus`, `reserveDisclosurePresent`, `monthlyAttestationPresent`, `latestReportDate`, `reviewer`, and `reviewedAt`, but the client-registry projection omits several of them. This makes some verified data impossible to display.
+The `/compliance` page does not expose every authored GENIUS data point. The source schema and `StablecoinClientMeta` type include fields such as `primaryFederalRegulator`, `foreignExceptionStatus`, `enforcementStatus`, `daspOfferSaleStatus`, `reserveDisclosurePresent`, `monthlyAttestationPresent`, `latestReportDate`, `reviewer`, and `reviewedAt`. These are now all included in the `GENIUS_CLIENT_PROFILE_FIELDS` projection, so the data is available client-side; surfacing remaining dimensions in the UI is the open work.
 
 The GENIUS reserve-attestation dates need a normalization pass. Many rows have `monthlyAttestationPresent: true` without `latestReportDate`, and several existing dates are stale relative to current public reports.
 
@@ -64,7 +64,7 @@ The GENIUS reserve-attestation dates need a normalization pass. Many rows have `
 
 1. Fix GENIUS client projection.
 
-   `scripts/build-data/build-client-registry.mjs` should emit every GENIUS field that `shared/types/stablecoin-client-meta.ts` allows and that `src/app/compliance/model.ts` or the page docs expect. At minimum, add:
+   FIXED. All of the fields below are now members of `GENIUS_CLIENT_PROFILE_FIELDS` in `shared/types/stablecoin-client-meta.ts`, and `scripts/build-data/build-client-registry.mjs` projects every one via `readGeniusClientFields()` / `projectGeniusProfile()`:
 
    - `primaryFederalRegulator`
    - `foreignExceptionStatus`
@@ -80,11 +80,11 @@ The GENIUS reserve-attestation dates need a normalization pass. Many rows have `
 
 2. Fix the default `/compliance?regime=all` table behavior.
 
-   In `src/app/compliance/client.tsx`, `showReserveDisclosure={regimeFilter === "genius"}` hides reserve disclosure data in the default all-regime view, even for GENIUS rows. Show the reserve column whenever a table contains GENIUS rows, or split the all view by regime.
+   FIXED. `src/app/compliance/client.tsx` now passes `showReserveDisclosure={hasGeniusRows(rows)}`, which shows the reserve disclosure column whenever the filtered result contains any GENIUS row, including in the default all-regime view.
 
 3. Aggregate nested source references for page display.
 
-   The page source column currently depends on top-level `references`. Rows such as `cusd-celo` and `wemix-dollar-wemix` have evidence in nested fields but no top-level references, so the page displays no source even though source evidence exists. Either require top-level references for every GENIUS row or aggregate references from nested evidence fields in `src/app/compliance/model.ts`.
+   FIXED. `collectGeniusReferences` in `src/app/compliance/model.ts` now aggregates and dedupes references from top-level `references`, `applicabilityBasis`, `foreignExceptionEvidence`, and `negativeEvidenceReview`, so rows such as `cusd-celo` and `wemix-dollar-wemix` display their nested-evidence sources.
 
 4. Decide actual pathway vs intended pathway semantics.
 

@@ -226,7 +226,7 @@ Optional GitHub Actions checkout fallback:
 
 Scheduled artifact PR secret:
 
-- `OG_REFRESH_GITHUB_TOKEN` — a bot or PAT token used by `.github/workflows/og-refresh.yml` to push `automated/og-refresh` and open checked PRs. The workflow fails closed when this secret is absent because PRs created with the default `GITHUB_TOKEN` do not trigger the normal pull-request workflows.
+- `OG_REFRESH_GITHUB_TOKEN` — a bot or PAT token used by `.github/workflows/og-refresh.yml` to push `automated/og-refresh` and open checked PRs. The workflow fails closed when this secret is absent and OG screenshots have changed, because PRs created with the default `GITHUB_TOKEN` do not trigger the normal pull-request workflows. When `npm run og:capture` produces no image diff, the workflow completes without requiring the secret.
 
 Repository variables:
 

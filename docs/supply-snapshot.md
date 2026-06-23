@@ -214,7 +214,7 @@ The handler explicitly supports `detailProvider === "coingecko"` and `detailProv
 **File:** `src/hooks/use-stablecoins.ts`
 
 - Fetches `/api/supply-history?stablecoin=<id>&days=<days>`
-- Returns the response typed as `SupplyHistoryPoint[]`; the runtime query registry used by this hook attaches no Zod schema, so the payload is not runtime-validated in this path
+- Returns the response typed as `SupplyHistoryPoint[]`; the runtime query registry used by this hook attaches `SupplyHistoryResponseSchema` (`z.array(SupplyHistoryPointSchema)`), so the payload is runtime-validated in strict mode
 - Returns normalized `{ date, circulatingUsd, price }` points directly; there is no detail-endpoint transform in the hook anymore
 - TanStack Query: `staleTime = 24 hours`, `refetchInterval = 48 hours` (derived from the daily `CRON_24H` producer interval)
 
@@ -242,7 +242,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 
 | Condition | Behavior |
 |-----------|----------|
-| `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, or `legacy-array-not-allowed`) |
+| `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, `legacy-array-not-allowed`, or `filtered-malformed-entries`) |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
 | Today's UTC snapshot already written | Skip write (`reason: "already_written_today"`) |
 | 0 prepared rows with a non-empty expected PSI set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the 80% guard |

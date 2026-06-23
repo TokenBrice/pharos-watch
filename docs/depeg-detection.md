@@ -353,8 +353,8 @@ Orphan cleanup:
 
 `rowToDepegEvent()` converts D1 snake_case rows to frontend camelCase. It validates:
 
-- `direction` must be `"above"` or `"below"` (defaults to `"below"`)
-- `source` must be `"live"` or `"backfill"` (defaults to `"live"`)
+- `direction` must be `"above"` or `"below"` (an invalid value throws)
+- `source` must be `"live"` or `"backfill"` (an invalid value throws)
 - `closeReason` is `null` for open/legacy rows or one of the validated terminal reason strings above
 
 Frontend type (defined in `shared/types/market.ts`, re-exported through `shared/types/index.ts`):
@@ -437,13 +437,13 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 ### Component: DepegFeed (`depeg-feed.tsx`)
 
 - Responsive recent-events feed with progressive history pagination
-- Sorted by `startedAt` DESC
+- Sorted ongoing-first, then by `startedAt` DESC
 - Shows: logo, symbol, peak deviation colored by severity (green <50bps, amber 50-200bps, orange 200-500bps, red >=500bps), direction badge, LIVE pulsing indicator if ongoing, date, duration
 - Click navigates to `/stablecoin/{id}`
 
 ### Depeg dashboard stat context
 
-`DepegTrackerStats` (`src/components/depeg-tracker-stats.tsx`) now uses the shared contextual methodology pattern on key cards (`Active Depegs`, `Coins at Peg`, `Median Deviation`, `Worst Current`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology.
+`DepegTrackerStats` (`src/components/depeg-tracker-stats.tsx`) now uses the shared contextual methodology pattern on the key cards (`Active Depegs`, `Coins at Peg`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology.
 
 ### Component: DepegHistory (`depeg-history.tsx`)
 

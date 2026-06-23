@@ -19,7 +19,7 @@ Public mint/burn availability causes (`mint_burn_public_degraded`, `mint_burn_pu
 
 ## Remediation
 
-- **Backfill mint/burn events:** Admin page → Recommended actions → `backfill-mint-burn`. Idempotent.
+- **Backfill mint/burn events:** Admin page → Recommended now → `backfill-mint-burn`. Idempotent.
 - **Backfill mint/burn prices:** if divergence is USD-side, `backfill-mint-burn-prices` repopulates price columns.
 - **On-chain monitor unavailable:** usually indicates the recent `onchain_supply` monitor rows are missing or unreadable globally. Check the relevant supply-monitoring cron/status sections before treating it as a mint/burn config issue.
 

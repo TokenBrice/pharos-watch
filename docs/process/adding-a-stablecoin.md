@@ -685,7 +685,7 @@ Schema (mirrors `shared/types/chart-annotation.ts`):
 ```ts
 {
   ts: Date.UTC(YYYY, monthIdx, day), // months are 0-indexed
-  kind: "depeg" | "mint-burn-spike" | "blacklist-surge" | "governance" | "regulatory" | "methodology-change",
+  kind: "depeg" | "mint-burn-spike" | "blacklist-surge" | "exploit" | "governance" | "regulatory" | "methodology-change",
   label: string, // ≤80 chars
   severity?: "low" | "med" | "high",
   href?: string, // primary source — issuer post-mortem, regulator filing, methodology changelog
@@ -854,6 +854,7 @@ Do not hardcode branch or PR creation into the process. Follow the repo's curren
 - `daily`
 - `weekly`
 - `monthly`
+- `semi-monthly`
 - `quarterly`
 - `semi-annual`
 - `annual`

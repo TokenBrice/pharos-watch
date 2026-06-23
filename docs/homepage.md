@@ -69,7 +69,7 @@ Derived helpers:
 
 Starred stablecoin state is local to the browser:
 
-- localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` key is migrated once and then only echo-written for back-compat)
+- localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` and `pharos:yield-watchlist:v1` keys are read once, merged into the canonical key, then deleted)
 - value: normalized stablecoin ID array
 - invalid, inactive, duplicate, or over-limit IDs are ignored on read
 

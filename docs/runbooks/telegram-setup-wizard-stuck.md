@@ -8,7 +8,7 @@ Detection signals:
 
 - Users open `/start`, tap a branch button, and see no state change in the chat.
 - The chat is on a fresh slash command but the dispatcher behaves as if a non-expired `telegram_pending_disambiguation` row with `action_type = "setup-step"` still owns the flow.
-- The chat has no other pending state (no bulk confirm, no ticker disambiguation), but `/cancel` is the only way to clear the wizard.
+- The chat has no other pending state (no bulk confirm, no ticker disambiguation), yet a non-expired `setup-step` row still owns the flow. Any slash command from the initiating user clears the wizard, but only `/cancel` does so with an explicit "Setup cancelled." reply.
 
 The wizard persists state in `telegram_pending_disambiguation` with `action_type = "setup-step"` and a 5-minute TTL. Ingress ignores expired rows; the scheduled `telegram-disambiguation-cleanup` job removes them only after an additional grace window so cleanup does not race slow users.
 

@@ -15,7 +15,7 @@ Each tracked stablecoin carries a `mechanismArchetype` field. The six values (`f
 
 - **Hub shell:** `src/app/learn/mechanisms/page.tsx`
 - **Archetype shell:** `src/app/learn/mechanisms/[archetype]/page.tsx`
-- **Page-level shell (editorial display + breadcrumb):** `src/app/learn/mechanisms/explainer-shell.tsx` (`ExplainerPageShell`)
+- **Page-level shell (editorial display + breadcrumb):** `src/app/learn/_shared/learn-page-shell.tsx` (`LearnPageShell`)
 - **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/app/learn/mechanisms/content/index.ts` (`ARCHETYPE_CONTENT`)
 - **Per-archetype content modules:** `src/app/learn/mechanisms/content/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund}.ts`
@@ -68,7 +68,8 @@ Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 7. **"Variations"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`).
 8. **"What to watch on Pharos"** — kicker + `<h2>` + `<ol>` with a 2-digit mono prefix (`01`, `02`, …) and hairline dividers. No card chrome.
 9. **"Tracked universe"** (`TrackedCoinList`) — kicker + `<h2>` + `<ul>` of all active coins via `getActiveByArchetype` (variants nested). Each row: mono ticker + name + right arrow (no note). Footer links to the screener plus `+N upcoming` / `+N frozen` deep-links.
-10. **"Continue reading"** — section above a top border. 2-column grid of color-on-hover row links (text + bottom border turn `frost-blue` on hover), with `ArrowUpRight` glyph.
+10. **"Case studies"** (`MechanismCaseStudies`) (optional, only when a study in `CASE_STUDY_LIST` is tagged with this archetype) — kicker + `<h2>` ("When this mechanism met a stress test") + `<ul>` of matching case studies in canonical list order. Each row: mono eyebrow + title + outcome chip (`CASE_STUDY_OUTCOME_CHIPS`/`_LABELS`), linking to `/learn/case-studies/<slug>/`. Server-rendered.
+11. **"Continue reading"** — section above a top border. 2-column grid of color-on-hover row links (text + bottom border turn `frost-blue` on hover), with `ArrowUpRight` glyph.
 
 The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Six ways a stablecoin holds its peg`), a server-rendered "Start Here" cluster for high-signal collateral/failure-mode paths, a `MechanismComparisonMatrix`, and an editorial vertical `<ol>` table of contents. The matrix links each mechanism label directly to its archetype explainer so the first comparison surface is also a crawlable deep-link hub. Each table-of-contents row: numbered index (`01`–`06`) + tracked/upcoming/frozen/dead count context from mechanism lifecycle helpers (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
 
@@ -86,7 +87,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 
 ## Coverage Invariant
 
-`npm run check:archetype-explainer-coverage` (`scripts/ci/check-archetype-explainer-coverage.ts`, registered in `scripts/lib/validate-contract.mjs` immediately after `check:mechanism-archetype-coverage`) asserts, for every `MECHANISM_ARCHETYPE_VALUES`:
+`npm run check:archetype-explainer-coverage` (`scripts/ci/check-archetype-explainer-coverage.ts`, registered in `scripts/lib/validation-command-registry.mjs` immediately after `check:mechanism-archetype-coverage`) asserts, for every `MECHANISM_ARCHETYPE_VALUES`:
 
 - non-empty label + one-liner in `mechanism-archetypes.ts`
 - a non-stub content module exists in the registry

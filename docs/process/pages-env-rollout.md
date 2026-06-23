@@ -76,7 +76,7 @@ After the workflow finishes (`gh run list --workflow="Rebuild Pages" --limit 1`)
    - `QUIET_DEVIATIONS` → peg-deviation card uses muted calm/warn/severe colors on small deviations.
    - `MOBILE_STICKY_SUMMARY` → compact bar with logo/symbol/price/grade sticks at the top on mobile after scrolling past the hero.
    - `BLACKLIST_BANNER` → amber "N freezes in the last 7 days" banner above Safety Score on coins with ≥5 freezes or any destroys.
-   - `HERO_VERDICT` → italic `oneLiner` paragraph below the title row, above the AI summary.
+   - `HERO_VERDICT` → archetype label pill (e.g. "Yield-Bearing Hybrid") below the classification line in the hero card; the `oneLiner` paragraph is always shown when populated and is not gated by this flag.
    - `CHART_ANNOTATIONS` → vertical dashed lines on the USDC market-cap chart around March 2023 (SVB).
 
 ## Rollback

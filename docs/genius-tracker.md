@@ -169,7 +169,7 @@ Always include `sourceDate` / `accessedAt` where available so the review is date
 
 GENIUS effective-date and rulemaking-phase state is centralized in `shared/lib/compliance-regime-state.ts` (`GENIUS_REGIME_STATE`), **not** per coin. Update that object when primary-regulator final rules are issued or the statutory fallback effective date changes. `rulemakingPhase` ∈ `pre-rulemaking` | `proposed-rules` | `final-rules-issued` | `effective`.
 
-The compliance page renders **Implementation Watch** (separate from the main authorization table) while `rulemakingPhase !== "effective"` — GENIUS rows are forward-looking until the regime is live. `sourceReferences` lets the effective-date posture cite multiple regulator rulemaking sources (OCC, FDIC, FinCEN/OFAC, Treasury), not just one. Keep `reviewedAt` current when re-verified.
+The compliance page renders **Implementation Watch** (separate from the main authorization table) while `rulemakingPhase !== "effective"`, and for pre-launch coins even after the regime is live — those rows never graduate to the main authorization table. GENIUS rows are forward-looking until the regime is effective. `sourceReferences` lets the effective-date posture cite multiple regulator rulemaking sources (OCC, FDIC, FinCEN/OFAC, Treasury), not just one. Keep `reviewedAt` current when re-verified.
 
 ---
 

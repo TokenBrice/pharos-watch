@@ -149,8 +149,8 @@ The `/coverage` page model lives under `src/lib/coverage/` as one module per fea
 - The feature's preset table (when applicable).
 - The `resolve<Feature>Coverage(...)` function that maps a `StablecoinMeta` (plus auxiliary inputs) to a `CoverageStatus`.
 - A `format<Feature>Breakdown(rows, breakdownMap)` callback returning `CoverageBreakdownItem[]`.
-- The `<FEATURE>_STATUS_KINDS` array enumerating every `kind` the resolver can produce, used by the legend invariant.
-- A `<FEATURE>_LEGEND_ITEMS` list of `{ kind, label, description }` entries aggregated into the global legend.
+- The `statusKinds` property on the exported `coverageFeature` object (backed by a module-private `<FEATURE>_KINDS` array) enumerating every `kind` the resolver can produce, used by the legend invariant.
+- The `legendItems` property on the exported `coverageFeature` object (backed by a module-private `<FEATURE>_LEGEND` const) — a list of `CoverageLegendItem` entries of shape `{ term, description, kinds[] }` aggregated into the global legend.
 
 `src/lib/coverage.ts` is a thin orchestrator + barrel — it re-exports every public symbol so consumers can keep importing from `@/lib/coverage`, and it owns the cross-feature helpers (`buildCoverageRow`, `buildCoverageFeatureSummary`, `countAvailableFeatures`, `countHeadlineFeatures`, `isHeadlineFeatureCovered`). `buildCoverageFeatureSummary` calls `feature.formatBreakdown(rows, breakdownMap)` inline — adding a new feature requires providing the callback, otherwise TypeScript fails the build.
 

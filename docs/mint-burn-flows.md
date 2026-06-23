@@ -77,7 +77,7 @@ Token identity now resolves from the shared stablecoin registry in `shared/lib/s
 
 ### Representative Stablecoins
 
-Current scope: **141 contract configs** across **140 stablecoin IDs** (7 critical + 134 extended).
+Current scope: **140 contract configs** across **140 stablecoin IDs** (7 critical + 133 extended).
 
 March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. GYD was later removed when the asset moved to the cemetery. The broader active wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
 
@@ -750,7 +750,7 @@ Current production scope already spans configured issuance chains. Planned next 
 | `worker/src/lib/mint-burn-pipeline/price-heal.ts` | Shared NULL-price auto-heal helper |
 | `worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection |
 | `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
-| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit override addresses for special vault events |
+| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts (no explicit address overrides; both reUSD configs track canonical zero-address Transfers) |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: pressure shift (FIS), gauge, flight-to-quality |
 | `worker/src/api/mint-burn-flows.ts` | API handler: route-level aggregate + per-coin orchestration |
 | `worker/src/api/mint-burn-flows-shared.ts` | Shared mint/burn cache fallback, cron snapshot, baseline, and coverage helpers |

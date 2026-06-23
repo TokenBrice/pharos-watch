@@ -61,8 +61,8 @@ The route does not call the Worker API directly. It is a metadata-driven surface
 
 - a top overview band summarizing tracked pre-launch coverage by phase
 - multi-select `Phase` filters over `announced`, `testnet`, `auditing`, `beta`, and `launching-soon`
-- multi-select `Peg` filters, shown only when the current pre-launch set contains more than one peg currency
 - multi-select `Backing` filters, shown only when the current pre-launch set contains more than one backing class
+- multi-select `Peg` filters, shown only when the current pre-launch set contains more than one peg currency
 - single-select `Sort` options:
   - `Expected Launch`
   - `Announced Date`

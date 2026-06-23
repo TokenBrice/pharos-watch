@@ -70,7 +70,7 @@ For the deceptive-content category specifically, build a mental model of what a 
 
 #### A. Inline-script phishing signatures (most common — 2026-05-12 root cause)
 
-**Signature:** A `<script>` block in the HTML containing `try{`, `location.hash`, `URLSearchParams`, `replaceState`, and a `window.__SOMETHING_TOKEN__` assignment. Especially dangerous when this is in a root layout and ships to every page.
+**Signature:** A `<script>` block in the HTML matching any of the CI guardrail's four independent phishing-kit patterns: `history.replaceState` near a credential keyword (`verify`/`token`/`auth`/`key`/`session`/`otp`/`magic`); `URLSearchParams(` over `location.hash`; a `window.__*_(TOKEN|KEY|SECRET|AUTH)__` global assignment; or the textbook `try{ … location.hash … replaceState … }catch` shape. Any single pattern is deploy-blocking. Especially dangerous when one of these is in a root layout and ships to every page.
 
 **Fix:** Move the logic into a React effect that mounts on the specific route. Remove the inline script entirely. Token-in-URL discipline rule in `docs/security-governance.md` formalizes this.
 

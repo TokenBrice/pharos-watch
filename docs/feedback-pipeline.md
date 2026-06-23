@@ -119,7 +119,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 
 Implemented in D1 via the `feedback_rate_limit` table. Logic:
 
-1. The client IP is taken from `CF-Connecting-IP` → `X-Forwarded-For` → `"unknown"`.
+1. The client IP is taken from `CF-Connecting-IP`, falling back to `"unknown"`. `X-Forwarded-For` is deliberately not consulted — trusting that client-controlled header would let a caller rotate the rate-limit bucket.
 2. The IP is hashed: `SHA-256(ip + FEEDBACK_IP_SALT)`, truncated to 32 hex characters.
 3. A single SQL statement atomically inserts only when the 10-minute count is below 3:
    - `INSERT INTO ... SELECT ... WHERE (SELECT COUNT(*)) < 3`
@@ -178,7 +178,7 @@ The verification result produces one of three GitHub labels:
 | Label | Meaning |
 |-------|---------|
 | `verified: confirmed` | `\|deviation\| > 1%` — the data issue is likely real |
-| `verified: unconfirmed` | Price available but within 1% — data looks OK |
+| `verified: unconfirmed` | Price absent, or present and within 1% of peg — data is not confirmed wrong |
 | `verified: pending` | Cache unavailable at submission time |
 
 The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot (at time of submission) ---**` section.

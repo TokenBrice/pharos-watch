@@ -51,7 +51,7 @@ The route renders:
 2. Hero copy that makes the auth model explicit:
    - external integrations use `https://api.pharos.watch`
    - protected public routes require `X-API-Key`
-   - only a narrow no-key set remains on the public host (`health`, OG images, `feedback`, self-serve key request/verify, `telegram-webhook` with Telegram secret auth, and Telegram Mini App session/mutation with signed `initData`)
+   - only a narrow no-key set remains on the public host (`health`, OG images, `feedback`, self-serve key request/verify, and `telegram-webhook` with Telegram secret auth); the Telegram Mini App session/mutation no-key exception (signed `initData`) is called out in the access FAQ
    - the website itself uses the internal `/_site-data/*` lane instead
    - operators use Cloudflare Access on the ops hosts, not public API keys
 3. Three top-fold lane cards:

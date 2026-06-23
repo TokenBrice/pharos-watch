@@ -5,9 +5,9 @@ Planning doc for the second baseline squash of `worker/migrations/`. Execution i
 ## Why squash now
 
 - The previous squash (`0000_baseline.sql`, S-014) landed on **2026-03-25**, consolidating migrations 0001–0071.
-- Since then the tree has grown to **81 individual migrations** (0072–0153, excluding retired 0086 `treasury_stable_exposure_history`) plus the baseline, with **1 retired** entry recorded in the manifest.
-- Total active `.sql` files under `worker/migrations/` today: **82** (verified via `find worker/migrations -maxdepth 1 -type f -name '*.sql' | wc -l`).
-- Fresh-database setup currently replays the baseline plus 81 sequential migrations — well past where 0001–0071 sat before the first squash. The next squash should be planned, not reactive.
+- Since then the tree has grown to **92 individual migrations** (0072–0164, excluding retired 0086 `treasury_stable_exposure_history`) plus the baseline, with **1 retired** entry recorded in the manifest.
+- Total active `.sql` files under `worker/migrations/` today: **93** (verified via `find worker/migrations -maxdepth 1 -type f -name '*.sql' | wc -l`).
+- Fresh-database setup currently replays the baseline plus 92 sequential migrations — well past where 0001–0071 sat before the first squash. The next squash should be planned, not reactive.
 
 ## Squash policy
 

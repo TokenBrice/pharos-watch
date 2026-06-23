@@ -134,7 +134,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
   - `context.ts` — `WebhookCommandContext` shape passed to every handler
   - `action-runner.ts` — shared `/subscribe`, `/unsubscribe`, `/set` coin-resolution + bulk-confirm flow (also used by Ingress's disambiguation reply path)
 - `worker/src/api/telegram-webhook-disambiguation-selection.ts` — executes pending disambiguation selections from callback replies through the shared action runner
-  - One file per command: `start.ts`, `help.ts`, `list.ts`, `status.ts`, `brief.ts`, `top.ts`, `why.ts`, `coverage.ts`, `health.ts`, `subscribe.ts`, `unsubscribe.ts`, `set.ts`, `settings.ts`, `mute.ts`, `timezone.ts`, `unmutehours.ts`, `unsnooze.ts`, `cancel.ts`, `presets.ts`, `forget.ts`, `sample.ts`, `single-target.ts` (shared helper for `/why` and `/coverage`)
+  - One file per command: `start.ts`, `help.ts`, `list.ts`, `status.ts`, `brief.ts`, `top.ts`, `why.ts`, `coverage.ts`, `health.ts`, `subscribe.ts`, `unsubscribe.ts`, `set.ts`, `settings.ts`, `mute.ts`, `pause.ts`, `timezone.ts`, `unmutehours.ts`, `unsnooze.ts`, `cancel.ts`, `presets.ts`, `forget.ts`, `export.ts`, `import.ts`, `sample.ts`, `single-target.ts` (shared helper for `/why` and `/coverage`)
 - `worker/src/api/telegram-webhook-messages.ts` (message builders shared across handlers)
 - `worker/src/api/telegram-webhook-insights.ts` (`/top`, `/why`, `/coverage` data-loading and rendering; `/why` and `/coverage` attach the status discovery keyboard in every chat, with Mini App buttons only in private chats)
 - `worker/src/api/telegram-webhook-status.ts` (the `/status` data loader)
@@ -172,6 +172,8 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 - `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly)
 - `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, cheap chunk estimation, newest-first pre-format selection, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
+- `worker/src/cron/dispatch-telegram-overflow.ts` (overflow plan cache and lazy format/enqueue of the over-budget tail)
+- `worker/src/cron/dispatch-telegram-terminal-targets.ts` (`pruneAlreadyTerminalSubscribers`: drops already-terminal dedupe-key targets before fresh send)
 - `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, alert context/reason builders, durable job manifests, per-target audit)
 - `worker/src/cron/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
 - `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery; same five-minute lane)

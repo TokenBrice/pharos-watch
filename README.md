@@ -19,7 +19,7 @@ Public-facing analytics dashboard tracking 407 stablecoins in repo metadata: 370
 ## Features
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
-- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, UAH, ARS, KGS, NGN, XOF, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
+- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, UAH, ARS, KGS, NGN, XOF, VND, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — 15-minute peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **FreezeWatch** — primary surface for issuer control over stablecoin balances, with a Freezable Supply Meter, Intervention Seismograph, and Sovereignty Lattice on top of 6-hourly on-chain tracking of 35 stablecoins (full list in `docs/blacklist-tracker.md`; examples: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, …) freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
@@ -33,7 +33,7 @@ Public-facing analytics dashboard tracking 407 stablecoins in repo metadata: 370
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 88 curated dead stablecoins plus 5 frozen archives documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 310 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 313 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
 - **Public API access + private operator admin** — self-serve email-verified API keys on `/api/`, read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/` and API management on `ops.pharos.watch/admin-api/`
 - **Backing type breakdown** — active public surfaces expose RWA-backed and crypto-backed cohorts; algorithmic remains a legacy metadata label only, with no generated algorithmic backing route because there are no active algorithmic assets
@@ -84,7 +84,7 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and configured issuance-chain mint/burn event ingestion (Alchemy) | 6h / 30 min                       |
 | [api.frankfurter.dev](https://api.frankfurter.dev/v1/latest)           | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, MYR, and KRW         | 30 min cooldown inside 15-min slot |
 | [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set      | 30 min FX lane, additionally rate-limited to ~55 min |
-| [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, ARS, KGS, and NGN, plus full-set fallback coverage when Frankfurter fails | 30 min cooldown inside 15-min slot |
+| [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, ARS, KGS, NGN, XOF, and VND, plus full-set fallback coverage when Frankfurter fails | 30 min cooldown inside 15-min slot |
 | [ExchangeRate-API](https://www.exchangerate-api.com/)                   | Tertiary live full-set FX fallback when both Frankfurter and the secondary FX mirrors are unavailable      | 30 min cooldown inside 15-min slot |
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 30 min cooldown inside 15-min slot |
 | [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / [New York Fed EFFR](https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json) / Treasury.gov yield curve XML / ECB Data API / SIX delayed SARON guest access | USD, USD EFFR, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`), with Treasury.gov and FRED DFF as fallback feeds | Daily                             |
