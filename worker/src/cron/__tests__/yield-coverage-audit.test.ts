@@ -29,6 +29,7 @@ import {
 } from "../yield-coverage-audit";
 import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
 import { loadDlStablecoinPools } from "../yield-sync/sources";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { YieldAdapterLifecycleEntry } from "../yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
@@ -119,6 +120,18 @@ describe("runYieldCoverageAudit", () => {
       if (key === "yield-rankings") {
         return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
       }
+      if (key === "report_card_cache") {
+        return {
+          value: JSON.stringify({
+            scores: {
+              "dllr-sovryn": { score: 49, grade: "D" },
+            },
+            updatedAt: Math.floor(Date.now() / 1000),
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          }),
+          updatedAt: Math.floor(Date.now() / 1000),
+        };
+      }
       return null;
     });
     mockComputeSafetyScoresSnapshot.mockResolvedValue({
@@ -182,8 +195,10 @@ describe("runYieldCoverageAudit", () => {
             safetyScoresComputed: 1,
             safetyScoresExpected: 1,
           },
+          safetySnapshotSource: "report-card-cache",
         },
       });
+    expect(mockComputeSafetyScoresSnapshot).not.toHaveBeenCalled();
     expect(progressUpdates.find((update) => update.stage === "quarantine-probe" && update.itemsDone === 4))
       .toMatchObject({
         metadata: {

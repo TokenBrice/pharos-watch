@@ -821,6 +821,104 @@ describe("handleBackfillSupplyHistory", () => {
     ]);
   });
 
+  it("shares same-chain block search cache across historical totalSupply coins in one page", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const day = Math.floor(Date.UTC(2026, 5, 9) / 1000);
+    const blockNumber = 22_500_000;
+    const blockSearchCaches: unknown[] = [];
+    const onChainRawSupplyByCall = [
+      6_700_000n * 10n ** 18n,
+      4_000_000n * 10n ** 6n,
+    ];
+
+    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockImplementation(async (_chain, _timestamp, cache) => {
+      blockSearchCaches.push(cache);
+      return blockNumber;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.includes("/coins/ember-earn/market_chart/range")) {
+        return new Response(
+          JSON.stringify({
+            market_caps: [[day * 1000, 1_000]],
+            prices: [[day * 1000, 1.02]],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/coins/ember-earn?")) {
+        return new Response(
+          JSON.stringify({ market_data: { circulating_supply: 0 } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("fake-eth-rpc")) {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+          params?: Array<{ data?: string } | string>;
+        };
+        expect(body.method).toBe("eth_call");
+        const call = body.params?.[0];
+        const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
+        expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
+        const raw = onChainRawSupplyByCall.shift();
+        if (raw == null) throw new Error("Unexpected extra historical totalSupply call");
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const chainRpcs = new Map<string, ChainRpcConfig>([
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://fake-eth-rpc.test",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
+    ]);
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?batch=96&batchSize=3&startDay=2026-06-09&endDay=2026-06-09"),
+      true,
+      makeApiRequest("/api/backfill-supply-history?batch=96&batchSize=3&startDay=2026-06-09&endDay=2026-06-09", {
+        adminKey: "secret",
+      }),
+      null,
+      chainRpcs,
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+      skipped?: string[];
+    };
+    expect(body.coinsProcessed).toBe(3);
+    expect(body.rowsInserted).toBe(2);
+    expect(body.errors).toBeUndefined();
+    expect(body.skipped).toEqual(["ZYS"]);
+    expect(blockSearchCaches).toHaveLength(2);
+    expect(blockSearchCaches[0]).toBe(blockSearchCaches[1]);
+
+    const inserts = capturedStatements.filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(inserts.map((stmt) => stmt.args[0])).toEqual([
+      "autousd-auto-finance",
+      "eearn-ember",
+    ]);
+  });
+
   it("backfills USG historical supply after subtracting PegKeeper balances", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
     const snapshotDate = Math.floor(Date.UTC(2026, 4, 9) / 1000);

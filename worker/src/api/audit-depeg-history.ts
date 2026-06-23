@@ -38,6 +38,9 @@ const AUDIT_CG_FETCH_CONCURRENCY = 4;
 // upstream outage rather than genuine per-event errors: mark the result
 // upstreamReachable=false and refuse to persist provenance for the batch.
 const AUDIT_UPSTREAM_OUTAGE_ERROR_RATIO = 0.5;
+const PSI_SUPPLY_NEAREST_SNAPSHOT_MARGIN_SEC = 14 * DAY_SECONDS;
+const PSI_RECOMPUTE_SUPPLY_LOOKBACK_SEC = 7 * DAY_SECONDS + PSI_SUPPLY_NEAREST_SNAPSHOT_MARGIN_SEC;
+const AUDIT_MIN_SUPPLY_LOOKUP_MARGIN_SEC = 30 * DAY_SECONDS;
 
 class AuditMutationCommitError extends Error {
   constructor(message: string) {
@@ -447,6 +450,48 @@ function addAffectedDays(affectedDays: Set<number>, startedAt: number, endedAt: 
   }
 }
 
+async function loadSupplyHistoryRowsForWindow(
+  db: D1Database,
+  startSec: number,
+  endSec: number,
+): Promise<PsiSupplyRow[]> {
+  const rows = await db
+    .prepare(
+      `SELECT stablecoin_id, snapshot_date, circulating_usd
+       FROM supply_history
+       WHERE snapshot_date BETWEEN ? AND ?
+       ORDER BY snapshot_date`,
+    )
+    .bind(Math.max(0, startSec), endSec)
+    .all<PsiSupplyRow>();
+  return rows.results ?? [];
+}
+
+function getRecomputeSupplyHistoryWindow(sortedDays: readonly number[]): { startSec: number; endSec: number } | null {
+  const firstDay = sortedDays[0];
+  const lastDay = sortedDays[sortedDays.length - 1];
+  if (firstDay == null || lastDay == null) return null;
+  return {
+    startSec: Math.max(0, firstDay - PSI_RECOMPUTE_SUPPLY_LOOKBACK_SEC),
+    endSec: lastDay + PSI_SUPPLY_NEAREST_SNAPSHOT_MARGIN_SEC,
+  };
+}
+
+function getAuditMinSupplyHistoryWindow(events: readonly DepegRow[]): { startSec: number; endSec: number } | null {
+  let minStartedAt = Infinity;
+  let maxStartedAt = -Infinity;
+  for (const event of events) {
+    if (!Number.isFinite(event.started_at)) continue;
+    minStartedAt = Math.min(minStartedAt, event.started_at);
+    maxStartedAt = Math.max(maxStartedAt, event.started_at);
+  }
+  if (!Number.isFinite(minStartedAt) || !Number.isFinite(maxStartedAt)) return null;
+  return {
+    startSec: Math.max(0, minStartedAt - AUDIT_MIN_SUPPLY_LOOKUP_MARGIN_SEC),
+    endSec: maxStartedAt + AUDIT_MIN_SUPPLY_LOOKUP_MARGIN_SEC,
+  };
+}
+
 function isSyntheticSplitPair(previous: DepegRow, next: DepegRow): boolean {
   if (previous.stablecoin_id !== next.stablecoin_id) return false;
   if (previous.direction !== next.direction) return false;
@@ -675,10 +720,11 @@ async function buildRecomputeStabilityStatements(
 
   const sortedDays = [...affectedDays].sort((a, b) => a - b);
   const now = Math.floor(Date.now() / 1000);
-  const allSupply = await db
-    .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
-    .all<PsiSupplyRow>();
-  const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
+  const supplyWindow = getRecomputeSupplyHistoryWindow(sortedDays);
+  const supplyRows = supplyWindow
+    ? await loadSupplyHistoryRowsForWindow(db, supplyWindow.startSec, supplyWindow.endSec)
+    : [];
+  const supplyByCoin = buildSupplySnapshotMap(supplyRows);
 
   const statements: D1PreparedStatement[] = [];
   let daysRecomputed = 0;
@@ -1192,15 +1238,19 @@ export async function auditEvents(
   options: AuditEventsOptions,
 ): Promise<AuditResult> {
   const { events, minSupply, symbolFilter, offset, limit, dryRun } = options;
+  const symbolFilteredEvents = symbolFilter
+    ? events.filter((event) => event.symbol.toUpperCase() === symbolFilter)
+    : events;
 
   // Build supply lookup only when min-supply > 0
   let getSupplyAtTime: ((coinId: string, ts: number) => number) | null = null;
-  if (minSupply > 0) {
-    const supplyRows = await db
-      .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
-      .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+  if (minSupply > 0 && symbolFilteredEvents.length > 0) {
+    const supplyWindow = getAuditMinSupplyHistoryWindow(symbolFilteredEvents);
+    const supplyRows = supplyWindow
+      ? await loadSupplyHistoryRowsForWindow(db, supplyWindow.startSec, supplyWindow.endSec)
+      : [];
     const supplyByCoin = new Map<string, { date: number; supply: number }[]>();
-    for (const r of supplyRows.results ?? []) {
+    for (const r of supplyRows) {
       const list = supplyByCoin.get(r.stablecoin_id) ?? [];
       list.push({ date: r.snapshot_date, supply: r.circulating_usd });
       supplyByCoin.set(r.stablecoin_id, list);
@@ -1219,8 +1269,7 @@ export async function auditEvents(
   }
 
   // Apply filters: symbol, min-supply, geckoId presence
-  const filtered = events.filter((e) => {
-    if (symbolFilter && e.symbol.toUpperCase() !== symbolFilter) return false;
+  const filtered = symbolFilteredEvents.filter((e) => {
     if (minSupply > 0 && getSupplyAtTime) {
       if (getSupplyAtTime(e.stablecoin_id, e.started_at) < minSupply) return false;
     }

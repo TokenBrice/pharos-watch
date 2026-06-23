@@ -3,6 +3,7 @@ import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 const fetchWithRetryMock = vi.fn();
+const DAY_SECONDS = 86_400;
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
@@ -204,7 +205,7 @@ describe("handleAuditDepegHistory method safety", () => {
         rows: [],
       },
       {
-        match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date",
+        match: "FROM supply_history",
         rows: [{ stablecoin_id: "usdt-tether", snapshot_date: 1_799_971_200, circulating_usd: 1_000_000_000 }],
       },
       { match: "INSERT INTO stability_index", rows: [], throwError: new Error("insert failed") },
@@ -218,6 +219,13 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("no changes were committed");
+    const affectedDay = Math.floor(rows[0].started_at / DAY_SECONDS) * DAY_SECONDS;
+    const supplyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM supply_history"));
+    expect(supplyQuery?.sql).toContain("WHERE snapshot_date BETWEEN ? AND ?");
+    expect(supplyQuery?.binds).toEqual([
+      affectedDay - 21 * DAY_SECONDS,
+      affectedDay + 14 * DAY_SECONDS,
+    ]);
   });
 
   it("surfaces synthetic split repair candidates in dry-run mode", async () => {
@@ -255,7 +263,7 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
       { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
       {
-        match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date",
+        match: "FROM supply_history",
         rows: [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1_000_000_000 }],
       },
       {
@@ -350,7 +358,7 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
       { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
       {
-        match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date",
+        match: "FROM supply_history",
         rows: [{ stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 50_000_000 }],
       },
       {
@@ -510,6 +518,74 @@ describe("handleAuditDepegHistory method safety", () => {
 
     expect(result.deletedEvents).toHaveLength(0);
     expect(result.rejectedByValidationCount ?? 0).toBeGreaterThan(0);
+  });
+
+  it("bounds min-supply history lookup to the audited event window", async () => {
+    fetchWithRetryMock.mockReset();
+    const firstStartedAt = 1_800_000_000;
+    const secondStartedAt = firstStartedAt + 2 * DAY_SECONDS;
+    const events = [
+      {
+        id: 101,
+        stablecoin_id: "unknown-a",
+        symbol: "UNKA",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -150,
+        started_at: firstStartedAt,
+        ended_at: firstStartedAt + 3600,
+        start_price: 0.985,
+        peak_price: 0.985,
+        recovery_price: 0.999,
+        peg_reference: 1,
+        source: "live",
+        confirmation_sources: null,
+        pending_reason: null,
+      },
+      {
+        id: 102,
+        stablecoin_id: "unknown-b",
+        symbol: "UNKB",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -150,
+        started_at: secondStartedAt,
+        ended_at: secondStartedAt + 3600,
+        start_price: 0.985,
+        peak_price: 0.985,
+        recovery_price: 0.999,
+        peg_reference: 1,
+        source: "live",
+        confirmation_sources: null,
+        pending_reason: null,
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "FROM supply_history",
+        rows: [{ stablecoin_id: "unknown-a", snapshot_date: firstStartedAt, circulating_usd: 250_000_000 }],
+      },
+    ]) as MockD1Database;
+
+    const result = await auditEvents(db, {
+      events,
+      minSupply: 100_000_000,
+      symbolFilter: null,
+      offset: 0,
+      limit: 10,
+      dryRun: true,
+    });
+
+    expect(result.totalMatching).toBe(1);
+    expect(result.auditedEvents).toEqual([
+      expect.objectContaining({ id: 101, verdict: "skipped" }),
+    ]);
+    const supplyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM supply_history"));
+    expect(supplyQuery?.sql).toContain("WHERE snapshot_date BETWEEN ? AND ?");
+    expect(supplyQuery?.binds).toEqual([
+      firstStartedAt - 30 * DAY_SECONDS,
+      secondStartedAt + 30 * DAY_SECONDS,
+    ]);
   });
 
   it("blocks audit provenance invalidation against sealed DDRv2 events", async () => {

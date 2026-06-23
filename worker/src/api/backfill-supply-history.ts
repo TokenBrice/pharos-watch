@@ -90,6 +90,8 @@ interface ResolvedSupplyBackfillWindow extends SupplyBackfillWindow {
   done: boolean;
 }
 
+type EvmBlockSearchCacheByChain = Map<string, EvmBlockSearchCache>;
+
 function validateSupplyBackfillCursor(payload: unknown): SupplyBackfillContinuationCursor | null {
   if (payload == null || typeof payload !== "object" || Array.isArray(payload)) return null;
   const record = payload as Record<string, unknown>;
@@ -292,6 +294,18 @@ function rawTokenAmountToNumber(raw: bigint, decimals: number): number | null {
   return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
+function getBlockSearchCacheForChain(
+  cachesByChain: EvmBlockSearchCacheByChain | undefined,
+  chain: string,
+): EvmBlockSearchCache {
+  if (!cachesByChain) return { blockTimestampByNumber: new Map() };
+  const existing = cachesByChain.get(chain);
+  if (existing) return existing;
+  const next: EvmBlockSearchCache = { blockTimestampByNumber: new Map() };
+  cachesByChain.set(chain, next);
+  return next;
+}
+
 async function fetchHistoricalAdjustedSupplyRaw(input: {
   contract: ContractDeployment;
   holderAddresses: readonly string[];
@@ -335,6 +349,7 @@ async function backfillHistoricalOnChainSupply(
   meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
   options: {
     chainRpcs?: Map<string, ChainRpcConfig>;
+    blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
@@ -356,7 +371,7 @@ async function backfillHistoricalOnChainSupply(
     return { rows: 0, error: "no completed UTC days in historical on-chain supply backfill window" };
   }
 
-  const blockSearchCache: EvmBlockSearchCache = { blockTimestampByNumber: new Map() };
+  const blockSearchCache = getBlockSearchCacheForChain(options.blockSearchCachesByChain, contract.chain);
   const stmts: D1PreparedStatement[] = [];
   let blockMisses = 0;
   let supplyMisses = 0;
@@ -424,6 +439,7 @@ async function backfillHistoricalTotalSupply(
   meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
   options: {
     chainRpcs?: Map<string, ChainRpcConfig>;
+    blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
     priceSeries?: TimestampedRatePoint[];
     requirePrice: boolean;
     window?: SupplyBackfillWindow;
@@ -465,7 +481,7 @@ async function backfillHistoricalTotalSupply(
     return interpolated && interpolated > 0 ? interpolated : null;
   }
 
-  const blockSearchCache: EvmBlockSearchCache = { blockTimestampByNumber: new Map() };
+  const blockSearchCache = getBlockSearchCacheForChain(options.blockSearchCachesByChain, contract.chain);
   const stmts: D1PreparedStatement[] = [];
   let blockMisses = 0;
   let supplyMisses = 0;
@@ -559,6 +575,7 @@ async function backfillCommodity(
     protocolSlug?: string;
     cgApiKey?: string | null;
     chainRpcs?: Map<string, ChainRpcConfig>;
+    blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
@@ -619,6 +636,7 @@ async function backfillCommodity(
 
     const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
       chainRpcs: config.chainRpcs,
+      blockSearchCachesByChain: config.blockSearchCachesByChain,
       priceSeries: normalizeCoinGeckoDailyPrices(marketHistory.prices),
       requirePrice: true,
       window: config.window,
@@ -750,10 +768,12 @@ async function executeBackfillSupplyHistory(
   let totalRows = 0;
   const errors: string[] = [];
   const skipped: string[] = [];
+  const blockSearchCachesByChain: EvmBlockSearchCacheByChain = new Map();
 
   const runCoinGeckoMarketChartBackfill = async (meta: (typeof coins)[number], failureLabel: string): Promise<void> => {
     const historicalOnChainResult = await backfillHistoricalOnChainSupply(db, meta, {
       chainRpcs,
+      blockSearchCachesByChain,
       window: supplyBackfillWindow,
       signal,
     });
@@ -788,6 +808,7 @@ async function executeBackfillSupplyHistory(
           : null;
         const result = await backfillHistoricalTotalSupply(db, meta, {
           chainRpcs,
+          blockSearchCachesByChain,
           priceSeries: marketHistory ? normalizeCoinGeckoDailyPrices(marketHistory.prices) : [],
           requirePrice: Boolean(meta.geckoId),
           window: supplyBackfillWindow,
@@ -816,6 +837,7 @@ async function executeBackfillSupplyHistory(
         protocolSlug: meta.protocolSlug ?? undefined,
         cgApiKey,
         chainRpcs,
+        blockSearchCachesByChain,
         window: supplyBackfillWindow,
         signal,
       });

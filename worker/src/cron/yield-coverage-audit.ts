@@ -32,7 +32,8 @@ import {
   MIN_SAFETY_SCORE_FOR_YIELD,
   MIN_LENDING_POOL_APY,
 } from "../lib/constants";
-import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
+import { computeSafetyScoresSnapshot, type SafetyScoresResultMap } from "../lib/safety-scores";
+import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { buildStablecoinSupplyMapFromCacheValue } from "./yield-sync/supply-map";
 import {
   YIELD_ADAPTER_LIFECYCLE,
@@ -836,6 +837,34 @@ async function loadStablecoinSupplyMapForAudit(db: D1Database): Promise<Map<stri
   }
 }
 
+async function loadSafetyScoresForAudit(db: D1Database): Promise<
+  SafetyScoresResultMap & { source: "report-card-cache" | "computed" }
+> {
+  const cached = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
+  if (cached.kind === "ok") {
+    const scores = new Map(Object.entries(cached.payload.scores));
+    return {
+      kind: "ok",
+      mode: "map",
+      coveredCount: scores.size,
+      trackedCount: scores.size,
+      coverageRatio: scores.size > 0 ? 1 : 0,
+      scores,
+      source: "report-card-cache",
+    };
+  }
+
+  const fallback = await computeSafetyScoresSnapshot(db, {
+    includeNavTokens: true,
+    outputMode: "map",
+  });
+  return {
+    ...fallback,
+    reason: fallback.reason ?? `report-card-cache-${cached.reason}`,
+    source: "computed",
+  };
+}
+
 export function identifyStaleAutoLendingOverrides(
   dlPools: DlPool[],
   options: IdentifyStaleAutoLendingOverrideOptions = {},
@@ -988,10 +1017,7 @@ export async function runYieldCoverageAudit(
     providerFamilies: ["stablecoins-cache", "safety-scores"],
   });
   const stablecoinSupplyById = await loadStablecoinSupplyMapForAudit(db);
-  const safetySnapshot = await computeSafetyScoresSnapshot(db, {
-    includeNavTokens: true,
-    outputMode: "map",
-  });
+  const safetySnapshot = await loadSafetyScoresForAudit(db);
   await reportAuditProgress("safety-supply-load", "Loaded stablecoin supply and safety snapshots", 3, {
     providerFamilies: ["stablecoins-cache", "safety-scores"],
     countTotals: {
@@ -1001,6 +1027,7 @@ export async function runYieldCoverageAudit(
     },
     safetySnapshotKind: safetySnapshot.kind,
     safetySnapshotReason: safetySnapshot.reason ?? null,
+    safetySnapshotSource: safetySnapshot.source,
   });
   const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools, {
     stablecoinSupplyById,
