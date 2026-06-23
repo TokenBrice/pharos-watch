@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../forget";
 
@@ -146,6 +148,32 @@ function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
+function discoverTelegramChatIdTablesFromMigrations(): string[] {
+  const migrationDir = join(process.cwd(), "worker/migrations");
+  const tables = new Set<string>();
+  for (const file of readdirSync(migrationDir)) {
+    if (!file.endsWith(".sql")) continue;
+    const sql = readFileSync(join(migrationDir, file), "utf8");
+    const createTablePattern = /CREATE TABLE IF NOT EXISTS\s+(telegram_[a-z0-9_]+)\s*\(([\s\S]*?)\);/giu;
+    for (const match of sql.matchAll(createTablePattern)) {
+      const table = match[1];
+      const body = match[2] ?? "";
+      if (table && /\bchat_id\b/iu.test(body)) tables.add(table);
+    }
+  }
+  return [...tables].sort();
+}
+
+function collectTelegramTablesFromSql(history: Array<{ sql: string }>): Set<string> {
+  const tables = new Set<string>();
+  for (const entry of history) {
+    for (const match of entry.sql.matchAll(/\btelegram_[a-z0-9_]+\b/giu)) {
+      tables.add(match[0]);
+    }
+  }
+  return tables;
+}
+
 describe("unsubscribeAll", () => {
   it("clears alert_snooze_until_ts so a re-subscribe is not silently muted", async () => {
     const db = mockD1([]);
@@ -170,6 +198,21 @@ describe("unsubscribeAll", () => {
 });
 
 describe("forgetSubscriber", () => {
+  it("covers every chat-owned Telegram table except retained processed updates", async () => {
+    const chatTables = discoverTelegramChatIdTablesFromMigrations();
+    const retainedOnForget = new Set(["telegram_processed_updates"]);
+    const db = mockD1();
+
+    await forgetSubscriber(db, "42");
+
+    const deletedTables = new Set(
+      db.getHistory()
+        .map((entry) => entry.sql.match(/DELETE FROM\s+(telegram_[a-z0-9_]+)\s+WHERE chat_id = \?/iu)?.[1])
+        .filter((table): table is string => typeof table === "string"),
+    );
+    expect([...deletedTables].sort()).toEqual(chatTables.filter((table) => !retainedOnForget.has(table)));
+  });
+
   it("clears chat-owned cache residue while preserving neighboring chat keys", async () => {
     const { sqlite, db } = setupChatMigrationSqlite();
     const chatId = "42";
@@ -250,6 +293,16 @@ describe("forgetSubscriber", () => {
 });
 
 describe("migrateTelegramChatId", () => {
+  it("touches every chat-owned Telegram table discovered in migrations", async () => {
+    const chatTables = discoverTelegramChatIdTablesFromMigrations();
+    const db = mockD1();
+
+    await migrateTelegramChatId(db, "-123", "-100123");
+
+    const touchedTables = collectTelegramTablesFromSql(db.getHistory());
+    expect(chatTables.filter((table) => !touchedTables.has(table))).toEqual([]);
+  });
+
   it("merges conflicting group rows in SQLite and is idempotent", async () => {
     const { sqlite, db } = setupChatMigrationSqlite();
     const oldChatId = "-123";

@@ -43,6 +43,10 @@ interface PresetSubscriptionRow {
   depeg_worsening_bps_step: number | null;
 }
 
+interface PendingAlertCountRow {
+  queued_alerts: number | string | null;
+}
+
 function boolFlag(value: number | null | undefined): boolean {
   return value === 1;
 }
@@ -135,32 +139,47 @@ export async function loadTelegramMiniAppState(
     : "not-private";
 
   const [subscriber, subscriptions, presets, health, pending] = chatId
-    ? await Promise.all([
-      db.prepare(
-        `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
-                global_depeg_worsening_bps_step, quiet_hours_enabled, quiet_hours_start_utc,
-                quiet_hours_end_utc, timezone, alert_snooze_until_ts
-           FROM telegram_subscribers
-          WHERE chat_id = ?`,
-      ).bind(chatId).first<SubscriberRow>(),
-      db.prepare(
-        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-                dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
-           FROM telegram_subscriptions
-          WHERE chat_id = ?
-          ORDER BY stablecoin_id`,
-      ).bind(chatId).all<SubscriptionRow>(),
-      db.prepare(
-        `SELECT preset_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
-           FROM telegram_preset_subscriptions
-          WHERE chat_id = ?
-          ORDER BY preset_id`,
-      ).bind(chatId).all<PresetSubscriptionRow>(),
-      loadTelegramChatHealthDiagnostics(db, chatId),
-      db.prepare("SELECT COUNT(*) AS queued_alerts FROM telegram_pending_alerts WHERE chat_id = ?")
-        .bind(chatId)
-        .first<{ queued_alerts: number | string | null }>(),
-    ])
+    ? await (async () => {
+      const [stateResults, diagnostics] = await Promise.all([
+        db.batch([
+          db.prepare(
+            `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
+                    global_depeg_worsening_bps_step, quiet_hours_enabled, quiet_hours_start_utc,
+                    quiet_hours_end_utc, timezone, alert_snooze_until_ts
+               FROM telegram_subscribers
+              WHERE chat_id = ?`,
+          ).bind(chatId),
+          db.prepare(
+            `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+                    dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
+               FROM telegram_subscriptions
+              WHERE chat_id = ?
+              ORDER BY stablecoin_id`,
+          ).bind(chatId),
+          db.prepare(
+            `SELECT preset_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+               FROM telegram_preset_subscriptions
+              WHERE chat_id = ?
+              ORDER BY preset_id`,
+          ).bind(chatId),
+          db.prepare("SELECT COUNT(*) AS queued_alerts FROM telegram_pending_alerts WHERE chat_id = ?")
+            .bind(chatId),
+        ]) as Promise<[
+          D1Result<SubscriberRow>,
+          D1Result<SubscriptionRow>,
+          D1Result<PresetSubscriptionRow>,
+          D1Result<PendingAlertCountRow>,
+        ]>,
+        loadTelegramChatHealthDiagnostics(db, chatId),
+      ]);
+      return [
+        stateResults[0].results?.[0] ?? null,
+        { results: stateResults[1].results ?? [] },
+        { results: stateResults[2].results ?? [] },
+        diagnostics,
+        stateResults[3].results?.[0] ?? null,
+      ] as const;
+    })()
     : [
       null,
       { results: [] as SubscriptionRow[] },

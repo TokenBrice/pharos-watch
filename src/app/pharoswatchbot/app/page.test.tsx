@@ -904,7 +904,6 @@ describe("PharosWatchBotMiniAppPage", () => {
 
   it.each([
     [401, "stale-auth", "Telegram authorization expired. Close and reopen from PharosWatchBot."],
-    [409, "replay-claimed", "This Telegram launch was already used. Reopen the Mini App to continue."],
     [429, "rate-limited", "Slow down — Telegram is rate-limiting your edits. Try again in a moment."],
     [403, "not-private", "This Mini App can only edit personal alerts. Use the bot commands in groups."],
     [400, "validation-error", "Change was rejected by the server."],

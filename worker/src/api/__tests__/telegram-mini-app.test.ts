@@ -68,28 +68,29 @@ function stateReadTables(overrides: {
   subscriptions?: Record<string, unknown>[];
   presets?: Record<string, unknown>[];
 } = {}): MockTableConfig[] {
+  const subscriber = overrides.subscriber ?? {
+    global_alert_dews: 0,
+    global_alert_depeg: 0,
+    global_alert_safety: 0,
+    global_alert_launch: 0,
+    global_alert_reserve: 0,
+    global_depeg_worsening_bps_step: null,
+    quiet_hours_enabled: 0,
+    quiet_hours_start_utc: null,
+    quiet_hours_end_utc: null,
+    timezone: null,
+    alert_snooze_until_ts: null,
+  };
   return [
     {
       match: "FROM telegram_subscribers",
-      first: overrides.subscriber ?? {
-        global_alert_dews: 0,
-        global_alert_depeg: 0,
-        global_alert_safety: 0,
-        global_alert_launch: 0,
-        global_alert_reserve: 0,
-        global_depeg_worsening_bps_step: null,
-        quiet_hours_enabled: 0,
-        quiet_hours_start_utc: null,
-        quiet_hours_end_utc: null,
-        timezone: null,
-        alert_snooze_until_ts: null,
-      },
-      rows: [],
+      first: subscriber,
+      rows: subscriber == null ? [] : [subscriber],
     },
     { match: "FROM telegram_subscriptions", rows: overrides.subscriptions ?? [] },
     { match: "FROM telegram_preset_subscriptions", rows: overrides.presets ?? [] },
     { match: "FROM telegram_chat_delivery_diagnostics", first: null, rows: [] },
-    { match: "FROM telegram_pending_alerts", first: { queued_alerts: 0 }, rows: [] },
+    { match: "FROM telegram_pending_alerts", first: { queued_alerts: 0 }, rows: [{ queued_alerts: 0 }] },
   ];
 }
 
@@ -154,6 +155,20 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.subscriber.snoozeUntilTs).toBeNull();
     expect(body.subscriptions[0]).toMatchObject({ stablecoinId: "usdc-circle", symbol: "USDC", alertTypes: { dews: true, depeg: true } });
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
+  });
+
+  it("loads private-chat state through one D1 batch plus separate health diagnostics", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables()) as MockD1Database;
+    const batchSpy = vi.spyOn(db, "batch");
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(batchSpy).toHaveBeenCalledTimes(1);
+    expect(batchSpy.mock.calls[0]?.[0]).toHaveLength(4);
+    const history = db.getHistory();
+    expect(history.filter((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toHaveLength(1);
   });
 
   it("hides all-disabled subscription rows but keeps snooze-only rows", async () => {
@@ -650,8 +665,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "alert_dews = excluded.alert_dews", ["42", "usdc-circle", 1, "WARNING"])).toBe(false);
     expect(historyHas(db, "alert_safety = excluded.alert_safety", ["42", "usdc-circle", 1, "downgrade-only"])).toBe(true);
     expect(historyHas(db, "alert_launch = excluded.alert_launch", ["42", "usdc-circle", 1])).toBe(true);
-    expect(batchSizes).toHaveLength(1);
     expect(batchSizes[0]).toBeGreaterThan(1);
+    expect(batchSizes).toContain(4);
   });
 
   it("enables per-coin depeg alerts when setting a worsening step", async () => {

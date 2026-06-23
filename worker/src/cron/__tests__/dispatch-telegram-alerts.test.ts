@@ -286,7 +286,10 @@ describe("dispatchTelegramAlerts", () => {
       },
     ]);
     const db = mockD1([
-      { match: "SELECT dedupe_key, attempts", rows: [{ dedupe_key: dedupeKey, attempts: 4 }] },
+      {
+        match: "SELECT dedupe_key, attempts",
+        rows: [{ dedupe_key: dedupeKey, attempts: 4, created_at: now - 60, expires_at: now + 600 }],
+      },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
     ]);
 
@@ -324,6 +327,74 @@ describe("dispatchTelegramAlerts", () => {
     expect(result.freshRetryQueued).toBe(1);
     const pendingInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
     expect(pendingInsert?.binds[4]).toBe(now + 600);
+  });
+
+  it("treats stale pending attempts as reset when re-enqueuing a retryable fresh chunk", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const dedupeKey = buildDedupeKey({
+      chatId: "chat-1",
+      html: "chunk-0",
+      canonicalHtml: "canonical-body",
+      disableNotification: false,
+      chunkIndex: 0,
+      alertType: "depeg",
+    });
+    mockSendBatch.mockResolvedValue([
+      {
+        chatId: "chat-1",
+        ok: false,
+        blocked: false,
+        retryable: true,
+        permanentFailure: false,
+        statusCode: 500,
+        errorClass: "server_error",
+        delivery: "retryable_failure",
+        retryAfterSec: null,
+        attempted: true,
+      },
+    ]);
+    const db = mockD1([
+      {
+        match: "SELECT dedupe_key, attempts",
+        rows: [{ dedupe_key: dedupeKey, attempts: 4, created_at: now - 90_000, expires_at: now - 30 }],
+      },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+    ]);
+
+    const result = await deliverTelegramSubscriberQueue({
+      db,
+      subscriberQueue: [
+        {
+          chatId: "chat-1",
+          lastActiveAt: now,
+          alerts: {
+            dews: [],
+            depegTriggered: [],
+            depegResolved: [],
+            depegWorsening: [],
+            safety: [],
+            launch: [],
+            reserve: [],
+          },
+          canonicalHtml: "canonical-body",
+          chunks: ["chunk-0"],
+          disableNotification: false,
+          alertType: "depeg",
+        },
+      ],
+      botToken: "bot-token",
+      drainResult: emptyDrainResult(),
+      maxMessagesPerRun: 10,
+      nowSec: now,
+      chatsInBackoff: new Map(),
+      globalBackoffUntil: null,
+      dispatchStartedAtMs: Date.now(),
+    });
+
+    expect(result.freshAttempted).toBe(1);
+    expect(result.freshRetryQueued).toBe(1);
+    const pendingInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
+    expect(pendingInsert?.binds[4]).toBe(now + 60);
   });
 
   it("does not format planned overflow while global backoff is active", async () => {

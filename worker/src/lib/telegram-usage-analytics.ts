@@ -807,9 +807,24 @@ export async function recordTelegramDeliveryOutcomes(
 ): Promise<void> {
   if (inputs.length === 0) return;
   const nowSec = Math.floor(Date.now() / 1000);
+  const inputsByChat = new Map<string, typeof inputs[number]>();
+  for (const input of inputs) {
+    const existing = inputsByChat.get(input.chatId);
+    if (!existing) {
+      inputsByChat.set(input.chatId, input);
+      continue;
+    }
+    inputsByChat.set(input.chatId, {
+      chatId: input.chatId,
+      ok: existing.ok || input.ok,
+      errorClass: existing.ok || input.ok ? null : input.errorClass ?? existing.errorClass ?? null,
+      nowSec: Math.max(existing.nowSec ?? nowSec, input.nowSec ?? nowSec),
+    });
+  }
+  const coalescedInputs = [...inputsByChat.values()];
   try {
-    for (let offset = 0; offset < inputs.length; offset += DELIVERY_DIAGNOSTIC_BATCH_SIZE) {
-      const chunk = inputs.slice(offset, offset + DELIVERY_DIAGNOSTIC_BATCH_SIZE);
+    for (let offset = 0; offset < coalescedInputs.length; offset += DELIVERY_DIAGNOSTIC_BATCH_SIZE) {
+      const chunk = coalescedInputs.slice(offset, offset + DELIVERY_DIAGNOSTIC_BATCH_SIZE);
       await db.batch(
         chunk.map((input) =>
           buildChatDeliveryDiagnosticsUpsert(db, {

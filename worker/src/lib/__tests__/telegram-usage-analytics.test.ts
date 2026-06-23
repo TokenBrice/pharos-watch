@@ -4,6 +4,7 @@ import {
   bucketTelegramCommandLatency,
   classifyTelegramStartSource,
   loadTelegramTopFollowedCoins,
+  recordTelegramDeliveryOutcomes,
   recordTelegramUsageEvent,
 } from "../telegram-usage-analytics";
 
@@ -70,6 +71,22 @@ describe("telegram usage analytics", () => {
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
     expect(insert?.binds[3]).toBe("unknown");
+  });
+
+  it("coalesces delivery diagnostics by chat before writing", async () => {
+    const db = mockD1([{ match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] }]);
+
+    await recordTelegramDeliveryOutcomes(db, [
+      { chatId: "42", ok: false, errorClass: "timeout", nowSec: 100 },
+      { chatId: "42", ok: true, nowSec: 101 },
+      { chatId: "43", ok: false, errorClass: "rate_limit", nowSec: 102 },
+      { chatId: "43", ok: false, errorClass: "network", nowSec: 103 },
+    ]);
+
+    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
+    expect(inserts).toHaveLength(2);
+    expect(inserts[0]?.binds).toEqual(["42", 101, 101, null, 101]);
+    expect(inserts[1]?.binds).toEqual(["43", null, 103, "network", 103]);
   });
 
   it("merges explicit top-coin follows with the preset-aware shape", async () => {

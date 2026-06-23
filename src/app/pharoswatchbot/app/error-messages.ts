@@ -11,7 +11,6 @@
 
 export const MINI_APP_ERROR_CODES = [
   "stale-auth",
-  "replay-claimed",
   "not-private",
   "rate-limited",
   "validation-error",
@@ -64,8 +63,6 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
 
     // context === "mutation"
     switch (err.code) {
-      case "replay-claimed":
-        return "This Telegram launch was already used. Reopen the Mini App to continue.";
       case "rate-limited":
         return "Slow down — Telegram is rate-limiting your edits. Try again in a moment.";
       case "not-private":

@@ -58,7 +58,6 @@ async function releaseMiniAppCooldownBestEffort(
  */
 type MiniAppErrorCode =
   | "stale-auth"
-  | "replay-claimed"
   | "not-private"
   | "rate-limited"
   | "validation-error"

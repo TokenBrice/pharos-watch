@@ -2,6 +2,7 @@ import {
   buildDedupeKey,
   enqueuePendingAlerts,
   pendingBackoffSec,
+  PENDING_TTL_SEC,
   setTelegramGlobalBackoff,
   type PendingEnqueueOptions,
   type PendingDrainResult,
@@ -161,6 +162,7 @@ async function loadActiveOverflowSubscriberPlanKeys(
 async function loadExistingPendingAttempts(
   db: D1Database,
   messages: readonly BatchMessage[],
+  nowSec: number,
 ): Promise<Map<string, number>> {
   const dedupeKeys = Array.from(new Set(messages.map((message) => buildDedupeKey(message))));
   const attemptsByDedupeKey = new Map<string, number>();
@@ -169,13 +171,22 @@ async function loadExistingPendingAttempts(
     const inClause = buildInClause(keyChunk);
     const rows = await db
       .prepare(
-        `SELECT dedupe_key, attempts
+        `SELECT dedupe_key, attempts, created_at, expires_at
            FROM telegram_pending_alerts
           WHERE dedupe_key IN (${inClause.sql})`,
       )
       .bind(...inClause.binds)
-      .all<{ dedupe_key: string; attempts: number | null }>();
+      .all<{ dedupe_key: string; attempts: number | null; created_at: number | null; expires_at: number | null }>();
     for (const row of rows.results ?? []) {
+      const createdAt = Number(row.created_at ?? 0);
+      const expiresAt = Number(row.expires_at ?? createdAt + PENDING_TTL_SEC);
+      const stale =
+        (Number.isFinite(expiresAt) && expiresAt <= nowSec) ||
+        (Number.isFinite(createdAt) && createdAt < nowSec - PENDING_TTL_SEC);
+      if (stale) {
+        attemptsByDedupeKey.set(row.dedupe_key, 0);
+        continue;
+      }
       const attempts = Number(row.attempts ?? 0);
       attemptsByDedupeKey.set(row.dedupe_key, Number.isFinite(attempts) ? Math.max(0, attempts) : 0);
     }
@@ -343,6 +354,7 @@ export async function deliverTelegramSubscriberQueue({
   const existingAttemptsByDedupeKey = await loadExistingPendingAttempts(
     db,
     retryableFreshMessages.map((retry) => retry.message),
+    nowSec,
   );
   const retryEnqueueGroups = new Map<string, { messages: typeof retryableFreshMessages[number]["message"][]; options: PendingEnqueueOptions }>();
   for (const retry of retryableFreshMessages) {
