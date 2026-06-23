@@ -440,7 +440,6 @@ describe("fetchKrakenPrices", () => {
               USDTZUSD: { c: ["1.0002"] },
               USDCUSD: { c: ["0.9998"] },
               DAIUSD: { c: ["1.0000"] },
-              EURRUSD: { a: ["1.1740"], b: ["1.1738"], c: ["1.1739"] },
               TGBPUSD: { a: ["1.3538"], b: ["1.3535"], c: ["1.3531"] },
               BTCUSD: { c: ["65000"] },
             },
@@ -448,12 +447,11 @@ describe("fetchKrakenPrices", () => {
       }),
     );
 
-    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "EURR", "TGBP"]);
+    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP"]);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.get("USDT")).toBeCloseTo(1.0002, 4);
     expect(outcome.value.get("USDC")).toBeCloseTo(0.9998, 4);
     expect(outcome.value.get("DAI")).toBeCloseTo(1.0, 4);
-    expect(outcome.value.get("EURR")).toBeCloseTo(1.1739, 4);
     expect(outcome.value.get("TGBP")).toBeCloseTo(1.35365, 5);
     expect(outcome.value.has("BTC")).toBe(false);
   });

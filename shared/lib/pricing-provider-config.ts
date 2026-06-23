@@ -8,7 +8,6 @@ export const BINANCE_MARKETS = [
 export const KRAKEN_MARKETS = [
   { symbol: "DAI", requestPair: "DAIUSD", responseKeys: ["DAIUSD"] },
   { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"] },
-  { symbol: "EURR", requestPair: "EURRUSD", responseKeys: ["EURRUSD"] },
   { symbol: "PAXG", requestPair: "PAXGUSD", responseKeys: ["PAXGUSD"] },
   { symbol: "PYUSD", requestPair: "PYUSDUSD", responseKeys: ["PYUSDUSD"] },
   { symbol: "TGBP", requestPair: "TGBPUSD", responseKeys: ["TGBPUSD"] },

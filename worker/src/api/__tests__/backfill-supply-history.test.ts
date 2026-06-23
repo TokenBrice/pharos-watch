@@ -4,11 +4,43 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchHistoricalFxRates } from "../../lib/backfill-fx";
 
+type PsiEligibleCoin = (typeof import("@shared/lib/psi-eligible"))["PSI_ELIGIBLE_STABLECOINS"][number];
+
 stubCryptoForAuth();
 
 const evmRpcMocks = vi.hoisted(() => ({
   resolveClosestBlockAtOrBeforeTimestamp: vi.fn(),
 }));
+const psiEligibleMocks = vi.hoisted(() => ({
+  stablecoins: [] as PsiEligibleCoin[],
+  defaultStablecoins: [] as PsiEligibleCoin[],
+  metaById: new Map<string, PsiEligibleCoin>(),
+  defaultMetaEntries: [] as Array<[string, PsiEligibleCoin]>,
+}));
+
+vi.mock("@shared/lib/psi-eligible", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/psi-eligible")>();
+  psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, ...actual.PSI_ELIGIBLE_STABLECOINS);
+  psiEligibleMocks.defaultStablecoins.splice(
+    0,
+    psiEligibleMocks.defaultStablecoins.length,
+    ...actual.PSI_ELIGIBLE_STABLECOINS,
+  );
+  psiEligibleMocks.defaultMetaEntries.splice(
+    0,
+    psiEligibleMocks.defaultMetaEntries.length,
+    ...actual.PSI_ELIGIBLE_META_BY_ID.entries(),
+  );
+  psiEligibleMocks.metaById.clear();
+  for (const [id, meta] of actual.PSI_ELIGIBLE_META_BY_ID.entries()) {
+    psiEligibleMocks.metaById.set(id, meta);
+  }
+  return {
+    ...actual,
+    PSI_ELIGIBLE_STABLECOINS: psiEligibleMocks.stablecoins,
+    PSI_ELIGIBLE_META_BY_ID: psiEligibleMocks.metaById,
+  };
+});
 
 vi.mock("../../lib/evm-rpc", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/evm-rpc")>();
@@ -78,6 +110,15 @@ function formatUint256Hex(value: bigint): string {
 describe("handleBackfillSupplyHistory", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    psiEligibleMocks.stablecoins.splice(
+      0,
+      psiEligibleMocks.stablecoins.length,
+      ...psiEligibleMocks.defaultStablecoins,
+    );
+    psiEligibleMocks.metaById.clear();
+    for (const [id, meta] of psiEligibleMocks.defaultMetaEntries) {
+      psiEligibleMocks.metaById.set(id, meta);
+    }
     evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockReset();
     vi.mocked(fetchHistoricalFxRates).mockClear().mockResolvedValue({});
     vi.mocked(fetchMarketBackfillPriceSeries).mockClear().mockResolvedValue({
@@ -822,6 +863,15 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("shares same-chain block search cache across historical totalSupply coins in one page", async () => {
+    const historicalTotalSupplyCoins = psiEligibleMocks.defaultStablecoins.filter((coin) =>
+      ["autousd-auto-finance", "eearn-ember"].includes(coin.id),
+    );
+    expect(historicalTotalSupplyCoins.map((coin) => coin.id)).toEqual([
+      "autousd-auto-finance",
+      "eearn-ember",
+    ]);
+    psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, ...historicalTotalSupplyCoins);
+
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
     const day = Math.floor(Date.UTC(2026, 5, 9) / 1000);
     const blockNumber = 22_500_000;
@@ -887,9 +937,9 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?batch=96&batchSize=3&startDay=2026-06-09&endDay=2026-06-09"),
+      makeApiUrl("/api/backfill-supply-history?batch=0&batchSize=2&startDay=2026-06-09&endDay=2026-06-09"),
       true,
-      makeApiRequest("/api/backfill-supply-history?batch=96&batchSize=3&startDay=2026-06-09&endDay=2026-06-09", {
+      makeApiRequest("/api/backfill-supply-history?batch=0&batchSize=2&startDay=2026-06-09&endDay=2026-06-09", {
         adminKey: "secret",
       }),
       null,
@@ -903,10 +953,10 @@ describe("handleBackfillSupplyHistory", () => {
       errors?: string[];
       skipped?: string[];
     };
-    expect(body.coinsProcessed).toBe(3);
+    expect(body.coinsProcessed).toBe(2);
     expect(body.rowsInserted).toBe(2);
     expect(body.errors).toBeUndefined();
-    expect(body.skipped).toEqual(["ZYS"]);
+    expect(body.skipped).toBeUndefined();
     expect(blockSearchCaches).toHaveLength(2);
     expect(blockSearchCaches[0]).toBe(blockSearchCaches[1]);
 
