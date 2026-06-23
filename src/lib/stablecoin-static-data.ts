@@ -3,45 +3,45 @@ import type { PegCurrency } from "@shared/types";
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
 export const TRACKED_STABLECOIN_COUNT = 407;
-export const ACTIVE_STABLECOIN_COUNT = 370;
+export const ACTIVE_STABLECOIN_COUNT = 368;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 32;
-export const FROZEN_STABLECOIN_COUNT = 5;
+export const FROZEN_STABLECOIN_COUNT = 7;
 export const DEAD_STABLECOIN_COUNT = 88;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
-  centralized: 181,
+  "centralized": 179,
   "centralized-dependent": 170,
-  decentralized: 19,
+  "decentralized": 19,
 } as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 268,
-  EUR: 21,
-  GBP: 6,
-  CHF: 5,
-  BRL: 6,
-  JPY: 6,
-  KRW: 2,
-  SGD: 1,
-  MYR: 1,
-  TRY: 2,
-  AUD: 5,
-  ZAR: 2,
-  CAD: 4,
-  PHP: 2,
-  RUB: 1,
-  CNH: 1,
-  MXN: 5,
-  VND: 1,
-  ARS: 1,
-  KGS: 1,
-  NGN: 1,
-  XOF: 1,
-  IDR: 2,
-  GOLD: 13,
-  SILVER: 3,
-  VAR: 3,
-  OTHER: 6,
+  "USD": 267,
+  "RUB": 1,
+  "EUR": 20,
+  "BRL": 6,
+  "VAR": 3,
+  "CHF": 5,
+  "GBP": 6,
+  "SGD": 1,
+  "JPY": 6,
+  "AUD": 5,
+  "CNH": 1,
+  "IDR": 2,
+  "KGS": 1,
+  "TRY": 2,
+  "GOLD": 13,
+  "SILVER": 3,
+  "PHP": 2,
+  "OTHER": 6,
+  "CAD": 4,
+  "ZAR": 2,
+  "MXN": 5,
+  "NGN": 1,
+  "ARS": 1,
+  "MYR": 1,
+  "VND": 1,
+  "KRW": 2,
+  "XOF": 1,
 } as const satisfies Partial<Record<PegCurrency, number>>;
 
 export const ACTIVE_PEG_CURRENCIES = [
@@ -489,7 +489,9 @@ export const TRACKED_STABLECOIN_IDS = [
 const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "usr-resolv",
   "usnd-nerite",
+  "usdr-stablr",
   "euroe-membrane",
+  "eurr-stablr",
   "usdpt-western-union",
   "roughrider-bnd",
   "fiusd-fiserv",

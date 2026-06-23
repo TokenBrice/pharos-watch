@@ -141,6 +141,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Nest's static fallback bucket mixes USDC with untracked pUSD; the live positions adapter emits USDC coinId when it sees exact liquid USDC balances.",
   ],
   [
+    "vndc-jade-labs::Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools::USDC",
+    "VNDC reports this as a mixed issuer-disclosed USDT/USDC collateral pool without stablecoin-level weights, so no single tracked coinId is representative.",
+  ],
+  [
+    "vndc-jade-labs::Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools::USDT",
+    "VNDC reports this as a mixed issuer-disclosed USDT/USDC collateral pool without stablecoin-level weights, so no single tracked coinId is representative.",
+  ],
+  [
     "weusd-picwe::Disputed USDC versus USDT/MOVE backing disclosure::USDC",
     "WEUSD's disclosure notes competing stablecoin exposures, and live adapter data is not yet granular enough to attribute a single upstream stablecoin coinId safely.",
   ],

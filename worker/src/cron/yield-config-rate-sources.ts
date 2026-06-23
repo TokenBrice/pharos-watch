@@ -335,6 +335,12 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-04-14",
     note: "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
   },
+  "dusd-standx": {
+    code: "no-public-yield-source",
+    since: "2026-06-23",
+    nextReviewAt: "2026-07-23",
+    note: "reviewed StandX DUSD delta-neutral yield semantics; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+  },
   "gldy-streamex": {
     code: "issuer-distributed-yield",
     since: "2026-04-14",
