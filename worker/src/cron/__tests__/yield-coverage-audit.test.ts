@@ -387,6 +387,59 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
+  it("surfaces allowlisted high-TVL venue slugs missing risk registry aliases", () => {
+    const dlPools: DlPool[] = [
+      {
+        pool: "aave-usdc",
+        chain: "Ethereum",
+        project: "aave",
+        symbol: "USDC",
+        tvlUsd: 25_000_000,
+        apy: 3,
+        apyBase: 3,
+        apyReward: null,
+        apyMean30d: 3,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: null,
+      },
+      {
+        pool: "renamed-usdc",
+        chain: "Ethereum",
+        project: "renamed-aave-v3",
+        symbol: "USDC",
+        tvlUsd: 25_000_000,
+        apy: 3,
+        apyBase: 3,
+        apyReward: null,
+        apyMean30d: 3,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: null,
+      },
+    ];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      new Set(["aave", "renamed-aave-v3"]),
+      new Map([
+        ["aave", "Lending"],
+        ["renamed-aave-v3", "Lending"],
+      ]),
+    );
+
+    expect(gaps.venueRiskConfigMissing).toEqual([
+      expect.objectContaining({
+        project: "renamed-aave-v3",
+        protocolCategory: "Lending",
+        poolCount: 1,
+        totalTvlUsd: 25_000_000,
+        examplePools: ["renamed-usdc"],
+      }),
+    ]);
+  });
+
   it("escapes provider slugs in suggested lending allowlist snippets", () => {
     const maliciousProject = 'evil"\n  __pwned__: (() => { throw new Error("injected"); })(),\n  "tail';
     const dlPools: DlPool[] = [
@@ -599,12 +652,13 @@ describe("identifyCoverageGaps", () => {
       { pool: "susde-native", chain: "Ethereum", project: "ethena", symbol: "sUSDe", tvlUsd: 50_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
       { pool: "morpho-usdc", chain: "Ethereum", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
       { pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "renamed-usdc", chain: "Ethereum", project: "renamed-aave-v3", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
     ];
     const gaps = identifyCoverageGaps(
       dlPools,
       new Set(),
-      new Set(["morpho-blue"]),
-      new Map([["new-lender", "Lending"]]),
+      new Set(["morpho-blue", "renamed-aave-v3"]),
+      new Map([["new-lender", "Lending"], ["renamed-aave-v3", "Lending"]]),
     );
 
     const queue = buildCoverageAuditOperatorQueue({
@@ -682,6 +736,15 @@ describe("identifyCoverageGaps", () => {
           actionHint: "watch",
           project: "aave-v3",
         }),
+        expect.objectContaining({
+          kind: "venue-risk-config-missing",
+          id: "venue-risk-config-missing:renamed-aave-v3",
+          title: "renamed-aave-v3",
+          actionHint: "accept",
+          project: "renamed-aave-v3",
+          protocolCategory: "Lending",
+          examplePools: ["renamed-usdc"],
+        }),
       ]),
     );
   });
@@ -695,6 +758,7 @@ describe("identifyCoverageGaps", () => {
         nativeExactPoolRecommendations: [],
         sourceFamilyAdapterRecommendations: [],
         lendingAllowlistRecommendations: [],
+        venueRiskConfigMissing: [],
       },
       manifestMissingIds: [],
       yieldBearingMissingFromRankings: [],

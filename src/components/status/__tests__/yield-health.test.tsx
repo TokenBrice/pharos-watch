@@ -81,7 +81,9 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
       nativeExactPoolRecommendationCount: 2,
       sourceFamilyAdapterRecommendationCount: 1,
       lendingAllowlistRecommendationCount: 2,
+      venueRiskConfigMissingCount: 0,
       staleAutoLendingOverrideCount: 0,
+      staleVenueRiskScoreCount: 0,
       headlineGaps: [
         {
           id: "manifest-missing:coin-a",

@@ -110,7 +110,7 @@ describe("healNullPrices", () => {
     const result = await healNullPrices(db, NOW);
 
     expect(result.healed).toBe(1);
-    const updateStmts = vi.mocked(batchExecute).mock.calls[0]?.[1] as BoundStatement[];
+    const updateStmts = vi.mocked(batchExecute).mock.calls[0]?.[1] as unknown as BoundStatement[];
     expect(updateStmts[0].args).toEqual([
       980,
       0.98,
@@ -134,7 +134,7 @@ describe("healNullPrices", () => {
     const result = await healNullPrices(db, NOW);
 
     expect(result.healed).toBe(1);
-    const updateStmts = vi.mocked(batchExecute).mock.calls[0]?.[1] as BoundStatement[];
+    const updateStmts = vi.mocked(batchExecute).mock.calls[0]?.[1] as unknown as BoundStatement[];
     expect(updateStmts[0].args).toEqual([
       1010,
       1.01,

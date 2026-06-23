@@ -49,7 +49,7 @@ import type {
 } from "@shared/types/status";
 import type { YieldAdapterLifecycle } from "@shared/types/yield";
 import type { DlPool } from "./yield-sync/types";
-import type { StaleVenueRiskScore } from "@shared/lib/yield-source-risk-registry";
+import { resolveReviewedYieldRiskConfig, type StaleVenueRiskScore } from "@shared/lib/yield-source-risk-registry";
 import { findStaleVenueRiskScores } from "./yield-sync/source-risk";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
@@ -319,6 +319,16 @@ export interface NativeExactPoolRecommendation extends CoverageGapPool {
   stablecoinIds: string[];
 }
 
+export interface VenueRiskConfigMissing {
+  project: string;
+  protocolCategory: string | null;
+  poolCount: number;
+  totalTvlUsd: number;
+  examplePools: string[];
+  examplePoolDetails: ProtocolRecommendationExamplePool[];
+  sourceLinks: ProtocolRecommendationSourceLink[];
+}
+
 export interface CoverageGaps {
   /** Pools above the TVL threshold that are not in the covered set. */
   unmatchedHighTvlPools: CoverageGapPool[];
@@ -332,6 +342,8 @@ export interface CoverageGaps {
   sourceFamilyAdapterRecommendations: ProtocolRecommendation[];
   /** High-TVL non-allowlisted lending protocols that may warrant allowlist review. */
   lendingAllowlistRecommendations: ProtocolRecommendation[];
+  /** Covered or allowlisted high-TVL venue slugs missing reviewed venue-risk config/aliases. */
+  venueRiskConfigMissing: VenueRiskConfigMissing[];
 }
 
 export interface CoverageAuditQueueItem extends YieldCoverageAuditQueueItem {
@@ -464,6 +476,46 @@ function buildProtocolRecommendations(
     .slice(0, 20);
 }
 
+function buildVenueRiskConfigMissing(pools: CoverageGapPool[]): VenueRiskConfigMissing[] {
+  const byProject = new Map<string, { pools: CoverageGapPool[]; tvl: number }>();
+  for (const pool of pools) {
+    const entry = byProject.get(pool.project) ?? { pools: [], tvl: 0 };
+    entry.pools.push(pool);
+    entry.tvl += pool.tvlUsd;
+    byProject.set(pool.project, entry);
+  }
+
+  return [...byProject.entries()]
+    .map(([project, value]) => {
+      const sortedPools = [...value.pools].sort((a, b) => b.tvlUsd - a.tvlUsd);
+      const protocolCategory = sortedPools.find((pool) => pool.protocolCategory)?.protocolCategory ?? null;
+      const examplePoolDetails = sortedPools.slice(0, 3).map((pool) => ({
+        ...pool,
+        sourceUrl: buildYieldPoolSourceUrl(pool.pool),
+      }));
+      return {
+        project,
+        protocolCategory,
+        poolCount: value.pools.length,
+        totalTvlUsd: value.tvl,
+        examplePools: examplePoolDetails.map((pool) => pool.pool),
+        examplePoolDetails,
+        sourceLinks: [
+          {
+            label: "DeFiLlama protocols category source",
+            url: DEFILLAMA_PROTOCOLS_SOURCE_URL,
+          },
+          ...examplePoolDetails.map((pool) => ({
+            label: `DeFiLlama yield chart: ${pool.symbol} on ${pool.chain}`,
+            url: pool.sourceUrl,
+          })),
+        ],
+      };
+    })
+    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
+    .slice(0, 20);
+}
+
 function normalizeRecommendationSymbol(symbol: string): string {
   return symbol.trim().toUpperCase();
 }
@@ -547,6 +599,25 @@ function buildProtocolQueueItem(
   };
 }
 
+function buildVenueRiskConfigMissingQueueItem(
+  missing: VenueRiskConfigMissing,
+): CoverageAuditQueueItem {
+  return {
+    id: queueId("venue-risk-config-missing", missing.project),
+    kind: "venue-risk-config-missing" as const,
+    title: missing.project,
+    detail: `${missing.poolCount} covered high-TVL pool(s) resolve to unknown venue risk; add a reviewed registry entry or alias.`,
+    actionHint: "accept" as const,
+    project: missing.project,
+    poolCount: missing.poolCount,
+    totalTvlUsd: missing.totalTvlUsd,
+    protocolCategory: missing.protocolCategory,
+    examplePools: missing.examplePools,
+    examplePoolDetails: missing.examplePoolDetails,
+    sourceLinks: missing.sourceLinks,
+  };
+}
+
 export function buildCoverageAuditOperatorQueue({
   gaps,
   manifestMissingIds,
@@ -607,6 +678,7 @@ export function buildCoverageAuditOperatorQueue({
     ...gaps.lendingAllowlistRecommendations.map((recommendation) =>
       buildProtocolQueueItem("lending-allowlist", recommendation),
     ),
+    ...gaps.venueRiskConfigMissing.map(buildVenueRiskConfigMissingQueueItem),
     ...quarantineReadyToRestore.map((candidate) => ({
       id: queueId("quarantine-ready-to-restore", candidate.stablecoinId),
       kind: "quarantine-ready-to-restore" as const,
@@ -652,13 +724,27 @@ export function identifyCoverageGaps(
   const missingProtocols: CoverageGapPool[] = [];
   const seenMissingProtocols = new Set<string>();
   const uncoveredStablecoinPools: CoverageGapPool[] = [];
+  const venueRiskConfigMissingPools: CoverageGapPool[] = [];
 
   for (const pool of dlPools) {
-    // Skip pools already covered
-    if (coveredPools.has(pool.pool)) continue;
-
     const protocolCategory = protocolCategoriesByProject.get(normalizeProtocolProjectKey(pool.project)) ?? null;
     const poolEntry = buildCoverageGapPool(pool, protocolCategory);
+    const coveredByProtocolOrExactPool = supportedProtocols.has(pool.project) || coveredPools.has(pool.pool);
+    if (
+      coveredByProtocolOrExactPool &&
+      pool.exposure === "single" &&
+      pool.stablecoin &&
+      pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD &&
+      resolveReviewedYieldRiskConfig(pool.project) == null
+    ) {
+      venueRiskConfigMissingPools.push(poolEntry);
+    }
+
+    // Skip pools already covered for generic coverage-gap queues. Venue-risk
+    // drift is checked above because exact covered pools can still expose a
+    // project slug that no reviewed venue-risk config or alias recognizes.
+    if (coveredPools.has(pool.pool)) continue;
+
     if (pool.exposure === "single" && pool.stablecoin) {
       uncoveredStablecoinPools.push(poolEntry);
     }
@@ -716,6 +802,7 @@ export function identifyCoverageGaps(
   const protocolRecommendations = buildProtocolRecommendations(
     uncoveredStablecoinPools.filter((pool) => !supportedProtocols.has(pool.project)),
   );
+  const venueRiskConfigMissing = buildVenueRiskConfigMissing(venueRiskConfigMissingPools);
 
   return {
     unmatchedHighTvlPools,
@@ -724,6 +811,7 @@ export function identifyCoverageGaps(
     nativeExactPoolRecommendations,
     sourceFamilyAdapterRecommendations,
     lendingAllowlistRecommendations,
+    venueRiskConfigMissing,
   };
 }
 
@@ -1015,6 +1103,7 @@ export async function runYieldCoverageAudit(
     nativeExactPoolRecommendationCount: gaps.nativeExactPoolRecommendations.length,
     sourceFamilyAdapterRecommendationCount: gaps.sourceFamilyAdapterRecommendations.length,
     lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
+    venueRiskConfigMissingCount: gaps.venueRiskConfigMissing.length,
     staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
     exactPoolOverrideCount: explicitPoolOverrides.length,
     exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
@@ -1036,6 +1125,7 @@ export async function runYieldCoverageAudit(
     nativeExactPoolRecommendations: gaps.nativeExactPoolRecommendations,
     sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations,
     lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
+    venueRiskConfigMissing: gaps.venueRiskConfigMissing,
     staleAutoLendingOverrides,
     staleVenueRiskScores,
     operatorQueue,
@@ -1082,6 +1172,7 @@ export async function runYieldCoverageAudit(
     gaps.nativeExactPoolRecommendations.length +
     gaps.sourceFamilyAdapterRecommendations.length +
     gaps.lendingAllowlistRecommendations.length +
+    gaps.venueRiskConfigMissing.length +
     staleAutoLendingOverrides.length +
     staleVenueRiskScores.length +
     quarantineProbe.readyToRestore.length +

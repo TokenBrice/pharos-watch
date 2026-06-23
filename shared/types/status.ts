@@ -638,6 +638,7 @@ export type YieldCoverageAuditQueueItemKind =
   | "native-exact-pool"
   | "source-family-adapter"
   | "lending-allowlist"
+  | "venue-risk-config-missing"
   | "stale-auto-lending-override"
   | "quarantine-ready-to-restore"
   | "stale-venue-risk-score";
@@ -719,6 +720,7 @@ export interface YieldHealthSummary {
     nativeExactPoolRecommendationCount: number | null;
     sourceFamilyAdapterRecommendationCount: number | null;
     lendingAllowlistRecommendationCount: number | null;
+    venueRiskConfigMissingCount: number | null;
     staleAutoLendingOverrideCount: number | null;
     staleVenueRiskScoreCount: number | null;
     headlineGaps: YieldCoverageAuditQueueItem[];

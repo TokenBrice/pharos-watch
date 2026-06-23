@@ -29,6 +29,7 @@ const COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
   "native-exact-pool",
   "source-family-adapter",
   "lending-allowlist",
+  "venue-risk-config-missing",
   "stale-auto-lending-override",
   "quarantine-ready-to-restore",
   "stale-venue-risk-score",
@@ -302,6 +303,7 @@ const COVERAGE_AUDIT_COUNT_FIELDS = [
   ["nativeExactPoolRecommendationCount", "nativeExactPoolRecommendations"],
   ["sourceFamilyAdapterRecommendationCount", "sourceFamilyAdapterRecommendations"],
   ["lendingAllowlistRecommendationCount", "lendingAllowlistRecommendations"],
+  ["venueRiskConfigMissingCount", "venueRiskConfigMissing"],
   ["staleAutoLendingOverrideCount", "staleAutoLendingOverrides"],
   ["staleVenueRiskScoreCount", "staleVenueRiskScores"],
 ] as const;
@@ -693,6 +695,7 @@ export async function loadYieldHealthSummary(
     coverageAuditCounts.nativeExactPoolRecommendationCount,
     coverageAuditCounts.sourceFamilyAdapterRecommendationCount,
     coverageAuditCounts.lendingAllowlistRecommendationCount,
+    coverageAuditCounts.venueRiskConfigMissingCount,
     coverageAuditCounts.staleVenueRiskScoreCount,
   ]);
   const coverageAuditQueue = buildCoverageAuditQueue(coverageAuditPayload);
