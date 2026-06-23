@@ -11,6 +11,7 @@ import {
   YIELD_RISK_CONFIG_PROTOCOLS,
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
 } from "../yield-sync/source-risk";
+import { YIELD_RISK_CONFIG_METADATA } from "@shared/lib/yield-source-risk-metadata";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
 
 function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYieldSource {
@@ -112,8 +113,9 @@ describe("yield source-risk registry", () => {
         expect(config.scores[category], `${protocol}.${category}`).toBeGreaterThanOrEqual(1);
         expect(config.scores[category], `${protocol}.${category}`).toBeLessThanOrEqual(5);
       }
-      expect(config.evidence.length, protocol).toBeGreaterThan(0);
-      expect(config.rationale.length, protocol).toBeGreaterThan(0);
+      const metadata = YIELD_RISK_CONFIG_METADATA[protocol];
+      expect(metadata.evidence.length, protocol).toBeGreaterThan(0);
+      expect(metadata.rationale.length, protocol).toBeGreaterThan(0);
     }
   });
 
@@ -165,7 +167,10 @@ describe("yield source-risk registry", () => {
     expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedAave!) })).toBe(1);
     expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedPendle!) })).toBe(1);
     // Medium venues: continuous curve (weighted-2.0)*0.15, near the legacy +0.15.
-    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedMorphoBlue!) })).toBeCloseTo(1.135, 5);
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedMorphoBlue!) })).toBeCloseTo(
+      1.135,
+      5,
+    );
     expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedMaple!) })).toBeCloseTo(1.18, 5);
   });
 
