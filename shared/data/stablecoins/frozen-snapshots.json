@@ -367,5 +367,85 @@
       ],
       "price": 0.9190696257398481
     }
+  },
+  {
+    "id": "eurr-stablr",
+    "capturedAt": "2026-06-23T18:15:00Z",
+    "peggedAssetRow": {
+      "id": "eurr-stablr",
+      "llamaId": "239",
+      "name": "StablR Euro",
+      "symbol": "EURR",
+      "geckoId": "stablr-euro",
+      "pegType": "peggedEUR",
+      "priceSource": "frozen-snapshot",
+      "pegMechanism": "fiat-backed",
+      "circulating": {
+        "peggedEUR": 0
+      },
+      "circulatingPrevDay": {
+        "peggedEUR": 0
+      },
+      "circulatingPrevWeek": {
+        "peggedEUR": 0
+      },
+      "circulatingPrevMonth": {
+        "peggedEUR": 0
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": {
+            "peggedEUR": 0
+          }
+        },
+        "Solana": {
+          "current": {
+            "peggedEUR": 0
+          }
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Solana"
+      ],
+      "price": null
+    }
+  },
+  {
+    "id": "usdr-stablr",
+    "capturedAt": "2026-06-23T18:15:00Z",
+    "peggedAssetRow": {
+      "id": "usdr-stablr",
+      "llamaId": "240",
+      "name": "StablR USD",
+      "symbol": "USDR",
+      "geckoId": "stablr-usd",
+      "pegType": "peggedUSD",
+      "priceSource": "frozen-snapshot",
+      "pegMechanism": "fiat-backed",
+      "circulating": {
+        "peggedUSD": 0
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 0
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 0
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 0
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": {
+            "peggedUSD": 0
+          }
+        }
+      },
+      "chains": [
+        "Ethereum"
+      ],
+      "price": null
+    }
   }
 ]
