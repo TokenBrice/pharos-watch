@@ -23909,7 +23909,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "m0"
+    "liveReserveAdapter": "m0-wrapper-underlying"
   },
   {
     "id": "usdo-openeden",
