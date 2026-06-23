@@ -91,6 +91,18 @@ describe("yield config registry", () => {
     expect(missing).toEqual([]);
   });
 
+  it("does not expose stale PikuDAO USP native DeFiLlama pool coverage", () => {
+    expect(YIELD_POOL_MAP["usp-pikudao"]).toBeUndefined();
+    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "usp-pikudao")?.strategies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "native-pool",
+          sourceKey: "2fb2f840-9be7-4de9-b29a-ea928205c476",
+        }),
+      ]),
+    );
+  });
+
   it("keeps deterministic on-chain configs unique and attached to tracked contracts", () => {
     const ids = ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId);
     expect(new Set(ids).size).toBe(ids.length);

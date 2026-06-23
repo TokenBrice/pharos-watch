@@ -18,8 +18,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "aznd-mu-digital": "0a05f2ee-e182-476a-9cdc-2fed86fcd765",
   // OUSD - origin-dollar native, Ethereum, $7M TVL, ~5.4% APY
   "ousd-origin-protocol": "529258ee-9b27-4fcf-a32c-b82abb3fda68",
-  // USP - merkl pool, Ethereum, $12M TVL, ~23.5% APY
-  "usp-pikudao": "2fb2f840-9be7-4de9-b29a-ea928205c476",
   // syrupUSDC - maple native USDC pool, Ethereum, $3.2B TVL, ~4.6% APY
   //             (syrupUSDC is the yield wrapper for USDC deposits into Maple)
   "syrupusdc-maple": "43641cf5-a92e-416b-bce9-27113d3c0db6",
