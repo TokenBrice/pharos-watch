@@ -15,6 +15,7 @@ import {
   COMMON_VALIDATE_PREBUILD_COMMANDS,
   PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
@@ -29,6 +30,13 @@ const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";
 const PRODUCTION_PUBLIC_ENV_KEYS = new Set(["NEXT_PUBLIC_GA_ID"]);
 const PRODUCTION_PUBLIC_ENV_PREFIXES = ["NEXT_PUBLIC_PHAROS_"];
 const TELEGRAM_LOAD_ADVISORY_COMMAND = "npx tsx scripts/ci/check-telegram-load.ts";
+const DEPENDENCY_AUDIT_COMMAND = "npm run audit:deps";
+const PRICING_PROVIDER_AUDIT_COMMAND = "npm run audit:pricing-providers";
+const DEPENDENCY_AUDIT_INPUT_PATHS = new Set(["package.json", "package-lock.json", "worker/package.json"]);
+const PRICING_PROVIDER_AUDIT_INPUT_PATHS = new Set([
+  "scripts/maintenance/audit-pricing-provider-config.ts",
+  "shared/lib/pricing-provider-config.ts",
+]);
 
 export function normalizePath(path) {
   return normalizeRepoPath(path);
@@ -208,6 +216,28 @@ export function getValidatePrebuildSurface(changedFiles) {
   return "full";
 }
 
+function shouldRunDependencyAudit(changedFiles) {
+  return changedFiles.some((file) => DEPENDENCY_AUDIT_INPUT_PATHS.has(file));
+}
+
+function shouldRunPricingProviderAudit(changedFiles) {
+  return changedFiles.some((file) => PRICING_PROVIDER_AUDIT_INPUT_PATHS.has(file));
+}
+
+/**
+ * @param {string[]} changedFiles
+ * @param {Record<string, string | undefined>} [env]
+ */
+export function getValidatePrebuildSkipCommands(changedFiles, env = process.env) {
+  if (env.MERGE_GATE_FULL_DEPLOY === "1") {
+    return [];
+  }
+  const skipped = [];
+  if (!shouldRunDependencyAudit(changedFiles)) skipped.push(DEPENDENCY_AUDIT_COMMAND);
+  if (!shouldRunPricingProviderAudit(changedFiles)) skipped.push(PRICING_PROVIDER_AUDIT_COMMAND);
+  return skipped;
+}
+
 function getOfflinePagesPublicEnv(env) {
   return Object.fromEntries(
     Object.keys(env)
@@ -238,9 +268,13 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
   const pagesValidationEnv = PAGES_VALIDATE_COMMANDS.includes(cmd) ? getPagesValidationEnv(env) : {};
 
   if (cmd === "npm run validate:prebuild") {
+    const skippedCommands = getValidatePrebuildSkipCommands(changedFiles, env);
     return {
       ...baseEnv,
       [VALIDATE_PREBUILD_SURFACE_ENV]: getValidatePrebuildSurface(changedFiles),
+      ...(skippedCommands.length > 0
+        ? { [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: skippedCommands.join(",") }
+        : {}),
     };
   }
 

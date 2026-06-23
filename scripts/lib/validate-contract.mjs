@@ -7,6 +7,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run lint",
   "npm run lint:typed",
   "npm run typecheck",
+  "npm run typecheck:tests",
   "npm run check:agent-doc-sync",
   "npm run check:agent-skill-symlinks",
   "npm run check:attestor-tier-coverage",
@@ -56,6 +57,7 @@ export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
 // package-level implementation delegates to the shared registry above.
 export const COMMON_VALIDATE_PREBUILD_COMMANDS = ["npm run validate:prebuild"];
 export const VALIDATE_PREBUILD_SURFACE_ENV = "VALIDATE_PREBUILD_SURFACE";
+export const VALIDATE_PREBUILD_SKIP_COMMANDS_ENV = "VALIDATE_PREBUILD_SKIP_COMMANDS";
 export const VALIDATE_PREBUILD_TIER_ENV = "VALIDATE_PREBUILD_TIER";
 export const VALIDATE_PREBUILD_TIERS = ["blocking", "surface", "full"];
 
@@ -72,6 +74,7 @@ export const VALIDATION_COMMAND_TIER_REGISTRY = [
   { command: "npm run lint", tier: "blocking" },
   { command: "npm run lint:typed", tier: "blocking" },
   { command: "npm run typecheck", tier: "blocking" },
+  { command: "npm run typecheck:tests", tier: "blocking" },
   { command: "npm run check:agent-doc-sync", tier: "full" },
   { command: "npm run check:agent-skill-symlinks", tier: "full" },
   { command: "npm run check:attestor-tier-coverage", tier: "surface" },
@@ -260,9 +263,23 @@ export function shouldRunValidatePrebuildCommand(command, { surface, tier } = {}
   );
 }
 
-export function buildValidatePrebuildCommands({ surface, tier } = {}) {
+export function parseValidatePrebuildSkipCommands(value) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return [];
+  }
+  return value
+    .split(",")
+    .map((command) => command.trim())
+    .filter(Boolean);
+}
+
+/**
+ * @param {{ surface?: string, tier?: string, skipCommands?: string[] }} [options]
+ */
+export function buildValidatePrebuildCommands({ surface, tier, skipCommands } = {}) {
+  const skipped = new Set(skipCommands ?? []);
   return VALIDATE_PREBUILD_COMMANDS.filter((command) =>
-    shouldRunValidatePrebuildCommand(command, { surface, tier }),
+    !skipped.has(command) && shouldRunValidatePrebuildCommand(command, { surface, tier }),
   );
 }
 

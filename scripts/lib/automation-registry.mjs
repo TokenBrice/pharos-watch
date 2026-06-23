@@ -10,11 +10,15 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     deployImpact: "full",
     paths: ["scripts/maintenance/run-validate-prebuild.mjs", "scripts/lib/validate-contract.mjs"],
   },
-  { command: "npm run audit:deps", deployImpact: "validation-only", paths: [] },
+  {
+    command: "npm run audit:deps",
+    deployImpact: "validation-only",
+    paths: ["package-lock.json", "package.json", "worker/package.json"],
+  },
   {
     command: "npm run audit:pricing-providers",
     deployImpact: "full",
-    paths: ["scripts/maintenance/audit-pricing-provider-config.ts"],
+    paths: ["scripts/maintenance/audit-pricing-provider-config.ts", "shared/lib/pricing-provider-config.ts"],
   },
   {
     command: "npm run check:provider-resilience",
@@ -27,6 +31,11 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
   { command: "npm run lint", deployImpact: "validation-only", paths: [] },
   { command: "npm run lint:typed", deployImpact: "validation-only", paths: [] },
   { command: "npm run typecheck", deployImpact: "validation-only", paths: [] },
+  {
+    command: "npm run typecheck:tests",
+    deployImpact: "validation-only",
+    paths: ["scripts/ci/check-test-typecheck.mjs", "scripts/lib/test-typecheck-baseline.json", "tsconfig.test-typecheck.json"],
+  },
   {
     command: "npm run check:agent-doc-sync",
     deployImpact: "validation-only",

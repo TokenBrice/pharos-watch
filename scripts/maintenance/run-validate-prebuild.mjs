@@ -5,14 +5,24 @@ import { createExecutionUnit, runParallelExecutionUnits } from "../lib/command-r
 import {
   buildValidatePrebuildCommands,
   normalizeValidatePrebuildSurface,
+  parseValidatePrebuildSkipCommands,
   resolveValidatePrebuildTier,
   VALIDATE_PREBUILD_MAX_PARALLEL,
+  VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
   VALIDATE_PREBUILD_TIER_ENV,
 } from "../lib/validate-contract.mjs";
 
 export function buildValidatePrebuildExecutionUnits(surface, tier = "full") {
   return buildValidatePrebuildCommands({ surface, tier }).map((cmd) => createExecutionUnit([cmd]));
+}
+
+export function buildValidatePrebuildExecutionUnitsForEnv(surface, tier = "full", env = process.env) {
+  return buildValidatePrebuildCommands({
+    surface,
+    tier,
+    skipCommands: parseValidatePrebuildSkipCommands(env[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]),
+  }).map((cmd) => createExecutionUnit([cmd]));
 }
 
 export function isValidatePrebuildDryRun(argv = process.argv.slice(2)) {
@@ -51,7 +61,8 @@ export async function runValidatePrebuild({
   const tierState = resolveValidatePrebuildTier(env[VALIDATE_PREBUILD_TIER_ENV], {
     ci: readEnvValue(env, "CI") ?? "",
   });
-  const units = buildValidatePrebuildExecutionUnits(surface, tierState.effectiveTier);
+  const skippedCommands = parseValidatePrebuildSkipCommands(env[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]);
+  const units = buildValidatePrebuildExecutionUnitsForEnv(surface, tierState.effectiveTier, env);
   const tierLabel = formatValidatePrebuildTier(tierState);
   const dryRun = isValidatePrebuildDryRun(argv);
 
@@ -59,12 +70,18 @@ export async function runValidatePrebuild({
     log(
       `[validate:prebuild] Surface hint: ${surface}; tier: ${tierLabel}; dry-run plan has ${units.length} prebuild command(s).`,
     );
+    if (skippedCommands.length > 0) {
+      log(`[validate:prebuild] Skipped by caller: ${skippedCommands.join(", ")}`);
+    }
     printValidatePrebuildCommandPlan(units, { log });
     log("[validate:prebuild] Dry run enabled; commands not executed.");
     return { status: 0, failedCmd: null, aborted: false };
   }
 
   log(`[validate:prebuild] Surface hint: ${surface}; tier: ${tierLabel}; running ${units.length} prebuild command(s).`);
+  if (skippedCommands.length > 0) {
+    log(`[validate:prebuild] Skipped by caller: ${skippedCommands.join(", ")}`);
+  }
 
   return runExecutionUnits(units, {
     continueOnError: env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",

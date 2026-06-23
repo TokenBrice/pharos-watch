@@ -8,6 +8,7 @@ import {
   fetchBaseRef,
   getChangedFiles,
   getProductionPagesPublicEnv,
+  getValidatePrebuildSkipCommands,
   getValidatePrebuildSurface,
   runExecutionBatches,
   runMergeGate,
@@ -22,6 +23,7 @@ import {
   PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
   resolveValidatePrebuildTier,
+  VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
   VALIDATE_PREBUILD_TIER_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
@@ -138,13 +140,30 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+      [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
     });
     expect(getCommandEnv("npm run validate:prebuild", ["worker/src/api/status.ts"], {})).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "worker",
+      [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
     });
+  });
+
+  it("path-gates network-backed prebuild audits in the local merge gate", () => {
+    expect(getValidatePrebuildSkipCommands(["src/app/page.tsx"], {})).toEqual([
+      "npm run audit:deps",
+      "npm run audit:pricing-providers",
+    ]);
+    expect(getValidatePrebuildSkipCommands(["package-lock.json"], {})).toEqual([
+      "npm run audit:pricing-providers",
+    ]);
+    expect(getValidatePrebuildSkipCommands(["shared/lib/pricing-provider-config.ts"], {})).toEqual([
+      "npm run audit:deps",
+    ]);
+    expect(getValidatePrebuildSkipCommands(["package-lock.json", "shared/lib/pricing-provider-config.ts"], {})).toEqual([]);
+    expect(getValidatePrebuildSkipCommands([], { MERGE_GATE_FULL_DEPLOY: "1" })).toEqual([]);
   });
 
   it("keeps inherited non-full validate:prebuild tiers from weakening the merge gate", () => {
@@ -157,6 +176,7 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+      [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
     });
     expect(resolveValidatePrebuildTier("blocking", { ci: commandEnv.CI }).effectiveTier).toBe("full");
   });
@@ -489,6 +509,7 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+      [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
       VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
     });
     expect(getDiscoveryCommandEnv({ cmd: "npm run build" }, ["src/app/page.tsx"], {})).toEqual(

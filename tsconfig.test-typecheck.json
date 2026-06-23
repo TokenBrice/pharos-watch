@@ -1,0 +1,34 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "next-env.d.ts",
+    "functions/**/*.test.ts",
+    "functions/**/__tests__/**/*.ts",
+    "scripts/**/*.test.ts",
+    "scripts/**/__tests__/**/*.ts",
+    "shared/**/*.test.ts",
+    "shared/**/*.test.tsx",
+    "shared/**/__tests__/**/*.ts",
+    "shared/**/__tests__/**/*.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/__tests__/**/*.ts",
+    "src/**/__tests__/**/*.tsx",
+    "tests/**/*.test.ts",
+    "tests/**/*.test.tsx",
+    "tests/**/*.spec.ts",
+    "tests/**/*.spec.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "worker",
+    "worktrees",
+    ".worktrees",
+    ".next",
+    "coverage",
+    "out"
+  ]
+}

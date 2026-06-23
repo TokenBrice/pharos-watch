@@ -3,8 +3,10 @@ import {
   buildValidatePrebuildCommands,
   buildValidatePrebuildCommandsForSurface,
   buildValidatePrebuildCommandsForSurfaceAndTier,
+  parseValidatePrebuildSkipCommands,
   resolveValidatePrebuildTier,
   VALIDATE_PREBUILD_COMMANDS,
+  VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
   VALIDATE_PREBUILD_TIER_ENV,
 } from "../lib/validate-contract.mjs";
@@ -58,6 +60,7 @@ describe("validate:prebuild surface filtering", () => {
       "npm run lint",
       "npm run lint:typed",
       "npm run typecheck",
+      "npm run typecheck:tests",
       "npm run check:client-registry-imports",
       "npm run check:cron-connections",
       "npm run check:cron-sync",
@@ -70,6 +73,23 @@ describe("validate:prebuild surface filtering", () => {
       "npm run check:supply-helper-usage",
       "npm run check:worker-boundary",
     ]);
+  });
+
+  it("removes caller-skipped commands after surface and tier filtering", () => {
+    expect(parseValidatePrebuildSkipCommands("npm run audit:deps, npm run audit:pricing-providers")).toEqual([
+      "npm run audit:deps",
+      "npm run audit:pricing-providers",
+    ]);
+
+    const commands = buildValidatePrebuildCommands({
+      surface: "full",
+      tier: "full",
+      skipCommands: ["npm run audit:deps", "npm run audit:pricing-providers"],
+    });
+
+    expect(commands).not.toContain("npm run audit:deps");
+    expect(commands).not.toContain("npm run audit:pricing-providers");
+    expect(commands).toContain("npm run typecheck:tests");
   });
 
   it("keeps the surface tier stronger than blocking while excluding full-only advisory checks", () => {
@@ -188,6 +208,7 @@ describe("validate:prebuild surface filtering", () => {
       argv: ["--dry-run"],
       env: {
         [VALIDATE_PREBUILD_TIER_ENV]: "blocking",
+        [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run typecheck:tests",
       },
       log: (line) => logs.push(line),
       runExecutionUnits: () => {
@@ -196,11 +217,16 @@ describe("validate:prebuild surface filtering", () => {
       },
     });
 
-    const expectedCommands = buildValidatePrebuildCommandsForSurfaceAndTier("full", "blocking");
+    const expectedCommands = buildValidatePrebuildCommands({
+      surface: "full",
+      tier: "blocking",
+      skipCommands: ["npm run typecheck:tests"],
+    });
     expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
     expect(executed).toBe(false);
     expect(logs).toEqual([
       `[validate:prebuild] Surface hint: full; tier: blocking; dry-run plan has ${expectedCommands.length} prebuild command(s).`,
+      "[validate:prebuild] Skipped by caller: npm run typecheck:tests",
       "[validate:prebuild] Command plan:",
       ...expectedCommands.map((cmd, index) => `${index + 1}. ${cmd}`),
       "[validate:prebuild] Dry run enabled; commands not executed.",

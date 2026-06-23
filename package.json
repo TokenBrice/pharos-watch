@@ -28,6 +28,8 @@
     "lint": "npm run check:table-primitives && eslint . --cache --cache-strategy content --cache-location .cache/eslint/ --max-warnings=0",
     "lint:typed": "eslint --config eslint.typed.config.mjs \"worker/src/**/*.ts\" \"worker/src/**/*.tsx\" \"shared/lib/**/*.ts\" \"functions/**/*.ts\" --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "typecheck:tests": "node scripts/ci/check-test-typecheck.mjs",
+    "typecheck:tests:update-baseline": "node scripts/ci/check-test-typecheck.mjs --update-baseline",
     "typecheck:worker": "cd worker && npx tsc --noEmit",
     "audit:deps": "npm audit --audit-level=high --omit=dev",
     "audit:mint-authority-review": "tsx scripts/maintenance/generate-mint-authority-review-audit.ts",

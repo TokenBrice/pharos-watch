@@ -14,6 +14,7 @@ npm run test:watch
 npm run lint
 npm run lint:typed
 npm run typecheck
+npm run typecheck:tests
 npm run typecheck:worker
 npm run test:a11y
 npm run test:a11y:hydrated
@@ -21,7 +22,7 @@ npm run test:merge-gate
 npm run test:merge-gate:discover
 ```
 
-Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. Do not duplicate those inventories here.
+Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and ratchets against `scripts/lib/test-typecheck-baseline.json`; use `npm run typecheck:tests:update-baseline` only after intentionally reducing or accepting the visible test type debt. Do not duplicate those inventories here.
 
 Common targeted runners:
 
