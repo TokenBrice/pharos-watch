@@ -23,6 +23,11 @@ import {
   DEPLOY_IMPACT_REGISTRY,
 } from "../lib/automation-registry.mjs";
 import {
+  VALIDATE_PREBUILD_COMMAND_DESCRIPTORS,
+  VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY,
+  VALIDATION_COMMAND_DESCRIPTORS,
+} from "../lib/validation-command-registry.mjs";
+import {
   buildCriticalCoverageArgs,
   buildNoncriticalTestArgs,
   CRITICAL_TEST_FILES,
@@ -422,6 +427,20 @@ describe("validate-ci parity", () => {
       "npm run check:supply-helper-usage",
       "npm run check:worker-boundary",
     ]);
+  });
+
+  it("derives validation command registries from the canonical descriptor list", () => {
+    expect(VALIDATE_PREBUILD_COMMANDS).toEqual(VALIDATE_PREBUILD_COMMAND_DESCRIPTORS.map((entry) => entry.command));
+    expect(VALIDATION_COMMAND_TIER_REGISTRY).toEqual(
+      VALIDATE_PREBUILD_COMMAND_DESCRIPTORS.map(({ command, tier }) => ({ command, tier })),
+    );
+    expect(VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY).toEqual(
+      VALIDATION_COMMAND_DESCRIPTORS.map(({ command, deployImpact, paths }) => ({
+        command,
+        deployImpact,
+        paths,
+      })),
+    );
   });
 
   it("derives the Worker root runtime package set from the lockfile", () => {

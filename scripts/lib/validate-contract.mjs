@@ -1,55 +1,9 @@
-import { VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY } from "./automation-registry.mjs";
+import {
+  VALIDATE_PREBUILD_COMMAND_DESCRIPTORS,
+  VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY,
+} from "./validation-command-registry.mjs";
 
-export const VALIDATE_PREBUILD_COMMANDS = [
-  "npm run audit:deps",
-  "npm run audit:pricing-providers",
-  "npm run check:provider-resilience",
-  "npm run lint",
-  "npm run lint:typed",
-  "npm run typecheck",
-  "npm run typecheck:tests",
-  "npm run check:agent-doc-sync",
-  "npm run check:agent-skill-symlinks",
-  "npm run check:attestor-tier-coverage",
-  "npm run check:client-registry-imports",
-  "npm run check:cron-abort-contract",
-  "npm run check:cron-console-usage",
-  "npm run check:cron-connections",
-  "npm run check:cron-sync",
-  "npm run check:dependency-coverage",
-  "npm run check:doc-counts",
-  "npm run check:doc-source-paths",
-  "npm run check:doc-sync",
-  "npm run check:duplicate-exports",
-  "npm run check:env-contract",
-  "npm run check:frozen-invariants",
-  "npm run check:generated-artifacts",
-  "npm run check:glossary-coverage",
-  "npm run check:one-liner-coverage",
-  "npm run check:mechanism-archetype-coverage",
-  "npm run check:archetype-explainer-coverage",
-  "npm run check:hook-polling-window",
-  "npm run check:hotspot-ratchet",
-  "npm run check:migrations",
-  "npm run check:price-bounds-parity",
-  "npm run check:redemption-backstops",
-  "npm run check:redemption-coverage-audit",
-  "npm run check:reserve-fixture-freshness",
-  "npm run check:selector-banned-phrases",
-  "npm run check:site-csp-sync",
-  "npm run check:script-entrypoints",
-  "npm run check:shared-cycles",
-  "npm run check:shared-types-imports",
-  "npm run check:sql-safety",
-  "npm run check:stale-flags",
-  "npm run check:stablecoin-data",
-  "npm run check:oracle-risk-coverage:enforce",
-  "npm run check:supply-helper-usage",
-  "npm run check:unused-code",
-  "npm run check:verified-doc-links",
-  "npm run check:world-map",
-  "npm run check:worker-boundary",
-];
+export const VALIDATE_PREBUILD_COMMANDS = VALIDATE_PREBUILD_COMMAND_DESCRIPTORS.map((entry) => entry.command);
 
 export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
 
@@ -67,56 +21,10 @@ const VALIDATE_PREBUILD_TIER_RANK = {
   full: 2,
 };
 
-export const VALIDATION_COMMAND_TIER_REGISTRY = [
-  { command: "npm run audit:deps", tier: "full" },
-  { command: "npm run audit:pricing-providers", tier: "surface" },
-  { command: "npm run check:provider-resilience", tier: "surface" },
-  { command: "npm run lint", tier: "blocking" },
-  { command: "npm run lint:typed", tier: "blocking" },
-  { command: "npm run typecheck", tier: "blocking" },
-  { command: "npm run typecheck:tests", tier: "blocking" },
-  { command: "npm run check:agent-doc-sync", tier: "full" },
-  { command: "npm run check:agent-skill-symlinks", tier: "full" },
-  { command: "npm run check:attestor-tier-coverage", tier: "surface" },
-  { command: "npm run check:client-registry-imports", tier: "blocking" },
-  { command: "npm run check:cron-abort-contract", tier: "surface" },
-  { command: "npm run check:cron-console-usage", tier: "surface" },
-  { command: "npm run check:cron-connections", tier: "blocking" },
-  { command: "npm run check:cron-sync", tier: "blocking" },
-  { command: "npm run check:dependency-coverage", tier: "full" },
-  { command: "npm run check:doc-counts", tier: "full" },
-  { command: "npm run check:doc-source-paths", tier: "full" },
-  { command: "npm run check:doc-sync", tier: "full" },
-  { command: "npm run check:duplicate-exports", tier: "full" },
-  { command: "npm run check:env-contract", tier: "blocking" },
-  { command: "npm run check:frozen-invariants", tier: "surface" },
-  { command: "npm run check:generated-artifacts", tier: "blocking" },
-  { command: "npm run check:glossary-coverage", tier: "full" },
-  { command: "npm run check:one-liner-coverage", tier: "full" },
-  { command: "npm run check:mechanism-archetype-coverage", tier: "surface" },
-  { command: "npm run check:archetype-explainer-coverage", tier: "surface" },
-  { command: "npm run check:hook-polling-window", tier: "surface" },
-  { command: "npm run check:hotspot-ratchet", tier: "full" },
-  { command: "npm run check:migrations", tier: "blocking" },
-  { command: "npm run check:price-bounds-parity", tier: "surface" },
-  { command: "npm run check:redemption-backstops", tier: "surface" },
-  { command: "npm run check:redemption-coverage-audit", tier: "full" },
-  { command: "npm run check:reserve-fixture-freshness", tier: "full" },
-  { command: "npm run check:selector-banned-phrases", tier: "full" },
-  { command: "npm run check:site-csp-sync", tier: "blocking" },
-  { command: "npm run check:script-entrypoints", tier: "full" },
-  { command: "npm run check:shared-cycles", tier: "surface" },
-  { command: "npm run check:shared-types-imports", tier: "surface" },
-  { command: "npm run check:sql-safety", tier: "blocking" },
-  { command: "npm run check:stale-flags", tier: "full" },
-  { command: "npm run check:stablecoin-data", tier: "blocking" },
-  { command: "npm run check:oracle-risk-coverage:enforce", tier: "surface" },
-  { command: "npm run check:supply-helper-usage", tier: "blocking" },
-  { command: "npm run check:unused-code", tier: "full" },
-  { command: "npm run check:verified-doc-links", tier: "full" },
-  { command: "npm run check:world-map", tier: "full" },
-  { command: "npm run check:worker-boundary", tier: "blocking" },
-];
+export const VALIDATION_COMMAND_TIER_REGISTRY = VALIDATE_PREBUILD_COMMAND_DESCRIPTORS.map(({ command, tier }) => ({
+  command,
+  tier,
+}));
 
 export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
@@ -140,17 +48,11 @@ export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_
   });
 }
 
-export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
-  ...buildNoncriticalTestShardCommands(),
-  "npm run coverage:critical",
-];
+export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [...buildNoncriticalTestShardCommands(), "npm run coverage:critical"];
 
 export const PAGES_SMOKE_VALIDATE_COMMANDS = ["npm run validate:pages-smoke"];
 
-export const WORKER_VALIDATE_COMMANDS = [
-  "npm run typecheck:worker",
-  "npm run validate:worker-scheduled-smoke",
-];
+export const WORKER_VALIDATE_COMMANDS = ["npm run typecheck:worker", "npm run validate:worker-scheduled-smoke"];
 
 export const WORKER_SMOKE_VALIDATE_COMMANDS = ["npm run validate:worker-smoke"];
 
@@ -278,8 +180,8 @@ export function parseValidatePrebuildSkipCommands(value) {
  */
 export function buildValidatePrebuildCommands({ surface, tier, skipCommands } = {}) {
   const skipped = new Set(skipCommands ?? []);
-  return VALIDATE_PREBUILD_COMMANDS.filter((command) =>
-    !skipped.has(command) && shouldRunValidatePrebuildCommand(command, { surface, tier }),
+  return VALIDATE_PREBUILD_COMMANDS.filter(
+    (command) => !skipped.has(command) && shouldRunValidatePrebuildCommand(command, { surface, tier }),
   );
 }
 
@@ -291,15 +193,17 @@ export function buildValidatePrebuildCommandsForSurfaceAndTier(surface, tier) {
   return buildValidatePrebuildCommands({ surface, tier });
 }
 
-export function validateValidationCommandImpactRegistry(commands = [
-  ...VALIDATE_PREBUILD_COMMANDS,
-  ...COMMON_VALIDATE_PREBUILD_COMMANDS,
-  ...PAGES_VALIDATE_COMMANDS,
-  ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
-  ...WORKER_VALIDATE_COMMANDS,
-  ...PAGES_SMOKE_VALIDATE_COMMANDS,
-  ...WORKER_SMOKE_VALIDATE_COMMANDS,
-]) {
+export function validateValidationCommandImpactRegistry(
+  commands = [
+    ...VALIDATE_PREBUILD_COMMANDS,
+    ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+    ...PAGES_VALIDATE_COMMANDS,
+    ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+    ...WORKER_VALIDATE_COMMANDS,
+    ...PAGES_SMOKE_VALIDATE_COMMANDS,
+    ...WORKER_SMOKE_VALIDATE_COMMANDS,
+  ],
+) {
   const classifiedCommands = new Set(VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY.map((entry) => entry.command));
   const missing = [...new Set(commands.map(normalizeValidationCommand))].filter(
     (command) => !classifiedCommands.has(command),
