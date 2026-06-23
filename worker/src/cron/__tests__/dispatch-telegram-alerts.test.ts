@@ -363,6 +363,48 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockRecordOutcome).not.toHaveBeenCalled();
   });
 
+  it("drains due pending rows even when the Telegram API circuit is open", async () => {
+    mockShouldAttemptFetch.mockResolvedValue(false);
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: {
+          total: 1,
+          expired: 0,
+          due: 1,
+          deferred: 0,
+          near_ttl: 0,
+          oldest_pending_created_at: now - 120,
+          oldest_due_created_at: now - 120,
+        },
+      },
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [buildPendingAlertRow({ id: 1, chatId: "100", html: "<b>Queued alert</b>", createdAt: now - 120 })],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      skipped: string;
+      pendingAttempted: number;
+      pendingDrained: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.skipped).toBe("circuit-open");
+    expect(metadata.pendingAttempted).toBe(1);
+    expect(metadata.pendingDrained).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(result.itemCount).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockRecordOutcome).toHaveBeenCalledWith(db, "telegram-api", true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+  });
+
   it("seeds snapshots on first run", async () => {
     mockGetCache.mockResolvedValue(null);
 

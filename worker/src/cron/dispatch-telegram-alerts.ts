@@ -193,6 +193,15 @@ interface FullFanoutPathContext {
   reportProgress?: CronProgressReporter;
 }
 
+interface CircuitOpenQueuePathContext {
+  db: D1Database;
+  botToken: string;
+  nowSec: number;
+  signal?: AbortSignal;
+  sharedState?: TelegramDispatchSharedState;
+  reportProgress?: CronProgressReporter;
+}
+
 async function executeSeedPath({
   db,
   currentSnapshots,
@@ -247,6 +256,96 @@ async function executeSeedPath({
       deferredTail: pendingTailState(pendingCapacityBefore),
     },
   });
+  return result;
+}
+
+async function executeCircuitOpenQueuePath({
+  db,
+  botToken,
+  nowSec,
+  signal,
+  sharedState,
+  reportProgress,
+}: CircuitOpenQueuePathContext): Promise<DispatchResult & { skipped: "circuit-open" }> {
+  const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
+  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
+  await reportDigestProgress(reportProgress, {
+    stage: "pending-drain",
+    message: "Draining due Telegram pending rows while fresh fanout is circuit-gated",
+    providerFamily: "telegram-api",
+    itemsDone: 0,
+    itemsTotal: Math.max(pendingCapacityBefore.due, 1),
+    metadata: {
+      skipped: "circuit-open",
+      deferredTail: pendingTailState(pendingCapacityBefore),
+    },
+  });
+
+  const drainResult = pendingCapacityBefore.due > 0
+    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal)
+    : emptyDrainResult();
+  const expiredCount = pendingCapacityBefore.expired > 0
+    ? await cleanupExpiredPendingAlerts(db, nowSec)
+    : 0;
+  const pendingQueueChanged =
+    drainResult.sent > 0 ||
+    drainResult.blocked > 0 ||
+    drainResult.retryQueued > 0 ||
+    drainResult.dropped > 0 ||
+    drainResult.deferred > 0 ||
+    expiredCount > 0;
+  const pendingCapacityAfter = pendingQueueChanged
+    ? await readPendingCapacitySnapshot(db, nowSec)
+    : pendingCapacityBefore;
+  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
+
+  const base = emptyResult(false);
+  const result: DispatchResult & { skipped: "circuit-open" } = {
+    ...base,
+    skipped: "circuit-open",
+    messagesSent: drainResult.sent,
+    blockedUsersCleanedUp: drainResult.blockedCleanedUp,
+    blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
+    pendingAttempted: drainResult.attempted,
+    pendingDrained: drainResult.sent,
+    pendingSent: drainResult.sent,
+    pendingRetryQueued: drainResult.retryQueued,
+    pendingDropped: drainResult.dropped,
+    pendingDroppedTtlExpired: expiredCount,
+    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
+    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
+    pendingDeferred: drainResult.deferred,
+    pendingRateLimited: drainResult.rateLimited,
+    pendingRetryAfterSec: drainResult.retryAfterSec,
+    pendingExpired: expiredCount,
+    ...pendingCapacityFields(pendingCapacityAfter),
+    pendingCapacityBefore,
+    pendingCapacityAfter,
+  };
+
+  if (drainResult.attempted > 0) {
+    const hasSuccessfulTelegramEffect = drainResult.sent > 0 || drainResult.blockedCleanedUp > 0;
+    await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulTelegramEffect);
+  }
+
+  await reportDigestProgress(reportProgress, {
+    stage: "complete",
+    message: "Skipped fresh Telegram fanout while preserving pending queue lifecycle",
+    providerFamily: "telegram-dispatch",
+    itemsDone: drainResult.attempted,
+    itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
+    metadata: {
+      skipped: "circuit-open",
+      countTotals: {
+        pendingAttempted: drainResult.attempted,
+        pendingSent: drainResult.sent,
+        pendingDeferred: drainResult.deferred,
+        pendingDropped: drainResult.dropped,
+      },
+      deferredTail: pendingTailState(pendingCapacityAfter),
+    },
+  });
+
   return result;
 }
 
@@ -808,17 +907,27 @@ export async function dispatchTelegramAlerts(
   });
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await executeCircuitOpenQueuePath({
+      db,
+      botToken,
+      nowSec,
+      signal,
+      sharedState,
+      reportProgress,
+    });
     await reportDigestProgress(reportProgress, {
       stage: "skipped",
-      message: "Skipping Telegram dispatch because the API circuit is open",
+      message: "Skipped fresh Telegram dispatch because the API circuit is open",
       providerFamily: "telegram-api",
-      itemsDone: 0,
-      itemsTotal: 1,
+      itemsDone: result.pendingAttempted,
+      itemsTotal: Math.max(result.pendingCapacityBefore.due, result.pendingAttempted, 1),
       metadata: {
         skipped: "circuit-open",
+        deferredTail: pendingTailState(result.pendingCapacityAfter),
       },
     });
-    return { itemCount: 0, metadata: JSON.stringify({ skipped: "circuit-open" }) };
+    return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
   }
 
   const dispatchStartedAtMs = Date.now();

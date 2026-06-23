@@ -790,6 +790,7 @@ stores only the rendered HTML.
 The dispatcher is protected by `CIRCUIT_SOURCE.TELEGRAM_API`.
 
 - Open circuits skip fan-out.
+- Open circuits still run the pending-queue drain and expired-row cleanup so already-enqueued retries do not age out while fresh fan-out is gated.
 - Successful snapshot seeding or alert delivery records a successful outcome.
 - Failed sends record an unsuccessful outcome.
 
