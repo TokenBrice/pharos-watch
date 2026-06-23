@@ -321,6 +321,7 @@ export function LongformScrollspyNav({
                   className={cn(
                     "group pharos-rail-tab pharos-focus-ring relative isolate inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
                     isActive && "pharos-rail-tab-active",
+                    emphasis === "watch-rail" && isActive && "font-semibold",
                   )}
                 >
                   {isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
@@ -342,10 +343,11 @@ export function LongformScrollspyNav({
           {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}
         </div>
         {emphasis === "watch-rail" && (
-          <div className="pharos-watch-rail-track" aria-hidden="true">
-            <div className="pharos-watch-rail-fill" />
-            <div className="pharos-watch-rail-lamp" />
-          </div>
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-left bg-frost-blue"
+            style={{ transform: "scaleX(var(--pharos-read-progress, 0))" }}
+            aria-hidden="true"
+          />
         )}
       </div>
       {showDepthHint && (
