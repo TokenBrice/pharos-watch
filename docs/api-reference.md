@@ -4372,6 +4372,8 @@ For commodity-pegged assets, bounded replays limit the peer-median reference fet
 
 Backfills per-coin supply history snapshots. When historical market-price series are available, the endpoint also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
 
+Commodity and CoinGecko-only total-supply fallback replays historical EVM `totalSupply()` at each UTC day close when CoinGecko market caps are missing. It does not project the current supply backward across the requested window, and it fails closed when the asset has multiple supported EVM deployments. Protocol-TVL fallback can still write market-cap rows, but stores `price: null` for days outside the returned price-chart coverage instead of extrapolating the nearest endpoint price.
+
 **Query parameters**
 
 | Param                           | Type                               | Default | Description                                                                               |

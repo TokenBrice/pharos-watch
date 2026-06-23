@@ -196,14 +196,14 @@ For CoinGecko-only coins and commodity tokens (gold/silver), empty or stale exte
 
 Admin endpoint (requires Access service-token headers). Backfills `supply_history` from:
 
-- **Commodity tokens:** CoinGecko `market_chart`
+- **Commodity tokens:** CoinGecko `market_chart` market caps; when those caps are missing, historical EVM `totalSupply()` at each UTC day close for single-deployment assets; protocol TVL fallback only after those sources fail
 - **CoinGecko-only and commodity detail providers:** CoinGecko `market_chart`
 - **Configured protocol-inventory on-chain assets:** historical EVM `totalSupply()` minus configured holder balances
 - **DefiLlama-backed regular coins:** DefiLlama detail API
 
 When a historical market-price series is available for a coin, the backfill also persists daily `supply_history.price` on restored rows, including regular USD stablecoins. Historical PSI replay relies on that field to prefer day-level deviation over blunt `peak_deviation_bps` fallback.
 
-The handler explicitly supports `detailProvider === "coingecko"` and `detailProvider === "commodity"` in addition to DefiLlama-backed assets. Non-USD regular coins fetch historical prices for native-to-USD conversion. Batch processing uses `stablecoin`, `batch`, and `batchSize`; optional `startDay` / `endDay` bounds limit the UTC daily rows written, with future `endDay` values clamped to the last completed UTC day.
+The handler explicitly supports `detailProvider === "coingecko"` and `detailProvider === "commodity"` in addition to DefiLlama-backed assets. Non-USD regular coins fetch historical prices for native-to-USD conversion. Commodity and CoinGecko-only total-supply fallback reads replay historical blocks instead of projecting a current `totalSupply()` across the window, and it fails closed for multi-deployment assets that cannot be represented by exactly one supported EVM contract. Batch processing uses `stablecoin`, `batch`, and `batchSize`; optional `startDay` / `endDay` bounds limit the UTC daily rows written, with future `endDay` values clamped to the last completed UTC day.
 
 ---
 

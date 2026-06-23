@@ -470,18 +470,23 @@ describe("handleBackfillSupplyHistory", () => {
     expect(fetchHistoricalFxRates).not.toHaveBeenCalled();
   });
 
-  it("falls back to on-chain totalSupply when CoinGecko market caps are all zero", async () => {
+  it("falls back to historical on-chain totalSupply when CoinGecko market caps are all zero", async () => {
     // Simulates a brand-new CG-only coin: CoinGecko returns valid prices but market_caps=0
-    // and circulating_supply=0 (upstream data not yet populated). Backfill should probe
-    // on-chain totalSupply and compute mcap = supply × price for each CG price point.
+    // and circulating_supply=0 (upstream data not yet populated). Backfill should replay
+    // on-chain totalSupply per historical day and compute mcap = supply × price.
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
 
     const ts1 = 1_775_692_800_000; // CG returns ms timestamps
     const ts2 = 1_775_779_200_000; // +1 day
-    const onChainRawSupply = 1_000_000_000_000n; // 1,000,000 tokens at 6 decimals
-    const rawHex = `0x${onChainRawSupply.toString(16).padStart(64, "0")}`;
+    const blockNumber = 22_500_000;
+    const onChainRawSupplyByCall = [
+      1_000_000_000_000n, // 1,000,000 tokens at 6 decimals
+      1_100_000_000_000n, // 1,100,000 tokens at 6 decimals
+    ];
 
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.includes("/coins/saturn-dollar/market_chart")) {
@@ -500,8 +505,18 @@ describe("handleBackfillSupplyHistory", () => {
         );
       }
       if (url.includes("fake-eth-rpc")) {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+          params?: Array<{ data?: string } | string>;
+        };
+        expect(body.method).toBe("eth_call");
+        const call = body.params?.[0];
+        const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
+        expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
+        const raw = onChainRawSupplyByCall.shift();
+        if (raw == null) throw new Error("Unexpected extra historical totalSupply call");
         return new Response(
-          JSON.stringify({ jsonrpc: "2.0", id: 1, result: rawHex }),
+          JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
@@ -552,16 +567,14 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts[0].args[0]).toBe("usdat-saturn");
     expect(inserts[0].args[2] as number).toBeCloseTo(1_000_200, -1);
     expect(inserts[0].args[3] as number).toBeCloseTo(1.0002, 4);
-    expect(inserts[1].args[2] as number).toBeCloseTo(1_001_100, -1);
+    expect(inserts[1].args[2] as number).toBeCloseTo(1_101_210, -1);
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).toHaveBeenCalledTimes(2);
   });
 
-  it("skips non-EVM first contracts when using on-chain totalSupply fallback", async () => {
+  it("fails closed instead of replaying one EVM lane for multi-deployment supply fallback", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
-    const rpcFetches: string[] = [];
 
     const ts = 1_775_692_800_000;
-    const onChainRawSupply = 2_000_000_000_000n; // 2,000,000 tokens at 6 decimals
-    const rawHex = `0x${onChainRawSupply.toString(16).padStart(64, "0")}`;
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
@@ -578,13 +591,6 @@ describe("handleBackfillSupplyHistory", () => {
       if (url.includes("/coins/apollo-diversified-credit-securitize-fund?")) {
         return new Response(
           JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url.includes("fake-avax-rpc")) {
-        rpcFetches.push(url);
-        return new Response(
-          JSON.stringify({ jsonrpc: "2.0", id: 1, result: rawHex }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
@@ -622,16 +628,14 @@ describe("handleBackfillSupplyHistory", () => {
       errors?: string[];
     };
     expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(1);
-    expect(body.errors).toBeUndefined();
-    expect(rpcFetches).toEqual(["https://fake-avax-rpc.test"]);
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors?.[0]).toContain("historical totalSupply backfill requires exactly one supported EVM contract");
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
 
     const inserts = capturedStatements.filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0].args[0]).toBe("acred-apollo-securitize");
-    expect(inserts[0].args[2] as number).toBeCloseTo(2_020_000, -1);
+    expect(inserts).toHaveLength(0);
   });
 
   it("backfills eEARN from historical Ethereum totalSupply and CoinGecko price", async () => {
@@ -955,5 +959,78 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.coinsProcessed).toBe(1);
     expect(body.rowsInserted).toBe(0);
     expect(body.errors?.[0]).toContain("CoinGecko market caps all zero");
+  });
+
+  it("does not extrapolate TVL fallback prices beyond the DefiLlama price chart range", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const day1 = Math.floor(Date.UTC(2026, 3, 9) / 1000);
+    const day2 = day1 + 86_400;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.includes("/coins/tether-gold/market_chart")) {
+        return new Response(
+          JSON.stringify({ market_caps: [], prices: [] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/coins/tether-gold?")) {
+        return new Response(
+          JSON.stringify({ market_data: { circulating_supply: 0 } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/protocol/tether-gold")) {
+        return new Response(
+          JSON.stringify({
+            tvl: [
+              { date: day1, totalLiquidityUSD: 100_000_000 },
+              { date: day2, totalLiquidityUSD: 101_000_000 },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/chart/coingecko:tether-gold")) {
+        return new Response(
+          JSON.stringify({
+            coins: {
+              "coingecko:tether-gold": {
+                prices: [{ timestamp: day1, price: 2_300 }],
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10"),
+      true,
+      makeApiRequest("/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10", {
+        adminKey: "secret",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+    };
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.rowsInserted).toBe(2);
+    expect(body.errors).toBeUndefined();
+
+    const inserts = capturedStatements.filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(inserts).toHaveLength(2);
+    expect(inserts[0].args).toEqual(["xaut-tether", day1, 100_000_000, 2_300]);
+    expect(inserts[1].args).toEqual(["xaut-tether", day2, 101_000_000, null]);
   });
 });

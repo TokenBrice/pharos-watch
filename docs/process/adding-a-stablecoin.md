@@ -768,7 +768,7 @@ After the production deploy, backfill history for live assets:
 - If the coin has `geckoId` but no `llamaId`, use `POST /api/backfill-cg-prices`
 - If it is pre-launch, skip runtime backfills until activation
 
-For commodity tokens (`pegCurrency: "GOLD" | "SILVER"`), `backfill-supply-history` automatically uses CoinGecko `market_chart` as the primary source rather than DefiLlama TVL, because protocol TVL can diverge from token market cap (e.g. a protocol's multi-chain reserves exceeding the on-chain token supply). You still call the same endpoint; no extra flag is required. An on-chain `totalSupply` probe is used as an additional sanity fallback when the token has an EVM contract in `contracts[]`.
+For commodity tokens (`pegCurrency: "GOLD" | "SILVER"`), `backfill-supply-history` automatically uses CoinGecko `market_chart` market caps as the primary source rather than DefiLlama TVL, because protocol TVL can diverge from token market cap (e.g. a protocol's multi-chain reserves exceeding the on-chain token supply). You still call the same endpoint; no extra flag is required. If CoinGecko has prices but missing/zero market caps, the endpoint can replay historical EVM `totalSupply()` at each UTC day close for assets with exactly one supported EVM deployment; it does not project the current supply backward across the window. Multi-deployment assets fail closed unless CoinGecko market caps or a validated TVL fallback can cover the requested days.
 
 Examples:
 

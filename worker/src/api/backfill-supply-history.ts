@@ -157,14 +157,6 @@ async function fetchHistoricalPegFxPrices(
 // Protocol TVL from DefiLlama can diverge from token market cap (e.g. XAUT TVL includes
 // multi-chain reserves that far exceed the token's market cap).
 
-function firstConfiguredEvmContract(
-  contracts: ContractDeployment[] | undefined,
-  chainRpcs: Map<string, ChainRpcConfig> | undefined,
-): ContractDeployment | null {
-  if (!contracts || !chainRpcs) return null;
-  return contracts.find((contract) => chainRpcs.get(contract.chain)?.type === "evm") ?? null;
-}
-
 function selectSingleHistoricalEvmContract(contracts?: ContractDeployment[]): ContractDeployment | null {
   const supportedContracts = contracts?.filter((c) =>
     c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron"
@@ -286,33 +278,6 @@ function resolveSupplyBackfillWindow(
         }),
     done: nextStartDay == null,
   };
-}
-
-async function fetchOnChainTotalSupply(
-  contracts: ContractDeployment[] | undefined,
-  chainRpcs: Map<string, ChainRpcConfig> | undefined,
-  logLabel: string,
-  signal?: AbortSignal,
-): Promise<number | null> {
-  const contract = firstConfiguredEvmContract(contracts, chainRpcs);
-  if (!contract || !chainRpcs) return null;
-
-  try {
-    const raw = await fetchEvmUint256AtBlock(contract.chain, contract.address, TOTAL_SUPPLY_SELECTOR, "latest", {
-      chainRpcs,
-      timeoutMs: 10_000,
-      signal,
-    });
-    if (raw == null || raw <= 0n) return null;
-    const supply = Number(raw) / 10 ** (contract.decimals ?? 18);
-    if (!Number.isFinite(supply) || supply <= 0) return null;
-    console.log(`[backfill-commodity] ${logLabel}: on-chain totalSupply fallback = ${supply.toFixed(2)} units`);
-    return supply;
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[backfill-commodity] ${logLabel}: on-chain totalSupply probe failed — ${String(err).slice(0, 200)}`);
-    return null;
-  }
 }
 
 function selectConfiguredHistoricalOnChainContract(
@@ -465,8 +430,8 @@ async function backfillHistoricalTotalSupply(
     signal?: AbortSignal;
   },
 ): Promise<{ rows: number; error?: string }> {
-  if (meta.flags.pegCurrency !== "USD") {
-    return { rows: 0, error: "historical totalSupply backfill currently supports USD-pegged assets only" };
+  if (meta.flags.pegCurrency !== "USD" && !options.requirePrice) {
+    return { rows: 0, error: "historical totalSupply backfill for non-USD assets requires historical prices" };
   }
 
   const contract = selectSingleHistoricalEvmContract(meta.contracts);
@@ -588,17 +553,17 @@ async function backfillHistoricalTotalSupply(
 
 async function backfillCommodity(
   db: D1Database,
-  id: string,
+  meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
   config: {
     geckoId: string;
     protocolSlug?: string;
     cgApiKey?: string | null;
-    contracts?: ContractDeployment[];
     chainRpcs?: Map<string, ChainRpcConfig>;
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
 ): Promise<{ rows: number; error?: string }> {
+  const id = meta.id;
   const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
     apiKey: config.cgApiKey ?? null,
     signal: config.signal,
@@ -613,7 +578,7 @@ async function backfillCommodity(
   let fallthroughReason = "CoinGecko market_chart returned no data";
   if (marketHistory?.prices.length) {
     fallthroughReason =
-      "CoinGecko market caps all zero and on-chain totalSupply unavailable (no EVM contract or chainRpcs)";
+      "CoinGecko market caps all zero and historical on-chain totalSupply unavailable";
     // Build a date-keyed map of cgMcap so we can pair each price point with its matching cap.
     const cgMcapByDate = new Map<string, number>();
     for (const [ts, mcap] of marketHistory.marketCaps) {
@@ -622,23 +587,9 @@ async function backfillCommodity(
       }
     }
 
-    // CoinGecko's circulating_supply is often 0 for brand-new coins until its data
-    // ingestion catches up. Fall back to on-chain totalSupply (same strategy the live
-    // sync uses via fetchFiatCoinGeckoTokens) so `resolveMarketCap` can compute
-    // supply × price when the CG market_cap series is all zeros.
-    let effectiveSupply = marketHistory.circulatingSupply;
-    if (!effectiveSupply || effectiveSupply <= 0) {
-      const onChain = await fetchOnChainTotalSupply(
-        config.contracts,
-        config.chainRpcs,
-        `${id} (${config.geckoId})`,
-        config.signal,
-      );
-      if (onChain != null) effectiveSupply = onChain;
-    }
-
     const stmts: D1PreparedStatement[] = [];
     const seenSnapshotDates = new Set<number>();
+    let missingMarketCapDays = 0;
 
     for (const [ts, price] of marketHistory.prices) {
       if (!Number.isFinite(price) || price <= 0) continue;
@@ -646,8 +597,11 @@ async function backfillCommodity(
       if (seenSnapshotDates.has(snapshotDate)) continue;
       if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
       const cgMcap = cgMcapByDate.get(new Date(ts).toISOString().slice(0, 10));
-      const resolvedMcap = resolveMarketCap(cgMcap, effectiveSupply, price);
-      if (!Number.isFinite(resolvedMcap) || resolvedMcap <= 0) continue;
+      const resolvedMcap = resolveMarketCap(cgMcap, undefined, price);
+      if (!Number.isFinite(resolvedMcap) || resolvedMcap <= 0) {
+        missingMarketCapDays += 1;
+        continue;
+      }
 
       seenSnapshotDates.add(snapshotDate);
       pushSupplyUpsert(stmts, db, id, snapshotDate, resolvedMcap, price);
@@ -655,10 +609,28 @@ async function backfillCommodity(
 
     if (stmts.length > 0) {
       await batchExecute(db, stmts);
+      if (missingMarketCapDays > 0) {
+        console.warn(
+          `[backfill-commodity] ${id}: skipped ${missingMarketCapDays} day(s) without CoinGecko market caps instead of projecting current supply backward`,
+        );
+      }
       return { rows: stmts.length };
     }
-    // Fell through: CG had prices but no usable mcap (all zero) and on-chain supply unavailable.
-    // Fall back to the protocol-TVL path below when possible, otherwise return a clear error.
+
+    const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
+      chainRpcs: config.chainRpcs,
+      priceSeries: normalizeCoinGeckoDailyPrices(marketHistory.prices),
+      requirePrice: true,
+      window: config.window,
+      signal: config.signal,
+    });
+    if (!historicalTotalSupply.error) {
+      return historicalTotalSupply;
+    }
+    fallthroughReason = `${fallthroughReason} (${historicalTotalSupply.error})`;
+    // Fell through: CG had prices but no usable mcap and historical on-chain supply
+    // could not be replayed. Fall back to the protocol-TVL path below when possible,
+    // otherwise return a clear error.
   }
 
   // Fallback: protocol TVL (only if TVL ≈ mcap)
@@ -711,6 +683,10 @@ async function backfillCommodity(
   }
 
   function findPrice(date: number): number | null {
+    if (prices.length === 0) return null;
+    const first = prices[0];
+    const last = prices[prices.length - 1];
+    if (date < first.timestamp || date > last.timestamp) return null;
     return binarySearchNearest(prices, date, (p) => p.timestamp)?.price ?? null;
   }
 
@@ -835,11 +811,10 @@ async function executeBackfillSupplyHistory(
     }
 
     try {
-      const result = await backfillCommodity(db, meta.id, {
+      const result = await backfillCommodity(db, meta, {
         geckoId: meta.geckoId,
         protocolSlug: meta.protocolSlug ?? undefined,
         cgApiKey,
-        contracts: meta.contracts,
         chainRpcs,
         window: supplyBackfillWindow,
         signal,
