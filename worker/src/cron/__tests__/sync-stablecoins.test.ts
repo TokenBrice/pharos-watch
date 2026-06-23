@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
-import { mockRegistry, mockCircuitBreaker } from "../../test-helpers/cron";
+import { mockRegistry, mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.fn();
 
@@ -417,7 +417,7 @@ describe("syncStablecoins", () => {
     // Reset circuit-breaker mocks to factory defaults — vi.restoreAllMocks()
     // does NOT restore vi.fn() factories, only vi.spyOn() spies.
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
+    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
     fetchWithRetryMock.mockReset();
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
       totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],

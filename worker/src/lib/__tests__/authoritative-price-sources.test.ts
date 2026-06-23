@@ -68,6 +68,7 @@ vi.mock("../../api/backfill-price-sources", () => ({
 }));
 
 import {
+  AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS,
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeHistoricalPriceSeries,
   fetchAuthoritativeLivePriceOverrides,
@@ -399,6 +400,11 @@ describe("authoritative-price-sources", () => {
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
     });
+  });
+
+  it("defaults the live override wall-clock budget to 10 seconds", () => {
+    expect(AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS).toBe(10_000);
+    expect(createAuthoritativeLivePriceOverrideStats().budgetMs).toBe(10_000);
   });
 
   it("stops live RPC protocol-redeem overrides when the wall-clock budget expires", async () => {

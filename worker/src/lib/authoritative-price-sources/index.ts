@@ -36,7 +36,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   idleCdoTrancheProvider,
 ];
 
-export const AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS = 30_000;
+export const AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS = 10_000;
 
 export interface AuthoritativeLivePriceOverrideStats {
   budgetMs: number;

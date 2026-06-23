@@ -45,8 +45,8 @@ describe("address price providers", () => {
     ]);
   });
 
-  it("guesses ethereum for 0x-prefixed fallback addresses and solana otherwise", () => {
-    expect(resolveFallbackChain("0x0000000000000000000000000000000000000001")).toBe("ethereum");
+  it("treats bare 0x fallback addresses as undecidable and solana otherwise", () => {
+    expect(resolveFallbackChain("0x0000000000000000000000000000000000000001")).toBeNull();
     expect(resolveFallbackChain("So11111111111111111111111111111111111111112")).toBe("solana");
   });
 
@@ -98,6 +98,23 @@ describe("address price providers", () => {
         providerChainId: "base",
       },
     ]);
+  });
+
+  it("skips bare 0x asset addresses when no chain or deployment metadata exists", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["dexpaprika-address", "moralis-address"],
+      assets: [
+        {
+          id: "bare-evm-unknown-chain",
+          symbol: "B0X",
+          address: "0x0000000000000000000000000000000000000001",
+          price: 0,
+        },
+      ],
+    });
+
+    expect(targets.get("dexpaprika-address")).toEqual([]);
+    expect(targets.get("moralis-address")).toEqual([]);
   });
 
   it("prioritizes missing prices before low-depth priced rows, then material source-depth gaps", () => {

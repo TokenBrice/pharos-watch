@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
+import { mockCircuitOutcomeRecord } from "../../test-helpers/cron";
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
@@ -220,7 +221,7 @@ describe("fetchTbillRate", () => {
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
+    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
   });
 
   it("returns degraded when circuit is already open", async () => {
@@ -1077,7 +1078,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
+    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
   });
 
   it("hits each new endpoint URL and parses its native shape", async () => {

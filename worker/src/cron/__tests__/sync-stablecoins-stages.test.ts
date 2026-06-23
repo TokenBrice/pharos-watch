@@ -59,7 +59,7 @@ vi.mock("../sync-stablecoins/intake", () => ({
 }));
 
 vi.mock("../../lib/authoritative-price-sources", () => ({
-  createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 30_000) => ({
+  createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 10_000) => ({
     budgetMs,
     candidateCount: 0,
     attemptedCount: 0,

@@ -360,7 +360,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">DEX observation:</span> requires consistent $50K post-confidence TVL floor</li>
               <li><span className="text-foreground font-medium">Historical backfill:</span> validates against per-timestamp peg references</li>
             </ul>
-            <p>Commodity tokens (gold, silver) scale references by <code className="text-xs">commodityOunces</code> for gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks. Replay-safe cache storage is limited to strong, replayable prices and now expires after 6 hours.</p>
+            <p>USD and fiat-FX pegs share the same upside tolerance ratio when a usable reference exists, while commodity tokens (gold, silver) keep the broader 2x reference band and scale references by <code className="text-xs">commodityOunces</code> for gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks. Replay-safe cache storage is limited to strong, replayable prices and now expires after 6 hours.</p>
           </div>
         </MethodologyDetails>
     </MethodologySectionShell>

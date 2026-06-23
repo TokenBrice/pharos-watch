@@ -165,14 +165,13 @@ function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById?: Ma
 /**
  * Last-resort chain guess for an asset whose `address` carries no `chain:` prefix
  * AND whose `chains` array is empty. Reachable only for assets with neither a
- * structured deployment nor an ACTIVE_META contracts entry. The guess is a coarse
- * heuristic: a `0x`-prefixed value is assumed to be an EVM (ethereum) address and
- * anything else is assumed to be a Solana base58 address. It can mis-route a
- * non-Ethereum `0x` address or a non-Solana base58 address, so prefer supplying a
- * `chain:` prefix, a `chains` array, or ACTIVE_META contracts for tracked assets.
+ * structured deployment nor an ACTIVE_META contracts entry. Bare `0x` addresses
+ * are undecidable because they could be Ethereum or any EVM chain, so they are
+ * skipped unless metadata supplies a chain. Non-`0x` addresses are treated as
+ * Solana base58 addresses for the legacy fallback path.
  */
-export function resolveFallbackChain(rawAddress: string): "ethereum" | "solana" {
-  return rawAddress.startsWith("0x") ? "ethereum" : "solana";
+export function resolveFallbackChain(rawAddress: string): "solana" | null {
+  return rawAddress.startsWith("0x") ? null : "solana";
 }
 
 function addAssetAddressDeployments(asset: AddressPriceAssetLike): Array<{
@@ -204,11 +203,14 @@ function addAssetAddressDeployments(asset: AddressPriceAssetLike): Array<{
     deployments.push({ chain, address: rawAddress, origin: "asset.address" });
   }
   if (deployments.length === 0) {
-    deployments.push({
-      chain: resolveFallbackChain(rawAddress),
-      address: rawAddress,
-      origin: "asset.address",
-    });
+    const fallbackChain = resolveFallbackChain(rawAddress);
+    if (fallbackChain) {
+      deployments.push({
+        chain: fallbackChain,
+        address: rawAddress,
+        origin: "asset.address",
+      });
+    }
   }
   return deployments;
 }

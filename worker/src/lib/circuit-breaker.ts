@@ -17,6 +17,10 @@ import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status"
 export type CircuitRecord = SharedCircuitRecord;
 export type CircuitState = "closed" | "open" | "half-open";
 export type CircuitOutcomeDecision = "success" | "failure" | "neutral";
+export interface CircuitOutcomeRecord {
+  before: CircuitRecord;
+  after: CircuitRecord;
+}
 
 const DEFAULT_RECORD: CircuitRecord = {
   state: "closed",
@@ -25,6 +29,39 @@ const DEFAULT_RECORD: CircuitRecord = {
   lastSuccessAt: null,
   openedAt: null,
 };
+const CIRCUIT_RECORD_MEMO_TTL_MS = 5_000;
+
+interface CircuitRecordMemoCache {
+  records: Map<string, { record: CircuitRecord; expiresAtMs: number }>;
+  reads: Map<string, Promise<CircuitRecord>>;
+  versions: Map<string, number>;
+}
+
+const circuitRecordCacheByDb = new WeakMap<D1Database, CircuitRecordMemoCache>();
+
+function cloneCircuitRecord(record: CircuitRecord): CircuitRecord {
+  return { ...record };
+}
+
+function getCircuitRecordCache(db: D1Database): CircuitRecordMemoCache {
+  let cache = circuitRecordCacheByDb.get(db);
+  if (!cache) {
+    cache = {
+      records: new Map(),
+      reads: new Map(),
+      versions: new Map(),
+    };
+    circuitRecordCacheByDb.set(db, cache);
+  }
+  return cache;
+}
+
+function invalidateCircuitRecord(db: D1Database, source: string): void {
+  const cache = getCircuitRecordCache(db);
+  cache.records.delete(source);
+  cache.reads.delete(source);
+  cache.versions.set(source, (cache.versions.get(source) ?? 0) + 1);
+}
 
 function isNullableNumber(value: unknown): value is number | null {
   return value === null || typeof value === "number";
@@ -46,15 +83,54 @@ function cacheKey(source: string): string {
   return `circuit:${source}`;
 }
 
-export async function getCircuitRecord(db: D1Database, source: string): Promise<CircuitRecord> {
+async function readCircuitRecordFromDb(db: D1Database, source: string): Promise<CircuitRecord> {
   const cached = await getCache(db, cacheKey(source));
-  if (!cached) return { ...DEFAULT_RECORD };
+  if (!cached) return cloneCircuitRecord(DEFAULT_RECORD);
   try {
     const parsed = JSON.parse(cached.value);
-    return isCircuitRecord(parsed) ? parsed : { ...DEFAULT_RECORD };
+    return isCircuitRecord(parsed) ? cloneCircuitRecord(parsed) : cloneCircuitRecord(DEFAULT_RECORD);
   } catch {
-    return { ...DEFAULT_RECORD };
+    return cloneCircuitRecord(DEFAULT_RECORD);
   }
+}
+
+export async function getCircuitRecord(db: D1Database, source: string): Promise<CircuitRecord> {
+  const cache = getCircuitRecordCache(db);
+  const nowMs = Date.now();
+  const memoized = cache.records.get(source);
+  if (memoized && memoized.expiresAtMs > nowMs) {
+    return cloneCircuitRecord(memoized.record);
+  }
+
+  const pending = cache.reads.get(source);
+  if (pending) {
+    return cloneCircuitRecord(await pending);
+  }
+
+  const version = cache.versions.get(source) ?? 0;
+  let read: Promise<CircuitRecord>;
+  read = readCircuitRecordFromDb(db, source)
+    .then((record) => {
+      if ((cache.versions.get(source) ?? 0) === version) {
+        cache.records.set(source, {
+          record: cloneCircuitRecord(record),
+          expiresAtMs: Date.now() + CIRCUIT_RECORD_MEMO_TTL_MS,
+        });
+      }
+      return record;
+    })
+    .finally(() => {
+      if (cache.reads.get(source) === read) {
+        cache.reads.delete(source);
+      }
+    });
+  cache.reads.set(source, read);
+  return cloneCircuitRecord(await read);
+}
+
+async function setCircuitRecord(db: D1Database, source: string, record: CircuitRecord): Promise<void> {
+  invalidateCircuitRecord(db, source);
+  await setCache(db, cacheKey(source), JSON.stringify(record));
 }
 
 /**
@@ -70,7 +146,7 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
     if (now - record.openedAt >= CIRCUIT_PROBE_INTERVAL_SEC) {
       // Transition to half-open — allow one probe request
       record.state = "half-open";
-      await setCache(db, cacheKey(source), JSON.stringify(record));
+      await setCircuitRecord(db, source, record);
       console.log(`[circuit-breaker] ${source}: open -> half-open (probe allowed)`);
       return true;
     }
@@ -92,8 +168,14 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
  * D1 lacks the CAS primitives needed for strict single-probe semantics
  * without adding a separate coordination mechanism.
  */
-export async function recordOutcome(db: D1Database, source: string, success: boolean, webhookUrl?: string | null): Promise<void> {
+export async function recordOutcome(
+  db: D1Database,
+  source: string,
+  success: boolean,
+  webhookUrl?: string | null,
+): Promise<CircuitOutcomeRecord> {
   const record = await getCircuitRecord(db, source);
+  const before = { ...record };
   const now = Math.floor(Date.now() / 1000);
 
   if (success) {
@@ -102,7 +184,7 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
     record.consecutiveFailures = 0;
     record.lastSuccessAt = now;
     record.openedAt = null;
-    await setCache(db, cacheKey(source), JSON.stringify(record));
+    await setCircuitRecord(db, source, record);
     if (wasOpen) {
       console.log(`[circuit-breaker] ${source}: CLOSED (recovered)`);
       // Awaited (not fire-and-forget) so the webhook fetch is tied to the
@@ -114,7 +196,7 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
         `Source "${source}" has recovered after being open.`,
       );
     }
-    return;
+    return { before, after: { ...record } };
   }
 
   // Failure
@@ -130,7 +212,7 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
     record.state = "open";
     record.openedAt = now;
     console.log(`[circuit-breaker] ${source}: closed -> OPEN (${record.consecutiveFailures} consecutive failures)`);
-    await setCache(db, cacheKey(source), JSON.stringify(record));
+    await setCircuitRecord(db, source, record);
     // Awaited (not fire-and-forget) so the webhook fetch is tied to the caller's
     // awaited recordOutcome promise and completes before isolate teardown.
     // sendAlert never throws — it returns false on any failure.
@@ -139,10 +221,11 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
       `Circuit OPEN: ${source}`,
       `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
     );
-    return;
+    return { before, after: { ...record } };
   }
 
-  await setCache(db, cacheKey(source), JSON.stringify(record));
+  await setCircuitRecord(db, source, record);
+  return { before, after: { ...record } };
 }
 
 export function mapCronStatusToCircuitOutcome(status: string | null | undefined): CircuitOutcomeDecision {
@@ -181,11 +264,17 @@ export async function recoverBreakerOnNoCandidate(db: D1Database, source: string
 }
 
 /** Non-blocking circuit telemetry write for best-effort callers. */
-export async function recordOutcomeSafe(db: D1Database, source: string, success: boolean, webhookUrl?: string | null): Promise<void> {
+export async function recordOutcomeSafe(
+  db: D1Database,
+  source: string,
+  success: boolean,
+  webhookUrl?: string | null,
+): Promise<CircuitOutcomeRecord | null> {
   try {
-    await recordOutcome(db, source, success, webhookUrl);
+    return await recordOutcome(db, source, success, webhookUrl);
   } catch (err) {
     console.warn(`[circuit-breaker] Failed to record outcome (${source}):`, err);
+    return null;
   }
 }
 

@@ -254,10 +254,17 @@ describe("isReasonablePrice", () => {
 
   describe("FX-rate-aware bounds", () => {
     it("uses dynamic bounds when fxRates provided for EUR", () => {
-      // FX rate for EUR is ~1.08, so bounds are 0.0108–2.16
+      // FX rate for EUR is ~1.08, so bounds are 0.0108–1.2852.
       expect(isReasonablePrice(1.08, "peggedEUR", { peggedEUR: 1.08 })).toBe(true);
+      expect(isReasonablePrice(1.28, "peggedEUR", { peggedEUR: 1.08 })).toBe(true);
+      expect(isReasonablePrice(1.29, "peggedEUR", { peggedEUR: 1.08 })).toBe(false);
       expect(isReasonablePrice(0.005, "peggedEUR", { peggedEUR: 1.08 })).toBe(false);
       expect(isReasonablePrice(2.5, "peggedEUR", { peggedEUR: 1.08 })).toBe(false);
+    });
+
+    it("keeps commodity reference bounds on the broader 2x band", () => {
+      expect(isReasonablePrice(5_700, "peggedGOLD", { peggedGOLD: 2_915 })).toBe(true);
+      expect(isReasonablePrice(5_900, "peggedGOLD", { peggedGOLD: 2_915 })).toBe(false);
     });
 
     it("uses dynamic bounds for GBP", () => {

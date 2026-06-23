@@ -40,6 +40,18 @@ function mockDbWithCircuit(source: string, record: CircuitRecord | null) {
   return mockD1([{ match: "cache", rows: cacheRows }]);
 }
 
+function countCircuitRecordReads(
+  db: { getHistory: () => Array<{ sql: string; binds: unknown[] }> },
+  source: string,
+): number {
+  return db
+    .getHistory()
+    .filter((entry) =>
+      entry.sql.includes("SELECT value, updated_at FROM cache WHERE key = ?") &&
+      entry.binds[0] === `circuit:${source}`
+    ).length;
+}
+
 describe("circuit-breaker", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -104,6 +116,28 @@ describe("circuit-breaker", () => {
       expect(record.state).toBe("closed");
       expect(record.consecutiveFailures).toBe(0);
     });
+
+    it("memoizes repeated reads briefly and returns defensive copies", async () => {
+      const db = mockDbWithCircuit("memo-source", makeRecord({ state: "closed" }));
+      const first = await getCircuitRecord(db, "memo-source");
+      first.state = "open";
+
+      const second = await getCircuitRecord(db, "memo-source");
+
+      expect(second.state).toBe("closed");
+      expect(countCircuitRecordReads(db, "memo-source")).toBe(1);
+    });
+
+    it("deduplicates concurrent reads for the same source", async () => {
+      const db = mockDbWithCircuit("pending-source", makeRecord({ state: "closed" }));
+
+      await Promise.all([
+        getCircuitRecord(db, "pending-source"),
+        getCircuitRecord(db, "pending-source"),
+      ]);
+
+      expect(countCircuitRecordReads(db, "pending-source")).toBe(1);
+    });
   });
 
   // --- shouldAttemptFetch ---
@@ -137,6 +171,19 @@ describe("circuit-breaker", () => {
       expect(await shouldAttemptFetch(db, "src")).toBe(true);
     });
 
+    it("invalidates cached state after an open to half-open transition", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = mockDbWithCircuit("half-open-memo", makeRecord({
+        state: "open",
+        openedAt: now - 1801,
+      }));
+
+      expect(await shouldAttemptFetch(db, "half-open-memo")).toBe(true);
+      await getCircuitRecord(db, "half-open-memo");
+
+      expect(countCircuitRecordReads(db, "half-open-memo")).toBe(2);
+    });
+
     it("allows probe when in half-open state", async () => {
       const db = mockDbWithCircuit("src", makeRecord({ state: "half-open" }));
       expect(await shouldAttemptFetch(db, "src")).toBe(true);
@@ -157,7 +204,13 @@ describe("circuit-breaker", () => {
     it("transitions half-open → closed and fires recovery alert", async () => {
       const stored = makeRecord({ state: "half-open", consecutiveFailures: 3 });
       const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", true);
+      const outcome = await recordOutcome(db, "src", true);
+      expect(outcome).toBeDefined();
+      expect(outcome!.before.state).toBe("half-open");
+      expect(outcome!.after).toMatchObject({
+        state: "closed",
+        consecutiveFailures: 0,
+      });
       expect(mockedAlert).toHaveBeenCalledWith(
         null,
         "Circuit closed: src",
@@ -182,6 +235,16 @@ describe("circuit-breaker", () => {
       const db = mockDbWithCircuit("src", stored);
       await recordOutcome(db, "src", true);
       expect(mockedAlert).not.toHaveBeenCalled();
+    });
+
+    it("invalidates cached state after an outcome write", async () => {
+      const db = mockDbWithCircuit("write-memo", makeRecord({ state: "closed" }));
+
+      await getCircuitRecord(db, "write-memo");
+      await recordOutcome(db, "write-memo", true);
+      await getCircuitRecord(db, "write-memo");
+
+      expect(countCircuitRecordReads(db, "write-memo")).toBe(2);
     });
   });
 

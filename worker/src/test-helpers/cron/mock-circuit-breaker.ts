@@ -12,6 +12,15 @@
 
 import { vi } from "vitest";
 import type { Mock } from "vitest";
+import type { CircuitOutcomeRecord, CircuitRecord } from "../../lib/circuit-breaker";
+
+const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
+  state: "closed",
+  consecutiveFailures: 0,
+  lastFailureAt: null,
+  lastSuccessAt: null,
+  openedAt: null,
+};
 
 export interface MockCircuitBreakerOptions {
   /** Optional pre-built spy for `shouldAttemptFetch`. Defaults to `vi.fn(async () => true)`. */
@@ -26,6 +35,16 @@ export interface MockCircuitBreakerExports {
   shouldAttemptFetch: Mock;
   recordOutcome: Mock;
   recordOutcomeSafe: Mock;
+}
+
+export function mockCircuitOutcomeRecord(
+  before: CircuitRecord = DEFAULT_CIRCUIT_RECORD,
+  after: CircuitRecord = before,
+): CircuitOutcomeRecord {
+  return {
+    before: { ...before },
+    after: { ...after },
+  };
 }
 
 /**
@@ -47,7 +66,7 @@ export function mockCircuitBreaker(
 ): MockCircuitBreakerExports {
   return {
     shouldAttemptFetch: options.shouldAttemptFetchFn ?? vi.fn(async () => true),
-    recordOutcome: options.recordOutcomeFn ?? vi.fn(async () => {}),
-    recordOutcomeSafe: options.recordOutcomeSafeFn ?? vi.fn(async () => {}),
+    recordOutcome: options.recordOutcomeFn ?? vi.fn(async () => mockCircuitOutcomeRecord()),
+    recordOutcomeSafe: options.recordOutcomeSafeFn ?? vi.fn(async () => mockCircuitOutcomeRecord()),
   };
 }

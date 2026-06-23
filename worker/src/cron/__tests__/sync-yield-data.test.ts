@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockCircuitBreaker, mockDbCache, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
+import {
+  mockCircuitBreaker,
+  mockCircuitOutcomeRecord,
+  mockDbCache,
+  mockFetchRetry,
+  mockRegistry,
+} from "../../test-helpers/cron";
 
 // --- Module-level mocks ---
 
@@ -321,7 +327,7 @@ describe("syncYieldData", () => {
     vi.mocked(writeFreshnessSentinel).mockReset().mockResolvedValue(undefined);
     vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
+    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
     vi.mocked(getChainRpc).mockReset().mockReturnValue(undefined);
     vi.mocked(yieldHelpersModule.findBestLendingPool).mockReset().mockReturnValue(null);
     vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({

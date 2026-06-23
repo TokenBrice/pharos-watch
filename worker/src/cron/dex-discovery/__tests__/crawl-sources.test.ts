@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 
 vi.mock("../../dex-liquidity/crawl-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../dex-liquidity/crawl-helpers")>();
@@ -79,7 +80,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(shouldAttemptFetch).mockReset();
     vi.mocked(recordOutcome).mockReset();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockResolvedValue(undefined);
+    vi.mocked(recordOutcome).mockResolvedValue(mockCircuitOutcomeRecord());
   });
 
   afterEach(() => {

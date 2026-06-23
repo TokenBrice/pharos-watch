@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.18",
+      title: "Fiat FX upside validation parity",
+      date: "2026-06-23",
+      effectiveAt: 1782172800,
+      summary:
+        "Fresh or static fiat FX peg references now use the same upside tolerance ratio as USD pegs, while commodity references keep their broader 2x validation band.",
+      impact: [
+        "EUR, JPY, GBP, and other fiat FX pegs now reject reference-backed upside prints at the USD-band ratio instead of allowing prices up to 2x the FX reference",
+        "Gold and silver commodity pegs retain the existing 2x reference band because their token prices scale with volatile metal spot references and `commodityOunces`",
+        "Authoritative downside modes remain unchanged, so protocol redemption and historical backfill paths can still admit deep downside when that mode explicitly allows it",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.17",
       title: "DEX aggregate and high-TVL outlier guards",
       date: "2026-06-19",

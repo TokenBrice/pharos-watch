@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockCircuitBreaker } from "../../test-helpers/cron";
+import { mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers/cron";
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
@@ -97,7 +97,7 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
     vi.mocked(logCronEvent).mockReset();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockResolvedValue(undefined);
+    vi.mocked(recordOutcome).mockResolvedValue(mockCircuitOutcomeRecord());
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
   });
 

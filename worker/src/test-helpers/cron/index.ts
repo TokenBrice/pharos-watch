@@ -13,7 +13,7 @@ export type { MockRegistryOptions, MockRegistryExports, MockRegistryStablecoin }
 export { mockDbCache } from "./mock-db-cache";
 export type { MockDbCacheOptions, MockDbCacheExports } from "./mock-db-cache";
 
-export { mockCircuitBreaker } from "./mock-circuit-breaker";
+export { mockCircuitBreaker, mockCircuitOutcomeRecord } from "./mock-circuit-breaker";
 export type { MockCircuitBreakerOptions, MockCircuitBreakerExports } from "./mock-circuit-breaker";
 
 export { mockFetchRetry } from "./mock-fetch-retry";

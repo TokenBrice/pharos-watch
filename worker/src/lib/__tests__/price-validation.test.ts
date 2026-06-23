@@ -303,6 +303,26 @@ describe("validatePriceCandidate", () => {
     expect(result.boundsUsed?.max).toBe(1.19);
   });
 
+  it("uses the USD upside ratio for fiat FX references while preserving the commodity 2x band", () => {
+    const eur = buildPriceValidationContext({ pegType: "peggedEUR", pegCurrency: "EUR" });
+    const highEur = validatePriceCandidate(1.29, eur, "fallback_enrichment", freshRefs);
+    const nearBoundEur = validatePriceCandidate(1.28, eur, "fallback_enrichment", freshRefs);
+
+    expect(highEur.accepted).toBe(false);
+    expect(highEur.reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(highEur.boundsUsed?.max).toBeCloseTo(1.08 * 1.19, 6);
+    expect(nearBoundEur.accepted).toBe(true);
+
+    const gold = buildPriceValidationContext({ pegType: "peggedGOLD", pegCurrency: "GOLD" });
+    const nearCommodityBound = validatePriceCandidate(5_700, gold, "fallback_enrichment", freshRefs);
+    const highCommodity = validatePriceCandidate(5_900, gold, "fallback_enrichment", freshRefs);
+
+    expect(nearCommodityBound.accepted).toBe(true);
+    expect(highCommodity.accepted).toBe(false);
+    expect(highCommodity.reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(highCommodity.boundsUsed?.max).toBe(2 * 2_915);
+  });
+
   it("allows catastrophic downside in authoritative mode while keeping strict fallback behavior", () => {
     const context = buildPriceValidationContext({ pegType: "peggedUSD", pegCurrency: "USD" });
 

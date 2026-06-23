@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockCircuitBreaker } from "../../test-helpers/cron";
+import { mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers/cron";
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
@@ -92,7 +92,7 @@ describe("parseKinesisResponse", () => {
 describe("syncKinesisSupply", () => {
   beforeEach(() => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockResolvedValue(undefined);
+    vi.mocked(recordOutcome).mockResolvedValue(mockCircuitOutcomeRecord());
   });
 
   afterEach(() => {

@@ -1,10 +1,19 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.17` (2026-02-01 -> 2026-06-19).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.18` (2026-02-01 -> 2026-06-23).
 
 ---
 
 > Older entries are archived in [pricing-pipeline-timeline-archive.md](./pricing-pipeline-timeline-archive.md); this file keeps the 10 most recent.
+
+## v6.18 - Fiat FX upside validation parity (June 23, 2026)
+
+- Fresh or static fiat FX peg references now use the same upside tolerance ratio as USD pegs
+- EUR, JPY, GBP, and other fiat FX pegs reject reference-backed upside prints at `1.19x` the FX reference instead of allowing prices up to `2x`
+- Gold and silver commodity pegs keep the existing `2x` reference band, including `commodityOunces` scaling for fractional tokens
+- Authoritative downside modes keep their existing lower-bound relaxation
+
+---
 
 ## v6.17 - DEX aggregate and high-TVL outlier guards (June 19, 2026)
 
@@ -83,13 +92,5 @@ Internal changelog reconstructed from the machine-readable methodology version s
 - Exact-address augmentation still fills or corroborates near-peg prices for thin assets
 - A fallback/search-family source such as CoinGecko Onchain address pricing is rejected when it is at least 500 bps from a fixed peg and no stronger source corroborates the move
 - Rejected weak address-provider candidates fall through to later enrichment, allowing exact DefiLlama contract fallback to repair assets such as Tangent USG when that contract quote remains near peg
-
----
-
-## v6.08 - Scoped live-parent wrapper price repair (May 24, 2026)
-
-- `sbold-k3-capital` and `ybold-yearn` can publish ERC-4626 NAV prices from `convertToAssets(1 share)` multiplied by fresh high-confidence BOLD live pricing
-- `usdk-kast` and `xo-exodus` can inherit fresh high-confidence `wm-m0` pricing as Solana M0 extension units
-- The relaxation is scoped to these audited wrappers and does not change historical replay rules or cached-parent eligibility
 
 ---

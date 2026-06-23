@@ -68,6 +68,7 @@ const MAX_PRICE = 100_000;
 const DEFAULT_REFERENCE_STALE_SEC = 6 * 3600;
 
 export const PRICE_BOUNDS = HARDCODED_PRICE_BOUNDS;
+const FIAT_FX_REFERENCE_UPPER_RATIO = PRICE_BOUNDS.USD[1];
 
 function sanitizeRates(input: unknown): Record<string, number> {
   return sanitizeRecordValues(input, (value) => (
@@ -248,6 +249,12 @@ function isFixedPegContext(context: PriceValidationContext): boolean {
   return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
 }
 
+function getReferenceUpperBound(context: PriceValidationContext, referencePrice: number): number {
+  if (context.pegClass === "usd") return PRICE_BOUNDS.USD[1];
+  if (context.pegClass === "fiat_fx") return FIAT_FX_REFERENCE_UPPER_RATIO * referencePrice;
+  return 2 * referencePrice;
+}
+
 export function isSevereFixedPegDownside(
   price: number,
   context: PriceValidationContext,
@@ -346,7 +353,7 @@ function evaluateReferenceBand(
   }
 
   const lowerBound = isAuthoritativeDownsideMode(mode) ? 0 : 0.01 * referencePrice;
-  const upperBound = context.pegClass === "usd" ? PRICE_BOUNDS.USD[1] : 2 * referencePrice;
+  const upperBound = getReferenceUpperBound(context, referencePrice);
   const candidateRatio = price / referencePrice;
 
   if (price >= upperBound) {
@@ -519,7 +526,7 @@ export function isReasonablePrice(
       : undefined,
   );
   if (referencePrice != null && referencePrice > 0) {
-    return price > 0.01 * referencePrice && price < 2 * referencePrice;
+    return price > 0.01 * referencePrice && price < getReferenceUpperBound(context, referencePrice);
   }
 
   const hardcodedBounds = getHardcodedBounds(context);
