@@ -9,7 +9,13 @@ import {
   queueRedeemBase,
   sourceRef,
 } from "./shared";
-import { REVIEWED_FIRST_WAVE_AT, REVIEWED_REMEDIATION_AT, REVIEWED_STABLECOIN_AUDIT_AT, REVIEWED_WRAPPER_WAVE_AT, REVIEWED_YIELD_COVERAGE_WAVE_AT as REVIEWED_YIELD_EXPANSION_AT } from "./review-dates";
+import {
+  REVIEWED_FIRST_WAVE_AT,
+  REVIEWED_REMEDIATION_AT,
+  REVIEWED_STABLECOIN_AUDIT_AT,
+  REVIEWED_WRAPPER_WAVE_AT,
+  REVIEWED_YIELD_COVERAGE_WAVE_AT as REVIEWED_YIELD_EXPANSION_AT,
+} from "./review-dates";
 
 const REVIEWED_QUEUE_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_WRAPPER_QUEUE_AT = REVIEWED_WRAPPER_WAVE_AT;
@@ -78,6 +84,51 @@ const mapleSyrupDocs = () => [
     ["route", "capacity", "settlement"],
   ),
 ];
+
+function erc4626ReserveTelemetryQueueConfig(options: {
+  reviewedAt: string;
+  accessModel?: RedemptionBackstopConfig["accessModel"];
+  settlementModel?: RedemptionBackstopConfig["settlementModel"];
+  executionModel?: RedemptionBackstopConfig["executionModel"];
+  outputAssetType?: RedemptionBackstopConfig["outputAssetType"];
+  totalScoreCap?: number;
+  costModel: RedemptionBackstopConfig["costModel"];
+  docs: NonNullable<RedemptionBackstopConfig["docs"]>;
+  notes?: string[];
+  telemetrySubject: string;
+  settlementConstraint: string;
+}): RedemptionBackstopConfig {
+  const {
+    reviewedAt,
+    accessModel,
+    settlementModel,
+    executionModel,
+    outputAssetType,
+    totalScoreCap,
+    costModel,
+    docs,
+    notes = [],
+    telemetrySubject,
+    settlementConstraint,
+  } = options;
+
+  return {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(reviewedAt),
+    capacityModel: { kind: "reserve-sync-metadata" },
+    ...(accessModel ? { accessModel } : {}),
+    ...(settlementModel ? { settlementModel } : {}),
+    ...(executionModel ? { executionModel } : {}),
+    ...(outputAssetType ? { outputAssetType } : {}),
+    ...(totalScoreCap ? { totalScoreCap } : {}),
+    costModel,
+    docs,
+    notes: [
+      ...notes,
+      `Fresh ERC-4626 reserve telemetry reads ${telemetrySubject} as the current redeemable bound while ${settlementConstraint} still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.`,
+    ],
+  };
+}
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
@@ -159,10 +210,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "If the Falcon transparency API snapshot is unavailable or stale, the route is intentionally left unrated rather than falling back to a static heuristic buffer",
     ],
   },
-  "syrupusdc-maple": {
-    ...queueRedeemBase,
-    ...reviewedQueueRedemptionSupplyFull,
-    capacityModel: { kind: "reserve-sync-metadata" },
+  "syrupusdc-maple": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     accessModel: "whitelisted-onchain",
     costModel: fixedFee(
       0,
@@ -172,13 +221,12 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
       "Modeled route excludes secondary-market exits on Uniswap or Balancer and instead scores the documented protocol withdrawal rail",
-      "Fresh ERC-4626 reserve telemetry reads the pool's idle USDC balance as the current redeemable bound while the FIFO queue still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
-  },
-  "syrupusdt-maple": {
-    ...queueRedeemBase,
-    ...reviewedQueueRedemptionSupplyFull,
-    capacityModel: { kind: "reserve-sync-metadata" },
+    telemetrySubject: "the pool's idle USDC balance",
+    settlementConstraint: "the FIFO queue",
+  }),
+  "syrupusdt-maple": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     accessModel: "whitelisted-onchain",
     costModel: fixedFee(
       0,
@@ -188,9 +236,10 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
       "Modeled route excludes secondary-market exits and instead scores the documented protocol withdrawal rail",
-      "Fresh ERC-4626 reserve telemetry reads the pool's idle USDT balance as the current redeemable bound while the FIFO queue still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
-  },
+    telemetrySubject: "the pool's idle USDT balance",
+    settlementConstraint: "the FIFO queue",
+  }),
   "reusd-re-protocol": {
     ...queueRedeemBase,
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, confidence: "documented-bound" },
@@ -275,10 +324,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Executed redemptions automatically convert sUSD1+ into USD1 at processing-day NAV, so the route is modeled as queued eventual redeemability rather than an immediate stablecoin buffer.",
     ],
   },
-  "susde-ethena": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
-    capacityModel: { kind: "reserve-sync-metadata" },
+  "susde-ethena": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     costModel: fixedFee(
@@ -306,13 +353,12 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "sUSDe burns immediately into a claim on underlying USDe, but the user can only withdraw that USDe after the cooldown window has elapsed",
       "Ethena staking includes jurisdictional and sanctions-based restrictions on the staking contract itself, so the wrapper route is modeled as whitelisted-onchain rather than fully permissionless",
-      "Fresh ERC-4626 reserve telemetry reads the staking contract's USDe holdings as the current redeemable bound while the documented 7-day cooldown still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
-  },
-  "syusd-aegis": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
-    capacityModel: { kind: "reserve-sync-metadata" },
+    telemetrySubject: "the staking contract's USDe holdings",
+    settlementConstraint: "the documented 7-day cooldown",
+  }),
+  "syusd-aegis": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,
     settlementModel: "days",
     costModel: fixedFee(0, "Aegis docs describe sYUSD staking and unstaking with 0% protocol fee"),
     docs: [
@@ -327,9 +373,10 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "sYUSD exits through a documented 7-day cooldown back into YUSD at the live staking-vault exchange rate",
       "The wrapper queue is distinct from YUSD's own primary-market redemption path and does not assume a separate instant-liquidity buffer beyond the contract's cooldown release",
-      "Fresh ERC-4626 reserve telemetry reads the staking vault's YUSD holdings as the current redeemable bound while the cooldown still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
-  },
+    telemetrySubject: "the staking vault's YUSD holdings",
+    settlementConstraint: "the cooldown",
+  }),
   "witry-brix": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
@@ -359,10 +406,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "iTRY redemption is whitelist-gated and serviced first by the FastAccessVault DLF liquidity buffer, with custodian-managed redemption when immediate DLF liquidity is insufficient.",
     ],
   },
-  "stkgho-umbrella-aave": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
-    capacityModel: { kind: "reserve-sync-metadata" },
+  "stkgho-umbrella-aave": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_PHASE_4_COVERAGE_AT,
     costModel: fixedFee(
       0,
       "Aave Umbrella StakeToken docs describe ERC-4626 redeem/withdraw after cooldown with no exit fee",
@@ -392,9 +437,10 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "stkGHO exits through Aave Umbrella's cooldown and withdrawal-window flow back into GHO rather than through an immediate public stablecoin buffer",
       "Staked assets remain slashable during cooldown, so the route is modeled as queued eventual redeemability and not as live direct redemption capacity",
-      "Fresh ERC-4626 reserve telemetry reads the staking contract's idle GHO-denominated holdings as the current redeemable bound while the cooldown and withdrawal window still govern settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
-  },
+    telemetrySubject: "the staking contract's idle GHO-denominated holdings",
+    settlementConstraint: "the cooldown and withdrawal window",
+  }),
   "cgusd-cygnus-finance": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
@@ -644,10 +690,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "OnRe currently documents weekly redemption capacity up to 2.5% of NAV, a target liquidity reserve up to 20% of NAV, and payouts in USDC or USDG for verified/accredited holders.",
     ],
   },
-  "apyusd-apyx": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
-    capacityModel: { kind: "reserve-sync-metadata" },
+  "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -665,14 +709,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       ]),
       sourceRef("Apyx smart contract addresses", "https://docs.apyx.fi/resources/smart-contract-addresses", ["route"]),
     ],
-    notes: [
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle apxUSD balance as the current redeemable bound while the documented unlock window still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
-    ],
-  },
-  "savusd-avant": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
-    capacityModel: { kind: "reserve-sync-metadata" },
+    telemetrySubject: "the vault's idle apxUSD balance",
+    settlementConstraint: "the documented unlock window",
+  }),
+  "savusd-avant": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: fixedFee(
@@ -691,14 +732,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         ["settlement", "capacity"],
       ),
     ],
-    notes: [
-      "Fresh ERC-4626 reserve telemetry reads the staking vault's idle avUSD balance as the current redeemable bound while the one-day cooldown still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
-    ],
-  },
-  "srusde-strata": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
-    capacityModel: { kind: "reserve-sync-metadata" },
+    telemetrySubject: "the staking vault's idle avUSD balance",
+    settlementConstraint: "the one-day cooldown",
+  }),
+  "srusde-strata": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -714,10 +752,9 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       ]),
       sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["settlement"]),
     ],
-    notes: [
-      "Fresh ERC-4626 reserve telemetry reads the tranche vault's idle underlying balance as the current redeemable bound while the documented redemption window still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
-    ],
-  },
+    telemetrySubject: "the tranche vault's idle underlying balance",
+    settlementConstraint: "the documented redemption window",
+  }),
   "scusd-rings": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
