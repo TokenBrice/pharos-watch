@@ -27,6 +27,13 @@ interface LongformScrollspyNavProps {
    * `rail` renders a thin vertical column intended for a sticky right-rail TOC.
    */
   variant?: "banner" | "rail";
+  /**
+   * `watch-rail` (banner only) intensifies the lit pill and adds a
+   * reading-progress beam that fills along the bottom edge as the reader
+   * descends the sections. Opt-in for the stablecoin dossier; other banner
+   * surfaces keep the calmer default recipe.
+   */
+  emphasis?: "watch-rail";
 }
 
 const STICKY_SUMMARY_VAR = "--pharos-sticky-summary-h";
@@ -98,6 +105,7 @@ export function LongformScrollspyNav({
   showDepthHint,
   onActiveChange,
   variant = "banner",
+  emphasis,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -168,6 +176,22 @@ export function LongformScrollspyNav({
         }
       }
       if (nextActive) setActiveId(nextActive.id);
+
+      // Reading-progress beam (watch-rail only): fraction of the dossier
+      // scrolled, from the first heading reaching the activation line (0) to
+      // the last section's bottom reaching the viewport bottom (1). Written
+      // straight to the DOM rather than React state so it tracks every scroll
+      // frame without a re-render.
+      if (emphasis === "watch-rail") {
+        const firstTop = sectionNodes[0].getBoundingClientRect().top + window.scrollY;
+        const lastBottom =
+          sectionNodes[sectionNodes.length - 1].getBoundingClientRect().bottom + window.scrollY;
+        const start = firstTop - getScrollOffset(railNode);
+        const end = lastBottom - window.innerHeight;
+        const span = end - start;
+        const progress = span > 0 ? (window.scrollY - start) / span : window.scrollY >= start ? 1 : 0;
+        railNode.style.setProperty("--pharos-read-progress", String(Math.min(1, Math.max(0, progress))));
+      }
     };
 
     applyScrollMargins();
@@ -217,7 +241,7 @@ export function LongformScrollspyNav({
         node.style.scrollMarginTop = "";
       }
     };
-  }, [sectionSignature]);
+  }, [sectionSignature, emphasis]);
 
   if (sections.length === 0) return null;
 
@@ -271,6 +295,7 @@ export function LongformScrollspyNav({
         ref={railRef}
         className={cn(
           "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:mx-0 md:rounded-2xl md:px-4 md:py-2.5 lg:top-[calc(env(safe-area-inset-top)+3px)]",
+          emphasis === "watch-rail" && "pharos-watch-rail overflow-hidden",
           className,
         )}
       >
@@ -316,6 +341,12 @@ export function LongformScrollspyNav({
         </nav>
           {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}
         </div>
+        {emphasis === "watch-rail" && (
+          <div className="pharos-watch-rail-track" aria-hidden="true">
+            <div className="pharos-watch-rail-fill" />
+            <div className="pharos-watch-rail-lamp" />
+          </div>
+        )}
       </div>
       {showDepthHint && (
         <div

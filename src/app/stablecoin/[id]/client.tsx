@@ -412,6 +412,7 @@ export default function StablecoinDetailClient({
         sections={detailSections}
         railLabel="Jump to"
         navAriaLabel="Stablecoin detail section navigation"
+        emphasis="watch-rail"
         onActiveChange={setActiveBannerId}
         className="mt-6 lg:w-full lg:max-w-none lg:rounded-xl lg:[&>div]:justify-center lg:[&_nav]:flex-none"
         rightSlot={
