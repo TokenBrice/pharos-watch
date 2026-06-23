@@ -209,5 +209,6 @@
         "Tempo chain has no standard public EVM RPC and no accessible block explorer API; the TIP-20 precompile token administrator address for pathUSD (0x20c0000000000000000000000000000000000000) cannot be confirmed via on-chain reads with available tooling. Resolve via Tempo chain native tooling or issuer disclosure of the administrator key/multisig before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2026-03-18"
 }

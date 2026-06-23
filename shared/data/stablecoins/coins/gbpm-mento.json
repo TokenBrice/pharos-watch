@@ -206,7 +206,9 @@
       "cdpStablecoin": "GBPm"
     }
   },
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "dependencies": [
     {
       "id": "cusd-celo",
@@ -214,5 +216,5 @@
       "weight": 1
     }
   ],
-  "launchDate": "2025-03-22"
+  "launchDate": "2025-04-13"
 }

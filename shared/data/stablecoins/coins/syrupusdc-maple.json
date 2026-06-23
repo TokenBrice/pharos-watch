@@ -84,7 +84,10 @@
         "name": "Maple Finance — syrupUSDC Expands to Solana (CCIP native availability)",
         "slug": "chainlink-ccip",
         "url": "https://maple.finance/insights/syrupusdc-expands-to-solana",
-        "bridgeTypes": ["external-validated-network", "burn-mint"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint"
+        ],
         "note": "States syrupUSDC is natively available on Solana powered by Chainlink CCIP."
       },
       {
@@ -92,7 +95,9 @@
         "name": "Maple Finance — syrupUSDC Expands to Arbitrum (Transporter)",
         "slug": "chainlink-ccip",
         "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum",
-        "bridgeTypes": ["external-validated-network"],
+        "bridgeTypes": [
+          "external-validated-network"
+        ],
         "note": "Directs users to bridge via Transporter, Chainlink's official CCIP bridge front-end."
       },
       {
@@ -100,7 +105,10 @@
         "name": "Chainlink CCIP Token Directory — syrupUSDC",
         "slug": "chainlink-ccip",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC",
-        "bridgeTypes": ["external-validated-network", "burn-mint"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint"
+        ],
         "note": "syrupUSDC registered as a Cross-Chain Token (CCT) across CCIP mainnet networks; JS-rendered table not machine-readable via fetch but listing confirmed by search and issuer/Chainlink statements."
       }
     ],
@@ -236,5 +244,5 @@
       "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."
     }
   },
-  "launchDate": "2024-05-21"
+  "launchDate": "2024-06-25"
 }

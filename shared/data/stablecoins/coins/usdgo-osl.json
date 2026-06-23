@@ -215,5 +215,6 @@
   "yieldConfig": {
     "yieldSource": "USDGO EFFR-linked reserve yield",
     "yieldType": "governance-set"
-  }
+  },
+  "launchDate": "2026-02-10"
 }

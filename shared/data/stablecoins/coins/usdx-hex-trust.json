@@ -28,8 +28,7 @@
     }
   ],
   "jurisdiction": {
-    "country": "Hong Kong",
-    "regulator": "Companies Registry"
+    "country": "Hong Kong"
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",

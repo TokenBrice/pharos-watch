@@ -181,7 +181,9 @@
       "message": "KES is not yet a first-class Pharos peg-currency enum, so KESm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
     }
   ],
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "dependencies": [
     {
       "id": "cusd-celo",
@@ -189,5 +191,5 @@
       "weight": 1
     }
   ],
-  "launchDate": "2024-05-07"
+  "launchDate": "2024-05-30"
 }

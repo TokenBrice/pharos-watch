@@ -108,5 +108,6 @@
         "BFUSD has no on-chain contract in Pharos metadata; the entire mint path is Binance's internal exchange ledger. If Binance later exposes an on-chain token contract, resolve its owner/minter admin at that time."
       ]
     }
-  }
+  },
+  "launchDate": "2024-11-27"
 }

@@ -24,7 +24,7 @@
     "url": "https://www.paxos.com/usdp-transparency",
     "provider": "KPMG",
     "attestorTier": "big4",
-    "cadence": "monthly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered"
   },

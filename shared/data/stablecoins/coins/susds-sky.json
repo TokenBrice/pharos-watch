@@ -169,13 +169,18 @@
         "source": "docs",
         "name": "Wormhole NTT",
         "url": "https://wormhole.com/blog/sky-formerly-maker-is-expanding-sky-usds-and-susds-multichain-to-solana-with",
-        "bridgeTypes": ["burnAndMint", "lockAndMint"]
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockAndMint"
+        ]
       },
       {
         "source": "docs",
         "name": "Spark cross-chain PSM",
         "url": "https://docs.spark.fi/dev/savings/spark-psm",
-        "bridgeTypes": ["liquidity"]
+        "bridgeTypes": [
+          "liquidity"
+        ]
       }
     ],
     "sources": [
@@ -235,5 +240,5 @@
       }
     }
   },
-  "launchDate": "2024-09-04"
+  "launchDate": "2024-09-18"
 }

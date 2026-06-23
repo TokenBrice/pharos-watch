@@ -24,6 +24,14 @@ function cloneConfigWithMorphoVaultV2Liquidity(config: LiveReservesConfig): Live
   return cloned;
 }
 
+function cloneConfigWithMorphoVaultV1Liquidity(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params: { redemptionLiquidity?: { source: "morpho-vault-v1"; chainId: number } };
+  };
+  cloned.params.redemptionLiquidity = { source: "morpho-vault-v1", chainId: 1 };
+  return cloned;
+}
+
 describe("fetchErc4626SingleAssetReserves", () => {
   beforeEach(() => {
     resetRpcMocks();
@@ -376,6 +384,94 @@ describe("fetchErc4626SingleAssetReserves", () => {
       morphoVaultV2LiquidityUsd: 30,
       morphoVaultV2ForceDeallocatableLiquidityRaw: "35000000",
       morphoVaultV2ForceDeallocatableLiquidityUsd: 35,
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 30,
+        capacityRatioOfSupply: 0.3,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-api",
+        routeStatus: "unknown",
+        routeStatusSource: "protocol-api",
+      },
+    });
+    expect(morphoVariables).toEqual([
+      {
+        address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        chainId: 1,
+      },
+    ]);
+  });
+
+  it("uses validated Morpho V1 vault liquidity when it exceeds idle underlying balance", async () => {
+    const morphoVariables: unknown[] = [];
+    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as {
+        params?: [{ data: string }];
+        variables?: Record<string, unknown>;
+      };
+      if (url === "https://api.morpho.org/graphql") {
+        morphoVariables.push(body.variables);
+        return jsonResponse({
+          data: {
+            vaultByAddress: {
+              address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+              listed: true,
+              asset: {
+                address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+              },
+              chain: { id: 1 },
+              liquidity: {
+                underlying: "30000000",
+                usd: 30,
+              },
+              warnings: [],
+            },
+          },
+        });
+      }
+      const call = body.params?.[0];
+      if (!call) return null;
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithMorphoVaultV1Liquidity(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "0",
+      redemptionCapacityRaw: "30000000",
+      redemptionCapacitySource: "morpho-vault-v1-liquidity",
+      morphoVaultV1LiquidityRaw: "30000000",
+      morphoVaultV1LiquidityUsd: 30,
       underlyingDecimals: 6,
       redemption: {
         capacityUsd: 30,

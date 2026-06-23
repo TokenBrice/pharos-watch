@@ -257,7 +257,11 @@
         "name": "LayerZero OFT (Omnichain Fungible Token)",
         "slug": "layerzero",
         "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
-        "bridgeTypes": ["burn-mint", "omnichain-token", "external-messaging"],
+        "bridgeTypes": [
+          "burn-mint",
+          "omnichain-token",
+          "external-messaging"
+        ],
         "note": "Noon docs explicitly label Sophon and zkSync Era USN deployments as OFT; Ethereum is the native home chain."
       },
       {
@@ -265,7 +269,11 @@
         "name": "USNUpgradeableHyperlane implementation (OFTUpgradeable + Hyperlane)",
         "slug": "sourcify",
         "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata",
-        "bridgeTypes": ["burn-mint", "layerzero-oft", "hyperlane-warp"],
+        "bridgeTypes": [
+          "burn-mint",
+          "layerzero-oft",
+          "hyperlane-warp"
+        ],
         "note": "Verified impl inherits OFTUpgradeable + OAppPreCrimeSimulatorUpgradeable, native burn/mint, plus Hyperlane configureHyperlane/sendTokensViaHyperlane/handle/mailbox. Home chain is burn/mint, not a lockbox adapter."
       },
       {
@@ -273,7 +281,10 @@
         "name": "Hyperlane interchain messaging",
         "slug": "hyperlane",
         "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
-        "bridgeTypes": ["warp-route", "external-validated"],
+        "bridgeTypes": [
+          "warp-route",
+          "external-validated"
+        ],
         "note": "Dual integration alongside LayerZero; Hyperlane Mailbox dispatch present in contract internals."
       }
     ],
@@ -363,5 +374,5 @@
       }
     }
   },
-  "launchDate": "2024-10-03"
+  "launchDate": "2025-01-27"
 }

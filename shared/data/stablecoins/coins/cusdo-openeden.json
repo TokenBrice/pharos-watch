@@ -83,7 +83,9 @@
         "source": "docs",
         "name": "Chainlink CCIP",
         "url": "https://docs.chain.link/ccip",
-        "bridgeTypes": ["burnAndMint"],
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
         "note": "OpenEden announced USDO interoperability through Chainlink CCIP; cUSDO is the wrapper of USDO."
       }
     ],
@@ -216,5 +218,5 @@
       }
     }
   },
-  "launchDate": "2024-10-03"
+  "launchDate": "2025-03-19"
 }

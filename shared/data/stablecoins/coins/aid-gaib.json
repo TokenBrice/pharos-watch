@@ -288,7 +288,7 @@
     }
   },
   "deploymentModel": "native-multichain",
-  "launchDate": "2025-10-29",
+  "launchDate": "2025-10-31",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "AID is reviewed as a native multichain GAIB asset with Arbitrum route evidence. The only reviewed bridge-route signal is the canonical Arbitrum rollup path, so Pharos assigns the canonical rollup bridge tier rather than an external third-party token bridge tier.",

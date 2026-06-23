@@ -2,7 +2,7 @@
   "id": "usdr-stablr",
   "name": "StablR USD",
   "symbol": "USDR",
-  "oneLiner": "USDR is StablR's MiCA-licensed dollar e-money token redeemable 1:1, backed by cash and short-term EU government bonds under Malta MFSA EMI supervision.",
+  "oneLiner": "USDR is StablR's MiCA-licensed dollar e-money token; minting and redemption have been suspended since a May 2026 cybersecurity incident.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -254,5 +254,16 @@
       "title": "Minting and redemption suspended",
       "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting USDR and EURR. Minting and redemption were suspended, 8.35M unbacked USDR were minted, and StablR stated USDR/EURR were not fully backed at the 1:1 ratio required under MiCAR while recovery work continued."
     }
-  ]
+  ],
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "frozen",
+  "frozenAt": "2026-05-24",
+  "obituary": {
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-05",
+    "epitaph": "A two-signer mint key broke the backing",
+    "obituary": "StablR suspended USDR minting and redemption after a May 24, 2026 cybersecurity incident let an attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR exploit. StablR disclosed that the affected tokens were temporarily not backed 1:1 under MiCAR while recovery work continued. With no public restoration of minting, redemption, or full backing confirmed, Pharos freezes USDR as an archived incident asset rather than treating it as an active redeemable stablecoin.",
+    "sourceUrl": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations",
+    "sourceLabel": "StablR cybersecurity incident disclosure"
+  }
 }

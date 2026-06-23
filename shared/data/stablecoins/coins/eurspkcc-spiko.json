@@ -178,7 +178,10 @@
         "source": "docs",
         "name": "Chainlink CCIP",
         "url": "https://docs.chain.link/ccip",
-        "bridgeTypes": ["messagePassing", "burnAndMint"]
+        "bridgeTypes": [
+          "messagePassing",
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -222,5 +225,5 @@
       "message": "Reserve weights use a conservative template because the cash-and-carry strategy allocation can vary over time."
     }
   ],
-  "launchDate": "2025-07-16"
+  "launchDate": "2025-07-24"
 }

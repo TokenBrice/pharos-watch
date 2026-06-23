@@ -2,17 +2,17 @@
   "id": "vndc-jade-labs",
   "name": "VNDC",
   "symbol": "VNDC",
-  "oneLiner": "VNDC is Jade Labs's Vietnamese dong stablecoin redeemable 1:1 via ONUS and VNDC Hub, with self-reported reserves and no third-party attestation.",
+  "oneLiner": "VNDC is Jade Labs's VND-denominated token, now disclosed as VNDC 2.0 backed by USDT/USDC pools under issuer and investigation risk.",
   "flags": {
-    "backing": "rwa-backed",
+    "backing": "crypto-backed",
     "pegCurrency": "VND",
     "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",
-  "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms with VND on/off-ramps via Vietnamese banking partners; reserve backing is self-reported by Jade Labs with no third-party attestation, audit cadence, or proof-of-reserves feed currently published",
+  "collateral": "Issuer-disclosed VNDC 2.0 USDT/USDC smart-contract collateral on Polygon and BNB Smart Chain; reserve and redemption claims remain high-risk after the March 2026 ONUS/VNDC investigation",
+  "pegMechanism": "Issuer-controlled mint and redemption through ONUS/VNDC Hub; VNDC 2.0 disclosures describe USDT/USDC collateral pools rather than direct VND bank reserves, with redemption reliability impaired by the March 2026 investigation and withdrawal disruptions",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "vndc",
@@ -102,14 +102,14 @@
       }
     ]
   },
-  "collateralQuality": "rwa",
+  "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Vietnamese dong reserves (issuer self-reported)",
+      "name": "Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools",
       "pct": 100,
-      "risk": "high"
+      "risk": "very-high"
     }
   ],
   "liveReservesConfig": {

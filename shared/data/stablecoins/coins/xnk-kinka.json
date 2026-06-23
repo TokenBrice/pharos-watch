@@ -165,7 +165,7 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2023-12-19",
+  "launchDate": "2024-02-21",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XNK is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",

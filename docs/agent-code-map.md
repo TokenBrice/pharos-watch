@@ -403,7 +403,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 26 keys
 - `shared/data/stablecoins/coins/ausd-agora.json` - 25 keys
 - `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 28 keys
-- `shared/data/stablecoins/coins/autousd-auto-finance.json` - 24 keys
+- `shared/data/stablecoins/coins/autousd-auto-finance.json` - 25 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 22 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 21 keys
 - `shared/data/stablecoins/coins/aznd-mu-digital.json` - 26 keys
@@ -411,7 +411,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/bc3m-backed.json` - 28 keys
 - `shared/data/stablecoins/coins/bd-basedollar.json` - 16 keys
 - `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 29 keys
-- `shared/data/stablecoins/coins/bfusd-binance.json` - 24 keys
+- `shared/data/stablecoins/coins/bfusd-binance.json` - 25 keys
 - `shared/data/stablecoins/coins/bib01-backed.json` - 29 keys
 - `shared/data/stablecoins/coins/bils-bitsofgold.json` - 21 keys
 - `shared/data/stablecoins/coins/bnusd-balanced.json` - 25 keys

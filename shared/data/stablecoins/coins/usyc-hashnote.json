@@ -2,7 +2,7 @@
   "id": "usyc-hashnote",
   "name": "Circle USYC",
   "symbol": "USYC",
-  "oneLiner": "Circle USYC is Hashnote's tokenized T-bill fund share backed by short-term U.S. Treasuries and reverse repos, redeemable at NAV.",
+  "oneLiner": "Circle USYC is Circle's tokenized T-bill fund share backed by short-term U.S. Treasuries and reverse repos, redeemable at NAV.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

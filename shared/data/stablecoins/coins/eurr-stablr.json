@@ -2,8 +2,8 @@
   "id": "eurr-stablr",
   "name": "StablR Euro",
   "symbol": "EURR",
-  "oneLiner": "EURR is StablR's MiCA-licensed euro stablecoin issued from Malta, redeemable 1:1 against euro cash held at regulated EU institutions.",
-  "marketAvailability": "limited-trading",
+  "oneLiner": "EURR is StablR's MiCA-licensed euro e-money token; minting and redemption have been suspended since a May 2026 cybersecurity incident.",
+  "marketAvailability": "legacy-or-wind-down",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -246,5 +246,15 @@
         "url": "https://www.stablr.com/"
       }
     ]
+  },
+  "status": "frozen",
+  "frozenAt": "2026-05-24",
+  "obituary": {
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-05",
+    "epitaph": "A mint key broke the euro rail",
+    "obituary": "StablR suspended EURR minting and redemption after a May 24, 2026 cybersecurity incident let an attacker mint 4.5M unbacked EURR as part of a coordinated EURR/USDR exploit. StablR disclosed that the affected tokens were temporarily not backed 1:1 under MiCAR while recovery work continued. With no public restoration of minting, redemption, or full backing confirmed, Pharos freezes EURR as an archived incident asset rather than treating it as an active redeemable stablecoin.",
+    "sourceUrl": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations",
+    "sourceLabel": "StablR cybersecurity incident disclosure"
   }
 }

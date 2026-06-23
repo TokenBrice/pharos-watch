@@ -23,7 +23,7 @@
   "pegReferenceId": "yzusd-yuzu",
   "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
   "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
-  "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetype": "cdp",
   "archetypeOverride": true,
   "detailProvider": "coingecko",
   "geckoId": "staked-yuzu-usd",
@@ -83,7 +83,11 @@
         "name": "LayerZero OVault (VaultComposerSync) — Yuzu ouroboros-contracts",
         "slug": "layerzero",
         "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol",
-        "bridgeTypes": ["external-lock-mint", "oft-adapter-lockbox", "ovault"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter-lockbox",
+          "ovault"
+        ],
         "note": "ProtoOVaultComposer inherits @layerzerolabs/ovault-evm VaultComposerSync; PSMOVaultComposer enforces share OFT must be an OFTAdapter (approvalRequired()==true => lockbox model). Asset+share OFT mesh per LayerZero OVault standard."
       },
       {
@@ -91,7 +95,10 @@
         "name": "Dedaub audit — Yuzu V2 LayerZero oVault integration",
         "slug": "layerzero-ovault",
         "url": "https://dedaub.com/audits/yuzu-money/yuzuusd-psm-february-09-2026/",
-        "bridgeTypes": ["external-lock-mint", "ovault"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "ovault"
+        ],
         "note": "Audit states cross-chain operations via LayerZero added; reviewers focused on the LayerZero oVault integration."
       }
     ],

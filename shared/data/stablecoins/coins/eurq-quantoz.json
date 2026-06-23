@@ -258,7 +258,7 @@
       "token": "EURQ"
     }
   },
-  "launchDate": "2024-11-13",
+  "launchDate": "2024-11-18",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "EURQ is Quantoz-issued across multiple ledgers, and the reviewed issuer materials present it as a regulated fiat-backed EMT rather than a third-party bridge wrapper. The route is classified as issuer-native issuance/redemption.",

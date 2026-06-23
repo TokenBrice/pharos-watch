@@ -226,7 +226,7 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "launchDate": "2025-12-15",
+  "launchDate": "2025-09-16",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "ACRDX cross-chain movement uses Centrifuge cross-chain architecture over Wormhole messaging, so Pharos scores durable route exposure as an external validated network rather than Across liquidity/intent routing.",

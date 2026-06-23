@@ -13,7 +13,7 @@
   },
   "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",
   "pegMechanism": "KYC-gated primary-market mint and redemption at 1 BRL per BRLV through Crown; reserves are pledged to BRLV holders through a Brazilian security-agent and fiduciary-assignment structure, while secondary-market price can deviate",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "crown-brlv",
   "proofOfReserves": {
@@ -89,7 +89,9 @@
         "name": "Base Canonical",
         "slug": "base",
         "url": "https://l2beat.com/interop/protocols/base",
-        "bridgeTypes": ["lockAndMint"]
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       }
     ],
     "sources": [

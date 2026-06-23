@@ -3,15 +3,15 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
     version: "4.14",
-    title: "Morpho V2 vault liquidity for Steakhouse Prime exits",
+    title: "Morpho V1/V2 vault liquidity for curated vault exits",
     date: "2026-06-23",
     effectiveAt: 1782237600,
     summary:
-      "Steakhouse Prime USDT reserve-sync telemetry now uses Morpho V2 vault liquidity as current executable redemption capacity after validating the exact vault, underlying asset, listed status, and chain.",
+      "Steakhouse, Smokehouse, and Gauntlet Morpho vault-token reserve-sync telemetry now uses reviewed Morpho V1/V2 vault liquidity as current executable redemption capacity after validating the exact vault, underlying asset, listed status, and chain.",
     impact: [
-      "`steakusdt-steakhouse` no longer scores its instant-exit path from idle USDT alone when the vault has withdrawable Morpho liquidity available",
-      "Morpho `liquidity` is treated as live-direct same-run API capacity and is capped by the ERC-4626 asset base before entering the effective-exit blend",
-      "Morpho `forceDeallocatableLiquidity` is retained as context only; it does not inflate scoring capacity",
+      "`steakusdt-steakhouse`, `steakusdc-steakhouse`, `gtusdcp-gauntlet`, `bbqusdc-steakhouse`, and `gtusdc-gauntlet` no longer score their instant-exit paths from idle underlying alone when the vault has withdrawable Morpho liquidity available",
+      "Morpho V2 `liquidity` and Morpho V1 `liquidity.underlying` are treated as live-direct same-run API capacity and capped by the ERC-4626 asset base before entering the effective-exit blend",
+      "Morpho V2 `forceDeallocatableLiquidity` is retained as context only; it does not inflate scoring capacity",
       "The standalone DEX liquidity score remains a DEX-market measure and does not count Morpho lending-vault liquidity directly",
     ],
     commits: [],

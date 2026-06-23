@@ -73,8 +73,8 @@
     }
   ],
   "jurisdiction": {
-    "country": "Switzerland",
-    "regulator": "FINMA",
+    "country": "Jersey",
+    "regulator": "JFSC (Jersey Financial Services Commission)",
     "license": "Swiss DLT Act registered uncertificated securities"
   },
   "genius": {

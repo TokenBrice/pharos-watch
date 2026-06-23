@@ -132,8 +132,14 @@
         "canRaiseCap": "unknown",
         "evidence": "At Ethereum block 25295020, storage slot 3 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains address 0x70250fcfef983c9b912c8eefb7021b4b7bae836e; eth_getCode returned no bytecode (EOA). In the EURSToken contract layout (owner=slot2, issuer=slot3, totalSupply=slot4), slot3 is the issuer address which holds mint/freeze authority in the issuer-operated model.",
         "sources": [
-          { "label": "EURS contract on Etherscan", "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8" },
-          { "label": "STASIS EURS GitHub", "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract" }
+          {
+            "label": "EURS contract on Etherscan",
+            "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
+          },
+          {
+            "label": "STASIS EURS GitHub",
+            "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
+          }
         ]
       },
       {
@@ -165,7 +171,10 @@
         },
         "evidence": "At Ethereum block 25295020, storage slot 2 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 (the contract's owner). masterCopy() on that address = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0 non-L2); threshold() = 3; getOwners() returned 7 addresses; getModules() = 0; guard slot = 0x0. Slot4 totalSupply = 12412594000 (= 124,125,940 EURS at 2 decimals, confirmed match).",
         "sources": [
-          { "label": "EURS contract on Etherscan", "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8" }
+          {
+            "label": "EURS contract on Etherscan",
+            "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
+          }
         ]
       },
       {
@@ -176,7 +185,10 @@
         "canRaiseCap": "unknown",
         "evidence": "Stellar issuer GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ confirmed via Horizon API: 5 active signers (weight 1 each) plus master key (weight 0), thresholds all set to 3 — equivalent to a 5/3 multisig. Signers: GAOHTWU…, GAYMJ7M…, GAZQ6UE…, GC4RTEX…, GD4ZFKF….",
         "sources": [
-          { "label": "Stellar Horizon issuer account", "url": "https://horizon.stellar.org/accounts/GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ" }
+          {
+            "label": "Stellar Horizon issuer account",
+            "url": "https://horizon.stellar.org/accounts/GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ"
+          }
         ]
       }
     ],
@@ -185,9 +197,18 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "STASIS Transparency", "url": "https://stasis.net/transparency" },
-        { "label": "EURS contract on Etherscan", "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8" },
-        { "label": "Stellar Horizon issuer account", "url": "https://horizon.stellar.org/accounts/GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ" }
+        {
+          "label": "STASIS Transparency",
+          "url": "https://stasis.net/transparency"
+        },
+        {
+          "label": "EURS contract on Etherscan",
+          "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
+        },
+        {
+          "label": "Stellar Horizon issuer account",
+          "url": "https://horizon.stellar.org/accounts/GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ"
+        }
       ]
     }
   },
@@ -221,5 +242,5 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2018-06-22"
+  "launchDate": "2018-06-27"
 }

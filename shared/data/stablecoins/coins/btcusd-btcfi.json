@@ -117,7 +117,10 @@
         "source": "docs",
         "name": "Bifrost Bridge",
         "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide",
-        "bridgeTypes": ["messagePassing", "lockAndMint"]
+        "bridgeTypes": [
+          "messagePassing",
+          "lockAndMint"
+        ]
       }
     ],
     "sources": [
@@ -133,7 +136,9 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "infrastructures": ["liquity-v1"],
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "reserves": [
     {
       "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
@@ -163,5 +168,5 @@
       "handlersUrl": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
     }
   },
-  "launchDate": "2024-07-22"
+  "launchDate": "2024-04-17"
 }

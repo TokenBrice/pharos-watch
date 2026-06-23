@@ -46,7 +46,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; testnet live on Ethereum Sepolia + Base Sepolia (ERC-20 + LayerZero OFT); Hypernative real-time security monitoring added; mainnet contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
+  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; not tracked on DefiLlama or CoinGecko",
   "featuredContent": [
     {
       "type": "tweet",
@@ -100,6 +100,13 @@
       "title": "trUSD testnet live on Ethereum Sepolia and Base Sepolia",
       "description": "Dedicated testnet docs published with verified Sepolia / Base Sepolia contracts (LayerZero OFT); date reflects observation, not a stated deployment date.",
       "sourceUrl": "https://docs.tori.finance/"
+    },
+    {
+      "date": "2026-06-23",
+      "type": "milestone",
+      "title": "Ethereum mainnet pre-deposit vault opens",
+      "description": "RockawayX / Upshift pre-deposit vault opens with a $50M cap, Accountable proof-of-solvency live from day one, Nexus Mutual cover, and a 30-day lock before full protocol launch.",
+      "sourceUrl": "https://tori.finance/"
     }
   ],
   "yieldConfig": {

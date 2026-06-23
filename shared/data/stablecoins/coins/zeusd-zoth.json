@@ -29,7 +29,10 @@
         "name": "LayerZero OFT Adapter (Zoth contract deployments)",
         "slug": "layerzero",
         "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments",
-        "bridgeTypes": ["external-lock-mint", "oft-adapter"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter"
+        ],
         "note": "Zoth docs explicitly list a 'Layer Zero Adapter' on Ethereum (0xBf1060028b212896F799CFbaeA1eD4EEbd060978) and 'ZeUSD OFT' contracts on Manta/Metis/Avalanche; marked as deprecated infrastructure but the documented cross-chain route."
       },
       {
@@ -37,7 +40,11 @@
         "name": "LayerZero OFTAdapter contract (Etherscan)",
         "slug": "layerzero",
         "url": "https://etherscan.io/address/0xBf1060028b212896F799CFbaeA1eD4EEbd060978#code",
-        "bridgeTypes": ["external-lock-mint", "oft-adapter", "lockbox"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter",
+          "lockbox"
+        ],
         "note": "Inherits OFTAdapter/OFTCore/IOAppCore, references LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, wraps inner ZeUSD via token(); send/quoteSend/lzReceive/setPeer present. Lock-on-Ethereum, mint-on-satellite pattern."
       },
       {
@@ -45,7 +52,9 @@
         "name": "ZeUSD token (plain upgradeable ERC20, not an OFT)",
         "slug": "zeusd-token",
         "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761#code",
-        "bridgeTypes": ["erc20-proxy"],
+        "bridgeTypes": [
+          "erc20-proxy"
+        ],
         "note": "ERC1967 proxy over an ERC20Upgradeable/AccessControl/UUPS impl with no LayerZero/OFT messaging functions — confirms the Adapter/lockbox (not native OFT) architecture."
       }
     ],
@@ -262,5 +271,5 @@
       "message": "Zoth suffered March 2025 exploits affecting ZeUSD platform risk, including a collateral-accounting bug and a later admin-key compromise. Review current redemption and reserve evidence before assuming normal peg liquidity. https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
     }
   ],
-  "launchDate": "2024-12-12"
+  "launchDate": "2025-01-27"
 }

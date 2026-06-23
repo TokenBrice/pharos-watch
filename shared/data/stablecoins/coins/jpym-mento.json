@@ -210,7 +210,11 @@
         "name": "Wormhole NTT (Native Token Transfers)",
         "slug": "wormhole",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/from-other-chains",
-        "bridgeTypes": ["external-validated-network", "burn-mint", "hub-and-spoke"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint",
+          "hub-and-spoke"
+        ],
         "note": "Mento's officially selected interoperability provider; NTT standard for native cross-chain issuance/redemption with Celo as hub, Monad as spoke; attested by Wormhole Guardians + Global Accountant."
       }
     ],
@@ -274,6 +278,8 @@
       "cdpStablecoin": "JPYm"
     }
   },
-  "infrastructures": ["liquity-v2"],
-  "launchDate": "2025-04-17"
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "launchDate": "2025-06-06"
 }

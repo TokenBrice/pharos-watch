@@ -408,7 +408,7 @@
       ]
     }
   },
-  "launchDate": "2023-11-14",
+  "launchDate": "2024-02-19",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDe uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",

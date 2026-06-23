@@ -175,7 +175,10 @@
         "name": "LayerZero V2 OFT (Omnichain Fungible Token)",
         "slug": "layerzero",
         "url": "https://etherscan.io/address/0x52c66B5E7f8Fde20843De900C5C8B4b0F23708A0#code",
-        "bridgeTypes": ["burn-mint", "external-validated-network"],
+        "bridgeTypes": [
+          "burn-mint",
+          "external-validated-network"
+        ],
         "note": "Ethereum AZND (0x52c66B5E...08A0) verified-source OFT importing @layerzerolabs/oft-evm-upgradeable; sends via LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fE728c. Standard OFT, not an Adapter/lockbox."
       },
       {
@@ -183,7 +186,9 @@
         "name": "DVN security stack (EndpointV2.getConfig, Monad EID 30390)",
         "slug": "layerzero-dvn",
         "url": "https://layerzeroscan.com/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
-        "bridgeTypes": ["external-validated-network"],
+        "bridgeTypes": [
+          "external-validated-network"
+        ],
         "note": "Required 3/3 DVNs: Deutsche Telekom, LayerZero Labs, Canary. Optional 1-of-2: Horizen, Frax. Custom ULN302 config (not LZDeadDVN default); confirmations 15 send / 4 receive. Peer set at eid 30390."
       }
     ],
@@ -255,5 +260,5 @@
       ]
     }
   },
-  "launchDate": "2026-01-22"
+  "launchDate": "2025-11-24"
 }

@@ -197,7 +197,7 @@
       "maxOracleAgeSec": 345600
     }
   },
-  "launchDate": "2024-08-28",
+  "launchDate": "2024-09-16",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Matrixdock documents an XAUm adaptor contract that connects to cross-chain protocols and currently uses Chainlink CCIP and LayerZero. Because supply movement depends on external messaging/validation networks, the route is reviewed as external validated-network exposure.",

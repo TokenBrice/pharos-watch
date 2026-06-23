@@ -2,7 +2,7 @@
   "id": "ylds-figure",
   "name": "YLDS",
   "symbol": "YLDS",
-  "oneLiner": "YLDS is Figure's SEC-registered face-amount certificate paying SOFR-minus-50bps daily interest, backed by short-term Treasuries and overnight repos at UMB Bank.",
+  "oneLiner": "YLDS is Figure's SEC-registered face-amount certificate paying SOFR-minus-35bps daily interest, backed by short-term Treasuries and repos.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

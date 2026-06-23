@@ -28,7 +28,7 @@
   "pegMechanism": "Direct 1:1 euro issuance and redemption through Membrane's verified-customer platform, with public transparency and regulation pages describing reserve attestations",
   "llamaId": "98",
   "detailProvider": "defillama",
-  "launchDate": "2023-01-18",
+  "launchDate": "2023-02-02",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.paxos.com/euroe-redemptions",
@@ -140,7 +140,10 @@
         "canRaiseCap": "unknown",
         "evidence": "At Ethereum block 25295054, hasRole(MINTER_ROLE=0x9f2df0fe…, 0x74424510108a8ad9aa6a5b506048948e6a16706b) = true; eth_getCode on that address returned no bytecode (EOA). RoleGranted events scanned from creation block 16432602; no RoleRevoked for this address was found. The minter role was never migrated to a multisig.",
         "sources": [
-          { "label": "EUROe Ethereum contract", "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974" }
+          {
+            "label": "EUROe Ethereum contract",
+            "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          }
         ]
       },
       {
@@ -152,7 +155,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "evidence": "At Ethereum block 25295054, hasRole(DEFAULT_ADMIN_ROLE=0x00…, 0xd5731b8c97b61cdede6c612ec963b3f86af0c3f7) = true; eth_getCode returned no bytecode (EOA). The UUPS proxy has no separate proxy-admin slot (empty). PROXYOWNER_ROLE was self-assigned to the proxy contract at creation (pattern for UUPS self-administration). No multisig migration occurred.",
         "sources": [
-          { "label": "EUROe Ethereum contract", "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974" }
+          {
+            "label": "EUROe Ethereum contract",
+            "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          }
         ]
       }
     ],

@@ -63,7 +63,10 @@
         "name": "LayerZero (OFT Adapter lockbox on Base hub + mint/burn spoke OFTs)",
         "slug": "layerzero",
         "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations",
-        "bridgeTypes": ["oft-adapter-lockbox", "oft-mint-burn"],
+        "bridgeTypes": [
+          "oft-adapter-lockbox",
+          "oft-mint-burn"
+        ],
         "note": "Base ShareOFTAdapter locks the canonical UTY vault token; Avalanche/Katana spoke OFTs mint/burn. Threshold of >=2 independent DVNs per pathway (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind)."
       }
     ],
@@ -212,5 +215,5 @@
       ]
     }
   },
-  "launchDate": "2025-02-28"
+  "launchDate": "2025-05-15"
 }

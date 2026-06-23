@@ -148,27 +148,35 @@
         "name": "Unitas roadmap — Cross-chain USDu (LayerZero), Design phase, ETA Q4 2025 (NOT live)",
         "slug": "layerzero",
         "url": "https://docs.unitas.so/",
-        "bridgeTypes": ["planned-omnichain-oft"],
+        "bridgeTypes": [
+          "planned-omnichain-oft"
+        ],
         "note": "Future route only; not the current durable mechanism"
       },
       {
         "source": "explorer",
         "name": "USDU BSC token — plain BEP20, mint()/burn() minter role, no OFT/LayerZero interface",
         "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882",
-        "bridgeTypes": ["native-mint"],
+        "bridgeTypes": [
+          "native-mint"
+        ],
         "note": "Gnosis Safe 3-of-5 sole minter (registry mintAuthority review)"
       },
       {
         "source": "explorer",
         "name": "USDU Solana Token-2022 mint — self-referential mintAuthority, effectively frozen",
         "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
-        "bridgeTypes": ["native-mint"]
+        "bridgeTypes": [
+          "native-mint"
+        ]
       },
       {
         "source": "docs",
         "name": "Minting USDu — USDC mint/redeem by whitelisted/KYC participants, native per chain",
         "url": "https://docs.unitas.so/solution-design/minting-usdu",
-        "bridgeTypes": ["native-mint"]
+        "bridgeTypes": [
+          "native-mint"
+        ]
       }
     ],
     "sources": [
@@ -242,5 +250,5 @@
       }
     }
   },
-  "launchDate": "2025-11-22"
+  "launchDate": "2025-08-08"
 }

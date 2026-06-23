@@ -181,7 +181,7 @@
       ]
     }
   },
-  "launchDate": "2026-03-03",
+  "launchDate": "2026-03-19",
   "mechanismArchetype": "rwa-credit-fund",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

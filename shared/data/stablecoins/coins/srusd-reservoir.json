@@ -199,6 +199,6 @@
     "yieldSource": "Reservoir savings vault",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2024-08-19",
+  "launchDate": "2024-11-11",
   "mechanismArchetype": "rwa-credit-fund"
 }

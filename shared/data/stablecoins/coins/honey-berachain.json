@@ -2,7 +2,7 @@
   "id": "honey-berachain",
   "name": "Honey",
   "symbol": "HONEY",
-  "oneLiner": "Honey is Berachain's native overcollateralized dollar token, minted against a basket of approved stable assets where some routes carry mint/redeem fees.",
+  "oneLiner": "Honey is Berachain's native fully-collateralized dollar token, minted 1:1 against approved stable assets where some routes carry mint/redeem fees.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

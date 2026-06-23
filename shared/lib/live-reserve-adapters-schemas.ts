@@ -318,16 +318,30 @@ const singleAssetProbeSchema = z
   })
   .strict();
 
+const morphoVaultV1RedemptionLiquiditySchema = z
+  .object({
+    source: z.literal("morpho-vault-v1"),
+    chainId: z.number().int().positive(),
+    apiUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+const morphoVaultV2RedemptionLiquiditySchema = z
+  .object({
+    source: z.literal("morpho-vault-v2"),
+    chainId: z.number().int().positive(),
+    apiUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
     redemptionLiquidity: z
-      .object({
-        source: z.literal("morpho-vault-v2"),
-        chainId: z.number().int().positive(),
-        apiUrl: AbsoluteUrlSchema.optional(),
-      })
-      .strict()
+      .discriminatedUnion("source", [
+        morphoVaultV1RedemptionLiquiditySchema,
+        morphoVaultV2RedemptionLiquiditySchema,
+      ])
       .optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
