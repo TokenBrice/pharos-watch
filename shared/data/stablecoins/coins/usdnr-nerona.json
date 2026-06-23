@@ -224,19 +224,37 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "m0",
+    "adapter": "m0-wrapper-underlying",
     "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
+    "semantics": "single-asset",
+    "breakerScope": "usdnr-nerona",
     "display": {
       "url": "https://dashboard.m0.org/stablecoins/usdnr",
       "label": "M0 Dashboard"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "mode": "m-extension",
+      "wrapperAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+      "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+      "expectedSwapFacilityAddress": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+      "slice": {
+        "name": "M token held by Nerona USDnr",
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://dashboard.m0.org/stablecoins/usdnr",
+        "https://docs.m0.org/get-started/resources/addresses/"
+      ],
+      "rpcUrl": "https://ethereum.publicnode.com"
     }
   },
   "launchDate": "2026-01-12"

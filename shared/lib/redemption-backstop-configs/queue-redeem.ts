@@ -591,7 +591,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: undisclosedReviewedFee(
       "Nerona documents permissioned 1:1 USDnr mint and redeem against underlying M; public docs reviewed do not publish a separate numeric redemption fee",
     ),
@@ -599,7 +599,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     docs: [sourceRef("Nerona documentation", "https://docs.nerona.finance/", ["route", "capacity", "access"])],
     notes: [
       "Permissioned M0 wrapper: KYC-gated to Nerona's private wealth platform clients; T-bill yield accrues to M0/Nerona rather than USDnr holders",
-      "The 50% ratio is a reviewed heuristic placeholder pending a published primary-market liquidity bound for Nerona's M wrapper",
+      "Fresh live reserve metadata reads the current M balance held by the USDnr extension as the directly redeemable bound and verifies the M0 SwapFacility path is not paused; if the live snapshot is unavailable, the route is left unrated instead of using a static supply heuristic",
     ],
   },
   "usdh-hermetica": {
@@ -697,7 +697,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     executionModel: "rules-based-nav",
     totalScoreCap: 65,
     costModel: documentedVariableFee(
-      "apyUSD unlocks to apxUSD over roughly 30 days, then apxUSD primary redemption depends on eligible participants",
+      "apyUSD redemptions become claimable after 3 days, with an early-redemption fee that declines linearly from 3.5% to 0.1% over the claimable window (waiting longer lowers the fee)",
+      "formula",
     ),
     docs: [
       sourceRef("apyUSD overview", "https://docs.apyx.fi/product-overview/apyusd-overview", [

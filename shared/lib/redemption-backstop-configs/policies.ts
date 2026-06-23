@@ -100,6 +100,17 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     reviewedAt: "2026-05-12",
   },
   {
+    kind: "degraded-sync-warning-exception",
+    stablecoinId: "usdf-falcon",
+    warningCode: "unknown-asset",
+    capacityNote:
+      "Using Falcon's tracked stablecoin reserve bucket as redemption capacity despite an unmapped altcoin in the high-risk 'other' bucket, which does not back the immediate-redeemable stable slice",
+    reason:
+      "Falcon's stablecoin-bucket redemption capacity stays a reviewed live proxy when the only degraded warning is an unmapped asset in the high-risk 'other' bucket, since that exposure sits outside the immediate-redeemable stable slice the capacity is drawn from.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-06-23",
+  },
+  {
     kind: "unused-live-redemption-telemetry",
     stablecoinId: "cjpy-yamato",
     reason:

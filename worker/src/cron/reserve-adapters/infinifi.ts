@@ -69,6 +69,7 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "aavev3":                  { risk: "low", ...wrapperAssetMeta("usdc") },
   "aavev3-horizon-usdc":     { risk: "low", ...wrapperAssetMeta("usdc") },
   "aavev3-rlusd-farm":       { risk: "low", ...wrapperAssetMeta("usdc") },
+  "aave-v4-usdg":            { risk: "low" },
   "euler-sentora-usdc":      { risk: "low", ...wrapperAssetMeta("usdc") },
   "morpho-steakUSDCinfinifi": { risk: "medium", ...wrapperAssetMeta("usdc") },
   "capfarm":                 { risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
@@ -84,6 +85,11 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "pendle-v3-PT-apyUSD-18JUN2026": { risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
   "new-silver-junior":       { risk: "high", ...cefiPositionMeta() },
   "morpho-v2-sentora-prime": { risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
+  // STRCx is Backed Assets' tokenized wrapper of Strategy's STRC perpetual
+  // preferred stock — an off-chain security held in centralized custody whose
+  // quasi-peg has already broken twice (to ~$90 in Nov 2025 and ~$93 in Feb
+  // 2026), dragging STRC-backed synthetics like apxUSD/sUSDat well below $1.
+  "strcx":                   { risk: "high", ...cefiPositionMeta() },
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
@@ -313,7 +319,9 @@ export async function fetchInfiniFiReserves(
         ...(freshness.freshnessMode === "verified"
           ? { freshnessKind: "verified-source-timestamp" as const, sourceTimestamp: freshness.sourceTimestamp }
           : { freshnessKind: "unverified" as const }),
-        routeStatus: "unknown",
+        // infiniFi redemption is permissionless and instant from the liquid
+        // buffer; pendingRedemptions sits at ~$0, so the queue route is open.
+        routeStatus: "open",
         routeStatusSource: "protocol-api",
         ...(payload.data.stats.asset.pendingRedemptionsAssetNormalized != null
           ? { queueDepthUsd: payload.data.stats.asset.pendingRedemptionsAssetNormalized }

@@ -365,7 +365,7 @@ describe("adaptInfiniFi", () => {
         capacityRatioOfSupply: 35 / 80,
         capacityKind: "live-queue",
         freshnessKind: "unverified",
-        routeStatus: "unknown",
+        routeStatus: "open",
         routeStatusSource: "protocol-api",
         queueDepthUsd: 12,
         sourceUrls: [url],

@@ -1,11 +1,12 @@
-import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig } from "./shared";
 
 export const STCUSD_CAP_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "stcUSD withdraws to cUSD at the live vault exchange rate; public docs reviewed do not publish a separate fixed stcUSD redemption fee",
+  costModel: fixedFee(
+    0,
+    "stcUSD unstakes to cUSD fee-free at the live vault exchange rate (only accrued-yield/lockedProfit NAV growth, no separate stcUSD wrapper fee); the 0.25% (0% whitelisted) fee is the downstream cUSD mint/burn/redeem leg, not the stcUSD step",
   ),
   reviewedAt: "2026-05-17",
   docs: [

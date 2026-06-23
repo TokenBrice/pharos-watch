@@ -210,7 +210,7 @@ describe("adaptFraxFpiCollateral", () => {
       capacityUsd: 5_000_000,
       capacityKind: "live-proxy-validated",
       freshnessKind: "verified-source-timestamp",
-      routeStatus: "unknown",
+      routeStatus: "open",
     });
   });
 
