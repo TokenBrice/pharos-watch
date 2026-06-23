@@ -10,6 +10,11 @@ interface FetchWithRetryOptions {
   timeoutMs?: number;
   maxRetryDelayMs?: number;
 }
+
+function jitterDelayMs(delayMs: number): number {
+  return Math.max(0, Math.round(delayMs * (0.5 + Math.random() * 0.5)));
+}
+
 function getRetryDelayMs(response: Response, attempt: number, maxRetryDelayMs?: number): number | null {
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
@@ -18,7 +23,7 @@ function getRetryDelayMs(response: Response, attempt: number, maxRetryDelayMs?: 
     return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
   }
   if (response.status === 529) {
-    const delayMs = Math.min(30_000, 5_000 * 2 ** attempt);
+    const delayMs = Math.min(30_000, jitterDelayMs(5_000 * 2 ** attempt));
     return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
   }
   return null;
@@ -97,7 +102,7 @@ export async function fetchWithRetry(
       console.warn(`[fetch-retry] ${logUrl} failed (attempt ${i + 1}/${maxRetries + 1}):`, err);
     }
     if (i < maxRetries) {
-      await sleepWithSignal(1000 * 2 ** i, signal);
+      await sleepWithSignal(jitterDelayMs(1000 * 2 ** i), signal);
     }
   }
   return null;

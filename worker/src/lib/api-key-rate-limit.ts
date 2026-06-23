@@ -87,7 +87,7 @@ export async function checkApiKeyRateLimit(
   const state = getApiKeyRuntimeState();
   if (state.lastApiKeyRateLimitPruneBucket !== bucketStart) {
     state.lastApiKeyRateLimitPruneBucket = bucketStart;
-    state.pendingApiKeyPrune = db.prepare("DELETE FROM api_key_rate_limit WHERE bucket_start < ?")
+    const prune = db.prepare("DELETE FROM api_key_rate_limit WHERE bucket_start < ?")
       .bind(bucketStart - (60 * API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER))
       .run()
       .then(() => {})
@@ -95,10 +95,11 @@ export async function checkApiKeyRateLimit(
         console.warn("[api-keys] rate-limit prune failed:", error);
       })
       .finally(() => {
-        if (state.pendingApiKeyPrune) {
+        if (state.pendingApiKeyPrune === prune) {
           state.pendingApiKeyPrune = null;
         }
       });
+    state.pendingApiKeyPrune = prune;
   }
 
   if ((row?.count ?? 0) > limit) {

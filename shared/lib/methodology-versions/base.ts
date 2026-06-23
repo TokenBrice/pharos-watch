@@ -69,27 +69,36 @@ function normalizeMethodologyMinorVersionSegment(segment: string, width: number)
   return parseMethodologyVersionSegment(segment.padEnd(width, "0"));
 }
 
-export function compareMethodologyVersions(a: string, b: string): number {
-  const aParts = a.split(".");
-  const bParts = b.split(".");
-  const maxLength = Math.max(aParts.length, bParts.length);
-
-  for (let index = 0; index < maxLength; index += 1) {
-    const aPart = aParts[index] ?? "0";
-    const bPart = bParts[index] ?? "0";
-    const width = Math.max(aPart.length, bPart.length, 1);
-    const diff =
-      index === 0
-        ? parseMethodologyVersionSegment(aPart) - parseMethodologyVersionSegment(bPart)
-        : normalizeMethodologyMinorVersionSegment(aPart, width) - normalizeMethodologyMinorVersionSegment(bPart, width);
-    if (diff !== 0) return diff;
+function parseMethodologyVersion(version: string): { major: number; minor: string } {
+  const match = version.match(/^(\d+)\.(\d+)$/u);
+  if (!match) {
+    throw new Error(`Invalid methodology version "${version}". Expected numeric two-segment form like "5.91".`);
   }
+  return {
+    major: parseMethodologyVersionSegment(match[1] ?? "0"),
+    minor: match[2] ?? "0",
+  };
+}
 
-  return 0;
+export function compareMethodologyVersions(a: string, b: string): number {
+  const aVersion = parseMethodologyVersion(a);
+  const bVersion = parseMethodologyVersion(b);
+  const majorDiff = aVersion.major - bVersion.major;
+  if (majorDiff !== 0) return majorDiff;
+
+  const width = Math.max(aVersion.minor.length, bVersion.minor.length, 1);
+  return (
+    normalizeMethodologyMinorVersionSegment(aVersion.minor, width) -
+    normalizeMethodologyMinorVersionSegment(bVersion.minor, width)
+  );
 }
 
 export function createMethodologyVersion(config: MethodologyVersionConfig): MethodologyVersion {
   const { currentVersion, changelogPath, changelog } = config;
+  parseMethodologyVersion(currentVersion);
+  for (const entry of changelog) {
+    parseMethodologyVersion(entry.version);
+  }
   const versionLabel = toMethodologyVersionLabel(currentVersion);
   const sortedChangelog = [...changelog].sort((a, b) => {
     const versionDiff = compareMethodologyVersions(b.version, a.version);

@@ -222,6 +222,58 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("reuses an open grouped circuit decision within one live override run", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
+        rows: [{
+          key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+          value: JSON.stringify({
+            state: "open",
+            consecutiveFailures: 3,
+            lastFailureAt: nowSec,
+            lastSuccessAt: null,
+            openedAt: nowSec,
+          }),
+          updated_at: nowSec,
+        }],
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "cusd-cap",
+        name: "Cap cUSD",
+        symbol: "CUSD",
+        circulating: { peggedUSD: 114_000_000 },
+      },
+      {
+        id: "iusd-infinifi",
+        name: "infiniFi USD",
+        symbol: "IUSD",
+        circulating: { peggedUSD: 180_000_000 },
+      },
+    ], undefined, undefined, { db, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    expect(stats).toMatchObject({
+      candidateCount: 2,
+      attemptedCount: 0,
+      skippedCircuitOpen: 2,
+    });
+    const circuitReads = db
+      .getHistory()
+      .filter((entry) =>
+        entry.sql.includes("SELECT value, updated_at FROM cache WHERE key = ?") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      );
+    expect(circuitReads).toHaveLength(1);
+  });
+
   it("records thrown live RPC protocol-redeem overrides as grouped circuit failures", async () => {
     fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
     const db = mockD1([

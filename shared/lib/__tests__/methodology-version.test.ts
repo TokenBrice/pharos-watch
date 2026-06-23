@@ -20,6 +20,10 @@ describe("compareMethodologyVersions", () => {
     expect(compareMethodologyVersions("10.0", "9.99")).toBeGreaterThan(0);
     expect(compareMethodologyVersions("9.99", "10.0")).toBeLessThan(0);
   });
+
+  it("rejects non-standard methodology version shapes", () => {
+    expect(() => compareMethodologyVersions("1.0.0", "1.0")).toThrow(/two-segment/i);
+  });
 });
 
 describe("createMethodologyVersion", () => {
@@ -117,6 +121,16 @@ describe("createMethodologyVersion", () => {
         ],
       }),
     ).toThrow(/drift/i);
+  });
+
+  it("rejects malformed currentVersion even when the changelog is empty", () => {
+    expect(() =>
+      createMethodologyVersion({
+        currentVersion: "1.0.0",
+        changelogPath: "/methodology/malformed-test/",
+        changelog: [],
+      }),
+    ).toThrow(/two-segment/i);
   });
 });
 

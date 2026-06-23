@@ -164,17 +164,40 @@ describe("fetchWithRetry", () => {
   });
 
   it("backs off on 529 overload responses before succeeding", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "overloaded" }), { status: 529 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "still overloaded" }), { status: 529 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(1);
+    try {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ error: "overloaded" }), { status: 529 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ error: "still overloaded" }), { status: 529 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
 
-    const res = await fetchWithRetry("https://example.com/token", undefined, 2);
+      const res = await fetchWithRetry("https://example.com/token", undefined, 2);
 
-    expect(res?.ok).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(sleepWithSignalMock).toHaveBeenNthCalledWith(1, 5000, undefined);
-    expect(sleepWithSignalMock).toHaveBeenNthCalledWith(2, 10000, undefined);
+      expect(res?.ok).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(sleepWithSignalMock).toHaveBeenNthCalledWith(1, 5000, undefined);
+      expect(sleepWithSignalMock).toHaveBeenNthCalledWith(2, 10000, undefined);
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it("jitters generic retry sleeps", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(new Response("bad gateway", { status: 520 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const res = await fetchWithRetry("https://example.com/token", undefined, 1);
+
+      expect(res?.ok).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(sleepWithSignalMock).toHaveBeenCalledWith(500, undefined);
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 });

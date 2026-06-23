@@ -37,6 +37,13 @@ describe("page metadata helpers", () => {
     expect(description).not.toContain("Peg score");
     expect(description).not.toContain("liquidity");
     expect(metadata.description).toBe(description);
+    expect(metadata.openGraph?.images).toEqual([
+      {
+        url: "/og-upcoming.png",
+        width: 1200,
+        height: 628,
+      },
+    ]);
   });
 
   it("prefers a full first sentence for digest descriptions", () => {

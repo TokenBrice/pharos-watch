@@ -72,6 +72,18 @@ export interface AuthoritativeLivePriceOverrideOptions {
   stats?: AuthoritativeLivePriceOverrideStats;
 }
 
+async function shouldAttemptLiveFetch(
+  db: D1Database,
+  source: string,
+  circuitAttempts: Map<string, boolean>,
+): Promise<boolean> {
+  const memoized = circuitAttempts.get(source);
+  if (typeof memoized === "boolean") return memoized;
+  const allowed = await shouldAttemptFetch(db, source);
+  circuitAttempts.set(source, allowed);
+  return allowed;
+}
+
 export async function fetchAuthoritativeLivePriceOverrides(
   assets: PeggedAsset[],
   signal?: AbortSignal,
@@ -101,6 +113,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
   const liveSignal = signal && budgetSignal
     ? AbortSignal.any([signal, budgetSignal])
     : budgetSignal ?? signal;
+  const circuitAttempts = new Map<string, boolean>();
 
   for (let index = 0; index < candidates.length; index += 1) {
     if (budgetSignal?.aborted) {
@@ -114,7 +127,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
     const { asset, provider } = candidates[index];
     const circuitSource = provider.liveCircuitSource;
     if (circuitSource && options?.db) {
-      const allowed = await shouldAttemptFetch(options.db, circuitSource);
+      const allowed = await shouldAttemptLiveFetch(options.db, circuitSource, circuitAttempts);
       if (!allowed) {
         if (stats) stats.skippedCircuitOpen += 1;
         continue;
@@ -129,11 +142,13 @@ export async function fetchAuthoritativeLivePriceOverrides(
         if (stats) stats.successCount += 1;
         if (circuitSource && options?.db) {
           await recordOutcomeSafe(options.db, circuitSource, true);
+          circuitAttempts.delete(circuitSource);
         }
       } else {
         if (stats) stats.emptyCount += 1;
         if (circuitSource && options?.db && provider.recordNullLiveResultAsCircuitFailure) {
           await recordOutcomeSafe(options.db, circuitSource, false);
+          circuitAttempts.delete(circuitSource);
         }
       }
     } catch (error) {
@@ -149,6 +164,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
       if (stats) stats.failedCount += 1;
       if (circuitSource && options?.db) {
         await recordOutcomeSafe(options.db, circuitSource, false);
+        circuitAttempts.delete(circuitSource);
       }
       console.warn(`[authoritative-price-sources] ${asset.id} live override failed:`, error);
     }

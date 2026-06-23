@@ -6,12 +6,19 @@ import {
   ACTIVE_META_BY_ID,
   PRE_LAUNCH_STABLECOINS,
   FROZEN_STABLECOINS,
+  TRACKED_META_BY_ID,
 } from "./registry";
 
 const COMMODITY_PEG_CURRENCIES = new Set(["GOLD", "SILVER"] as const);
-const ACTIVE_META_MAP = ACTIVE_META_BY_ID;
-const PRE_LAUNCH_META_MAP = new Map(PRE_LAUNCH_STABLECOINS.map((coin) => [coin.id, coin]));
-const FROZEN_META_MAP = new Map(FROZEN_STABLECOINS.map((coin) => [coin.id, coin]));
+
+type LifecycleStatus = "active" | "pre-launch" | "frozen";
+
+type LifecyclePools = Partial<Record<LifecycleStatus, readonly StablecoinMeta[]>>;
+
+interface LifecycleFilterOptions {
+  registry?: ReadonlyMap<string, StablecoinMeta>;
+  pools?: LifecyclePools;
+}
 
 function isNotCommodity(coin: StablecoinMeta): boolean {
   return !COMMODITY_PEG_CURRENCIES.has(coin.flags.pegCurrency as "GOLD" | "SILVER");
@@ -76,27 +83,25 @@ export function getActiveByArchetype(
  */
 export function getCoinsByLifecycleStatus(
   archetype: MechanismArchetype,
-  status: "active" | "pre-launch" | "frozen",
+  status: LifecycleStatus,
+  options: LifecycleFilterOptions = {},
 ): StablecoinMeta[] {
   let pool: readonly StablecoinMeta[];
-  let registryForPool: ReadonlyMap<string, StablecoinMeta>;
   if (status === "active") {
-    pool = ACTIVE_STABLECOINS;
-    registryForPool = ACTIVE_META_MAP;
+    pool = options.pools?.active ?? ACTIVE_STABLECOINS;
   } else if (status === "pre-launch") {
-    pool = PRE_LAUNCH_STABLECOINS;
-    registryForPool = PRE_LAUNCH_META_MAP;
+    pool = options.pools?.["pre-launch"] ?? PRE_LAUNCH_STABLECOINS;
   } else if (status === "frozen") {
-    pool = FROZEN_STABLECOINS;
-    registryForPool = FROZEN_META_MAP;
+    pool = options.pools?.frozen ?? FROZEN_STABLECOINS;
   } else {
     return [];
   }
+  const registry = options.registry ?? TRACKED_META_BY_ID;
 
   return pool.filter(
     (coin) =>
       isNotCommodity(coin) &&
-      resolveMechanismArchetype(coin, registryForPool) === archetype,
+      resolveMechanismArchetype(coin, registry) === archetype,
   );
 }
 

@@ -22,6 +22,9 @@ const ADMIN_DYNAMIC_PATH_ROOTS = [
   "/api/api-keys",
   "/api/discovery-candidates",
 ] as const;
+const ADMIN_STATIC_PATH_ROOTS = ENDPOINT_DEFINITIONS
+  .filter((endpoint) => endpoint.adminRequired)
+  .map((endpoint) => endpoint.path);
 
 function isPathOrChild(path: string, root: string): boolean {
   return path === root || path.startsWith(`${root}/`);
@@ -143,7 +146,7 @@ export function isAdminPath(path: string): boolean {
 export function isAdminLikePath(path: string): boolean {
   if (isAdminPath(path)) return true;
   if (ADMIN_DYNAMIC_PATH_ROOTS.some((root) => isPathOrChild(path, root))) return true;
-  return ENDPOINT_DEFINITIONS.some((endpoint) => endpoint.adminRequired && isPathOrChild(path, endpoint.path));
+  return ADMIN_STATIC_PATH_ROOTS.some((root) => isPathOrChild(path, root));
 }
 
 export function isMutatingAdminGetAllowed(url: URL): boolean {

@@ -248,9 +248,9 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       title: buildStablecoinStatusTitle(coin),
       description: buildStablecoinDetailDescription(coin),
       canonical: buildStablecoinUrl(coin.id),
-      // Pre-launch ids never enter the worker's READABLE_IDS set, so the
-      // dynamic /api/og/stablecoin/:id card 404s for them; fall back to the
-      // static site card until launch promotes the coin.
+      // Pre-launch ids never enter the worker's READABLE_IDS set, so use a
+      // static launch-tracker card until launch promotes the coin.
+      ogImage: "/og-upcoming.png",
     });
   }
 

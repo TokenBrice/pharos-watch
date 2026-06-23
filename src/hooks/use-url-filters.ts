@@ -16,6 +16,8 @@ const URL_FILTER_HISTORY_CHANGE_EVENT = "pharos:url-filter-history-change";
 let historyPatchSubscribers = 0;
 let originalPushState: History["pushState"] | null = null;
 let originalReplaceState: History["replaceState"] | null = null;
+let patchedPushState: History["pushState"] | null = null;
+let patchedReplaceState: History["replaceState"] | null = null;
 
 function dispatchHistoryChangeEvent(targetWindow: Window): void {
   const event = new Event(URL_FILTER_HISTORY_CHANGE_EVENT);
@@ -33,18 +35,22 @@ function dispatchHistoryChangeEvent(targetWindow: Window): void {
 function subscribeToHistoryChanges(listener: () => void): () => void {
   const targetWindow = window;
   if (historyPatchSubscribers === 0) {
-    originalPushState = targetWindow.history.pushState;
-    originalReplaceState = targetWindow.history.replaceState;
+    const pushStateOriginal = targetWindow.history.pushState;
+    const replaceStateOriginal = targetWindow.history.replaceState;
+    originalPushState = pushStateOriginal;
+    originalReplaceState = replaceStateOriginal;
 
-    targetWindow.history.pushState = ((data, unused, url) => {
-      originalPushState?.call(targetWindow.history, data, unused, url);
+    patchedPushState = ((data, unused, url) => {
+      pushStateOriginal.call(targetWindow.history, data, unused, url);
       dispatchHistoryChangeEvent(targetWindow);
     }) satisfies History["pushState"];
+    targetWindow.history.pushState = patchedPushState;
 
-    targetWindow.history.replaceState = ((data, unused, url) => {
-      originalReplaceState?.call(targetWindow.history, data, unused, url);
+    patchedReplaceState = ((data, unused, url) => {
+      replaceStateOriginal.call(targetWindow.history, data, unused, url);
       dispatchHistoryChangeEvent(targetWindow);
     }) satisfies History["replaceState"];
+    targetWindow.history.replaceState = patchedReplaceState;
   }
 
   historyPatchSubscribers += 1;
@@ -54,10 +60,16 @@ function subscribeToHistoryChanges(listener: () => void): () => void {
     targetWindow.removeEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, listener);
     historyPatchSubscribers = Math.max(0, historyPatchSubscribers - 1);
     if (historyPatchSubscribers === 0 && originalPushState && originalReplaceState) {
-      targetWindow.history.pushState = originalPushState;
-      targetWindow.history.replaceState = originalReplaceState;
+      if (targetWindow.history.pushState === patchedPushState) {
+        targetWindow.history.pushState = originalPushState;
+      }
+      if (targetWindow.history.replaceState === patchedReplaceState) {
+        targetWindow.history.replaceState = originalReplaceState;
+      }
       originalPushState = null;
       originalReplaceState = null;
+      patchedPushState = null;
+      patchedReplaceState = null;
     }
   };
 }

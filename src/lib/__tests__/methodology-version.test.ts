@@ -118,7 +118,7 @@ describe("compareMethodologyVersions", () => {
     expect(compareMethodologyVersions("2.10", "2.9")).toBeLessThan(0);
     expect(compareMethodologyVersions("5.91", "5.9")).toBeGreaterThan(0);
     expect(compareMethodologyVersions("4.10", "4.1")).toBe(0);
-    expect(compareMethodologyVersions("1.0", "1.0.0")).toBe(0);
+    expect(() => compareMethodologyVersions("1.0", "1.0.0")).toThrow(/two-segment/i);
   });
 });
 

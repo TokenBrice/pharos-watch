@@ -410,6 +410,42 @@ describe("api key helpers", () => {
     expect(response?.status).toBe(429);
   });
 
+  it("does not let an older rate-limit prune clear a newer pending prune", async () => {
+    const pruneResolvers: Array<() => void> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          first: async () => ({ count: 1 }),
+          run: () => {
+            if (!sql.includes("DELETE FROM api_key_rate_limit")) {
+              return Promise.resolve({ success: true, meta: { changes: 1 } });
+            }
+            return new Promise<{ success: boolean; meta: { changes: number } }>((resolve) => {
+              pruneResolvers.push(() => resolve({ success: true, meta: { changes: 1 } }));
+            });
+          },
+        }),
+      }),
+    } as unknown as Parameters<typeof checkApiKeyRateLimit>[0];
+
+    await checkApiKeyRateLimit(db, 7, 100, 600);
+    const firstPrune = getApiKeyRuntimeState().pendingApiKeyPrune;
+    await checkApiKeyRateLimit(db, 7, 100, 660);
+    const secondPrune = getApiKeyRuntimeState().pendingApiKeyPrune;
+
+    expect(firstPrune).toBeTruthy();
+    expect(secondPrune).toBeTruthy();
+    expect(secondPrune).not.toBe(firstPrune);
+
+    pruneResolvers[0]?.();
+    await firstPrune;
+    expect(getApiKeyRuntimeState().pendingApiKeyPrune).toBe(secondPrune);
+
+    pruneResolvers[1]?.();
+    await secondPrune;
+    expect(getApiKeyRuntimeState().pendingApiKeyPrune).toBeNull();
+  });
+
   it("throttles last-used writes to avoid per-request metadata churn", async () => {
     const db = mockD1(
       [

@@ -138,6 +138,30 @@ describe("getActiveByArchetype", () => {
 });
 
 describe("getCoinsByLifecycleStatus", () => {
+  function makeLifecycleCoin(
+    id: string,
+    mechanismArchetype: MechanismArchetype,
+    variantOf?: string,
+  ): StablecoinMeta {
+    return {
+      id,
+      name: id,
+      symbol: id.toUpperCase(),
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      mechanismArchetype,
+      ...(variantOf
+        ? { variantOf, variantKind: "savings-passthrough" as const }
+        : {}),
+    } as StablecoinMeta;
+  }
+
   it("returns active coins for fiat-cash archetype", () => {
     const coins = getCoinsByLifecycleStatus("fiat-cash", "active");
     expect(coins.length).toBeGreaterThan(0);
@@ -152,6 +176,32 @@ describe("getCoinsByLifecycleStatus", () => {
 
     expect(frozenCoins.length).toBeGreaterThan(0);
     expect(invalidCoins).toEqual([]);
+  });
+
+  it("resolves variants against the full tracked registry across lifecycle buckets", () => {
+    const activeParent = makeLifecycleCoin("active-parent", "fiat-cash");
+    const preLaunchChild = makeLifecycleCoin(
+      "pre-launch-child",
+      "algorithmic",
+      "active-parent",
+    );
+    const registry = new Map([
+      [activeParent.id, activeParent],
+      [preLaunchChild.id, preLaunchChild],
+    ]);
+
+    expect(
+      getCoinsByLifecycleStatus("fiat-cash", "pre-launch", {
+        registry,
+        pools: { "pre-launch": [preLaunchChild] },
+      }).map((coin) => coin.id),
+    ).toEqual(["pre-launch-child"]);
+    expect(
+      getCoinsByLifecycleStatus("algorithmic", "pre-launch", {
+        registry,
+        pools: { "pre-launch": [preLaunchChild] },
+      }),
+    ).toEqual([]);
   });
 });
 
