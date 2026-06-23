@@ -105,9 +105,10 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 
 `StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. For tracked variants, that fallback includes a crawlable variant-relationship block linking to the parent asset and up to four sibling variants so wrapper, savings, strategy-vault, and risk-absorption pages expose their parent risk context even before hydration. The server shell passes `ExploreNextSection` into `StablecoinDetailClient` as `exploreNextContent`, and the client renders it inside the Explore zone.
 
-### Rail vs section rules
+### Scrollspy vs section rules
 
-- `LongformScrollspyNav` pill order is: `overview` (Risk), `context`, `liquidity`, `activity`, `history`, `explore`. Child cards can still expose deep-link anchors such as `#report-card`, `#reserves`, `#mint-authority`, `#redemption`, `#price`, `#chart`, `#yield`, `#flows`, `#blacklist`, `#coin-timeline`, and `#explore-next` — plus the passport sub-anchors `#mechanism`, `#attestation`, `#jurisdiction`, and `#contracts` inside `KeyInfoCard` — but they are not top-level rail pills.
+- `LongformScrollspyNav` renders once as a sticky horizontal pill banner after the identity zone. On `lg+` it stays full-width with the `Jump to` label and section pills centered inside the banner instead of reserving a right-side rail column, so the dossier sections keep the full content width.
+- `LongformScrollspyNav` pill order is: `overview` (Risk), `context`, `liquidity`, `activity`, `history`, `explore`. Child cards can still expose deep-link anchors such as `#report-card`, `#reserves`, `#mint-authority`, `#redemption`, `#price`, `#chart`, `#yield`, `#flows`, `#blacklist`, `#coin-timeline`, and `#explore-next` — plus the passport sub-anchors `#mechanism`, `#attestation`, `#jurisdiction`, and `#contracts` inside `KeyInfoCard` — but they are not top-level scrollspy pills.
 - Section ids are stable; do not rename them. In particular, the top-level Explore pill targets `#explore`; the reusable `ExploreNextSection` keeps its inner `#explore-next` anchor for existing deep links.
 - The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
 - `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the context zone (inside `ContagionSnapshot`) and are not top-level scrollspy entries.

@@ -406,17 +406,16 @@ export default function StablecoinDetailClient({
       />
 
       {/* ── Navigation zone ──
-        Banner scrollspy stays for <lg viewports; on lg+ the sticky right-rail
-        TOC inside the grid below takes over. Keep the breakpoint class on
-        the sticky element so a short wrapper does not constrain it. */}
+        The scrollspy stays in the normal vertical flow so the dossier sections
+        can use the full content width on desktop. */}
       <LongformScrollspyNav
         sections={detailSections}
-        railLabel="Jump to Section"
+        railLabel="Jump to"
         navAriaLabel="Stablecoin detail section navigation"
         onActiveChange={setActiveBannerId}
-        className="mt-6 lg:hidden"
+        className="mt-6 lg:w-full lg:max-w-none lg:rounded-xl lg:[&>div:first-child]:justify-center lg:[&_nav>div]:min-w-0 lg:[&_nav>div]:justify-center"
         rightSlot={
-          <div className="hidden items-center gap-2 text-xs sm:flex">
+          <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
             <Link
               href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
               className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
@@ -438,7 +437,7 @@ export default function StablecoinDetailClient({
         showDepthHint
       />
 
-      <div className="mt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_14rem] lg:gap-10">
+      <div className="mt-6">
         <div className="min-w-0">
           {/* ── Key Info ── */}
           <div>
@@ -622,18 +621,8 @@ export default function StablecoinDetailClient({
           {faqContent}
         </div>
         {/* /min-w-0 content column */}
-
-        <aside className="hidden lg:block" aria-label="Section navigation">
-          <LongformScrollspyNav
-            sections={detailSections}
-            variant="rail"
-            railLabel="On this page"
-            navAriaLabel="Stablecoin detail section navigation"
-            onActiveChange={setActiveBannerId}
-          />
-        </aside>
       </div>
-      {/* /grid wrapper */}
+      {/* /content wrapper */}
 
       <FeedbackModal
         open={feedbackOpen}

@@ -7,14 +7,19 @@ import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
-const { lazyViewportValues, nearViewportValues, useNearViewportMock, useStablecoinDetailViewModelMock } = vi.hoisted(
-  () => ({
-    lazyViewportValues: [] as boolean[],
-    nearViewportValues: [] as boolean[],
-    useNearViewportMock: vi.fn(),
-    useStablecoinDetailViewModelMock: vi.fn(),
-  }),
-);
+const {
+  lazyViewportValues,
+  nearViewportValues,
+  longformScrollspyNavMock,
+  useNearViewportMock,
+  useStablecoinDetailViewModelMock,
+} = vi.hoisted(() => ({
+  lazyViewportValues: [] as boolean[],
+  nearViewportValues: [] as boolean[],
+  longformScrollspyNavMock: vi.fn(),
+  useNearViewportMock: vi.fn(),
+  useStablecoinDetailViewModelMock: vi.fn(),
+}));
 
 vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<unknown>) => {
@@ -113,7 +118,17 @@ vi.mock("@/components/query-error-notice", () => ({
 }));
 
 vi.mock("@/components/longform-scrollspy-nav", () => ({
-  LongformScrollspyNav: () => <nav data-testid="scrollspy" />,
+  LongformScrollspyNav: (props: { className?: string; railLabel?: string; variant?: "banner" | "rail" }) => {
+    longformScrollspyNavMock(props);
+    return (
+      <nav
+        data-testid="scrollspy"
+        data-rail-label={props.railLabel}
+        data-variant={props.variant ?? "banner"}
+        className={props.className}
+      />
+    );
+  },
 }));
 
 vi.mock("@/components/stablecoin-detail/hero-card", () => ({
@@ -244,6 +259,7 @@ describe("StablecoinDetailClient", () => {
     });
     useStablecoinDetailViewModelMock.mockReset();
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    longformScrollspyNavMock.mockClear();
   });
 
   afterEach(() => {
@@ -350,6 +366,24 @@ describe("StablecoinDetailClient", () => {
     expect(overviewSections[0]?.contains(screen.getByText("Variants"))).toBe(false);
     expect(screen.getAllByText("Sky Savings USDS").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
+  });
+
+  it("uses one full-width sticky banner scrollspy so desktop sections keep the full content width", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const { container } = render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    const scrollspyNavs = screen.getAllByTestId("scrollspy");
+    expect(scrollspyNavs).toHaveLength(1);
+    expect(scrollspyNavs[0]?.dataset.variant).toBe("banner");
+    expect(scrollspyNavs[0]?.dataset.railLabel).toBe("Jump to");
+    expect(scrollspyNavs[0]?.className).toContain("lg:w-full");
+    expect(scrollspyNavs[0]?.className).toContain("lg:[&>div:first-child]:justify-center");
+    expect(scrollspyNavs[0]?.className).toContain("lg:[&_nav>div]:justify-center");
+    expect(scrollspyNavs[0]?.className).not.toContain("lg:w-fit");
+    expect(container.querySelector('aside[aria-label="Section navigation"]')).toBeNull();
+    expect(longformScrollspyNavMock).not.toHaveBeenCalledWith(expect.objectContaining({ variant: "rail" }));
   });
 
   it("renders reserve view in the overview stream when report-card data is unavailable", async () => {
