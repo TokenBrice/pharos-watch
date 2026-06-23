@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
@@ -111,6 +111,69 @@ describe("handleBlacklistSummary", () => {
 
     await Promise.all(waitUntilPromises);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
+  });
+
+  it("logs structured warning when stale snapshot background refresh fails", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleAt = now - 24 * 60 * 60;
+    const payload = {
+      stats: { usdtBlacklisted: 9 },
+      chart: [],
+      chains: [],
+      coverage: { counts: { supportedConfigs: 0 } },
+      freezeLedgerMeta: { gaps: { recoverable: 0 } },
+      dataQuality: { status: "ok" },
+      totalEvents: 9,
+      methodology: { asOf: staleAt },
+    };
+    const waitUntilPromises: Promise<unknown>[] = [];
+    const execCtx = {
+      waitUntil: (promise: Promise<unknown>) => {
+        waitUntilPromises.push(promise);
+      },
+    } as unknown as ExecutionContext;
+    const refreshError = new Error("aggregate unavailable");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "blacklist-summary-snapshot-read",
+        rows: [{
+          key: "blacklist:summary:producer:v1",
+          value: JSON.stringify({
+            version: 1,
+            materializedAt: staleAt,
+            freshnessTs: staleAt,
+            payload,
+          }),
+          updated_at: staleAt,
+        }],
+      },
+      {
+        match: "blacklist-summary-public-aggregate",
+        rows: [],
+        throwError: refreshError,
+      },
+    ]);
+
+    const res = await handleBlacklistSummary(db, execCtx);
+    const body = await res.json() as typeof payload;
+
+    expect(body).toEqual(payload);
+    expect(waitUntilPromises).toHaveLength(1);
+    await Promise.all(waitUntilPromises);
+    const record = JSON.parse(String(warnSpy.mock.calls[0]?.[0])) as {
+      level: string;
+      event: string;
+      route: string;
+      errorMessage: string;
+    };
+    expect(record).toMatchObject({
+      level: "warn",
+      event: "blacklist_summary_snapshot_refresh_failed",
+      route: "blacklist-summary",
+      errorMessage: "aggregate unavailable",
+    });
+    warnSpy.mockRestore();
   });
 
   it("falls back from corrupt producer snapshots and counts other provider coverage", async () => {

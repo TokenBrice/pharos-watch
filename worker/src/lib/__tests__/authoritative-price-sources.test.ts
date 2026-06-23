@@ -312,6 +312,46 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("records null live RPC protocol-redeem overrides as grouped circuit failures", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "cusd-cap",
+        name: "Cap cUSD",
+        symbol: "CUSD",
+        circulating: { peggedUSD: 114_000_000 },
+      },
+    ], undefined, undefined, { db, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      emptyCount: 1,
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
+    warnSpy.mockRestore();
+  });
+
   it("records parent-derived live RPC nulls as grouped protocol-redeem failures", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
     const db = mockD1([
@@ -440,6 +480,42 @@ describe("authoritative-price-sources", () => {
         extraRpcUrls: ["https://ethereum-rpc.publicnode.com"],
       }),
     );
+  });
+
+  it("returns matched null historical prices when the authoritative provider fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    resolveClosestBlockAtOrBeforeTimestampMock.mockRejectedValue(new Error("rpc index down"));
+
+    const result = await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "cusd-cap",
+        name: "Cap cUSD",
+        symbol: "CUSD",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          governance: "centralized-dependent",
+          yieldBearing: false,
+          rwa: false,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_710_000_000],
+        supplySnapshots: [{ ts: 1_710_000_000, supply: 100_000_000 }],
+      },
+    );
+
+    expect(result).toEqual({
+      matched: true,
+      source: "protocol-redeem",
+      prices: null,
+    });
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[authoritative-price-sources] cusd-cap historical source failed:",
+      expect.any(Error),
+    );
+    warnSpy.mockRestore();
   });
 
   it("returns a live iUSD override from the infiniFi redeem quote", async () => {
