@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // no implicit cap that forces a v4; entries below are newest-first by version.
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.9971",
+    title: "Legacy derived-zero retry ceiling",
+    date: "2026-06-23",
+    effectiveAt: 1782172800, // 2026-06-23T00:00:00Z
+    summary:
+      "Bounds historical amount recovery for legacy derived-zero EVM rows so unrecoverable rows stop consuming provider backfill budget every sync-blacklist run.",
+    impact: [
+      "Legacy derived-zero EVM rows are selected for recovery only while below the three-attempt ceiling",
+      "Rows that still cannot be recovered on the final attempt are marked `permanently_unavailable` while retaining the legacy amount/source for audit context",
+      "The regular recoverable/provider/ambiguous amount-gap lane remains unchanged and still runs before legacy derived-zero retries",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.997",
     title: "Same-cycle freeze snapshot capture",
     date: "2026-06-06",

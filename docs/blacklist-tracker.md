@@ -593,7 +593,7 @@ CREATE INDEX idx_blacklist_events_suppression_reason ON blacklist_events(suppres
 - `amount_last_attempted_at`, `amount_last_error_class`, and `amount_last_provider` are operator diagnostics for unresolved rows
 - `suppression_reason` records auditable rows excluded from public aggregate/event surfaces; currently `circle_mirror_zero_balance` for EURC rows that mirror Circle actions without frozen EURC value
 
-`amount_source='current_balance_snapshot'` is written when Tron rows are reconciled from the freeze-ledger mirror in `blacklist_current_balances`. `sync-blacklist` reapplies that mirror after refreshing current balances, so newly ingested Tron blacklist rows resolve in the same cron cycle rather than waiting for the next 6-hour pass. `amount_source='derived'` and `amount_source='legacy_migration'` are treated as legacy migration artifacts, not active ingestion modes. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision.
+`amount_source='current_balance_snapshot'` is written when Tron rows are reconciled from the freeze-ledger mirror in `blacklist_current_balances`. `sync-blacklist` reapplies that mirror after refreshing current balances, so newly ingested Tron blacklist rows resolve in the same cron cycle rather than waiting for the next 6-hour pass. `amount_source='derived'` and `amount_source='legacy_migration'` are treated as legacy migration artifacts, not active ingestion modes. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision. Legacy derived-zero EVM rows receive at most three historical recovery attempts before the row is marked `permanently_unavailable`.
 
 ### blacklist_current_balances table
 
@@ -666,7 +666,7 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 ### Execution Order (each cron cycle)
 
 1. **Backfill** (runs FIRST to prioritize budget)
-   - Targets non-Tron rows with recoverable/provider/ambiguous amount statuses, plus legacy derived-zero rows that were reset into the recovery pool
+   - Targets non-Tron rows with recoverable/provider/ambiguous amount statuses, plus legacy derived-zero rows that remain below the three-attempt recovery ceiling
    - Orders newest rows first so fresh gaps clear before archival backlog
    - Batch size: 100 rows per cycle
    - Confirmed zero balances are treated as complete and are not retried

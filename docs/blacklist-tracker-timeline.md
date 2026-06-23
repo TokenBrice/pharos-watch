@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.997` (2026-02-09 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9971` (2026-02-09 -> 2026-06-23).
+
+---
+
+## v3.9971 — Legacy derived-zero retry ceiling (2026-06-23)
+
+- **Bounded recovery attempts** — legacy derived-zero EVM rows are selected for historical amount recovery only while below the three-attempt ceiling
+- **Terminal failed state** — rows that still cannot be recovered on the final attempt are marked `permanently_unavailable`, preserving the legacy value for audit context while removing the row from future provider backfill
+- **Backfill budget protected** — unrecoverable legacy rows no longer spend one historical-balance subrequest every `sync-blacklist` run
 
 ---
 

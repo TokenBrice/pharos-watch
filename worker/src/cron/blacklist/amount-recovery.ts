@@ -4,7 +4,7 @@ import {
   computeBlacklistAmountUsdAtEvent,
   getBlacklistPriceAssetId,
 } from "@shared/lib/blacklist";
-import type { BlacklistStablecoin } from "@shared/types/market";
+import type { BlacklistAmountStatus, BlacklistStablecoin } from "@shared/types/market";
 import { fetchBlacklistAssetPriceFromCache } from "./row-preparation";
 import { shouldSuppressAsMirrorZero } from "./shared";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -40,6 +40,7 @@ import {
 // Conservative hourly recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
 const BACKFILL_BATCH_SIZE = 100;
+const MAX_DERIVED_RECOVERY_ATTEMPTS = 3;
 // Independent cap that happens to share the same value as BACKFILL_BATCH_SIZE;
 // keep separate so either can be tuned without affecting the other.
 const TRON_LEDGER_BACKFILL_BATCH_SIZE = 100;
@@ -511,7 +512,7 @@ export async function backfillAmounts(
     attemptAtSec: number,
     errorClass: BlacklistRecoveryErrorClass | null,
     provider: BlacklistRecoveryProvider,
-    status?: "resolved" | "provider_failed" | "recoverable_pending" | "ambiguous",
+    status?: BlacklistAmountStatus,
   ): D1PreparedStatement => {
     const statusClause = status !== undefined ? `,\n               amount_status = ?` : "";
     const stmt = db.prepare(
@@ -542,6 +543,7 @@ export async function backfillAmounts(
                  amount_source = 'derived'
                  AND amount_native = 0
                  AND amount_status = 'resolved'
+                 AND COALESCE(amount_attempt_count, 0) < ?
                )
              )
        ORDER BY
@@ -549,7 +551,7 @@ export async function backfillAmounts(
          timestamp DESC
        LIMIT ?`,
     )
-    .bind(BACKFILL_BATCH_SIZE)
+    .bind(MAX_DERIVED_RECOVERY_ATTEMPTS, BACKFILL_BATCH_SIZE)
     .all<{
       id: string;
       chain_id: string;
@@ -608,7 +610,7 @@ export async function backfillAmounts(
 
     let amount: number | null = null;
     let amountSource: "event" | "historical_balance" | "derived" | "unavailable" = "unavailable";
-    let amountStatus: "resolved" | "provider_failed" | "recoverable_pending" | "ambiguous" = "provider_failed";
+    let amountStatus: BlacklistAmountStatus = "provider_failed";
     let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
     let lastProvider: BlacklistRecoveryProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
 
@@ -670,8 +672,18 @@ export async function backfillAmounts(
       );
     } else {
       const wasLegacyDerived = row.amount_source === "derived";
+      const derivedRetryExhausted =
+        wasLegacyDerived && (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
       if (wasLegacyDerived) {
-        stmts.push(buildAttemptUpdate(row.id, attemptAt, lastErrorClass, lastProvider));
+        stmts.push(
+          buildAttemptUpdate(
+            row.id,
+            attemptAt,
+            lastErrorClass,
+            lastProvider,
+            derivedRetryExhausted ? "permanently_unavailable" : undefined,
+          ),
+        );
       } else {
         stmts.push(buildAttemptUpdate(row.id, attemptAt, lastErrorClass, lastProvider, amountStatus));
       }
