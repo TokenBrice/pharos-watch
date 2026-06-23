@@ -168,7 +168,7 @@ describe("buildStablecoinDetailMetadata", () => {
 
     // Pre-launch ids are outside the worker's READABLE_IDS set, so the
     // dynamic card 404s — the metadata must not reference it.
-    expect(ogUrl(preLaunch)).toBe("/og-card.png");
+    expect(ogUrl(preLaunch)).toBe("/og-upcoming.png");
     expect(ogUrl(active)).toBe(`https://api.pharos.watch/api/og/stablecoin/${active.id}`);
     expect(ogUrl(frozen)).toBe(`https://api.pharos.watch/api/og/stablecoin/${frozen.id}`);
   });
