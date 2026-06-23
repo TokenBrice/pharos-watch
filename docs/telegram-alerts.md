@@ -429,7 +429,7 @@ Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `T
 
 Telegram may redeliver the same `update_id`. The webhook claims each update in `telegram_processed_updates` before command handling, marks it `processed` only after successful or terminal handled completion, and lets non-terminal failed or stale `processing` claims be retried instead of advancing a global high-watermark. Already processed duplicates return `200 ok` without side effects. Fresh in-flight duplicates return `503 retry` with `Retry-After` so Telegram keeps retrying if the original invocation dies before terminal handling.
 
-Processed-update rows are retained for 7 days. Claimed webhook updates opportunistically run a cache-guarded prune at most every 6 hours under `telegram:processed-updates:prune:last-run`, logging `processed-update-prune` with the pruned row count when the guard opens.
+Processed-update rows are retained for 7 days. The daily `telegram-retention-cleanup` job owns capped processed-update pruning alongside the other Telegram audit and analytics retention passes; webhook requests only claim and mark update rows for idempotency.
 
 Command, callback, setup, and settings replies use the shared audited reply helper. Successful command replies update only `last_successful_reply_at`; alert delivery senders update `last_successful_delivery_at`. This keeps `/health` able to distinguish "commands work" from "alerts have not delivered recently." Reply failures record `reply_failure` usage events and update the recent failure class for the affected chat.
 

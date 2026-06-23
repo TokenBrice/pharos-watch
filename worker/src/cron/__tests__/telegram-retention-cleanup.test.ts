@@ -99,23 +99,6 @@ function createStubDb(state: StubState): D1Database {
           // these tests.
           return { success: true, meta: { changes: 0 } };
         }
-        if (sql.startsWith("INSERT INTO cache")) {
-          // maybePruneTelegramProcessedUpdates uses a guarded INSERT to claim
-          // the prune slot. Treat as a no-op success in tests; the actual
-          // delete below will still run on the second statement.
-          const [, , updatedAt] = bound as [string, string, number];
-          const [key] = bound as [string];
-          // Behaves like ON CONFLICT...DO UPDATE WHERE updated_at <= ?
-          const existing = state.cache.find((row) => row.key === key);
-          if (!existing) {
-            state.cache.push({ key, value: "1", updated_at: updatedAt });
-            return { success: true, meta: { changes: 1 } };
-          }
-          // The guarded path uses `<= eligibleBefore` to claim. We greenlight
-          // the test path by always allowing the conflict to win when called.
-          existing.updated_at = updatedAt;
-          return { success: true, meta: { changes: 1 } };
-        }
         if (sql.startsWith("DELETE FROM telegram_processed_updates")) {
           const [cutoff] = bound as [number];
           const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff);
@@ -342,7 +325,6 @@ describe("runTelegramRetentionCleanup", () => {
       { key: "telegram:chat-admins:-43", value: "1", updated_at: freshShortLived },
       { key: "telegram:group-welcome:-43", value: "1", updated_at: freshShortLived },
       { key: "telegram:re-engagement-warned:43", value: "1", updated_at: freshWarning },
-      { key: "telegram:processed-updates:prune:last-run", value: "1", updated_at: staleShortLived },
     );
     const db = createStubDb(state);
 
@@ -354,7 +336,6 @@ describe("runTelegramRetentionCleanup", () => {
       "telegram:chat-admins:-43",
       "telegram:chat-member:43:99",
       "telegram:group-welcome:-43",
-      "telegram:processed-updates:prune:last-run",
       "telegram:re-engagement-warned:43",
     ].sort());
     const metadata = JSON.parse(result.metadata!) as {

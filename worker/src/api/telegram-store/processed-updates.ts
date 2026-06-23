@@ -1,5 +1,4 @@
 import {
-  TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC,
   TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC,
   TELEGRAM_PROCESSING_STALE_SEC,
 } from "../../lib/telegram-constants";
@@ -153,36 +152,6 @@ export async function pruneTelegramProcessedUpdates(
     .bind(nowSec - retentionSec)
     .run();
   return d1ChangeCount(result);
-}
-
-export async function maybePruneTelegramProcessedUpdates(
-  db: D1Database,
-  input: {
-    nowSec?: number;
-    retentionSec?: number;
-    intervalSec?: number;
-  } = {},
-): Promise<number | null> {
-  const nowSec = input.nowSec ?? unixNow();
-  const intervalSec = input.intervalSec ?? TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC;
-  const eligibleBefore = nowSec - intervalSec;
-  const result = await db
-    .prepare(
-      `INSERT INTO cache (key, value, updated_at)
-       VALUES ('telegram:processed-updates:prune:last-run', '1', ?)
-       ON CONFLICT(key) DO UPDATE SET
-         value = excluded.value,
-         updated_at = excluded.updated_at
-       WHERE cache.updated_at <= ?`,
-    )
-    .bind(nowSec, eligibleBefore)
-    .run();
-
-  if (d1ChangeCount(result) <= 0) return null;
-  return pruneTelegramProcessedUpdates(db, {
-    nowSec,
-    retentionSec: input.retentionSec,
-  });
 }
 
 export interface TelegramCommandCooldownResult {

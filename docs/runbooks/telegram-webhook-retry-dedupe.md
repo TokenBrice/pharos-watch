@@ -18,7 +18,7 @@ The webhook stores per-update claims in `telegram_processed_updates`. It inserts
 
 If Telegram redelivers the same update while the original invocation is still fresh and `processing`, the webhook returns `503 retry` plus `Retry-After` instead of acknowledging it. This keeps Telegram's retry loop alive if the original invocation dies before marking the row `processed` or `failed`. Logs use the `processed-update-dedupe` action for these in-flight duplicates.
 
-Processed-update rows are retained for 7 days. Claimed webhook traffic opportunistically runs a cache-guarded prune at most every 6 hours under `telegram:processed-updates:prune:last-run`; successful passes log `processed-update-prune` with the row count.
+Processed-update rows are retained for 7 days. Cleanup is owned by the daily `telegram-retention-cleanup` cron, which runs the capped processed-update prune with the rest of Telegram retention; webhook traffic does not run retention work.
 
 ## Quick Diagnostic Checklist
 

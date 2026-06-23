@@ -172,9 +172,6 @@ export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
 /** A `processing` claim older than this is considered stale and can be reclaimed by another worker. */
 export const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
 
-/** Minimum interval between processed-updates retention prune passes. */
-export const TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC = 6 * 60 * 60;
-
 // ---------- Webhook ingress tuning ----------
 
 /**

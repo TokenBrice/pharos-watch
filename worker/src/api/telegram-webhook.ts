@@ -29,7 +29,6 @@ import {
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateProcessed,
   migrateTelegramChatId,
-  maybePruneTelegramProcessedUpdates,
   recordTelegramChatCommandFlood,
   releaseTelegramCommandCooldown,
   unixNow,
@@ -171,21 +170,6 @@ export const handleTelegramWebhook = withErrorHandler(
           });
         }
         return ok();
-      }
-      try {
-        const pruned = await maybePruneTelegramProcessedUpdates(db, { nowSec });
-        if (pruned != null) {
-          logTelegramEvent({
-            level: "info",
-            message: "pruned processed webhook updates",
-            action: "processed-update-prune",
-            pruned,
-          });
-        }
-      } catch (err) {
-        logWarn("processed webhook update prune failed", {
-          action: "processed-update-prune",
-        }, err);
       }
     }
 
