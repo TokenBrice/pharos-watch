@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeDEWS } from "../../lib/dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../../lib/dews";
 import { isAuthoritativeDepegPegReference } from "../../lib/depeg-trust-policy";
@@ -110,6 +111,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const prevSnapshot = sourceState.prevSignals.get(meta.id);
     const prev = prevSnapshot?.signals;
     const mintBurn = sourceState.mintBurnMap.get(meta.id);
+    const mintBurnAgeSec = sourceState.mintBurnAgeSecById.get(meta.id) ?? null;
 
     const hasBlacklistTracking = BLACKLIST_TRACKED_ID_SET.has(meta.id);
     const blacklistCounts = hasBlacklistTracking ? sourceState.blacklistCounts.get(meta.id) : undefined;
@@ -170,7 +172,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       burnVolume24hUsd: mintBurn?.burn24h ?? null,
       mintVolume24hUsd: mintBurn?.mint24h ?? null,
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,
-      flowDataAgeDays: mintBurn?.dataAgeDays ?? 0,
+      flowDataAgeDays: mintBurnAgeSec == null ? 9999 : mintBurnAgeSec / DAY_SECONDS,
       flowBaselineDays: mintBurn?.baselineDays ?? null,
       yieldWarnings: sourceState.yieldWarnings.get(meta.id) ?? [],
       yieldSourceRisk: sourceState.yieldSourceRisk.get(meta.id) ?? null,
@@ -183,11 +185,13 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         dexLiquidity: sourceState.dexLiqAgeSecById.get(meta.id) ?? null,
         dexPrice: sourceState.dexPriceAgeSecById.get(meta.id) ?? null,
         previousSignals: prevSnapshot?.ageSec ?? null,
+        mintBurn: mintBurnAgeSec,
       },
       staleFlags: {
         dexLiquidity: sourceState.dexLiqStaleIds.has(meta.id),
         dexPrice: sourceState.dexPriceStaleIds.has(meta.id),
         previousSignals: sourceState.prevSignalStaleIds.has(meta.id),
+        mintBurn: sourceState.mintBurnStaleIds.has(meta.id),
         pegReference: !pegReferenceTrusted,
       },
     };

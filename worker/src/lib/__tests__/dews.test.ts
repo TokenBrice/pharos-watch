@@ -334,7 +334,8 @@ describe("computeDEWS", () => {
         burnVolume24hUsd: 5e8,
         mintVolume24hUsd: 1e7,
         burnBaseline30dUsd: 1e8,
-        flowDataAgeDays: 14,
+        flowDataAgeDays: 0.1,
+        flowBaselineDays: 14,
       }),
     );
     expect(result.signals.flow.available).toBe(true);
@@ -353,7 +354,8 @@ describe("computeDEWS", () => {
         burnVolume24hUsd: 0,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 5e8,
-        flowDataAgeDays: 14,
+        flowDataAgeDays: 0.1,
+        flowBaselineDays: 14,
       }),
     );
 
@@ -369,7 +371,8 @@ describe("computeDEWS", () => {
         burnVolume24hUsd: 5e8,
         mintVolume24hUsd: 1e7,
         burnBaseline30dUsd: 1e8,
-        flowDataAgeDays: 3,
+        flowDataAgeDays: 0.1,
+        flowBaselineDays: 3,
       }),
     );
     expect(result.signals.flow.available).toBe(false);
@@ -577,13 +580,14 @@ describe("DEWS scoring boundaries", () => {
     expect(Math.abs((resultAt75?.score ?? 0) - (resultAtNull?.score ?? 0))).toBeLessThanOrEqual(1);
   });
 
-  it("flow signal is unavailable at flowDataAgeDays === 6 and available at 7", () => {
+  it("flow signal is unavailable at flowBaselineDays === 6 and available at 7 when fresh", () => {
     const resultAt6 = computeDEWS(
       baseInput({
         burnVolume24hUsd: 1e6,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 1e5,
-        flowDataAgeDays: 6,
+        flowDataAgeDays: 0.1,
+        flowBaselineDays: 6,
       }),
     );
     expect(resultAt6?.signals.flow.available).toBe(false);
@@ -592,7 +596,8 @@ describe("DEWS scoring boundaries", () => {
         burnVolume24hUsd: 1e6,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 1e5,
-        flowDataAgeDays: 7,
+        flowDataAgeDays: 0.1,
+        flowBaselineDays: 7,
       }),
     );
     expect(resultAt7?.signals.flow.available).toBe(true);

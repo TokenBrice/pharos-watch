@@ -44,7 +44,9 @@ import { abortIf } from "./depeg-resolver/utils";
 
 const DDRR_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.depegResolverReview;
 const DDRR_ASSESSMENT_ROW_CAP = 20_000;
+const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
 const DDRR_PUBLIC_ROW_CAP = 100;
+const DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY = "depeg-resolver-review:terminal-evidence:v1";
 
 export interface DdrrV2ReviewSource {
   incidents: DdrCanonicalIncident[];
@@ -52,6 +54,8 @@ export interface DdrrV2ReviewSource {
   sealedPublicPredictions: DdrSealedPublicPrediction[];
   errata: Array<Record<string, unknown>>;
   nowSec: number;
+  incidentRowLimit: number;
+  incidentRowsTruncated: boolean;
 }
 
 export interface ComputeDepegResolverReviewOptions {
@@ -105,6 +109,19 @@ interface TerminalEvidence {
   terminalEvidenceSourceDate: string | null;
 }
 
+interface TapeTerminalEvidenceCacheToken {
+  rowCount: number;
+  maxTs: number | null;
+  maxId: number | null;
+}
+
+interface TapeTerminalEvidenceCachePayload {
+  version: 1;
+  token: TapeTerminalEvidenceCacheToken;
+  checkedStablecoinIds: string[];
+  evidenceByStablecoinId: Record<string, TerminalEvidence>;
+}
+
 interface DdrrActualEventWithTerminalEvidence extends DdrrActualEvent {
   terminalEvidenceSourceDate: string | null;
 }
@@ -131,6 +148,8 @@ function buildDdrrResponseEnvelope(input: {
   rows: DdrrResponse["rows"];
   assessedEventCount: number;
   assessmentRowsTruncated: boolean;
+  incidentRowLimit?: number;
+  incidentRowsTruncated?: boolean;
   methodologyVersions: string[];
   degradedReasons?: string[];
 }): DdrrResponse {
@@ -156,6 +175,8 @@ function buildDdrrResponseEnvelope(input: {
       verdictScoredCount: input.summary.headline.recoveryLikelihoodScoredCount,
       assessmentRowLimit: DDRR_ASSESSMENT_ROW_CAP,
       assessmentRowsTruncated: input.assessmentRowsTruncated,
+      incidentRowLimit: input.incidentRowLimit ?? DDRR_V2_INCIDENT_ROW_CAP,
+      incidentRowsTruncated: input.incidentRowsTruncated ?? false,
       publicRowLimit: DDRR_PUBLIC_ROW_CAP,
       publicRowsTruncated,
       methodologyVersions: input.methodologyVersions,
@@ -261,7 +282,165 @@ function tapeTerminalEvidence(row: TapeTerminalEvidenceRow): TerminalEvidence | 
   return null;
 }
 
-async function loadTapeTerminalEvidenceByStablecoinId(
+function nullableNonnegativeInteger(value: unknown): number | null {
+  const parsed = numberValue(value);
+  if (parsed == null || !Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.floor(parsed);
+}
+
+function terminalEvidencePrecisionValue(value: unknown): TerminalEvidence["terminalEvidencePrecision"] {
+  return value === "day" || value === "month" || value === "unknown" ? value : null;
+}
+
+function terminalEvidenceIntervalValue(value: unknown): TerminalEvidence["terminalEvidenceInterval"] {
+  if (value == null) return null;
+  const interval = isRecord(value) ? value : null;
+  const start = nullableNonnegativeInteger(interval?.start);
+  const end = nullableNonnegativeInteger(interval?.end);
+  if (start == null || end == null || end < start) return null;
+  return { start, end };
+}
+
+function terminalEvidenceValue(value: unknown): TerminalEvidence | null {
+  const record = isRecord(value) ? value : null;
+  if (!record) return null;
+  const terminalEvidenceAt = nullableNonnegativeInteger(record.terminalEvidenceAt);
+  const terminalEvidenceInterval = terminalEvidenceIntervalValue(record.terminalEvidenceInterval);
+  const terminalEvidencePrecision = terminalEvidencePrecisionValue(record.terminalEvidencePrecision);
+  const terminalEvidenceSourceDate = stringValue(record.terminalEvidenceSourceDate);
+  return {
+    terminalEvidenceAt,
+    terminalEvidenceInterval,
+    terminalEvidencePrecision,
+    terminalEvidenceSourceDate,
+  };
+}
+
+function tapeTerminalEvidenceCachePayload(value: unknown): TapeTerminalEvidenceCachePayload | null {
+  const payload = isRecord(value) ? value : null;
+  const token = isRecord(payload?.token) ? payload.token : null;
+  const rowCount = nullableNonnegativeInteger(token?.rowCount);
+  if (!payload || payload.version !== 1 || rowCount == null) return null;
+  const checkedStablecoinIds = arrayValue(payload.checkedStablecoinIds)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
+  const evidenceRecord = isRecord(payload.evidenceByStablecoinId) ? payload.evidenceByStablecoinId : {};
+  const evidenceByStablecoinId: Record<string, TerminalEvidence> = {};
+  for (const [stablecoinId, evidence] of Object.entries(evidenceRecord)) {
+    const parsed = terminalEvidenceValue(evidence);
+    if (parsed) evidenceByStablecoinId[stablecoinId] = parsed;
+  }
+  return {
+    version: 1,
+    token: {
+      rowCount,
+      maxTs: nullableNonnegativeInteger(token?.maxTs),
+      maxId: nullableNonnegativeInteger(token?.maxId),
+    },
+    checkedStablecoinIds,
+    evidenceByStablecoinId,
+  };
+}
+
+function sameTapeTerminalEvidenceToken(
+  left: TapeTerminalEvidenceCacheToken,
+  right: TapeTerminalEvidenceCacheToken,
+): boolean {
+  return left.rowCount === right.rowCount && left.maxTs === right.maxTs && left.maxId === right.maxId;
+}
+
+async function loadTapeTerminalEvidenceToken(db: D1Database): Promise<TapeTerminalEvidenceCacheToken | null> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT COUNT(*) as row_count, MAX(ts) as max_ts, MAX(id) as max_id
+         FROM tape_events
+         WHERE type IN ('lifecycle.tracked.frozen', 'cemetery.entry.added')`,
+      )
+      .first<{ row_count: number | null; max_ts: number | null; max_id: number | null }>();
+    const rowCount = nullableNonnegativeInteger(row?.row_count);
+    if (rowCount == null) return null;
+    return {
+      rowCount,
+      maxTs: nullableNonnegativeInteger(row?.max_ts),
+      maxId: nullableNonnegativeInteger(row?.max_id),
+    };
+  } catch (err) {
+    const message = toErrorMessage(err);
+    if (message.includes("no such table")) return null;
+    logWorkerEvent({
+      scope: "lib",
+      level: "error",
+      job: "compute-depeg-resolver-review",
+      event: "tape_terminal_evidence_token_failed",
+      source: "tape_events",
+      message: "Failed to load tape terminal evidence cache token",
+      error: err,
+    });
+    throw err;
+  }
+}
+
+async function readTapeTerminalEvidenceCache(
+  db: D1Database,
+  token: TapeTerminalEvidenceCacheToken,
+): Promise<TapeTerminalEvidenceCachePayload | null> {
+  try {
+    const row = await db
+      .prepare("SELECT value FROM cache WHERE key = ?")
+      .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY)
+      .first<{ value: string | null }>();
+    const payload = tapeTerminalEvidenceCachePayload(tryJsonParse(row?.value));
+    if (!payload || !sameTapeTerminalEvidenceToken(payload.token, token)) return null;
+    return payload;
+  } catch (err) {
+    const message = toErrorMessage(err);
+    if (message.includes("no such table")) return null;
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      job: "compute-depeg-resolver-review",
+      event: "tape_terminal_evidence_cache_read_failed",
+      source: "cache",
+      message: "Failed to read tape terminal evidence cache",
+      error: err,
+    });
+    return null;
+  }
+}
+
+async function writeTapeTerminalEvidenceCache(
+  db: D1Database,
+  token: TapeTerminalEvidenceCacheToken,
+  checkedStablecoinIds: Set<string>,
+  evidenceByStablecoinId: Map<string, TerminalEvidence>,
+): Promise<void> {
+  const payload: TapeTerminalEvidenceCachePayload = {
+    version: 1,
+    token,
+    checkedStablecoinIds: [...checkedStablecoinIds].sort(),
+    evidenceByStablecoinId: Object.fromEntries([...evidenceByStablecoinId.entries()].sort(([left], [right]) => left.localeCompare(right))),
+  };
+  try {
+    await db
+      .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY, JSON.stringify(payload), Math.floor(Date.now() / 1000))
+      .run();
+  } catch (err) {
+    const message = toErrorMessage(err);
+    if (message.includes("no such table")) return;
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      job: "compute-depeg-resolver-review",
+      event: "tape_terminal_evidence_cache_write_failed",
+      source: "cache",
+      message: "Failed to write tape terminal evidence cache",
+      error: err,
+    });
+  }
+}
+
+async function queryTapeTerminalEvidenceByStablecoinId(
   db: D1Database,
   stablecoinIdsInput: readonly string[],
 ): Promise<Map<string, TerminalEvidence>> {
@@ -310,6 +489,39 @@ async function loadTapeTerminalEvidenceByStablecoinId(
   }
 
   return evidenceByStablecoinId;
+}
+
+async function loadTapeTerminalEvidenceByStablecoinId(
+  db: D1Database,
+  stablecoinIdsInput: readonly string[],
+): Promise<Map<string, TerminalEvidence>> {
+  const stablecoinIds = [...new Set(stablecoinIdsInput)];
+  if (stablecoinIds.length === 0) return new Map();
+
+  const token = await loadTapeTerminalEvidenceToken(db);
+  if (!token) return queryTapeTerminalEvidenceByStablecoinId(db, stablecoinIds);
+
+  const cached = await readTapeTerminalEvidenceCache(db, token);
+  const checkedStablecoinIds = new Set(cached?.checkedStablecoinIds ?? []);
+  const evidenceByStablecoinId = new Map<string, TerminalEvidence>(
+    cached ? Object.entries(cached.evidenceByStablecoinId) : [],
+  );
+  const missingIds = stablecoinIds.filter((stablecoinId) => !checkedStablecoinIds.has(stablecoinId));
+  if (missingIds.length === 0) {
+    return new Map(stablecoinIds.flatMap((stablecoinId) => {
+      const evidence = evidenceByStablecoinId.get(stablecoinId);
+      return evidence ? [[stablecoinId, evidence] as const] : [];
+    }));
+  }
+
+  const loadedEvidence = await queryTapeTerminalEvidenceByStablecoinId(db, missingIds);
+  for (const stablecoinId of missingIds) checkedStablecoinIds.add(stablecoinId);
+  for (const [stablecoinId, evidence] of loadedEvidence) evidenceByStablecoinId.set(stablecoinId, evidence);
+  await writeTapeTerminalEvidenceCache(db, token, checkedStablecoinIds, evidenceByStablecoinId);
+  return new Map(stablecoinIds.flatMap((stablecoinId) => {
+    const evidence = evidenceByStablecoinId.get(stablecoinId);
+    return evidence ? [[stablecoinId, evidence] as const] : [];
+  }));
 }
 
 const EMPTY_TERMINAL_EVIDENCE: TerminalEvidence = {
@@ -888,7 +1100,10 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
     rows,
     assessedEventCount: source.incidents.length,
     assessmentRowsTruncated: false,
+    incidentRowLimit: source.incidentRowLimit,
+    incidentRowsTruncated: source.incidentRowsTruncated,
     methodologyVersions,
+    degradedReasons: source.incidentRowsTruncated ? ["incident-row-cap"] : [],
   });
 }
 
@@ -901,12 +1116,15 @@ async function maybeBuildDdrV2ReviewSnapshot(
   const builder = options?.v2ReviewBuilder;
   if (!stores || !stores.loadCanonicalIncidents) return null;
 
-  const incidents = await stores.loadCanonicalIncidents(db, {
+  const loadedIncidents = await stores.loadCanonicalIncidents(db, {
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
     policyUniverseIncluded: true,
     includeSuperseded: true,
     policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
+    limit: DDRR_V2_INCIDENT_ROW_CAP + 1,
   });
+  const incidentRowsTruncated = loadedIncidents.length > DDRR_V2_INCIDENT_ROW_CAP;
+  const incidents = loadedIncidents.slice(0, DDRR_V2_INCIDENT_ROW_CAP);
   const incidentKeys = incidents.map((incident) => incident.incidentKey);
   const sealedPublicPredictions = await stores.loadSealedPublicPredictions(db, {
     incidentKeys,
@@ -924,12 +1142,14 @@ async function maybeBuildDdrV2ReviewSnapshot(
       })
     : [];
 
-  const source = {
+  const source: DdrrV2ReviewSource = {
     incidents,
     firstPublication,
     sealedPublicPredictions,
     errata,
     nowSec,
+    incidentRowLimit: DDRR_V2_INCIDENT_ROW_CAP,
+    incidentRowsTruncated,
   };
 
   return builder ? builder(source) : buildDurableDdrV2ReviewSnapshot(db, source);
@@ -990,6 +1210,7 @@ export async function computeAndStoreDepegResolverReview(
       degraded: snapshot._meta.degraded,
       degradedReason: snapshot._meta.degradedReason,
       assessmentRowsTruncated: snapshot._meta.assessmentRowsTruncated,
+      incidentRowsTruncated: snapshot._meta.incidentRowsTruncated,
       publicRowsTruncated: snapshot._meta.publicRowsTruncated,
     }),
   };

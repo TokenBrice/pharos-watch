@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.093` (2026-02-18 -> 2026-06-21).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.094` (2026-02-18 -> 2026-06-23).
+
+---
+
+## v6.094 — Mint/burn flow freshness fails closed (Jun 23, 2026)
+
+DEWS now separates mint/burn baseline coverage from true source freshness, so the Flow sub-signal requires a fresh 24-hour `mint_burn_hourly` row plus at least 7 baseline days.
+
+- A mature 30-day baseline no longer produces available zero flow stress when the mint/burn pipeline has no fresh 24-hour row
+- Fresh zero-volume 24-hour rows still contribute zero flow stress when the source is current
+- Stale mint/burn hourly input is recorded as a `mint-burn-hourly-freshness` source failure and surfaced through `sourceAges.mintBurn` and `staleFlags.mintBurn`
+- `flowBaselineDays` remains the baseline coverage diagnostic, while `flowDataAgeDays` now reports true mint/burn source freshness age in days
 
 ---
 

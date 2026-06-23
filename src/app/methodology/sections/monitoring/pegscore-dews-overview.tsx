@@ -53,7 +53,9 @@ export function PegScoreDewsOverview() {
             Blacklist activity is attributed through the tracker config&apos;s canonical stablecoin ID, so same-symbol
             siblings do not inherit one issuer&apos;s freeze events. Its divergence input now reuses the live depeg DEX
             trust floor, so fresh-but-thin DEX rows stay visible for analytics but do not affect the score unless they
-            pass the same `$1M` aggregate-TVL gate.
+            pass the same `$1M` aggregate-TVL gate. The Mint/Burn Flow signal separates 30-day baseline coverage from
+            source freshness: a fresh zero-volume 24-hour row is calm, while a mature baseline with no fresh 24-hour row
+            is unavailable and recorded as stale.
           </p>
           <p>
             Historical DEWS daily snapshots do not retain the underlying DEX trust metadata needed to replay that gate
@@ -92,7 +94,7 @@ export function PegScoreDewsOverview() {
             },
             {
               label: "Failure behavior",
-              value: "PegScore can be null; DEWS returns null when signal coverage is below threshold; stablecoins-cache failure aborts writes, while other source failures or stale DEX liquidity publish partial rows and mark the cron degraded",
+              value: "PegScore can be null; DEWS returns null when signal coverage is below threshold; stablecoins-cache failure aborts writes, while other source failures or stale DEX liquidity/mint-burn freshness publish partial rows and mark the cron degraded",
             },
           ]}
         />

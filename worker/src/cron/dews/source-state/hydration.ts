@@ -41,6 +41,7 @@ import { readDewsPublishedGeneration } from "../../../lib/dews-publication-point
 
 export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
+export const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
 const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 
 type PreviousStressSignalRow = {
@@ -443,23 +444,32 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
 
 export interface MintBurnHydration {
   mintBurnMap: Map<string, MintBurnSnapshot>;
+  mintBurnAgeSecById: Map<string, number>;
+  mintBurnStaleIds: Set<string>;
+  freshCount: number;
+  staleCount: number;
+  freshnessAgeSec: number | null;
   rowsRead: number;
 }
 
 export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHydration> {
   const mintBurnMap = new Map<string, MintBurnSnapshot>();
+  const mintBurnAgeSecById = new Map<string, number>();
+  const mintBurnStaleIds = new Set<string>();
   let mintBurnRowsRead = 0;
+  let mintBurnLatestHourTs: number | null = null;
   try {
     const mb24h = await ctx.db
       .prepare(
         `SELECT /* pharos:dews:mint-burn-24h */
                 stablecoin_id, chain_id,
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
-                SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint
+                SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
+                MAX(hour_ts) as latest_hour_ts
          FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
       )
       .bind(ctx.nowSec - DAY_SECONDS)
-      .all<{ stablecoin_id: string; chain_id: string; total_burn: number; total_mint: number }>();
+      .all<{ stablecoin_id: string; chain_id: string; total_burn: number; total_mint: number; latest_hour_ts: number | null }>();
 
     const mb30d = await ctx.db
       .prepare(
@@ -467,7 +477,8 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
                 stablecoin_id, chain_id,
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
-                COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data
+                COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data,
+                MAX(hour_ts) as latest_hour_ts
          FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
       )
       .bind(ctx.nowSec - 30 * DAY_SECONDS)
@@ -477,25 +488,38 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
         total_burn: number;
         total_mint: number;
         days_with_data: number;
+        latest_hour_ts: number | null;
       }>();
     mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
 
-    const mb24hMap = new Map<string, { total_burn: number; total_mint: number }>();
+    const mb24hMap = new Map<string, { total_burn: number; total_mint: number; latest_hour_ts: number | null }>();
     for (const row of mb24h.results) {
       if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
-      const aggregate = mb24hMap.get(row.stablecoin_id) ?? { total_burn: 0, total_mint: 0 };
+      const aggregate = mb24hMap.get(row.stablecoin_id) ?? { total_burn: 0, total_mint: 0, latest_hour_ts: null };
       aggregate.total_burn += row.total_burn;
       aggregate.total_mint += row.total_mint;
+      if (row.latest_hour_ts != null && (aggregate.latest_hour_ts == null || row.latest_hour_ts > aggregate.latest_hour_ts)) {
+        aggregate.latest_hour_ts = row.latest_hour_ts;
+      }
+      if (row.latest_hour_ts != null && (mintBurnLatestHourTs == null || row.latest_hour_ts > mintBurnLatestHourTs)) {
+        mintBurnLatestHourTs = row.latest_hour_ts;
+      }
       mb24hMap.set(row.stablecoin_id, aggregate);
     }
-    const mb30dMap = new Map<string, { avg_burn: number; avg_mint: number; days_with_data: number }>();
+    const mb30dMap = new Map<string, { avg_burn: number; avg_mint: number; days_with_data: number; latest_hour_ts: number | null }>();
     for (const row of mb30d.results) {
       if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
-      const aggregate = mb30dMap.get(row.stablecoin_id) ?? { avg_burn: 0, avg_mint: 0, days_with_data: 0 };
+      const aggregate = mb30dMap.get(row.stablecoin_id) ?? { avg_burn: 0, avg_mint: 0, days_with_data: 0, latest_hour_ts: null };
       const observedDays = Math.max(0, row.days_with_data);
       aggregate.avg_burn += observedDays > 0 ? row.total_burn / observedDays : 0;
       aggregate.avg_mint += observedDays > 0 ? row.total_mint / observedDays : 0;
       aggregate.days_with_data = Math.max(aggregate.days_with_data, observedDays);
+      if (row.latest_hour_ts != null && (aggregate.latest_hour_ts == null || row.latest_hour_ts > aggregate.latest_hour_ts)) {
+        aggregate.latest_hour_ts = row.latest_hour_ts;
+      }
+      if (row.latest_hour_ts != null && (mintBurnLatestHourTs == null || row.latest_hour_ts > mintBurnLatestHourTs)) {
+        mintBurnLatestHourTs = row.latest_hour_ts;
+      }
       mb30dMap.set(row.stablecoin_id, aggregate);
     }
     const mintBurnIds = new Set([...mb24hMap.keys(), ...mb30dMap.keys()]);
@@ -503,21 +527,42 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     for (const stablecoinId of mintBurnIds) {
       const latestWindow = mb24hMap.get(stablecoinId);
       const baseline = mb30dMap.get(stablecoinId);
+      const latestHourTs = latestWindow?.latest_hour_ts ?? baseline?.latest_hour_ts ?? null;
+      const ageSec = getRowAgeSec(latestHourTs, ctx.nowSec);
+      if (ageSec != null) mintBurnAgeSecById.set(stablecoinId, ageSec);
+      if (ageSec == null || ageSec > DEWS_STALE_MINT_BURN_SEC) {
+        mintBurnStaleIds.add(stablecoinId);
+      }
       mintBurnMap.set(stablecoinId, {
         burn24h: latestWindow?.total_burn ?? 0,
         mint24h: latestWindow?.total_mint ?? 0,
         burnBaseline: baseline?.avg_burn ?? 0,
         mintBaseline: baseline?.avg_mint ?? 0,
-        dataAgeDays: baseline?.days_with_data ?? 0,
+        dataAgeDays: ageSec == null ? 9999 : ageSec / DAY_SECONDS,
         baselineDays: baseline?.days_with_data ?? 0,
       });
+    }
+    const mintBurnAgeSec = mintBurnLatestHourTs != null ? Math.max(0, ctx.nowSec - mintBurnLatestHourTs) : null;
+    if (mintBurnAgeSec != null && mintBurnAgeSec > DEWS_STALE_MINT_BURN_SEC) {
+      ctx.registerSourceFailure(
+        "mint-burn-hourly-freshness",
+        `mint_burn_hourly age ${mintBurnAgeSec}s exceeds ${DEWS_STALE_MINT_BURN_SEC}s`,
+      );
     }
   } catch (error) {
     ctx.registerSourceFailure("mint-burn-hourly", error, {
       bootstrapAllowed: resolveBootstrapAllowed("mint-burn-hourly", error, ctx.bootstrapPending),
     });
   }
-  return { mintBurnMap, rowsRead: mintBurnRowsRead };
+  return {
+    mintBurnMap,
+    mintBurnAgeSecById,
+    mintBurnStaleIds,
+    freshCount: mintBurnMap.size - mintBurnStaleIds.size,
+    staleCount: mintBurnStaleIds.size,
+    freshnessAgeSec: mintBurnLatestHourTs != null ? Math.max(0, ctx.nowSec - mintBurnLatestHourTs) : null,
+    rowsRead: mintBurnRowsRead,
+  };
 }
 
 export interface YieldWarningsHydration {

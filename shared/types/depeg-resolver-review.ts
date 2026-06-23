@@ -413,6 +413,8 @@ export const DdrrMetaSchema = z.object({
   verdictScoredCount: z.number().int().nonnegative(),
   assessmentRowLimit: z.number().int().nonnegative(),
   assessmentRowsTruncated: z.boolean(),
+  incidentRowLimit: z.number().int().nonnegative(),
+  incidentRowsTruncated: z.boolean(),
   publicRowLimit: z.number().int().nonnegative(),
   publicRowsTruncated: z.boolean(),
   methodologyVersions: z.array(z.string()),

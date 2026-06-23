@@ -46,7 +46,9 @@ export interface MintBurnSnapshot {
   mint24h: number;
   burnBaseline: number;
   mintBaseline: number;
+  /** True source freshness age in days, derived from the newest mint_burn_hourly hour_ts. */
   dataAgeDays: number;
+  /** Distinct baseline days observed in the 30-day mint/burn window. */
   baselineDays: number;
 }
 
@@ -77,6 +79,8 @@ export interface DewsSourceState {
   prevSignals: Map<string, { signals: Record<string, { value: number }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
   mintBurnMap: Map<string, MintBurnSnapshot>;
+  mintBurnAgeSecById: Map<string, number>;
+  mintBurnStaleIds: Set<string>;
   yieldWarnings: Map<string, string[]>;
   yieldSourceRisk: Map<string, YieldSourceRisk>;
   yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;

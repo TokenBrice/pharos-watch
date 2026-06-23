@@ -365,14 +365,22 @@ export function computeBlacklistSignal(input: DEWSInput): SignalResult {
 }
 
 export function computeFlowSignal(input: DEWSInput): SignalResult {
-  // Unavailable if no mint-burn data or data too young
+  const baselineDays = input.flowBaselineDays ?? 0;
+
+  // Unavailable if mint/burn values are missing, the baseline is too thin, or
+  // the latest hourly source row is stale.
   if (
     input.burnVolume24hUsd === null ||
     input.mintVolume24hUsd === null ||
-    input.burnBaseline30dUsd === null ||
-    input.flowDataAgeDays < 7
+    input.burnBaseline30dUsd === null
   ) {
-    return { value: 0, available: false };
+    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-data-missing" };
+  }
+  if (baselineDays < 7) {
+    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-baseline-too-short" };
+  }
+  if (!Number.isFinite(input.flowDataAgeDays) || input.flowDataAgeDays > 1) {
+    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-stale" };
   }
 
   // Burn surge: how much 24h burns exceed the 30d daily average
@@ -422,7 +430,7 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
     burnSurge: Math.round(burnSurge * 100) / 100,
     burnToMintRatio: Math.round(ratio * 100) / 100,
     net24hUsd: net24h,
-    baselineDays: input.flowBaselineDays ?? input.flowDataAgeDays,
+    baselineDays,
   };
 }
 

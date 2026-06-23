@@ -163,16 +163,37 @@ describe("DEWS signal family curves", () => {
   });
 
   it("pins mint-burn flow fallbacks and burn pressure curves", () => {
-    expect(computeFlowSignal(baseInput({ flowDataAgeDays: 3 }))).toEqual({
+    expect(computeFlowSignal(baseInput({
+      burnVolume24hUsd: 1_000_000,
+      mintVolume24hUsd: 0,
+      burnBaseline30dUsd: 100_000,
+      flowBaselineDays: 3,
+      flowDataAgeDays: 0.1,
+    }))).toEqual({
       value: 0,
       available: false,
+      baselineDays: 3,
+      unavailableReason: "mint-burn-baseline-too-short",
+    });
+    expect(computeFlowSignal(baseInput({
+      burnVolume24hUsd: 1_000_000,
+      mintVolume24hUsd: 0,
+      burnBaseline30dUsd: 100_000,
+      flowBaselineDays: 14,
+      flowDataAgeDays: 3,
+    }))).toEqual({
+      value: 0,
+      available: false,
+      baselineDays: 14,
+      unavailableReason: "mint-burn-stale",
     });
 
     const result = computeFlowSignal(baseInput({
       burnVolume24hUsd: 2_000_000,
       mintVolume24hUsd: 0,
       burnBaseline30dUsd: 0,
-      flowDataAgeDays: 14,
+      flowDataAgeDays: 0.1,
+      flowBaselineDays: 14,
     }));
 
     expect(result.available).toBe(true);
@@ -180,6 +201,7 @@ describe("DEWS signal family curves", () => {
     expect(result.burnToMintRatio).toBe(10);
     expect(result.value).toBe(85);
     expect(result.net24hUsd).toBe(-2_000_000);
+    expect(result.baselineDays).toBe(14);
   });
 
   it("pins legacy yield warning scores", () => {

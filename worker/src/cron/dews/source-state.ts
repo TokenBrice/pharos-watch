@@ -86,6 +86,11 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   sourceCoverage.previousStressSignalsFreshRows = prevSignals.prevSignals.size;
   sourceCoverage.previousStressSignalsStaleRows = prevSignals.prevSignalStaleIds.size;
   sourceCoverage.mintBurnHourly = mintBurn.rowsRead;
+  sourceCoverage.mintBurnHourlyFreshRows = mintBurn.freshCount;
+  sourceCoverage.mintBurnHourlyStaleRows = mintBurn.staleCount;
+  if (mintBurn.freshnessAgeSec != null) {
+    sourceCoverage.mintBurnHourlyAgeSec = mintBurn.freshnessAgeSec;
+  }
   sourceCoverage.yieldWarnings = yieldWarnings.rowsRead;
   sourceCoverage.yieldStructuredRows = yieldRankings.yieldSourceRisk.size;
 
@@ -103,6 +108,8 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     prevSignals: prevSignals.prevSignals,
     prevSignalStaleIds: prevSignals.prevSignalStaleIds,
     mintBurnMap: mintBurn.mintBurnMap,
+    mintBurnAgeSecById: mintBurn.mintBurnAgeSecById,
+    mintBurnStaleIds: mintBurn.mintBurnStaleIds,
     yieldWarnings: yieldWarnings.yieldWarnings,
     yieldSourceRisk: yieldRankings.yieldSourceRisk,
     yieldRankChangeAttribution: yieldRankings.yieldRankChangeAttribution,

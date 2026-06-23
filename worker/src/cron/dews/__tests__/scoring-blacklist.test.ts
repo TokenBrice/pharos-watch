@@ -32,6 +32,8 @@ function createSourceState(): DewsSourceState {
     prevSignals: new Map(),
     prevSignalStaleIds: new Set(),
     mintBurnMap: new Map(),
+    mintBurnAgeSecById: new Map(),
+    mintBurnStaleIds: new Set(),
     yieldWarnings: new Map(),
     yieldSourceRisk: new Map(),
     yieldRankChangeAttribution: new Map(),

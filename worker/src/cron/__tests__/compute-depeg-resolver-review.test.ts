@@ -153,6 +153,8 @@ describe("buildDepegResolverReviewSnapshot", () => {
         verdictScoredCount: 0,
         assessmentRowLimit: 20_000,
         assessmentRowsTruncated: false,
+        incidentRowLimit: 20_000,
+        incidentRowsTruncated: false,
         publicRowLimit: 100,
         publicRowsTruncated: false,
         methodologyVersions: [DDR_METHODOLOGY_VERSION],
@@ -181,6 +183,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       expect.objectContaining({
         predictionPolicyVersion: "sticky-24h-v1",
         policyUniverseIncluded: true,
+        limit: 20_001,
       }),
     );
     expect(v2ReviewBuilder).toHaveBeenCalledWith(
@@ -189,6 +192,40 @@ describe("buildDepegResolverReviewSnapshot", () => {
         sealedPublicPredictions: [expect.objectContaining({ id: 9 })],
       }),
     );
+  });
+
+  it("caps unfiltered durable v2 incident review loads and marks the envelope truncated", async () => {
+    const incidents = Array.from({ length: 20_001 }, (_, index) => ({
+      incidentKey: `ddr2:incident-${String(index).padStart(5, "0")}`,
+      eventId: index + 1,
+      currentEventId: index + 1,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT - index,
+      eligibleAt: ELIGIBLE_AT - index,
+      policyUniverseIncluded: true,
+      incidentState: "active" as const,
+      supersededByIncidentKey: null,
+    }));
+    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(stores.loadCanonicalIncidents).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ limit: 20_001 }),
+    );
+    expect(snapshot._meta.assessedEventCount).toBe(20_000);
+    expect(snapshot._meta.incidentRowLimit).toBe(20_000);
+    expect(snapshot._meta.incidentRowsTruncated).toBe(true);
+    expect(snapshot._meta.degraded).toBe(true);
+    expect(snapshot._meta.degradedReason).toContain("incident-row-cap");
+    expect(snapshot._meta.reviewedEventCount).toBe(20_000);
+    expect(snapshot.rows).toHaveLength(100);
   });
 
   it("reviews published durable v2 prediction payloads", async () => {
@@ -917,6 +954,80 @@ describe("buildDepegResolverReviewSnapshot", () => {
       terminalEvidencePrecision: "unknown",
     });
     expect(snapshot.summary.headline.terminalBeforePredictionCount).toBe(1);
+  });
+
+  it("reuses cached tape terminal evidence when the tape token is unchanged", async () => {
+    const incident = {
+      incidentKey: "ddr2:tape-terminal-cache-hit",
+      eventId: 96,
+      currentEventId: 96,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const terminalTs = STARTED_AT + 3600;
+    const token = { rowCount: 1, maxTs: terminalTs * 1000, maxId: 7 };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 96,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+      {
+        match: "COUNT(*) as row_count",
+        rows: [{ row_count: token.rowCount, max_ts: token.maxTs, max_id: token.maxId }],
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "depeg-resolver-review:terminal-evidence:v1",
+            value: JSON.stringify({
+              version: 1,
+              token,
+              checkedStablecoinIds: ["lusd-liquity"],
+              evidenceByStablecoinId: {
+                "lusd-liquity": {
+                  terminalEvidenceAt: terminalTs,
+                  terminalEvidenceInterval: null,
+                  terminalEvidencePrecision: "unknown",
+                  terminalEvidenceSourceDate: null,
+                },
+              },
+            }),
+          },
+        ],
+      },
+      {
+        match: "SELECT coin_id, type, ts, payload_json",
+        rows: [],
+        throwError: new Error("unexpected tape row query"),
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      sourceEventState: "terminal",
+      predictionState: "terminal_before_prediction",
+      terminalEvidenceAt: terminalTs,
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT coin_id, type, ts, payload_json"))).toBe(false);
   });
 
   it("rejects YYYY-MM source date with year 0000 and falls back to tape timestamp (ddr-5 regression)", async () => {

@@ -208,6 +208,11 @@ function DewsTechnicalDetails() {
           still writes rows that meet signal coverage, then marks the run degraded instead of treating the missing input as startup noise.
         </p>
         <p>
+          Mint/Burn Flow requires both a mature 30-day baseline and a fresh 24-hour hourly row. Fresh zero-volume rows
+          remain available as calm flow evidence, while stale baseline-only input is recorded as a source-freshness
+          failure and its signal weight is redistributed.
+        </p>
+        <p>
           The Yield Anomaly sub-signal combines legacy warning strings with populated Yield Intelligence source-risk,
           source-switch, and rank-attribution stress evidence. Neutral, missing, or malformed structured yield rows
           remain unavailable rather than adding zero-stress signal weight.
@@ -300,7 +305,7 @@ function DewsTechnicalDetails() {
           </li>
           <li>Non-USD pegs: cross-source divergence is dampened by 0.7 (noisier FX pricing)</li>
           <li>Small coins (&lt;$50M): supply velocity is dampened via a logarithmic size factor</li>
-          <li>Missing DEX data stays unavailable; zero-current rows retire; aggregate freshness uses the newest current row while the body exposes oldest-row lag</li>
+          <li>Missing or stale DEX and mint/burn freshness stays unavailable; zero-current rows retire; aggregate freshness uses the newest current row while the body exposes oldest-row lag</li>
         </ul>
       </div>
     </>

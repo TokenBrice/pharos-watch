@@ -176,6 +176,7 @@ export interface LoadCanonicalIncidentsFilters {
   policyUniverseIncluded?: boolean;
   includeSuperseded?: boolean;
   policyDelaySec?: number;
+  limit?: number;
 }
 
 export interface RecordLockDeferralInput {
@@ -250,6 +251,12 @@ function optionEffectiveAt(options: EnsureCanonicalIncidentsOptions): number {
 
 function optionPolicyDelaySec(options?: { policyDelaySec?: number }): number {
   return options?.policyDelaySec ?? DDR_PUBLIC_PREDICTION_DELAY_SEC;
+}
+
+function optionLimit(options?: { limit?: number }): number | null {
+  if (options?.limit == null) return null;
+  assertPositiveInteger(options.limit, "limit");
+  return options.limit;
 }
 
 async function sourceFingerprintForEvent(event: DdrCanonicalIncidentEventInput): Promise<string> {
@@ -936,7 +943,7 @@ export async function loadCanonicalIncidents(
     return [...(await loadIncidentsByEventIds(db, filters.eventIds, policyDelaySec)).values()];
   }
 
-  const readRows = async (whereSql: string, binds: unknown[]) => {
+  const readRows = async (whereSql: string, binds: unknown[], limit: number | null = null) => {
     const result = await db
       .prepare(
         `SELECT i.*,
@@ -945,9 +952,10 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
          LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
          LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
          ${whereSql}
-         ORDER BY i.first_started_at DESC, i.incident_key`,
+         ORDER BY i.first_started_at DESC, i.incident_key
+         ${limit == null ? "" : "LIMIT ?"}`,
       )
-      .bind(...binds)
+      .bind(...binds, ...(limit == null ? [] : [limit]))
       .all<IncidentRow>();
     return (result.results ?? []).map((row) => mapIncidentRow(row, policyDelaySec));
   };
@@ -984,7 +992,7 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
   }
 
   const conditions = scopedConditions();
-  return readRows(conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "", scopedBinds());
+  return readRows(conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "", scopedBinds(), optionLimit(filters));
 }
 
 function assertLockInput(input: RecordLockDeferralInput): void {

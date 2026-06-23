@@ -299,6 +299,7 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
       policyUniverseIncluded: filters.policyUniverseIncluded,
       includeSuperseded: filters.includeSuperseded,
       policyDelaySec: filters.policyDelaySec ?? DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
+      limit: filters.limit,
     });
     return incidents.map(mapStoreIncident);
   },

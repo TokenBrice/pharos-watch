@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v6.093`
+- **Current methodology version:** `v6.094`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -117,7 +117,7 @@ Only for stablecoin IDs with direct live blacklist tracker configs. Recent `blac
 
 ### S_flow — Mint/Burn Flow
 
-Available only when `mint_burn_hourly` data exists and is >= 7 days old. A mature 30-day baseline with zero mint/burn activity in the latest 24h window still counts as available data and contributes zero flow stress. Measures:
+Available only when `mint_burn_hourly` has at least 7 observed baseline days and a fresh latest 24h row. A fresh 24h row with zero mint/burn volume still contributes zero flow stress; a mature baseline with no fresh 24h row is marked stale and its signal weight is redistributed. Measures:
 
 - **Burn surge:** 24h burn volume / 30d daily average
 - **Burn-to-mint ratio:** 24h burns / 24h mints
@@ -184,7 +184,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 **Cron name:** `compute-dews`
 
-**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel after the first successful publication. Before that first success, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` is treated as a core dependency failure and is recorded in metadata, but rows that meet signal-coverage requirements are still persisted.
+**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel after the first successful publication. Before that first success, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` and stale `mint_burn_hourly` freshness are recorded in metadata, but rows that meet signal-coverage requirements are still persisted.
 
 **Off-chain confirmation resilience:** CoinGecko and DefiLlama confirmation fetches used by the pending-depeg pipeline are wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
 
@@ -194,7 +194,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 2. Read `dex_liquidity`, live-depeg-trusted `dex_prices`, and `dex_liquidity_history`
 3. Read `blacklist_events` counts (24h + 7d)
 4. Read previous `stress_signals` for smoothing
-5. Read `mint_burn_hourly` aggregates
+5. Read `mint_burn_hourly` aggregates, separating 30d baseline coverage from latest-row freshness
 6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
 7. Compute DEWS per PSI-eligible coin
 8. Batch write to `stress_signals` and `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)

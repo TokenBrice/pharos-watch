@@ -32,6 +32,8 @@ function degradedResponse(reason: string): DdrrResponse {
       verdictScoredCount: 0,
       assessmentRowLimit: 0,
       assessmentRowsTruncated: false,
+      incidentRowLimit: 0,
+      incidentRowsTruncated: false,
       publicRowLimit: 0,
       publicRowsTruncated: false,
       methodologyVersions: [],

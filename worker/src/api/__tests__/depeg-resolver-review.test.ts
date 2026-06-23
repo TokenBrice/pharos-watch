@@ -29,6 +29,8 @@ type LegacyDdrrCachePayload = {
     verdictScoredCount: number;
     assessmentRowLimit: number;
     assessmentRowsTruncated: boolean;
+    incidentRowLimit: number;
+    incidentRowsTruncated: boolean;
     publicRowLimit: number;
     publicRowsTruncated: boolean;
     methodologyVersions: string[];
@@ -70,6 +72,8 @@ function snapshot(computedAt: number, expiresAt: number): LegacyDdrrCachePayload
       verdictScoredCount: 1,
       assessmentRowLimit: 20_000,
       assessmentRowsTruncated: false,
+      incidentRowLimit: 20_000,
+      incidentRowsTruncated: false,
       publicRowLimit: 100,
       publicRowsTruncated: false,
       methodologyVersions: [DDR_METHODOLOGY_VERSION],

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.094",
+    title: "Mint/burn flow freshness fails closed",
+    date: "2026-06-23",
+    effectiveAt: 1782172800,
+    summary:
+      "DEWS now separates mint/burn baseline coverage from true source freshness, so the Flow sub-signal requires a fresh 24-hour mint_burn_hourly row plus at least 7 baseline days.",
+    impact: [
+      "A mature 30-day baseline no longer produces available zero flow stress when the mint/burn pipeline has no fresh 24-hour row",
+      "Fresh zero-volume 24-hour rows still contribute zero flow stress when the source is current",
+      "Stale mint/burn hourly input is recorded as a `mint-burn-hourly-freshness` source failure and surfaced through `sourceAges.mintBurn` and `staleFlags.mintBurn`",
+      "`flowBaselineDays` remains the baseline coverage diagnostic, while `flowDataAgeDays` now reports true mint/burn source freshness age in days",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.093",
     title: "Independent primary-family severe moves can open immediately",
     date: "2026-06-21",

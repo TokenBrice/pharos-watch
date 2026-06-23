@@ -138,6 +138,8 @@ function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
       verdictScoredCount: 4,
       assessmentRowLimit: 20_000,
       assessmentRowsTruncated: false,
+      incidentRowLimit: 20_000,
+      incidentRowsTruncated: false,
       publicRowLimit: 100,
       publicRowsTruncated: false,
       methodologyVersions: ["1.0"],

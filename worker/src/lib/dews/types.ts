@@ -81,7 +81,9 @@ export interface DEWSInput {
   burnVolume24hUsd: number | null;
   mintVolume24hUsd: number | null;
   burnBaseline30dUsd: number | null;
+  /** True mint_burn_hourly source freshness age in days. */
   flowDataAgeDays: number;
+  /** Observed baseline coverage days in the 30-day mint/burn window. */
   flowBaselineDays?: number | null;
   // Yield anomaly (optional — from yield_data.warning_signals)
   yieldWarnings: string[];

@@ -141,13 +141,20 @@ interface MakeDbOptions {
     total_tvl_usd: number | null;
     updated_at?: number | null;
   }>;
-  mintBurn24hRows?: Array<{ stablecoin_id: string; chain_id?: string; total_burn: number; total_mint: number }>;
+  mintBurn24hRows?: Array<{
+    stablecoin_id: string;
+    chain_id?: string;
+    total_burn: number;
+    total_mint: number;
+    latest_hour_ts?: number | null;
+  }>;
   mintBurn30dRows?: Array<{
     stablecoin_id: string;
     chain_id?: string;
     total_burn: number;
     total_mint: number;
     days_with_data: number;
+    latest_hour_ts?: number | null;
   }>;
   blacklistRows?: Array<{
     stablecoin: string;
@@ -258,13 +265,22 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         return { results: bestRows as T[] };
       }
       if (sql.includes("FROM mint_burn_hourly")) {
+        const freshHourTs = Math.floor(Date.now() / 1000) - 3600;
         if (sql.includes("days_with_data")) {
           return {
-            results: (opts.mintBurn30dRows ?? []).map((row) => ({ chain_id: "ethereum", ...row })) as T[],
+            results: (opts.mintBurn30dRows ?? []).map((row) => ({
+              chain_id: "ethereum",
+              latest_hour_ts: row.latest_hour_ts ?? freshHourTs,
+              ...row,
+            })) as T[],
           };
         }
         return {
-          results: (opts.mintBurn24hRows ?? []).map((row) => ({ chain_id: "ethereum", ...row })) as T[],
+          results: (opts.mintBurn24hRows ?? []).map((row) => ({
+            chain_id: "ethereum",
+            latest_hour_ts: row.latest_hour_ts ?? freshHourTs,
+            ...row,
+          })) as T[],
         };
       }
       return { results: [] as T[] };
@@ -488,15 +504,25 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
-  it("keeps a mature mint/burn baseline when the latest 24h window is quiet", async () => {
+  it("keeps a mature mint/burn baseline when a fresh 24h row is quiet", async () => {
     const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb(sqlSeen, {
+      mintBurn24hRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          total_burn: 0,
+          total_mint: 0,
+          latest_hour_ts: nowSec - 3600,
+        },
+      ],
       mintBurn30dRows: [
         {
           stablecoin_id: "usdt-tether",
           total_burn: 3_500_000,
           total_mint: 2_100_000,
           days_with_data: 14,
+          latest_hour_ts: nowSec - 3600,
         },
       ],
     });
@@ -509,10 +535,56 @@ describe("computeAndStoreDEWS", () => {
         burnVolume24hUsd: 0,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 250_000,
-        flowDataAgeDays: 14,
+        flowDataAgeDays: expect.any(Number),
         flowBaselineDays: 14,
+        sourceAges: expect.objectContaining({ mintBurn: 3600 }),
+        staleFlags: expect.objectContaining({ mintBurn: false }),
       }),
     );
+    const calls = vi.mocked(computeDEWS).mock.calls;
+    const input = calls[calls.length - 1]?.[0];
+    expect(input?.flowDataAgeDays).toBeCloseTo(1 / 24, 5);
+  });
+
+  it("marks mature mint/burn baselines stale when no fresh 24h data exists", async () => {
+    const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb(sqlSeen, {
+      mintBurn30dRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          total_burn: 3_500_000,
+          total_mint: 2_100_000,
+          days_with_data: 14,
+          latest_hour_ts: nowSec - 2 * 86400,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBe("degraded");
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        burnVolume24hUsd: 0,
+        mintVolume24hUsd: 0,
+        burnBaseline30dUsd: 250_000,
+        flowDataAgeDays: 2,
+        flowBaselineDays: 14,
+        sourceAges: expect.objectContaining({ mintBurn: 2 * 86400 }),
+        staleFlags: expect.objectContaining({ mintBurn: true }),
+      }),
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceCoverage: Record<string, number>;
+    };
+    expect(metadata.sourceFailures).toContainEqual(
+      expect.objectContaining({ source: "mint-burn-hourly-freshness", bootstrapAllowed: false }),
+    );
+    expect(metadata.sourceCoverage.mintBurnHourlyStaleRows).toBe(1);
+    expect(metadata.sourceCoverage.mintBurnHourlyFreshRows).toBe(0);
   });
 
   it("marks run degraded when dex_liquidity is unavailable", async () => {
@@ -898,21 +970,35 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         burnBaseline30dUsd: 100_000,
-        flowDataAgeDays: 7,
+        flowDataAgeDays: expect.any(Number),
         flowBaselineDays: 7,
+        staleFlags: expect.objectContaining({ mintBurn: false }),
       }),
     );
+    const calls = vi.mocked(computeDEWS).mock.calls;
+    const input = calls[calls.length - 1]?.[0];
+    expect(input?.flowDataAgeDays).toBeCloseTo(1 / 24, 5);
   });
 
   it("leaves complete 30-day mint/burn baselines unchanged", async () => {
     const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb(sqlSeen, {
+      mintBurn24hRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          total_burn: 0,
+          total_mint: 0,
+          latest_hour_ts: nowSec - 3600,
+        },
+      ],
       mintBurn30dRows: [
         {
           stablecoin_id: "usdt-tether",
           total_burn: 3_000_000,
           total_mint: 1_500_000,
           days_with_data: 30,
+          latest_hour_ts: nowSec - 3600,
         },
       ],
     });
@@ -923,10 +1009,14 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         burnBaseline30dUsd: 100_000,
-        flowDataAgeDays: 30,
+        flowDataAgeDays: expect.any(Number),
         flowBaselineDays: 30,
+        staleFlags: expect.objectContaining({ mintBurn: false }),
       }),
     );
+    const calls = vi.mocked(computeDEWS).mock.calls;
+    const input = calls[calls.length - 1]?.[0];
+    expect(input?.flowDataAgeDays).toBeCloseTo(1 / 24, 5);
   });
 
   it("marks thin non-USD peg references unavailable for DEWS divergence", async () => {

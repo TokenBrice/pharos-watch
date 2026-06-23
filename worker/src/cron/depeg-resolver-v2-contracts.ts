@@ -198,6 +198,7 @@ export interface DdrV2StoreContracts {
       policyUniverseIncluded?: boolean;
       includeSuperseded?: boolean;
       policyDelaySec?: number;
+      limit?: number;
     },
   ): Promise<DdrCanonicalIncident[]>;
   recordLockDeferral(db: D1Database, input: DdrLockOpportunityInput): Promise<void>;
