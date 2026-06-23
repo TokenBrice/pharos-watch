@@ -84,7 +84,7 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 195,
+    "fileLines": 194,
     "maxFunctionLines": 161,
     "branchCount": 9,
     "disposition": "stabilized",
@@ -336,9 +336,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 1015,
+    "fileLines": 1124,
     "maxFunctionLines": 429,
-    "branchCount": 25,
+    "branchCount": 29,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,
@@ -384,9 +384,9 @@
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 353,
-    "maxFunctionLines": 284,
-    "branchCount": 18,
+    "fileLines": 344,
+    "maxFunctionLines": 278,
+    "branchCount": 16,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 345,
