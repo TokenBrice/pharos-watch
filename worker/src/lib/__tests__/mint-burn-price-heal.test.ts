@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../db", () => ({
   batchExecute: vi.fn().mockResolvedValue(0),
+  buildInClause: (values: readonly unknown[]) => ({
+    sql: values.map(() => "?").join(", "),
+    binds: [...values],
+  }),
 }));
 
 vi.mock("../db-cache", () => ({
@@ -14,21 +18,48 @@ import { healNullPrices } from "../mint-burn-pipeline/price-heal";
 
 const NOW = 1_700_000_000;
 
+interface NullPriceEvent {
+  id: string;
+  stablecoin_id: string;
+  chain_id: string;
+  amount: number;
+  timestamp: number;
+}
+
+interface PriceHistoryRow {
+  stablecoin_id: string;
+  snapshot_date: number;
+  price: number;
+}
+
+interface BoundStatement {
+  sql: string;
+  args: unknown[];
+  all: () => Promise<{ results: unknown[] }>;
+}
+
 function mockDb(
-  nullEvents: Array<{
-    id: string;
-    stablecoin_id: string;
-    chain_id: string;
-    amount: number;
-    timestamp: number;
-  }> = [],
+  nullEvents: NullPriceEvent[] = [],
+  priceHistoryRows: PriceHistoryRow[] = [],
 ): D1Database {
+  const prepare = vi.fn((sql: string) => ({
+    bind: vi.fn((...args: unknown[]): BoundStatement => ({
+      sql,
+      args,
+      all: async () => {
+        if (sql.includes("FROM mint_burn_events")) {
+          return { results: nullEvents };
+        }
+        if (sql.includes("FROM supply_history")) {
+          return { results: priceHistoryRows };
+        }
+        return { results: [] };
+      },
+    })),
+  }));
+
   return {
-    prepare: (_sql: string) => ({
-      bind: (..._args: unknown[]) => ({
-        all: async () => ({ results: nullEvents }),
-      }),
-    }),
+    prepare,
   } as unknown as D1Database;
 }
 
@@ -61,6 +92,56 @@ describe("healNullPrices", () => {
     const result = await healNullPrices(db, NOW);
     expect(result.healed).toBe(2);
     expect(batchExecute).toHaveBeenCalledTimes(1);
+  });
+
+  it("prefers historical supply_history prices over current price_cache rows", async () => {
+    const dayTs = Math.floor((NOW - 3600) / 86400) * 86400;
+    const events = [
+      { id: "e1", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3600 },
+    ];
+    const db = mockDb(events, [
+      { stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 0.98 },
+    ]);
+    vi.mocked(getPriceCache).mockResolvedValueOnce(
+      new Map([["usdc-circle", { price: 1.05, updatedAt: NOW, source: "binance" }]]),
+    );
+    vi.mocked(batchExecute).mockResolvedValueOnce(1);
+
+    const result = await healNullPrices(db, NOW);
+
+    expect(result.healed).toBe(1);
+    const updateStmts = vi.mocked(batchExecute).mock.calls[0]?.[1] as BoundStatement[];
+    expect(updateStmts[0].args).toEqual([
+      980,
+      0.98,
+      dayTs,
+      "supply-history-heal",
+      "e1",
+    ]);
+  });
+
+  it("can heal from historical supply_history when the cache row is missing", async () => {
+    const dayTs = Math.floor((NOW - 3600) / 86400) * 86400;
+    const events = [
+      { id: "e1", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3600 },
+    ];
+    const db = mockDb(events, [
+      { stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 1.01 },
+    ]);
+    vi.mocked(getPriceCache).mockResolvedValueOnce(new Map());
+    vi.mocked(batchExecute).mockResolvedValueOnce(1);
+
+    const result = await healNullPrices(db, NOW);
+
+    expect(result.healed).toBe(1);
+    const updateStmts = vi.mocked(batchExecute).mock.calls[0]?.[1] as BoundStatement[];
+    expect(updateStmts[0].args).toEqual([
+      1010,
+      1.01,
+      dayTs,
+      "supply-history-heal",
+      "e1",
+    ]);
   });
 
   it("skips events whose stablecoin has no price in price_cache", async () => {

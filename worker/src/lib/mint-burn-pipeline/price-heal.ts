@@ -1,9 +1,24 @@
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { batchExecute } from "../db";
-import { getPriceCache } from "../db-cache";
-import type { MintBurnAffectedHour } from "./types";
+import { getPriceCache, type PriceCacheEntry } from "../db-cache";
+import { findMintBurnHistoricalPrice, loadMintBurnPriceHistoryBatch } from "./context";
+import type { MintBurnAffectedHour, MintBurnPriceHistoryPoint } from "./types";
 
 const LOOKBACK_SEC = 48 * 3600; // 48 hours
+
+interface NullPriceEvent {
+  id: string;
+  stablecoin_id: string;
+  chain_id: string;
+  amount: number;
+  timestamp: number;
+}
+
+interface HealPriceResolution {
+  price: number;
+  priceTimestamp: number;
+  priceSource: string;
+}
 
 interface PriceHealResult {
   healed: number;
@@ -13,6 +28,35 @@ interface PriceHealResult {
 export interface NullPriceBacklogSummary {
   recent: number;
   historical: number;
+}
+
+function resolveHealEventPrice(
+  event: NullPriceEvent,
+  priceHistory: Map<string, MintBurnPriceHistoryPoint[]>,
+  cached: PriceCacheEntry | undefined,
+): HealPriceResolution | null {
+  const historical = findMintBurnHistoricalPrice(
+    priceHistory,
+    event.stablecoin_id,
+    event.timestamp,
+  );
+  if (historical?.price != null) {
+    return {
+      price: historical.price,
+      priceTimestamp: historical.snapshotDate,
+      priceSource: "supply-history-heal",
+    };
+  }
+
+  if (!cached || !isReplaySafePriceSource(cached.source ?? null)) {
+    return null;
+  }
+
+  return {
+    price: cached.price,
+    priceTimestamp: cached.updatedAt,
+    priceSource: "price_cache_heal",
+  };
 }
 
 export async function getNullPriceBacklog(
@@ -35,9 +79,10 @@ export async function getNullPriceBacklog(
 }
 
 /**
- * Find recent mint_burn_events with NULL amount_usd, resolve prices
- * from price_cache, and update. Returns count of healed events and
- * affected hours for re-aggregation.
+ * Find recent mint_burn_events with NULL amount_usd, resolve event-day
+ * prices from supply_history before falling back to replay-safe price_cache
+ * rows, and update. Returns count of healed events and affected hours for
+ * re-aggregation.
  */
 export async function healNullPrices(
   db: D1Database,
@@ -58,38 +103,47 @@ export async function healNullPrices(
     amount: number;
     timestamp: number;
   }>();
-  const nullEvents = results ?? [];
+  const nullEvents: NullPriceEvent[] = results ?? [];
 
   if (nullEvents.length === 0) {
     return { healed: 0, affectedHours: new Map() };
   }
 
+  const priceHistory = await loadMintBurnPriceHistoryBatch(
+    db,
+    nullEvents.map((event) => event.stablecoin_id),
+  );
+
   // Load all prices via existing helper (reads price_cache table keyed by asset_id)
   const prices = await getPriceCache(db);
 
-  // Filter to events where we have a replay-safe cached price.
-  // Defense-in-depth: post-enrichment already filters the writer, but if that
-  // ever regresses the heal path refuses non-replay-safe rows.
-  const healable = nullEvents.filter((event) => {
-    const cached = prices.get(event.stablecoin_id);
-    if (!cached) return false;
-    return isReplaySafePriceSource(cached.source ?? null);
-  });
+  const healable = nullEvents
+    .map((event) => {
+      const resolution = resolveHealEventPrice(
+        event,
+        priceHistory,
+        prices.get(event.stablecoin_id),
+      );
+      return resolution ? { event, resolution } : null;
+    })
+    .filter(
+      (entry): entry is { event: NullPriceEvent; resolution: HealPriceResolution } =>
+        entry != null,
+    );
   if (healable.length === 0) {
     return { healed: 0, affectedHours: new Map() };
   }
 
-  const updateStmts = healable.map((event) => {
-    const cached = prices.get(event.stablecoin_id)!;
+  const updateStmts = healable.map(({ event, resolution }) => {
     return db.prepare(
       `UPDATE mint_burn_events
        SET amount_usd = ?, price_used = ?, price_timestamp = ?, price_source = ?
        WHERE id = ? AND amount_usd IS NULL`,
     ).bind(
-      event.amount * cached.price,
-      cached.price,
-      cached.updatedAt,
-      "price_cache_heal",
+      event.amount * resolution.price,
+      resolution.price,
+      resolution.priceTimestamp,
+      resolution.priceSource,
       event.id,
     );
   });
@@ -98,7 +152,7 @@ export async function healNullPrices(
 
   // Collect affected hours for re-aggregation.
   const affectedHours = new Map<string, MintBurnAffectedHour>();
-  for (const event of healable) {
+  for (const { event } of healable) {
     const hourTs = Math.floor(event.timestamp / 3600) * 3600;
     const key = `${event.stablecoin_id}-${event.chain_id}-${hourTs}`;
     affectedHours.set(key, {
