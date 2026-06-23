@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.997`
+- **Current methodology version:** `v3.9971`
 - **Runtime/version source:** `shared/lib/blacklist-tracker-version.ts`
 - **Public changelog route:** `/methodology/blacklist-tracker-changelog/`
 - **Version timeline:** [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)
@@ -799,8 +799,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.997",
-    "currentVersionLabel": "v3.997",
+    "currentVersion": "3.9971",
+    "currentVersionLabel": "v3.9971",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false
