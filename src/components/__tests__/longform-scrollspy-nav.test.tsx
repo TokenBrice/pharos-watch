@@ -62,6 +62,9 @@ describe("LongformScrollspyNav", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // jsdom does not implement scrollIntoView; the banner centers the active
+    // pill in its horizontal scroller after the first render.
+    Element.prototype.scrollIntoView = vi.fn();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
       return 1;

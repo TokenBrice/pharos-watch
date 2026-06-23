@@ -413,7 +413,7 @@ export default function StablecoinDetailClient({
         railLabel="Jump to"
         navAriaLabel="Stablecoin detail section navigation"
         onActiveChange={setActiveBannerId}
-        className="mt-6 lg:w-full lg:max-w-none lg:rounded-xl lg:[&>div:first-child]:justify-center lg:[&_nav>div]:min-w-0 lg:[&_nav>div]:justify-center"
+        className="mt-6 lg:w-full lg:max-w-none lg:rounded-xl lg:[&>div]:justify-center lg:[&_nav]:flex-none"
         rightSlot={
           <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
             <Link

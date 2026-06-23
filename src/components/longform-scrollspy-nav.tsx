@@ -101,14 +101,28 @@ export function LongformScrollspyNav({
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
+  const activeAnchorRef = useRef<HTMLAnchorElement | null>(null);
   const pendingScrollSyncRef = useRef<number[]>([]);
   const initialHashHandledRef = useRef(false);
+  const activePillSyncedRef = useRef(false);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
   const sectionSignature = useJoinedKey(sections.map((section) => section.id));
 
   useEffect(() => {
     onActiveChange?.(effectiveActiveId);
   }, [effectiveActiveId, onActiveChange]);
+
+  // Keep the lit pill visible inside the horizontally-scrolling banner row
+  // (it can sit off the right edge on narrow viewports). Skip the first run so
+  // hydration doesn't hijack the page's initial scroll position.
+  useEffect(() => {
+    if (variant !== "banner") return;
+    if (!activePillSyncedRef.current) {
+      activePillSyncedRef.current = true;
+      return;
+    }
+    activeAnchorRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
+  }, [effectiveActiveId, variant]);
 
   useEffect(() => {
     const railNode = railRef.current;
@@ -136,33 +150,50 @@ export function LongformScrollspyNav({
       }
     };
 
-    applyScrollMargins();
+    // Active-section detection by scroll position rather than an
+    // IntersectionObserver band. The active section is the last one whose
+    // heading has scrolled up to (or past) the line just below the sticky
+    // nav. Unlike a narrow observer band — which goes empty between the thin
+    // heading strips and freezes the highlight on a stale section — this
+    // always resolves to the section currently under the reader.
+    let scrollFrame = 0;
+    const computeActiveSection = () => {
+      const railRect = railNode.getBoundingClientRect();
+      if (railRect.width === 0 && railRect.height === 0) return; // hidden instance
+      const activationLine = getScrollOffset(railNode) + 8;
+      let nextActive = sectionNodes[0];
+      for (const node of sectionNodes) {
+        if (node.getBoundingClientRect().top <= activationLine) {
+          nextActive = node;
+        }
+      }
+      if (nextActive) setActiveId(nextActive.id);
+    };
 
+    applyScrollMargins();
+    computeActiveSection();
+
+    // Recompute on layout changes, not just scroll: this page lazy-mounts
+    // charts whose late render shifts section offsets, and hash jumps can land
+    // the reader mid-page before that settles. Observing the document body
+    // keeps the lit pill correct without waiting for the next scroll event.
     const resizeObserver = new ResizeObserver(() => {
       applyScrollMargins();
+      computeActiveSection();
     });
     resizeObserver.observe(railNode);
+    if (document.body) resizeObserver.observe(document.body);
     window.addEventListener("resize", applyScrollMargins);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const inView = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+    const handleScroll = () => {
+      if (scrollFrame) return;
+      scrollFrame = window.requestAnimationFrame(() => {
+        scrollFrame = 0;
+        computeActiveSection();
+      });
+    };
 
-        if (inView[0]) {
-          setActiveId(inView[0].target.id);
-        }
-      },
-      {
-        rootMargin: "-20% 0px -65% 0px",
-        threshold: [0.05, 0.2, 0.4, 0.7],
-      },
-    );
-
-    for (const node of sectionNodes) {
-      observer.observe(node);
-    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     const activeHash = getHashSectionId();
     if (!initialHashHandledRef.current) {
@@ -177,7 +208,8 @@ export function LongformScrollspyNav({
     }
 
     return () => {
-      observer.disconnect();
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
       resizeObserver.disconnect();
       window.removeEventListener("resize", applyScrollMargins);
       clearPendingScrollSync(pendingScrollSyncRef);
@@ -242,45 +274,47 @@ export function LongformScrollspyNav({
           className,
         )}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <p className="shrink-0 text-xs font-medium text-muted-foreground">
-              <span className="hidden sm:inline">{railLabel ?? "Jump to Section"}</span>
-              <span className="sm:hidden">Sections:</span>
-            </p>
-          </div>
-          {rightSlot && <div className="hidden sm:block">{rightSlot}</div>}
-        </div>
-        <div className="relative">
-          {/* Fade mask hints at off-screen content */}
+        <div className="relative flex items-center gap-3">
+          {/* Fade mask hints at off-screen pills on narrow viewports */}
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden" aria-hidden="true" />
-        <nav aria-label={navAriaLabel} className="overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
+        <nav aria-label={navAriaLabel} className="min-w-0 flex-1 overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
           <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
             {sections.map((section) => {
               const Icon = section.icon;
+              const isActive = effectiveActiveId === section.id;
               return (
                 <a
                   key={section.id}
+                  ref={isActive ? activeAnchorRef : undefined}
                   href={`#${section.id}`}
+                  aria-current={isActive ? "true" : undefined}
                   onClick={(event) => {
                     event.preventDefault();
                     scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
                     setActiveId(section.id);
                   }}
                   className={cn(
-                    "pharos-focus-ring inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
-                    effectiveActiveId === section.id
-                      ? "border-foreground/35 bg-muted text-foreground"
-                      : "border-border/60 bg-background/80 text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
+                    "group pharos-rail-tab pharos-focus-ring relative isolate inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
+                    isActive && "pharos-rail-tab-active",
                   )}
                 >
-                  {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden /> : null}
+                  {isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
+                  {Icon ? (
+                    <Icon
+                      aria-hidden
+                      className={cn(
+                        "h-3.5 w-3.5 shrink-0",
+                        isActive ? "text-frost-blue" : "text-muted-foreground/80 group-hover:text-foreground",
+                      )}
+                    />
+                  ) : null}
                   <span>{section.label}</span>
                 </a>
               );
             })}
           </div>
         </nav>
+          {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}
         </div>
       </div>
       {showDepthHint && (
