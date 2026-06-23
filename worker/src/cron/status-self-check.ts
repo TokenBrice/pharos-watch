@@ -2,12 +2,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "../lib/error-utils";
-import {
-  API_ORIGIN,
-  OPS_API_ORIGIN,
-  SITE_API_ORIGIN,
-  resolveOrigin,
-} from "@shared/lib/runtime-origins";
+import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 
@@ -80,13 +75,31 @@ interface ExternalProductionProbeTarget {
   expectedFailureMessage?: string;
 }
 
+export interface StatusSelfCheckOptions {
+  selfUrl?: string;
+  signal?: AbortSignal;
+  ctx?: ExecutionContext;
+  mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
+  alertWebhookUrl?: string | null;
+  siteApiSharedSecret?: string | null;
+}
+
+interface CollectedStatusSelfCheckProbes {
+  probeBaseUrl: URL;
+  probeMode: "internal-router" | "external-http";
+  probeSelection: ReturnType<typeof selectStatusProbePathsForRun>;
+  internalProbes: ProbeResult[];
+  externalProbes: ProbeResult[];
+  probes: ProbeResult[];
+  internalSummary: StatusProbePlaneSummary | null;
+  externalSummary: StatusProbePlaneSummary | null;
+  internalExternalDiscrepancy: StatusProbeComparison;
+}
+
 const PUBLIC_PROBE_PATHS = getProbePaths("public");
 const ADMIN_PROBE_PATHS = getProbePaths("admin").filter((path) => path !== "/api/status");
 
-const CRITICAL_PROBE_PATHS = [
-  ...PUBLIC_PROBE_PATHS,
-  ...ADMIN_PROBE_PATHS,
-];
+const CRITICAL_PROBE_PATHS = [...PUBLIC_PROBE_PATHS, ...ADMIN_PROBE_PATHS];
 
 const DEFAULT_SELF_URL = API_ORIGIN;
 const HEALTH_PROBE_PATH = "/api/health";
@@ -111,11 +124,7 @@ const PROBE_STATUS_SEVERITY: Record<StatusLevel, number> = {
 
 const UNKNOWN_PROBE_SEVERITY = -1;
 
-export async function isBootstrapCacheMiss(
-  db: D1Database,
-  path: string,
-  status: number,
-): Promise<boolean> {
+export async function isBootstrapCacheMiss(db: D1Database, path: string, status: number): Promise<boolean> {
   if (status !== 503) return false;
   const producerJob = BOOTSTRAP_CACHE_PRODUCER_BY_PATH[path];
   if (!producerJob) return false;
@@ -125,7 +134,8 @@ export async function isBootstrapCacheMiss(
       .bind(producerJob)
       .first<{ cnt: number | null }>();
     return (row?.cnt ?? 0) === 0;
-  } catch { /* non-blocking: observability only */
+  } catch {
+    /* non-blocking: observability only */
     return false;
   }
 }
@@ -254,13 +264,9 @@ export function selectStatusProbePathsForRun(
 } {
   const candidates = uniquePaths(paths);
   const deepProbePaths = candidates.filter((path) => path !== HEALTH_PROBE_PATH);
-  const rotationBucketCount = Math.max(
-    1,
-    Math.min(STATUS_DEEP_PROBE_ROTATION_BUCKETS, deepProbePaths.length || 1),
-  );
-  const rotationBucket = deepProbePaths.length === 0
-    ? 0
-    : Math.floor(nowSec / STATUS_SELF_CHECK_INTERVAL_SEC) % rotationBucketCount;
+  const rotationBucketCount = Math.max(1, Math.min(STATUS_DEEP_PROBE_ROTATION_BUCKETS, deepProbePaths.length || 1));
+  const rotationBucket =
+    deepProbePaths.length === 0 ? 0 : Math.floor(nowSec / STATUS_SELF_CHECK_INTERVAL_SEC) % rotationBucketCount;
   const selectedDeepProbePaths = deepProbePaths.filter(
     (_path, index) => index % rotationBucketCount === rotationBucket,
   );
@@ -291,7 +297,8 @@ function maxProbeStatus(left: StatusLevel, right: StatusLevel): StatusLevel {
 function resolveProbeBaseUrl(selfUrl?: string): URL {
   try {
     return new URL(resolveOrigin(selfUrl, DEFAULT_SELF_URL));
-  } catch { /* expected: malformed SELF_URL env var */
+  } catch {
+    /* expected: malformed SELF_URL env var */
     return new URL(DEFAULT_SELF_URL);
   }
 }
@@ -307,7 +314,7 @@ async function evaluateProbeResponse(
   }
 
   try {
-    const payload = await response.json() as { status?: unknown };
+    const payload = (await response.json()) as { status?: unknown };
     if (payload.status === "healthy") {
       return {
         ok: true,
@@ -326,7 +333,8 @@ async function evaluateProbeResponse(
       error: "invalid-health-status",
       semanticStatus: "stale",
     };
-  } catch { /* degraded: health endpoint returned unparseable JSON */
+  } catch {
+    /* degraded: health endpoint returned unparseable JSON */
     return {
       ok: false,
       error: "invalid-health-payload",
@@ -430,7 +438,7 @@ async function probePathExternally(
       startedAt,
       status: 0,
       ok: false,
-      error: timeout.isTimedOut() ? "timeout" : (toErrorMessage(error)),
+      error: timeout.isTimedOut() ? "timeout" : toErrorMessage(error),
     });
   } finally {
     timeout.dispose();
@@ -589,41 +597,42 @@ async function runExternalProductionProbes(
   return probes;
 }
 
-function shouldSendAlert(
-  guard: {
-    persistenceSucceeded: boolean;
-    triggered: boolean;
-    streakMet: boolean;
-    lastAlertAt: number | null;
-  },
-  now: number,
-  cooldownSec: number,
-): boolean {
-  return (
-    guard.persistenceSucceeded &&
-    guard.triggered &&
-    guard.streakMet &&
-    (
-      guard.lastAlertAt == null ||
-      now - guard.lastAlertAt >= cooldownSec
-    )
-  );
-}
-
-export async function runStatusSelfCheck(
-  db: D1Database,
-  selfUrl?: string,
+function normalizeStatusSelfCheckOptions(
+  optionsOrSelfUrl?: StatusSelfCheckOptions | string,
   signal?: AbortSignal,
   ctx?: ExecutionContext,
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
   alertWebhookUrl?: string | null,
   siteApiSharedSecret?: string | null,
-): Promise<CronResult> {
+): StatusSelfCheckOptions {
+  if (typeof optionsOrSelfUrl === "object" && optionsOrSelfUrl !== null) {
+    return optionsOrSelfUrl;
+  }
+
+  return {
+    selfUrl: optionsOrSelfUrl,
+    signal,
+    ctx,
+    mintBurnFreshnessConfig,
+    alertWebhookUrl,
+    siteApiSharedSecret,
+  };
+}
+
+async function collectStatusSelfCheckProbes(
+  db: D1Database,
+  now: number,
+  options: Pick<
+    StatusSelfCheckOptions,
+    "selfUrl" | "signal" | "ctx" | "mintBurnFreshnessConfig" | "siteApiSharedSecret"
+  >,
+): Promise<CollectedStatusSelfCheckProbes> {
+  const { selfUrl, signal, ctx, mintBurnFreshnessConfig, siteApiSharedSecret } = options;
   const probeBaseUrl = resolveProbeBaseUrl(selfUrl);
   const probeMode = ctx ? "internal-router" : "external-http";
-  const now = Math.floor(Date.now() / 1000);
   const probeSelection = selectStatusProbePathsForRun(now);
   const internalProbes: ProbeResult[] = [];
+
   for (const path of probeSelection.paths) {
     if (signal?.aborted) break;
     internalProbes.push(
@@ -640,11 +649,79 @@ export async function runStatusSelfCheck(
           ),
     );
   }
+
   const externalProbes = await runExternalProductionProbes(siteApiSharedSecret, signal);
   const probes: ProbeResult[] = [...internalProbes, ...externalProbes];
   const internalSummary = summarizeProbePlane(internalProbes);
   const externalSummary = summarizeProbePlane(externalProbes);
-  const internalExternalDiscrepancy = buildInternalExternalDiscrepancy(internalSummary, externalSummary);
+  return {
+    probeBaseUrl,
+    probeMode,
+    probeSelection,
+    internalProbes,
+    externalProbes,
+    probes,
+    internalSummary,
+    externalSummary,
+    internalExternalDiscrepancy: buildInternalExternalDiscrepancy(internalSummary, externalSummary),
+  };
+}
+
+function shouldSendAlert(
+  guard: {
+    persistenceSucceeded: boolean;
+    triggered: boolean;
+    streakMet: boolean;
+    lastAlertAt: number | null;
+  },
+  now: number,
+  cooldownSec: number,
+): boolean {
+  return (
+    guard.persistenceSucceeded &&
+    guard.triggered &&
+    guard.streakMet &&
+    (guard.lastAlertAt == null || now - guard.lastAlertAt >= cooldownSec)
+  );
+}
+
+export async function runStatusSelfCheck(db: D1Database, options?: StatusSelfCheckOptions): Promise<CronResult>;
+export async function runStatusSelfCheck(
+  db: D1Database,
+  selfUrl?: string,
+  signal?: AbortSignal,
+  ctx?: ExecutionContext,
+  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
+  alertWebhookUrl?: string | null,
+  siteApiSharedSecret?: string | null,
+): Promise<CronResult>;
+export async function runStatusSelfCheck(
+  db: D1Database,
+  optionsOrSelfUrl?: StatusSelfCheckOptions | string,
+  legacySignal?: AbortSignal,
+  legacyCtx?: ExecutionContext,
+  legacyMintBurnFreshnessConfig?: MintBurnFreshnessConfig,
+  legacyAlertWebhookUrl?: string | null,
+  legacySiteApiSharedSecret?: string | null,
+): Promise<CronResult> {
+  const options = normalizeStatusSelfCheckOptions(
+    optionsOrSelfUrl,
+    legacySignal,
+    legacyCtx,
+    legacyMintBurnFreshnessConfig,
+    legacyAlertWebhookUrl,
+    legacySiteApiSharedSecret,
+  );
+  const now = Math.floor(Date.now() / 1000);
+  const {
+    probeBaseUrl,
+    probeMode,
+    probeSelection,
+    probes,
+    internalSummary,
+    externalSummary,
+    internalExternalDiscrepancy,
+  } = await collectStatusSelfCheckProbes(db, now, options);
 
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
@@ -704,24 +781,10 @@ export async function runStatusSelfCheck(
     persistenceSucceeded: statusPersistenceSucceeded,
   } = await evaluateStatusAndPersist(db, now);
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
-  const discrepancyObserved = hasDivergence(
-    effectiveStatus,
-    probeSummary,
-    now,
-  );
+  const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
-  const discrepancyState = await updateDiscrepancyObservation(
-    db,
-    now,
-    discrepancyObserved,
-    hasProbeFailure,
-  );
-  const discrepancy = buildDiscrepancy(
-    effectiveStatus,
-    probeSummary,
-    now,
-    discrepancyState.consecutiveDivergent,
-  );
+  const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure);
+  const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, now, discrepancyState.consecutiveDivergent);
 
   const shouldDiscrepancyAlert = shouldSendAlert(
     {
@@ -750,11 +813,11 @@ export async function runStatusSelfCheck(
   let discrepancyAlertSent = false;
   if (shouldDiscrepancyAlert) {
     discrepancyAlertSent = await sendAlert(
-      alertWebhookUrl ?? null,
+      options.alertWebhookUrl ?? null,
       "Status divergence detected",
       `effective=${effectiveStatus}, raw=${raw.rawOverallStatus}, probe=${probeStatus}, ` +
-      `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}, ` +
-      probeComparisonAlertSegment,
+        `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}, ` +
+        probeComparisonAlertSegment,
     );
     if (discrepancyAlertSent) {
       await markDiscrepancyAlertSent(db, now);
@@ -764,10 +827,10 @@ export async function runStatusSelfCheck(
   let probeFailureAlertSent = false;
   if (shouldProbeFailureAlert) {
     probeFailureAlertSent = await sendAlert(
-      alertWebhookUrl ?? null,
+      options.alertWebhookUrl ?? null,
       "Status probe failures detected",
       `probe=${probeStatus}, failures=${failCount}/${sampleCount}, ` +
-      `streak=${discrepancyState.consecutiveProbeFailures}, ${probeComparisonAlertSegment}`,
+        `streak=${discrepancyState.consecutiveProbeFailures}, ${probeComparisonAlertSegment}`,
     );
     if (probeFailureAlertSent) {
       await markProbeFailureAlertSent(db, now);

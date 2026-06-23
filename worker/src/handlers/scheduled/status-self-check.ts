@@ -19,25 +19,19 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
           job: "status-self-check",
           errorMessage: "[cron] status-self-check failed in isolated slot:",
           run: (signal) =>
-            runStatusSelfCheck(
-              runtime.db,
-              runtime.env.SELF_URL,
+            runStatusSelfCheck(runtime.db, {
+              selfUrl: runtime.env.SELF_URL,
               signal,
-              runtime.ctx,
-              runtime.mintBurnFreshnessConfig,
-              runtime.alertWebhookUrl,
-              runtime.env.SITE_API_SHARED_SECRET,
-            ),
+              ctx: runtime.ctx,
+              mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
+              alertWebhookUrl: runtime.alertWebhookUrl,
+              siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
+            }),
         },
         {
           job: "cron-staleness-watchdog",
           errorMessage: "[cron] cron-staleness-watchdog failed in isolated slot:",
-          run: (signal) =>
-            runCronStalenessWatchdog(
-              runtime.db,
-              runtime.alertWebhookUrl,
-              signal,
-            ),
+          run: (signal) => runCronStalenessWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
         },
       ],
     },
@@ -45,9 +39,5 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
 }
 
 export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
-  return runScheduledSlotGroups(
-    runtime,
-    "isolated status self-check slot",
-    buildStatusSelfCheckSlotGroups(runtime),
-  );
+  return runScheduledSlotGroups(runtime, "isolated status self-check slot", buildStatusSelfCheckSlotGroups(runtime));
 }
