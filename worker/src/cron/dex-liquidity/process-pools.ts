@@ -291,7 +291,7 @@ export function processPoolMetrics(
       }
     } catch (err) {
       console.error(`[dex-liquidity] Pool processing failed for pool=${pool.pool} chain=${pool.chain}:`, err);
-      throw err;
+      continue;
     }
   }
 

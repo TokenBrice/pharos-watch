@@ -350,7 +350,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
     incrementReason(excludedByReason, "invalid_units", normalized.skippedInvalidUnitCount);
   }
 
-  if (params.directApiPools.length === 0) {
+  if (directApiPools.length === 0) {
     return {
       directApiDedupSkippedByAddress,
       directApiDedupSkippedByDerivedIdentity,
@@ -364,7 +364,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
     };
   }
 
-  console.log(`[dex-liquidity] Fetched ${params.directApiPools.length} direct API pools total`);
+  console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
   const trackedDirectApiPools = directApiPools.filter((pool) =>
     pool.tokens.some(
       (token) =>

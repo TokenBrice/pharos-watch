@@ -44,6 +44,47 @@ describe("processPoolMetrics", () => {
     vi.restoreAllMocks();
   });
 
+  it("skips a malformed upstream pool and keeps processing later pools", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: "0xmalformed",
+          symbol: "USDC-USDC",
+          chain: null as unknown as string,
+          tvlUsd: 100_000,
+        }),
+        makePool({
+          pool: "0xvalid",
+          symbol: "USDC-USDC",
+          tvlUsd: 150_000,
+          count: 5,
+        }),
+      ],
+      new Set(["curve"]),
+      symbolToIds,
+      symbolToChainScopedIds,
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[dex-liquidity] Pool processing failed for pool=0xmalformed chain=null:",
+      expect.any(TypeError),
+    );
+    expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
+    expect(metrics.get("usdc-circle")?.topPools[0]?.poolId).toBe("ethereum:0xvalid");
+    expect(logSpy).toHaveBeenCalledWith("[dex-liquidity] Matched 1 stablecoins with DEX liquidity");
+  });
+
   it("does not apply Curve symbol fallback enrichment to non-Curve DeFiLlama rows", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
 

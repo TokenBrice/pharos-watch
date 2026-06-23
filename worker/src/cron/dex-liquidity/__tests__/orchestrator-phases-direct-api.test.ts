@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DexApiPool } from "../../../lib/dex-api-common";
 import { integrateDirectApiLiquidityPhase } from "../orchestrator-phases/direct-api";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 
 describe("integrateDirectApiLiquidityPhase", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("registers exact ids for sub-threshold direct API pools so staged duplicates cannot re-add them", async () => {
     const poolAddress = "0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
     const directApiPools: DexApiPool[] = [
@@ -87,6 +91,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
   });
 
   it("counts invalid direct API units before tracking and identity processing", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const directApiPools: DexApiPool[] = [
       {
         source: "meteora",
@@ -121,6 +126,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(result.directApiSkippedInvalidUnits).toBe(1);
     expect(result.directApiSkippedUntracked).toBe(0);
     expect(result.excludedByReason).toEqual({ invalid_units: 1 });
+    expect(logSpy).not.toHaveBeenCalledWith("[dex-liquidity] Fetched 1 direct API pools total");
   });
 
   it("counts tracked direct API pools filtered by the TVL threshold", async () => {
