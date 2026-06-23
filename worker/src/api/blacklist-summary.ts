@@ -43,6 +43,7 @@ import {
   computeBlacklistTrackedSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
 } from "@shared/lib/blacklist-active-records";
+import { logWorkerEvent } from "../lib/structured-log";
 
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 1;
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY = `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
@@ -681,7 +682,15 @@ export const handleBlacklistSummary = withErrorHandler(
     if (staleSnapshot) {
       execCtx?.waitUntil(
         materializeBlacklistSummarySnapshot(db, now).catch((error) => {
-          console.warn("[blacklist-summary] Background snapshot refresh failed:", error);
+          logWorkerEvent({
+            scope: "api",
+            level: "warn",
+            event: "blacklist_summary_snapshot_refresh_failed",
+            route: "blacklist-summary",
+            source: "producer-snapshot",
+            message: "Background blacklist-summary snapshot refresh failed",
+            error,
+          });
         }),
       );
       return jsonResponse(staleSnapshot.payload, blacklistSummaryHeaders(staleSnapshot.freshnessTs));
