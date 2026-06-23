@@ -77,12 +77,14 @@ function makeLeaseDb(seed?: {
   progress?: ProgressRow[];
   runs?: CronRunRow[];
   cache?: CacheRow[];
+  failSlotHeartbeatRuns?: number;
 }): TestLeaseDb {
   const leases = new Map<string, LeaseRow>();
   const slots = new Map<string, SlotExecutionRow>();
   const progressRows = new Map<string, ProgressRow>();
   const cronRuns: CronRunRow[] = [...(seed?.runs ?? [])];
   const cacheRows = new Map<string, CacheRow>();
+  let failSlotHeartbeatRuns = seed?.failSlotHeartbeatRuns ?? 0;
 
   for (const lease of seed?.leases ?? []) {
     leases.set(lease.job, lease);
@@ -298,6 +300,10 @@ function makeLeaseDb(seed?: {
 
           if (sql.includes("UPDATE cron_slot_executions") && sql.includes("SET updated_at = ?")) {
             const [updatedAt, slotKey, slotStartedAt, owner] = args as [number, string, number, string];
+            if (failSlotHeartbeatRuns > 0) {
+              failSlotHeartbeatRuns--;
+              throw new Error("slot heartbeat write failed");
+            }
             const key = makeSlotMapKey(slotKey, slotStartedAt);
             const existing = slots.get(key);
             if (!existing || existing.execution_owner !== owner || existing.state !== "running") {
@@ -1007,6 +1013,35 @@ describe("runScheduledSlotWithFence", () => {
     expect(slot?.metadata).toBe(JSON.stringify({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 }));
   });
 
+  it("uses a 35-minute default scheduled-slot stale window", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const thirtyMinutesAgo = now - 30 * 60;
+    const db = makeLeaseDb({
+      slots: [{
+        slot_key: "fourHourlyReserveSync",
+        slot_started_at: thirtyMinutesAgo,
+        state: "running",
+        result_status: null,
+        execution_owner: "owner-a",
+        started_at: thirtyMinutesAgo,
+        finished_at: null,
+        updated_at: thirtyMinutesAgo,
+        metadata: null,
+      }],
+    });
+    const fn = vi.fn(async () => undefined);
+
+    const result = await runScheduledSlotWithFence(
+      db,
+      "fourHourlyReserveSync",
+      fn,
+      { slotStartedAt: thirtyMinutesAgo, owner: "owner-b" },
+    );
+
+    expect(result.status).toBe("skipped_running");
+    expect(fn).not.toHaveBeenCalled();
+  });
+
   it("claims a new slot without sweeping stale previous slots", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
@@ -1357,5 +1392,46 @@ describe("runScheduledSlotWithFence", () => {
 
     finish?.({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
     await runPromise;
+  });
+
+  it("records slot heartbeat failures in final slot metadata", async () => {
+    const slotStartedAt = Math.floor(Date.now() / 1000);
+    const db = makeLeaseDb({ failSlotHeartbeatRuns: 1 });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let finish: ((value: { jobsErrored: number; jobsDegraded: number; jobsSkipped: number }) => void) | undefined;
+    const fn = vi.fn(() =>
+      new Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number }>((resolve) => {
+        finish = resolve;
+      }),
+    );
+
+    const runPromise = runScheduledSlotWithFence(
+      db,
+      "daily0800Utc",
+      fn,
+      { slotStartedAt, owner: "owner-heartbeat-failure", heartbeatSec: 15 },
+    );
+
+    await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.waitFor(() => expect(warnSpy).toHaveBeenCalledWith(
+      `[cron-slot] Failed to heartbeat slot daily0800Utc@${slotStartedAt}:`,
+      expect.any(Error),
+    ));
+
+    finish?.({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
+    const result = await runPromise;
+
+    expect(result.metadata).toMatchObject({
+      jobsErrored: 0,
+      jobsDegraded: 0,
+      jobsSkipped: 0,
+      slotHeartbeatFailures: 1,
+    });
+    const slot = db.getSlot("daily0800Utc", slotStartedAt);
+    expect(slot?.metadata ? JSON.parse(slot.metadata) : null).toMatchObject({
+      slotHeartbeatFailures: 1,
+    });
+    warnSpy.mockRestore();
   });
 });

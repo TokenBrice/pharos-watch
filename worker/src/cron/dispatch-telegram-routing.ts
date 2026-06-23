@@ -19,6 +19,7 @@ import {
   BURST_EVENT_THRESHOLD,
   BURST_MARKER_TTL_SEC,
   TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
+  TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
 } from "../lib/telegram-constants";
 import type {
   PerAlertTypeDelivery,
@@ -479,8 +480,9 @@ export async function deliverFreshAlerts(
   dispatchStartedAtMs: number,
   signal?: AbortSignal,
 ): Promise<FreshSendOutcome> {
+  const softDeadlineAtMs = dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS;
   const sendResults = sendList.length > 0
-    ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal)
+    ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal, { softDeadlineAtMs })
     : [];
   const blockedChats = new Set<string>();
   const retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }> = [];

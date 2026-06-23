@@ -565,7 +565,7 @@ If a depeg closes with a recovery reason and reopens for the same coin between t
 - Long messages are split with `splitMessage(html, 4000)`.
 - `sendBatch()` posts in parallel batches of 4 (staying under Workers 6-connection limit).
 - Hard cap: `3,600 Telegram message attempts per dispatch run`.
-- `dispatch-telegram-alerts` has a 14-minute app-level timeout and 30-second lease heartbeats, leaving room under Cloudflare's 15-minute scheduled-event ceiling for logging and slot cleanup.
+- `dispatch-telegram-alerts` has a 14-minute app-level hard timeout and 30-second lease heartbeats; pending-drain and fresh-send loops stop starting Telegram batches after a 4-minute soft deadline, releasing unattempted pending claims or queueing the untouched fresh tail so slow Bot API runs yield the next 5-minute trigger interval.
 - Discovery dual-writes durable `telegram_alert_jobs` / `telegram_alert_job_targets`
   manifests before authoritative sends so rollout stages can audit target counts,
   dedupe keys, and cursor order without changing the sender lane.
@@ -677,7 +677,7 @@ The simulated scenarios are:
 - admin broadcast to deliverable watchers
 - Telegram 429 storm with a 15-minute backoff window
 
-The script reports target chats, message chunks, pending enqueues, estimated drain time, per-invocation CPU, and rough D1 read/write statement counts using the current sender budget: 3,600 fresh attempts per run, 900 pending drain attempts per run, 3,664 pre-format chunk budget (`TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE`), 5-minute cron cadence, 14-minute dispatch timeout, Telegram's ordinary 30 msg/sec broadcast guidance, a conservative p95 send-latency/D1-write pacing model, a format/send CPU model capped against `worker/wrangler.toml` `cpu_ms`, and 1-hour risk-alert pending TTL. It also replays the Telegram table migrations into local SQLite and runs `EXPLAIN QUERY PLAN` checks for fan-out, pending drain, pulse/status aggregates, and the current active-watcher history fallback. Direct/global fan-out and pending drain are index-gated; preset and fallback aggregate scans are marked `REVIEW`.
+The script reports target chats, message chunks, pending enqueues, estimated drain time, per-invocation CPU, and rough D1 read/write statement counts using the current sender budget: 3,600 fresh attempts per run, 900 pending drain attempts per run, 3,664 pre-format chunk budget (`TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE`), 5-minute cron cadence, 14-minute dispatch hard timeout with a 4-minute send-loop soft deadline, Telegram's ordinary 30 msg/sec broadcast guidance, a conservative p95 send-latency/D1-write pacing model, a format/send CPU model capped against `worker/wrangler.toml` `cpu_ms`, and 1-hour risk-alert pending TTL. It also replays the Telegram table migrations into local SQLite and runs `EXPLAIN QUERY PLAN` checks for fan-out, pending drain, pulse/status aggregates, and the current active-watcher history fallback. Direct/global fan-out and pending drain are index-gated; preset and fallback aggregate scans are marked `REVIEW`.
 
 The package-level `npm run check:telegram-load` command is blocking: it passes `--enforce-target-slo` and fails when the 5,000-watcher target misses the normal under-15-minute risk-alert SLO. For an advisory local report that only fails critical query-plan regressions, run `npx tsx scripts/ci/check-telegram-load.ts` directly without `--enforce-target-slo`.
 

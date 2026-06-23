@@ -48,6 +48,7 @@ import { pruneAlreadyTerminalSubscribers } from "./dispatch-telegram-terminal-ta
 import { logTelegramEvent } from "../lib/telegram-log";
 import {
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
+  TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
 } from "../lib/telegram-constants";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
@@ -171,6 +172,7 @@ interface EventlessFastPathContext {
   pendingCapacityBefore: PendingCapacitySnapshot;
   overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
+  dispatchStartedAtMs: number;
   chatsWithActiveSnooze: number;
   signal?: AbortSignal;
   sharedState?: TelegramDispatchSharedState;
@@ -197,6 +199,7 @@ interface CircuitOpenQueuePathContext {
   db: D1Database;
   botToken: string;
   nowSec: number;
+  dispatchStartedAtMs: number;
   signal?: AbortSignal;
   sharedState?: TelegramDispatchSharedState;
   reportProgress?: CronProgressReporter;
@@ -263,6 +266,7 @@ async function executeCircuitOpenQueuePath({
   db,
   botToken,
   nowSec,
+  dispatchStartedAtMs,
   signal,
   sharedState,
   reportProgress,
@@ -282,7 +286,9 @@ async function executeCircuitOpenQueuePath({
   });
 
   const drainResult = pendingCapacityBefore.due > 0
-    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal)
+    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal, {
+      softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+    })
     : emptyDrainResult();
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
@@ -360,6 +366,7 @@ async function executeEventlessFastPath({
   pendingCapacityBefore,
   overflowBacklog,
   nowSec,
+  dispatchStartedAtMs,
   chatsWithActiveSnooze,
   signal,
   sharedState,
@@ -377,7 +384,9 @@ async function executeEventlessFastPath({
     },
   });
   const drainResult = pendingCapacityBefore.due > 0
-    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal)
+    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal, {
+      softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+    })
     : emptyDrainResult();
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
@@ -708,7 +717,10 @@ async function executeFullFanoutPath({
     botToken,
     TELEGRAM_PENDING_DRAIN_BUDGET,
     signal,
-    { maxPriority: drainOnlyRiskPriority },
+    {
+      maxPriority: drainOnlyRiskPriority,
+      softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+    },
   );
 
   const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
@@ -905,6 +917,7 @@ export async function dispatchTelegramAlerts(
     itemsDone: 0,
     itemsTotal: 1,
   });
+  const dispatchStartedAtMs = Date.now();
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
     const nowSec = Math.floor(Date.now() / 1000);
@@ -912,6 +925,7 @@ export async function dispatchTelegramAlerts(
       db,
       botToken,
       nowSec,
+      dispatchStartedAtMs,
       signal,
       sharedState,
       reportProgress,
@@ -929,8 +943,6 @@ export async function dispatchTelegramAlerts(
     });
     return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
   }
-
-  const dispatchStartedAtMs = Date.now();
 
   try {
     throwIfAborted(signal);
@@ -1077,6 +1089,7 @@ export async function dispatchTelegramAlerts(
         pendingCapacityBefore,
         overflowBacklog,
         nowSec,
+        dispatchStartedAtMs,
         chatsWithActiveSnooze,
         signal,
         sharedState,

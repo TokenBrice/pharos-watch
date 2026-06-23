@@ -67,6 +67,7 @@ describe("Telegram load simulation", () => {
 
     expect(report.assumptions.freshAttemptsPerRun).toBe(3_600);
     expect(report.assumptions.pendingDrainAttemptsPerRun).toBe(900);
+    expect(report.assumptions.sendLoopSoftDeadlineSeconds).toBe(4 * 60);
     expect(requiredScenarios.every((scenario) => scenario.sloStatus !== "breach")).toBe(true);
   });
 

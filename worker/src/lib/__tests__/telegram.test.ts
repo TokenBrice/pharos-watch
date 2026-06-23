@@ -518,4 +518,21 @@ describe("sendBatch", () => {
     expect(results).toHaveLength(2);
     expect(results.every((result) => result.retryable && result.errorClass === "timeout")).toBe(true);
   });
+
+  it("marks the untouched tail retryable when the soft deadline has elapsed", async () => {
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const results = await sendBatch([
+      { chatId: "a", html: "hi", disableNotification: false },
+      { chatId: "b", html: "hi", disableNotification: false },
+    ], "bot-token", 2, undefined, { softDeadlineAtMs: Date.now() - 1 });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(results).toHaveLength(2);
+    expect(results.every((result) =>
+      result.retryable &&
+      result.errorClass === "timeout" &&
+      result.attempted === false
+    )).toBe(true);
+  });
 });

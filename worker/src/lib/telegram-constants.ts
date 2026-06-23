@@ -87,6 +87,13 @@ export const TELEGRAM_ALERT_TTL_SEC = {
 export const TELEGRAM_DISPATCH_INTERVAL_SEC = 5 * 60;
 
 /**
+ * Fresh-send soft deadline for one dispatch invocation. The outer cron lease is
+ * longer, but fresh Telegram batches should stop early enough that the next
+ * five-minute lane is not blocked by slow Bot API responses.
+ */
+export const TELEGRAM_DISPATCH_SOFT_DEADLINE_MS = 4 * 60_000;
+
+/**
  * Upper bound on message attempts per dispatcher run.
  *
  * This keeps the same `SEND_BATCH_SIZE = 4` connection footprint but allows

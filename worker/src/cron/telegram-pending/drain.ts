@@ -47,6 +47,11 @@ import { logTelegramEvent } from "../../lib/telegram-log";
 const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
 
+interface PendingDrainOptions {
+  maxPriority?: number | null;
+  softDeadlineAtMs?: number | null;
+}
+
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
   return row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec;
 }
@@ -399,7 +404,7 @@ export async function drainPendingQueue(
   botToken: string,
   limit: number,
   signal?: AbortSignal,
-  options: { maxPriority?: number | null } = {},
+  options: PendingDrainOptions = {},
 ): Promise<PendingDrainResult> {
   if (limit <= 0) return emptyDrainResult();
   const nowSec = Math.floor(Date.now() / 1000);
@@ -445,9 +450,13 @@ export async function drainPendingQueue(
   const disabledChatIds = new Set<string>();
   const chatRateLimitedThisLoop = new Map<string, { notBeforeAt: number }>();
   const distinctRateLimitedChats = new Set<string>();
+  const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
+    ? options.softDeadlineAtMs
+    : null;
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
     if (signal?.aborted || globalRateLimited) break;
+    if (softDeadlineAtMs != null && Date.now() >= softDeadlineAtMs) break;
     const skippedRateLimitResults: PendingSendResult[] = [];
     const batch = pending.slice(i, i + SEND_BATCH_SIZE).filter((row) => {
       if (!isPendingRowSnoozed(row, nowSec)) return true;

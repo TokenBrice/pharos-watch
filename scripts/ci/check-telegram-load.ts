@@ -128,6 +128,7 @@ export interface TelegramLoadCheckReport {
     pendingDrainAttemptsPerRun: number;
     cronIntervalSeconds: number;
     dispatchTimeoutSeconds: number;
+    sendLoopSoftDeadlineSeconds: number;
     telegramBroadcastMessagesPerSecond: number;
     telegramP95SendLatencyMs: number;
     effectiveSendMessagesPerSecond: number;
@@ -154,6 +155,7 @@ const FRESH_ATTEMPTS_PER_RUN = 3_600;
 const PENDING_DRAIN_ATTEMPTS_PER_RUN = Math.floor(FRESH_ATTEMPTS_PER_RUN / 4);
 const SEND_BATCH_SIZE = 4;
 const DISPATCH_TIMEOUT_SECONDS = 14 * 60;
+const SEND_LOOP_SOFT_DEADLINE_SECONDS = 4 * 60;
 const TELEGRAM_BROADCAST_MESSAGES_PER_SECOND = 30;
 const TELEGRAM_P95_SEND_LATENCY_MS = 250;
 const D1_WRITE_MS_PER_MESSAGE = 20;
@@ -1006,6 +1008,7 @@ export function buildTelegramLoadCheckReport(options: {
       pendingDrainAttemptsPerRun: PENDING_DRAIN_ATTEMPTS_PER_RUN,
       cronIntervalSeconds: CRON_INTERVAL_SECONDS,
       dispatchTimeoutSeconds: DISPATCH_TIMEOUT_SECONDS,
+      sendLoopSoftDeadlineSeconds: SEND_LOOP_SOFT_DEADLINE_SECONDS,
       telegramBroadcastMessagesPerSecond: TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
       telegramP95SendLatencyMs: TELEGRAM_P95_SEND_LATENCY_MS,
       effectiveSendMessagesPerSecond: Math.round(EFFECTIVE_SEND_MESSAGES_PER_SECOND * 10) / 10,
@@ -1049,7 +1052,7 @@ function parseTargets(args: string[]): number[] | null {
 function printReport(report: TelegramLoadCheckReport): void {
   console.log("Synthetic Telegram load simulation");
   console.log(
-    `Assumptions: ${report.assumptions.freshAttemptsPerRun} fresh attempts/run, ${report.assumptions.pendingDrainAttemptsPerRun} pending drain attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.dispatchTimeoutSeconds / 60}m dispatch timeout, ${report.assumptions.effectiveSendMessagesPerSecond} effective msg/s, ${report.assumptions.pendingTtlSeconds / 60}m risk pending TTL.`,
+    `Assumptions: ${report.assumptions.freshAttemptsPerRun} fresh attempts/run, ${report.assumptions.pendingDrainAttemptsPerRun} pending drain attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.dispatchTimeoutSeconds / 60}m dispatch timeout, ${report.assumptions.sendLoopSoftDeadlineSeconds / 60}m send-loop soft deadline, ${report.assumptions.effectiveSendMessagesPerSecond} effective msg/s, ${report.assumptions.pendingTtlSeconds / 60}m risk pending TTL.`,
   );
   console.log(
     `CPU budget: ${report.assumptions.dispatchCpuMs.toLocaleString()}ms cap, ceiling ${report.assumptions.cpuBudgetCeilingMs.toLocaleString()}ms (${report.assumptions.cpuBudgetSafetyFraction}x), ${report.assumptions.formatCpuMsPerChat}ms/format-chat, ${report.assumptions.sendCpuMsPerMessage}ms/sent-chunk (format-count capped at fresh budget post-C102).`,

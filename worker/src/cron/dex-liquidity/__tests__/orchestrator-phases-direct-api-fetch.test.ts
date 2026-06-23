@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeDexApiFetchResult } from "../../../lib/dex-api-common";
+import { getCircuitRecord } from "../../../lib/circuit-breaker";
 import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
 import { runDirectApiFetchPhase } from "../orchestrator-phases/direct-api";
 
@@ -39,22 +40,25 @@ vi.mock("../../../lib/circuit-breaker", () => {
     recordOutcomeSafe: vi.fn(async (_db: D1Database, source: string, success: boolean) => {
       const current = cloneRecord(circuitStore.records.get(source) ?? defaultRecord());
       if (success) {
-        circuitStore.records.set(source, {
+        const after = {
           ...current,
           state: "closed",
           consecutiveFailures: 0,
           lastSuccessAt: circuitStore.nowSec,
           openedAt: null,
-        });
-        return;
+        } satisfies MockCircuitRecord;
+        circuitStore.records.set(source, after);
+        return { before: current, after: cloneRecord(after) };
       }
-      circuitStore.records.set(source, {
+      const after = {
         ...current,
         state: "open",
         consecutiveFailures: current.consecutiveFailures + 1,
         lastFailureAt: circuitStore.nowSec,
         openedAt: circuitStore.nowSec,
-      });
+      } satisfies MockCircuitRecord;
+      circuitStore.records.set(source, after);
+      return { before: current, after: cloneRecord(after) };
     }),
   };
 });
@@ -120,5 +124,6 @@ describe("runDirectApiFetchPhase", () => {
         at: 1_800_000_000,
       },
     ]);
+    expect(getCircuitRecord).not.toHaveBeenCalled();
   });
 });

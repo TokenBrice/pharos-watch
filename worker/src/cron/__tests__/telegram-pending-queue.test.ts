@@ -416,6 +416,39 @@ describe("resetSubscriberBlockCount", () => {
 });
 
 describe("drainPendingQueue", () => {
+  it("releases claimed rows without sending when the soft deadline has elapsed", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    insertPendingSqlite(sqlite, {
+      id: 1,
+      chatId: "deadline-chat",
+      html: "<b>Deadline</b>",
+      createdAt: now - 60,
+      expiresAt: now + 600,
+      priority: TELEGRAM_PENDING_PRIORITY.depeg,
+      sourceType: "risk_alert",
+      alertType: "depeg",
+      dedupeKey: "deadline-key",
+    });
+
+    const result = await drainPendingQueue(db, "bot-token", 10, undefined, {
+      softDeadlineAtMs: Date.now() - 1,
+    });
+
+    expect(result.attempted).toBe(0);
+    expect(result.sent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+    expect(
+      sqlite
+        .prepare("SELECT processing_owner, processing_started_at, processing_expires_at FROM telegram_pending_alerts WHERE id = 1")
+        .get(),
+    ).toEqual({
+      processing_owner: null,
+      processing_started_at: null,
+      processing_expires_at: null,
+    });
+  });
+
   it("lets only one owner deliver a row when two drains race the same claim", async () => {
     mockSendToChat.mockResolvedValue({
       ok: true,

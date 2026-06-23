@@ -68,7 +68,7 @@ const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
 const { deliverTelegramSubscriberQueue } = await import("../dispatch-telegram-delivery");
 const { pruneOverflowPlanBacklogForChat } = await import("../dispatch-telegram-overflow");
 const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending");
-const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE } = await import(
+const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE, TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } = await import(
   "../../lib/telegram-constants"
 );
 
@@ -259,6 +259,64 @@ describe("dispatchTelegramAlerts", () => {
     expect(result.subscribersNotified).toBe(1);
     const sent = mockSendBatch.mock.calls[0]?.[0] as Array<{ html: string; chunkIndex?: number }>;
     expect(sent).toEqual([expect.objectContaining({ html: "chunk-1", chunkIndex: 1 })]);
+  });
+
+  it("passes a five-minute-lane soft deadline to fresh batch sends", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const dispatchStartedAtMs = Date.now();
+    mockSendBatch.mockResolvedValue([
+      {
+        chatId: "chat-1",
+        ok: true,
+        blocked: false,
+        retryable: false,
+        permanentFailure: false,
+        statusCode: 200,
+        errorClass: null,
+        delivery: "sent",
+        retryAfterSec: null,
+        attempted: true,
+      },
+    ]);
+    const db = mockD1([
+      { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE telegram_alert_job_targets", rows: [], runMeta: { changes: 1 } },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [], runMeta: { changes: 0 } },
+    ]);
+
+    await deliverTelegramSubscriberQueue({
+      db,
+      subscriberQueue: [
+        {
+          chatId: "chat-1",
+          lastActiveAt: now,
+          alerts: {
+            dews: [],
+            depegTriggered: [],
+            depegResolved: [],
+            depegWorsening: [],
+            safety: [],
+            launch: [],
+            reserve: [],
+          },
+          canonicalHtml: "canonical-body",
+          chunks: ["chunk-0"],
+          disableNotification: false,
+          alertType: "depeg",
+        },
+      ],
+      botToken: "bot-token",
+      drainResult: emptyDrainResult(),
+      maxMessagesPerRun: 10,
+      nowSec: now,
+      chatsInBackoff: new Map(),
+      globalBackoffUntil: null,
+      dispatchStartedAtMs,
+    });
+
+    expect(mockSendBatch.mock.calls[0]?.[4]).toEqual({
+      softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+    });
   });
 
   it("uses existing pending attempts when re-enqueuing a retryable fresh chunk", async () => {

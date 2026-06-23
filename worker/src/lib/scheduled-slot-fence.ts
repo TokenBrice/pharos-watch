@@ -23,7 +23,7 @@ export interface ScheduledSlotExecutionResult {
   metadata?: unknown;
 }
 
-const SLOT_EXECUTION_RUNNING_STALE_SEC = 20 * 60;
+const SLOT_EXECUTION_RUNNING_STALE_SEC = 35 * 60;
 const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
 
 type SlotExecutionRow = {
@@ -530,6 +530,23 @@ async function finishScheduledSlotExecution(
   );
 }
 
+function attachSlotHeartbeatFailures<T>(
+  metadata: T,
+  heartbeatFailures: number,
+): T | { slotHeartbeatFailures: number } | { metadata: T; slotHeartbeatFailures: number } {
+  if (heartbeatFailures <= 0) return metadata;
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    return {
+      ...metadata,
+      slotHeartbeatFailures: heartbeatFailures,
+    };
+  }
+  if (metadata == null) {
+    return { slotHeartbeatFailures: heartbeatFailures };
+  }
+  return { metadata, slotHeartbeatFailures: heartbeatFailures };
+}
+
 export async function runScheduledSlotWithFence(
   db: D1Database,
   slotKey: string,
@@ -558,14 +575,17 @@ export async function runScheduledSlotWithFence(
     };
   }
 
+  let heartbeatFailures = 0;
   const timer = setInterval(() => {
     void touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner).catch((err) => {
+      heartbeatFailures++;
       console.warn(`[cron-slot] Failed to heartbeat slot ${slotKey}@${opts.slotStartedAt}:`, err);
     });
   }, heartbeatSec * 1000);
 
   try {
     const metadata = await fn();
+    const slotMetadata = attachSlotHeartbeatFailures(metadata, heartbeatFailures);
     const resultStatus =
       metadata && metadata.jobsErrored > 0
         ? "error"
@@ -578,7 +598,7 @@ export async function runScheduledSlotWithFence(
       opts.slotStartedAt,
       owner,
       resultStatus,
-      metadata ? JSON.stringify(metadata) : null,
+      slotMetadata ? JSON.stringify(slotMetadata) : null,
     );
     return {
       status: "ok",
@@ -586,7 +606,7 @@ export async function runScheduledSlotWithFence(
       slotKey,
       slotStartedAt: opts.slotStartedAt,
       owner,
-      metadata,
+      metadata: slotMetadata,
     };
   } catch (err) {
     await finishScheduledSlotExecution(
@@ -597,6 +617,7 @@ export async function runScheduledSlotWithFence(
       "error",
       JSON.stringify({
         error: toErrorMessage(err),
+        ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
       }),
     ).catch((finishErr) => {
       console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);

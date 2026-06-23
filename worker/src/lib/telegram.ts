@@ -154,6 +154,10 @@ export interface SendToChatResult {
   rateLimitScope?: "chat" | "global";
 }
 
+export interface SendBatchOptions {
+  softDeadlineAtMs?: number;
+}
+
 function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
   const lower = responseBody.toLowerCase();
   if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
@@ -418,12 +422,20 @@ export async function sendBatch(
   botToken: string,
   batchSize: number,
   signal?: AbortSignal,
+  options: SendBatchOptions = {},
 ): Promise<BatchResult[]> {
   const results: BatchResult[] = [];
   const chatRateLimitedUntil = new Map<string, number | null>();
   const distinctRateLimitedChats = new Set<string>();
+  const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
+    ? options.softDeadlineAtMs
+    : null;
   for (let i = 0; i < messages.length; i += batchSize) {
     if (signal?.aborted) {
+      results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
+      break;
+    }
+    if (softDeadlineAtMs != null && Date.now() >= softDeadlineAtMs) {
       results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
       break;
     }
