@@ -43,7 +43,6 @@ import {
   computeBlacklistTrackedSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
 } from "@shared/lib/blacklist-active-records";
-import { logWorkerEvent } from "../lib/structured-log";
 
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 1;
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY = `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
@@ -671,7 +670,7 @@ function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
 
 export const handleBlacklistSummary = withErrorHandler(
   "blacklist-summary",
-  async (db: D1Database, execCtx?: ExecutionContext): Promise<Response> => {
+  async (db: D1Database, _execCtx?: ExecutionContext): Promise<Response> => {
     const now = Math.floor(Date.now() / 1000);
     const snapshot = await readBlacklistSummarySnapshot(db, now);
     if (snapshot) {
@@ -680,19 +679,6 @@ export const handleBlacklistSummary = withErrorHandler(
 
     const staleSnapshot = await readBlacklistSummarySnapshot(db, now, { allowStale: true });
     if (staleSnapshot) {
-      execCtx?.waitUntil(
-        materializeBlacklistSummarySnapshot(db, now).catch((error) => {
-          logWorkerEvent({
-            scope: "api",
-            level: "warn",
-            event: "blacklist_summary_snapshot_refresh_failed",
-            route: "blacklist-summary",
-            source: "producer-snapshot",
-            message: "Background blacklist-summary snapshot refresh failed",
-            error,
-          });
-        }),
-      );
       return jsonResponse(staleSnapshot.payload, blacklistSummaryHeaders(staleSnapshot.freshnessTs));
     }
 
