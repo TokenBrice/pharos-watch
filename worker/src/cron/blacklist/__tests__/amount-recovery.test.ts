@@ -290,6 +290,50 @@ describe("enrichRowBalances", () => {
     expect(update?.binds).not.toContain("drpc");
   });
 
+  it("marks exhausted legacy derived-zero rows permanently unavailable when config cannot be resolved", async () => {
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [{
+          id: "row-1",
+          chain_id: "ethereum",
+          event_type: "blacklist",
+          address: "0x1111111111111111111111111111111111111111",
+          block_number: 100,
+          stablecoin: "UNKNOWN",
+          tx_hash: "0xabc",
+          config_key: null,
+          contract_address: null,
+          amount_attempt_count: 2,
+          amount_last_attempted_at: null,
+          amount_last_error_class: null,
+          amount_last_provider: null,
+          amount_source: "derived",
+        }],
+      },
+    ]);
+
+    await backfillAmounts(
+      db,
+      null,
+      null,
+      async <T>(fn: () => Promise<T>) => fn(),
+      makeRunBudget({ subrequestBudget: { count: 0, limit: 10 } }),
+    );
+
+    const update = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE blacklist_events")
+      && entry.sql.includes("amount_status = ?"),
+    );
+    expect(update?.binds).toEqual([
+      expect.any(Number),
+      "config_missing",
+      "none",
+      "permanently_unavailable",
+      "row-1",
+    ]);
+  });
+
   it("stops retrying exhausted legacy derived-zero rows after the final failed recovery attempt", async () => {
     const db = mockD1([
       {
