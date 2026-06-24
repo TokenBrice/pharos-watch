@@ -33,6 +33,7 @@ import {
   createProviderExecutionContext,
   createProviderExecutionContextForJob,
   providerJson,
+  providerTextBounded,
   withProviderExecution,
   type ProviderExecutionPolicy,
 } from "../provider-execution";
@@ -46,6 +47,17 @@ function makePolicy(overrides: Partial<ProviderExecutionPolicy<string>> = {}): P
     responseBodyPolicy: "cancel",
     ...overrides,
   };
+}
+
+function neverEndingResponse(prefix = ""): Response {
+  const encoder = new TextEncoder();
+  return new Response(new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (prefix) {
+        controller.enqueue(encoder.encode(prefix));
+      }
+    },
+  }));
 }
 
 describe("provider-execution", () => {
@@ -260,6 +272,80 @@ describe("provider-execution", () => {
       false,
       undefined,
     );
+  });
+
+  it("treats providerJson body timeouts as provider execution failures", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("fetch", vi.fn(async () => neverEndingResponse("{")));
+      const context = createProviderExecutionContext({
+        laneId: "unit-lane",
+        laneMaxConcurrent: 1,
+      });
+
+      const resultPromise = providerJson(
+        context,
+        {
+          providerId: "json-provider",
+          maxConcurrent: 1,
+          timeoutMs: 5,
+          responseBodyPolicy: "consume",
+        },
+        "https://example.com/provider.json",
+      );
+
+      const expectation = expect(resultPromise).rejects.toMatchObject({
+        name: "ProviderExecutionError",
+        attempt: {
+          providerId: "json-provider",
+          timedOut: true,
+          outcome: "failure",
+          httpStatus: 200,
+        },
+      });
+      await vi.advanceTimersByTimeAsync(5);
+      await expectation;
+      expect(context.snapshot().lane.inUse).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("treats providerTextBounded body timeouts as provider execution failures", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("fetch", vi.fn(async () => neverEndingResponse("partial")));
+      const context = createProviderExecutionContext({
+        laneId: "unit-lane",
+        laneMaxConcurrent: 1,
+      });
+
+      const resultPromise = providerTextBounded(
+        context,
+        {
+          providerId: "text-provider",
+          maxConcurrent: 1,
+          timeoutMs: 5,
+          responseBodyPolicy: "consume",
+        },
+        "https://example.com/provider.txt",
+      );
+
+      const expectation = expect(resultPromise).rejects.toMatchObject({
+        name: "ProviderExecutionError",
+        attempt: {
+          providerId: "text-provider",
+          timedOut: true,
+          outcome: "failure",
+          httpStatus: 200,
+        },
+      });
+      await vi.advanceTimersByTimeAsync(5);
+      await expectation;
+      expect(context.snapshot().lane.inUse).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("derives scheduled provider context limits from cron connection metadata", () => {

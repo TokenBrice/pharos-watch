@@ -13,7 +13,18 @@ vi.mock("../abort", () => ({
   throwIfAborted: throwIfAbortedMock,
 }));
 
-import { fetchWithRetry } from "../fetch-retry";
+import { fetchJsonWithRetry, fetchTextWithRetry, fetchWithRetry } from "../fetch-retry";
+
+function neverEndingResponse(prefix = ""): Response {
+  const encoder = new TextEncoder();
+  return new Response(new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (prefix) {
+        controller.enqueue(encoder.encode(prefix));
+      }
+    },
+  }));
+}
 
 describe("fetchWithRetry", () => {
   beforeEach(() => {
@@ -198,6 +209,62 @@ describe("fetchWithRetry", () => {
       expect(sleepWithSignalMock).toHaveBeenCalledWith(500, undefined);
     } finally {
       randomSpy.mockRestore();
+    }
+  });
+
+  it("keeps the per-attempt timeout active while reading JSON bodies", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const fetchMock = vi.fn().mockResolvedValue(neverEndingResponse("{"));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const resultPromise = fetchJsonWithRetry(
+        "https://example.com/slow.json",
+        undefined,
+        0,
+        { timeoutMs: 5 },
+      );
+
+      const expectation = expect(resultPromise).resolves.toBeNull();
+      await vi.advanceTimersByTimeAsync(5);
+      await expectation;
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[fetch-retry] https://example.com/slow.json failed (attempt 1/1):",
+        expect.objectContaining({ name: "TimeoutError" }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the per-attempt timeout active while reading text bodies", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const fetchMock = vi.fn().mockResolvedValue(neverEndingResponse("partial"));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const resultPromise = fetchTextWithRetry(
+        "https://example.com/slow.txt",
+        undefined,
+        0,
+        { timeoutMs: 5 },
+      );
+
+      const expectation = expect(resultPromise).resolves.toBeNull();
+      await vi.advanceTimersByTimeAsync(5);
+      await expectation;
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[fetch-retry] https://example.com/slow.txt failed (attempt 1/1):",
+        expect.objectContaining({ name: "TimeoutError" }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
     }
   });
 });

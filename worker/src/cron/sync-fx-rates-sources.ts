@@ -1,6 +1,6 @@
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { USER_AGENT } from "../lib/constants";
-import { fetchWithRetry } from "../lib/fetch-retry";
+import { fetchJsonWithRetry, fetchWithRetry } from "../lib/fetch-retry";
 import type {
   ExchangeRateApiPayload,
   SecondaryCurrencyCandidate,
@@ -106,22 +106,21 @@ export async function loadFrankfurterPayload(
   signal?: AbortSignal,
 ): Promise<FrankfurterLoadResult> {
   const url = `https://api.frankfurter.dev/v1/latest?base=USD&symbols=${primaryCurrencies.join(",")}`;
-  const res = await fetchWithRetry(url, {
+  const result = await fetchJsonWithRetry(url, {
     headers: { "User-Agent": USER_AGENT },
     signal,
   });
-  if (!res || !res.ok) {
+  if (!result || !result.response.ok) {
     return {
       ok: false,
       kind: "unavailable",
-      statusCode: res?.status ?? null,
+      statusCode: result?.response.status ?? null,
     };
   }
 
-  const payload = await res.json();
   const validation = validatePayloadWithSchema(
     FrankfurterResponseSchema,
-    payload,
+    result.body,
     "sync-fx-rates:frankfurter",
   );
   if (!validation.ok) {

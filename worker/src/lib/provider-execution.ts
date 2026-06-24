@@ -7,7 +7,12 @@ import {
   type CircuitOutcomeRecord,
 } from "./circuit-breaker";
 import { abortError, throwIfAborted } from "./abort";
-import { cancelResponseBodyQuietly, drainResponseBody } from "./response-body";
+import {
+  cancelResponseBodyQuietly,
+  drainResponseBody,
+  readResponseJsonWithSignal,
+  readResponseTextBoundedWithSignal,
+} from "./response-body";
 
 const PROVIDER_EXECUTION_PLATFORM_CONNECTION_LIMIT = CRON_CONNECTION_BUDGET.maxPerTrigger;
 const PROVIDER_EXECUTION_HEADROOM_CONNECTION_LIMIT = CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt;
@@ -506,35 +511,8 @@ export async function providerJson<TResult>(
       await cancelOrDrainResponse(response, policy.responseBodyPolicy);
       throw new ProviderHttpError(policy.providerId, response.status);
     }
-    return await response.json() as TResult;
+    return await readResponseJsonWithSignal<TResult>(response, requestSignal);
   });
-}
-
-async function readResponseTextBounded(response: Response, maxBytes: number): Promise<string> {
-  if (!response.body) return "";
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let total = 0;
-  let text = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
-    const remaining = maxBytes - total;
-    if (remaining <= 0) {
-      await reader.cancel();
-      break;
-    }
-    const slice = chunk.byteLength > remaining ? chunk.slice(0, remaining) : chunk;
-    total += slice.byteLength;
-    text += decoder.decode(slice, { stream: total < maxBytes });
-    if (chunk.byteLength > remaining || total >= maxBytes) {
-      await reader.cancel();
-      break;
-    }
-  }
-  text += decoder.decode();
-  return text;
 }
 
 export async function providerTextBounded(
@@ -550,7 +528,7 @@ export async function providerTextBounded(
       : signal;
     const response = await fetch(input, { ...init, signal: requestSignal });
     attempt.httpStatus = response.status;
-    const text = await readResponseTextBounded(response, maxBytes);
+    const text = await readResponseTextBoundedWithSignal(response, maxBytes, requestSignal);
     if (!response.ok) {
       throw new ProviderHttpError(policy.providerId, response.status, text);
     }

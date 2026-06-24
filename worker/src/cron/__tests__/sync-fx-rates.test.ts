@@ -8,6 +8,13 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: async (url: string, opts?: RequestInit) => {
     return fetch(url, opts);
   },
+  fetchJsonWithRetry: async (url: string, opts?: RequestInit) => {
+    const response = await fetch(url, opts);
+    return {
+      response,
+      body: await response.json(),
+    };
+  },
 }));
 
 import { syncFxRates } from "../sync-fx-rates";
