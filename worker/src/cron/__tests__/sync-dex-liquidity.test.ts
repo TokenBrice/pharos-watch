@@ -441,7 +441,7 @@ describe("syncDexLiquidity", () => {
 
     await syncDexLiquidity(db, "graph-key", undefined, undefined, chainRpcs);
 
-    expect(fetchFluidPools).toHaveBeenCalledWith(undefined, chainRpcs);
+    expect(fetchFluidPools).toHaveBeenCalledWith(expect.any(AbortSignal), chainRpcs);
   });
 
   it("threads tracked stablecoin cache prices into direct API conversion and observations", async () => {
