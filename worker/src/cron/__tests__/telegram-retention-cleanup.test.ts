@@ -69,13 +69,9 @@ function createStubDb(state: StubState): D1Database {
     return Number.isFinite(limit) ? limit : Number.POSITIVE_INFINITY;
   }
 
-  function deleteMatching<T>(
-    rows: T[],
-    predicate: (row: T) => boolean,
-    limit = Number.POSITIVE_INFINITY,
-  ): number {
+  function deleteMatching<T>(rows: T[], predicate: (row: T) => boolean, limit = Number.POSITIVE_INFINITY): number {
     let removed = 0;
-    for (let i = 0; i < rows.length && removed < limit;) {
+    for (let i = 0; i < rows.length && removed < limit; ) {
       if (predicate(rows[i])) {
         rows.splice(i, 1);
         removed += 1;
@@ -101,34 +97,22 @@ function createStubDb(state: StubState): D1Database {
         }
         if (sql.startsWith("DELETE FROM telegram_processed_updates")) {
           const [cutoff] = bound as [number];
-          const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff);
+          const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff, 5_000);
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_alert_dead_letters")) {
           const [cutoff] = bound as [number];
-          const removed = deleteMatching(
-            state.deadLetters,
-            (row) => row.expired_at < cutoff,
-            boundDeleteLimit(bound),
-          );
+          const removed = deleteMatching(state.deadLetters, (row) => row.expired_at < cutoff, boundDeleteLimit(bound));
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_alert_job_targets")) {
           const [cutoff] = bound as [number];
-          const removed = deleteMatching(
-            state.jobTargets,
-            (row) => row.created_at < cutoff,
-            boundDeleteLimit(bound),
-          );
+          const removed = deleteMatching(state.jobTargets, (row) => row.created_at < cutoff, boundDeleteLimit(bound));
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_alert_jobs")) {
           const [cutoff] = bound as [number];
-          const removed = deleteMatching(
-            state.jobs,
-            (row) => row.created_at < cutoff,
-            boundDeleteLimit(bound),
-          );
+          const removed = deleteMatching(state.jobs, (row) => row.created_at < cutoff, boundDeleteLimit(bound));
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_usage_daily")) {
@@ -138,11 +122,7 @@ function createStubDb(state: StubState): D1Database {
               `telegram_usage_daily.day is TEXT; cutoff must be a YYYY-MM-DD string, got ${typeof cutoff}`,
             );
           }
-          const removed = deleteMatching(
-            state.usageDaily,
-            (row) => row.day < cutoff,
-            boundDeleteLimit(bound),
-          );
+          const removed = deleteMatching(state.usageDaily, (row) => row.day < cutoff, boundDeleteLimit(bound));
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_watcher_lifecycle_daily")) {
@@ -152,20 +132,12 @@ function createStubDb(state: StubState): D1Database {
               `telegram_watcher_lifecycle_daily.day is TEXT; cutoff must be a YYYY-MM-DD string, got ${typeof cutoff}`,
             );
           }
-          const removed = deleteMatching(
-            state.watcherLifecycle,
-            (row) => row.day < cutoff,
-            boundDeleteLimit(bound),
-          );
+          const removed = deleteMatching(state.watcherLifecycle, (row) => row.day < cutoff, boundDeleteLimit(bound));
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_chat_delivery_diagnostics")) {
           const [cutoff] = bound as [number];
-          const removed = deleteMatching(
-            state.diagnostics,
-            (row) => row.updated_at < cutoff,
-            boundDeleteLimit(bound),
-          );
+          const removed = deleteMatching(state.diagnostics, (row) => row.updated_at < cutoff, boundDeleteLimit(bound));
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM cache")) {
@@ -204,9 +176,7 @@ describe("runTelegramRetentionCleanup", () => {
     const controller = new AbortController();
     controller.abort(new Error("retention cleanup aborted"));
 
-    await expect(runTelegramRetentionCleanup(db, controller.signal)).rejects.toThrow(
-      "retention cleanup aborted",
-    );
+    await expect(runTelegramRetentionCleanup(db, controller.signal)).rejects.toThrow("retention cleanup aborted");
   });
 
   it("prunes telegram_usage_daily rows older than the YYYY-MM-DD cutoff", async () => {
@@ -305,13 +275,33 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.cappedAtLimit.jobs).toBe(false);
   });
 
+  it("drains processed-update retention across multiple capped batches", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    const staleReceivedAt = now - 8 * 24 * 60 * 60;
+    for (let i = 0; i < 12_001; i += 1) {
+      state.processedUpdates.push({ received_at: staleReceivedAt });
+    }
+    const db = createStubDb(state);
+
+    const result = await runTelegramRetentionCleanup(db);
+
+    expect(state.processedUpdates).toHaveLength(0);
+    const metadata = JSON.parse(result.metadata!) as {
+      processedUpdatesPruned: number;
+      cappedAtLimit: { processedUpdates: boolean };
+    };
+    expect(metadata.processedUpdatesPruned).toBe(12_001);
+    expect(metadata.cappedAtLimit.processedUpdates).toBe(false);
+  });
+
   it("prunes stale Telegram chat cache residue by prefix", async () => {
     const state = makeState();
     const now = Math.floor(Date.now() / 1000);
-    const staleShortLived = now - (8 * 24 * 60 * 60);
+    const staleShortLived = now - 8 * 24 * 60 * 60;
     const freshShortLived = now - 3600;
-    const staleWarning = now - (31 * 24 * 60 * 60);
-    const freshWarning = now - (20 * 24 * 60 * 60);
+    const staleWarning = now - 31 * 24 * 60 * 60;
+    const freshWarning = now - 20 * 24 * 60 * 60;
     state.cache.push(
       { key: "telegram:command-cooldown:42:/status", value: "1", updated_at: staleShortLived },
       { key: "telegram:command-flood:42", value: "1", updated_at: staleShortLived },
@@ -330,14 +320,16 @@ describe("runTelegramRetentionCleanup", () => {
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.cache.map((row) => row.key).sort()).toEqual([
-      "telegram:command-cooldown:43:/status",
-      "telegram:command-flood:43",
-      "telegram:chat-admins:-43",
-      "telegram:chat-member:43:99",
-      "telegram:group-welcome:-43",
-      "telegram:re-engagement-warned:43",
-    ].sort());
+    expect(state.cache.map((row) => row.key).sort()).toEqual(
+      [
+        "telegram:command-cooldown:43:/status",
+        "telegram:command-flood:43",
+        "telegram:chat-admins:-43",
+        "telegram:chat-member:43:99",
+        "telegram:group-welcome:-43",
+        "telegram:re-engagement-warned:43",
+      ].sort(),
+    );
     const metadata = JSON.parse(result.metadata!) as {
       commandCooldownCachePruned: number;
       commandFloodCachePruned: number;

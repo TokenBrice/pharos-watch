@@ -1,7 +1,7 @@
 import { throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { pruneTelegramProcessedUpdates } from "../api/telegram-webhook-store";
+import { TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT, pruneTelegramProcessedUpdates } from "../api/telegram-webhook-store";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
 
 const DAY_SEC = 24 * 60 * 60;
@@ -11,6 +11,26 @@ const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
 const SHORT_LIVED_CHAT_CACHE_RETENTION_SEC = 7 * DAY_SEC;
 const RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC = 30 * DAY_SEC;
 const RETENTION_DELETE_BATCH_LIMIT = 10_000;
+
+async function pruneAllTelegramProcessedUpdates(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<CappedDeleteResult> {
+  let pruned = 0;
+  let lastBatch = 0;
+
+  do {
+    throwIfAborted(signal);
+    lastBatch = await pruneTelegramProcessedUpdates(db, { nowSec });
+    pruned += lastBatch;
+  } while (lastBatch >= TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT);
+
+  return {
+    pruned,
+    cappedAtLimit: lastBatch >= TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
+  };
+}
 
 interface CappedDeleteResult {
   pruned: number;
@@ -62,7 +82,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
   const expiredTargetsReconciled = await reconcileExpiredTelegramAlertJobTargets(db, nowSec);
   throwIfAborted(signal);
 
-  const processedUpdatesPruned = await pruneTelegramProcessedUpdates(db, { nowSec });
+  const processedUpdates = await pruneAllTelegramProcessedUpdates(db, nowSec, signal);
   throwIfAborted(signal);
 
   const deadLetters = await deleteOlderThanCapped(
@@ -89,9 +109,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
   // `day` is TEXT (YYYY-MM-DD) in telegram_usage_daily and
   // telegram_watcher_lifecycle_daily; an integer cutoff would never match. Bind
   // the cutoff as a YYYY-MM-DD string so the comparison is text-vs-text.
-  const cutoffDayString = new Date((nowSec - USAGE_DAILY_RETENTION_SEC) * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const cutoffDayString = new Date((nowSec - USAGE_DAILY_RETENTION_SEC) * 1000).toISOString().slice(0, 10);
 
   const usageDaily = await deleteOlderThanCapped(
     db,
@@ -156,7 +174,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
   );
 
   const totalPruned =
-    processedUpdatesPruned +
+    processedUpdates.pruned +
     deadLetters.pruned +
     jobTargets.pruned +
     jobs.pruned +
@@ -174,7 +192,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     status: "ok",
     itemCount: totalPruned,
     metadata: {
-      processedUpdatesPruned,
+      processedUpdatesPruned: processedUpdates.pruned,
       deadLettersPruned: deadLetters.pruned,
       jobTargetsPruned: jobTargets.pruned,
       jobsPruned: jobs.pruned,
@@ -190,6 +208,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
       expiredTargetsReconciled,
       deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
       cappedAtLimit: {
+        processedUpdates: processedUpdates.cappedAtLimit,
         deadLetters: deadLetters.cappedAtLimit,
         jobTargets: jobTargets.cappedAtLimit,
         jobs: jobs.cappedAtLimit,
