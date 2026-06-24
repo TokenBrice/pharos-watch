@@ -360,7 +360,7 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 815,
+    "fileLines": 825,
     "maxFunctionLines": 163,
     "branchCount": 20,
     "disposition": "stabilized",
@@ -420,7 +420,7 @@
     "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 450,
+    "fileLines": 451,
     "maxFunctionLines": 145,
     "branchCount": 22,
     "disposition": "queued-p4",
@@ -432,8 +432,8 @@
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. The current baseline includes resumable deferred-tail cursor handling plus surfaced reserve-sync pressure metrics; the next pass should still separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 245,
-    "maxFunctionLines": 169,
+    "fileLines": 246,
+    "maxFunctionLines": 170,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -516,8 +516,8 @@
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 253,
-    "maxFunctionLines": 129,
+    "fileLines": 261,
+    "maxFunctionLines": 134,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
