@@ -161,6 +161,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
     },
     liquidityHealth: null,
     yieldHealth: null,
+    publicationHealth: null,
     priceSourceHealth: null,
     priceProviderDiagnostics: null,
     gtProbe: null,

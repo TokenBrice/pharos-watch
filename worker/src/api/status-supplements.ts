@@ -11,6 +11,7 @@ import type {
   DiscoveryCandidate,
   LiquidityHealth,
   MintBurnReconciliationSummary,
+  PublicationHealth,
   PriceSourceHealth,
   ReserveDriftEntry,
   StatusResponse,
@@ -43,10 +44,12 @@ import { getMintBurnReconciliation } from "../lib/status/derived-data";
 import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
 import { loadYieldHealthSummary } from "../lib/status/yield-health";
 import { logWorkerEvent } from "../lib/structured-log";
+import { loadPublicationHealth } from "../lib/publication-contract";
 
 const SECTION_ERROR_MESSAGES: Record<string, string> = {
   discovery_candidates_query_failed: "Discovery candidates unavailable.",
   liquidity_health_extraction_failed: "Liquidity health data unavailable.",
+  publication_health_query_failed: "Publication health unavailable.",
   price_source_health_extraction_failed: "Price source health data unavailable.",
   coingecko_price_diff_query_failed: "CoinGecko price diff unavailable.",
   d1_usage_query_failed: "D1 usage metrics unavailable.",
@@ -80,6 +83,7 @@ function logStatusSupplementWarning(
 export interface StatusSupplements {
   liquidityHealth: LiquidityHealth | null;
   yieldHealth: YieldHealthSummary | null;
+  publicationHealth: PublicationHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   priceProviderDiagnostics: Array<Record<string, unknown>> | null;
   gtProbe: Record<string, unknown> | null;
@@ -333,6 +337,20 @@ export async function loadStatusSupplements(
     );
   }
 
+  let publicationHealth: PublicationHealth | null = null;
+  try {
+    publicationHealth = await loadPublicationHealth(db, now);
+  } catch (err) {
+    logStatusSupplementWarning(
+      "publication_health_query_failed",
+      "Publication health query failed",
+      err,
+    );
+    sectionErrors.publicationHealth = sectionError(
+      "publication_health_query_failed",
+    );
+  }
+
   let priceSourceHealth: PriceSourceHealth | null = null;
   let priceProviderDiagnostics: Array<Record<string, unknown>> | null = null;
   let gtProbe: Record<string, unknown> | null = null;
@@ -503,6 +521,7 @@ export async function loadStatusSupplements(
   return {
     liquidityHealth,
     yieldHealth,
+    publicationHealth,
     priceSourceHealth,
     priceProviderDiagnostics,
     gtProbe,

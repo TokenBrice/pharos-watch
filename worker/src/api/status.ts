@@ -184,6 +184,7 @@ export function handleStatus(
         reserveComposition: raw.reserveComposition,
         liquidityHealth: supplements.liquidityHealth,
         yieldHealth: supplements.yieldHealth,
+        publicationHealth: supplements.publicationHealth,
         priceSourceHealth: supplements.priceSourceHealth,
         priceProviderDiagnostics: supplements.priceProviderDiagnostics,
         gtProbe: supplements.gtProbe,

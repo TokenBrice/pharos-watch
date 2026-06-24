@@ -871,6 +871,46 @@ export interface CoinGeckoPriceDiff {
   rows: CoinGeckoPriceDiffRow[];
 }
 
+export type PublicationSurfaceId = "dex-liquidity" | "yield-rankings";
+export type PublicationGenerationState =
+  | "candidate"
+  | "validated"
+  | "published"
+  | "rejected"
+  | "superseded"
+  | "failed";
+
+export interface PublicationGenerationHealth {
+  generationId: string;
+  sourceState: string;
+  state: PublicationGenerationState;
+  startedAt: number;
+  validatedAt: number | null;
+  publishedAt: number | null;
+  failedAt: number | null;
+  candidateRows: number | null;
+  publishedRows: number | null;
+  expectedRows: number | null;
+  failureReason: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PublicationSurfaceHealth {
+  surface: PublicationSurfaceId;
+  label: string;
+  sourceOfTruth: string;
+  lastPublishedGeneration: PublicationGenerationHealth | null;
+  lastAttemptedGeneration: PublicationGenerationHealth | null;
+  lastFailureReason: string | null;
+  candidateAgeSec: number | null;
+  dependencyWatermarks: Record<string, unknown> | null;
+}
+
+export interface PublicationHealth {
+  checkedAt: number;
+  surfaces: Partial<Record<PublicationSurfaceId, PublicationSurfaceHealth>>;
+}
+
 export interface D1UsageSummary {
   checkedAt: number;
   windowStart: number;
@@ -895,6 +935,7 @@ export type StatusSectionKey =
   | "d1Usage"
   | "liquidityHealth"
   | "yieldHealth"
+  | "publicationHealth"
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
   | "discoveryCandidates"
@@ -969,6 +1010,7 @@ export interface StatusResponse {
   };
   liquidityHealth: LiquidityHealth | null;
   yieldHealth: YieldHealthSummary | null;
+  publicationHealth: PublicationHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   /**
    * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
@@ -1137,6 +1179,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   summary: StatusJsonObjectSchema,
   liquidityHealth: StatusJsonObjectSchema.nullable(),
   yieldHealth: StatusJsonObjectSchema.nullable(),
+  publicationHealth: StatusJsonObjectSchema.nullable(),
   priceSourceHealth: StatusJsonObjectSchema.nullable(),
   priceProviderDiagnostics: z.array(StatusJsonObjectSchema).nullable(),
   gtProbe: StatusJsonObjectSchema.nullable(),
