@@ -170,6 +170,7 @@ export function handleStatus(
         timeline,
         caches: raw.caches,
         crons: raw.crons,
+        budgetOnlySurfaces: raw.budgetOnlySurfaces,
         dataQuality: raw.dataQuality,
         telegramBot: raw.telegramBot,
         sectionErrors: {

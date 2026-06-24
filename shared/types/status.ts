@@ -111,6 +111,28 @@ export interface CronStatus {
   bootstrap?: boolean;
 }
 
+export interface BudgetOnlySurfaceStatus {
+  job: string;
+  label: string;
+  scheduleKey: string;
+  schedule: string;
+  expectedIntervalSec: number;
+  maxAgeSec: number;
+  maxConnections: number;
+  connectionGroup?: string;
+  telemetryStatus: "fresh" | "stale" | "missing" | "unreadable";
+  telemetryUnknown: boolean;
+  checkedAt: number | null;
+  ageSeconds: number | null;
+  durationMs: number | null;
+  dueCount: number | null;
+  processedCount: number | null;
+  outcome: "ok" | "degraded" | "error" | "skipped" | "unknown";
+  skippedReason?: string | null;
+  error?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
 export interface StatusCause {
   code: string;
   layer: "availability" | "data-quality" | "system";
@@ -855,6 +877,7 @@ export interface StatusResponse {
   timeline: StatusTransition[];
   caches: Record<string, CacheStatus>;
   crons: Record<string, CronStatus>;
+  budgetOnlySurfaces: BudgetOnlySurfaceStatus[];
   dataQuality: DataQuality;
   telegramBot: TelegramBotStats | null;
   sectionErrors: StatusSectionErrors;
@@ -874,6 +897,10 @@ export interface StatusResponse {
     scheduledSlotRunning?: number;
     scheduledSlotStaleCandidates?: number;
     scheduledSlotOldestRunningAgeSec?: number | null;
+    budgetOnlySurfaceCount?: number;
+    budgetOnlySurfaceMissingTelemetry?: number;
+    budgetOnlySurfaceStaleTelemetry?: number;
+    budgetOnlySurfaceErrors?: number;
     diagnosticIssueCount: number;
     worstCacheRatio: number;
     /**
@@ -1047,6 +1074,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   timeline: z.array(StatusTransitionSchema),
   caches: z.record(z.string(), CacheStatusSchema),
   crons: z.record(z.string(), StatusJsonObjectSchema),
+  budgetOnlySurfaces: z.array(StatusJsonObjectSchema),
   dataQuality: StatusJsonObjectSchema,
   telegramBot: StatusJsonObjectSchema.nullable(),
   sectionErrors: z.record(z.string(), z.object({ code: z.string(), message: z.string() })),

@@ -13,9 +13,13 @@ vi.mock("../../../lib/db-cache", () => ({
   setCache: vi.fn(async () => {}),
   deleteCache: vi.fn(async () => {}),
 }));
+vi.mock("../../../lib/budget-surface-telemetry", () => ({
+  recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
+}));
 
 import { generateDailyDigest } from "../../../cron/daily-digest";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
+import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTwitterCreds } from "../../../lib/runtime-credentials";
 import { runDigestTriggerPollSlot, DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY } from "../digest-trigger-poll";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../../api/admin-actions";
@@ -66,6 +70,13 @@ describe("runDigestTriggerPollSlot", () => {
     expect(runLeasedCron).not.toHaveBeenCalled();
     expect(deleteCache).not.toHaveBeenCalled();
     expect(setCache).not.toHaveBeenCalled();
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "digest-trigger-poll",
+      dueCount: 0,
+      processedCount: 0,
+      outcome: "skipped",
+      skippedReason: "no-pending-request",
+    }));
     expect(summary).toMatchObject({
       jobsSkipped: 0,
       jobsNeutralSkipped: 1,
@@ -89,6 +100,13 @@ describe("runDigestTriggerPollSlot", () => {
 
     expect(runLeasedCron).not.toHaveBeenCalled();
     expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "digest-trigger-poll",
+      dueCount: 1,
+      processedCount: 1,
+      outcome: "error",
+      error: "malformed-payload",
+    }));
     expect(summary.jobsSkipped).toBe(1);
     expect(summary.jobsNeutralSkipped).toBe(0);
   });
@@ -130,12 +148,26 @@ describe("runDigestTriggerPollSlot", () => {
       DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
       expect.any(String),
     );
-    const lastResult = JSON.parse(vi.mocked(setCache).mock.calls[0][2]) as {
+    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
+      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
+    );
+    expect(lastResultCall).toBeTruthy();
+    const lastResult = JSON.parse(lastResultCall?.[2] as string) as {
       outcome: string;
       requestId: string;
     };
     expect(lastResult.outcome).toBe("ok");
     expect(lastResult.requestId).toBe("manual-digest-abc");
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "digest-trigger-poll",
+      dueCount: 1,
+      processedCount: 1,
+      outcome: "ok",
+      metadata: expect.objectContaining({
+        requestId: "manual-digest-abc",
+        flagCleared: true,
+      }),
+    }));
   });
 
   it("preserves the flag when the daily-digest lease is skipped_locked", async () => {
@@ -150,8 +182,19 @@ describe("runDigestTriggerPollSlot", () => {
     expect(runLeasedCron).toHaveBeenCalledTimes(1);
     expect(deleteCache).not.toHaveBeenCalled();
 
-    const lastResult = JSON.parse(vi.mocked(setCache).mock.calls[0][2]) as { outcome: string };
+    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
+      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
+    );
+    expect(lastResultCall).toBeTruthy();
+    const lastResult = JSON.parse(lastResultCall?.[2] as string) as { outcome: string };
     expect(lastResult.outcome).toBe("skipped_locked");
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "digest-trigger-poll",
+      dueCount: 1,
+      processedCount: 0,
+      outcome: "skipped",
+      skippedReason: "daily-digest-lease-locked",
+    }));
   });
 
   it("records the error outcome and still clears the flag when the digest throws", async () => {
@@ -164,12 +207,23 @@ describe("runDigestTriggerPollSlot", () => {
     await runDigestTriggerPollSlot(buildRuntime());
 
     expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);
-    const lastResult = JSON.parse(vi.mocked(setCache).mock.calls[0][2]) as {
+    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
+      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
+    );
+    expect(lastResultCall).toBeTruthy();
+    const lastResult = JSON.parse(lastResultCall?.[2] as string) as {
       outcome: string;
       error: string | null;
     };
     expect(lastResult.outcome).toBe("error");
     expect(lastResult.error).toContain("upstream blew up");
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "digest-trigger-poll",
+      dueCount: 1,
+      processedCount: 1,
+      outcome: "error",
+      error: "upstream blew up",
+    }));
   });
 
   it("reports degraded outcome when digest returned status=degraded", async () => {
@@ -182,7 +236,15 @@ describe("runDigestTriggerPollSlot", () => {
     await runDigestTriggerPollSlot(buildRuntime());
 
     expect(deleteCache).toHaveBeenCalled();
-    const lastResult = JSON.parse(vi.mocked(setCache).mock.calls[0][2]) as { outcome: string };
+    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
+      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
+    );
+    expect(lastResultCall).toBeTruthy();
+    const lastResult = JSON.parse(lastResultCall?.[2] as string) as { outcome: string };
     expect(lastResult.outcome).toBe("degraded");
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "digest-trigger-poll",
+      outcome: "degraded",
+    }));
   });
 });

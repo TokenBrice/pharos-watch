@@ -78,6 +78,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
         healthy: true,
       },
     },
+    budgetOnlySurfaces: [],
     dataQuality: {
       stablecoinsCacheStatus: "ok",
       stablecoinsCacheReason: null,

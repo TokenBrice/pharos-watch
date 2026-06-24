@@ -36,7 +36,7 @@ Mandatory coverage:
 
 - Account for all 19 cron trigger slots.
 - Account for every `CRON_JOB_DEFINITIONS` job.
-- Account for every `CRON_CONNECTION_BUDGET_ENTRIES` surface, including budget-only surfaces absent from standalone `/api/status` rows:
+- Account for every `CRON_CONNECTION_BUDGET_ENTRIES` surface, including budget-only surfaces exposed under `/api/status.budgetOnlySurfaces` rather than standalone cron rows:
   - `telegram-registration-reconciliation`
   - `digest-trigger-poll`
 - For daily, weekly, monthly, or not-due jobs, inspect latest telemetry plus code path and mark `not due during watch`, not `unobserved`.
@@ -47,6 +47,7 @@ Watch protocol:
 - Capture baseline, boundary, and final snapshots from `/api/health`, admin `/api/status`, and admin `/api/status-history`.
 - Sample at least every 15 minutes, plus shortly after expected slot boundaries.
 - Inspect D1 telemetry where available: `cron_runs`, `cron_slot_executions`, `cron_run_progress`, `cron_leases`, status/probe history.
+- Prefer `node scripts/maintenance/watch-worker-cron.mjs --include-status --include-status-history` for bounded D1 metadata previews plus health/status probes. Use `--include-full-metadata` only for narrow follow-up reads, and pass Cloudflare Access service-token headers via `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` when the admin probes are behind Access.
 - Inspect Worker logs / Cloudflare observability where available.
 
 For each slot/job, record:

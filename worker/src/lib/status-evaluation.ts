@@ -29,6 +29,7 @@ import {
 } from "./status/evaluation-causes";
 import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
+import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
 import type { CacheFreshnessDiagnostic } from "./api-utils";
 
 export interface RawStatusComputation {
@@ -40,6 +41,7 @@ export interface RawStatusComputation {
   causes: StatusResponse["causes"];
   caches: StatusResponse["caches"];
   crons: StatusResponse["crons"];
+  budgetOnlySurfaces: StatusResponse["budgetOnlySurfaces"];
   dataQuality: StatusResponse["dataQuality"];
   telegramBot: StatusResponse["telegramBot"];
   sectionErrors: StatusResponse["sectionErrors"];
@@ -75,6 +77,7 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
     },
     caches: {},
     crons: {},
+    budgetOnlySurfaces: [],
     dataQuality: emptyDataQuality(),
     telegramBot: null,
     sectionErrors: {},
@@ -131,12 +134,14 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   // effectively unconstrained up to the Worker CPU budget; the 6-connection
   // ctx.waitUntil pool documented in CLAUDE.md does not apply here because
   // none of these calls are scheduled via waitUntil.
-  const [cronHealth, dataQuality, supplements, transitionsLast24h] = await Promise.all([
+  const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
     loadCronHealth(db, now),
+    loadBudgetOnlySurfaceStatuses(db, now),
     getDataQuality(db, now, { blacklistMetrics: publicHealth.blacklistMetrics }),
     loadSupplementalStatusSections(db, now),
     countRecentStatusTransitions(db, now),
   ]);
+  const budgetOnlySurfaces = budgetOnlySurfaceResult.surfaces;
 
   const {
     crons,
@@ -173,6 +178,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
+    cronBudgetSurfaceTelemetryQueryFailed: budgetOnlySurfaceResult.queryFailed,
   });
 
   const availabilityStatus = deriveAvailabilityStatus({
@@ -236,6 +242,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     },
     caches: publicHealth.caches,
     crons,
+    budgetOnlySurfaces,
     dataQuality,
     telegramBot,
     sectionErrors,
@@ -244,6 +251,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     freshnessDiagnostics: publicHealth.cacheDiagnostics,
     summary: buildStatusSummary({
       cronHealth,
+      budgetOnlySurfaces,
       diagnosticIssueCount,
       worstCacheRatio: publicHealth.worstCacheRatio,
       transitionsLast24h,

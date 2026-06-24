@@ -57,6 +57,7 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
         healthy: true,
       },
     },
+    budgetOnlySurfaces: [],
     dataQuality: {
       stablecoinsCacheStatus: "ok",
       stablecoinsCacheReason: null,
@@ -789,7 +790,7 @@ describe("handleStatus", () => {
     });
     const db = mockD1([
       {
-        match: "cache WHERE key IN",
+        match: "WHERE key IN",
         rows: [
           makeCacheRow("stablecoins"),
           makeCacheRow("stablecoin-charts"),
@@ -1674,6 +1675,70 @@ describe("handleStatus", () => {
     expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(3600);
     expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
     expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
+  });
+
+  it("includes budget-only scheduled surface telemetry in status", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache",
+        matchBinds: [
+          "cron:budget-surface:telegram-registration-reconciliation",
+          "cron:budget-surface:digest-trigger-poll",
+        ],
+        rows: [
+          {
+            key: "cron:budget-surface:digest-trigger-poll",
+            updated_at: now - 45,
+            value: JSON.stringify({
+              version: 1,
+              surface: "digest-trigger-poll",
+              checkedAt: now - 45,
+              durationMs: 64,
+              dueCount: 0,
+              processedCount: 0,
+              outcome: "skipped",
+              skippedReason: "no-pending-request",
+            }),
+          },
+        ],
+      },
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      budgetOnlySurfaces: Array<{ job: string; telemetryStatus: string; outcome: string; skippedReason?: string | null }>;
+      summary: { budgetOnlySurfaceCount?: number; budgetOnlySurfaceMissingTelemetry?: number };
+    };
+    expect(body.budgetOnlySurfaces).toEqual([
+      expect.objectContaining({
+        job: "telegram-registration-reconciliation",
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
+        job: "digest-trigger-poll",
+        telemetryStatus: "fresh",
+        outcome: "skipped",
+        skippedReason: "no-pending-request",
+      }),
+    ]);
+    expect(body.summary.budgetOnlySurfaceCount).toBe(2);
+    expect(body.summary.budgetOnlySurfaceMissingTelemetry).toBe(1);
   });
 
   it("includes in-flight cron progress when a leased job is still running", async () => {

@@ -13,6 +13,7 @@ import { publishTelegramPulseSnapshot } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
 import { logTelegramEvent } from "../../lib/telegram-log";
+import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import {
   reconcileTelegramCommandRegistration,
   reconcileTelegramMenuButton,
@@ -45,23 +46,50 @@ function logReconciliationSuccess(
   });
 }
 
+interface TelegramReconciliationTelemetry {
+  action: string;
+  attempted: boolean;
+  skipped: boolean;
+  reason: string | null;
+  success: boolean;
+  error: string | null;
+}
+
 async function runTelegramReconciliation<T extends { attempted: boolean }>(
   action: string,
   fn: () => Promise<T>,
   onSuccessDetails?: (result: T) => Record<string, unknown>,
-): Promise<void> {
+): Promise<TelegramReconciliationTelemetry> {
   try {
     const result = await fn();
     if (result.attempted) {
       logReconciliationSuccess(action, onSuccessDetails ? onSuccessDetails(result) : undefined);
     }
+    const resultRecord = result as T & { skipped?: boolean; reason?: string };
+    return {
+      action,
+      attempted: result.attempted,
+      skipped: resultRecord.skipped === true,
+      reason: typeof resultRecord.reason === "string" ? resultRecord.reason : null,
+      success: true,
+      error: null,
+    };
   } catch (err) {
+    const error = toErrorMessage(err);
     logTelegramEvent({
       message: "registration reconciliation failed",
       action,
       module: "five-minute-telegram",
-      err: toErrorMessage(err),
+      err: error,
     });
+    return {
+      action,
+      attempted: true,
+      skipped: false,
+      reason: null,
+      success: false,
+      error,
+    };
   }
 }
 
@@ -115,6 +143,7 @@ function buildTelegramSlotGroups(
 }
 
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {
+  const reconciliationStartedMs = Date.now();
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram scheduled lane";
     // Token is absent: groups are only enumerated for skip-summaries; the task
@@ -134,40 +163,72 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
         message,
       });
     }
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: "telegram-registration-reconciliation",
+      durationMs: Date.now() - reconciliationStartedMs,
+      dueCount: 1,
+      processedCount: 0,
+      outcome: "skipped",
+      skippedReason: "missing-telegram-bot-token",
+      metadata: { botTokenConfigured: false },
+    });
     return buildScheduledSlotSummary(skippedJobs, { budgetOnlyJobs: 1 });
   }
 
-  await runTelegramReconciliation("reconcile-commands", () =>
-    reconcileTelegramCommandRegistration(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-    }),
-  );
-
-  await runTelegramReconciliation("reconcile-profile", () =>
-    reconcileTelegramProfileRegistration(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-    }),
-  );
-
-  await runTelegramReconciliation(
-    "reconcile-menu",
-    () =>
-      reconcileTelegramMenuButton(runtime.db, {
+  const reconciliationResults = [
+    await runTelegramReconciliation("reconcile-commands", () =>
+      reconcileTelegramCommandRegistration(runtime.db, {
         botToken: runtime.env.TELEGRAM_BOT_TOKEN,
       }),
-    (menuResult) => ({ miniAppUrl: menuResult.miniAppUrl }),
-  );
-
-  await runTelegramReconciliation(
-    "reconcile-webhook",
-    () =>
-      reconcileTelegramWebhookRegistration(runtime.db, {
+    ),
+    await runTelegramReconciliation("reconcile-profile", () =>
+      reconcileTelegramProfileRegistration(runtime.db, {
         botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-        webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
-        selfUrl: runtime.env.SELF_URL,
       }),
-    (result) => ({ expectedUrl: result.expectedUrl }),
-  );
+    ),
+    await runTelegramReconciliation(
+      "reconcile-menu",
+      () =>
+        reconcileTelegramMenuButton(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+        }),
+      (menuResult) => ({ miniAppUrl: menuResult.miniAppUrl }),
+    ),
+    await runTelegramReconciliation(
+      "reconcile-webhook",
+      () =>
+        reconcileTelegramWebhookRegistration(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+          selfUrl: runtime.env.SELF_URL,
+        }),
+      (result) => ({ expectedUrl: result.expectedUrl }),
+    ),
+  ];
+  const failedReconciliations = reconciliationResults.filter((result) => !result.success);
+  await recordBudgetSurfaceTelemetry(runtime.db, {
+    surface: "telegram-registration-reconciliation",
+    durationMs: Date.now() - reconciliationStartedMs,
+    dueCount: reconciliationResults.length,
+    processedCount: reconciliationResults.filter((result) => result.success).length,
+    outcome: failedReconciliations.length > 0 ? "error" : "ok",
+    error: failedReconciliations.length > 0
+      ? failedReconciliations.map((result) => `${result.action}:${result.error ?? "failed"}`).join("; ")
+      : null,
+    metadata: {
+      botTokenConfigured: true,
+      attemptedCount: reconciliationResults.filter((result) => result.attempted).length,
+      skippedCount: reconciliationResults.filter((result) => result.skipped).length,
+      failedActions: failedReconciliations.map((result) => result.action),
+      actions: reconciliationResults.map((result) => ({
+        action: result.action,
+        attempted: result.attempted,
+        skipped: result.skipped,
+        reason: result.reason,
+        success: result.success,
+      })),
+    },
+  });
 
   const summary = await runScheduledSlotGroups(
     runtime,

@@ -18,6 +18,10 @@ export function emptyStatusSummary(): StatusSummary {
     scheduledSlotRunning: 0,
     scheduledSlotStaleCandidates: 0,
     scheduledSlotOldestRunningAgeSec: null,
+    budgetOnlySurfaceCount: 0,
+    budgetOnlySurfaceMissingTelemetry: 0,
+    budgetOnlySurfaceStaleTelemetry: 0,
+    budgetOnlySurfaceErrors: 0,
     diagnosticIssueCount: 0,
     worstCacheRatio: 0,
     transitionsLast24h: 0,
@@ -26,6 +30,7 @@ export function emptyStatusSummary(): StatusSummary {
 
 export function buildStatusSummary(input: {
   cronHealth: CronHealthSnapshot;
+  budgetOnlySurfaces: StatusResponse["budgetOnlySurfaces"];
   diagnosticIssueCount: number;
   worstCacheRatio: number;
   transitionsLast24h: number;
@@ -45,6 +50,10 @@ export function buildStatusSummary(input: {
     scheduledSlotRunning: cronHealth.scheduledSlots.runningSlots,
     scheduledSlotStaleCandidates: cronHealth.scheduledSlots.staleCandidateSlots,
     scheduledSlotOldestRunningAgeSec: cronHealth.scheduledSlots.oldestRunningAgeSec,
+    budgetOnlySurfaceCount: input.budgetOnlySurfaces.length,
+    budgetOnlySurfaceMissingTelemetry: input.budgetOnlySurfaces.filter((surface) => surface.telemetryStatus === "missing").length,
+    budgetOnlySurfaceStaleTelemetry: input.budgetOnlySurfaces.filter((surface) => surface.telemetryStatus === "stale").length,
+    budgetOnlySurfaceErrors: input.budgetOnlySurfaces.filter((surface) => surface.outcome === "error").length,
     diagnosticIssueCount: input.diagnosticIssueCount,
     worstCacheRatio: input.worstCacheRatio,
     transitionsLast24h: input.transitionsLast24h,

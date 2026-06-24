@@ -19,12 +19,16 @@ vi.mock("../../../lib/telegram-webhook-registration", () => ({
   reconcileTelegramProfileRegistration: vi.fn(),
   reconcileTelegramWebhookRegistration: vi.fn(),
 }));
+vi.mock("../../../lib/budget-surface-telemetry", () => ({
+  recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
+}));
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
 }));
 
 import { logSkippedCronRun } from "../preflight-skip";
 import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
+import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
 import { publishTelegramPulseSnapshot } from "../../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram-degradation-watchdog";
@@ -73,6 +77,13 @@ describe("runFiveMinuteTelegramSlot", () => {
     expect(vi.mocked(logSkippedCronRun).mock.calls[0][1]).toMatchObject({
       reason: "missing-telegram-bot-token",
     });
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "telegram-registration-reconciliation",
+      dueCount: 1,
+      processedCount: 0,
+      outcome: "skipped",
+      skippedReason: "missing-telegram-bot-token",
+    }));
   });
 
   it("runs reconciliation in order and still runs slot groups after a reconciliation failure", async () => {
@@ -145,5 +156,15 @@ describe("runFiveMinuteTelegramSlot", () => {
       "telegram-pulse-snapshot",
     ]);
     expect(summary.jobsErrored).toBe(0);
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "telegram-registration-reconciliation",
+      dueCount: 4,
+      processedCount: 3,
+      outcome: "error",
+      metadata: expect.objectContaining({
+        attemptedCount: 4,
+        failedActions: ["reconcile-profile"],
+      }),
+    }));
   });
 });

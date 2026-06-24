@@ -93,6 +93,7 @@ function statusResponse() {
     timeline: [],
     caches: {},
     crons: {},
+    budgetOnlySurfaces: [],
     dataQuality: {},
     telegramBot: null,
     sectionErrors: {},

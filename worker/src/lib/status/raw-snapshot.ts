@@ -151,7 +151,12 @@ function parseStatusRawSnapshotPayload(value: string): StatusRawSnapshotPayload 
     return {
       version: 1,
       producedAt: parsed.producedAt,
-      raw: parsed.raw,
+      raw: {
+        ...parsed.raw,
+        budgetOnlySurfaces: Array.isArray(parsed.raw.budgetOnlySurfaces)
+          ? parsed.raw.budgetOnlySurfaces as RawStatusComputation["budgetOnlySurfaces"]
+          : [],
+      },
     };
   } catch {
     return null;

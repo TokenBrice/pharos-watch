@@ -17,6 +17,7 @@ import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
 import type { ScheduledRuntimeContext } from "./context";
 import type { CronResult } from "../../lib/cron-logger";
+import { recordBudgetSurfaceTelemetry, type BudgetSurfaceOutcome } from "../../lib/budget-surface-telemetry";
 import {
   buildScheduledSlotSummary,
   summarizeCronResult,
@@ -25,6 +26,7 @@ import {
 } from "./slot-summary";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
+const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
 
 interface DigestForceRunRequest {
   requestedAt: number;
@@ -44,8 +46,18 @@ function parseForceRunPayload(value: string): DigestForceRunRequest | null {
 }
 
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
+  const startedMs = Date.now();
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
   if (!pending) {
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: DIGEST_TRIGGER_POLL_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 0,
+      processedCount: 0,
+      outcome: "skipped",
+      skippedReason: "no-pending-request",
+      metadata: { pending: false },
+    });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request", { neutral: true }),
     ], { budgetOnlyJobs: 1 });
@@ -57,6 +69,15 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       `[digest-trigger-poll] Malformed force-run payload, clearing: ${pending.value.slice(0, 200)}`,
     );
     await deleteCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: DIGEST_TRIGGER_POLL_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 1,
+      processedCount: 1,
+      outcome: "error",
+      error: "malformed-payload",
+      metadata: { pending: true, cleared: true },
+    });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "malformed-payload"),
     ], { budgetOnlyJobs: 1 });
@@ -127,6 +148,29 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   } catch (err) {
     console.warn("[digest-trigger-poll] Failed to persist last-trigger-result:", err);
   }
+
+  const telemetryOutcome: BudgetSurfaceOutcome =
+    outcome === "skipped_locked" || outcome === "skipped" ? "skipped" : outcome;
+  await recordBudgetSurfaceTelemetry(runtime.db, {
+    surface: DIGEST_TRIGGER_POLL_SURFACE,
+    durationMs: Date.now() - startedMs,
+    dueCount: 1,
+    processedCount: leaseLocked ? 0 : 1,
+    outcome: telemetryOutcome,
+    skippedReason: outcome === "skipped_locked"
+      ? "daily-digest-lease-locked"
+      : outcome === "skipped"
+        ? "daily-digest-skipped"
+        : null,
+    error: errorMessage,
+    metadata: {
+      pending: true,
+      requestId: payload.requestId,
+      requestedAt: payload.requestedAt,
+      dailyDigestOutcome: outcome,
+      flagCleared: !leaseLocked,
+    },
+  });
 
   // Do not re-throw: logCronRun (inside runLeasedCron) already wrote the
   // error row to cron_runs. Swallowing matches the five-minute-telegram slot

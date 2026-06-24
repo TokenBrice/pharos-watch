@@ -99,6 +99,7 @@ export interface CronConnectionBudgetDefinition {
 
 export interface CronConnectionBudgetMeta extends CronConnectionBudgetDefinition {
   schedule: CronScheduleExpression;
+  intervalSec: number;
 }
 
 type CronJobDefinitionInput = Omit<CronJobDefinition, "intervalSec"> & {
@@ -601,6 +602,7 @@ export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[]
 ].map((definition) => ({
   ...definition,
   schedule: CRON_SCHEDULES[definition.scheduleKey],
+  intervalSec: CRON_SCHEDULE_INTERVALS[definition.scheduleKey],
 }));
 
 /** Job name → expected interval in seconds, derived from definitions. */
