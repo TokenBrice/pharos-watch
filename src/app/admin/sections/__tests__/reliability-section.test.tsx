@@ -140,7 +140,10 @@ describe("ReliabilitySection", () => {
     );
 
     expect(screen.getByText("Probes, breakers, and cache pressure")).toBeTruthy();
-    expect(screen.getByText("healthy")).toBeTruthy();
+    expect(screen.getByText("Public vs operator impact")).toBeTruthy();
+    expect(screen.getByText("No public health surface is currently reporting user-visible impact.")).toBeTruthy();
+    expect(screen.getByText("Admin state is healthy.")).toBeTruthy();
+    expect(screen.getAllByText("healthy").length).toBeGreaterThan(0);
     expect(screen.getByText("4/4")).toBeTruthy();
     // No "probe fail" hint when failCount is zero
     expect(screen.queryByText(/probe fail/)).toBeNull();
@@ -182,7 +185,7 @@ describe("ReliabilitySection", () => {
       />,
     );
 
-    expect(screen.getByText("degraded")).toBeTruthy();
+    expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);
     expect(screen.getByText("2/4")).toBeTruthy();
     expect(screen.getByText("1.80x")).toBeTruthy();
     // Hint text appears beside the summary label
@@ -207,9 +210,7 @@ describe("ReliabilitySection", () => {
       />,
     );
 
-    const details = screen
-      .getByText(/Endpoint probes, circuit breakers, and cache freshness/)
-      .closest("details");
+    const details = screen.getByText(/Endpoint probes, circuit breakers, and cache freshness/).closest("details");
     expect(details).toBeTruthy();
     expect(details?.hasAttribute("open")).toBe(true);
   });

@@ -12,6 +12,7 @@ import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconc
 import { MetadataIntegrityCard } from "@/components/status/metadata-integrity-card";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
+import { ScoreImpactPanel } from "@/components/status/score-impact-panel";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { YieldHealthCard } from "@/components/status/yield-health";
 import { getStatusTone } from "@/lib/status-dashboard-model";
@@ -115,26 +116,26 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
 
       {activeTab === "quality" ? (
         <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="text-base font-semibold tracking-tight text-foreground">Quality threshold board</h3>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Critical data-quality blockers sort first so the noisiest metrics do not hide the real breakpoints.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold tracking-tight text-foreground">Quality threshold board</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Critical data-quality blockers sort first so the noisiest metrics do not hide the real breakpoints.
+              </p>
+            </div>
+            <span
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                getStatusTone(data.dataQualityStatus).badgeClassName,
+              )}
+            >
+              {getStatusTone(data.dataQualityStatus).label}
+            </span>
           </div>
-          <span
-            className={cn(
-              "rounded-full border px-2.5 py-1 text-[11px] font-medium",
-              getStatusTone(data.dataQualityStatus).badgeClassName,
-            )}
-          >
-            {getStatusTone(data.dataQualityStatus).label}
-          </span>
+          <div className="mt-4">
+            <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
+          </div>
         </div>
-        <div className="mt-4">
-          <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
-        </div>
-      </div>
       ) : null}
 
       {activeTab === "markets" ? (
@@ -145,10 +146,7 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
               error={data.sectionErrors.priceSourceHealth}
               nowSeconds={data.timestamp}
             />
-            <LiquidityHealthCard
-              health={data.liquidityHealth}
-              error={data.sectionErrors.liquidityHealth}
-            />
+            <LiquidityHealthCard health={data.liquidityHealth} error={data.sectionErrors.liquidityHealth} />
           </div>
           <CoinGeckoPriceDiffCard
             summary={data.coingeckoPriceDiff}
@@ -159,38 +157,38 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
       ) : null}
 
       {activeTab === "reserves" ? (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
-          <div className="space-y-5">
-            <MintBurnReconciliationCard
-              summary={data.mintBurnReconciliation}
-              error={data.sectionErrors.mintBurnReconciliation}
-            />
-            <MetadataIntegrityCard
-              reserveDrift={data.reserveDrift}
-              classificationWarnings={data.classificationWarnings}
-              reserveDriftError={data.sectionErrors.reserveDrift}
-              classificationWarningsError={data.sectionErrors.classificationWarnings}
-            />
+        <div className="space-y-5">
+          <ScoreImpactPanel
+            reserveComposition={data.reserveComposition}
+            reserveDrift={data.reserveDrift}
+            classificationWarnings={data.classificationWarnings}
+          />
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
+            <div className="space-y-5">
+              <MintBurnReconciliationCard
+                summary={data.mintBurnReconciliation}
+                error={data.sectionErrors.mintBurnReconciliation}
+              />
+              <MetadataIntegrityCard
+                reserveDrift={data.reserveDrift}
+                classificationWarnings={data.classificationWarnings}
+                reserveDriftError={data.sectionErrors.reserveDrift}
+                classificationWarningsError={data.sectionErrors.classificationWarnings}
+              />
+            </div>
           </div>
         </div>
       ) : null}
 
       {activeTab === "yield" ? (
-        <YieldHealthCard
-          health={data.yieldHealth}
-          error={data.sectionErrors.yieldHealth}
-        />
+        <YieldHealthCard health={data.yieldHealth} error={data.sectionErrors.yieldHealth} />
       ) : null}
 
       {activeTab === "storage" ? (
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.42fr)]">
           <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
-          <D1UsageCard
-            summary={data.d1Usage}
-            error={data.sectionErrors.d1Usage}
-            nowSeconds={data.timestamp}
-          />
+          <D1UsageCard summary={data.d1Usage} error={data.sectionErrors.d1Usage} nowSeconds={data.timestamp} />
         </div>
       ) : null}
 

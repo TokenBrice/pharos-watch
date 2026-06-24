@@ -15,9 +15,16 @@ function formatLastSuccess(lastSuccessAt: number | null, nowSeconds: number): st
 function formatPersistentStaleIndependentFeeds(
   coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],
 ): string {
-  const examples = coins.slice(0, 3).map((coin) => coin.stablecoinId).join(", ");
+  const examples = coins
+    .slice(0, 3)
+    .map((coin) => coin.stablecoinId)
+    .join(", ");
   const suffix = coins.length > 3 ? `, +${coins.length - 3} more` : "";
   return examples ? `${coins.length} (${examples}${suffix})` : String(coins.length);
+}
+
+function formatCoveragePct(value: number): string {
+  return `${(value * 100).toFixed(1)}%`;
 }
 
 export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthCardProps) {
@@ -27,6 +34,12 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
       : health.status === "degraded"
         ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
         : "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300";
+  const scoreInputHold =
+    health.status !== "healthy" ||
+    health.deferredCoins > 0 ||
+    health.runBudgetTruncated ||
+    health.writeTimeoutUncertain > 0 ||
+    health.authoritativeFreshCoverageRatio < 1;
 
   return (
     <Card>
@@ -39,6 +52,24 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
         </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
+        {scoreInputHold ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+            <div className="text-sm font-medium text-amber-950 dark:text-amber-100">
+              Report-card inputs are conservative
+            </div>
+            <p className="mt-1">
+              Safety scoring only trusts score-grade reserve evidence. While this lane is degraded or deferred, affected
+              report cards can show lower reserve scores until a clean run completes.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px]">
+              <span>{formatCoveragePct(health.freshCoverageRatio)} fresh</span>
+              <span>{formatCoveragePct(health.authoritativeFreshCoverageRatio)} score-grade</span>
+              {health.deferredCoins > 0 ? <span>{health.deferredCoins} deferred</span> : null}
+              {health.nextCursorStablecoinId ? <span>resume {health.nextCursorStablecoinId}</span> : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
           <div>
             <div className="text-muted-foreground">Configured</div>
@@ -77,18 +108,19 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
         <div className="space-y-1 text-xs text-muted-foreground">
           <div>Last success: {formatLastSuccess(health.lastSuccessAt, nowSeconds)}</div>
           <div>
-            Oldest fresh snapshot age: {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
+            Oldest fresh snapshot age:{" "}
+            {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
           </div>
           <div>
-            Coverage: {(health.freshCoverageRatio * 100).toFixed(0)}% fresh, {(health.authoritativeFreshCoverageRatio * 100).toFixed(0)}% authoritative
+            Coverage: {formatCoveragePct(health.freshCoverageRatio)} fresh,{" "}
+            {formatCoveragePct(health.authoritativeFreshCoverageRatio)} score-grade
           </div>
-          {health.nextCursorStablecoinId && (
-            <div>
-              Next deferred cursor: {health.nextCursorStablecoinId}
-            </div>
-          )}
+          {health.nextCursorStablecoinId && <div>Next deferred cursor: {health.nextCursorStablecoinId}</div>}
           <div>
-            Run budget truncated: {health.runBudgetTruncated ? `yes${health.deferredAt ? ` at ${new Date(health.deferredAt * 1000).toLocaleString()}` : ""}` : "no"}
+            Queue pressure:{" "}
+            {health.runBudgetTruncated
+              ? `run budget truncated${health.deferredAt ? ` at ${new Date(health.deferredAt * 1000).toLocaleString()}` : ""}`
+              : "run budget clear"}
           </div>
         </div>
 
@@ -97,11 +129,15 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div>
               <div className="text-muted-foreground">Independent eligible</div>
-              <div className="font-mono text-base text-green-600 dark:text-green-400">{health.independentFreshEligible}</div>
+              <div className="font-mono text-base text-green-600 dark:text-green-400">
+                {health.independentFreshEligible}
+              </div>
             </div>
             <div>
               <div className="text-muted-foreground">Independent unverified</div>
-              <div className="font-mono text-base text-amber-600 dark:text-amber-400">{health.independentFreshUnverified}</div>
+              <div className="font-mono text-base text-amber-600 dark:text-amber-400">
+                {health.independentFreshUnverified}
+              </div>
             </div>
             <div>
               <div className="text-muted-foreground">Static validated</div>

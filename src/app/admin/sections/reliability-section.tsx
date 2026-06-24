@@ -4,6 +4,7 @@ import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
+import { PublicAdminSplitPanel } from "@/components/status/public-admin-split-panel";
 import { RequestSourceAttributionCard } from "@/components/status/request-source-attribution-card";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { formatPercent } from "@shared/lib/format";
@@ -63,6 +64,7 @@ export function ReliabilitySection({
         </>
       }
     >
+      <PublicAdminSplitPanel data={data} healthData={healthData} browserProbeSummary={browserProbeSummary} />
       <details
         open={isReliabilityOpen}
         onToggle={(event) => setIsReliabilityOpen(event.currentTarget.open)}
@@ -73,9 +75,13 @@ export function ReliabilitySection({
           {(browserProbeSummary?.failCount ?? 0) > 0 || data.summary.worstCacheRatio > 1 ? (
             <span className="ml-2 text-xs font-normal text-muted-foreground">
               {[
-                browserProbeSummary && browserProbeSummary.failCount > 0 ? `${browserProbeSummary.failCount} probe fail` : null,
+                browserProbeSummary && browserProbeSummary.failCount > 0
+                  ? `${browserProbeSummary.failCount} probe fail`
+                  : null,
                 data.summary.worstCacheRatio > 1 ? `cache ${data.summary.worstCacheRatio.toFixed(1)}x` : null,
-              ].filter(Boolean).join(" · ")}
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
           ) : null}
         </summary>
@@ -89,11 +95,7 @@ export function ReliabilitySection({
             error={requestSourceError}
             isLoading={requestSourceLoading}
           />
-          <ApiKeyLoadTable
-            stats={requestSourceStats}
-            error={requestSourceError}
-            isLoading={requestSourceLoading}
-          />
+          <ApiKeyLoadTable stats={requestSourceStats} error={requestSourceError} isLoading={requestSourceLoading} />
           <CacheFreshnessTable caches={data.caches} />
         </div>
       </details>

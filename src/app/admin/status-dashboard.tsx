@@ -5,11 +5,9 @@ import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { NoticeRail } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
-import {
-  type DashboardSectionId,
-  formatTimestampSeconds,
-} from "@/lib/status-dashboard-model";
+import { type DashboardSectionId, formatTimestampSeconds } from "@/lib/status-dashboard-model";
 import { useAutoExpand } from "./use-auto-expand";
+import { useReleaseMetadata } from "@/hooks/use-release-metadata";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { PipelineSection } from "./sections/pipeline-section";
 import { ReliabilitySection } from "./sections/reliability-section";
@@ -39,6 +37,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     requestSourceStats,
     setHistoryWindow,
   } = useStatusDashboardModel();
+  const releaseMetadataState = useReleaseMetadata();
   const diagnosticsSignal =
     data?.overallStatus !== "healthy" || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
   const reliabilitySignal =
@@ -108,10 +107,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
   const sectionNodes: Partial<Record<DashboardSectionId, ReactNode>> = {
     pipeline: (
       <SectionErrorBoundary name="pipeline">
-        <PipelineSection
-          data={data}
-          handleRefresh={handleRefresh}
-        />
+        <PipelineSection data={data} handleRefresh={handleRefresh} />
       </SectionErrorBoundary>
     ),
     reliability: (
@@ -146,6 +142,8 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
       <SectionErrorBoundary name="actions">
         <ActionsSection
           data={data}
+          healthData={healthData}
+          clientDataStale={clientDataStale}
           handleRefresh={handleRefresh}
           recommendedActions={recommendedActions}
         />
@@ -167,6 +165,8 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
           allTransitions={allTransitions}
           latestTransition={latestTransition}
           reserveComposition={data.reserveComposition}
+          releaseMetadataState={releaseMetadataState}
+          nowSeconds={data.timestamp}
           historyWindow={historyWindow}
           setHistoryWindow={setHistoryWindow}
           historyLoading={historyLoading}

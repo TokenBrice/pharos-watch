@@ -9,6 +9,7 @@ import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { buildReserveRecoveryForecast, formatNextRunWindow } from "@/lib/status/admin-ops-insights";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import {
   type BrowserProbeSummary,
@@ -22,6 +23,10 @@ import {
 import { cn } from "@/lib/utils";
 
 const ADMIN_STALE_AFTER_MS = 180_000;
+
+function formatReserveCoverage(value: number): string {
+  return `${(value * 100).toFixed(1)}%`;
+}
 
 export interface TriageSummaryProps {
   data: StatusResponse;
@@ -73,14 +78,23 @@ export function TriageSummary({
   const healthSync = querySyncs.find((s) => s.key === "health");
   const probeSync = querySyncs.find((s) => s.key === "probes");
   const requestSourceSync = querySyncs.find((s) => s.key === "requestSource");
+  const reserveScoreInputHold =
+    data.reserveComposition.status !== "healthy" ||
+    data.reserveComposition.deferredCoins > 0 ||
+    data.reserveComposition.runBudgetTruncated ||
+    data.reserveComposition.writeTimeoutUncertain > 0;
+  const reserveForecast = buildReserveRecoveryForecast(data);
+  const reserveForecastTone =
+    reserveForecast.state === "blocked"
+      ? "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-200"
+      : reserveForecast.state === "clear"
+        ? "border-green-500/30 bg-green-500/10 text-green-900 dark:text-green-200"
+        : "border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100";
 
   return (
     <section
       id="overview"
-      className={cn(
-        "scroll-mt-36 rounded-xl border px-4 py-4 sm:px-5 lg:px-6",
-        topFoldCopy.shell,
-      )}
+      className={cn("scroll-mt-36 rounded-xl border px-4 py-4 sm:px-5 lg:px-6", topFoldCopy.shell)}
     >
       <div className="space-y-4">
         {/* Triage header: status + key metrics + controls */}
@@ -113,7 +127,8 @@ export function TriageSummary({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    The state machine is holding at a higher severity than the raw signal so that improvements must hold for {data.state.minDwellSec}s before the overall status is downgraded. Prevents flap.
+                    The state machine is holding at a higher severity than the raw signal so that improvements must hold
+                    for {data.state.minDwellSec}s before the overall status is downgraded. Prevents flap.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -150,9 +165,7 @@ export function TriageSummary({
             label="Cron Errors"
             value={String(data.summary.cronErrors)}
             className={
-              data.summary.cronErrors > 0
-                ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
-                : undefined
+              data.summary.cronErrors > 0 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : undefined
             }
           />
           <SummaryBadge
@@ -165,6 +178,61 @@ export function TriageSummary({
           <SummaryBadge label="Reserve Drift" value={String(data.reserveDrift?.length ?? 0)} />
           <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
         </div>
+
+        {reserveScoreInputHold ? (
+          <div className={cn("rounded-xl border px-4 py-3 text-sm", reserveForecastTone)}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
+                  Reserve recovery forecast
+                </div>
+                <p className="mt-1 max-w-3xl leading-relaxed">
+                  {reserveForecast.headline}. Live reserve evidence is degraded, so report cards can use conservative
+                  reserve inputs until a clean reserve run catches up.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <SummaryBadge
+                  label="Reserve"
+                  value={data.reserveComposition.status}
+                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                />
+                <SummaryBadge
+                  label="Next"
+                  value={formatNextRunWindow(reserveForecast.nextRunAt, data.timestamp)}
+                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                />
+                <SummaryBadge
+                  label="Runs"
+                  value={
+                    reserveForecast.estimatedRunsToClear == null ? "—" : String(reserveForecast.estimatedRunsToClear)
+                  }
+                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                />
+                <SummaryBadge
+                  label="Score-grade"
+                  value={formatReserveCoverage(data.reserveComposition.authoritativeFreshCoverageRatio)}
+                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                />
+              </div>
+            </div>
+            <div className="mt-2 text-xs leading-relaxed opacity-90">
+              {reserveForecast.detail}{" "}
+              {data.reserveComposition.runBudgetTruncated ? (
+                <>
+                  The cursor should resume at{" "}
+                  <span className="font-mono">
+                    {data.reserveComposition.nextCursorStablecoinId ?? "the next configured coin"}
+                  </span>
+                  .
+                </>
+              ) : (
+                "The reserve lane is reporting degraded evidence; wait for the next scheduled run unless coverage falls further."
+              )}{" "}
+              Manual intervention is only needed if truncation repeats or the deferred queue stops shrinking.
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)_minmax(18rem,0.7fr)]">
           <div className="rounded-xl border border-border/60 bg-background/35 p-4">
@@ -236,7 +304,9 @@ export function TriageSummary({
               <SummaryBadge
                 label="Changed"
                 value={
-                  latestTransition ? `${formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at))} ago` : "—"
+                  latestTransition
+                    ? `${formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at))} ago`
+                    : "—"
                 }
               />
             </div>
@@ -259,7 +329,9 @@ export function TriageSummary({
                   >
                     <span className="min-w-0">
                       <span className="block text-sm font-medium text-foreground">{section.title}</span>
-                      <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{section.summary}</span>
+                      <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                        {section.summary}
+                      </span>
                     </span>
                     <span className={cn("shrink-0 font-mono text-xs tabular-nums", section.valueClassName)}>
                       {section.value}
@@ -274,10 +346,7 @@ export function TriageSummary({
             </div>
           </div>
 
-          <RecommendedActionStrip
-            recommendations={recommendedActions}
-            onActionFinished={handleRefresh}
-          />
+          <RecommendedActionStrip recommendations={recommendedActions} onActionFinished={handleRefresh} />
         </div>
 
         <details
