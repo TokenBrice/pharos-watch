@@ -952,13 +952,21 @@ describe("computeDepegResolver", () => {
       ...runOptions,
       storeContracts: quarantiningStores([42]),
     });
-    expect(firstResult.status).toBe("degraded");
+    expect(firstResult.status).not.toBe("degraded");
+    const firstMetadata = JSON.parse(firstResult.metadata ?? "{}") as { repairRequiredEventCount?: number };
+    expect(firstMetadata.repairRequiredEventCount).toBe(1);
     const firstAlert = cacheWrites(firstDb, "cron:event:compute-depeg-resolver:quarantine-repair-required");
     expect(firstAlert).toHaveLength(1);
     expect(String(firstAlert[0].binds[1])).toContain("#42");
     const firstMarker = cacheWrites(firstDb, "ddr:quarantine-alerted-event-ids");
     expect(firstMarker).toHaveLength(1);
     expect(firstMarker[0].binds[1]).toBe("[42]");
+    const firstRepairDebt = cacheWrites(firstDb, "ddr:repair-debt:v1");
+    expect(firstRepairDebt).toHaveLength(1);
+    expect(JSON.parse(firstRepairDebt[0].binds[1] as string)).toMatchObject({
+      count: 1,
+      events: [{ eventId: 42, reason: "incident-conflict" }],
+    });
 
     // Second run with the same id: no re-alert, marker untouched.
     const secondDb = quarantineDb("[42]");

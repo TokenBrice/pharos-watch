@@ -384,6 +384,26 @@ export function buildDataQualityCauses(input: {
     });
   }
 
+  if (input.dataQuality.ddrRepairDebtStatus === "present" && input.dataQuality.ddrRepairDebtCount > 0) {
+    pushCause(dataQualityCauses, {
+      code: "ddr_repair_debt_present",
+      layer: "data-quality",
+      severity: "warning",
+      message:
+        `${input.dataQuality.ddrRepairDebtCount} DDR source event(s) are quarantined pending explicit repair migration.`,
+      metric: "ddrRepairDebtCount",
+      value: input.dataQuality.ddrRepairDebtCount,
+      threshold: 1,
+    });
+  } else if (input.dataQuality.ddrRepairDebtStatus === "unknown") {
+    pushCause(dataQualityCauses, {
+      code: "ddr_repair_debt_unknown",
+      layer: "data-quality",
+      severity: "info",
+      message: "DDR repair-debt marker could not be read; repair backlog status is unknown.",
+    });
+  }
+
   if (input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale) {
     pushCause(dataQualityCauses, {
       code: "missing_prices_stale",

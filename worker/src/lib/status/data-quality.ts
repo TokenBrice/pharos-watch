@@ -15,6 +15,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
+import { loadDdrRepairDebt } from "../ddr-repair-debt";
 
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
 
@@ -39,6 +40,11 @@ export function emptyDataQuality(): DataQuality {
     blacklistGapStatus: "failed",
     activeDepegStatus: "failed",
     onchainSupplyQueryStatus: "failed",
+    ddrRepairDebtStatus: "unknown",
+    ddrRepairDebtCount: 0,
+    ddrRepairDebtCheckedAt: null,
+    ddrRepairDebtEvents: [],
+    ddrRepairDebtEventsTruncated: false,
     sourceFailures: [],
     totalStablecoins: 0,
     missingPrices: 0,
@@ -162,6 +168,33 @@ export async function getDataQuality(
     });
   }
 
+  let ddrRepairDebtStatus: DataQuality["ddrRepairDebtStatus"] = "ok";
+  let ddrRepairDebtCount = 0;
+  let ddrRepairDebtCheckedAt: number | null = null;
+  let ddrRepairDebtEvents: DataQuality["ddrRepairDebtEvents"] = [];
+  let ddrRepairDebtEventsTruncated = false;
+  try {
+    const repairDebt = await loadDdrRepairDebt(db);
+    if (repairDebt && repairDebt.count > 0) {
+      ddrRepairDebtStatus = "present";
+      ddrRepairDebtCount = repairDebt.count;
+      ddrRepairDebtCheckedAt = repairDebt.checkedAt;
+      ddrRepairDebtEvents = repairDebt.events;
+      ddrRepairDebtEventsTruncated = repairDebt.eventsTruncated;
+    }
+  } catch (e) {
+    ddrRepairDebtStatus = "unknown";
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "ddr_repair_debt_query_failed",
+      route: "status",
+      source: "ddr-repair-debt",
+      message: "Failed to query DDR repair debt marker",
+      error: e,
+    });
+  }
+
   let staleOnchainSupply = 0;
   let onchainSupplyDivergences = 0;
   let onchainSupplyMonitoring: DataQuality["onchainSupplyMonitoring"] = "unavailable";
@@ -273,6 +306,11 @@ export async function getDataQuality(
     blacklistGapStatus,
     activeDepegStatus,
     onchainSupplyQueryStatus,
+    ddrRepairDebtStatus,
+    ddrRepairDebtCount,
+    ddrRepairDebtCheckedAt,
+    ddrRepairDebtEvents,
+    ddrRepairDebtEventsTruncated,
     sourceFailures,
     totalStablecoins,
     missingPrices,

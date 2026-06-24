@@ -96,6 +96,11 @@ function makeDataQuality(overrides?: Partial<DataQuality>): DataQuality {
     blacklistGapStatus: "ok",
     activeDepegStatus: "ok",
     onchainSupplyQueryStatus: "ok",
+    ddrRepairDebtStatus: "ok",
+    ddrRepairDebtCount: 0,
+    ddrRepairDebtCheckedAt: null,
+    ddrRepairDebtEvents: [],
+    ddrRepairDebtEventsTruncated: false,
     sourceFailures: [],
     totalStablecoins: 10,
     missingPrices: 0,
@@ -300,6 +305,33 @@ describe("status cause text", () => {
       code: "reserve_sync_budget_truncated",
       severity: "warning",
       message: expect.stringContaining("deferred 1 coin(s)"),
+    }));
+  });
+
+  it("emits a distinct warning cause for DDR repair debt", () => {
+    const causes = buildDataQualityCauses({
+      dataQuality: makeDataQuality({
+        ddrRepairDebtStatus: "present",
+        ddrRepairDebtCount: 2,
+        ddrRepairDebtCheckedAt: 1_700_000_000,
+        ddrRepairDebtEvents: [
+          { eventId: 42, reason: "incident-conflict" },
+          { eventId: 43, reason: "incident-conflict" },
+        ],
+      }),
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition: makeReserveComposition(),
+    });
+
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "ddr_repair_debt_present",
+      severity: "warning",
+      metric: "ddrRepairDebtCount",
+      value: 2,
     }));
   });
 

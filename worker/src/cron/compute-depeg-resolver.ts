@@ -1,6 +1,7 @@
 import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
 import { logCronEvent, type CronResult } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
+import { persistDdrRepairDebt } from "../lib/ddr-repair-debt";
 import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import {
   emptyDdrLineage,
@@ -186,7 +187,7 @@ export async function computeDepegResolver(
     });
   // Repair-required events are excluded from the run entirely so the rest of
   // the universe keeps resolving and publishing; each still needs its explicit
-  // repair migration and is surfaced via degraded status + metadata below.
+  // repair migration and is surfaced via repair-debt metadata below.
   const quarantinedEventIds = new Set(quarantinedEvents.map((entry) => entry.eventId));
   const activeRows = loadedActiveRows.filter((row) => !quarantinedEventIds.has(row.id));
   await alertNewQuarantinedEvents(db, quarantinedEvents);
@@ -207,6 +208,12 @@ export async function computeDepegResolver(
   let v2PublicationAttempted = false;
   let v2PublicationSucceeded = false;
   let v2PublicationError: string | null = null;
+  let repairDebtPersistError: string | null = null;
+  try {
+    await persistDdrRepairDebt(db, quarantinedEvents, nowSec, options.signal);
+  } catch (error) {
+    repairDebtPersistError = error instanceof Error ? error.message : String(error);
+  }
 
   const degradedResult = async (degradedReason: string): Promise<CronResult> => {
     v2LockDeferrals = await recordSystemHealthDeferrals({
@@ -233,6 +240,9 @@ export async function computeDepegResolver(
       metadata: JSON.stringify({
         ddrRunId: options.ddrRunId,
         activeEvents: activeRows.length,
+        repairRequiredEvents: quarantinedEvents,
+        repairRequiredEventCount: quarantinedEvents.length,
+        repairDebtPersistError,
         degraded: true,
         degradedReason,
         v2LockDeferrals,
@@ -352,11 +362,12 @@ export async function computeDepegResolver(
 
   return {
     itemCount: rows.length,
-    ...(quarantinedEvents.length > 0 ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
       ddrRunId: options.ddrRunId,
       activeEvents: rows.length,
       repairRequiredEvents: quarantinedEvents,
+      repairRequiredEventCount: quarantinedEvents.length,
+      repairDebtPersistError,
       assessmentWriteCount,
       reviewRows,
       ddrrDegraded: reviewError != null,

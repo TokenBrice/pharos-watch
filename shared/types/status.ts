@@ -236,6 +236,14 @@ export interface DataQuality {
   blacklistGapStatus: "ok" | "failed";
   activeDepegStatus: "ok" | "failed";
   onchainSupplyQueryStatus: "ok" | "failed" | "unavailable";
+  ddrRepairDebtStatus: "ok" | "present" | "unknown";
+  ddrRepairDebtCount: number;
+  ddrRepairDebtCheckedAt: number | null;
+  ddrRepairDebtEvents: Array<{
+    eventId: number;
+    reason: string;
+  }>;
+  ddrRepairDebtEventsTruncated: boolean;
   sourceFailures: Array<{
     source: "stablecoins-cache" | "blacklist-gaps" | "active-depegs" | "onchain-supply";
     message: string;
