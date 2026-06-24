@@ -1042,7 +1042,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
-  it("claims a new slot without sweeping stale previous slots", async () => {
+  it("claims a new slot after sweeping stale previous slots for the same schedule key", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
     const currentSlotStartedAt = now;
@@ -1070,10 +1070,16 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(result.status).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(1);
+    expect(result.metadata).toMatchObject({
+      staleSlotPreSweep: {
+        candidateSlots: 1,
+        slotsReconciled: 1,
+      },
+    });
 
     const staleSlot = db.getSlot("halfHourlyOffset", staleSlotStartedAt);
-    expect(staleSlot?.state).toBe("running");
-    expect(staleSlot?.result_status).toBeNull();
+    expect(staleSlot?.state).toBe("finished");
+    expect(staleSlot?.result_status).toBe("error");
   });
 
   it("reconciles stale slot progress into a synthetic child cron run and clears expired ownership", async () => {

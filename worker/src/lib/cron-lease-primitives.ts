@@ -15,6 +15,13 @@ export interface CronLeaseRunResult<T> {
   status: "ok" | "skipped_locked";
   leaseOwner: string;
   renewFailures: number;
+  leaseTtlSec: number;
+  leaseHeartbeatSec: number;
+  leaseMaxRenewFailures: number;
+  leaseRenewAttempts: number;
+  leaseRenewSuccesses: number;
+  leaseRenewFailuresTotal: number;
+  leaseLastRenewedAt: number | null;
   leaseLost?: boolean;
   result?: T;
 }
@@ -152,6 +159,15 @@ export async function runCronWithLease<T>(
   const heartbeatSec = opts?.heartbeatSec ?? Math.max(15, Math.floor(ttlSec / 3));
   const maxRenewFailures = opts?.maxRenewFailures ?? 2;
   const owner = opts?.owner ?? createLeaseOwner(job);
+  const buildLeaseTelemetry = () => ({
+    leaseTtlSec: ttlSec,
+    leaseHeartbeatSec: heartbeatSec,
+    leaseMaxRenewFailures: maxRenewFailures,
+    leaseRenewAttempts: 0,
+    leaseRenewSuccesses: 0,
+    leaseRenewFailuresTotal: 0,
+    leaseLastRenewedAt: null as number | null,
+  });
 
   const acquired = await runWithOverloadRetry(() => acquireCronLease(db, job, owner, ttlSec), 3, opts?.abortSignal);
   if (!acquired) {
@@ -159,14 +175,20 @@ export async function runCronWithLease<T>(
       status: "skipped_locked",
       leaseOwner: owner,
       renewFailures: 0,
+      ...buildLeaseTelemetry(),
     };
   }
 
   let renewFailures = 0;
+  let leaseRenewAttempts = 0;
+  let leaseRenewSuccesses = 0;
+  let leaseRenewFailuresTotal = 0;
+  let leaseLastRenewedAt: number | null = null;
   let leaseLost = false;
   const leaseController = new AbortController();
   const markLeaseFailure = () => {
     renewFailures++;
+    leaseRenewFailuresTotal++;
     if (!leaseLost && renewFailures >= maxRenewFailures) {
       leaseLost = true;
       leaseController.abort(new CronLeaseLostError(job, renewFailures));
@@ -174,12 +196,15 @@ export async function runCronWithLease<T>(
   };
 
   const timer = setInterval(() => {
+    leaseRenewAttempts++;
     void renewCronLease(db, job, owner, ttlSec)
       .then((ok) => {
         if (!ok) {
           markLeaseFailure();
           return;
         }
+        leaseRenewSuccesses++;
+        leaseLastRenewedAt = Math.floor(Date.now() / 1000);
         renewFailures = 0;
       })
       .catch(() => {
@@ -262,6 +287,13 @@ export async function runCronWithLease<T>(
       status: "ok",
       leaseOwner: owner,
       renewFailures,
+      leaseTtlSec: ttlSec,
+      leaseHeartbeatSec: heartbeatSec,
+      leaseMaxRenewFailures: maxRenewFailures,
+      leaseRenewAttempts,
+      leaseRenewSuccesses,
+      leaseRenewFailuresTotal,
+      leaseLastRenewedAt,
       leaseLost,
       result,
     };

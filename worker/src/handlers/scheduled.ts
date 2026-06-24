@@ -1,7 +1,7 @@
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
 import type { Env } from "../lib/env";
-import { runScheduledSlotWithFence } from "../lib/cron-lease";
+import { runScheduledSlotWithFence, type ScheduledSlotExecutionOptions } from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import type { ScheduledSlotSummary } from "./scheduled/slot-summary";
 
@@ -51,6 +51,48 @@ export const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = Object.fromEn
   Object.values(SCHEDULED_SLOT_PLANS_BY_SCHEDULE).map((plan) => [plan.schedule, SLOT_RUNNER_BY_KEY[plan.runnerKey]]),
 ) as Record<string, SlotRunner>;
 
+type SlotFencePolicy = Pick<ScheduledSlotExecutionOptions, "heartbeatSec" | "staleAfterSec" | "preSweepLimit">;
+
+const SHORT_SLOT_FENCE_POLICY = {
+  heartbeatSec: 30,
+  staleAfterSec: 10 * 60,
+  preSweepLimit: 5,
+} satisfies SlotFencePolicy;
+
+const MEDIUM_SLOT_FENCE_POLICY = {
+  heartbeatSec: 45,
+  staleAfterSec: 20 * 60,
+  preSweepLimit: 5,
+} satisfies SlotFencePolicy;
+
+const LONG_SLOT_FENCE_POLICY = {
+  heartbeatSec: 60,
+  staleAfterSec: 35 * 60,
+  preSweepLimit: 5,
+} satisfies SlotFencePolicy;
+
+const SLOT_FENCE_POLICY_BY_RUNNER_KEY: Partial<Record<ScheduledRunnerKey, SlotFencePolicy>> = {
+  statusSelfCheckOffset: SHORT_SLOT_FENCE_POLICY,
+  digestTriggerPoll: SHORT_SLOT_FENCE_POLICY,
+  fiveMinuteTelegramAlerts: MEDIUM_SLOT_FENCE_POLICY,
+  quarterHourly: MEDIUM_SLOT_FENCE_POLICY,
+  halfHourlyOffset: MEDIUM_SLOT_FENCE_POLICY,
+  halfHourlyChartsOffset: MEDIUM_SLOT_FENCE_POLICY,
+  dewsPsiOffset: MEDIUM_SLOT_FENCE_POLICY,
+  sixHourlyBlacklist: LONG_SLOT_FENCE_POLICY,
+  halfHourlyMintBurnCritical: LONG_SLOT_FENCE_POLICY,
+  twoHourlyDexDiscovery: LONG_SLOT_FENCE_POLICY,
+  halfHourlyMintBurnExtended: LONG_SLOT_FENCE_POLICY,
+  fourHourlyReserveSync: LONG_SLOT_FENCE_POLICY,
+  hourlyYieldSync: LONG_SLOT_FENCE_POLICY,
+  fourHourlyYieldSupplemental: LONG_SLOT_FENCE_POLICY,
+  daily0300Utc: LONG_SLOT_FENCE_POLICY,
+  daily0800Utc: LONG_SLOT_FENCE_POLICY,
+  daily0805Utc: LONG_SLOT_FENCE_POLICY,
+  daily0810Utc: LONG_SLOT_FENCE_POLICY,
+  monthlyYieldAudit: LONG_SLOT_FENCE_POLICY,
+};
+
 function buildUnknownScheduleError(cron: string): Error {
   return new Error(`[cron-slot] Unknown scheduled trigger: ${cron}`);
 }
@@ -82,7 +124,10 @@ export async function handleScheduledEvent(
     env.DB,
     scheduleKey,
     () => Promise.resolve(runner(runtime)),
-    { slotStartedAt },
+    {
+      slotStartedAt,
+      ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),
+    },
   );
 
   if (slotResult.status === "skipped_duplicate") {

@@ -14,13 +14,28 @@ import {
 /**
  * Per-job overrides for cron lease behavior. Jobs not listed use the default
  * policy in `runCronWithLease` (heartbeatSec = ttlSec/3, maxRenewFailures = 2).
- * `daily-digest` needs tighter heartbeat + more retry tolerance because its
- * LLM call runs for 10+ minutes and the default 5-min heartbeat cadence would
- * only fire 2–3 times, giving poor lease-loss detection.
+ * Long-running scheduled jobs use a tighter heartbeat so lease-loss detection
+ * happens within the job's own timeout window instead of near the outer TTL.
  */
+const LONG_RUNNING_LEASE_OPTIONS = { heartbeatSec: 30, maxRenewFailures: 3 } satisfies Pick<
+  CronLeaseOptions,
+  "heartbeatSec" | "maxRenewFailures"
+>;
+
 const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec" | "maxRenewFailures">> = {
-  "dispatch-telegram-alerts": { heartbeatSec: 30, maxRenewFailures: 3 },
-  "daily-digest": { heartbeatSec: 30, maxRenewFailures: 3 },
+  "sync-stablecoins": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-live-reserves": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-dex-liquidity": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-dex-discovery": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-yield-data": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-yield-supplemental": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-blacklist": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-mint-burn": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-mint-burn-extended": LONG_RUNNING_LEASE_OPTIONS,
+  "dispatch-telegram-alerts": LONG_RUNNING_LEASE_OPTIONS,
+  "snapshot-public-dataset": LONG_RUNNING_LEASE_OPTIONS,
+  "daily-digest": LONG_RUNNING_LEASE_OPTIONS,
+  "weekly-recap": LONG_RUNNING_LEASE_OPTIONS,
 };
 
 export interface ScheduledRuntimeContext {
@@ -117,6 +132,19 @@ export function createScheduledRuntimeContext(
         });
         const leaseOwner = createLeaseOwner(job);
         const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
+        const buildLeaseMeta = (lease: Awaited<ReturnType<typeof runCronWithLease>>) => ({
+          leaseOwner: lease.leaseOwner,
+          renewFailures: lease.renewFailures,
+          leaseLost: lease.leaseLost ?? false,
+          leaseTtlSec: lease.leaseTtlSec,
+          leaseHeartbeatSec: lease.leaseHeartbeatSec,
+          leaseMaxRenewFailures: lease.leaseMaxRenewFailures,
+          leaseRenewAttempts: lease.leaseRenewAttempts,
+          leaseRenewSuccesses: lease.leaseRenewSuccesses,
+          leaseRenewFailuresTotal: lease.leaseRenewFailuresTotal,
+          leaseLastRenewedAt: lease.leaseLastRenewedAt,
+          ...slotMeta,
+        });
         const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
           await reportProgress({
             stage: "lease-acquired",
@@ -138,9 +166,7 @@ export function createScheduledRuntimeContext(
             status: "skipped_locked",
             metadata: JSON.stringify({
               reason: "lease-locked",
-              leaseOwner: lease.leaseOwner,
-              renewFailures: lease.renewFailures,
-              ...slotMeta,
+              ...buildLeaseMeta(lease),
             }),
           };
         }
@@ -149,18 +175,12 @@ export function createScheduledRuntimeContext(
         if (!result) {
           return {
             metadata: JSON.stringify({
-              leaseOwner: lease.leaseOwner,
-              renewFailures: lease.renewFailures,
-              ...slotMeta,
+              ...buildLeaseMeta(lease),
             }),
           };
         }
 
-        const leaseMeta = {
-          leaseOwner: lease.leaseOwner,
-          renewFailures: lease.renewFailures,
-          ...slotMeta,
-        };
+        const leaseMeta = buildLeaseMeta(lease);
 
         const metadata = mergeCronMetadataWithLease(
           normalizeCronMetadata(result),

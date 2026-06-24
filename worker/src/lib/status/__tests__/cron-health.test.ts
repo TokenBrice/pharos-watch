@@ -239,6 +239,48 @@ describe("loadCronHealth — stale cron artifact readout", () => {
   });
 });
 
+describe("loadCronHealth — running scheduled slot telemetry", () => {
+  const NOW = 1_775_890_000;
+
+  it("summarizes running and stale candidate scheduled slots", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "FROM cron_slot_executions",
+        rows: [
+          {
+            slot_key: "statusSelfCheckOffset",
+            slot_started_at: NOW - 600,
+            execution_owner: "slot-owner-fresh",
+            started_at: NOW - 600,
+            updated_at: NOW - 60,
+          },
+          {
+            slot_key: "halfHourlyOffset",
+            slot_started_at: NOW - 4_000,
+            execution_owner: "slot-owner-stale",
+            started_at: NOW - 4_000,
+            updated_at: NOW - 2_400,
+          },
+        ],
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.scheduledSlots).toEqual({
+      runningSlots: 2,
+      staleCandidateSlots: 1,
+      oldestRunningAgeSec: 2_400,
+      oldestStaleAgeSec: 2_400,
+      queryFailed: false,
+    });
+  });
+});
+
 describe("loadCronHealth — cron event markers", () => {
   const NOW = 1_775_890_000;
 

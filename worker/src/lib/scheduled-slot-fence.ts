@@ -12,6 +12,8 @@ export interface ScheduledSlotExecutionOptions {
   owner?: string;
   heartbeatSec?: number;
   staleAfterSec?: number;
+  preSweepStale?: boolean;
+  preSweepLimit?: number;
 }
 
 export interface ScheduledSlotExecutionResult {
@@ -530,21 +532,33 @@ async function finishScheduledSlotExecution(
   );
 }
 
-function attachSlotHeartbeatFailures<T>(
+function attachSlotRuntimeMetadata<T>(
   metadata: T,
   heartbeatFailures: number,
-): T | { slotHeartbeatFailures: number } | { metadata: T; slotHeartbeatFailures: number } {
-  if (heartbeatFailures <= 0) return metadata;
+  staleSlotPreSweep?: ScheduledSlotSweepSummary | { error: string },
+): T | {
+  slotHeartbeatFailures?: number;
+  staleSlotPreSweep?: ScheduledSlotSweepSummary | { error: string };
+} | {
+  metadata: T;
+  slotHeartbeatFailures?: number;
+  staleSlotPreSweep?: ScheduledSlotSweepSummary | { error: string };
+} {
+  if (heartbeatFailures <= 0 && !staleSlotPreSweep) return metadata;
+  const additions = {
+    ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
+    ...(staleSlotPreSweep ? { staleSlotPreSweep } : {}),
+  };
   if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
     return {
       ...metadata,
-      slotHeartbeatFailures: heartbeatFailures,
+      ...additions,
     };
   }
   if (metadata == null) {
-    return { slotHeartbeatFailures: heartbeatFailures };
+    return additions;
   }
-  return { metadata, slotHeartbeatFailures: heartbeatFailures };
+  return { metadata, ...additions };
 }
 
 export async function runScheduledSlotWithFence(
@@ -556,6 +570,24 @@ export async function runScheduledSlotWithFence(
   const owner = opts.owner ?? createLeaseOwner(slotKey);
   const heartbeatSec = Math.max(15, opts.heartbeatSec ?? SLOT_EXECUTION_HEARTBEAT_SEC);
   const staleAfterSec = Math.max(heartbeatSec * 2, opts.staleAfterSec ?? SLOT_EXECUTION_RUNNING_STALE_SEC);
+  let staleSlotPreSweep: ScheduledSlotSweepSummary | { error: string } | undefined;
+  if (opts.preSweepStale !== false) {
+    try {
+      const summary = await sweepStaleScheduledSlotExecutions(db, {
+        slotKey,
+        excludeSlotStartedAt: opts.slotStartedAt,
+        staleAfterSec,
+        limit: opts.preSweepLimit ?? 5,
+      });
+      if (summary.candidateSlots > 0 || summary.slotsReconciled > 0) {
+        staleSlotPreSweep = summary;
+      }
+    } catch (err) {
+      const error = toErrorMessage(err);
+      staleSlotPreSweep = { error };
+      console.warn(`[cron-slot] Failed to pre-sweep stale slots for ${slotKey}:`, err);
+    }
+  }
   const claimResult = await claimScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, staleAfterSec);
 
   if (claimResult === "duplicate") {
@@ -585,7 +617,7 @@ export async function runScheduledSlotWithFence(
 
   try {
     const metadata = await fn();
-    const slotMetadata = attachSlotHeartbeatFailures(metadata, heartbeatFailures);
+    const slotMetadata = attachSlotRuntimeMetadata(metadata, heartbeatFailures, staleSlotPreSweep);
     const resultStatus =
       metadata && metadata.jobsErrored > 0
         ? "error"
@@ -618,6 +650,7 @@ export async function runScheduledSlotWithFence(
       JSON.stringify({
         error: toErrorMessage(err),
         ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
+        ...(staleSlotPreSweep ? { staleSlotPreSweep } : {}),
       }),
     ).catch((finishErr) => {
       console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);

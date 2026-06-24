@@ -22,6 +22,15 @@ export interface CronHealthSnapshot {
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
+  scheduledSlots: ScheduledSlotHealthSummary;
+}
+
+export interface ScheduledSlotHealthSummary {
+  runningSlots: number;
+  staleCandidateSlots: number;
+  oldestRunningAgeSec: number | null;
+  oldestStaleAgeSec: number | null;
+  queryFailed: boolean;
 }
 
 const CRON_HISTORY_ROWS_PER_JOB = 10;
@@ -168,6 +177,16 @@ interface CronSlotEventRow {
   updated_at: number;
 }
 
+interface RunningCronSlotRow {
+  slot_key: string;
+  slot_started_at: number;
+  execution_owner: string;
+  started_at: number;
+  updated_at: number;
+}
+
+const STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC = 35 * 60;
+
 async function fetchCronHistoryRows(
   db: D1Database,
   cronJobs: string[],
@@ -288,6 +307,57 @@ async function fetchCronSlotEventRows(
   }
 }
 
+async function fetchRunningCronSlotRows(db: D1Database): Promise<{ rows: RunningCronSlotRow[]; failed: boolean }> {
+  try {
+    const runningRows = await db
+      .prepare(
+        `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at
+           FROM cron_slot_executions
+           WHERE state = 'running'
+           ORDER BY updated_at ASC
+           LIMIT 25`,
+      )
+      .all<RunningCronSlotRow>();
+    return { rows: runningRows.results ?? [], failed: false };
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "cron_slot_running_unavailable",
+      route: "status",
+      source: "cron_slot_executions",
+      message: "Running scheduled slot rows unavailable",
+      error: err,
+    });
+    return { rows: [], failed: true };
+  }
+}
+
+function summarizeRunningCronSlots(
+  rows: readonly RunningCronSlotRow[],
+  now: number,
+  queryFailed: boolean,
+): ScheduledSlotHealthSummary {
+  let oldestRunningAgeSec: number | null = null;
+  let oldestStaleAgeSec: number | null = null;
+  let staleCandidateSlots = 0;
+  for (const row of rows) {
+    const ageSec = Math.max(0, now - row.updated_at);
+    oldestRunningAgeSec = Math.max(oldestRunningAgeSec ?? 0, ageSec);
+    if (ageSec >= STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC) {
+      staleCandidateSlots++;
+      oldestStaleAgeSec = Math.max(oldestStaleAgeSec ?? 0, ageSec);
+    }
+  }
+  return {
+    runningSlots: rows.length,
+    staleCandidateSlots,
+    oldestRunningAgeSec,
+    oldestStaleAgeSec,
+    queryFailed,
+  };
+}
+
 export async function loadCronHealth(
   db: D1Database,
   now: number,
@@ -303,12 +373,14 @@ export async function loadCronHealth(
   // dependency is purely an in-memory post-fetch step, so only the raw fetches
   // run in parallel; the dependent processing below preserves the original
   // ordering. This collapses ~13 sequential D1 awaits into one parallel wave.
-  const [historyResult, leaseResult, progressResult, slotEventResult] = await Promise.all([
+  const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult] = await Promise.all([
     fetchCronHistoryRows(db, cronJobs),
     fetchCronLeaseRows(db, cronJobInClause),
     fetchCronProgressRows(db, cronJobInClause),
     fetchCronSlotEventRows(db, eventKeyInClause),
+    fetchRunningCronSlotRows(db),
   ]);
+  const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);
 
   const cronRows: { results?: CronHistoryRow[] } = { results: historyResult.rows };
   const cronHistoryQueryFailed = historyResult.failed;
@@ -544,5 +616,6 @@ export async function loadCronHealth(
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
+    scheduledSlots,
   };
 }
