@@ -107,6 +107,7 @@ const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
 const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
 const MAX_CANARY_ERROR_CHARS = 800;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
+export const WORKER_CANARY_RUN_RETENTION_SEC = 90 * 24 * 3600;
 const PSI_MAX_AGE_SEC = 4 * 3600;
 const DEWS_MAX_AGE_SEC = 4 * 3600;
 const STABLECOINS_ACTIVE_MIN_RATIO = 0.95;
@@ -674,6 +675,23 @@ export async function runAndPersistCanaryChecks(
     await persistCanaryRun(db, result, { mode: summary.mode });
   }
   return summary;
+}
+
+export async function pruneWorkerCanaryRuns(
+  db: D1Database,
+  cutoffObservedAt: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  throwIfAborted(signal);
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare("DELETE FROM worker_canary_runs WHERE observed_at < ?")
+      .bind(cutoffObservedAt)
+      .run(),
+    3,
+    signal,
+  );
+  return result.meta?.changes ?? 0;
 }
 
 function mapCanaryStatusRow(row: WorkerCanaryRunRow): CanaryStatus["checks"][string] {

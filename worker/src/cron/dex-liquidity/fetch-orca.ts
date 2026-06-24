@@ -4,7 +4,7 @@ import {
   type DexApiFetchResult,
   type DexApiPool,
 } from "../../lib/dex-api-common";
-import { sleepWithSignal } from "../../lib/abort";
+import { rethrowIfAborted, sleepWithSignal } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import {
@@ -61,6 +61,7 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
           signal: buildDirectApiRequestSignal(signal),
         });
       } catch (err) {
+        rethrowIfAborted(err, signal);
         pageError = toErrorMessage(err);
         break;
       }

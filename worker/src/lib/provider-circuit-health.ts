@@ -109,7 +109,7 @@ export async function loadProviderCircuitHealth(
 
   return {
     checkedAt: now,
-    status: openCount > 0 ? "degraded" : "healthy",
+    status: openCount > 0 || halfOpenCount > 0 ? "degraded" : "healthy",
     totalTracked: sources.length,
     closedCount,
     halfOpenCount,

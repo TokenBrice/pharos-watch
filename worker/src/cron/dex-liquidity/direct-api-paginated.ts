@@ -7,6 +7,7 @@ import {
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
 import { toErrorMessage } from "../../lib/error-utils";
+import { rethrowIfAborted } from "../../lib/abort";
 
 export interface PaginatedFetchOptions<TRow> {
   source: string;
@@ -71,6 +72,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
         signal: buildDirectApiRequestSignal(signal, timeoutMs),
       });
     } catch (err) {
+      rethrowIfAborted(err, signal);
       const message = toErrorMessage(err);
       errors.push(`${source} page ${page} request failed: ${message}`);
       break;

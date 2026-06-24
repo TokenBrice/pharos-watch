@@ -20,3 +20,6 @@ CREATE INDEX IF NOT EXISTS idx_worker_canary_runs_check_observed
 
 CREATE INDEX IF NOT EXISTS idx_worker_canary_runs_status_observed
   ON worker_canary_runs(status, severity, observed_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_worker_canary_runs_observed_at
+  ON worker_canary_runs(observed_at DESC);

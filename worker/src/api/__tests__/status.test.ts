@@ -4,6 +4,7 @@ import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/a
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import * as dependencyHealthModule from "../../lib/dependency-health";
 
 stubCryptoForAuth();
 
@@ -243,6 +244,40 @@ describe("handleStatus", () => {
     const sql = db.getHistory().map((entry) => entry.sql).join("\n");
     expect(sql).not.toContain("cache WHERE key IN");
     expect(sql).not.toContain("blacklist_events");
+  });
+
+  it("keeps status available when dependency-health computation fails", async () => {
+    const dependencyHealthSpy = vi
+      .spyOn(dependencyHealthModule, "buildDependencyHealth")
+      .mockImplementationOnce(() => {
+        throw new Error("dependency graph failed");
+      });
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [
+          makeRawStatusSnapshotRow(now, 60),
+        ],
+      },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      dependencyHealth: Record<string, unknown> | null;
+      sectionErrors: Record<string, { code: string; message: string } | undefined>;
+    };
+    expect(dependencyHealthSpy).toHaveBeenCalledOnce();
+    expect(body.dependencyHealth).toBeNull();
+    expect(body.sectionErrors.dependencyHealth).toEqual({
+      code: "dependency_health_computation_failed",
+      message: "Dependency health unavailable.",
+    });
   });
 
   it("falls back to live raw status when the cron snapshot is stale", async () => {

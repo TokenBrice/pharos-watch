@@ -72,23 +72,41 @@ interface ProviderPermit {
   release: () => void;
 }
 
+interface ProviderSemaphoreWaiter {
+  resolve: (permit: ProviderPermit) => void;
+  reject: (error: Error) => void;
+  signal?: AbortSignal;
+  onAbort?: () => void;
+}
+
 class ProviderSemaphore {
   private active = 0;
-  private readonly waiters: Array<(permit: ProviderPermit) => void> = [];
+  private readonly waiters: ProviderSemaphoreWaiter[] = [];
 
   constructor(
     readonly label: string,
     readonly maxConcurrent: number,
   ) {}
 
-  acquire(): Promise<ProviderPermit> {
+  acquire(signal?: AbortSignal): Promise<ProviderPermit> {
+    throwIfAborted(signal);
+
     if (this.active < this.maxConcurrent) {
       this.active++;
       return Promise.resolve(this.makePermit());
     }
 
-    return new Promise((resolve) => {
-      this.waiters.push(resolve);
+    return new Promise((resolve, reject) => {
+      const waiter: ProviderSemaphoreWaiter = { resolve, reject, signal };
+      waiter.onAbort = () => {
+        const index = this.waiters.indexOf(waiter);
+        if (index >= 0) {
+          this.waiters.splice(index, 1);
+        }
+        reject(abortError(signal));
+      };
+      signal?.addEventListener("abort", waiter.onAbort, { once: true });
+      this.waiters.push(waiter);
     });
   }
 
@@ -116,8 +134,14 @@ class ProviderSemaphore {
     while (this.active < this.maxConcurrent && this.waiters.length > 0) {
       const waiter = this.waiters.shift();
       if (!waiter) return;
+      if (waiter.signal?.aborted) {
+        if (waiter.onAbort) waiter.signal.removeEventListener("abort", waiter.onAbort);
+        waiter.reject(abortError(waiter.signal));
+        continue;
+      }
+      if (waiter.onAbort) waiter.signal?.removeEventListener("abort", waiter.onAbort);
       this.active++;
-      waiter(this.makePermit());
+      waiter.resolve(this.makePermit());
     }
   }
 }
@@ -161,11 +185,11 @@ class ProviderExecutionContext {
     this.laneSemaphore = new ProviderSemaphore(`lane:${options.laneId}`, this.laneMaxConcurrent);
   }
 
-  acquireLanePermit(): Promise<ProviderPermit> {
-    return this.laneSemaphore.acquire();
+  acquireLanePermit(signal?: AbortSignal): Promise<ProviderPermit> {
+    return this.laneSemaphore.acquire(signal);
   }
 
-  acquireProviderPermit(providerId: string, maxConcurrent: number): Promise<ProviderPermit> {
+  acquireProviderPermit(providerId: string, maxConcurrent: number, signal?: AbortSignal): Promise<ProviderPermit> {
     const normalized = normalizeConcurrency(
       maxConcurrent,
       `provider execution policy ${providerId}`,
@@ -178,12 +202,12 @@ class ProviderExecutionContext {
           `Provider ${providerId} already registered with maxConcurrent=${existing.maxConcurrent}; received ${normalized}.`,
         );
       }
-      return existing.acquire();
+      return existing.acquire(signal);
     }
 
     const semaphore = new ProviderSemaphore(`provider:${providerId}`, normalized);
     this.providerSemaphores.set(providerId, semaphore);
-    return semaphore.acquire();
+    return semaphore.acquire(signal);
   }
 
   snapshot(): {
@@ -384,13 +408,15 @@ export async function withProviderExecution<TResult>(
     throwIfAborted(context.signal);
 
     if (policy.countsAgainstLaneBudget !== false) {
-      const lanePermit = await context.acquireLanePermit();
+      const lanePermit = await context.acquireLanePermit(context.signal);
       attempt.lanePermitAcquired = true;
       releases.push(lanePermit);
     }
-    const providerPermit = await context.acquireProviderPermit(policy.providerId, policy.maxConcurrent);
+    throwIfAborted(context.signal);
+    const providerPermit = await context.acquireProviderPermit(policy.providerId, policy.maxConcurrent, context.signal);
     attempt.providerPermitAcquired = true;
     releases.push(providerPermit);
+    throwIfAborted(context.signal);
 
     timeout = createTimeoutSignal({
       timeoutMs: policy.timeoutMs,
@@ -403,7 +429,9 @@ export async function withProviderExecution<TResult>(
 
     const value = await operation({ signal: timeout.signal, attempt });
     attempt.timedOut = timeout.isTimedOut();
-    const outcome = normalizeOutcome(policy.classifyOutcome?.(value) ?? (attempt.timedOut ? "failure" : "success"));
+    const outcome = attempt.timedOut
+      ? "failure"
+      : normalizeOutcome(policy.classifyOutcome?.(value) ?? "success");
     attempt.outcome = outcome;
     circuitOutcome = await recordProviderOutcome(context, policy, circuitKey, outcome);
     finishAttempt(attempt);

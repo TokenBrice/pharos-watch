@@ -62,6 +62,9 @@ CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_job_queued
 CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_job_updated
   ON worker_job_attempts(job, updated_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_job_updated_queued
+  ON worker_job_attempts(job, updated_at DESC, queued_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_slot
   ON worker_job_attempts(schedule_key, slot_started_at);
 

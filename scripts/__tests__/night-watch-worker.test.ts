@@ -124,6 +124,10 @@ function evidence() {
   };
 }
 
+type TestEvidence = Omit<ReturnType<typeof evidence>, "snapshots"> & {
+  snapshots: Array<Record<string, unknown>>;
+};
+
 describe("night-watch-worker", () => {
   it("parses watch windows and access options", () => {
     const args = parseArgs([
@@ -157,6 +161,24 @@ describe("night-watch-worker", () => {
     expect(markdown).toContain("data-invariant-canary");
     expect(markdown).toContain("Canaries report 1 errors");
     expect(markdown).toContain("digest-trigger-poll");
+  });
+
+  it("renders D1 child watcher failures as access gaps", () => {
+    const failedEvidence = evidence() as TestEvidence;
+    failedEvidence.snapshots.push({
+      collectedAt: "2026-06-24T10:30:00.000Z",
+      mode: "d1-error",
+      error: "wrangler auth failed",
+      probes: {},
+      recentRuns: [],
+      slots: [],
+      leases: [],
+      progress: [],
+    });
+
+    const markdown = renderNightWatchMarkdown(failedEvidence);
+
+    expect(markdown).toContain("D1 snapshot failed (wrangler auth failed)");
   });
 
   it("writes dry-run report and evidence without collecting production data", async () => {

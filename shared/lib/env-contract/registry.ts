@@ -528,7 +528,7 @@ export const ENV_BINDINGS = [
   {
     key: "WORKER_JOB_LEDGER_MODE",
     valueType: "string",
-    description: "Scheduled Worker job-attempt ledger mode. Unset or `off` disables writes; `shadow` records best-effort telemetry without changing execution.",
+    description: "Scheduled Worker job-attempt ledger mode. Unset or `off` disables writes; `shadow` records best-effort telemetry without changing execution; `write` is reserved for later promotion and currently behaves like `shadow`.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 45, status: "optional" },

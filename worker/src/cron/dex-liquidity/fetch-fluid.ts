@@ -11,6 +11,7 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeAddress } from "../../lib/evm-selectors";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
+import { rethrowIfAborted } from "../../lib/abort";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
@@ -226,6 +227,7 @@ export async function fetchFluidPools(
         try {
           await enrichFluidPool(chain, pool, resolvedChainRpcs, signal);
         } catch (error) {
+          rethrowIfAborted(error, signal);
           const reason = toErrorMessage(error);
           errors.push(`${chain} pool ${pool.poolAddress} enrichment failed: ${reason}`);
           console.warn("[fetch-fluid] Pool enrichment failed:", reason);
@@ -233,6 +235,7 @@ export async function fetchFluidPools(
       }
       results.push(...pools);
     } catch (error) {
+      rethrowIfAborted(error, signal);
       const reason = toErrorMessage(error);
       errors.push(reason);
       console.warn("[fetch-fluid] Chain fetch failed:", reason);

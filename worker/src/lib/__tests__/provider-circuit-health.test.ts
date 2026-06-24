@@ -66,4 +66,37 @@ describe("provider-circuit-health", () => {
     expect(db.getHistory()[0]?.sql).toContain("WHERE key = ?");
     expect(db.getHistory()[0]?.sql).not.toContain("LIKE 'circuit:%'");
   });
+
+  it("degrades when tracked circuits are half-open but none are open", async () => {
+    const now = 2_000;
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [PROVIDER_CIRCUIT_INDEX_CACHE_KEY],
+        rows: [
+          {
+            key: PROVIDER_CIRCUIT_INDEX_CACHE_KEY,
+            value: JSON.stringify({
+              circuits: {
+                [CIRCUIT_SOURCE.ORCA_API]: circuit({
+                  state: "half-open",
+                  consecutiveFailures: 1,
+                  lastFailureAt: 1_900,
+                  openedAt: 1_850,
+                }),
+              },
+              updatedAt: now,
+            }),
+            updated_at: now,
+          },
+        ],
+      },
+    ]);
+
+    const health = await loadProviderCircuitHealth(db, now);
+
+    expect(health.status).toBe("degraded");
+    expect(health.openCount).toBe(0);
+    expect(health.halfOpenCount).toBe(1);
+  });
 });

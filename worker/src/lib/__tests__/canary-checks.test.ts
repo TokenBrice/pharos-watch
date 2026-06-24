@@ -5,6 +5,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   loadCanaryStatus,
   normalizeWorkerCanaryMode,
+  pruneWorkerCanaryRuns,
   runAndPersistCanaryChecks,
   runCanaryChecks,
 } from "../canary-checks";
@@ -273,6 +274,24 @@ describe("worker data invariant canaries", () => {
       errorCount: 1,
       staleCount: 0,
     });
+  });
+
+  it("prunes canary run rows older than the retention cutoff", async () => {
+    const db = mockD1([
+      {
+        match: "DELETE FROM worker_canary_runs WHERE observed_at < ?",
+        rows: [],
+        runMeta: { changes: 4 },
+      },
+    ]);
+
+    await expect(pruneWorkerCanaryRuns(db, NOW - 90 * 24 * 3600)).resolves.toBe(4);
+    expect(db.getHistory()).toEqual([
+      expect.objectContaining({
+        sql: expect.stringContaining("DELETE FROM worker_canary_runs WHERE observed_at < ?"),
+        binds: [NOW - 90 * 24 * 3600],
+      }),
+    ]);
   });
 
   it("skips rollout-missing tables without throwing the whole canary run", async () => {

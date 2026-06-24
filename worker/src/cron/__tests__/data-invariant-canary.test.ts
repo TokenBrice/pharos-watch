@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { runDataInvariantCanary } from "../data-invariant-canary";
 
@@ -13,6 +13,10 @@ vi.mock("../../lib/canary-checks", async (importOriginal) => {
 });
 
 describe("runDataInvariantCanary", () => {
+  beforeEach(() => {
+    runAndPersistCanaryChecks.mockReset();
+  });
+
   it("skips without D1 writes when canary mode is off", async () => {
     const result = await runDataInvariantCanary(mockD1(), { mode: undefined, observedAt: 1_775_900_000 });
 
@@ -70,6 +74,21 @@ describe("runDataInvariantCanary", () => {
         { checkId: "ok-check", status: "ok", severity: "info", durationMs: 4 },
         { checkId: "warn-check", status: "degraded", severity: "warning", durationMs: 7, error: "warning" },
       ],
+    });
+  });
+
+  it("fails open when shadow persistence is unavailable", async () => {
+    runAndPersistCanaryChecks.mockRejectedValueOnce(new Error("D1_ERROR: no such table: worker_canary_runs"));
+
+    const result = await runDataInvariantCanary(mockD1(), { mode: "shadow", observedAt: 1_775_900_000 });
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      mode: "shadow",
+      observedAt: 1_775_900_000,
+      persistFailed: true,
+      persistError: "D1_ERROR: no such table: worker_canary_runs",
     });
   });
 });

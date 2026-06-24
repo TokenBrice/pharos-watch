@@ -5,6 +5,7 @@ import {
   type WorkerCanaryMode,
 } from "../lib/canary-checks";
 import { throwIfAborted } from "../lib/abort";
+import { toErrorMessage } from "../lib/error-utils";
 
 export interface DataInvariantCanaryOptions {
   mode?: string;
@@ -35,12 +36,30 @@ export async function runDataInvariantCanary(
   }
 
   const observedAt = options.observedAt ?? Math.floor(Date.now() / 1000);
+  let persistError: string | null = null;
   const summary = await runAndPersistCanaryChecks(db, {
     observedAt,
     signal: options.signal,
     mode,
+  }).catch((error: unknown) => {
+    throwIfAborted(options.signal);
+    persistError = toErrorMessage(error);
+    return null;
   });
   throwIfAborted(options.signal);
+
+  if (!summary) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        mode,
+        observedAt,
+        persistFailed: true,
+        persistError,
+      }),
+    };
+  }
 
   return {
     status: summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok",

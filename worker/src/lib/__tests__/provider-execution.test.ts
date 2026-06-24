@@ -151,6 +151,87 @@ describe("provider-execution", () => {
     );
   });
 
+  it("records timed-out degraded results as provider failures", async () => {
+    vi.useFakeTimers();
+    try {
+      const context = createProviderExecutionContext({
+        laneId: "unit-lane",
+        laneMaxConcurrent: 1,
+        db: {} as D1Database,
+      });
+      let operationStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        operationStarted = resolve;
+      });
+
+      const resultPromise = withProviderExecution(
+        context,
+        makePolicy({
+          breakerPolicy: { circuitKey: "test-provider" },
+          timeoutMs: 5,
+          classifyOutcome: () => "success",
+        }),
+        async ({ signal }) => {
+          operationStarted();
+          return await new Promise<string>((resolve) => {
+            signal.addEventListener("abort", () => resolve("degraded"), { once: true });
+          });
+        },
+      );
+
+      await started;
+      await vi.advanceTimersByTimeAsync(5);
+      const result = await resultPromise;
+
+      expect(result.value).toBe("degraded");
+      expect(result.attempt.timedOut).toBe(true);
+      expect(result.attempt.outcome).toBe("failure");
+      expect(circuitMocks.recordOutcomeSafe).toHaveBeenCalledWith(
+        context.db,
+        "test-provider",
+        false,
+        undefined,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("aborts queued provider work while waiting for a lane permit", async () => {
+    const controller = new AbortController();
+    const context = createProviderExecutionContext({
+      laneId: "unit-lane",
+      laneMaxConcurrent: 1,
+      signal: controller.signal,
+    });
+
+    let startedFirst!: () => void;
+    const firstStarted = new Promise<void>((resolve) => {
+      startedFirst = resolve;
+    });
+    const first = withProviderExecution(context, makePolicy({ providerId: "first-provider" }), async ({ signal }) => {
+      startedFirst();
+      return await new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => resolve("ok"), 1_000);
+        signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(signal.reason ?? new Error("aborted"));
+        }, { once: true });
+      });
+    });
+    await firstStarted;
+
+    const second = withProviderExecution(context, makePolicy({ providerId: "second-provider" }), async () => "unused");
+    await Promise.resolve();
+    expect(context.snapshot().lane.queued).toBe(1);
+
+    controller.abort(new Error("cron aborted"));
+
+    await expect(second).rejects.toThrow("cron aborted");
+    await expect(first).rejects.toThrow("cron aborted");
+    expect(context.snapshot().lane).toMatchObject({ inUse: 0, queued: 0 });
+  });
+
   it("records non-OK providerJson responses as failures", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("bad gateway", { status: 502 })));
     const context = createProviderExecutionContext({

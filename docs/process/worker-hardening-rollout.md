@@ -44,3 +44,73 @@ After deployment, inspect `/api/status` for `summary.activeJobAttempts`,
 `summary.staleJobAttempts`, and per-cron `latestAttempt` fields. A
 `sectionErrors.jobAttempts` entry means the status route could not read the
 ledger and should block promotion beyond shadow mode.
+
+## Data-Invariant Canaries
+
+Migration `0167_worker_canary_runs.sql` creates `worker_canary_runs`.
+`WORKER_CANARY_MODE` controls the scheduled `data-invariant-canary` job:
+
+- unset / `off`: the job exits without writes.
+- `shadow`: run checks and persist telemetry; persistence failures are reported
+  in cron metadata as `persistFailed` but do not fail the scheduled slot.
+- `status`: same writer path as `shadow`; `/api/status.canaries` is expected to
+  be watched by operators.
+- `alert`: reserved for later escalation; do not enable until alert routing has
+  a separate acceptance test.
+
+Activation sequence:
+
+1. Deploy migrations with `WORKER_CANARY_MODE=off`.
+2. Set `WORKER_CANARY_MODE=shadow` for one status-self-check cycle and inspect
+   `/api/status.canaries`, `sectionErrors.canaries`, and the latest
+   `data-invariant-canary` cron metadata.
+3. Promote to `status` only after persistence succeeds for at least one cycle
+   and any degraded/error checks are understood.
+4. Roll back by setting `WORKER_CANARY_MODE=off`; schema and retained telemetry
+   are additive and can remain in D1.
+
+`prune-cron-history` owns canary retention and deletes rows older than 90 days.
+
+## Repair Task Ledger
+
+Migration `0166_worker_repair_tasks.sql` creates `worker_repair_tasks`.
+Initial producers should enqueue only shadow/diagnostic repair debt. Runner
+promotion requires:
+
+- an allowlisted task kind,
+- bounded claim batch size,
+- visible `/api/status.dataQuality.repairDebt` counts,
+- rollback by disabling the producer or runner without deleting queued rows.
+
+If repair writes fail, the existing cache-backed repair-debt/status paths must
+remain readable.
+
+## Status Supplements
+
+`publicationHealth`, `dependencyHealth`, `providerCircuitHealth`, and
+`canaries` are advisory admin supplements. Loader failures must produce a
+matching `sectionErrors.*` entry and `null` supplement value, not a failed
+`/api/status` response. These fields are optional in the public TypeScript/Zod
+contract so a newer frontend can read an older Worker during rollback.
+
+The current `publicationHealth` slice covers DEX-liquidity and yield-ranking
+publication generations only. Do not treat missing DEWS, PSI, stablecoins, or
+report-card publication rows as rollout failures until those surfaces get their
+own generation contracts.
+
+## Night Watch
+
+For staged activation, collect an operator window with:
+
+```bash
+node scripts/maintenance/night-watch-worker.mjs --cycles 1 --include-status --include-status-history --include-d1
+```
+
+When operator origins are behind Cloudflare Access, pass the service token via
+`CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` environment variables. The
+collector records D1/status access failures as access gaps in the evidence
+rather than aborting the report.
+
+Use the generated coverage matrix plus `artifactErrors`, `jobAttempts`,
+`repairTasks`, `canaryRuns`, and `publicationGenerations` evidence to decide
+whether the slice can promote beyond shadow/status mode.

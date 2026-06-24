@@ -242,15 +242,40 @@ function collectD1Snapshot(args, sinceMinutes) {
   if (args.includeStatus) childArgs.push("--include-status");
   if (args.includeStatusHistory) childArgs.push("--include-status-history");
   if (!args.remote) childArgs.push("--local");
-  if (args.cfAccessClientId) childArgs.push("--cf-access-client-id", args.cfAccessClientId);
-  if (args.cfAccessClientSecret) childArgs.push("--cf-access-client-secret", args.cfAccessClientSecret);
-  const stdout = execFileSync(process.execPath, childArgs, {
-    cwd: ROOT_DIR,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  return { collectedAt: new Date().toISOString(), mode: "d1", ...JSON.parse(stdout) };
+  const env = { ...process.env };
+  if (args.cfAccessClientId) env.CF_ACCESS_CLIENT_ID = args.cfAccessClientId;
+  if (args.cfAccessClientSecret) env.CF_ACCESS_CLIENT_SECRET = args.cfAccessClientSecret;
+  const collectedAt = new Date().toISOString();
+  try {
+    const stdout = execFileSync(process.execPath, childArgs, {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 64 * 1024 * 1024,
+      env,
+    });
+    return { collectedAt, mode: "d1", ...JSON.parse(stdout) };
+  } catch (error) {
+    return {
+      collectedAt,
+      mode: "d1-error",
+      error: childProcessErrorMessage(error),
+      probes: {},
+      recentRuns: [],
+      slots: [],
+      leases: [],
+      progress: [],
+    };
+  }
+}
+
+function childProcessErrorMessage(error) {
+  const value = error && typeof error === "object" ? error : {};
+  const stderr = "stderr" in value ? value.stderr : null;
+  if (Buffer.isBuffer(stderr) && stderr.length > 0) return stderr.toString("utf8").trim().slice(0, 1000);
+  if (typeof stderr === "string" && stderr.length > 0) return stderr.trim().slice(0, 1000);
+  if (error instanceof Error) return error.message.slice(0, 1000);
+  return String(error).slice(0, 1000);
 }
 
 function loadScheduleMatrix() {
@@ -412,6 +437,12 @@ function summarizeAnalysis(evidence) {
   const coverage = buildCoverage(evidence.scheduleMatrix, evidence.snapshots);
   const probeGaps = [];
   for (const snapshot of evidence.snapshots) {
+    if (snapshot.mode === "d1-error") {
+      probeGaps.push(`${snapshot.collectedAt}: D1 snapshot failed (${snapshot.error ?? "unknown error"})`);
+    }
+    for (const [artifact, error] of Object.entries(snapshot.artifactErrors ?? {})) {
+      probeGaps.push(`${snapshot.collectedAt}: ${artifact} unavailable (${error})`);
+    }
     for (const [name, probe] of Object.entries(snapshot.probes ?? {})) {
       const gap = accessGapForProbe(name, probe);
       if (gap) probeGaps.push(`${snapshot.collectedAt}: ${gap}`);

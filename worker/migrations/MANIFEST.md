@@ -134,6 +134,12 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Automatic Worker rollback only re-promotes the previous Worker version. It does not undo D1 schema or data changes.
 
+## Recent Migration Rollback Notes
+
+- `0165_worker_job_attempts.sql`: roll back runtime behavior with `WORKER_JOB_LEDGER_MODE=off` or an empty allowlist. Keep the additive table/indexes in place unless a coordinated D1 restore is required.
+- `0166_worker_repair_tasks.sql`: disable the repair-task producer/runner for rollback. Queued rows are diagnostic debt and can remain for later inspection; do not delete them as part of Worker rollback.
+- `0167_worker_canary_runs.sql`: roll back canary writes with `WORKER_CANARY_MODE=off`. The table is append/upsert telemetry only, pruned by `prune-cron-history`, and does not need schema rollback for Worker-code rollback.
+
 ## Rollback Procedure
 
 If a migration corrupts data:

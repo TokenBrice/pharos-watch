@@ -255,11 +255,38 @@ async function reconcileStaleSlotArtifacts(
     leasesCleared: 0,
     abandonedJobs: [],
   };
+  const expectedJobs = getExpectedJobsForScheduledSlot(slot.slot_key);
   const progressRows = await listProgressRowsForStaleSlot(
     db,
     slot.slot_started_at,
-    getExpectedJobsForScheduledSlot(slot.slot_key),
+    expectedJobs,
   );
+  const progressJobs = new Set(progressRows.map((progress) => progress.job));
+  const noProgressJobs = expectedJobs.filter((job) => !progressJobs.has(job));
+  if (noProgressJobs.length > 0) {
+    try {
+      summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
+        scheduleKey: slot.slot_key,
+        slotStartedAt: slot.slot_started_at,
+        jobs: noProgressJobs,
+        nowSec,
+        error: STALE_SLOT_ERROR,
+        metadata: {
+          reason: "stale-slot-reconciled",
+          reconciliationSource: "slot-no-progress-sweep",
+          slotKey: slot.slot_key,
+          slotStartedAt: slot.slot_started_at,
+          slotOwner: slot.execution_owner,
+          reconciledAt: nowSec,
+        },
+      });
+    } catch (err) {
+      console.warn(
+        `[cron-slot] Failed to mark no-progress job attempts abandoned for ${slot.slot_key}@${slot.slot_started_at}:`,
+        err,
+      );
+    }
+  }
 
   for (const progress of progressRows) {
     const lease = await getCronLeaseForJob(db, progress.job);

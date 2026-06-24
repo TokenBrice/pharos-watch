@@ -1059,6 +1059,7 @@ export type StatusSectionKey =
   | "liquidityHealth"
   | "yieldHealth"
   | "publicationHealth"
+  | "dependencyHealth"
   | "providerCircuitHealth"
   | "canaries"
   | "priceSourceHealth"
@@ -1135,10 +1136,10 @@ export interface StatusResponse {
   };
   liquidityHealth: LiquidityHealth | null;
   yieldHealth: YieldHealthSummary | null;
-  publicationHealth: PublicationHealth | null;
-  dependencyHealth: DependencyHealth | null;
-  providerCircuitHealth: ProviderCircuitHealth | null;
-  canaries: CanaryStatus | null;
+  publicationHealth?: PublicationHealth | null;
+  dependencyHealth?: DependencyHealth | null;
+  providerCircuitHealth?: ProviderCircuitHealth | null;
+  canaries?: CanaryStatus | null;
   priceSourceHealth: PriceSourceHealth | null;
   /**
    * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
@@ -1307,10 +1308,10 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   summary: StatusJsonObjectSchema,
   liquidityHealth: StatusJsonObjectSchema.nullable(),
   yieldHealth: StatusJsonObjectSchema.nullable(),
-  publicationHealth: StatusJsonObjectSchema.nullable(),
-  dependencyHealth: StatusJsonObjectSchema.nullable(),
-  providerCircuitHealth: StatusJsonObjectSchema.nullable(),
-  canaries: StatusJsonObjectSchema.nullable(),
+  publicationHealth: StatusJsonObjectSchema.nullable().optional(),
+  dependencyHealth: StatusJsonObjectSchema.nullable().optional(),
+  providerCircuitHealth: StatusJsonObjectSchema.nullable().optional(),
+  canaries: StatusJsonObjectSchema.nullable().optional(),
   priceSourceHealth: StatusJsonObjectSchema.nullable(),
   priceProviderDiagnostics: z.array(StatusJsonObjectSchema).nullable(),
   gtProbe: StatusJsonObjectSchema.nullable(),
@@ -1322,7 +1323,13 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   cacheBlobSizes: z.record(z.string(), z.number()).optional(),
   reserveDrift: z.array(StatusJsonObjectSchema).optional(),
   classificationWarnings: z.array(StatusJsonObjectSchema).optional(),
-}).passthrough().transform((value): StatusResponse => value as unknown as StatusResponse);
+}).passthrough().transform((value): StatusResponse => ({
+  ...value,
+  publicationHealth: value.publicationHealth ?? null,
+  dependencyHealth: value.dependencyHealth ?? null,
+  providerCircuitHealth: value.providerCircuitHealth ?? null,
+  canaries: value.canaries ?? null,
+}) as unknown as StatusResponse);
 
 export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.object({
   timestamp: z.number(),

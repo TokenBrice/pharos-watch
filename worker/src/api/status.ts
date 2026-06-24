@@ -154,12 +154,21 @@ export function handleStatus(
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
       const snapshotErrorSection = statusSnapshotSectionError(snapshotFallbackReason, snapshotError);
-      const dependencyHealth = buildDependencyHealth({
-        now,
-        caches: raw.caches,
-        crons: raw.crons,
-        publicationHealth: supplements.publicationHealth,
-      });
+      let dependencyHealth: StatusResponse["dependencyHealth"] = null;
+      let dependencyHealthError: StatusSectionError | null = null;
+      try {
+        dependencyHealth = buildDependencyHealth({
+          now,
+          caches: raw.caches,
+          crons: raw.crons,
+          publicationHealth: supplements.publicationHealth,
+        });
+      } catch {
+        dependencyHealthError = {
+          code: "dependency_health_computation_failed",
+          message: "Dependency health unavailable.",
+        };
+      }
 
       const body: StatusResponse = {
         timestamp: now,
@@ -185,6 +194,7 @@ export function handleStatus(
           ...(statusStateError ? { statusState: statusStateError } : {}),
           ...supplements.sectionErrors,
           ...(snapshotErrorSection ? { statusSnapshot: snapshotErrorSection } : {}),
+          ...(dependencyHealthError ? { dependencyHealth: dependencyHealthError } : {}),
         },
         datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,

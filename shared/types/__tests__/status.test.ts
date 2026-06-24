@@ -133,6 +133,20 @@ describe("StatusResponseSchema reserve composition contract", () => {
     });
   });
 
+  it("accepts older status payloads without hardening supplements", () => {
+    const legacyPayload: Record<string, unknown> = { ...statusResponse() };
+    for (const key of ["publicationHealth", "dependencyHealth", "providerCircuitHealth", "canaries"]) {
+      delete legacyPayload[key];
+    }
+
+    const parsed = StatusResponseSchema.parse(legacyPayload);
+
+    expect(parsed.publicationHealth).toBeNull();
+    expect(parsed.dependencyHealth).toBeNull();
+    expect(parsed.providerCircuitHealth).toBeNull();
+    expect(parsed.canaries).toBeNull();
+  });
+
   it("rejects reserve composition payloads missing cursor observability fields", () => {
     const payload = statusResponse();
     const { cursorTailState: _cursorTailState, ...reserveWithoutCursorState } = payload.reserveComposition;

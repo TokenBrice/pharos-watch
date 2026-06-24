@@ -21,6 +21,10 @@ interface RepairTaskRow {
   state: string;
 }
 
+interface CanaryRunRow {
+  observed_at: number;
+}
+
 /**
  * Minimal D1 stub that understands the DELETE statements issued by
  * runPruneCronHistory plus the SELECT COUNT(*) verification queries used
@@ -31,11 +35,13 @@ function createStubDb(): {
   cronRuns: CronRunRow[];
   jobAttempts: JobAttemptRow[];
   repairTasks: RepairTaskRow[];
+  canaryRuns: CanaryRunRow[];
   slotExecs: SlotExecRow[];
 } {
   const cronRuns: CronRunRow[] = [];
   const jobAttempts: JobAttemptRow[] = [];
   const repairTasks: RepairTaskRow[] = [];
+  const canaryRuns: CanaryRunRow[] = [];
   const slotExecs: SlotExecRow[] = [];
 
   function prepare(sql: string): D1PreparedStatement {
@@ -92,6 +98,17 @@ function createStubDb(): {
           }
           return { success: true, meta: { changes: removed } };
         }
+        if (sql.includes("DELETE FROM worker_canary_runs")) {
+          const [cutoff] = bound as [number];
+          let removed = 0;
+          for (let i = canaryRuns.length - 1; i >= 0; i--) {
+            if (canaryRuns[i].observed_at < cutoff) {
+              canaryRuns.splice(i, 1);
+              removed += 1;
+            }
+          }
+          return { success: true, meta: { changes: removed } };
+        }
         return { success: true, meta: { changes: 0 } };
       },
       first: async () => null,
@@ -107,11 +124,12 @@ function createStubDb(): {
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
 
-  return { db, cronRuns, jobAttempts, repairTasks, slotExecs };
+  return { db, cronRuns, jobAttempts, repairTasks, canaryRuns, slotExecs };
 }
 
 const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
 const TWO_WEEKS_SEC = 14 * 24 * 60 * 60;
+const NINETY_DAYS_SEC = 90 * 24 * 60 * 60;
 
 describe("runPruneCronHistory", () => {
   it("throws before D1 work when the cron signal is already aborted", async () => {
@@ -182,12 +200,26 @@ describe("runPruneCronHistory", () => {
     expect(metadata.repairTasksDeleted).toBe(1);
   });
 
+  it("removes worker_canary_runs older than 90 days and keeps newer rows", async () => {
+    const { db, canaryRuns } = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    canaryRuns.push({ observed_at: now - NINETY_DAYS_SEC - 3600 });
+    canaryRuns.push({ observed_at: now - 3600 });
+
+    const result = await runPruneCronHistory(db);
+
+    expect(canaryRuns).toEqual([{ observed_at: now - 3600 }]);
+    const metadata = JSON.parse(result.metadata!) as { canaryRunsDeleted: number };
+    expect(metadata.canaryRunsDeleted).toBe(1);
+  });
+
   it("reports all deleted counts in metadata", async () => {
-    const { db, cronRuns, jobAttempts, repairTasks, slotExecs } = createStubDb();
+    const { db, cronRuns, jobAttempts, repairTasks, canaryRuns, slotExecs } = createStubDb();
     const now = Math.floor(Date.now() / 1000);
     cronRuns.push({ job: "sync-stablecoins", started_at: now - ONE_WEEK_SEC - 1 });
     jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 1 });
     repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 1 });
+    canaryRuns.push({ observed_at: now - NINETY_DAYS_SEC - 1 });
     slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - TWO_WEEKS_SEC - 1 });
 
     const result = await runPruneCronHistory(db);
@@ -195,20 +227,24 @@ describe("runPruneCronHistory", () => {
       cronRunsDeleted: number;
       jobAttemptsDeleted: number;
       repairTasksDeleted: number;
+      canaryRunsDeleted: number;
       slotExecutionsDeleted: number;
       cutoffCronRunsSec: number;
       cutoffJobAttemptsSec: number;
       cutoffRepairTasksSec: number;
+      cutoffCanaryRunsSec: number;
       cutoffSlotExecutionsSec: number;
     };
 
     expect(metadata.cronRunsDeleted).toBe(1);
     expect(metadata.jobAttemptsDeleted).toBe(1);
     expect(metadata.repairTasksDeleted).toBe(1);
+    expect(metadata.canaryRunsDeleted).toBe(1);
     expect(metadata.slotExecutionsDeleted).toBe(1);
     expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffJobAttemptsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffRepairTasksSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
+    expect(metadata.cutoffCanaryRunsSec).toBeCloseTo(now - NINETY_DAYS_SEC, -2);
     expect(metadata.cutoffSlotExecutionsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
   });
 

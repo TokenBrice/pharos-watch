@@ -156,6 +156,23 @@ function d1Select(args, sql) {
   return parseWranglerRows(stdout);
 }
 
+function errorMessage(error) {
+  const value = error && typeof error === "object" ? error : {};
+  const stderr = "stderr" in value ? value.stderr : null;
+  if (Buffer.isBuffer(stderr) && stderr.length > 0) return stderr.toString("utf8").trim().slice(0, 1000);
+  if (typeof stderr === "string" && stderr.length > 0) return stderr.trim().slice(0, 1000);
+  if (error instanceof Error) return error.message.slice(0, 1000);
+  return String(error).slice(0, 1000);
+}
+
+function optionalD1Select(args, sql) {
+  try {
+    return { rows: d1Select(args, sql), error: null };
+  } catch (error) {
+    return { rows: [], error: errorMessage(error) };
+  }
+}
+
 function accessHeaders(args) {
   const headers = {};
   if (args.cfAccessClientId && args.cfAccessClientSecret) {
@@ -314,7 +331,52 @@ async function main() {
       FROM cron_run_progress
      ORDER BY updated_at DESC
   `);
+  const jobAttempts = optionalD1Select(args, `
+    SELECT attempt_id, schedule_key, job, slot_started_at, state, status_class, attempt_no, owner, lease_until,
+           queued_at, claimed_at, started_at, last_heartbeat_at, finished_at, updated_at, duration_ms, item_count,
+           error, ${metadataSelect(args, "result_metadata_json")}
+      FROM worker_job_attempts
+     ORDER BY updated_at DESC
+     LIMIT ${Math.min(limit, 80)}
+  `);
+  const repairTasks = optionalD1Select(args, `
+    SELECT task_id, kind, subject_id, priority, state, attempt_count, next_attempt_at, last_attempt_at,
+           locked_by, locked_until, created_at, updated_at, closed_at, last_error,
+           ${metadataSelect(args, "payload_json")}
+      FROM worker_repair_tasks
+     ORDER BY updated_at DESC
+     LIMIT 80
+  `);
+  const canaryRuns = optionalD1Select(args, `
+    SELECT check_id, status, severity, observed_at, duration_ms, error, ${metadataSelect(args, "metadata_json")}
+      FROM worker_canary_runs
+     ORDER BY observed_at DESC
+     LIMIT 80
+  `);
+  const dexPublicationGenerations = optionalD1Select(args, `
+    SELECT generation_id, started_at, state, expected_row_count, written_row_count, current_row_count,
+           published_at, failed_at, failure_reason, ${metadataSelect(args, "metadata_json")}
+      FROM dex_liquidity_publication_generations
+     ORDER BY started_at DESC
+     LIMIT 20
+  `);
+  const yieldPublicationGenerations = optionalD1Select(args, `
+    SELECT generation_id, started_at, state, cache_key, ranking_updated_at, ranking_count, source_row_count,
+           best_row_count, decision_count, published_at, failed_at, failure_reason, ${metadataSelect(args, "metadata_json")}
+      FROM yield_publication_generations
+     ORDER BY started_at DESC
+     LIMIT 20
+  `);
   const probes = await fetchProbes(args);
+  const artifactErrors = Object.fromEntries(
+    Object.entries({
+      jobAttempts: jobAttempts.error,
+      repairTasks: repairTasks.error,
+      canaryRuns: canaryRuns.error,
+      dexPublicationGenerations: dexPublicationGenerations.error,
+      yieldPublicationGenerations: yieldPublicationGenerations.error,
+    }).filter(([, error]) => error),
+  );
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -328,6 +390,14 @@ async function main() {
     slots,
     leases,
     progress,
+    jobAttempts: jobAttempts.rows,
+    repairTasks: repairTasks.rows,
+    canaryRuns: canaryRuns.rows,
+    publicationGenerations: {
+      dexLiquidity: dexPublicationGenerations.rows,
+      yieldRankings: yieldPublicationGenerations.rows,
+    },
+    artifactErrors,
   };
 
   if (args.json) {

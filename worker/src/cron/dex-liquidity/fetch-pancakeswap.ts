@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
@@ -175,6 +175,7 @@ export async function fetchPancakeSwapPools(
               volume24hByPool.set(poolId, (volume24hByPool.get(poolId) ?? 0) + validVolume);
             }
           } catch (error) {
+            rethrowIfAborted(error, signal);
             failedHourDataBatches++;
             const message = toErrorMessage(error);
             console.warn(
@@ -240,6 +241,7 @@ export async function fetchPancakeSwapPools(
         successfulChains++;
       }
     } catch (error) {
+      rethrowIfAborted(error, signal);
       errors.push(`${chain}: ${toErrorMessage(error)}`);
       console.warn("[fetch-pancakeswap]", chain, error);
     }

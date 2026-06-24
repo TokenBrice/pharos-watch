@@ -1,6 +1,7 @@
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 
 const STATUS_SECTION_MESSAGES: Partial<Record<keyof StatusResponse["sectionErrors"], string>> = {
+  dependencyHealth: "Dependency health unavailable.",
   jobAttempts: "Worker job attempt diagnostics unavailable.",
   reserveComposition: "Reserve composition overview unavailable.",
   telegramBot: "Telegram bot diagnostics unavailable.",

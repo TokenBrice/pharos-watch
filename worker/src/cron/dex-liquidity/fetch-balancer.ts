@@ -8,6 +8,7 @@ import {
 } from "./direct-api-policy";
 import { toErrorMessage } from "../../lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { rethrowIfAborted } from "../../lib/abort";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 
@@ -144,6 +145,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         signal: buildDirectApiRequestSignal(signal),
       });
     } catch (err) {
+      rethrowIfAborted(err, signal);
       const message = toErrorMessage(err);
       errors.push(`request failed on page ${page}: ${message}`);
       break;
