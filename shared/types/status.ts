@@ -888,7 +888,7 @@ export interface CoinGeckoPriceDiff {
   rows: CoinGeckoPriceDiffRow[];
 }
 
-export type PublicationSurfaceId = "dex-liquidity" | "yield-rankings";
+export type PublicationSurfaceId = "dex-liquidity" | "yield-rankings" | "stablecoins";
 export type PublicationGenerationState =
   | "candidate"
   | "validated"
@@ -1123,6 +1123,11 @@ export interface StatusResponse {
     budgetOnlySurfaceMissingTelemetry?: number;
     budgetOnlySurfaceStaleTelemetry?: number;
     budgetOnlySurfaceErrors?: number;
+    canaryTotalChecks?: number;
+    canaryErrorCount?: number;
+    canaryDegradedCount?: number;
+    canarySkippedCount?: number;
+    canaryStaleCount?: number;
     diagnosticIssueCount: number;
     worstCacheRatio: number;
     /**

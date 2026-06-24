@@ -170,6 +170,16 @@ export function handleStatus(
         };
       }
 
+      const canarySummary = supplements.canaries
+        ? {
+            canaryTotalChecks: supplements.canaries.totalChecks,
+            canaryErrorCount: supplements.canaries.errorCount,
+            canaryDegradedCount: supplements.canaries.degradedCount,
+            canarySkippedCount: supplements.canaries.skippedCount,
+            canaryStaleCount: supplements.canaries.staleCount,
+          }
+        : {};
+
       const body: StatusResponse = {
         timestamp: now,
         dbHealthy: raw.dbHealthy,
@@ -197,7 +207,10 @@ export function handleStatus(
           ...(dependencyHealthError ? { dependencyHealth: dependencyHealthError } : {}),
         },
         datasetFreshness: raw.datasetFreshness,
-        summary: raw.summary,
+        summary: {
+          ...raw.summary,
+          ...canarySummary,
+        },
         reserveComposition: raw.reserveComposition,
         liquidityHealth: supplements.liquidityHealth,
         yieldHealth: supplements.yieldHealth,

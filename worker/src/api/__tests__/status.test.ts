@@ -246,6 +246,83 @@ describe("handleStatus", () => {
     expect(sql).not.toContain("blacklist_events");
   });
 
+  it("adds canary counts to the live status summary", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60)],
+      },
+      {
+        match: "FROM worker_canary_runs",
+        rows: [
+          {
+            check_id: "bad-check",
+            status: "error",
+            severity: "critical",
+            observed_at: now - 30,
+            duration_ms: 5,
+            metadata_json: JSON.stringify({ label: "Bad check", description: "Failed invariant" }),
+            error: "boom",
+          },
+          {
+            check_id: "warn-check",
+            status: "degraded",
+            severity: "warning",
+            observed_at: now - 40,
+            duration_ms: 7,
+            metadata_json: JSON.stringify({ label: "Warn check", description: "Soft invariant" }),
+            error: null,
+          },
+          {
+            check_id: "skip-check",
+            status: "skipped",
+            severity: "info",
+            observed_at: now - 50,
+            duration_ms: 1,
+            metadata_json: JSON.stringify({ label: "Skip check", description: "Intentional skip" }),
+            error: null,
+          },
+        ],
+      },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      summary: {
+        canaryTotalChecks?: number;
+        canaryErrorCount?: number;
+        canaryDegradedCount?: number;
+        canarySkippedCount?: number;
+        canaryStaleCount?: number;
+      };
+      canaries: {
+        errorCount: number;
+        degradedCount: number;
+        skippedCount: number;
+        staleCount: number;
+      } | null;
+    };
+    expect(body.summary).toMatchObject({
+      canaryTotalChecks: 3,
+      canaryErrorCount: 1,
+      canaryDegradedCount: 1,
+      canarySkippedCount: 1,
+      canaryStaleCount: 0,
+    });
+    expect(body.canaries).toMatchObject({
+      errorCount: 1,
+      degradedCount: 1,
+      skippedCount: 1,
+      staleCount: 0,
+    });
+  });
+
   it("keeps status available when dependency-health computation fails", async () => {
     const dependencyHealthSpy = vi
       .spyOn(dependencyHealthModule, "buildDependencyHealth")
