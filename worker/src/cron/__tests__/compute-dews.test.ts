@@ -196,6 +196,7 @@ interface MakeDbOptions {
     failed_at: number | null;
     failure_reason: string | null;
   };
+  failDexPublicationDiagnostics?: boolean;
   onBind?: (sql: string, args: unknown[]) => void;
 }
 
@@ -304,6 +305,9 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
 
     const first = async <T>() => {
       if (sql.includes("FROM dex_liquidity_publication_generations")) {
+        if (opts.failDexPublicationDiagnostics) {
+          throw new Error("publication diagnostics unavailable");
+        }
         if (sql.includes("WHERE state = 'published'")) {
           return (opts.dexPublicationLatestPublished ?? null) as T | null;
         }
@@ -959,6 +963,50 @@ describe("computeAndStoreDEWS", () => {
       latestGenerationFailureReason: "current generation incomplete: active=368 expected=369",
       latestPublishedGenerationId: "dex-liquidity-1772539200",
       latestPublishedAgeSec: 7_400,
+    });
+  });
+
+  it("keeps stale dex_liquidity failures visible when publication diagnostics fail", async () => {
+    const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb(sqlSeen, {
+      failDexPublicationDiagnostics: true,
+      dexLiqRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          weighted_balance_ratio: 0.4,
+          avg_pool_stress: 90,
+          top_pools_json: "[]",
+          liquidity_score: 25,
+          total_tvl_usd: 1_000_000,
+          updated_at: nowSec - 3 * 3600,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceCoverage: Record<string, number>;
+      dependencies: {
+        dexLiquidity?: {
+          diagnosticsError?: string;
+          latestGenerationId?: string | null;
+          latestPublishedAgeSec?: number | null;
+        };
+      };
+    };
+    expect(metadata.sourceFailures).toContainEqual(
+      expect.objectContaining({ source: "dex-liquidity-freshness", bootstrapAllowed: false }),
+    );
+    expect(metadata.sourceCoverage.dexLiquidityStaleRows).toBe(1);
+    expect(metadata.sourceCoverage.dexLiquidityFreshRows).toBe(0);
+    expect(metadata.dependencies.dexLiquidity).toMatchObject({
+      diagnosticsError: "publication diagnostics unavailable",
+      latestGenerationId: null,
+      latestPublishedAgeSec: null,
     });
   });
 
