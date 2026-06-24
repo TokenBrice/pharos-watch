@@ -58,6 +58,7 @@ export interface Env {
   API_KEY_REQUEST_ATTRIBUTION_DISABLED?: string;
   WORKER_JOB_LEDGER_MODE?: string;
   WORKER_JOB_LEDGER_ALLOWLIST?: string;
+  WORKER_REPAIR_RUNNER_MODE?: string;
 }
 
 export interface WorkerEnvIssue {

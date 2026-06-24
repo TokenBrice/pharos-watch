@@ -310,6 +310,7 @@ export interface DataQuality {
   blacklistGapStatus: "ok" | "failed";
   activeDepegStatus: "ok" | "failed";
   onchainSupplyQueryStatus: "ok" | "failed" | "unavailable";
+  repairDebt: RepairDebtSummary;
   ddrRepairDebtStatus: "ok" | "present" | "unknown";
   ddrRepairDebtCount: number;
   ddrRepairDebtCheckedAt: number | null;
@@ -340,6 +341,22 @@ export interface DataQuality {
   activeDepegs: number;
   staleOnchainSupply: number;
   onchainStaleRatio: number;
+}
+
+export interface RepairDebtKindSummary {
+  openCount: number;
+  oldestAgeSec: number | null;
+  nextRunnerDueAt: number | null;
+}
+
+export interface RepairDebtSummary {
+  status: "ok" | "present" | "unknown";
+  openCount: number;
+  oldestAgeSec: number | null;
+  byKind: Record<string, RepairDebtKindSummary>;
+  availabilityEscalated: boolean;
+  nextRunnerDueAt: number | null;
+  source: "worker-repair-tasks" | "ddr-cache-fallback" | "unavailable";
 }
 
 export interface DatasetFreshness {

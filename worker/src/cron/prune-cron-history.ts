@@ -4,6 +4,7 @@ import { SECONDS } from "../lib/time-constants";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { createCronResult } from "../lib/cron-result";
 import { pruneWorkerJobAttempts } from "../lib/job-ledger";
+import { pruneRepairTasks } from "../lib/repair-tasks";
 
 // Kept in sync with the retention window previously enforced inline inside
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
@@ -27,6 +28,8 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
 
   const jobAttemptsDeleted = await pruneWorkerJobAttempts(db, now - SECONDS.ONE_WEEK, signal);
   throwIfAborted(signal);
+  const repairTasksDeleted = await pruneRepairTasks(db, now - SECONDS.ONE_WEEK, signal);
+  throwIfAborted(signal);
 
   const slotResult = await runWithOverloadRetry(() =>
     db
@@ -41,13 +44,15 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
 
   return createCronResult({
     status: "ok",
-    itemCount: cronRunsDeleted + jobAttemptsDeleted + slotExecutionsDeleted,
+    itemCount: cronRunsDeleted + jobAttemptsDeleted + repairTasksDeleted + slotExecutionsDeleted,
     metadata: {
       cronRunsDeleted,
       jobAttemptsDeleted,
+      repairTasksDeleted,
       slotExecutionsDeleted,
       cutoffCronRunsSec: now - SECONDS.ONE_WEEK,
       cutoffJobAttemptsSec: now - SECONDS.ONE_WEEK,
+      cutoffRepairTasksSec: now - SECONDS.ONE_WEEK,
       cutoffSlotExecutionsSec: now - SLOT_EXECUTION_RETENTION_SEC,
     },
   });

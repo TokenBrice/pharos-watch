@@ -544,6 +544,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "WORKER_REPAIR_RUNNER_MODE",
+    valueType: "string",
+    description: "Worker repair-task runner mode. Unset or `off` disables repair processing; `shadow` may record reconciliation telemetry before an enabled runner claims tasks.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 47, status: "optional" },
+    },
+  },
+  {
     key: "OPS_UI_ORIGIN",
     valueType: "string",
     description: "Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks.",

@@ -16,6 +16,52 @@ import type { DataQuality, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
 import { loadDdrRepairDebt } from "../ddr-repair-debt";
+import { loadRepairDebtSummary } from "../repair-tasks";
+
+function emptyRepairDebt(source: DataQuality["repairDebt"]["source"] = "unavailable"): DataQuality["repairDebt"] {
+  return {
+    status: "unknown",
+    openCount: 0,
+    oldestAgeSec: null,
+    byKind: {},
+    availabilityEscalated: false,
+    nextRunnerDueAt: null,
+    source,
+  };
+}
+
+function ddrCacheRepairDebtSummary(
+  repairDebt: Awaited<ReturnType<typeof loadDdrRepairDebt>>,
+  now: number,
+): DataQuality["repairDebt"] {
+  if (!repairDebt || repairDebt.count <= 0) {
+    return {
+      status: "ok",
+      openCount: 0,
+      oldestAgeSec: null,
+      byKind: {},
+      availabilityEscalated: false,
+      nextRunnerDueAt: null,
+      source: "ddr-cache-fallback",
+    };
+  }
+  const checkedAge = Math.max(0, now - repairDebt.checkedAt);
+  return {
+    status: "present",
+    openCount: repairDebt.count,
+    oldestAgeSec: checkedAge,
+    byKind: {
+      "ddr-repair-required-event": {
+        openCount: repairDebt.count,
+        oldestAgeSec: checkedAge,
+        nextRunnerDueAt: null,
+      },
+    },
+    availabilityEscalated: false,
+    nextRunnerDueAt: null,
+    source: "ddr-cache-fallback",
+  };
+}
 
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
 
@@ -40,6 +86,7 @@ export function emptyDataQuality(): DataQuality {
     blacklistGapStatus: "failed",
     activeDepegStatus: "failed",
     onchainSupplyQueryStatus: "failed",
+    repairDebt: emptyRepairDebt(),
     ddrRepairDebtStatus: "unknown",
     ddrRepairDebtCount: 0,
     ddrRepairDebtCheckedAt: null,
@@ -173,17 +220,39 @@ export async function getDataQuality(
   let ddrRepairDebtCheckedAt: number | null = null;
   let ddrRepairDebtEvents: DataQuality["ddrRepairDebtEvents"] = [];
   let ddrRepairDebtEventsTruncated = false;
+  let repairDebt: DataQuality["repairDebt"] = emptyRepairDebt();
+  let repairTaskSummaryLoaded = false;
   try {
-    const repairDebt = await loadDdrRepairDebt(db);
-    if (repairDebt && repairDebt.count > 0) {
+    repairDebt = await loadRepairDebtSummary(db, now);
+    repairTaskSummaryLoaded = true;
+  } catch (e) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "repair_debt_task_summary_query_failed",
+      route: "status",
+      source: "worker-repair-tasks",
+      message: "Failed to query repair task summary; falling back to DDR cache marker",
+      error: e,
+    });
+  }
+  try {
+    const ddrRepairDebt = await loadDdrRepairDebt(db);
+    if (ddrRepairDebt && ddrRepairDebt.count > 0) {
       ddrRepairDebtStatus = "present";
-      ddrRepairDebtCount = repairDebt.count;
-      ddrRepairDebtCheckedAt = repairDebt.checkedAt;
-      ddrRepairDebtEvents = repairDebt.events;
-      ddrRepairDebtEventsTruncated = repairDebt.eventsTruncated;
+      ddrRepairDebtCount = ddrRepairDebt.count;
+      ddrRepairDebtCheckedAt = ddrRepairDebt.checkedAt;
+      ddrRepairDebtEvents = ddrRepairDebt.events;
+      ddrRepairDebtEventsTruncated = ddrRepairDebt.eventsTruncated;
+      if (!repairTaskSummaryLoaded || repairDebt.openCount === 0) {
+        repairDebt = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
+      }
+    } else if (!repairTaskSummaryLoaded) {
+      repairDebt = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
     }
   } catch (e) {
     ddrRepairDebtStatus = "unknown";
+    if (!repairTaskSummaryLoaded) repairDebt = emptyRepairDebt();
     logWorkerEvent({
       scope: "status",
       level: "warn",
@@ -306,6 +375,7 @@ export async function getDataQuality(
     blacklistGapStatus,
     activeDepegStatus,
     onchainSupplyQueryStatus,
+    repairDebt,
     ddrRepairDebtStatus,
     ddrRepairDebtCount,
     ddrRepairDebtCheckedAt,

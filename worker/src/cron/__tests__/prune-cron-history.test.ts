@@ -16,6 +16,11 @@ interface JobAttemptRow {
   state: string;
 }
 
+interface RepairTaskRow {
+  updated_at: number;
+  state: string;
+}
+
 /**
  * Minimal D1 stub that understands the DELETE statements issued by
  * runPruneCronHistory plus the SELECT COUNT(*) verification queries used
@@ -25,10 +30,12 @@ function createStubDb(): {
   db: D1Database;
   cronRuns: CronRunRow[];
   jobAttempts: JobAttemptRow[];
+  repairTasks: RepairTaskRow[];
   slotExecs: SlotExecRow[];
 } {
   const cronRuns: CronRunRow[] = [];
   const jobAttempts: JobAttemptRow[] = [];
+  const repairTasks: RepairTaskRow[] = [];
   const slotExecs: SlotExecRow[] = [];
 
   function prepare(sql: string): D1PreparedStatement {
@@ -73,6 +80,18 @@ function createStubDb(): {
           }
           return { success: true, meta: { changes: removed } };
         }
+        if (sql.includes("DELETE FROM worker_repair_tasks")) {
+          const [cutoff] = bound as [number];
+          let removed = 0;
+          const terminalStates = new Set(bound.slice(1).map(String));
+          for (let i = repairTasks.length - 1; i >= 0; i--) {
+            if (repairTasks[i].updated_at < cutoff && terminalStates.has(repairTasks[i].state)) {
+              repairTasks.splice(i, 1);
+              removed += 1;
+            }
+          }
+          return { success: true, meta: { changes: removed } };
+        }
         return { success: true, meta: { changes: 0 } };
       },
       first: async () => null,
@@ -88,7 +107,7 @@ function createStubDb(): {
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
 
-  return { db, cronRuns, jobAttempts, slotExecs };
+  return { db, cronRuns, jobAttempts, repairTasks, slotExecs };
 }
 
 const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
@@ -146,28 +165,50 @@ describe("runPruneCronHistory", () => {
     expect(metadata.jobAttemptsDeleted).toBe(1);
   });
 
+  it("removes terminal repair tasks older than 7 days and keeps active or newer rows", async () => {
+    const { db, repairTasks } = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 3600 });
+    repairTasks.push({ state: "open", updated_at: now - ONE_WEEK_SEC - 3600 });
+    repairTasks.push({ state: "cancelled", updated_at: now - 3600 });
+
+    const result = await runPruneCronHistory(db);
+
+    expect(repairTasks).toEqual([
+      { state: "open", updated_at: now - ONE_WEEK_SEC - 3600 },
+      { state: "cancelled", updated_at: now - 3600 },
+    ]);
+    const metadata = JSON.parse(result.metadata!) as { repairTasksDeleted: number };
+    expect(metadata.repairTasksDeleted).toBe(1);
+  });
+
   it("reports all deleted counts in metadata", async () => {
-    const { db, cronRuns, jobAttempts, slotExecs } = createStubDb();
+    const { db, cronRuns, jobAttempts, repairTasks, slotExecs } = createStubDb();
     const now = Math.floor(Date.now() / 1000);
     cronRuns.push({ job: "sync-stablecoins", started_at: now - ONE_WEEK_SEC - 1 });
     jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 1 });
+    repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 1 });
     slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - TWO_WEEKS_SEC - 1 });
 
     const result = await runPruneCronHistory(db);
     const metadata = JSON.parse(result.metadata!) as {
       cronRunsDeleted: number;
       jobAttemptsDeleted: number;
+      repairTasksDeleted: number;
       slotExecutionsDeleted: number;
       cutoffCronRunsSec: number;
       cutoffJobAttemptsSec: number;
+      cutoffRepairTasksSec: number;
       cutoffSlotExecutionsSec: number;
     };
 
     expect(metadata.cronRunsDeleted).toBe(1);
     expect(metadata.jobAttemptsDeleted).toBe(1);
+    expect(metadata.repairTasksDeleted).toBe(1);
     expect(metadata.slotExecutionsDeleted).toBe(1);
     expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffJobAttemptsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
+    expect(metadata.cutoffRepairTasksSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffSlotExecutionsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
   });
 
