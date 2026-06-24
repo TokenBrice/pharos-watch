@@ -11,17 +11,24 @@ interface SlotExecRow {
   slot_started_at: number;
 }
 
+interface JobAttemptRow {
+  updated_at: number;
+  state: string;
+}
+
 /**
- * Minimal D1 stub that understands the two DELETE statements issued by
+ * Minimal D1 stub that understands the DELETE statements issued by
  * runPruneCronHistory plus the SELECT COUNT(*) verification queries used
  * in this test. Mirrors the pattern in prune-status-probe-runs.test.ts.
  */
 function createStubDb(): {
   db: D1Database;
   cronRuns: CronRunRow[];
+  jobAttempts: JobAttemptRow[];
   slotExecs: SlotExecRow[];
 } {
   const cronRuns: CronRunRow[] = [];
+  const jobAttempts: JobAttemptRow[] = [];
   const slotExecs: SlotExecRow[] = [];
 
   function prepare(sql: string): D1PreparedStatement {
@@ -54,6 +61,18 @@ function createStubDb(): {
           }
           return { success: true, meta: { changes: removed } };
         }
+        if (sql.includes("DELETE FROM worker_job_attempts")) {
+          const [cutoff] = bound as [number];
+          let removed = 0;
+          const terminalStates = new Set(bound.slice(1).map(String));
+          for (let i = jobAttempts.length - 1; i >= 0; i--) {
+            if (jobAttempts[i].updated_at < cutoff && terminalStates.has(jobAttempts[i].state)) {
+              jobAttempts.splice(i, 1);
+              removed += 1;
+            }
+          }
+          return { success: true, meta: { changes: removed } };
+        }
         return { success: true, meta: { changes: 0 } };
       },
       first: async () => null,
@@ -69,7 +88,7 @@ function createStubDb(): {
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
 
-  return { db, cronRuns, slotExecs };
+  return { db, cronRuns, jobAttempts, slotExecs };
 }
 
 const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
@@ -110,23 +129,45 @@ describe("runPruneCronHistory", () => {
     expect(slotExecs[0].slot_started_at).toBe(now - 3600);
   });
 
-  it("reports both deleted counts in metadata", async () => {
-    const { db, cronRuns, slotExecs } = createStubDb();
+  it("removes terminal worker_job_attempts older than 7 days and keeps active or newer rows", async () => {
+    const { db, jobAttempts } = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 3600 });
+    jobAttempts.push({ state: "running", updated_at: now - ONE_WEEK_SEC - 3600 });
+    jobAttempts.push({ state: "failed", updated_at: now - 3600 });
+
+    const result = await runPruneCronHistory(db);
+
+    expect(jobAttempts).toEqual([
+      { state: "running", updated_at: now - ONE_WEEK_SEC - 3600 },
+      { state: "failed", updated_at: now - 3600 },
+    ]);
+    const metadata = JSON.parse(result.metadata!) as { jobAttemptsDeleted: number };
+    expect(metadata.jobAttemptsDeleted).toBe(1);
+  });
+
+  it("reports all deleted counts in metadata", async () => {
+    const { db, cronRuns, jobAttempts, slotExecs } = createStubDb();
     const now = Math.floor(Date.now() / 1000);
     cronRuns.push({ job: "sync-stablecoins", started_at: now - ONE_WEEK_SEC - 1 });
+    jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 1 });
     slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - TWO_WEEKS_SEC - 1 });
 
     const result = await runPruneCronHistory(db);
     const metadata = JSON.parse(result.metadata!) as {
       cronRunsDeleted: number;
+      jobAttemptsDeleted: number;
       slotExecutionsDeleted: number;
       cutoffCronRunsSec: number;
+      cutoffJobAttemptsSec: number;
       cutoffSlotExecutionsSec: number;
     };
 
     expect(metadata.cronRunsDeleted).toBe(1);
+    expect(metadata.jobAttemptsDeleted).toBe(1);
     expect(metadata.slotExecutionsDeleted).toBe(1);
     expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
+    expect(metadata.cutoffJobAttemptsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffSlotExecutionsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
   });
 

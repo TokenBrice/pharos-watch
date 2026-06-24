@@ -4,6 +4,7 @@ import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { staleSlotEventCacheKey } from "../cron-lease";
 import { buildInClause } from "../db";
+import { loadWorkerJobAttemptHealth } from "../job-ledger";
 import { logWorkerEvent } from "../structured-log";
 
 export interface CronHealthSnapshot {
@@ -19,9 +20,12 @@ export interface CronHealthSnapshot {
   staleCronArtifacts: number;
   expiredCronLeases: number;
   orphanedCronProgressRows: number;
+  activeJobAttempts: number;
+  staleJobAttempts: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
+  jobAttemptQueryFailed: boolean;
   scheduledSlots: ScheduledSlotHealthSummary;
 }
 
@@ -369,16 +373,17 @@ export async function loadCronHealth(
   const eventKeyInClause = buildInClause(eventKeys);
   const scheduleKeyByEventKey = new Map(eventKeys.map((key, index) => [key, scheduleKeys[index]]));
 
-  // Fire the four independent query groups concurrently. The lease→progress
+  // Fire independent query groups concurrently. The lease→progress
   // dependency is purely an in-memory post-fetch step, so only the raw fetches
   // run in parallel; the dependent processing below preserves the original
   // ordering. This collapses ~13 sequential D1 awaits into one parallel wave.
-  const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult] = await Promise.all([
+  const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult, jobAttemptHealth] = await Promise.all([
     fetchCronHistoryRows(db, cronJobs),
     fetchCronLeaseRows(db, cronJobInClause),
     fetchCronProgressRows(db, cronJobInClause),
     fetchCronSlotEventRows(db, eventKeyInClause),
     fetchRunningCronSlotRows(db),
+    loadWorkerJobAttemptHealth(db, cronJobs, now),
   ]);
   const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);
 
@@ -526,6 +531,7 @@ export async function loadCronHealth(
         lastRun.status === "degraded" ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
+    const latestAttempt = jobAttemptHealth.latestByJob.get(job);
     const metadataDegraded =
       job === "sync-blacklist"
       && lastRun != null
@@ -586,6 +592,7 @@ export async function loadCronHealth(
           stale: now - inFlight.updatedAt > Math.max(300, interval),
         };
       })(),
+      ...(latestAttempt ? { latestAttempt } : {}),
       ...(staleArtifactsByJob.has(job) ? { staleArtifacts: staleArtifactsByJob.get(job) } : {}),
       ...(latestEventByJob.has(job) ? { latestEvent: latestEventByJob.get(job) } : {}),
       ...(watchBootstrap ? { bootstrap: true } : {}),
@@ -613,9 +620,12 @@ export async function loadCronHealth(
     staleCronArtifacts,
     expiredCronLeases,
     orphanedCronProgressRows,
+    activeJobAttempts: jobAttemptHealth.activeAttempts,
+    staleJobAttempts: jobAttemptHealth.staleAttempts,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
+    jobAttemptQueryFailed: jobAttemptHealth.queryFailed,
     scheduledSlots,
   };
 }

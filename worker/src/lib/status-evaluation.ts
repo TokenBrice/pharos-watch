@@ -31,6 +31,7 @@ import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
 import type { CacheFreshnessDiagnostic } from "./api-utils";
+import { getStatusSectionMessage } from "./status/section-errors";
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -130,7 +131,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     return buildDbUnavailableRawStatus();
   }
 
-  // Four independent loads run in parallel. D1's per-request concurrency is
+  // Independent status loads run in parallel. D1's per-request concurrency is
   // effectively unconstrained up to the Worker CPU budget; the 6-connection
   // ctx.waitUntil pool documented in CLAUDE.md does not apply here because
   // none of these calls are scheduled via waitUntil.
@@ -155,6 +156,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
+    jobAttemptQueryFailed,
   } = cronHealth;
   const {
     sectionErrors,
@@ -178,8 +180,15 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
+    jobAttemptQueryFailed,
     cronBudgetSurfaceTelemetryQueryFailed: budgetOnlySurfaceResult.queryFailed,
   });
+  if (jobAttemptQueryFailed) {
+    sectionErrors.jobAttempts = {
+      code: "job_attempts_query_failed",
+      message: getStatusSectionMessage("jobAttempts"),
+    };
+  }
 
   const availabilityStatus = deriveAvailabilityStatus({
     publicHealth,

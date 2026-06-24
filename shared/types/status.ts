@@ -92,6 +92,57 @@ export interface CronEvent {
   recordedAt: number;
 }
 
+export const WORKER_JOB_ATTEMPT_STATE_VALUES = [
+  "queued",
+  "claimed",
+  "running",
+  "completed",
+  "deferred",
+  "abandoned",
+  "failed",
+  "skipped_locked",
+  "cancelled",
+] as const;
+export type WorkerJobAttemptState = (typeof WORKER_JOB_ATTEMPT_STATE_VALUES)[number];
+
+export const WORKER_JOB_ATTEMPT_STATUS_CLASS_VALUES = [
+  "ok",
+  "degraded",
+  "controlled_error",
+  "thrown_error",
+  "abandoned",
+  "deferred",
+  "skipped_duplicate",
+  "skipped_running",
+  "skipped_locked",
+] as const;
+export type WorkerJobAttemptStatusClass = (typeof WORKER_JOB_ATTEMPT_STATUS_CLASS_VALUES)[number];
+
+export interface WorkerJobAttemptStatus {
+  attemptId: string;
+  idempotencyKey: string;
+  scheduleKey: string;
+  job: string;
+  slotStartedAt: number | null;
+  producerKind: string;
+  state: WorkerJobAttemptState;
+  statusClass: WorkerJobAttemptStatusClass | null;
+  attemptNo: number;
+  owner: string | null;
+  leaseUntil: number | null;
+  queuedAt: number;
+  claimedAt: number | null;
+  startedAt: number | null;
+  lastHeartbeatAt: number | null;
+  finishedAt: number | null;
+  updatedAt: number;
+  durationMs: number | null;
+  itemCount: number | null;
+  stale: boolean;
+  error: string | null;
+  metadata?: Record<string, unknown>;
+}
+
 export interface CronStatus {
   lastRun: CronRun | null;
   recentRuns: CronRun[];
@@ -99,6 +150,7 @@ export interface CronStatus {
   healthy: boolean;
   telemetryUnknown?: boolean;
   inFlight?: CronInFlight | null;
+  latestAttempt?: WorkerJobAttemptStatus;
   staleArtifacts?: CronStaleArtifact[];
   latestEvent?: CronEvent;
   /**
@@ -846,6 +898,7 @@ export type StatusSectionKey =
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
   | "discoveryCandidates"
+  | "jobAttempts"
   | "mintBurnReconciliation"
   | "reserveDrift"
   | "classificationWarnings";
@@ -894,6 +947,8 @@ export interface StatusResponse {
     staleCronArtifacts?: number;
     expiredCronLeases?: number;
     orphanedCronProgressRows?: number;
+    activeJobAttempts?: number;
+    staleJobAttempts?: number;
     scheduledSlotRunning?: number;
     scheduledSlotStaleCandidates?: number;
     scheduledSlotOldestRunningAgeSec?: number | null;

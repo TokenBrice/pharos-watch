@@ -333,3 +333,59 @@ describe("loadCronHealth — cron event markers", () => {
     expect(snapshot.crons["sync-stablecoins"]?.latestEvent).toBeUndefined();
   });
 });
+
+describe("loadCronHealth — worker job attempt telemetry", () => {
+  const NOW = 1_775_890_000;
+
+  it("surfaces latest attempts and active/stale attempt counters", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "ROW_NUMBER() OVER",
+        rows: [{
+          attempt_id: "attempt-a",
+          idempotency_key: "scheduled-slot|hourlyYieldSync|1775890000|sync-yield-data|1",
+          schedule_key: "hourlyYieldSync",
+          job: "sync-yield-data",
+          slot_started_at: NOW - 60,
+          producer_kind: "scheduled-slot",
+          state: "running",
+          status_class: null,
+          attempt_no: 1,
+          owner: "owner-a",
+          queued_at: NOW - 60,
+          claimed_at: NOW - 59,
+          started_at: NOW - 59,
+          last_heartbeat_at: NOW - 10,
+          finished_at: null,
+          updated_at: NOW - 10,
+          duration_ms: null,
+          item_count: 12,
+          result_metadata_json: JSON.stringify({ progress: { stage: "evaluation" } }),
+          error: null,
+        }],
+      },
+      {
+        match: "COUNT(*) AS active_count",
+        rows: [],
+        first: { active_count: 2, stale_count: 1 },
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.activeJobAttempts).toBe(2);
+    expect(snapshot.staleJobAttempts).toBe(1);
+    expect(snapshot.jobAttemptQueryFailed).toBe(false);
+    expect(snapshot.crons["sync-yield-data"]?.latestAttempt).toMatchObject({
+      attemptId: "attempt-a",
+      state: "running",
+      stale: false,
+      itemCount: 12,
+      metadata: { progress: { stage: "evaluation" } },
+    });
+  });
+});

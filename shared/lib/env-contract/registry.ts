@@ -526,6 +526,24 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "WORKER_JOB_LEDGER_MODE",
+    valueType: "string",
+    description: "Scheduled Worker job-attempt ledger mode. Unset or `off` disables writes; `shadow` records best-effort telemetry without changing execution.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 45, status: "optional" },
+    },
+  },
+  {
+    key: "WORKER_JOB_LEDGER_ALLOWLIST",
+    valueType: "string",
+    description: "Optional CSV allowlist for job-attempt ledger recording. Unset records all scheduled jobs when the ledger mode is enabled.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 46, status: "optional" },
+    },
+  },
+  {
     key: "OPS_UI_ORIGIN",
     valueType: "string",
     description: "Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks.",

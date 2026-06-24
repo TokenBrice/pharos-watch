@@ -6,6 +6,7 @@ import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
+import { markWorkerJobAttemptsAbandonedForSlot } from "./job-ledger";
 
 export interface ScheduledSlotExecutionOptions {
   slotStartedAt: number;
@@ -58,6 +59,7 @@ type StaleSlotLeaseRow = {
 
 interface StaleSlotReconciliationSummary {
   syntheticCronRuns: number;
+  jobAttemptsAbandoned: number;
   progressRowsCleared: number;
   leasesCleared: number;
   abandonedJobs: Array<{
@@ -83,6 +85,7 @@ export interface ScheduledSlotSweepSummary {
   candidateSlots: number;
   slotsReconciled: number;
   syntheticCronRuns: number;
+  jobAttemptsAbandoned: number;
   progressRowsCleared: number;
   leasesCleared: number;
   abandonedSlots: Array<{
@@ -247,6 +250,7 @@ async function reconcileStaleSlotArtifacts(
 ): Promise<StaleSlotReconciliationSummary> {
   const summary: StaleSlotReconciliationSummary = {
     syntheticCronRuns: 0,
+    jobAttemptsAbandoned: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
     abandonedJobs: [],
@@ -277,6 +281,31 @@ async function reconcileStaleSlotArtifacts(
       leaseOwner: progress.lease_owner,
       leaseUntil: lease.lease_until,
     });
+    try {
+      summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
+        scheduleKey: slot.slot_key,
+        slotStartedAt: slot.slot_started_at,
+        jobs: [progress.job],
+        nowSec,
+        error: STALE_SLOT_ERROR,
+        metadata: {
+          reason: "stale-slot-reconciled",
+          slotKey: slot.slot_key,
+          slotStartedAt: slot.slot_started_at,
+          slotOwner: slot.execution_owner,
+          progressStage: progress.stage,
+          progressUpdatedAt: progress.updated_at,
+          leaseOwner: progress.lease_owner,
+          leaseUntil: lease.lease_until,
+          reconciledAt: nowSec,
+        },
+      });
+    } catch (err) {
+      console.warn(
+        `[cron-slot] Failed to mark job attempt abandoned for ${progress.job}@${slot.slot_started_at}:`,
+        err,
+      );
+    }
 
     const progressDelete = await runWithOverloadRetry(() =>
       db
@@ -394,6 +423,7 @@ export async function sweepStaleScheduledSlotExecutions(
     candidateSlots: staleSlots.length,
     slotsReconciled: 0,
     syntheticCronRuns: 0,
+    jobAttemptsAbandoned: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
     abandonedSlots: [],
@@ -408,6 +438,7 @@ export async function sweepStaleScheduledSlotExecutions(
     await finishStaleScheduledSlotExecution(db, staleSlot, nowSec, staleBefore, reconciliation);
     summary.slotsReconciled++;
     summary.syntheticCronRuns += reconciliation.syntheticCronRuns;
+    summary.jobAttemptsAbandoned += reconciliation.jobAttemptsAbandoned;
     summary.progressRowsCleared += reconciliation.progressRowsCleared;
     summary.leasesCleared += reconciliation.leasesCleared;
     summary.abandonedSlots.push({

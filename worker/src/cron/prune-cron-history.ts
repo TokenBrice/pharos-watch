@@ -3,6 +3,7 @@ import { throwIfAborted } from "../lib/abort";
 import { SECONDS } from "../lib/time-constants";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { createCronResult } from "../lib/cron-result";
+import { pruneWorkerJobAttempts } from "../lib/job-ledger";
 
 // Kept in sync with the retention window previously enforced inline inside
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
@@ -24,6 +25,9 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   throwIfAborted(signal);
   const cronRunsDeleted = cronRunsResult.meta?.changes ?? 0;
 
+  const jobAttemptsDeleted = await pruneWorkerJobAttempts(db, now - SECONDS.ONE_WEEK, signal);
+  throwIfAborted(signal);
+
   const slotResult = await runWithOverloadRetry(() =>
     db
       .prepare("DELETE FROM cron_slot_executions WHERE slot_started_at < ?")
@@ -37,11 +41,13 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
 
   return createCronResult({
     status: "ok",
-    itemCount: cronRunsDeleted + slotExecutionsDeleted,
+    itemCount: cronRunsDeleted + jobAttemptsDeleted + slotExecutionsDeleted,
     metadata: {
       cronRunsDeleted,
+      jobAttemptsDeleted,
       slotExecutionsDeleted,
       cutoffCronRunsSec: now - SECONDS.ONE_WEEK,
+      cutoffJobAttemptsSec: now - SECONDS.ONE_WEEK,
       cutoffSlotExecutionsSec: now - SLOT_EXECUTION_RETENTION_SEC,
     },
   });

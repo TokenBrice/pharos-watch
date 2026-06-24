@@ -127,6 +127,7 @@ export function countDiagnosticIssues(input: {
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
+  jobAttemptQueryFailed?: boolean;
   cronBudgetSurfaceTelemetryQueryFailed?: boolean;
 }): number {
   let count = input.publicHealth.cacheFailures.length;
@@ -135,6 +136,7 @@ export function countDiagnosticIssues(input: {
   if (input.cronHistoryQueryFailed) count += 1;
   if (input.cronProgressQueryFailed) count += 1;
   if (input.cronLeaseQueryFailed) count += 1;
+  if (input.jobAttemptQueryFailed) count += 1;
   if (input.cronBudgetSurfaceTelemetryQueryFailed) count += 1;
   if (input.reserveCompositionQueryFailed) count += 1;
   count += input.dataQuality.sourceFailures.filter((failure) => failure.source !== "stablecoins-cache").length;
