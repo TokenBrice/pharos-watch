@@ -111,6 +111,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0165     | `0165_worker_job_attempts.sql`                           | Add a per-job scheduled Worker attempt ledger for active, deferred, abandoned, and skipped job visibility                                         |
 | 0166     | `0166_worker_repair_tasks.sql`                           | Add a generic Worker repair-task ledger for low-priority repair/backfill debt and DDR repair-required events                                      |
 | 0167     | `0167_worker_canary_runs.sql`                            | Add a compact data-invariant canary ledger for scheduled Worker structural checks                                                                 |
+| 0168     | `0168_surface_publication_generations.sql`               | Add a generic publication-generation ledger for migrated cache-backed and generated Worker surfaces                                                |
 
 ## Retired Individual Migrations
 
@@ -139,6 +140,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 - `0165_worker_job_attempts.sql`: roll back runtime behavior with `WORKER_JOB_LEDGER_MODE=off` or an empty allowlist. Keep the additive table/indexes in place unless a coordinated D1 restore is required.
 - `0166_worker_repair_tasks.sql`: disable the repair-task producer/runner for rollback. Queued rows are diagnostic debt and can remain for later inspection; do not delete them as part of Worker rollback.
 - `0167_worker_canary_runs.sql`: roll back canary writes with `WORKER_CANARY_MODE=off`. The table is append/upsert telemetry only, pruned by `prune-cron-history`, and does not need schema rollback for Worker-code rollback.
+- `0168_surface_publication_generations.sql`: roll back migrated publication writers or status readers to their previous surface-specific sources. Keep the additive generic table/indexes in place unless a coordinated D1 restore is required.
 
 ## Rollback Procedure
 

@@ -21,6 +21,30 @@ function generationRow(overrides: Record<string, unknown>): Record<string, unkno
   };
 }
 
+function stablecoinPayload(count = 2): string {
+  return JSON.stringify({
+    peggedAssets: Array.from({ length: count }, (_, index) => ({
+      id: `coin-${index + 1}`,
+      name: `Coin ${index + 1}`,
+      symbol: `C${index + 1}`,
+      pegType: "peggedUSD",
+      pegMechanism: "fiat-backed",
+      price: 1,
+      priceSource: "test",
+      circulating: { peggedUSD: 1_000_000 },
+      chainCirculating: {
+        Ethereum: {
+          current: 1_000_000,
+          circulatingPrevDay: 1_000_000,
+          circulatingPrevWeek: 1_000_000,
+          circulatingPrevMonth: 1_000_000,
+        },
+      },
+      chains: ["Ethereum"],
+    })),
+  });
+}
+
 describe("loadPublicationHealth", () => {
   it("maps existing DEX and yield publication ledgers into shared surface health", async () => {
     const db = mockD1([
@@ -146,6 +170,137 @@ describe("loadPublicationHealth", () => {
     });
   });
 
+  it("projects stablecoins from the generic surface publication table when migrated rows exist", async () => {
+    const db = mockD1([
+      {
+        match: "FROM surface_publication_generations\n          WHERE surface = ?\n          ORDER BY started_at DESC",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: generationRow({
+          generation_id: "stablecoins-candidate",
+          source_state: "candidate",
+          started_at: NOW - 300,
+          validated_at: null,
+          published_at: null,
+          candidate_rows: 408,
+          published_rows: null,
+          expected_rows: 407,
+          metadata_json: JSON.stringify({
+            inputWatermarks: {
+              stablecoinsCache: NOW - 900,
+            },
+            artifactCacheKey: "stablecoins",
+          }),
+        }),
+      },
+      {
+        match: "FROM surface_publication_generations\n          WHERE surface = ? AND state = 'published'",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: generationRow({
+          generation_id: "stablecoins-published",
+          source_state: "published",
+          started_at: NOW - 1_200,
+          validated_at: NOW - 1_190,
+          published_at: NOW - 1_180,
+          candidate_rows: 407,
+          published_rows: 407,
+          expected_rows: 407,
+        }),
+      },
+      {
+        match: "FROM surface_publication_generations\n          WHERE surface = ? AND state = 'failed'",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "FROM surface_publication_generations\n          WHERE surface = ? AND state = 'rejected'",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: generationRow({
+          generation_id: "stablecoins-rejected",
+          source_state: "rejected",
+          started_at: NOW - 600,
+          published_at: null,
+          failure_reason: "shrinkage-threshold-exceeded",
+        }),
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces.stablecoins).toMatchObject({
+      sourceOfTruth: "surface_publication_generations",
+      candidateAgeSec: 300,
+      lastFailureReason: "shrinkage-threshold-exceeded",
+      dependencyWatermarks: {
+        stablecoinsCache: NOW - 900,
+      },
+      lastAttemptedGeneration: {
+        generationId: "stablecoins-candidate",
+        state: "candidate",
+        candidateRows: 408,
+        expectedRows: 407,
+      },
+      lastPublishedGeneration: {
+        generationId: "stablecoins-published",
+        state: "published",
+        publishedRows: 407,
+      },
+    });
+  });
+
+  it("derives stablecoins publication health from the canonical cache before generic writes exist", async () => {
+    const updatedAt = NOW - 120;
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: stablecoinPayload(3),
+            updated_at: updatedAt,
+          },
+          {
+            key: "stablecoins:response-ready:v2",
+            value: "{}",
+            updated_at: updatedAt,
+          },
+        ],
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces.stablecoins).toMatchObject({
+      sourceOfTruth: "cache[stablecoins]",
+      candidateAgeSec: null,
+      lastFailureReason: null,
+      dependencyWatermarks: {
+        stablecoinsCache: updatedAt,
+        responseReadyCache: updatedAt,
+      },
+      lastAttemptedGeneration: {
+        generationId: `stablecoins-cache:${updatedAt}`,
+        sourceState: "published",
+        state: "published",
+        candidateRows: 3,
+        publishedRows: 3,
+        validatedAt: updatedAt,
+        publishedAt: updatedAt,
+      },
+      lastPublishedGeneration: {
+        generationId: `stablecoins-cache:${updatedAt}`,
+        state: "published",
+      },
+    });
+    expect(health.surfaces.stablecoins?.lastPublishedGeneration?.metadata).toMatchObject({
+      cacheKey: "stablecoins",
+      responseReadyMatchesCanonical: true,
+    });
+  });
+
   it("returns present surfaces with null generation details when ledgers are empty", async () => {
     const health = await loadPublicationHealth(mockD1(), NOW);
 
@@ -156,6 +311,12 @@ describe("loadPublicationHealth", () => {
       candidateAgeSec: null,
     });
     expect(health.surfaces["yield-rankings"]).toMatchObject({
+      lastAttemptedGeneration: null,
+      lastPublishedGeneration: null,
+      lastFailureReason: null,
+      candidateAgeSec: null,
+    });
+    expect(health.surfaces.stablecoins).toMatchObject({
       lastAttemptedGeneration: null,
       lastPublishedGeneration: null,
       lastFailureReason: null,

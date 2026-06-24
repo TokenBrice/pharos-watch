@@ -6,6 +6,10 @@ import type {
   PublicationSurfaceId,
 } from "@shared/types/status";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { getResponseReadyCacheKey } from "./api-cache-read";
+import { getCacheUpdatedAt } from "./db-cache";
+import { isMissingTableError } from "./db";
+import { loadStablecoinsCache } from "./stablecoins-cache";
 
 interface PublicationGenerationRow {
   generation_id: string;
@@ -39,6 +43,17 @@ const YIELD_RANKINGS_SURFACE: PublicationSurfaceDefinition = {
   sourceOfTruth: "yield_publication_generations",
 };
 
+const STABLECOINS_SURFACE: PublicationSurfaceDefinition = {
+  surface: "stablecoins",
+  label: "Stablecoins cache",
+  sourceOfTruth: "surface_publication_generations",
+};
+
+const STABLECOINS_CACHE_SURFACE: PublicationSurfaceDefinition = {
+  ...STABLECOINS_SURFACE,
+  sourceOfTruth: "cache[stablecoins]",
+};
+
 function parseMetadata(value: string | null | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
   try {
@@ -53,8 +68,16 @@ function parseMetadata(value: string | null | undefined): Record<string, unknown
 
 function mapSourceState(state: string): PublicationGenerationState {
   if (state === "staged") return "candidate";
-  if (state === "published") return "published";
-  if (state === "failed") return "failed";
+  if (
+    state === "candidate" ||
+    state === "validated" ||
+    state === "published" ||
+    state === "rejected" ||
+    state === "superseded" ||
+    state === "failed"
+  ) {
+    return state;
+  }
   return "failed";
 }
 
@@ -126,6 +149,14 @@ function buildSurfaceHealth(
 
 async function firstRow(db: D1Database, sql: string): Promise<PublicationGenerationRow | null> {
   return runWithOverloadRetry(() => db.prepare(sql).first<PublicationGenerationRow>(), 2);
+}
+
+async function firstBoundRow(
+  db: D1Database,
+  sql: string,
+  ...binds: unknown[]
+): Promise<PublicationGenerationRow | null> {
+  return runWithOverloadRetry(() => db.prepare(sql).bind(...binds).first<PublicationGenerationRow>(), 2);
 }
 
 async function loadDexLiquidityPublicationSurface(
@@ -216,16 +247,174 @@ async function loadYieldRankingsPublicationSurface(
   return buildSurfaceHealth(YIELD_RANKINGS_SURFACE, now, latestAttempted, latestPublished, latestFailed);
 }
 
+async function loadGenericPublicationSurface(
+  db: D1Database,
+  now: number,
+  definition: PublicationSurfaceDefinition,
+): Promise<PublicationSurfaceHealth | null> {
+  const selectColumns = `
+    generation_id,
+    state AS source_state,
+    started_at,
+    validated_at,
+    published_at,
+    NULL AS failed_at,
+    candidate_rows,
+    published_rows,
+    expected_rows,
+    failure_reason,
+    json_object(
+      'inputWatermarks', CASE WHEN json_valid(input_watermarks_json) THEN json(input_watermarks_json) ELSE NULL END,
+      'dependencySnapshot', CASE WHEN json_valid(dependency_snapshot_json) THEN json(dependency_snapshot_json) ELSE NULL END,
+      'validationSummary', CASE WHEN json_valid(validation_summary_json) THEN json(validation_summary_json) ELSE NULL END,
+      'artifactChecksum', artifact_checksum,
+      'artifactCacheKey', artifact_cache_key,
+      'previousGenerationId', previous_generation_id
+    ) AS metadata_json`;
+
+  let latestAttempted: PublicationGenerationRow | null;
+  let latestPublished: PublicationGenerationRow | null;
+  let latestFailed: PublicationGenerationRow | null;
+  try {
+    const [attemptedRow, publishedRow, failedRow, rejectedRow] = await Promise.all([
+      firstBoundRow(
+        db,
+        `SELECT ${selectColumns}
+           FROM surface_publication_generations
+          WHERE surface = ?
+          ORDER BY started_at DESC
+          LIMIT 1`,
+        definition.surface,
+      ),
+      firstBoundRow(
+        db,
+        `SELECT ${selectColumns}
+           FROM surface_publication_generations
+          WHERE surface = ? AND state = 'published'
+          ORDER BY published_at DESC, started_at DESC
+          LIMIT 1`,
+        definition.surface,
+      ),
+      firstBoundRow(
+        db,
+        `SELECT ${selectColumns}
+           FROM surface_publication_generations
+          WHERE surface = ? AND state = 'failed'
+          ORDER BY started_at DESC
+          LIMIT 1`,
+        definition.surface,
+      ),
+      firstBoundRow(
+        db,
+        `SELECT ${selectColumns}
+           FROM surface_publication_generations
+          WHERE surface = ? AND state = 'rejected'
+          ORDER BY started_at DESC
+          LIMIT 1`,
+        definition.surface,
+      ),
+    ]);
+    latestAttempted = attemptedRow;
+    latestPublished = publishedRow;
+    latestFailed = [failedRow, rejectedRow]
+      .filter((row): row is PublicationGenerationRow => row != null)
+      .sort((a, b) => b.started_at - a.started_at)[0] ?? null;
+  } catch (error) {
+    if (isMissingTableError(error)) return null;
+    throw error;
+  }
+
+  if (latestAttempted == null && latestPublished == null && latestFailed == null) {
+    return null;
+  }
+  return buildSurfaceHealth(definition, now, latestAttempted, latestPublished, latestFailed);
+}
+
+function stablecoinsCacheFailureRow(
+  reason: string,
+  updatedAt: number,
+  metadata: Record<string, unknown>,
+): PublicationGenerationRow {
+  return {
+    generation_id: `stablecoins-cache:${updatedAt}:invalid`,
+    source_state: "failed",
+    started_at: updatedAt,
+    validated_at: null,
+    published_at: null,
+    failed_at: updatedAt,
+    candidate_rows: null,
+    published_rows: null,
+    expected_rows: null,
+    failure_reason: reason,
+    metadata_json: JSON.stringify(metadata),
+  };
+}
+
+async function loadStablecoinsPublicationSurface(
+  db: D1Database,
+  now: number,
+): Promise<PublicationSurfaceHealth> {
+  const genericSurface = await loadGenericPublicationSurface(db, now, STABLECOINS_SURFACE);
+  if (genericSurface) return genericSurface;
+
+  const responseReadyCacheKey = getResponseReadyCacheKey("stablecoins");
+  const [stablecoinsCache, responseReadyUpdatedAt] = await Promise.all([
+    loadStablecoinsCache(db, {
+      mode: "strict",
+      contract: "published",
+      allowLegacyArray: false,
+    }),
+    getCacheUpdatedAt(db, responseReadyCacheKey).catch(() => null),
+  ]);
+
+  const metadata = {
+    cacheKey: "stablecoins",
+    contract: "published",
+    responseReadyCacheKey,
+    responseReadyUpdatedAt,
+    responseReadyMatchesCanonical:
+      stablecoinsCache.updatedAt != null && responseReadyUpdatedAt === stablecoinsCache.updatedAt,
+    inputWatermarks: {
+      stablecoinsCache: stablecoinsCache.updatedAt,
+      responseReadyCache: responseReadyUpdatedAt,
+    },
+  };
+
+  if (stablecoinsCache.kind === "ok") {
+    const row: PublicationGenerationRow = {
+      generation_id: `stablecoins-cache:${stablecoinsCache.updatedAt}`,
+      source_state: "published",
+      started_at: stablecoinsCache.updatedAt,
+      validated_at: stablecoinsCache.updatedAt,
+      published_at: stablecoinsCache.updatedAt,
+      failed_at: null,
+      candidate_rows: stablecoinsCache.payload.peggedAssets.length,
+      published_rows: stablecoinsCache.payload.peggedAssets.length,
+      expected_rows: null,
+      failure_reason: null,
+      metadata_json: JSON.stringify(metadata),
+    };
+    return buildSurfaceHealth(STABLECOINS_CACHE_SURFACE, now, row, row, null);
+  }
+
+  const failedRow = stablecoinsCache.updatedAt == null
+    ? null
+    : stablecoinsCacheFailureRow(stablecoinsCache.reason, stablecoinsCache.updatedAt, metadata);
+  return buildSurfaceHealth(STABLECOINS_CACHE_SURFACE, now, failedRow, null, failedRow);
+}
+
 export async function loadPublicationHealth(db: D1Database, now: number): Promise<PublicationHealth> {
-  const [dexLiquidity, yieldRankings] = await Promise.all([
+  const [dexLiquidity, yieldRankings, stablecoins] = await Promise.all([
     loadDexLiquidityPublicationSurface(db, now),
     loadYieldRankingsPublicationSurface(db, now),
+    loadStablecoinsPublicationSurface(db, now),
   ]);
   return {
     checkedAt: now,
     surfaces: {
       "dex-liquidity": dexLiquidity,
       "yield-rankings": yieldRankings,
+      stablecoins,
     },
   };
 }
