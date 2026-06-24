@@ -6,6 +6,7 @@ import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/s
 import { isRecord } from "@shared/lib/type-guards";
 import type {
   ClassificationWarning,
+  CanaryStatus,
   CoinGeckoPriceDiff,
   D1UsageSummary,
   DiscoveryCandidate,
@@ -47,12 +48,14 @@ import { loadYieldHealthSummary } from "../lib/status/yield-health";
 import { logWorkerEvent } from "../lib/structured-log";
 import { loadPublicationHealth } from "../lib/publication-contract";
 import { loadProviderCircuitHealth } from "../lib/provider-circuit-health";
+import { loadCanaryStatus } from "../lib/canary-checks";
 
 const SECTION_ERROR_MESSAGES: Record<string, string> = {
   discovery_candidates_query_failed: "Discovery candidates unavailable.",
   liquidity_health_extraction_failed: "Liquidity health data unavailable.",
   publication_health_query_failed: "Publication health unavailable.",
   provider_circuit_health_query_failed: "Provider circuit health unavailable.",
+  canary_status_query_failed: "Data-invariant canaries unavailable.",
   price_source_health_extraction_failed: "Price source health data unavailable.",
   coingecko_price_diff_query_failed: "CoinGecko price diff unavailable.",
   d1_usage_query_failed: "D1 usage metrics unavailable.",
@@ -88,6 +91,7 @@ export interface StatusSupplements {
   yieldHealth: YieldHealthSummary | null;
   publicationHealth: PublicationHealth | null;
   providerCircuitHealth: ProviderCircuitHealth | null;
+  canaries: CanaryStatus | null;
   priceSourceHealth: PriceSourceHealth | null;
   priceProviderDiagnostics: Array<Record<string, unknown>> | null;
   gtProbe: Record<string, unknown> | null;
@@ -369,6 +373,20 @@ export async function loadStatusSupplements(
     );
   }
 
+  let canaries: CanaryStatus | null = null;
+  try {
+    canaries = await loadCanaryStatus(db, now);
+  } catch (err) {
+    logStatusSupplementWarning(
+      "canary_status_query_failed",
+      "Data-invariant canary status query failed",
+      err,
+    );
+    sectionErrors.canaries = sectionError(
+      "canary_status_query_failed",
+    );
+  }
+
   let priceSourceHealth: PriceSourceHealth | null = null;
   let priceProviderDiagnostics: Array<Record<string, unknown>> | null = null;
   let gtProbe: Record<string, unknown> | null = null;
@@ -541,6 +559,7 @@ export async function loadStatusSupplements(
     yieldHealth,
     publicationHealth,
     providerCircuitHealth,
+    canaries,
     priceSourceHealth,
     priceProviderDiagnostics,
     gtProbe,

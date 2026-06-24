@@ -553,6 +553,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "WORKER_CANARY_MODE",
+    valueType: "string",
+    description: "Worker data-invariant canary mode. Unset or `off` skips writes; `shadow`, `status`, and `alert` record structural canary telemetry without changing producer behavior.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 48, status: "optional" },
+    },
+  },
+  {
     key: "OPS_UI_ORIGIN",
     valueType: "string",
     description: "Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks.",

@@ -110,6 +110,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0164     | `0164_depeg_event_close_reason.sql`                      | Add nullable depeg close reasons so downstream dispatch can distinguish recovery from coverage-loss and superseded closures                        |
 | 0165     | `0165_worker_job_attempts.sql`                           | Add a per-job scheduled Worker attempt ledger for active, deferred, abandoned, and skipped job visibility                                         |
 | 0166     | `0166_worker_repair_tasks.sql`                           | Add a generic Worker repair-task ledger for low-priority repair/backfill debt and DDR repair-required events                                      |
+| 0167     | `0167_worker_canary_runs.sql`                            | Add a compact data-invariant canary ledger for scheduled Worker structural checks                                                                 |
 
 ## Retired Individual Migrations
 

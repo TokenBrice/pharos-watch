@@ -1,0 +1,67 @@
+import type { CronResult } from "../lib/cron-logger";
+import {
+  normalizeWorkerCanaryMode,
+  runAndPersistCanaryChecks,
+  type WorkerCanaryMode,
+} from "../lib/canary-checks";
+import { throwIfAborted } from "../lib/abort";
+
+export interface DataInvariantCanaryOptions {
+  mode?: string;
+  observedAt?: number;
+  signal?: AbortSignal;
+}
+
+export function resolveDataInvariantCanaryMode(value: string | undefined): WorkerCanaryMode {
+  return normalizeWorkerCanaryMode(value);
+}
+
+export async function runDataInvariantCanary(
+  db: D1Database,
+  options: DataInvariantCanaryOptions = {},
+): Promise<CronResult> {
+  throwIfAborted(options.signal);
+  const mode = resolveDataInvariantCanaryMode(options.mode);
+  if (mode === "off") {
+    return {
+      status: "ok",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        mode,
+        skipped: true,
+        reason: "worker-canary-mode-off",
+      }),
+    };
+  }
+
+  const observedAt = options.observedAt ?? Math.floor(Date.now() / 1000);
+  const summary = await runAndPersistCanaryChecks(db, {
+    observedAt,
+    signal: options.signal,
+    mode,
+  });
+  throwIfAborted(options.signal);
+
+  return {
+    status: summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok",
+    itemCount: summary.totalChecks,
+    metadata: JSON.stringify({
+      mode,
+      observedAt: summary.observedAt,
+      totalChecks: summary.totalChecks,
+      okCount: summary.okCount,
+      degradedCount: summary.degradedCount,
+      errorCount: summary.errorCount,
+      skippedCount: summary.skippedCount,
+      worstStatus: summary.worstStatus,
+      worstSeverity: summary.worstSeverity,
+      checks: summary.results.map((result) => ({
+        checkId: result.checkId,
+        status: result.status,
+        severity: result.severity,
+        durationMs: result.durationMs,
+        ...(result.error ? { error: result.error } : {}),
+      })),
+    }),
+  };
+}

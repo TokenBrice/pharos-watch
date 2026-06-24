@@ -13,6 +13,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "project-tape": DEFAULT_CRON_TIMEOUT_MS,
   "cron-slot-sweeper": DEFAULT_CRON_TIMEOUT_MS,
   "status-self-check": DEFAULT_CRON_TIMEOUT_MS,
+  "data-invariant-canary": DEFAULT_CRON_TIMEOUT_MS,
   "cron-staleness-watchdog": DEFAULT_CRON_TIMEOUT_MS,
   "telegram-degradation-watchdog": DEFAULT_CRON_TIMEOUT_MS,
   "telegram-disambiguation-cleanup": DEFAULT_CRON_TIMEOUT_MS,

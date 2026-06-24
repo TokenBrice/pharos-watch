@@ -1,5 +1,6 @@
 import { runCronSlotSweeper } from "../../cron/cron-slot-sweeper";
 import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
+import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
@@ -26,6 +27,16 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
               mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
               alertWebhookUrl: runtime.alertWebhookUrl,
               siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
+            }),
+        },
+        {
+          job: "data-invariant-canary",
+          errorMessage: "[cron] data-invariant-canary failed in isolated slot:",
+          run: (signal) =>
+            runDataInvariantCanary(runtime.db, {
+              mode: runtime.env.WORKER_CANARY_MODE,
+              observedAt: runtime.slotStartedAt,
+              signal,
             }),
         },
         {

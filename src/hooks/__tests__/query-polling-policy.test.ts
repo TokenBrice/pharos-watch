@@ -92,6 +92,7 @@ function minimalStatusResponse() {
     publicationHealth: null,
     dependencyHealth: null,
     providerCircuitHealth: null,
+    canaries: null,
     priceSourceHealth: null,
     priceProviderDiagnostics: null,
     gtProbe: null,

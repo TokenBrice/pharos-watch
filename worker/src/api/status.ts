@@ -194,6 +194,7 @@ export function handleStatus(
         publicationHealth: supplements.publicationHealth,
         dependencyHealth,
         providerCircuitHealth: supplements.providerCircuitHealth,
+        canaries: supplements.canaries,
         priceSourceHealth: supplements.priceSourceHealth,
         priceProviderDiagnostics: supplements.priceProviderDiagnostics,
         gtProbe: supplements.gtProbe,

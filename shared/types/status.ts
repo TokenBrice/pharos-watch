@@ -1005,6 +1005,35 @@ export interface ProviderCircuitHealth {
   byFamily: Record<string, ProviderCircuitHealthFamilySummary>;
 }
 
+export type CanaryRunStatus = "ok" | "degraded" | "error" | "skipped";
+export type CanaryRunSeverity = "info" | "warning" | "error" | "critical";
+
+export interface CanaryStatusCheck {
+  checkId: string;
+  label: string;
+  description: string;
+  status: CanaryRunStatus;
+  severity: CanaryRunSeverity;
+  observedAt: number;
+  durationMs: number | null;
+  metadata?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface CanaryStatus {
+  checkedAt: number;
+  status: StatusHealthOrUnknown;
+  latestRunAt: number | null;
+  maxAgeSec: number;
+  totalChecks: number;
+  okCount: number;
+  degradedCount: number;
+  errorCount: number;
+  skippedCount: number;
+  staleCount: number;
+  checks: Record<string, CanaryStatusCheck>;
+}
+
 export interface D1UsageSummary {
   checkedAt: number;
   windowStart: number;
@@ -1031,6 +1060,7 @@ export type StatusSectionKey =
   | "yieldHealth"
   | "publicationHealth"
   | "providerCircuitHealth"
+  | "canaries"
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
   | "discoveryCandidates"
@@ -1108,6 +1138,7 @@ export interface StatusResponse {
   publicationHealth: PublicationHealth | null;
   dependencyHealth: DependencyHealth | null;
   providerCircuitHealth: ProviderCircuitHealth | null;
+  canaries: CanaryStatus | null;
   priceSourceHealth: PriceSourceHealth | null;
   /**
    * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
@@ -1279,6 +1310,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   publicationHealth: StatusJsonObjectSchema.nullable(),
   dependencyHealth: StatusJsonObjectSchema.nullable(),
   providerCircuitHealth: StatusJsonObjectSchema.nullable(),
+  canaries: StatusJsonObjectSchema.nullable(),
   priceSourceHealth: StatusJsonObjectSchema.nullable(),
   priceProviderDiagnostics: z.array(StatusJsonObjectSchema).nullable(),
   gtProbe: StatusJsonObjectSchema.nullable(),

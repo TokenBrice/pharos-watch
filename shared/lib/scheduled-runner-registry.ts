@@ -26,7 +26,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
   },
   statusSelfCheckOffset: {
-    jobChains: [["cron-slot-sweeper", "status-self-check", "cron-staleness-watchdog"]],
+    jobChains: [["cron-slot-sweeper", "status-self-check", "data-invariant-canary", "cron-staleness-watchdog"]],
   },
   sixHourlyBlacklist: {
     jobChains: [["sync-blacklist"]],

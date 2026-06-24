@@ -1,0 +1,750 @@
+import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
+import { REPORT_CARD_CACHE_GENERATION, REPORT_CARD_CACHE_MAX_AGE_MS, loadReportCardCache } from "./report-card-cache";
+import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
+import { runWithOverloadRetry } from "./d1-overload-retry";
+import { isMissingColumnError, isMissingTableError } from "./db";
+import { toErrorMessage } from "./error-utils";
+import { throwIfAborted } from "./abort";
+
+export type WorkerCanaryMode = "off" | "shadow" | "status" | "alert";
+
+export interface CanaryCheckResult {
+  checkId: string;
+  label: string;
+  description: string;
+  status: CanaryRunStatus;
+  severity: CanaryRunSeverity;
+  observedAt: number;
+  durationMs: number;
+  metadata?: Record<string, unknown>;
+  error?: string | null;
+}
+
+export interface RunCanaryChecksOptions {
+  observedAt?: number;
+  signal?: AbortSignal;
+  mode?: WorkerCanaryMode;
+}
+
+export interface CanaryRunSummary {
+  mode: WorkerCanaryMode;
+  observedAt: number;
+  totalChecks: number;
+  okCount: number;
+  degradedCount: number;
+  errorCount: number;
+  skippedCount: number;
+  worstStatus: CanaryRunStatus;
+  worstSeverity: CanaryRunSeverity;
+  results: CanaryCheckResult[];
+}
+
+interface DexCurrentSummaryRow {
+  row_count: number | null;
+  unpublished_rows: number | null;
+  generation_count: number | null;
+  latest_updated_at: number | null;
+}
+
+interface DexPublishedGenerationRow {
+  generation_id: string;
+  current_row_count: number | null;
+  expected_row_count: number | null;
+  published_at: number | null;
+}
+
+interface DexGlobalRow {
+  current_rows: number | null;
+  global_rows: number | null;
+}
+
+interface PsiLatestRow {
+  stored_at: number;
+  score: number;
+  band: string;
+  methodology_version: string;
+}
+
+interface DewsLatestSummaryRow {
+  source_table: string;
+  row_count: number | null;
+  latest_computed_at: number | null;
+  out_of_range_scores: number | null;
+}
+
+interface WorkerCanaryRunRow {
+  check_id: string;
+  status: CanaryRunStatus;
+  severity: CanaryRunSeverity;
+  observed_at: number;
+  duration_ms: number | null;
+  metadata_json: string | null;
+  error: string | null;
+}
+
+type CanaryCheckDefinition = {
+  checkId: string;
+  label: string;
+  description: string;
+  run: (db: D1Database, observedAt: number, signal?: AbortSignal) => Promise<Omit<CanaryCheckResult, "checkId" | "label" | "description" | "observedAt" | "durationMs">>;
+};
+
+const CANARY_STATUS_ORDER: Record<CanaryRunStatus, number> = {
+  skipped: 0,
+  ok: 1,
+  degraded: 2,
+  error: 3,
+};
+
+const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
+  info: 0,
+  warning: 1,
+  error: 2,
+  critical: 3,
+};
+
+const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
+const MAX_CANARY_ERROR_CHARS = 800;
+const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
+const PSI_MAX_AGE_SEC = 4 * 3600;
+const DEWS_MAX_AGE_SEC = 4 * 3600;
+const STABLECOINS_ACTIVE_MIN_RATIO = 0.95;
+
+export function normalizeWorkerCanaryMode(value: string | undefined): WorkerCanaryMode {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "shadow" || normalized === "status" || normalized === "alert") return normalized;
+  return "off";
+}
+
+function nowSec(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
+  return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;
+}
+
+function boundedJson(value: unknown): string | null {
+  if (value == null) return null;
+  try {
+    const json = JSON.stringify(value);
+    if (!json) return null;
+    if (json.length <= MAX_CANARY_METADATA_JSON_CHARS) return json;
+    return JSON.stringify({
+      truncated: true,
+      preview: json.slice(0, MAX_CANARY_METADATA_JSON_CHARS),
+      originalLength: json.length,
+    });
+  } catch {
+    return JSON.stringify({ unserializable: true });
+  }
+}
+
+function parseMetadata(value: string | null | undefined): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : undefined;
+  } catch {
+    return { raw: value.slice(0, 1_000) };
+  }
+}
+
+function skippedResult(reason: string, metadata?: Record<string, unknown>) {
+  return {
+    status: "skipped" as const,
+    severity: "info" as const,
+    error: reason,
+    metadata,
+  };
+}
+
+function unavailableResult(error: unknown) {
+  const reason = isMissingTableError(error) || isMissingColumnError(error)
+    ? "canary source unavailable; migration/table not present"
+    : "canary source unavailable";
+  return skippedResult(reason, { error: boundedText(toErrorMessage(error)) });
+}
+
+function isFiniteScore(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isScoreInRange(value: unknown): value is number {
+  return isFiniteScore(value) && value >= 0 && value <= 100;
+}
+
+function worstStatus(results: readonly Pick<CanaryCheckResult, "status">[]): CanaryRunStatus {
+  return results.reduce<CanaryRunStatus>(
+    (worst, result) => CANARY_STATUS_ORDER[result.status] > CANARY_STATUS_ORDER[worst] ? result.status : worst,
+    "ok",
+  );
+}
+
+function worstSeverity(results: readonly Pick<CanaryCheckResult, "severity">[]): CanaryRunSeverity {
+  return results.reduce<CanaryRunSeverity>(
+    (worst, result) => CANARY_SEVERITY_ORDER[result.severity] > CANARY_SEVERITY_ORDER[worst] ? result.severity : worst,
+    "info",
+  );
+}
+
+async function checkStablecoinsCacheActiveCount(db: D1Database) {
+  const cache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const expectedActiveCount = ACTIVE_IDS.size;
+  const minimumActiveCount = Math.floor(expectedActiveCount * STABLECOINS_ACTIVE_MIN_RATIO);
+  if (!hasUsableStablecoinsPayload(cache)) {
+    return {
+      status: "error" as const,
+      severity: "error" as const,
+      error: `stablecoins cache ${cache.reason}`,
+      metadata: {
+        expectedActiveCount,
+        minimumActiveCount,
+        updatedAt: cache.updatedAt,
+        reason: cache.reason,
+      },
+    };
+  }
+
+  const cachedIds = new Set(cache.payload.peggedAssets.map((asset) => asset.id));
+  const activeCount = [...ACTIVE_IDS].filter((id) => cachedIds.has(id)).length;
+  const missingExamples = ACTIVE_STABLECOINS
+    .filter((coin) => !cachedIds.has(coin.id))
+    .slice(0, 12)
+    .map((coin) => coin.id);
+  const metadata = {
+    activeCount,
+    expectedActiveCount,
+    minimumActiveCount,
+    cachedAssetCount: cache.payload.peggedAssets.length,
+    updatedAt: cache.updatedAt,
+    missingExamples,
+    cacheKind: cache.kind,
+  };
+  if (activeCount < minimumActiveCount) {
+    return {
+      status: "degraded" as const,
+      severity: "warning" as const,
+      error: `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}`,
+      metadata,
+    };
+  }
+  return { status: "ok" as const, severity: "info" as const, metadata };
+}
+
+async function loadDexCurrentSummary(db: D1Database): Promise<DexCurrentSummaryRow> {
+  return (await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT
+           COUNT(*) AS row_count,
+           SUM(CASE WHEN publication_generation_id IS NOT NULL AND publication_state != 'published' THEN 1 ELSE 0 END) AS unpublished_rows,
+           COUNT(DISTINCT publication_generation_id) AS generation_count,
+           MAX(updated_at) AS latest_updated_at
+         FROM dex_liquidity`,
+      )
+      .first<DexCurrentSummaryRow>(),
+  )) ?? { row_count: 0, unpublished_rows: 0, generation_count: 0, latest_updated_at: null };
+}
+
+async function loadLatestPublishedDexGeneration(db: D1Database): Promise<DexPublishedGenerationRow | null> {
+  return runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT generation_id, current_row_count, expected_row_count, published_at
+           FROM dex_liquidity_publication_generations
+          WHERE state = 'published'
+          ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
+          LIMIT 1`,
+      )
+      .first<DexPublishedGenerationRow>(),
+  );
+}
+
+async function checkDexCurrentPublication(db: D1Database) {
+  try {
+    const summary = await loadDexCurrentSummary(db);
+    const rowCount = Number(summary.row_count ?? 0);
+    const unpublishedRows = Number(summary.unpublished_rows ?? 0);
+    const latestPublished = await loadLatestPublishedDexGeneration(db);
+    const metadata = {
+      rowCount,
+      unpublishedRows,
+      generationCount: Number(summary.generation_count ?? 0),
+      latestUpdatedAt: summary.latest_updated_at,
+      latestPublishedGenerationId: latestPublished?.generation_id ?? null,
+      latestPublishedRows: latestPublished?.current_row_count ?? null,
+      latestPublishedExpectedRows: latestPublished?.expected_row_count ?? null,
+      latestPublishedAt: latestPublished?.published_at ?? null,
+    };
+
+    if (rowCount === 0) {
+      return skippedResult("dex_liquidity has no current rows", metadata);
+    }
+    if (unpublishedRows > 0) {
+      return {
+        status: "error" as const,
+        severity: "error" as const,
+        error: `${unpublishedRows} current DEX liquidity rows are not published`,
+        metadata,
+      };
+    }
+    if (!latestPublished) {
+      return skippedResult("no DEX liquidity published generation found", metadata);
+    }
+    if (latestPublished.current_row_count != null && rowCount !== latestPublished.current_row_count) {
+      return {
+        status: "error" as const,
+        severity: "error" as const,
+        error: `DEX current rows ${rowCount} differ from latest published generation ${latestPublished.current_row_count}`,
+        metadata,
+      };
+    }
+    return { status: "ok" as const, severity: "info" as const, metadata };
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
+async function checkDexGlobalRow(db: D1Database) {
+  try {
+    const row = (await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT
+             COUNT(*) AS current_rows,
+             SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END) AS global_rows
+           FROM dex_liquidity
+           WHERE publication_generation_id IS NULL OR publication_state = 'published'`,
+        )
+        .first<DexGlobalRow>(),
+    )) ?? { current_rows: 0, global_rows: 0 };
+    const currentRows = Number(row.current_rows ?? 0);
+    const globalRows = Number(row.global_rows ?? 0);
+    const metadata = { currentRows, globalRows };
+    if (currentRows === 0) {
+      return skippedResult("dex_liquidity has no published current rows", metadata);
+    }
+    if (globalRows !== 1) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: `expected one DEX __global__ row, found ${globalRows}`,
+        metadata,
+      };
+    }
+    return { status: "ok" as const, severity: "info" as const, metadata };
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
+async function checkPsiLatestSample(db: D1Database, observedAt: number) {
+  try {
+    const row = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT stored_at, score, band, methodology_version
+             FROM stability_index_samples
+            ORDER BY stored_at DESC
+            LIMIT 1`,
+        )
+        .first<PsiLatestRow>(),
+    );
+    if (!row) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: "no PSI stability_index_samples rows found",
+        metadata: { maxAgeSec: PSI_MAX_AGE_SEC },
+      };
+    }
+    const ageSec = Math.max(0, observedAt - row.stored_at);
+    const metadata = {
+      storedAt: row.stored_at,
+      ageSec,
+      maxAgeSec: PSI_MAX_AGE_SEC,
+      score: row.score,
+      band: row.band,
+      methodologyVersion: row.methodology_version,
+    };
+    if (!isScoreInRange(row.score)) {
+      return {
+        status: "error" as const,
+        severity: "error" as const,
+        error: `latest PSI score is out of range: ${String(row.score)}`,
+        metadata,
+      };
+    }
+    if (ageSec > PSI_MAX_AGE_SEC) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: `latest PSI sample is ${ageSec}s old`,
+        metadata,
+      };
+    }
+    return { status: "ok" as const, severity: "info" as const, metadata };
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
+async function loadDewsLatestSummary(db: D1Database): Promise<DewsLatestSummaryRow> {
+  try {
+    return (await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT
+             'stress_signals_latest' AS source_table,
+             COUNT(*) AS row_count,
+             MAX(computed_at) AS latest_computed_at,
+             SUM(CASE WHEN score < 0 OR score > 100 THEN 1 ELSE 0 END) AS out_of_range_scores
+           FROM stress_signals_latest`,
+        )
+        .first<DewsLatestSummaryRow>(),
+    )) ?? { source_table: "stress_signals_latest", row_count: 0, latest_computed_at: null, out_of_range_scores: 0 };
+  } catch (error) {
+    if (!isMissingTableError(error)) throw error;
+    return (await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT
+             'stress_signals' AS source_table,
+             COUNT(*) AS row_count,
+             MAX(computed_at) AS latest_computed_at,
+             SUM(CASE WHEN score < 0 OR score > 100 THEN 1 ELSE 0 END) AS out_of_range_scores
+           FROM stress_signals`,
+        )
+        .first<DewsLatestSummaryRow>(),
+    )) ?? { source_table: "stress_signals", row_count: 0, latest_computed_at: null, out_of_range_scores: 0 };
+  }
+}
+
+async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
+  try {
+    const summary = await loadDewsLatestSummary(db);
+    const rowCount = Number(summary.row_count ?? 0);
+    const outOfRangeScores = Number(summary.out_of_range_scores ?? 0);
+    const latestComputedAt = summary.latest_computed_at;
+    const ageSec = latestComputedAt == null ? null : Math.max(0, observedAt - latestComputedAt);
+    const metadata = {
+      sourceTable: summary.source_table,
+      rowCount,
+      latestComputedAt,
+      ageSec,
+      maxAgeSec: DEWS_MAX_AGE_SEC,
+      outOfRangeScores,
+    };
+    if (rowCount === 0 || latestComputedAt == null) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: "no DEWS stress signal rows found",
+        metadata,
+      };
+    }
+    if (outOfRangeScores > 0) {
+      return {
+        status: "error" as const,
+        severity: "error" as const,
+        error: `${outOfRangeScores} DEWS stress signals have out-of-range scores`,
+        metadata,
+      };
+    }
+    if (ageSec != null && ageSec > DEWS_MAX_AGE_SEC) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: `latest DEWS signal is ${ageSec}s old`,
+        metadata,
+      };
+    }
+    return { status: "ok" as const, severity: "info" as const, metadata };
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
+async function checkReportCardCacheMethodology(db: D1Database) {
+  const cache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
+  if (cache.kind === "error") {
+    const severity: CanaryRunSeverity = cache.reason === "generation-mismatch" || cache.reason === "methodology-mismatch"
+      ? "error"
+      : "warning";
+    return {
+      status: severity === "error" ? "error" as const : "degraded" as const,
+      severity,
+      error: `report-card cache ${cache.reason}`,
+      metadata: {
+        reason: cache.reason,
+        updatedAt: cache.updatedAt,
+        expectedGeneration: REPORT_CARD_CACHE_GENERATION,
+        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+      },
+    };
+  }
+  const scoreCount = Object.keys(cache.payload.scores).length;
+  const metadata = {
+    updatedAt: cache.updatedAt,
+    scoreCount,
+    methodologyVersion: cache.payload.methodologyVersion,
+    expectedGeneration: REPORT_CARD_CACHE_GENERATION,
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    degradedInputs: cache.payload.degradedInputs ?? null,
+  };
+  if (scoreCount === 0) {
+    return {
+      status: "degraded" as const,
+      severity: "warning" as const,
+      error: "report-card cache has no score entries",
+      metadata,
+    };
+  }
+  return { status: "ok" as const, severity: "info" as const, metadata };
+}
+
+export const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
+  {
+    checkId: "dex-liquidity-current-publication",
+    label: "DEX liquidity current publication",
+    description: "Current DEX rows are published and match the latest published generation row count.",
+    run: checkDexCurrentPublication,
+  },
+  {
+    checkId: "dex-liquidity-global-row",
+    label: "DEX liquidity global row",
+    description: "The published DEX current table has exactly one __global__ aggregate row when data exists.",
+    run: checkDexGlobalRow,
+  },
+  {
+    checkId: "stablecoins-cache-active-count",
+    label: "Stablecoins cache active count",
+    description: "The stablecoins cache contains nearly all active registry assets.",
+    run: checkStablecoinsCacheActiveCount,
+  },
+  {
+    checkId: "psi-latest-sample",
+    label: "PSI latest sample",
+    description: "The latest PSI sample exists, is fresh, and has a finite score in the 0-100 range.",
+    run: checkPsiLatestSample,
+  },
+  {
+    checkId: "dews-latest-signal",
+    label: "DEWS latest signal",
+    description: "DEWS latest stress-signal rows exist, are fresh, and have scores in the 0-100 range.",
+    run: checkDewsLatestSignal,
+  },
+  {
+    checkId: "report-card-cache-methodology",
+    label: "Report-card cache methodology",
+    description: "The report-card score cache is fresh and matches the expected generation/methodology contract.",
+    run: checkReportCardCacheMethodology,
+  },
+] as const;
+
+async function runOneCanaryCheck(
+  db: D1Database,
+  definition: CanaryCheckDefinition,
+  observedAt: number,
+  signal?: AbortSignal,
+): Promise<CanaryCheckResult> {
+  throwIfAborted(signal);
+  const startedAt = Date.now();
+  try {
+    const result = await definition.run(db, observedAt, signal);
+    throwIfAborted(signal);
+    return {
+      checkId: definition.checkId,
+      label: definition.label,
+      description: definition.description,
+      observedAt,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      ...result,
+      ...(result.error ? { error: boundedText(result.error) } : {}),
+    };
+  } catch (error) {
+    throwIfAborted(signal);
+    return {
+      checkId: definition.checkId,
+      label: definition.label,
+      description: definition.description,
+      status: "error",
+      severity: "error",
+      observedAt,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      error: boundedText(toErrorMessage(error)),
+    };
+  }
+}
+
+export async function runCanaryChecks(
+  db: D1Database,
+  options: RunCanaryChecksOptions = {},
+): Promise<CanaryRunSummary> {
+  const observedAt = options.observedAt ?? nowSec();
+  const mode = options.mode ?? "shadow";
+  const results: CanaryCheckResult[] = [];
+  for (const definition of CANARY_CHECKS) {
+    results.push(await runOneCanaryCheck(db, definition, observedAt, options.signal));
+  }
+  const counts = summarizeCanaryResults(results);
+  return {
+    mode,
+    observedAt,
+    totalChecks: results.length,
+    ...counts,
+    worstStatus: worstStatus(results),
+    worstSeverity: worstSeverity(results),
+    results,
+  };
+}
+
+function summarizeCanaryResults(results: readonly Pick<CanaryCheckResult, "status">[]) {
+  let okCount = 0;
+  let degradedCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+  for (const result of results) {
+    if (result.status === "ok") okCount++;
+    else if (result.status === "degraded") degradedCount++;
+    else if (result.status === "error") errorCount++;
+    else skippedCount++;
+  }
+  return { okCount, degradedCount, errorCount, skippedCount };
+}
+
+function canaryRunId(result: Pick<CanaryCheckResult, "checkId" | "observedAt">): string {
+  return `canary:${result.checkId}:${result.observedAt}`;
+}
+
+function canaryIdempotencyKey(result: Pick<CanaryCheckResult, "checkId" | "observedAt">): string {
+  return `${result.checkId}:${result.observedAt}`;
+}
+
+export async function persistCanaryRun(
+  db: D1Database,
+  result: CanaryCheckResult,
+  options: { mode?: WorkerCanaryMode } = {},
+): Promise<void> {
+  const metadataJson = boundedJson({
+    label: result.label,
+    description: result.description,
+    mode: options.mode ?? "shadow",
+    ...(result.metadata ?? {}),
+  });
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT INTO worker_canary_runs (
+           id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(idempotency_key) DO UPDATE SET
+           status = excluded.status,
+           severity = excluded.severity,
+           duration_ms = excluded.duration_ms,
+           metadata_json = excluded.metadata_json,
+           error = excluded.error`,
+      )
+      .bind(
+        canaryRunId(result),
+        result.checkId,
+        canaryIdempotencyKey(result),
+        result.status,
+        result.severity,
+        result.observedAt,
+        result.durationMs,
+        metadataJson,
+        result.error ?? null,
+      )
+      .run(),
+  );
+}
+
+export async function runAndPersistCanaryChecks(
+  db: D1Database,
+  options: RunCanaryChecksOptions = {},
+): Promise<CanaryRunSummary> {
+  const summary = await runCanaryChecks(db, options);
+  for (const result of summary.results) {
+    throwIfAborted(options.signal);
+    await persistCanaryRun(db, result, { mode: summary.mode });
+  }
+  return summary;
+}
+
+function mapCanaryStatusRow(row: WorkerCanaryRunRow): CanaryStatus["checks"][string] {
+  const metadata = parseMetadata(row.metadata_json);
+  const label = typeof metadata?.label === "string" ? metadata.label : row.check_id;
+  const description = typeof metadata?.description === "string" ? metadata.description : "";
+  const publicMetadata = metadata ? { ...metadata } : undefined;
+  if (publicMetadata) {
+    delete publicMetadata.label;
+    delete publicMetadata.description;
+  }
+  return {
+    checkId: row.check_id,
+    label,
+    description,
+    status: row.status,
+    severity: row.severity,
+    observedAt: row.observed_at,
+    durationMs: row.duration_ms,
+    ...(publicMetadata && Object.keys(publicMetadata).length > 0 ? { metadata: publicMetadata } : {}),
+    ...(row.error ? { error: row.error } : {}),
+  };
+}
+
+export async function loadCanaryStatus(db: D1Database, now = nowSec()): Promise<CanaryStatus> {
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT r.check_id, r.status, r.severity, r.observed_at, r.duration_ms, r.metadata_json, r.error
+           FROM worker_canary_runs r
+           INNER JOIN (
+             SELECT check_id, MAX(observed_at) AS observed_at
+               FROM worker_canary_runs
+              GROUP BY check_id
+           ) latest
+             ON latest.check_id = r.check_id
+            AND latest.observed_at = r.observed_at
+          ORDER BY r.check_id ASC`,
+      )
+      .all<WorkerCanaryRunRow>(),
+  );
+
+  const checks: CanaryStatus["checks"] = {};
+  for (const row of rows.results ?? []) {
+    checks[row.check_id] = mapCanaryStatusRow(row);
+  }
+  const latestRunAt = Object.values(checks).reduce<number | null>(
+    (latest, check) => latest == null || check.observedAt > latest ? check.observedAt : latest,
+    null,
+  );
+  const values = Object.values(checks);
+  const staleCount = values.filter((check) => now - check.observedAt > CANARY_STATUS_MAX_AGE_SEC).length;
+  const counts = summarizeCanaryResults(values);
+  let status: CanaryStatus["status"];
+  if (values.length === 0) {
+    status = "unknown";
+  } else if (staleCount > 0) {
+    status = "stale";
+  } else if (counts.errorCount > 0 || counts.degradedCount > 0) {
+    status = "degraded";
+  } else {
+    status = "healthy";
+  }
+  return {
+    checkedAt: now,
+    status,
+    latestRunAt,
+    maxAgeSec: CANARY_STATUS_MAX_AGE_SEC,
+    totalChecks: values.length,
+    ...counts,
+    staleCount,
+    checks,
+  };
+}

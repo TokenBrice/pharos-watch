@@ -3652,7 +3652,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 - Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
 
-**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
+**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 ```text
 {
@@ -3760,6 +3760,29 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "onchainStaleRatio": 0
   },
   "sectionErrors": {},
+  "canaries": {
+    "checkedAt": 1771856453,
+    "status": "healthy",
+    "latestRunAt": 1771856400,
+    "maxAgeSec": 7200,
+    "totalChecks": 6,
+    "okCount": 6,
+    "degradedCount": 0,
+    "errorCount": 0,
+    "skippedCount": 0,
+    "staleCount": 0,
+    "checks": {
+      "dex-liquidity-current-publication": {
+        "checkId": "dex-liquidity-current-publication",
+        "label": "DEX liquidity current publication",
+        "description": "Current DEX rows are published and match the latest published generation row count.",
+        "status": "ok",
+        "severity": "info",
+        "observedAt": 1771856400,
+        "durationMs": 12
+      }
+    }
+  },
   "telegramBot": {
     "totalChats": 128,
     "alertEnabledChats": 123,
@@ -4106,6 +4129,8 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 `dependencyHealth` is a read-only derived matrix over existing status signals. The worker combines `caches`, `crons`, `publicationHealth`, and the static registry in `shared/lib/data-dependency-registry.ts` into per-dependency status rows plus `rootCauseGroups` that group degraded/stale symptoms under the highest upstream dependency. This is operator triage metadata only: it does not perform extra D1 reads, does not change `availabilityStatus` / `dataQualityStatus`, and does not mutate publication ledgers.
 
 `providerCircuitHealth` is a read-only admin supplement over the provider circuit-breaker index. Breaker decisions still use the individual `cache["circuit:<source>"]` rows; successful/failing breaker writes maintain `cache["provider:circuit:index"]` so `/api/status` can report `openCount`, `halfOpenCount`, `openProviders`, and `byFamily` without scanning circuit rows. Loader failures return `providerCircuitHealth: null` and `sectionErrors.providerCircuitHealth`; public `/api/health.circuits` remains the raw per-circuit surface.
+
+`canaries` is a read-only admin supplement over `worker_canary_runs`, populated by the DB/cache-only `data-invariant-canary` cron when `WORKER_CANARY_MODE` is `shadow`, `status`, or `alert`. It reports the latest row per structural check, including DEX publication/current-row invariants, stablecoins-cache active coverage, PSI and DEWS latest samples, and report-card cache generation/methodology freshness. Loader failures return `canaries: null` and `sectionErrors.canaries`; canary findings are operator diagnostics and do not directly change availability.
 
 `discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 

@@ -232,6 +232,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "status-self-check-chain",
   },
   {
+    job: "data-invariant-canary",
+    label: "Data invariant canary",
+    group: "quarter-hourly",
+    scheduleKey: "statusSelfCheckOffset",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB/cache-only structural checks; no outbound fetches
+    connectionGroup: "status-self-check-chain",
+  },
+  {
     job: "cron-staleness-watchdog",
     label: "Cron staleness watchdog",
     group: "quarter-hourly",
