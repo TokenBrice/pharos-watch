@@ -126,7 +126,7 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
   });
 
   throwIfAborted(signal);
-  await batchExecute(db, stmts, STAGING_BATCH_SIZE);
+  await batchExecute(db, stmts, { chunkSize: STAGING_BATCH_SIZE, signal });
 }
 
 /**
