@@ -927,6 +927,11 @@ describe("computeDepegResolver", () => {
               : [{ key: "ddr:quarantine-alerted-event-ids", value: markerValue, updated_at: NOW_SEC - 900 }],
         },
         { match: "INSERT OR REPLACE INTO cache", rows: [] },
+        {
+          match: "INSERT INTO worker_repair_tasks",
+          rows: [],
+          throwError: new Error("repair task table unavailable"),
+        },
       ]);
 
     const cacheWrites = (db: MockD1Database, keyPrefix: string) =>
@@ -953,8 +958,12 @@ describe("computeDepegResolver", () => {
       storeContracts: quarantiningStores([42]),
     });
     expect(firstResult.status).not.toBe("degraded");
-    const firstMetadata = JSON.parse(firstResult.metadata ?? "{}") as { repairRequiredEventCount?: number };
+    const firstMetadata = JSON.parse(firstResult.metadata ?? "{}") as {
+      repairRequiredEventCount?: number;
+      repairTaskPersistError?: string;
+    };
     expect(firstMetadata.repairRequiredEventCount).toBe(1);
+    expect(firstMetadata.repairTaskPersistError).toBe("repair task table unavailable");
     const firstAlert = cacheWrites(firstDb, "cron:event:compute-depeg-resolver:quarantine-repair-required");
     expect(firstAlert).toHaveLength(1);
     expect(String(firstAlert[0].binds[1])).toContain("#42");
