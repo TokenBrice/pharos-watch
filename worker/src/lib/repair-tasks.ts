@@ -122,7 +122,7 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason ?? new Error("repair task runner aborted");
 }
 
-export function normalizeWorkerRepairRunnerMode(value: string | undefined): WorkerRepairRunnerMode {
+function normalizeWorkerRepairRunnerMode(value: string | undefined): WorkerRepairRunnerMode {
   const normalized = value?.trim().toLowerCase();
   if (normalized === "shadow" || normalized === "enabled") return normalized;
   return "off";

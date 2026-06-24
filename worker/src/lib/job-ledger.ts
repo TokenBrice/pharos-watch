@@ -352,7 +352,7 @@ export async function createWorkerJobAttempt(
   return identity;
 }
 
-export async function claimWorkerJobAttempt(
+async function claimWorkerJobAttempt(
   db: D1Database,
   input: { attemptId: string; owner?: string | null; nowSec?: number },
 ): Promise<void> {
