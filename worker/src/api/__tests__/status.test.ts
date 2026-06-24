@@ -541,6 +541,7 @@ describe("handleStatus", () => {
       liquidityHealth: Record<string, unknown> | null;
       yieldHealth: Record<string, unknown> | null;
       publicationHealth: Record<string, unknown> | null;
+      dependencyHealth: Record<string, unknown> | null;
       discoveryCandidates: Array<Record<string, unknown>> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
       reserveComposition: Record<string, unknown>;
@@ -562,6 +563,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("liquidityHealth");
     expect(body).toHaveProperty("yieldHealth");
     expect(body).toHaveProperty("publicationHealth");
+    expect(body).toHaveProperty("dependencyHealth");
     expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
     expect(body).toHaveProperty("reserveComposition");

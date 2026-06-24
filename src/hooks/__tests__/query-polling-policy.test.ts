@@ -89,6 +89,8 @@ function minimalStatusResponse() {
     summary: {},
     liquidityHealth: null,
     yieldHealth: null,
+    publicationHealth: null,
+    dependencyHealth: null,
     priceSourceHealth: null,
     priceProviderDiagnostics: null,
     gtProbe: null,

@@ -911,6 +911,54 @@ export interface PublicationHealth {
   surfaces: Partial<Record<PublicationSurfaceId, PublicationSurfaceHealth>>;
 }
 
+export type DependencyHealthStatus = "healthy" | "degraded" | "stale" | "unknown";
+export type DependencyImpactLayer = "availability" | "data-quality" | "system";
+export type DependencyCriticality = "critical" | "watch";
+
+export interface DependencyHealthItem {
+  id: string;
+  label: string;
+  sourceOfTruth: string;
+  producerJob: string | null;
+  cacheKey: string | null;
+  publicationSurface: PublicationSurfaceId | null;
+  impactLayer: DependencyImpactLayer;
+  criticality: DependencyCriticality;
+  dependsOn: string[];
+  consumers: string[];
+  status: DependencyHealthStatus;
+  checkedAt: number;
+  updatedAt: number | null;
+  ageSeconds: number | null;
+  maxAgeSec: number | null;
+  reason: string | null;
+  runbookPath: string | null;
+}
+
+export interface DependencyRootCauseGroup {
+  rootDependencyId: string;
+  rootStatus: DependencyHealthStatus;
+  rootReason: string | null;
+  symptomDependencyIds: string[];
+  impactedDependencyIds: string[];
+  consumerIds: string[];
+  criticality: DependencyCriticality;
+}
+
+export interface DependencyHealth {
+  checkedAt: number;
+  dependencies: Record<string, DependencyHealthItem>;
+  rootCauseGroups: DependencyRootCauseGroup[];
+  summary: {
+    total: number;
+    healthy: number;
+    degraded: number;
+    stale: number;
+    unknown: number;
+    rootCauseGroupCount: number;
+  };
+}
+
 export interface D1UsageSummary {
   checkedAt: number;
   windowStart: number;
@@ -1011,6 +1059,7 @@ export interface StatusResponse {
   liquidityHealth: LiquidityHealth | null;
   yieldHealth: YieldHealthSummary | null;
   publicationHealth: PublicationHealth | null;
+  dependencyHealth: DependencyHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   /**
    * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
@@ -1180,6 +1229,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   liquidityHealth: StatusJsonObjectSchema.nullable(),
   yieldHealth: StatusJsonObjectSchema.nullable(),
   publicationHealth: StatusJsonObjectSchema.nullable(),
+  dependencyHealth: StatusJsonObjectSchema.nullable(),
   priceSourceHealth: StatusJsonObjectSchema.nullable(),
   priceProviderDiagnostics: z.array(StatusJsonObjectSchema).nullable(),
   gtProbe: StatusJsonObjectSchema.nullable(),

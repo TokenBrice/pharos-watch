@@ -6,7 +6,7 @@ Operational reference for the split status surfaces: public `/status/` read-only
 
 ## Scope
 
-The operator dashboard combines nine signals:
+The operator dashboard combines ten signals:
 
 1. Cache freshness (`/api/status` -> `caches`)
 2. Cron health (`/api/status` -> `crons`)
@@ -15,8 +15,9 @@ The operator dashboard combines nine signals:
 5. Synthetic status probes (`/api/status` -> `probe`, `discrepancy`)
 6. Live reserve sync health (`/api/status` -> `reserveComposition`)
 7. Yield health (`/api/status` -> `yieldHealth`)
-8. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
-9. Site-vs-external demand attribution (`useRequestSourceStats` -> `GET /api/request-source-stats`)
+8. Publication and dependency health (`/api/status` -> `publicationHealth`, `dependencyHealth`)
+9. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
+10. Site-vs-external demand attribution (`useRequestSourceStats` -> `GET /api/request-source-stats`)
 
 The repo now ships two related surfaces:
 
@@ -337,6 +338,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `persistentlyStaleIndependentCoins`, `writeTimeoutUncertain`, `deferredCoins`, `runBudgetTruncated`, `deferredAt`, `nextCursorStablecoinId`, `cursorTailState`, `cursorTailError`, `cursorRecordedAt`, `cursorTailCompletedAt`, `cursorTailFailedAt`, `runBudgetTruncationCount`, `historyWriteGaps`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`). Any persistent stale independent feed keeps the reserve composition status at least `degraded` even if aggregate fresh coverage remains high.
 - `yieldHealth`: admin-only yield health summary sourced from existing cache rows and cron metadata (`yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `sync-yield-data`). It reports ranking count/update age, previous-vs-current ranking-count delta, live-safety hydration coverage, supplemental cache age, benchmark age/fallback mode, coverage-audit age, source-risk field coverage, comparison-anchor freshness, latest cron status, a field-level status, status-impact class, and the yield runbook link.
 - `publicationHealth`: admin-only read-only publication generation summary for surfaces with existing ledgers. The first surfaces are `dex-liquidity` and `yield-rankings`; each reports last published generation, last attempted generation, latest failure reason, candidate age, and optional dependency watermarks without changing publisher behavior.
+- `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.

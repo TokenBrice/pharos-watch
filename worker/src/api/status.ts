@@ -16,6 +16,7 @@ import {
   type StatusRawSnapshotLoadResult,
 } from "../lib/status/raw-snapshot";
 import { loadStatusSupplements } from "./status-supplements";
+import { buildDependencyHealth } from "../lib/dependency-health";
 import type { StatusResponse, StatusSectionError } from "@shared/types/status";
 import type { CloudflareD1StatusBindings } from "../lib/env";
 import { runAdminRoute } from "../lib/route-wrappers";
@@ -153,6 +154,12 @@ export function handleStatus(
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
       const snapshotErrorSection = statusSnapshotSectionError(snapshotFallbackReason, snapshotError);
+      const dependencyHealth = buildDependencyHealth({
+        now,
+        caches: raw.caches,
+        crons: raw.crons,
+        publicationHealth: supplements.publicationHealth,
+      });
 
       const body: StatusResponse = {
         timestamp: now,
@@ -185,6 +192,7 @@ export function handleStatus(
         liquidityHealth: supplements.liquidityHealth,
         yieldHealth: supplements.yieldHealth,
         publicationHealth: supplements.publicationHealth,
+        dependencyHealth,
         priceSourceHealth: supplements.priceSourceHealth,
         priceProviderDiagnostics: supplements.priceProviderDiagnostics,
         gtProbe: supplements.gtProbe,
