@@ -56,6 +56,30 @@ export interface WorkerJobAttemptHealth {
   queryFailed: boolean;
 }
 
+export interface JobProducer {
+  createAttempt(input: CreateWorkerJobAttemptInput): Promise<WorkerJobAttemptIdentity>;
+}
+
+export interface JobConsumer {
+  claimAttempt(input: { attemptId: string; owner?: string | null; nowSec?: number }): Promise<void>;
+  recordLease(input: { attemptId: string; owner: string; leaseUntil: number; nowSec?: number }): Promise<void>;
+  heartbeatAttempt(input: { attemptId: string; progress: WorkerJobAttemptProgressUpdate; nowSec?: number }): Promise<void>;
+  finishAttempt(input: FinishWorkerJobAttemptInput): Promise<void>;
+}
+
+export interface JobAttemptStore extends JobProducer, JobConsumer {
+  markAttemptsAbandonedForSlot(input: {
+    scheduleKey: string;
+    slotStartedAt: number;
+    jobs: readonly string[];
+    nowSec?: number;
+    error: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<number>;
+  pruneTerminalAttempts(cutoffSec: number, signal?: AbortSignal): Promise<number>;
+  loadHealth(jobs: readonly string[], now: number): Promise<WorkerJobAttemptHealth>;
+}
+
 interface WorkerJobAttemptRow {
   attempt_id: string;
   idempotency_key: string;
@@ -601,4 +625,55 @@ export async function loadWorkerJobAttemptHealth(
     });
     return { latestByJob: new Map(), activeAttempts: 0, staleAttempts: 0, queryFailed: true };
   }
+}
+
+class D1JobAttemptStore implements JobAttemptStore {
+  constructor(private readonly db: D1Database) {}
+
+  createAttempt(input: CreateWorkerJobAttemptInput): Promise<WorkerJobAttemptIdentity> {
+    return createWorkerJobAttempt(this.db, input);
+  }
+
+  claimAttempt(input: { attemptId: string; owner?: string | null; nowSec?: number }): Promise<void> {
+    return claimWorkerJobAttempt(this.db, input);
+  }
+
+  recordLease(input: { attemptId: string; owner: string; leaseUntil: number; nowSec?: number }): Promise<void> {
+    return recordWorkerJobAttemptLease(this.db, input);
+  }
+
+  heartbeatAttempt(input: {
+    attemptId: string;
+    progress: WorkerJobAttemptProgressUpdate;
+    nowSec?: number;
+  }): Promise<void> {
+    return heartbeatWorkerJobAttempt(this.db, input);
+  }
+
+  finishAttempt(input: FinishWorkerJobAttemptInput): Promise<void> {
+    return finishWorkerJobAttempt(this.db, input);
+  }
+
+  markAttemptsAbandonedForSlot(input: {
+    scheduleKey: string;
+    slotStartedAt: number;
+    jobs: readonly string[];
+    nowSec?: number;
+    error: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<number> {
+    return markWorkerJobAttemptsAbandonedForSlot(this.db, input);
+  }
+
+  pruneTerminalAttempts(cutoffSec: number, signal?: AbortSignal): Promise<number> {
+    return pruneWorkerJobAttempts(this.db, cutoffSec, signal);
+  }
+
+  loadHealth(jobs: readonly string[], now: number): Promise<WorkerJobAttemptHealth> {
+    return loadWorkerJobAttemptHealth(this.db, jobs, now);
+  }
+}
+
+export function createD1JobAttemptStore(db: D1Database): JobAttemptStore {
+  return new D1JobAttemptStore(db);
 }
