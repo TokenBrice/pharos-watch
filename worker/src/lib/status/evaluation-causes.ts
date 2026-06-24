@@ -182,6 +182,23 @@ export function buildAvailabilityCauses(input: {
     }
   }
 
+  const dexLiquidityCache = caches["dex-liquidity"];
+  const dewsCache = caches.dews;
+  if (dexLiquidityCache && dewsCache && !dexLiquidityCache.healthy && !dewsCache.healthy) {
+    pushCause(availabilityCauses, {
+      code: "dews_downstream_of_dex_liquidity",
+      layer: "availability",
+      severity: dexLiquidityCache.ageSeconds != null && dexLiquidityCache.ageSeconds > dexLiquidityCache.maxAge
+        ? "warning"
+        : "info",
+      message:
+        "DEWS freshness is downstream of DEX liquidity; both lanes are unhealthy, so investigate sync-dex-liquidity first.",
+      metric: "dexLiquidityAgeSeconds",
+      value: dexLiquidityCache.ageSeconds ?? undefined,
+      threshold: dexLiquidityCache.maxAge,
+    });
+  }
+
   if (input.publicHealth.mintBurnQueryError) {
     pushCause(availabilityCauses, {
       code: "mint_burn_health_query_failed",

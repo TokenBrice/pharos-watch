@@ -228,6 +228,7 @@ export async function computeAndStoreDEWS(
       currentGenerationRows,
       latestGenerationRows,
       sourceCoverage,
+      dependencies: sourceState.dependencyDiagnostics,
       sourceFailures,
       fallbackMode:
         hardFailures.length > 0

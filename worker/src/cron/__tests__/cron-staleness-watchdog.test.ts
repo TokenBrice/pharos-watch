@@ -208,6 +208,26 @@ describe("cron staleness watchdog", () => {
     expect(marker.lastAlertedAt).toBe(0);
   });
 
+  it("reports DEX-to-DEWS dependency recovery state", async () => {
+    mockCacheStatus({
+      "dex-liquidity": 120,
+      dews: 4_000,
+    });
+
+    const result = await runCronStalenessWatchdog(fakeDb(), "https://alerts.example/webhook");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      dependencyRecoveryChecks?: Array<{ root: string; dependent: string; state: string }>;
+    };
+
+    expect(metadata.dependencyRecoveryChecks).toContainEqual({
+      root: "dex-liquidity",
+      dependent: "dews",
+      state: "root-recovered-dependent-stale",
+      rootAgeSeconds: 120,
+      dependentAgeSeconds: 4_000,
+    });
+  });
+
   it("keeps recovered alert markers when the recovery webhook send fails", async () => {
     cacheStore.set(ALERT_KEY, JSON.stringify({ firstStaleAt: 100, lastObservedAt: 100, lastAlertedAt: 100 }));
     sendAlertMock.mockResolvedValueOnce(false);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import { buildDataQualityCauses } from "../status/evaluation-causes";
+import { buildAvailabilityCauses, buildDataQualityCauses } from "../status/evaluation-causes";
 import { deriveAvailabilityStatus, deriveReserveCompositionStatus } from "../status/evaluation-state";
 
 function makeReserveComposition(
@@ -252,6 +252,42 @@ describe("status evaluation policy", () => {
 });
 
 describe("status cause text", () => {
+  it("groups DEWS stale health downstream of DEX liquidity", () => {
+    const causes = buildAvailabilityCauses({
+      publicHealth: makePublicHealth({
+        caches: {
+          "dex-liquidity": {
+            ageSeconds: 8_000,
+            maxAge: 7_200,
+            healthy: false,
+          },
+          dews: {
+            ageSeconds: 8_100,
+            maxAge: 7_200,
+            healthy: false,
+          },
+        },
+        worstCacheRatio: 1.2,
+      }),
+      availabilityImpactingUnhealthyCrons: 0,
+      watchUnhealthyCrons: 0,
+      degradedCronRuns: 0,
+      cronErrorCount: 0,
+      availabilityImpactingCronErrors: 0,
+      availabilityImpactingConsecutiveCronErrors: 0,
+      cronHistoryQueryFailed: false,
+      cronProgressQueryFailed: false,
+      cronLeaseQueryFailed: false,
+    });
+
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "dews_downstream_of_dex_liquidity",
+      severity: "warning",
+      metric: "dexLiquidityAgeSeconds",
+      value: 8_000,
+    }));
+  });
+
   it("includes persistent stale independent feed details in degraded reserve sync causes", () => {
     const reserveComposition = makeReserveComposition({
       status: "degraded",

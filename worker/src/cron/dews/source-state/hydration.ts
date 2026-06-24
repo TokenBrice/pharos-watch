@@ -22,6 +22,7 @@ import { isCanonicalMintBurnPair } from "../../../lib/mint-burn-canonical-chain"
 import type {
   BlacklistCountByStablecoinId,
   DewsSourceState,
+  DexLiquidityDependencyDiagnostics,
   DexLiquidityRow,
   DexPriceSnapshot,
   LiquidityHistorySnapshot,
@@ -174,6 +175,75 @@ export interface DexLiquidityHydration {
   staleCount: number;
   totalRows: number;
   freshnessAgeSec: number | null;
+  dependencyDiagnostics: DexLiquidityDependencyDiagnostics;
+}
+
+interface DexLiquidityPublicationGenerationRow {
+  generation_id: string;
+  state: string;
+  started_at: number | null;
+  published_at: number | null;
+  failed_at: number | null;
+  failure_reason: string | null;
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function loadDexLiquidityPublicationDiagnostics(
+  ctx: HydrationContext,
+  summary: Pick<DexLiquidityDependencyDiagnostics, "totalRows" | "freshRows" | "staleRows" | "freshnessAgeSec" | "staleThresholdSec">,
+): Promise<DexLiquidityDependencyDiagnostics> {
+  try {
+    const [latestGeneration, latestPublished] = await Promise.all([
+      ctx.db
+        .prepare(
+          `SELECT generation_id, state, started_at, published_at, failed_at, failure_reason
+             FROM dex_liquidity_publication_generations
+             ORDER BY started_at DESC
+             LIMIT 1`,
+        )
+        .first<DexLiquidityPublicationGenerationRow>(),
+      ctx.db
+        .prepare(
+          `SELECT generation_id, state, started_at, published_at, failed_at, failure_reason
+             FROM dex_liquidity_publication_generations
+             WHERE state = 'published'
+             ORDER BY COALESCE(published_at, started_at) DESC
+             LIMIT 1`,
+        )
+        .first<DexLiquidityPublicationGenerationRow>(),
+    ]);
+
+    const latestPublishedAt = latestPublished?.published_at ?? null;
+    return {
+      ...summary,
+      latestGenerationId: latestGeneration?.generation_id ?? null,
+      latestGenerationState: latestGeneration?.state ?? null,
+      latestGenerationStartedAt: latestGeneration?.started_at ?? null,
+      latestGenerationPublishedAt: latestGeneration?.published_at ?? null,
+      latestGenerationFailedAt: latestGeneration?.failed_at ?? null,
+      latestGenerationFailureReason: latestGeneration?.failure_reason ?? null,
+      latestPublishedGenerationId: latestPublished?.generation_id ?? null,
+      latestPublishedAt,
+      latestPublishedAgeSec: latestPublishedAt == null ? null : Math.max(0, ctx.nowSec - latestPublishedAt),
+    };
+  } catch (error) {
+    return {
+      ...summary,
+      latestGenerationId: null,
+      latestGenerationState: null,
+      latestGenerationStartedAt: null,
+      latestGenerationPublishedAt: null,
+      latestGenerationFailedAt: null,
+      latestGenerationFailureReason: null,
+      latestPublishedGenerationId: null,
+      latestPublishedAt: null,
+      latestPublishedAgeSec: null,
+      diagnosticsError: toErrorMessage(error),
+    };
+  }
 }
 
 export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiquidityHydration> {
@@ -215,6 +285,13 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
       `dex_liquidity age ${dexLiquidityAgeSec}s exceeds ${DEWS_STALE_DEX_LIQUIDITY_SEC}s`,
     );
   }
+  const dependencyDiagnostics = await loadDexLiquidityPublicationDiagnostics(ctx, {
+    totalRows: dexLiqRows.results.length,
+    freshRows: dexLiqMap.size,
+    staleRows: dexLiqStaleIds.size,
+    freshnessAgeSec: dexLiquidityAgeSec,
+    staleThresholdSec: DEWS_STALE_DEX_LIQUIDITY_SEC,
+  });
   return {
     dexLiqRows,
     dexLiqMap,
@@ -224,6 +301,7 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
     staleCount: dexLiqStaleIds.size,
     totalRows: dexLiqRows.results.length,
     freshnessAgeSec: dexLiquidityAgeSec,
+    dependencyDiagnostics,
   };
 }
 

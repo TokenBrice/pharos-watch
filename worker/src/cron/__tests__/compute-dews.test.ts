@@ -180,6 +180,22 @@ interface MakeDbOptions {
   historyIds?: string[];
   currentGenerationRows?: number;
   latestGenerationRows?: number;
+  dexPublicationLatest?: {
+    generation_id: string;
+    state: string;
+    started_at: number | null;
+    published_at: number | null;
+    failed_at: number | null;
+    failure_reason: string | null;
+  };
+  dexPublicationLatestPublished?: {
+    generation_id: string;
+    state: string;
+    started_at: number | null;
+    published_at: number | null;
+    failed_at: number | null;
+    failure_reason: string | null;
+  };
   onBind?: (sql: string, args: unknown[]) => void;
 }
 
@@ -287,6 +303,12 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     };
 
     const first = async <T>() => {
+      if (sql.includes("FROM dex_liquidity_publication_generations")) {
+        if (sql.includes("WHERE state = 'published'")) {
+          return (opts.dexPublicationLatestPublished ?? null) as T | null;
+        }
+        return (opts.dexPublicationLatest ?? null) as T | null;
+      }
       if (sql.includes("FROM cache WHERE key = ?")) {
         if (opts.yieldRankingsPayload === undefined) return null as T | null;
         return {
@@ -887,6 +909,22 @@ describe("computeAndStoreDEWS", () => {
           updated_at: nowSec - 3 * 3600,
         },
       ],
+      dexPublicationLatest: {
+        generation_id: "dex-liquidity-1772546400",
+        state: "failed",
+        started_at: nowSec - 300,
+        published_at: null,
+        failed_at: nowSec - 240,
+        failure_reason: "current generation incomplete: active=368 expected=369",
+      },
+      dexPublicationLatestPublished: {
+        generation_id: "dex-liquidity-1772539200",
+        state: "published",
+        started_at: nowSec - 7_500,
+        published_at: nowSec - 7_400,
+        failed_at: null,
+        failure_reason: null,
+      },
     });
 
     const result = await computeAndStoreDEWS(db);
@@ -903,9 +941,25 @@ describe("computeAndStoreDEWS", () => {
     );
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       sourceCoverage: Record<string, number>;
+      dependencies: {
+        dexLiquidity?: {
+          latestGenerationId?: string | null;
+          latestGenerationState?: string | null;
+          latestGenerationFailureReason?: string | null;
+          latestPublishedGenerationId?: string | null;
+          latestPublishedAgeSec?: number | null;
+        };
+      };
     };
     expect(metadata.sourceCoverage.dexLiquidityStaleRows).toBe(1);
     expect(metadata.sourceCoverage.dexLiquidityFreshRows).toBe(0);
+    expect(metadata.dependencies.dexLiquidity).toMatchObject({
+      latestGenerationId: "dex-liquidity-1772546400",
+      latestGenerationState: "failed",
+      latestGenerationFailureReason: "current generation incomplete: active=368 expected=369",
+      latestPublishedGenerationId: "dex-liquidity-1772539200",
+      latestPublishedAgeSec: 7_400,
+    });
   });
 
   it("does not smooth with stale previous stress-signal rows", async () => {

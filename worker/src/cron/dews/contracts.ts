@@ -29,6 +29,24 @@ export interface DexLiquidityRow {
   updated_at: number | null;
 }
 
+export interface DexLiquidityDependencyDiagnostics {
+  totalRows: number;
+  freshRows: number;
+  staleRows: number;
+  freshnessAgeSec: number | null;
+  staleThresholdSec: number;
+  latestGenerationId: string | null;
+  latestGenerationState: string | null;
+  latestGenerationStartedAt: number | null;
+  latestGenerationPublishedAt: number | null;
+  latestGenerationFailedAt: number | null;
+  latestGenerationFailureReason: string | null;
+  latestPublishedGenerationId: string | null;
+  latestPublishedAt: number | null;
+  latestPublishedAgeSec: number | null;
+  diagnosticsError?: string;
+}
+
 export interface LiquidityHistorySnapshot {
   score: number | null;
   tvl: number | null;
@@ -86,6 +104,9 @@ export interface DewsSourceState {
   yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;
   latestPsiScore: number | null;
   sourceCoverage: Record<string, number>;
+  dependencyDiagnostics: {
+    dexLiquidity: DexLiquidityDependencyDiagnostics;
+  };
 }
 
 export interface DewsScoringState {

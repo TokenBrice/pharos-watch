@@ -68,6 +68,24 @@ vi.mock("../../cron/dews/source-state", () => ({
     yieldRankChangeAttribution: new Map(),
     latestPsiScore: null,
     sourceCoverage: { dexPrices: 1, dexLiquidity: 1 },
+    dependencyDiagnostics: {
+      dexLiquidity: {
+        totalRows: 0,
+        freshRows: 0,
+        staleRows: 0,
+        freshnessAgeSec: null,
+        staleThresholdSec: 7200,
+        latestGenerationId: null,
+        latestGenerationState: null,
+        latestGenerationStartedAt: null,
+        latestGenerationPublishedAt: null,
+        latestGenerationFailedAt: null,
+        latestGenerationFailureReason: null,
+        latestPublishedGenerationId: null,
+        latestPublishedAt: null,
+        latestPublishedAgeSec: null,
+      },
+    },
   })),
 }));
 

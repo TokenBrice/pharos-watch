@@ -115,5 +115,8 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     yieldRankChangeAttribution: yieldRankings.yieldRankChangeAttribution,
     latestPsiScore,
     sourceCoverage,
+    dependencyDiagnostics: {
+      dexLiquidity: dexLiq.dependencyDiagnostics,
+    },
   };
 }

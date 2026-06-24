@@ -197,6 +197,43 @@ function isStale(observation: CronStalenessObservation): boolean {
   return !isFreshAge(observation.ageSeconds, observation.thresholdSec);
 }
 
+function buildDependencyRecoveryChecks(observations: readonly CronStalenessObservation[]): Array<{
+  root: string;
+  dependent: string;
+  state: "both-stale" | "root-recovered-dependent-stale" | "healthy" | "unknown";
+  rootAgeSeconds: number | null;
+  dependentAgeSeconds: number | null;
+}> {
+  const byCacheKey = new Map(observations.map((observation) => [observation.cacheKey, observation]));
+  const dexLiquidity = byCacheKey.get("dex-liquidity");
+  const dews = byCacheKey.get("dews");
+  if (!dexLiquidity || !dews) {
+    return [{
+      root: "dex-liquidity",
+      dependent: "dews",
+      state: "unknown",
+      rootAgeSeconds: dexLiquidity?.ageSeconds ?? null,
+      dependentAgeSeconds: dews?.ageSeconds ?? null,
+    }];
+  }
+
+  const rootStale = isStale(dexLiquidity);
+  const dependentStale = isStale(dews);
+  const state =
+    rootStale && dependentStale
+      ? "both-stale"
+      : !rootStale && dependentStale
+        ? "root-recovered-dependent-stale"
+        : "healthy";
+  return [{
+    root: "dex-liquidity",
+    dependent: "dews",
+    state,
+    rootAgeSeconds: dexLiquidity.ageSeconds,
+    dependentAgeSeconds: dews.ageSeconds,
+  }];
+}
+
 function buildObservation(
   laneKey: CacheFreshnessLaneKey,
   lane: CacheFreshnessLaneConfig,
@@ -301,6 +338,7 @@ export async function runCronStalenessWatchdog(
     buildFullObservation(laneKey, CACHE_FRESHNESS_LANES[laneKey], status.caches[CACHE_FRESHNESS_LANES[laneKey].cacheKey]),
   );
   const stale = watchedObservations.filter(isStale);
+  const dependencyRecoveryChecks = buildDependencyRecoveryChecks(watchedObservations);
   const markers = await loadAlertMarkers(db, watchedObservations);
   const staleCacheKeys = new Set(stale.map((observation) => observation.cacheKey));
   const dueForAlert = stale.filter((observation) => {
@@ -396,6 +434,7 @@ export async function runCronStalenessWatchdog(
         .filter((observation) => !alertedCacheKeys.has(observation.cacheKey))
         .map((observation) => observation.cacheKey),
       recovered: recovered.map((observation) => observation.cacheKey),
+      dependencyRecoveryChecks,
       deliveredRecoveryAlerts: [...recoveredAlertedCacheKeys],
       failedRecoveryAlerts: [...recoveryAlertFailedCacheKeys],
       warnings: status.warnings,
