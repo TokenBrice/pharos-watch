@@ -47,7 +47,8 @@ Watch protocol:
 - Capture baseline, boundary, and final snapshots from `/api/health`, admin `/api/status`, and admin `/api/status-history`.
 - Sample at least every 15 minutes, plus shortly after expected slot boundaries.
 - Inspect D1 telemetry where available: `cron_runs`, `cron_slot_executions`, `cron_run_progress`, `cron_leases`, status/probe history.
-- Prefer `node scripts/maintenance/watch-worker-cron.mjs --include-status --include-status-history` for bounded D1 metadata previews plus health/status probes. Use `--include-full-metadata` only for narrow follow-up reads, and pass Cloudflare Access service-token headers via `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` when the admin probes are behind Access.
+- Prefer `npm run ops:night-watch-worker -- --cycles 1 --include-status --include-status-history --include-d1` for the standard collector/report pass. It writes `agents/night-watch-report.md` and `agents/night-watch-evidence.json`, loads the canonical cron registries, calls the lower-level watcher for bounded D1 snapshots, and marks admin/D1/tail access gaps explicitly.
+- Use `node scripts/maintenance/watch-worker-cron.mjs --include-status --include-status-history` for narrow follow-up reads or incident spot checks. Use `--include-full-metadata` only for targeted follow-up reads, and pass Cloudflare Access service-token headers via `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` when the admin probes are behind Access.
 - Inspect Worker logs / Cloudflare observability where available.
 
 For each slot/job, record:
@@ -86,6 +87,8 @@ Write `/agents/night-watch-report.md` with:
 6. Quick wins vs deeper refactors.
 7. Open questions and access gaps.
 8. Verification appendix: commands, endpoint snapshots, SQL/log sources, files inspected.
+
+The automated collector writes the first-pass report structure. The operator or agent running the watch still owns the final synthesis: fill in any code-audit evidence, worker-tail excerpts, access gaps, and remediation-ready findings that require human review beyond the collected snapshots.
 
 Finding quality bar:
 
