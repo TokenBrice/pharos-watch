@@ -580,7 +580,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/daily-digest/runtime-helpers.ts` - RecentDigestMetaEntry, buildRecentDigestMeta, logDailyDigestLlmCall
 - `worker/src/cron/daily-digest/shared.ts` - NON_WEEKLY_DIGEST_SQL_FILTER
 - `worker/src/cron/daily-digest/voice-guards.ts` - FORBIDDEN_TICS_ANYWHERE, FORBIDDEN_TICS_CLOSER, LeadFamily, findForbiddenTics, forbiddenTicsPromptLine, hasForwardLook
-- `worker/src/cron/data-invariant-canary.ts` - DataInvariantCanaryOptions, resolveDataInvariantCanaryMode, runDataInvariantCanary
+- `worker/src/cron/data-invariant-canary.ts` - DataInvariantCanaryOptions, runDataInvariantCanary
 - `worker/src/cron/depeg-detection/decision-engine.ts` - decideDepegAsset, emitDepegDiagnostics
 - `worker/src/cron/depeg-detection/hydration.ts` - hydrateDepegDetection
 - `worker/src/cron/depeg-detection/persistence.ts` - persistDepegCommands
@@ -677,7 +677,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
 - `worker/src/lib/budget-surface-telemetry.ts` - BudgetSurfaceOutcome, BudgetSurfaceTelemetryInput, loadBudgetOnlySurfaceStatuses, recordBudgetSurfaceTelemetry
 - `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
-- `worker/src/lib/canary-checks.ts` - CANARY_CHECKS, CanaryCheckResult, CanaryRunSummary, RunCanaryChecksOptions, WorkerCanaryMode, loadCanaryStatus
+- `worker/src/lib/canary-checks.ts` - CanaryCheckResult, CanaryRunSummary, RunCanaryChecksOptions, WorkerCanaryMode, loadCanaryStatus, normalizeWorkerCanaryMode
 - `worker/src/lib/cex-orderbooks.ts` - CexOrderbookDepth, DirectCexOrderbookDepthSummary, computeOrderbookDepth, fetchBinanceOrderbookDepths, fetchCoinbaseOrderbookDepths, fetchKrakenOrderbookDepths
 - `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, CexTickerBatch, KRAKEN_KNOWN_SYMBOLS, fetchBinancePricesDetailed
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
