@@ -359,6 +359,39 @@ export async function claimWorkerJobAttempt(
   );
 }
 
+export async function recordWorkerJobAttemptLease(
+  db: D1Database,
+  input: { attemptId: string; owner: string; leaseUntil: number; nowSec?: number },
+): Promise<void> {
+  const timestamp = input.nowSec ?? nowSec();
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE worker_job_attempts
+            SET state = 'running',
+                owner = ?,
+                lease_until = ?,
+                claimed_at = COALESCE(claimed_at, ?),
+                started_at = COALESCE(started_at, ?),
+                last_heartbeat_at = ?,
+                updated_at = ?
+          WHERE attempt_id = ?
+            AND state NOT IN (${terminalStateSql()})`,
+      )
+      .bind(
+        input.owner,
+        input.leaseUntil,
+        timestamp,
+        timestamp,
+        timestamp,
+        timestamp,
+        input.attemptId,
+        ...TERMINAL_ATTEMPT_STATES,
+      )
+      .run(),
+  );
+}
+
 export async function heartbeatWorkerJobAttempt(
   db: D1Database,
   input: { attemptId: string; progress: WorkerJobAttemptProgressUpdate; nowSec?: number },

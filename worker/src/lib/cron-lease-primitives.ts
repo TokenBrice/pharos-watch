@@ -9,6 +9,16 @@ export interface CronLeaseOptions {
   owner?: string;
   maxRenewFailures?: number;
   abortSignal?: AbortSignal;
+  onLeaseState?: (state: CronLeaseStateUpdate) => Promise<void> | void;
+}
+
+export interface CronLeaseStateUpdate {
+  event: "acquired" | "renewed";
+  job: string;
+  leaseOwner: string;
+  leaseUntil: number;
+  heartbeatAt: number;
+  ttlSec: number;
 }
 
 export interface CronLeaseRunResult<T> {
@@ -99,7 +109,12 @@ function getStopReason(error: unknown): CronJobAbandonedMetadata["stopReason"] {
 }
 
 /** Acquire or take over an expired cron lease. Returns false when another active owner holds the lease. */
-export async function acquireCronLease(db: D1Database, job: string, owner: string, ttlSec: number): Promise<boolean> {
+async function acquireCronLeaseState(
+  db: D1Database,
+  job: string,
+  owner: string,
+  ttlSec: number,
+): Promise<{ acquired: boolean; leaseUntil: number; heartbeatAt: number }> {
   const nowSec = Math.floor(Date.now() / 1000);
   const leaseUntil = nowSec + ttlSec;
   const result = await db
@@ -116,11 +131,21 @@ export async function acquireCronLease(db: D1Database, job: string, owner: strin
     .bind(job, owner, leaseUntil, nowSec, nowSec, nowSec)
     .run();
 
-  return (result.meta.changes ?? 0) > 0;
+  return { acquired: (result.meta.changes ?? 0) > 0, leaseUntil, heartbeatAt: nowSec };
+}
+
+export async function acquireCronLease(db: D1Database, job: string, owner: string, ttlSec: number): Promise<boolean> {
+  const result = await acquireCronLeaseState(db, job, owner, ttlSec);
+  return result.acquired;
 }
 
 /** Renew an existing lease. Returns false when lease ownership was lost. */
-export async function renewCronLease(db: D1Database, job: string, owner: string, ttlSec: number): Promise<boolean> {
+async function renewCronLeaseState(
+  db: D1Database,
+  job: string,
+  owner: string,
+  ttlSec: number,
+): Promise<{ renewed: boolean; leaseUntil: number; heartbeatAt: number }> {
   const nowSec = Math.floor(Date.now() / 1000);
   const leaseUntil = nowSec + ttlSec;
   const result = await db
@@ -131,7 +156,12 @@ export async function renewCronLease(db: D1Database, job: string, owner: string,
     )
     .bind(leaseUntil, nowSec, nowSec, job, owner)
     .run();
-  return (result.meta.changes ?? 0) > 0;
+  return { renewed: (result.meta.changes ?? 0) > 0, leaseUntil, heartbeatAt: nowSec };
+}
+
+export async function renewCronLease(db: D1Database, job: string, owner: string, ttlSec: number): Promise<boolean> {
+  const result = await renewCronLeaseState(db, job, owner, ttlSec);
+  return result.renewed;
 }
 
 /** Release a lease if and only if caller still owns it. */
@@ -169,8 +199,22 @@ export async function runCronWithLease<T>(
     leaseLastRenewedAt: null as number | null,
   });
 
-  const acquired = await runWithOverloadRetry(() => acquireCronLease(db, job, owner, ttlSec), 3, opts?.abortSignal);
-  if (!acquired) {
+  const notifyLeaseState = async (
+    event: CronLeaseStateUpdate["event"],
+    state: { leaseUntil: number; heartbeatAt: number },
+  ): Promise<void> => {
+    await opts?.onLeaseState?.({
+      event,
+      job,
+      leaseOwner: owner,
+      leaseUntil: state.leaseUntil,
+      heartbeatAt: state.heartbeatAt,
+      ttlSec,
+    });
+  };
+
+  const acquisition = await runWithOverloadRetry(() => acquireCronLeaseState(db, job, owner, ttlSec), 3, opts?.abortSignal);
+  if (!acquisition.acquired) {
     return {
       status: "skipped_locked",
       leaseOwner: owner,
@@ -178,6 +222,7 @@ export async function runCronWithLease<T>(
       ...buildLeaseTelemetry(),
     };
   }
+  await notifyLeaseState("acquired", acquisition);
 
   let renewFailures = 0;
   let leaseRenewAttempts = 0;
@@ -197,15 +242,16 @@ export async function runCronWithLease<T>(
 
   const timer = setInterval(() => {
     leaseRenewAttempts++;
-    void renewCronLease(db, job, owner, ttlSec)
-      .then((ok) => {
-        if (!ok) {
+    void renewCronLeaseState(db, job, owner, ttlSec)
+      .then(async (renewal) => {
+        if (!renewal.renewed) {
           markLeaseFailure();
           return;
         }
         leaseRenewSuccesses++;
-        leaseLastRenewedAt = Math.floor(Date.now() / 1000);
+        leaseLastRenewedAt = renewal.heartbeatAt;
         renewFailures = 0;
+        await notifyLeaseState("renewed", renewal);
       })
       .catch(() => {
         markLeaseFailure();

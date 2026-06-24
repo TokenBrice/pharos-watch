@@ -7,11 +7,11 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
-  claimWorkerJobAttempt,
   createWorkerJobAttempt,
   finishWorkerJobAttempt,
   heartbeatWorkerJobAttempt,
   normalizeWorkerJobLedgerMode,
+  recordWorkerJobAttemptLease,
   shouldRecordWorkerJobAttempt,
   type WorkerJobAttemptIdentity,
 } from "../../lib/job-ledger";
@@ -170,13 +170,6 @@ export function createScheduledRuntimeContext(
         const result = await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
           const slotMeta = { slotStartedAt: scheduled.slotStartedAt, scheduleKey: scheduled.scheduleKey };
           const leaseOwner = createLeaseOwner(job);
-          if (ledgerIdentity) {
-            try {
-              await claimWorkerJobAttempt(db, { attemptId: ledgerIdentity.attemptId, owner: leaseOwner });
-            } catch (err) {
-              logJobLedgerWriteFailure(job, "worker_job_attempt_claim_failed", err);
-            }
-          }
           const reportProgressWithLedger: CronProgressReporter = async (update) => {
             await reportProgress(update);
             if (!ledgerIdentity) return;
@@ -189,6 +182,20 @@ export function createScheduledRuntimeContext(
               logJobLedgerWriteFailure(job, "worker_job_attempt_heartbeat_failed", err);
             }
           };
+          const currentLedgerIdentity = ledgerIdentity;
+          const recordLeaseState: CronLeaseOptions["onLeaseState"] | undefined = currentLedgerIdentity
+            ? async (leaseState) => {
+                try {
+                  await recordWorkerJobAttemptLease(db, {
+                    attemptId: currentLedgerIdentity.attemptId,
+                    owner: leaseState.leaseOwner,
+                    leaseUntil: leaseState.leaseUntil,
+                  });
+                } catch (err) {
+                  logJobLedgerWriteFailure(job, "worker_job_attempt_lease_state_failed", err);
+                }
+              }
+            : undefined;
           await reportProgressWithLedger({
             stage: "started",
             message: `Starting ${job}`,
@@ -208,6 +215,12 @@ export function createScheduledRuntimeContext(
             leaseLastRenewedAt: lease.leaseLastRenewedAt,
             ...slotMeta,
           });
+          const leaseOptions: CronLeaseOptions = {
+            owner: leaseOwner,
+            abortSignal: signal,
+            ...(recordLeaseState ? { onLeaseState: recordLeaseState } : {}),
+            ...perJobLeaseOptions,
+          };
           const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
             await reportProgressWithLedger({
               stage: "lease-acquired",
@@ -216,7 +229,7 @@ export function createScheduledRuntimeContext(
               metadata: slotMeta,
             });
             return fn(leaseSignal, reportProgressWithLedger);
-          }, { owner: leaseOwner, abortSignal: signal, ...perJobLeaseOptions });
+          }, leaseOptions);
 
           if (lease.status === "skipped_locked") {
             await reportProgressWithLedger({

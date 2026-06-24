@@ -5,6 +5,7 @@ import {
   finishWorkerJobAttempt,
   loadWorkerJobAttemptHealth,
   normalizeWorkerJobLedgerMode,
+  recordWorkerJobAttemptLease,
   shouldRecordWorkerJobAttempt,
 } from "../job-ledger";
 
@@ -68,6 +69,27 @@ describe("worker job attempt ledger", () => {
     expect(update?.binds[0]).toBe("deferred");
     expect(update?.binds[1]).toBe("deferred");
     expect(update?.binds[4]).toBe(20);
+  });
+
+  it("records lease owner and lease_until from cron lease state", async () => {
+    const db = mockD1();
+    await recordWorkerJobAttemptLease(db, {
+      attemptId: "attempt-a",
+      owner: "lease-owner-a",
+      leaseUntil: 1_775_890_500,
+      nowSec: 1_775_890_100,
+    });
+
+    const update = db.getHistory().find((entry) => entry.sql.includes("lease_until = ?"));
+    expect(update?.binds.slice(0, 7)).toEqual([
+      "lease-owner-a",
+      1_775_890_500,
+      1_775_890_100,
+      1_775_890_100,
+      1_775_890_100,
+      1_775_890_100,
+      "attempt-a",
+    ]);
   });
 
   it("loads latest per-job attempts and active/stale counters", async () => {

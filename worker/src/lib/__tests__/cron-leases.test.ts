@@ -668,6 +668,39 @@ describe("runCronWithLease", () => {
     expect(reacquired).toBe(true);
   });
 
+  it("emits lease state updates with lease_until from acquisition and renewal writes", async () => {
+    const db = makeLeaseDb();
+    const updates: Array<{ event: string; leaseUntil: number; heartbeatAt: number; leaseOwner: string }> = [];
+    const now = Math.floor(Date.now() / 1000);
+
+    const runPromise = runCronWithLease(
+      db,
+      "sync-stablecoins",
+      async () => new Promise((resolve) => setTimeout(() => resolve("done"), 1500)),
+      {
+        owner: "owner-z",
+        ttlSec: 120,
+        heartbeatSec: 1,
+        onLeaseState: (state) => {
+          updates.push({
+            event: state.event,
+            leaseUntil: state.leaseUntil,
+            heartbeatAt: state.heartbeatAt,
+            leaseOwner: state.leaseOwner,
+          });
+        },
+      },
+    );
+
+    await vi.advanceTimersByTimeAsync(1500);
+    await expect(runPromise).resolves.toMatchObject({ status: "ok", result: "done" });
+
+    expect(updates).toEqual([
+      { event: "acquired", leaseUntil: now + 120, heartbeatAt: now, leaseOwner: "owner-z" },
+      { event: "renewed", leaseUntil: now + 121, heartbeatAt: now + 1, leaseOwner: "owner-z" },
+    ]);
+  });
+
   it("resets renew failures after a successful heartbeat", async () => {
     const renewOutcomes = [0, 1, 0, 0];
     const sequencedRenewDb = {
