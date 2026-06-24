@@ -2,10 +2,16 @@ import type { PriceValidationReferences } from "../../../lib/price-validation";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import {
-  shouldAttemptFetch,
-  recordOutcomeSafe,
+  type CircuitOutcomeRecord,
   type CircuitState,
 } from "../../../lib/circuit-breaker";
+import {
+  ProviderCircuitOpenError,
+  ProviderExecutionError,
+  createProviderExecutionContextForJob,
+  withProviderExecution,
+  type ProviderExecutionPolicy,
+} from "../../../lib/provider-execution";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   convertToGtNewPools,
@@ -35,7 +41,10 @@ import {
 } from "../pool-identity";
 import type { DexPriceObs, LiquidityMetrics, SymbolLookups } from "../types";
 import { mergeDexPriceObservationMap } from "./price-obs";
-import { DIRECT_API_FETCH_PHASE_CONCURRENCY } from "../direct-api-policy";
+import {
+  DIRECT_API_FETCH_PHASE_CONCURRENCY,
+  DIRECT_API_PROVIDER_TIMEOUT_MS,
+} from "../direct-api-policy";
 import { toErrorMessage } from "../../../lib/error-utils";
 
 export interface DirectApiFetcher {
@@ -183,6 +192,13 @@ export async function runDirectApiFetchPhase(
   fetchers: DirectApiFetcher[],
   signal?: AbortSignal,
 ): Promise<DirectApiFetchPhaseResult> {
+  const providerContext = createProviderExecutionContextForJob({
+    job: "sync-dex-liquidity",
+    laneId: "sync-dex-liquidity:direct-api",
+    laneMaxConcurrent: DIRECT_API_FETCH_PHASE_CONCURRENCY,
+    db,
+    signal,
+  });
   const entries = await runBounded(fetchers, DIRECT_API_FETCH_PHASE_CONCURRENCY, async ({
     name,
     circuitKey,
@@ -193,31 +209,15 @@ export async function runDirectApiFetchPhase(
     const failedSources: string[] = [];
     const fallbackSignals: string[] = [];
     const circuitEvents: DirectApiCircuitEvent[] = [];
-    if (!(await shouldAttemptFetch(db, circuitKey))) {
-      console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
-      failedSources.push(circuitKey);
-      fallbackSignals.push(`${circuitKey}-circuit-open`);
-      return {
-        failedSources,
-        fallbackSignals,
-        circuitEvents,
-        entry: {
-          name,
-          circuitKey,
-          normalizedProtocol,
-          supportedChains,
-          result: makeDexApiFetchResult([], {
-            ok: false,
-            degraded: true,
-            errors: ["circuit open"],
-          }),
-        },
-      };
-    }
 
     try {
-      const result = await fn(signal);
-      const event = await recordDirectApiOutcome(db, circuitKey, result.ok);
+      const execution = await withProviderExecution(
+        providerContext,
+        buildDirectApiProviderPolicy(name, circuitKey),
+        ({ signal: providerSignal }) => fn(providerSignal),
+      );
+      const result = execution.value;
+      const event = directApiCircuitEventFromOutcome(circuitKey, execution.circuitOutcome);
       if (event) circuitEvents.push(event);
       if (!result.ok || result.degraded) {
         failedSources.push(circuitKey);
@@ -234,9 +234,31 @@ export async function runDirectApiFetchPhase(
         entry: { name, circuitKey, normalizedProtocol, supportedChains, result },
       };
     } catch (err) {
+      if (err instanceof ProviderCircuitOpenError) {
+        console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
+        failedSources.push(circuitKey);
+        fallbackSignals.push(`${circuitKey}-circuit-open`);
+        return {
+          failedSources,
+          fallbackSignals,
+          circuitEvents,
+          entry: {
+            name,
+            circuitKey,
+            normalizedProtocol,
+            supportedChains,
+            result: makeDexApiFetchResult([], {
+              ok: false,
+              degraded: true,
+              errors: ["circuit open"],
+            }),
+          },
+        };
+      }
       if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
-      const event = await recordDirectApiOutcome(db, circuitKey, false);
+      const executionError = err instanceof ProviderExecutionError ? err : null;
+      const event = directApiCircuitEventFromOutcome(circuitKey, executionError?.circuitOutcome ?? null);
       if (event) circuitEvents.push(event);
       failedSources.push(circuitKey);
       fallbackSignals.push(`${circuitKey}-exception`);
@@ -287,12 +309,25 @@ async function runBounded<T, R>(
   return results;
 }
 
-async function recordDirectApiOutcome(
-  db: D1Database,
+function buildDirectApiProviderPolicy(
+  name: string,
   circuitKey: string,
-  success: boolean,
-): Promise<DirectApiCircuitEvent | null> {
-  const outcome = await recordOutcomeSafe(db, circuitKey, success);
+): ProviderExecutionPolicy<DexApiFetchResult> {
+  return {
+    providerId: `dex-direct-api:${name.toLowerCase().replaceAll(/\s+/g, "-")}`,
+    maxConcurrent: 1,
+    timeoutMs: DIRECT_API_PROVIDER_TIMEOUT_MS,
+    breakerPolicy: { circuitKey },
+    countsAgainstLaneBudget: true,
+    responseBodyPolicy: "stream",
+    classifyOutcome: (result) => result.ok ? "success" : "failure",
+  };
+}
+
+function directApiCircuitEventFromOutcome(
+  circuitKey: string,
+  outcome: CircuitOutcomeRecord | null,
+): DirectApiCircuitEvent | null {
   if (!outcome) return null;
   const { before, after } = outcome;
 

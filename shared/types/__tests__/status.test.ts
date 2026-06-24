@@ -103,6 +103,7 @@ function statusResponse() {
     yieldHealth: null,
     publicationHealth: null,
     dependencyHealth: null,
+    providerCircuitHealth: null,
     priceSourceHealth: null,
     priceProviderDiagnostics: null,
     gtProbe: null,

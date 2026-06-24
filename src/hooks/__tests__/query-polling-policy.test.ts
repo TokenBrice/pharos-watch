@@ -91,6 +91,7 @@ function minimalStatusResponse() {
     yieldHealth: null,
     publicationHealth: null,
     dependencyHealth: null,
+    providerCircuitHealth: null,
     priceSourceHealth: null,
     priceProviderDiagnostics: null,
     gtProbe: null,

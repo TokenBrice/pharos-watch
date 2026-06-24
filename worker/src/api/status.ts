@@ -193,6 +193,7 @@ export function handleStatus(
         yieldHealth: supplements.yieldHealth,
         publicationHealth: supplements.publicationHealth,
         dependencyHealth,
+        providerCircuitHealth: supplements.providerCircuitHealth,
         priceSourceHealth: supplements.priceSourceHealth,
         priceProviderDiagnostics: supplements.priceProviderDiagnostics,
         gtProbe: supplements.gtProbe,

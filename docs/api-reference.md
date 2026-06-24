@@ -3652,7 +3652,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 - Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
 
-**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
+**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 ```text
 {
@@ -4104,6 +4104,8 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 `publicationHealth` is a read-only live supplement over existing publication ledgers. It currently normalizes `dex_liquidity_publication_generations` and `yield_publication_generations` into per-surface `lastPublishedGeneration`, `lastAttemptedGeneration`, `lastFailureReason`, `candidateAgeSec`, and optional dependency watermark fields. Loader failures return `publicationHealth: null` and `sectionErrors.publicationHealth`; they do not change publication behavior or write generic publication rows.
 
 `dependencyHealth` is a read-only derived matrix over existing status signals. The worker combines `caches`, `crons`, `publicationHealth`, and the static registry in `shared/lib/data-dependency-registry.ts` into per-dependency status rows plus `rootCauseGroups` that group degraded/stale symptoms under the highest upstream dependency. This is operator triage metadata only: it does not perform extra D1 reads, does not change `availabilityStatus` / `dataQualityStatus`, and does not mutate publication ledgers.
+
+`providerCircuitHealth` is a read-only admin supplement over the provider circuit-breaker index. Breaker decisions still use the individual `cache["circuit:<source>"]` rows; successful/failing breaker writes maintain `cache["provider:circuit:index"]` so `/api/status` can report `openCount`, `halfOpenCount`, `openProviders`, and `byFamily` without scanning circuit rows. Loader failures return `providerCircuitHealth: null` and `sectionErrors.providerCircuitHealth`; public `/api/health.circuits` remains the raw per-circuit surface.
 
 `discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 
@@ -4956,7 +4958,7 @@ Deletes the `cron_leases` row for the named job so the next scheduled tick can c
 
 ### `POST /api/reset-circuit-breaker`
 
-Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against active source-wide `CIRCUIT_SOURCE` values plus configured scoped live-reserve breakers such as `live-reserves:<scope>`.
+Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against active source-wide `CIRCUIT_SOURCE` values plus configured scoped live-reserve breakers such as `live-reserves:<scope>`. The reset also removes the source from `cache["provider:circuit:index"]`, the aggregate row used by `/api/status.providerCircuitHealth`.
 
 **Authentication:** admin. **Required query:** `?circuit=<circuit-source>`.
 

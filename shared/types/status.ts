@@ -976,6 +976,35 @@ export interface DependencyHealth {
   };
 }
 
+export interface ProviderCircuitHealthEntry {
+  providerId: string;
+  family: string;
+  state: CircuitRecord["state"];
+  consecutiveFailures: number;
+  openedAt: number | null;
+  openAgeSec: number | null;
+  lastFailureAt: number | null;
+  lastSuccessAt: number | null;
+}
+
+export interface ProviderCircuitHealthFamilySummary {
+  total: number;
+  closed: number;
+  halfOpen: number;
+  open: number;
+}
+
+export interface ProviderCircuitHealth {
+  checkedAt: number;
+  status: StatusHealthOrUnknown;
+  totalTracked: number;
+  closedCount: number;
+  halfOpenCount: number;
+  openCount: number;
+  openProviders: ProviderCircuitHealthEntry[];
+  byFamily: Record<string, ProviderCircuitHealthFamilySummary>;
+}
+
 export interface D1UsageSummary {
   checkedAt: number;
   windowStart: number;
@@ -1001,6 +1030,7 @@ export type StatusSectionKey =
   | "liquidityHealth"
   | "yieldHealth"
   | "publicationHealth"
+  | "providerCircuitHealth"
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
   | "discoveryCandidates"
@@ -1077,6 +1107,7 @@ export interface StatusResponse {
   yieldHealth: YieldHealthSummary | null;
   publicationHealth: PublicationHealth | null;
   dependencyHealth: DependencyHealth | null;
+  providerCircuitHealth: ProviderCircuitHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   /**
    * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
@@ -1247,6 +1278,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   yieldHealth: StatusJsonObjectSchema.nullable(),
   publicationHealth: StatusJsonObjectSchema.nullable(),
   dependencyHealth: StatusJsonObjectSchema.nullable(),
+  providerCircuitHealth: StatusJsonObjectSchema.nullable(),
   priceSourceHealth: StatusJsonObjectSchema.nullable(),
   priceProviderDiagnostics: z.array(StatusJsonObjectSchema).nullable(),
   gtProbe: StatusJsonObjectSchema.nullable(),

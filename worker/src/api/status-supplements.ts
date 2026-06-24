@@ -13,6 +13,7 @@ import type {
   MintBurnReconciliationSummary,
   PublicationHealth,
   PriceSourceHealth,
+  ProviderCircuitHealth,
   ReserveDriftEntry,
   StatusResponse,
   StatusSectionError,
@@ -45,11 +46,13 @@ import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
 import { loadYieldHealthSummary } from "../lib/status/yield-health";
 import { logWorkerEvent } from "../lib/structured-log";
 import { loadPublicationHealth } from "../lib/publication-contract";
+import { loadProviderCircuitHealth } from "../lib/provider-circuit-health";
 
 const SECTION_ERROR_MESSAGES: Record<string, string> = {
   discovery_candidates_query_failed: "Discovery candidates unavailable.",
   liquidity_health_extraction_failed: "Liquidity health data unavailable.",
   publication_health_query_failed: "Publication health unavailable.",
+  provider_circuit_health_query_failed: "Provider circuit health unavailable.",
   price_source_health_extraction_failed: "Price source health data unavailable.",
   coingecko_price_diff_query_failed: "CoinGecko price diff unavailable.",
   d1_usage_query_failed: "D1 usage metrics unavailable.",
@@ -84,6 +87,7 @@ export interface StatusSupplements {
   liquidityHealth: LiquidityHealth | null;
   yieldHealth: YieldHealthSummary | null;
   publicationHealth: PublicationHealth | null;
+  providerCircuitHealth: ProviderCircuitHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   priceProviderDiagnostics: Array<Record<string, unknown>> | null;
   gtProbe: Record<string, unknown> | null;
@@ -351,6 +355,20 @@ export async function loadStatusSupplements(
     );
   }
 
+  let providerCircuitHealth: ProviderCircuitHealth | null = null;
+  try {
+    providerCircuitHealth = await loadProviderCircuitHealth(db, now);
+  } catch (err) {
+    logStatusSupplementWarning(
+      "provider_circuit_health_query_failed",
+      "Provider circuit health query failed",
+      err,
+    );
+    sectionErrors.providerCircuitHealth = sectionError(
+      "provider_circuit_health_query_failed",
+    );
+  }
+
   let priceSourceHealth: PriceSourceHealth | null = null;
   let priceProviderDiagnostics: Array<Record<string, unknown>> | null = null;
   let gtProbe: Record<string, unknown> | null = null;
@@ -522,6 +540,7 @@ export async function loadStatusSupplements(
     liquidityHealth,
     yieldHealth,
     publicationHealth,
+    providerCircuitHealth,
     priceSourceHealth,
     priceProviderDiagnostics,
     gtProbe,
