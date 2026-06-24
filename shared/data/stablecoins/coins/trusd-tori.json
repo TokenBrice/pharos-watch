@@ -15,6 +15,13 @@
   "pegMechanism": "1:1 mint and redeem against USDC or USDT with 0.1% fee; peg maintained by arbitrage incentives and delta-neutral portfolio construction offsetting directional exposure",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "defillama",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xd0580192E98eA6CEB9c7b6191Ed2E27560911697",
+      "decimals": 18
+    }
+  ],
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tori.finance/",
@@ -46,7 +53,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; not tracked on DefiLlama or CoinGecko",
+  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; verified Ethereum mainnet token contracts now live and accumulating supply (~40.8M trUSD minted, ~20M staked to strUSD as of Jun 24, 2026), but no price source yet lists trUSD on DefiLlama or CoinGecko, so it stays pre-launch until a fetchable price path exists",
   "featuredContent": [
     {
       "type": "tweet",
@@ -107,6 +114,13 @@
       "title": "Ethereum mainnet pre-deposit vault opens",
       "description": "RockawayX / Upshift pre-deposit vault opens with a $50M cap, Accountable proof-of-solvency live from day one, Nexus Mutual cover, and a 30-day lock before full protocol launch.",
       "sourceUrl": "https://tori.finance/"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "milestone",
+      "title": "Verified Ethereum mainnet token contracts live",
+      "description": "trUSD (0xd058…1697) and strUSD (0x2808…5815) deployed and verified on Ethereum mainnet, 18 decimals; on-chain supply ~40.8M trUSD minted with ~20M staked to strUSD. Not yet listed on DefiLlama stablecoins or CoinGecko, so no runtime price path exists yet.",
+      "sourceUrl": "https://docs.tori.finance/resources/contracts"
     }
   ],
   "yieldConfig": {
