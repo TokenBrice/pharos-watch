@@ -50,6 +50,39 @@ export interface AuthoritativeLivePriceOverrideStats {
   timedOut: boolean;
 }
 
+type LivePriceProvider = PriceSourceProvider & {
+  fetchLivePrice: NonNullable<PriceSourceProvider["fetchLivePrice"]>;
+};
+
+export interface AuthoritativeLivePriceCandidate {
+  asset: PeggedAsset;
+  provider: LivePriceProvider;
+  originalIndex: number;
+}
+
+function getProviderLivePriority(provider: PriceSourceProvider): number {
+  const priority = provider.livePriority;
+  return typeof priority === "number" && Number.isFinite(priority) ? priority : 10;
+}
+
+function hasUsableLivePrice(asset: PeggedAsset): boolean {
+  return typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
+}
+
+export function prioritizeAuthoritativeLivePriceCandidates<T extends AuthoritativeLivePriceCandidate>(
+  candidates: readonly T[],
+): T[] {
+  return [...candidates].sort((a, b) => {
+    const priorityDelta = getProviderLivePriority(a.provider) - getProviderLivePriority(b.provider);
+    if (priorityDelta !== 0) return priorityDelta;
+
+    const missingPriceDelta = Number(hasUsableLivePrice(a.asset)) - Number(hasUsableLivePrice(b.asset));
+    if (missingPriceDelta !== 0) return missingPriceDelta;
+
+    return a.originalIndex - b.originalIndex;
+  });
+}
+
 export function createAuthoritativeLivePriceOverrideStats(
   budgetMs = AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS,
 ): AuthoritativeLivePriceOverrideStats {
@@ -96,18 +129,20 @@ export async function fetchAuthoritativeLivePriceOverrides(
     validationReferences,
   };
   const candidates = assets
-    .map((asset) => ({
+    .map((asset, originalIndex) => ({
       asset,
+      originalIndex,
       provider: AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) => candidate.matches(asset.id)),
     }))
-    .filter((entry): entry is { asset: PeggedAsset; provider: PriceSourceProvider & { fetchLivePrice: NonNullable<PriceSourceProvider["fetchLivePrice"]> } } =>
+    .filter((entry): entry is AuthoritativeLivePriceCandidate =>
       typeof entry.provider?.fetchLivePrice === "function"
     );
+  const prioritizedCandidates = prioritizeAuthoritativeLivePriceCandidates(candidates);
   const budgetMs = options?.wallClockBudgetMs ?? AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS;
   const stats = options?.stats;
   if (stats) {
     stats.budgetMs = budgetMs;
-    stats.candidateCount += candidates.length;
+    stats.candidateCount += prioritizedCandidates.length;
   }
   const budgetSignal = budgetMs > 0 ? AbortSignal.timeout(budgetMs) : undefined;
   const liveSignal = signal && budgetSignal
@@ -115,16 +150,16 @@ export async function fetchAuthoritativeLivePriceOverrides(
     : budgetSignal ?? signal;
   const circuitAttempts = new Map<string, boolean>();
 
-  for (let index = 0; index < candidates.length; index += 1) {
+  for (let index = 0; index < prioritizedCandidates.length; index += 1) {
     if (budgetSignal?.aborted) {
       if (stats) {
         stats.timedOut = true;
-        stats.skippedBudget += candidates.length - index;
+        stats.skippedBudget += prioritizedCandidates.length - index;
       }
       break;
     }
 
-    const { asset, provider } = candidates[index];
+    const { asset, provider } = prioritizedCandidates[index];
     const circuitSource = provider.liveCircuitSource;
     if (circuitSource && options?.db) {
       const allowed = await shouldAttemptLiveFetch(options.db, circuitSource, circuitAttempts);
@@ -156,7 +191,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
       if (budgetSignal?.aborted && !signal?.aborted) {
         if (stats) {
           stats.timedOut = true;
-          stats.skippedBudget += candidates.length - index - 1;
+          stats.skippedBudget += prioritizedCandidates.length - index - 1;
         }
         console.warn(`[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
         break;

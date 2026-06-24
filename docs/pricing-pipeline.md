@@ -23,7 +23,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.18`
+- **Current methodology version:** `v6.19`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -319,7 +319,7 @@ The DefiLlama `/coins` contract-address fallback, supplemental CoinGecko-id mirr
 
 Tracked DefiLlama rows that collapse to zero supply are repaired before pricing when the row has no usable chart-history repair or its chart-history value is below the tracked repair floor. The repair remains scoped to source-reviewed deployments for CADD and the Mento JPY/ZAR/XOF stables, reads every configured chain successfully before publishing, converts total supply through the current fresh/static FX reference, and tags the result `supplySource = "onchain-total-supply"`.
 
-Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes and self-stops once its clipped 90-second budget is exhausted. Protocol overrides run under a 10-second wall-clock budget, and external live RPC-backed `protocol-redeem` providers share a grouped breaker; local par and inherited tracked-base overrides remain cache/local decisions.
+Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes and self-stops once its clipped 90-second budget is exhausted. Protocol overrides run under a 10-second wall-clock budget, and external live RPC-backed `protocol-redeem` providers share a grouped breaker. Local par and inherited tracked-base overrides are attempted before RPC-backed providers, and missing-price candidates are prioritized within each provider tier so budget exhaustion repairs coverage before refreshing already-priced wrappers.
 
 Provider attempt diagnostics for fallback providers are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, parse or rejection reason counts, and short non-OK snippets so operators can distinguish provider transport failures from schema drift, rejected quotes, and successful responses that simply carry no usable tracked prices.
 

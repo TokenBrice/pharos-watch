@@ -658,7 +658,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/authoritative-price-sources/erc4626-nav.ts` - erc4626NavProvider
 - `worker/src/lib/authoritative-price-sources/helpers.ts` - CurrentPriceOverride, ERC4626_NAV_MAX_RATIO, ERC4626_NAV_MIN_RATIO, ETHEREUM_CHAIN, Erc4626NavVaultConfig, HistoricalBlockPriceResolver
 - `worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts` - idleCdoTrancheProvider
-- `worker/src/lib/authoritative-price-sources/index.ts` - AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS, AuthoritativeLivePriceOverrideOptions, AuthoritativeLivePriceOverrideStats, createAuthoritativeLivePriceOverrideStats, fetchAuthoritativeHistoricalPriceSeries, fetchAuthoritativeLivePriceOverrides
+- `worker/src/lib/authoritative-price-sources/index.ts` - AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS, AuthoritativeLivePriceCandidate, AuthoritativeLivePriceOverrideOptions, AuthoritativeLivePriceOverrideStats, createAuthoritativeLivePriceOverrideStats, fetchAuthoritativeHistoricalPriceSeries
 - `worker/src/lib/authoritative-price-sources/infinifi-iusd.ts` - iusdInfinifiProvider
 - `worker/src/lib/authoritative-price-sources/inherited-tracked.ts` - inheritedTrackedPriceProvider
 - `worker/src/lib/authoritative-price-sources/preview-redeem.ts` - previewRedeemProvider

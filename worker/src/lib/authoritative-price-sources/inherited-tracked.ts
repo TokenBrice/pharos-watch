@@ -72,6 +72,7 @@ async function replayInheritedTrackedPriceSeries(
 
 export const inheritedTrackedPriceProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
+  livePriority: 0,
   matches(stablecoinId: string): boolean {
     return getInheritedTrackedPriceConfig(stablecoinId) != null;
   },

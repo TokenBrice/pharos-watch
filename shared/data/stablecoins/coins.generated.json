@@ -8270,7 +8270,7 @@
   {
     "id": "brz-transfero",
     "llamaId": "249",
-    "detailProvider": "defillama",
+    "detailProvider": "coingecko",
     "name": "Brazilian Digital",
     "symbol": "BRZ",
     "oneLiner": "BRZ is Transfero's centralized Brazilian real stablecoin, redeemable 1:1 by KYC'd users against BRL cash held at a regulated Brazilian institution.",

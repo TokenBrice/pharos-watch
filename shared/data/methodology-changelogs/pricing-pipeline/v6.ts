@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.19",
+      title: "Authoritative override budget prioritization",
+      date: "2026-06-24",
+      effectiveAt: 1782259200,
+      summary:
+        "Live authoritative protocol overrides now attempt cache/local repairs before RPC-backed probes and prioritize still-missing prices within each provider tier.",
+      impact: [
+        "Local protocol-par and inherited tracked-base overrides can no longer be skipped behind slower ERC-4626 or redeem-preview RPC calls when the 10-second live override budget is exhausted",
+        "RPC-backed override candidates that are still missing a price are attempted before already-priced wrapper candidates in the same cost tier",
+        "The override registry remains stable for ties, preserving existing provider order when priority and missing-price state are equal",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.18",
       title: "Fiat FX upside validation parity",
       date: "2026-06-23",

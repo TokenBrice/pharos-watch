@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
 const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
@@ -69,9 +70,11 @@ vi.mock("../../api/backfill-price-sources", () => ({
 
 import {
   AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS,
+  type AuthoritativeLivePriceCandidate,
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeHistoricalPriceSeries,
   fetchAuthoritativeLivePriceOverrides,
+  prioritizeAuthoritativeLivePriceCandidates,
 } from "../authoritative-price-sources";
 import { CIRCUIT_SOURCE } from "../constants";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -79,12 +82,39 @@ import {
   encodeUint256,
   fetchVaultAssetsPerShareViaSelector,
   type Erc4626NavVaultConfig,
+  type PriceSourceProvider,
 } from "../authoritative-price-sources/helpers";
 
 const QUOTE_HEX =
   "0x000000000000000000000000000000000000000000000000000000e8d435370b0000000000000000000000000000000000000000000000000000000000000000";
 const IUSD_QUOTE_HEX = "0x00000000000000000000000000000000000000000000000000000000000f4240";
 const ZERO_WORD_HEX = `0x${"0".repeat(64)}` as `0x${string}`;
+
+type LivePriceProvider = PriceSourceProvider & {
+  fetchLivePrice: NonNullable<PriceSourceProvider["fetchLivePrice"]>;
+};
+
+function makePriorityProvider(livePriority?: number): LivePriceProvider {
+  const baseProvider: LivePriceProvider = {
+    source: "protocol-redeem",
+    matches: () => true,
+    fetchLivePrice: async () => null,
+  };
+  return livePriority == null ? baseProvider : { ...baseProvider, livePriority };
+}
+
+function makePriorityCandidate(
+  id: string,
+  price: number | null,
+  livePriority: number | undefined,
+  originalIndex: number,
+): AuthoritativeLivePriceCandidate {
+  return {
+    asset: { id, price } as PeggedAsset,
+    provider: makePriorityProvider(livePriority),
+    originalIndex,
+  };
+}
 
 describe("authoritative-price-sources", () => {
   beforeEach(() => {
@@ -405,6 +435,24 @@ describe("authoritative-price-sources", () => {
   it("defaults the live override wall-clock budget to 10 seconds", () => {
     expect(AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS).toBe(10_000);
     expect(createAuthoritativeLivePriceOverrideStats().budgetMs).toBe(10_000);
+  });
+
+  it("prioritizes local live providers and missing prices within each override tier", () => {
+    const prioritized = prioritizeAuthoritativeLivePriceCandidates([
+      makePriorityCandidate("rpc-priced", 1, undefined, 0),
+      makePriorityCandidate("rpc-missing-a", null, undefined, 1),
+      makePriorityCandidate("local-priced", 1, 0, 2),
+      makePriorityCandidate("local-missing", null, 0, 3),
+      makePriorityCandidate("rpc-missing-b", null, undefined, 4),
+    ]);
+
+    expect(prioritized.map((entry) => entry.asset.id)).toEqual([
+      "local-missing",
+      "local-priced",
+      "rpc-missing-a",
+      "rpc-missing-b",
+      "rpc-priced",
+    ]);
   });
 
   it("stops live RPC protocol-redeem overrides when the wall-clock budget expires", async () => {

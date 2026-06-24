@@ -127,6 +127,11 @@ export interface LivePriceContext {
 
 export interface PriceSourceProvider {
   source: string;
+  /**
+   * Lower values run earlier in the live override budget. Use this for local
+   * or cache-only providers so slow RPC probes cannot starve cheap repairs.
+   */
+  livePriority?: number;
   liveCircuitSource?: string;
   recordNullLiveResultAsCircuitFailure?: boolean;
   matches(stablecoinId: string): boolean;

@@ -1,10 +1,19 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.18` (2026-02-01 -> 2026-06-23).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.19` (2026-02-01 -> 2026-06-24).
 
 ---
 
 > Older entries are archived in [pricing-pipeline-timeline-archive.md](./pricing-pipeline-timeline-archive.md); this file keeps the 10 most recent.
+
+## v6.19 - Authoritative override budget prioritization (June 24, 2026)
+
+- Live authoritative protocol overrides now attempt cache/local repairs before RPC-backed probes
+- Local protocol-par and inherited tracked-base overrides can no longer be skipped behind slower ERC-4626 or redeem-preview RPC calls when the 10-second live override budget is exhausted
+- RPC-backed override candidates that are still missing a price are attempted before already-priced wrapper candidates in the same cost tier
+- Ties preserve existing registry order when priority and missing-price state are equal
+
+---
 
 ## v6.18 - Fiat FX upside validation parity (June 23, 2026)
 
