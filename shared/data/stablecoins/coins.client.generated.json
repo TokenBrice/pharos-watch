@@ -1783,8 +1783,7 @@
           "canRaiseCap": true
         }
       ]
-    },
-    "liveReserveAdapter": "accountable"
+    }
   },
   {
     "id": "bbqusdc-steakhouse",
