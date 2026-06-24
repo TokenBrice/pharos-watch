@@ -2,7 +2,7 @@ import type { RepairDebtSummary } from "@shared/types/status";
 import { buildInClause, isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
 
-export const REPAIR_TASK_STATE_VALUES = [
+const REPAIR_TASK_STATE_VALUES = [
   "open",
   "claimed",
   "deferred",
@@ -56,7 +56,7 @@ function serializePayload(payload: Record<string, unknown> | null | undefined): 
   return payload ? JSON.stringify(payload) : null;
 }
 
-export async function upsertRepairTask(
+async function upsertRepairTask(
   db: D1Database,
   input: RepairTaskInput & { nowSec: number },
 ): Promise<void> {
@@ -106,7 +106,7 @@ export async function upsertRepairTask(
   );
 }
 
-export async function closeRepairTasksNotInSubjects(
+async function closeRepairTasksNotInSubjects(
   db: D1Database,
   input: {
     kind: string;

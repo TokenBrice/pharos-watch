@@ -507,7 +507,7 @@ async function checkReportCardCacheMethodology(db: D1Database) {
   return { status: "ok" as const, severity: "info" as const, metadata };
 }
 
-export const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
+const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "dex-liquidity-current-publication",
     label: "DEX liquidity current publication",
@@ -625,7 +625,7 @@ function canaryIdempotencyKey(result: Pick<CanaryCheckResult, "checkId" | "obser
   return `${result.checkId}:${result.observedAt}`;
 }
 
-export async function persistCanaryRun(
+async function persistCanaryRun(
   db: D1Database,
   result: CanaryCheckResult,
   options: { mode?: WorkerCanaryMode } = {},

@@ -121,7 +121,7 @@ export function deriveStatusAssessmentInputs(dataQuality: StatusResponse["dataQu
   };
 }
 
-export function countDiagnosticIssues(input: {
+function countDiagnosticIssues(input: {
   publicHealth: PublicHealthAssessment;
   dataQuality: StatusResponse["dataQuality"];
   reserveCompositionQueryFailed: boolean;

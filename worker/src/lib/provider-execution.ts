@@ -9,8 +9,8 @@ import {
 import { abortError, throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly, drainResponseBody } from "./response-body";
 
-export const PROVIDER_EXECUTION_PLATFORM_CONNECTION_LIMIT = CRON_CONNECTION_BUDGET.maxPerTrigger;
-export const PROVIDER_EXECUTION_HEADROOM_CONNECTION_LIMIT = CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt;
+const PROVIDER_EXECUTION_PLATFORM_CONNECTION_LIMIT = CRON_CONNECTION_BUDGET.maxPerTrigger;
+const PROVIDER_EXECUTION_HEADROOM_CONNECTION_LIMIT = CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt;
 
 export type ProviderResponseBodyPolicy = "consume" | "cancel" | "stream";
 
@@ -138,7 +138,7 @@ export interface ScheduledProviderExecutionContextOptions {
   db?: D1Database;
 }
 
-export class ProviderExecutionContext {
+class ProviderExecutionContext {
   readonly laneId: string;
   readonly laneMaxConcurrent: number;
   readonly signal?: AbortSignal;
@@ -215,7 +215,7 @@ export class ProviderCircuitOpenError extends Error {
   }
 }
 
-export class ProviderHttpError extends Error {
+class ProviderHttpError extends Error {
   constructor(
     readonly providerId: string,
     readonly status: number,
@@ -428,7 +428,7 @@ export async function withProviderExecution<TResult>(
   }
 }
 
-export async function cancelOrDrainResponse(
+async function cancelOrDrainResponse(
   response: Response | null | undefined,
   policy: ProviderResponseBodyPolicy,
 ): Promise<void> {
@@ -440,7 +440,7 @@ export async function cancelOrDrainResponse(
   await cancelResponseBodyQuietly(response);
 }
 
-export async function providerFetch(
+async function providerFetch(
   context: ProviderExecutionContext,
   policy: ProviderExecutionPolicy<Response>,
   input: RequestInfo | URL,
@@ -509,7 +509,7 @@ async function readResponseTextBounded(response: Response, maxBytes: number): Pr
   return text;
 }
 
-export async function providerTextBounded(
+async function providerTextBounded(
   context: ProviderExecutionContext,
   policy: ProviderExecutionPolicy<string>,
   input: RequestInfo | URL,

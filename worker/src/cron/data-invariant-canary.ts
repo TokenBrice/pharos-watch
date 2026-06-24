@@ -12,7 +12,7 @@ export interface DataInvariantCanaryOptions {
   signal?: AbortSignal;
 }
 
-export function resolveDataInvariantCanaryMode(value: string | undefined): WorkerCanaryMode {
+function resolveDataInvariantCanaryMode(value: string | undefined): WorkerCanaryMode {
   return normalizeWorkerCanaryMode(value);
 }
 
