@@ -368,6 +368,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
 - `shared/lib/compliance-regime-state.ts` - GENIUS_REGIME_STATE, GeniusRegimeState, GeniusRulemakingPhase, isGeniusRegimeEffective
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
+- `shared/lib/data-dependency-registry.ts` - DATA_DEPENDENCY_BY_ID, DATA_DEPENDENCY_REGISTRY, DataDependencyDefinition
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
 - `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
 - `shared/lib/depeg-dews-version.ts`
@@ -376,8 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
-- `shared/lib/depeg-resolver-version.ts`
-- ... 257 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 258 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -580,6 +580,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/daily-digest/runtime-helpers.ts` - RecentDigestMetaEntry, buildRecentDigestMeta, logDailyDigestLlmCall
 - `worker/src/cron/daily-digest/shared.ts` - NON_WEEKLY_DIGEST_SQL_FILTER
 - `worker/src/cron/daily-digest/voice-guards.ts` - FORBIDDEN_TICS_ANYWHERE, FORBIDDEN_TICS_CLOSER, LeadFamily, findForbiddenTics, forbiddenTicsPromptLine, hasForwardLook
+- `worker/src/cron/data-invariant-canary.ts` - DataInvariantCanaryOptions, resolveDataInvariantCanaryMode, runDataInvariantCanary
 - `worker/src/cron/depeg-detection/decision-engine.ts` - decideDepegAsset, emitDepegDiagnostics
 - `worker/src/cron/depeg-detection/hydration.ts` - hydrateDepegDetection
 - `worker/src/cron/depeg-detection/persistence.ts` - persistDepegCommands
@@ -616,8 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, toStagedPool
 - `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
-- `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
-- ... 337 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 338 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -677,11 +677,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
 - `worker/src/lib/budget-surface-telemetry.ts` - BudgetSurfaceOutcome, BudgetSurfaceTelemetryInput, loadBudgetOnlySurfaceStatuses, recordBudgetSurfaceTelemetry
 - `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
+- `worker/src/lib/canary-checks.ts` - CANARY_CHECKS, CanaryCheckResult, CanaryRunSummary, RunCanaryChecksOptions, WorkerCanaryMode, loadCanaryStatus
 - `worker/src/lib/cex-orderbooks.ts` - CexOrderbookDepth, DirectCexOrderbookDepthSummary, computeOrderbookDepth, fetchBinanceOrderbookDepths, fetchCoinbaseOrderbookDepths, fetchKrakenOrderbookDepths
 - `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, CexTickerBatch, KRAKEN_KNOWN_SYMBOLS, fetchBinancePricesDetailed
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
-- `worker/src/lib/chain-config.ts` - ChainConfig, chainConfig
-- ... 242 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 249 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -742,7 +742,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/lighthouse-static-export.test.ts`
 - `scripts/__tests__/merge-gate-parallel-mode.test.ts`
 - `scripts/__tests__/mint-authority-review-audit.test.ts`
+- `scripts/__tests__/night-watch-worker.test.ts`
 - `scripts/__tests__/oracle-risk-coverage.test.ts`
 - `scripts/__tests__/parse-version-upload.test.ts`
-- `scripts/__tests__/pharos-change-contract.test.ts`
-- ... 212 more files omitted; use `rg --files scripts` for the full list.
+- ... 214 more files omitted; use `rg --files scripts` for the full list.

@@ -20006,6 +20006,13 @@
         "title": "Ethereum mainnet pre-deposit vault opens",
         "description": "RockawayX / Upshift pre-deposit vault opens with a $50M cap, Accountable proof-of-solvency live from day one, Nexus Mutual cover, and a 30-day lock before full protocol launch.",
         "sourceUrl": "https://tori.finance/"
+      },
+      {
+        "date": "2026-06-24",
+        "type": "milestone",
+        "title": "Verified Ethereum mainnet token contracts live",
+        "description": "trUSD (0xd058…1697) and strUSD (0x2808…5815) deployed and verified on Ethereum mainnet, 18 decimals; on-chain supply ~40.8M trUSD minted with ~20M staked to strUSD. Not yet listed on DefiLlama stablecoins or CoinGecko, so no runtime price path exists yet.",
+        "sourceUrl": "https://docs.tori.finance/resources/contracts"
       }
     ],
     "yieldConfig": {
