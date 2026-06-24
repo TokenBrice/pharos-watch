@@ -1,5 +1,6 @@
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { toErrorMessage } from "../lib/error-utils";
+import { throwIfAborted } from "../lib/abort";
 import {
   filterStaleLiveReserveCircuitStates,
   getCircuitStates,
@@ -35,6 +36,7 @@ export interface FinalizeReserveSyncRunArgs {
   signal?: AbortSignal;
   total: number;
   runStartedAt: number;
+  runStartedMs: number;
   reportProgress?: CronProgressReporter;
   synced: number;
   failed: number;
@@ -63,6 +65,28 @@ interface LiveReserveFinalizationWarning {
   eventType: string;
   message: string;
   error: string;
+}
+
+interface LiveReserveFinalizationBudget {
+  deadlineMs: number;
+  remainingMs: number;
+  artifactCleanupSkipped: boolean;
+  historyPruneSkipped: boolean;
+}
+
+function resolveFinalizationBudget(args: FinalizeReserveSyncRunArgs): LiveReserveFinalizationBudget {
+  const deadlineMs = args.runStartedMs + args.budgetConfig.runBudgetMs + args.budgetConfig.d1FinalizeTimeoutMs;
+  return {
+    deadlineMs,
+    remainingMs: Math.max(0, deadlineMs - Date.now()),
+    artifactCleanupSkipped: false,
+    historyPruneSkipped: false,
+  };
+}
+
+function hasD1FinalizationWindow(args: FinalizeReserveSyncRunArgs, budget: LiveReserveFinalizationBudget): boolean {
+  budget.remainingMs = Math.max(0, budget.deadlineMs - Date.now());
+  return budget.remainingMs > args.budgetConfig.finalizationMarginMs;
 }
 
 async function recoverNoCandidateLiveReserveBreakers(db: D1Database): Promise<void> {
@@ -167,6 +191,8 @@ function resolveRunStatus(args: FinalizeReserveSyncRunArgs): CronResult["status"
 }
 
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {
+  const finalizationBudget = resolveFinalizationBudget(args);
+
   await reportCronProgress(args.reportProgress, {
     stage: "finalizing",
     message: "Recording reserve sync outcomes and cleanup",
@@ -179,10 +205,12 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     },
   });
 
+  throwIfAborted(args.signal);
   for (const [key, success] of args.breakerOutcomes) {
     await recordOutcomeSafe(args.db, key, success);
   }
 
+  throwIfAborted(args.signal);
   try {
     await recoverNoCandidateLiveReserveBreakers(args.db);
   } catch (error) {
@@ -196,38 +224,61 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
 
   let artifactCleanup: LiveReserveArtifactCleanupResult | null = null;
   const artifactCleanupWarnings: LiveReserveFinalizationWarning[] = [];
-  try {
-    artifactCleanup = await cleanupStaleLiveReserveArtifacts(
-      args.db,
-      CONFIGURED_COINS.map((coin) => coin.id),
-      CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
-    );
-  } catch (error) {
-    artifactCleanupWarnings.push(
-      await recordFinalizationWarning(
+  throwIfAborted(args.signal);
+  if (hasD1FinalizationWindow(args, finalizationBudget)) {
+    try {
+      artifactCleanup = await cleanupStaleLiveReserveArtifacts(
         args.db,
-        "live-reserve-artifact-cleanup-failed",
-        "Ghost live-reserve artifact cleanup failed.",
-        error,
-      ),
-    );
+        CONFIGURED_COINS.map((coin) => coin.id),
+        CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
+      );
+    } catch (error) {
+      artifactCleanupWarnings.push(
+        await recordFinalizationWarning(
+          args.db,
+          "live-reserve-artifact-cleanup-failed",
+          "Ghost live-reserve artifact cleanup failed.",
+          error,
+        ),
+      );
+    }
+  } else {
+    finalizationBudget.artifactCleanupSkipped = true;
+    artifactCleanupWarnings.push({
+      eventType: "live-reserve-artifact-cleanup-skipped",
+      message: "Ghost live-reserve artifact cleanup skipped because finalization tail budget was exhausted.",
+      error: "finalization-tail-budget-exhausted",
+    });
   }
 
+  throwIfAborted(args.signal);
   const { cursorPersistFailed, cursorPersistError } = await persistCursorStateForRun(args);
   let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;
-  try {
-    historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt);
-  } catch (error) {
+  throwIfAborted(args.signal);
+  if (hasD1FinalizationWindow(args, finalizationBudget)) {
+    try {
+      historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt);
+    } catch (error) {
+      await recordFinalizationWarning(
+        args.db,
+        "live-reserve-history-prune-failed",
+        "Live reserve history prune failed.",
+        error,
+      );
+    }
+  } else {
+    finalizationBudget.historyPruneSkipped = true;
     await recordFinalizationWarning(
       args.db,
-      "live-reserve-history-prune-failed",
-      "Live reserve history prune failed.",
-      error,
+      "live-reserve-history-prune-skipped",
+      "Live reserve history prune skipped because finalization tail budget was exhausted.",
+      new Error("finalization-tail-budget-exhausted"),
     );
   }
 
   const historyWriteFailedCoins = getHistoryWriteFailedCoins(args.warningMessages);
   await recordHistoryWriteGapEvent(args.db, historyWriteFailedCoins);
+  finalizationBudget.remainingMs = Math.max(0, finalizationBudget.deadlineMs - Date.now());
 
   return {
     itemCount: args.synced,
@@ -257,6 +308,11 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
       finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
+      finalizationDeadlineMs: finalizationBudget.deadlineMs,
+      finalizationRemainingMs: finalizationBudget.remainingMs,
+      finalizationTailBudgetExhausted: finalizationBudget.artifactCleanupSkipped || finalizationBudget.historyPruneSkipped,
+      artifactCleanupSkipped: finalizationBudget.artifactCleanupSkipped,
+      historyPruneSkipped: finalizationBudget.historyPruneSkipped,
       cursorPersistFailed,
       artifactCleanup,
       artifactCleanupWarningCount: artifactCleanupWarnings.length,

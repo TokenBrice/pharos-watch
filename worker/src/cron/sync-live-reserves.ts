@@ -441,6 +441,7 @@ export async function syncLiveReserves(
     signal,
     total,
     runStartedAt,
+    runStartedMs,
     reportProgress,
     budgetConfig,
     loadedCursorState: cursorState,

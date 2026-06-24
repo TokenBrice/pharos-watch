@@ -41,6 +41,7 @@ interface DiscoveryCandidate {
 // degrade cleanly instead of dying mid-flight and leaving stale progress behind.
 export const DEX_DISCOVERY_RUN_BUDGET_MS = 12 * 60_000;
 const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
+export const DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS = 20_000;
 
 function summarizeDiscoveryError(err: unknown): string {
   if (err instanceof Error) {
@@ -48,6 +49,10 @@ function summarizeDiscoveryError(err: unknown): string {
     return `${name}${err.message}`.slice(0, 240);
   }
   return String(err).slice(0, 240);
+}
+
+function hasDiscoveryFinalizationWindow(deadlineMs: number): boolean {
+  return Date.now() + DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS < deadlineMs;
 }
 
 function discoveryCohort(stablecoinId: string, modulo: number): number {
@@ -168,6 +173,8 @@ export async function syncDexDiscovery(
   let coinsCrawled = 0;
   let poolsDiscovered = 0;
   let budgetExhausted = false;
+  let stagingWritesSkippedForBudget = 0;
+  let cleanupSkippedForBudget = false;
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
@@ -228,6 +235,10 @@ export async function syncDexDiscovery(
     for (let index = 0; index < eligibleCoins.length; index++) {
       const candidate = eligibleCoins[index];
       throwIfAborted(signal);
+      if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
+        budgetExhausted = true;
+        break;
+      }
       await onProgress?.({
         stage: "crawl-coin",
         itemsDone: index,
@@ -255,8 +266,13 @@ export async function syncDexDiscovery(
         );
 
         try {
-          await upsertStagedPools(db, result.pools);
-          await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec);
+          if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
+            budgetExhausted = true;
+            stagingWritesSkippedForBudget += 1;
+            break;
+          }
+          await upsertStagedPools(db, result.pools, signal);
+          await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec, signal);
 
           for (const pool of result.pools) {
             knownPoolIds.add(pool.poolId);
@@ -289,7 +305,7 @@ export async function syncDexDiscovery(
         const existingCoverage = liquidityCoverage.get(candidate.stablecoinId);
         if (!existingCoverage || existingCoverage.poolCount === 0) {
           try {
-            await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec);
+            await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec, signal);
           } catch (err) {
             console.warn(`[dex-discovery] Failed to update discovery meta for ${candidate.stablecoinId}: ${toErrorMessage(err)}`);
           }
@@ -302,7 +318,12 @@ export async function syncDexDiscovery(
       }
     }
 
-    await cleanupStaging(db, nowSec);
+    if (hasDiscoveryFinalizationWindow(deadlineMs)) {
+      await cleanupStaging(db, nowSec, signal);
+    } else {
+      cleanupSkippedForBudget = true;
+      budgetExhausted = true;
+    }
     await onProgress?.({
       stage: "complete",
       itemsDone: eligibleCoins.length,
@@ -313,6 +334,8 @@ export async function syncDexDiscovery(
         poolsDiscovered,
         tierBreakdown,
         budgetExhausted,
+        stagingWritesSkippedForBudget,
+        cleanupSkippedForBudget,
         runSeq,
       },
     });
@@ -325,6 +348,9 @@ export async function syncDexDiscovery(
         poolsDiscovered,
         tierBreakdown,
         budgetExhausted,
+        stagingWritesSkippedForBudget,
+        cleanupSkippedForBudget,
+        finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
@@ -343,6 +369,9 @@ export async function syncDexDiscovery(
         poolsDiscovered,
         tierBreakdown,
         budgetExhausted,
+        stagingWritesSkippedForBudget,
+        cleanupSkippedForBudget,
+        finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,

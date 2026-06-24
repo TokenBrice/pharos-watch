@@ -1,4 +1,5 @@
 import { batchExecute } from "../../lib/db";
+import { throwIfAborted } from "../../lib/abort";
 import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
@@ -67,7 +68,8 @@ function legacyOrderbookPoolId(pool: Pick<StagedPool, "poolId" | "stablecoinId" 
  * Preserves initial discovery timestamp on re-discovery by updating conflicting rows in place.
  * Batches in groups of 50 to stay within D1 statement limits.
  */
-export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Promise<void> {
+export async function upsertStagedPools(db: D1Database, pools: StagedPool[], signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
   if (pools.length === 0) return;
 
   const validPools = pools.filter((pool) => {
@@ -123,6 +125,7 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Pr
     return cleanupStmt ? [cleanupStmt, insertStmt] : [insertStmt];
   });
 
+  throwIfAborted(signal);
   await batchExecute(db, stmts, STAGING_BATCH_SIZE);
 }
 
@@ -136,7 +139,9 @@ export async function updateDiscoveryMeta(
   stablecoinId: string,
   poolsFound: number,
   nowSec: number,
+  signal?: AbortSignal,
 ): Promise<void> {
+  throwIfAborted(signal);
   if (poolsFound > 0) {
     await db
       .prepare(
@@ -152,6 +157,7 @@ export async function updateDiscoveryMeta(
     return;
   }
 
+  throwIfAborted(signal);
   const result = await db
     .prepare(
       "UPDATE dex_discovery_meta SET consecutive_misses = consecutive_misses + 1, last_crawl_at = ? WHERE stablecoin_id = ?",
@@ -160,6 +166,7 @@ export async function updateDiscoveryMeta(
     .run();
 
   if ((result.meta.changes ?? 0) === 0) {
+    throwIfAborted(signal);
     await db
       .prepare(
         "INSERT INTO dex_discovery_meta (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at) VALUES (?, 1, ?, NULL)",
@@ -174,7 +181,8 @@ export async function updateDiscoveryMeta(
  * - Delete rows where refreshed_at < nowSec - 48h (172800)
  * - NULL out raw_json where refreshed_at < nowSec - 6h (21600) to save storage
  */
-export async function cleanupStaging(db: D1Database, nowSec: number): Promise<void> {
+export async function cleanupStaging(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
   await db.batch([
     db
       .prepare("DELETE FROM dex_pool_staging WHERE refreshed_at < ?")

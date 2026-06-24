@@ -56,6 +56,9 @@ interface RunMetadata {
   cursorTailCompletedAt?: number | null;
   runBudgetTruncationCount?: number;
   artifactCleanup?: { breakerCacheDeleted?: number };
+  finalizationTailBudgetExhausted?: boolean;
+  artifactCleanupSkipped?: boolean;
+  historyPruneSkipped?: boolean;
   breakerKeys?: string[];
 }
 
@@ -205,6 +208,32 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       deferredCount: metadata.deferredCoins,
       tailState: "complete",
     });
+  });
+
+  it("skips optional finalization cleanup when the D1 tail budget is exhausted", async () => {
+    let fetches = 0;
+    mockAdapterRegistry(async () => {
+      fetches += 1;
+      if (fetches === 1) {
+        nowMs += TIGHT_BUDGET.runBudgetMs + TIGHT_BUDGET.d1FinalizeTimeoutMs;
+      }
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const result = await syncLiveReserves(db, new AbortController().signal, {}, undefined, TIGHT_BUDGET);
+    const metadata = parseMetadata(result?.metadata);
+
+    expect(metadata.runBudgetTruncated).toBe(true);
+    expect(metadata.finalizationTailBudgetExhausted).toBe(true);
+    expect(metadata.artifactCleanupSkipped).toBe(true);
+    expect(metadata.historyPruneSkipped).toBe(true);
+    expect(metadata.artifactCleanup).toBeNull();
+    expect(db.getHistory().some((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-prune-skipped"
+    ))).toBe(true);
   });
 
   it("resumes from the first deferred coin on the next run without wrapping into the priority head", async () => {

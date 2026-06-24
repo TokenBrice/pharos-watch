@@ -44,7 +44,11 @@ vi.mock("../persistence", () => ({
   upsertStagedPools: vi.fn(async () => {}),
 }));
 
-import { DEX_DISCOVERY_RUN_BUDGET_MS, syncDexDiscovery } from "../orchestrator";
+import {
+  DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
+  DEX_DISCOVERY_RUN_BUDGET_MS,
+  syncDexDiscovery,
+} from "../orchestrator";
 import { crawlCoin } from "../crawl-sources";
 import { loadPriceValidationReferences } from "../../../lib/price-validation";
 import {
@@ -124,7 +128,7 @@ describe("syncDexDiscovery", () => {
     expect(result.itemCount).toBe(1);
     expect(vi.mocked(crawlCoin)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(upsertStagedPools)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(updateDiscoveryMeta)).toHaveBeenCalledWith(db, "coin-a", 2, expect.any(Number));
+    expect(vi.mocked(updateDiscoveryMeta)).toHaveBeenCalledWith(db, "coin-a", 2, expect.any(Number), undefined);
     expect(vi.mocked(cleanupStaging)).toHaveBeenCalledTimes(1);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -144,7 +148,7 @@ describe("syncDexDiscovery", () => {
     });
   });
 
-  it("returns degraded when the run budget is exhausted before the queue completes", async () => {
+  it("returns degraded and skips staging when the finalization tail budget is exhausted", async () => {
     vi.mocked(incrementRunSeq).mockResolvedValue(1);
 
     let nowMs = 1_700_000_000_000;
@@ -161,14 +165,19 @@ describe("syncDexDiscovery", () => {
     const result = await syncDexDiscovery(db, null);
 
     expect(result.status).toBe("degraded");
-    expect(result.itemCount).toBe(1);
+    expect(result.itemCount).toBe(0);
     expect(vi.mocked(crawlCoin)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(upsertStagedPools)).not.toHaveBeenCalled();
+    expect(vi.mocked(cleanupStaging)).not.toHaveBeenCalled();
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata).toMatchObject({
-      coinsCrawled: 1,
-      poolsDiscovered: 1,
+      coinsCrawled: 0,
+      poolsDiscovered: 0,
       budgetExhausted: true,
+      stagingWritesSkippedForBudget: 1,
+      cleanupSkippedForBudget: true,
+      finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
       runSeq: 1,
       tierBreakdown: {
         t1: 1,
