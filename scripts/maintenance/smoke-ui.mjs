@@ -668,9 +668,21 @@ export function hasAnyGaAnalyticsSignal(network) {
   );
 }
 
+export function hasRetryBlockingGaAnalyticsSignal(network, expectedGaId) {
+  return (
+    (Array.isArray(network?.requests) && network.requests.length > 0) ||
+    (Array.isArray(network?.responses) && network.responses.length > 0) ||
+    (Array.isArray(network?.failures) && network.failures.length > 0) ||
+    getUnexpectedGaCspViolations(network?.violations ?? [], expectedGaId).length > 0
+  );
+}
+
 export function shouldRetryLiveAnalyticsSmoke({ expectedGaId, mode, network, runtime }) {
   return (
-    mode === "live" && Boolean(expectedGaId) && !hasExpectedGaRuntimeState(runtime) && !hasAnyGaAnalyticsSignal(network)
+    mode === "live"
+    && Boolean(expectedGaId)
+    && !hasExpectedGaRuntimeState(runtime)
+    && !hasRetryBlockingGaAnalyticsSignal(network, expectedGaId)
   );
 }
 

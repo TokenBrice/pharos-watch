@@ -9,6 +9,7 @@ import {
   getExpectedGaNetworkSignals,
   getUnexpectedGaCspViolations,
   getUnexpectedGaAnalyticsFailures,
+  hasRetryBlockingGaAnalyticsSignal,
   hasGaConfigInit,
   hasAnyGaAnalyticsSignal,
   hasExpectedGaRuntimeState,
@@ -300,6 +301,50 @@ describe("hasAnyGaAnalyticsSignal", () => {
   });
 });
 
+describe("hasRetryBlockingGaAnalyticsSignal", () => {
+  it("ignores unrelated CSP violations when deciding live analytics retry eligibility", () => {
+    expect(
+      hasRetryBlockingGaAnalyticsSignal(
+        {
+          requests: [],
+          responses: [],
+          failures: [],
+          violations: [
+            {
+              blockedURI: "eval",
+              effectiveDirective: "script-src",
+              sourceFile: "https://pharos.watch/_next/static/chunks/0abpcssvqzw-7.js",
+              violatedDirective: "script-src",
+            },
+          ],
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+  });
+
+  it("treats analytics CSP violations as retry-blocking evidence", () => {
+    expect(
+      hasRetryBlockingGaAnalyticsSignal(
+        {
+          requests: [],
+          responses: [],
+          failures: [],
+          violations: [
+            {
+              blockedURI: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
+              effectiveDirective: "script-src",
+              sourceFile: "https://pharos.watch/",
+              violatedDirective: "script-src",
+            },
+          ],
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("shouldRetryLiveAnalyticsSmoke", () => {
   const missingRuntime = {
     dataLayerLength: 0,
@@ -357,6 +402,29 @@ describe("shouldRetryLiveAnalyticsSmoke", () => {
         runtime: missingRuntime,
       }),
     ).toBe(false);
+  });
+
+  it("retries live smoke when only an unrelated first-party CSP violation was observed", () => {
+    expect(
+      shouldRetryLiveAnalyticsSmoke({
+        expectedGaId: "G-6TS0KG8H04",
+        mode: "live",
+        network: {
+          failures: [],
+          requests: [],
+          responses: [],
+          violations: [
+            {
+              blockedURI: "eval",
+              effectiveDirective: "script-src",
+              sourceFile: "https://pharos.watch/_next/static/chunks/0abpcssvqzw-7.js",
+              violatedDirective: "script-src",
+            },
+          ],
+        },
+        runtime: missingRuntime,
+      }),
+    ).toBe(true);
   });
 });
 
