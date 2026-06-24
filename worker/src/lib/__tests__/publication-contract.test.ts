@@ -317,9 +317,13 @@ describe("loadPublicationHealth", () => {
       candidateAgeSec: null,
     });
     expect(health.surfaces.stablecoins).toMatchObject({
-      lastAttemptedGeneration: null,
+      lastAttemptedGeneration: {
+        generationId: "stablecoins-cache:missing",
+        state: "failed",
+        failureReason: "missing-cache",
+      },
       lastPublishedGeneration: null,
-      lastFailureReason: null,
+      lastFailureReason: "missing-cache",
       candidateAgeSec: null,
     });
   });

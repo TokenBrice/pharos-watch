@@ -63,6 +63,37 @@ function ddrCacheRepairDebtSummary(
   };
 }
 
+function mergeDdrCacheRepairDebtSummary(
+  repairDebt: DataQuality["repairDebt"],
+  ddrRepairDebt: NonNullable<Awaited<ReturnType<typeof loadDdrRepairDebt>>>,
+  now: number,
+): DataQuality["repairDebt"] {
+  const taskDdrCount = repairDebt.byKind["ddr-repair-required-event"]?.openCount ?? 0;
+  if (ddrRepairDebt.count <= taskDdrCount) {
+    return repairDebt;
+  }
+
+  const fallback = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
+  const delta = ddrRepairDebt.count - taskDdrCount;
+  const oldestAgeSec = repairDebt.oldestAgeSec == null
+    ? fallback.oldestAgeSec
+    : fallback.oldestAgeSec == null
+      ? repairDebt.oldestAgeSec
+      : Math.max(repairDebt.oldestAgeSec, fallback.oldestAgeSec);
+
+  return {
+    ...repairDebt,
+    status: "present",
+    openCount: repairDebt.openCount + delta,
+    oldestAgeSec,
+    byKind: {
+      ...repairDebt.byKind,
+      "ddr-repair-required-event": fallback.byKind["ddr-repair-required-event"],
+    },
+    source: "worker-repair-tasks+ddr-cache-fallback",
+  };
+}
+
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
 
 function recordDataQualityFailure(
@@ -246,6 +277,8 @@ export async function getDataQuality(
       ddrRepairDebtEventsTruncated = ddrRepairDebt.eventsTruncated;
       if (!repairTaskSummaryLoaded || repairDebt.openCount === 0) {
         repairDebt = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
+      } else {
+        repairDebt = mergeDdrCacheRepairDebtSummary(repairDebt, ddrRepairDebt, now);
       }
     } else if (!repairTaskSummaryLoaded) {
       repairDebt = ddrCacheRepairDebtSummary(ddrRepairDebt, now);

@@ -323,6 +323,60 @@ describe("handleStatus", () => {
     });
   });
 
+  it("omits canary summary counts when canary status is unavailable", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [
+          makeRawStatusSnapshotRow(now, 60, {
+            summary: {
+              unhealthyCrons: 0,
+              availabilityImpactingUnhealthyCrons: 0,
+              watchUnhealthyCrons: 0,
+              degradedCrons: 0,
+              cronErrors: 0,
+              availabilityImpactingCronErrors: 0,
+              availabilityImpactingConsecutiveCronErrors: 0,
+              canaryTotalChecks: 0,
+              canaryErrorCount: 0,
+              canaryDegradedCount: 0,
+              canarySkippedCount: 0,
+              canaryStaleCount: 0,
+              diagnosticIssueCount: 0,
+              worstCacheRatio: 0,
+              transitionsLast24h: 0,
+            },
+          }),
+        ],
+      },
+      {
+        match: "FROM worker_canary_runs",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: worker_canary_runs"),
+      },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      summary: Record<string, unknown>;
+      canaries: unknown;
+      sectionErrors: Record<string, { code: string }>;
+    };
+    expect(body.canaries).toBeNull();
+    expect(body.sectionErrors.canaries?.code).toBe("canary_status_query_failed");
+    expect(body.summary).not.toHaveProperty("canaryTotalChecks");
+    expect(body.summary).not.toHaveProperty("canaryErrorCount");
+    expect(body.summary).not.toHaveProperty("canaryDegradedCount");
+    expect(body.summary).not.toHaveProperty("canarySkippedCount");
+    expect(body.summary).not.toHaveProperty("canaryStaleCount");
+  });
+
   it("keeps status available when dependency-health computation fails", async () => {
     const dependencyHealthSpy = vi
       .spyOn(dependencyHealthModule, "buildDependencyHealth")

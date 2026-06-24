@@ -356,7 +356,7 @@ export interface RepairDebtSummary {
   byKind: Record<string, RepairDebtKindSummary>;
   availabilityEscalated: boolean;
   nextRunnerDueAt: number | null;
-  source: "worker-repair-tasks" | "ddr-cache-fallback" | "unavailable";
+  source: "worker-repair-tasks" | "worker-repair-tasks+ddr-cache-fallback" | "ddr-cache-fallback" | "unavailable";
 }
 
 export interface DatasetFreshness {

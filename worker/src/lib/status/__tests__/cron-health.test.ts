@@ -237,6 +237,43 @@ describe("loadCronHealth — stale cron artifact readout", () => {
       }),
     ]);
   });
+
+  it("treats progress without a lease owner as orphaned when lease reads succeed", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      {
+        match: "FROM cron_run_progress",
+        rows: [{
+          job: "sync-yield-data",
+          started_at: NOW - 3_600,
+          updated_at: NOW - 120,
+          stage: "started",
+          items_done: null,
+          items_total: null,
+          message: null,
+          lease_owner: null,
+          metadata: null,
+          slot_started_at: NOW - 3_600,
+        }],
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.orphanedCronProgressRows).toBe(1);
+    expect(snapshot.staleCronArtifacts).toBe(1);
+    expect(snapshot.crons["sync-yield-data"]?.inFlight).toBeNull();
+    expect(snapshot.crons["sync-yield-data"]?.staleArtifacts).toEqual([
+      expect.objectContaining({
+        kind: "orphaned-progress",
+        job: "sync-yield-data",
+        progressStage: "started",
+        slotStartedAt: NOW - 3_600,
+      }),
+    ]);
+  });
 });
 
 describe("loadCronHealth — running scheduled slot telemetry", () => {

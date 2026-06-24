@@ -148,8 +148,11 @@ describe("night-watch-worker", () => {
       includeStatus: true,
       includeStatusHistory: true,
       includeD1: true,
+      adminApiUrl: "https://ops-api.pharos.watch",
       metadataBytes: 1200,
     });
+    expect(parseArgs(["--admin-api-url", "https://ops.example.test"], new Date(generatedAt)).adminApiUrl)
+      .toBe("https://ops.example.test");
     expect(() => parseArgs(["--cycles", "3"], new Date(generatedAt))).toThrow("--cycles must be 1 or 2");
   });
 

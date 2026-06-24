@@ -117,10 +117,16 @@ describe("repair tasks", () => {
   it("inspects due repair tasks in shadow mode without claiming rows", async () => {
     const db = mockD1([
       {
-        match: "SUM(CASE",
+        match: "COUNT(*) AS due_count",
         rows: [],
         first: {
           due_count: 2,
+        },
+      },
+      {
+        match: "COUNT(*) AS stale_claim_count",
+        rows: [],
+        first: {
           stale_claim_count: 1,
         },
       },
@@ -144,15 +150,21 @@ describe("repair tasks", () => {
     const unresolvedTaskId = buildRepairTaskId("ddr-repair-required-event", "43");
     const db = mockD1([
       {
-        match: "SUM(CASE",
+        match: "COUNT(*) AS due_count",
         rows: [],
         first: {
           due_count: 2,
+        },
+      },
+      {
+        match: "COUNT(*) AS stale_claim_count",
+        rows: [],
+        first: {
           stale_claim_count: 0,
         },
       },
       {
-        match: "FROM worker_repair_tasks",
+        match: "WHERE state IN (?,?) AND (next_attempt_at IS NULL OR next_attempt_at <= ?)",
         rows: [
           {
             task_id: linkedTaskId,
@@ -181,6 +193,10 @@ describe("repair tasks", () => {
             updated_at: NOW - 90,
           },
         ],
+      },
+      {
+        match: "WHERE state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?)",
+        rows: [],
       },
       {
         match: "FROM depeg_resolver_incident_event_links",
@@ -246,5 +262,133 @@ describe("repair tasks", () => {
       unresolvedTaskId,
       expect.stringContaining(`repair-runner:${NOW}:`),
     ]);
+  });
+
+  it("defers transient repair processing failures so the next run can retry", async () => {
+    const taskId = buildRepairTaskId("ddr-repair-required-event", "44");
+    const firstRunDb = mockD1([
+      {
+        match: "COUNT(*) AS due_count",
+        rows: [],
+        first: { due_count: 1 },
+      },
+      {
+        match: "COUNT(*) AS stale_claim_count",
+        rows: [],
+        first: { stale_claim_count: 0 },
+      },
+      {
+        match: "WHERE state IN (?,?) AND (next_attempt_at IS NULL OR next_attempt_at <= ?)",
+        rows: [{
+          task_id: taskId,
+          kind: "ddr-repair-required-event",
+          subject_id: "44",
+          priority: 50,
+          state: "open",
+          attempt_count: 0,
+          next_attempt_at: null,
+          locked_until: null,
+          payload_json: JSON.stringify({ eventId: 44, reason: "incident-conflict" }),
+          created_at: NOW - 100,
+          updated_at: NOW - 100,
+        }],
+      },
+      {
+        match: "WHERE state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?)",
+        rows: [],
+      },
+      {
+        match: "FROM depeg_resolver_incident_event_links",
+        matchBinds: [44],
+        rows: [],
+        throwError: new Error("temporary D1 failure"),
+      },
+    ]);
+
+    const firstResult = await runWorkerRepairTaskRunner(firstRunDb, {
+      mode: "enabled",
+      nowSec: NOW,
+      batchLimit: 5,
+    });
+
+    expect(firstResult.status).toBe("degraded");
+    expect(JSON.parse(firstResult.metadata ?? "{}")).toMatchObject({
+      claimed: 1,
+      failed: 1,
+      outcomes: [
+        {
+          taskId,
+          action: "failed",
+        },
+      ],
+    });
+    expect(firstRunDb.getHistory().find((entry) => entry.sql.includes("SET state = 'deferred'"))?.binds).toEqual([
+      NOW + 24 * 60 * 60,
+      "temporary D1 failure",
+      NOW,
+      taskId,
+      expect.stringContaining(`repair-runner:${NOW}:`),
+    ]);
+
+    const retryAt = NOW + 24 * 60 * 60;
+    const secondRunDb = mockD1([
+      {
+        match: "COUNT(*) AS due_count",
+        rows: [],
+        first: { due_count: 1 },
+      },
+      {
+        match: "COUNT(*) AS stale_claim_count",
+        rows: [],
+        first: { stale_claim_count: 0 },
+      },
+      {
+        match: "WHERE state IN (?,?) AND (next_attempt_at IS NULL OR next_attempt_at <= ?)",
+        rows: [{
+          task_id: taskId,
+          kind: "ddr-repair-required-event",
+          subject_id: "44",
+          priority: 50,
+          state: "deferred",
+          attempt_count: 1,
+          next_attempt_at: retryAt,
+          locked_until: null,
+          payload_json: JSON.stringify({ eventId: 44, reason: "incident-conflict" }),
+          created_at: NOW - 100,
+          updated_at: NOW,
+        }],
+      },
+      {
+        match: "WHERE state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?)",
+        rows: [],
+      },
+      {
+        match: "FROM depeg_resolver_incident_event_links",
+        matchBinds: [44],
+        rows: [{ ok: 1 }],
+        first: { ok: 1 },
+      },
+    ]);
+
+    const secondResult = await runWorkerRepairTaskRunner(secondRunDb, {
+      mode: "enabled",
+      nowSec: retryAt,
+      batchLimit: 5,
+    });
+
+    expect(secondResult.status).toBe("ok");
+    expect(JSON.parse(secondResult.metadata ?? "{}")).toMatchObject({
+      claimed: 1,
+      closed: 1,
+      failed: 0,
+      outcomes: [
+        {
+          taskId,
+          action: "closed",
+          reason: "ddr-event-linked",
+        },
+      ],
+    });
+    expect(secondRunDb.getHistory().find((entry) => entry.sql.includes("SET state = 'closed'"))).toBeDefined();
   });
 });

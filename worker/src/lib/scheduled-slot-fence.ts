@@ -48,7 +48,7 @@ type StaleSlotProgressRow = {
   started_at: number;
   updated_at: number;
   stage: string | null;
-  lease_owner: string;
+  lease_owner: string | null;
   slot_started_at: number | null;
 };
 
@@ -66,8 +66,8 @@ interface StaleSlotReconciliationSummary {
     job: string;
     progressStage: string | null;
     progressUpdatedAt: number;
-    leaseOwner: string;
-    leaseUntil: number;
+    leaseOwner: string | null;
+    leaseUntil: number | null;
   }>;
 }
 
@@ -176,13 +176,12 @@ async function listProgressRowsForStaleSlot(
            FROM cron_run_progress
            WHERE slot_started_at = ?
              AND job IN (${jobPlaceholders})
-             AND lease_owner IS NOT NULL
            ORDER BY updated_at DESC`,
       )
       .bind(slotStartedAt, ...jobs)
       .all<StaleSlotProgressRow>(),
   );
-  return (rows.results ?? []).filter((row) => typeof row.lease_owner === "string" && row.lease_owner.length > 0);
+  return rows.results ?? [];
 }
 
 function getExpectedJobsForScheduledSlot(slotKey: string): readonly string[] {
@@ -261,7 +260,12 @@ async function reconcileStaleSlotArtifacts(
     slot.slot_started_at,
     expectedJobs,
   );
-  const progressJobs = new Set(progressRows.map((progress) => progress.job));
+  const progressRowsWithOwner = progressRows.filter(
+    (progress): progress is StaleSlotProgressRow & { lease_owner: string } =>
+      typeof progress.lease_owner === "string" && progress.lease_owner.length > 0,
+  );
+  const progressRowsWithoutOwner = progressRows.filter((progress) => !progress.lease_owner);
+  const progressJobs = new Set(progressRowsWithOwner.map((progress) => progress.job));
   const noProgressJobs = expectedJobs.filter((job) => !progressJobs.has(job));
   if (noProgressJobs.length > 0) {
     try {
@@ -288,7 +292,29 @@ async function reconcileStaleSlotArtifacts(
     }
   }
 
-  for (const progress of progressRows) {
+  for (const progress of progressRowsWithoutOwner) {
+    const progressDelete = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `DELETE FROM cron_run_progress
+           WHERE job = ?
+             AND slot_started_at = ?
+             AND (lease_owner IS NULL OR lease_owner = '')`,
+        )
+        .bind(progress.job, slot.slot_started_at)
+        .run(),
+    );
+    summary.progressRowsCleared += progressDelete.meta.changes ?? 0;
+    summary.abandonedJobs.push({
+      job: progress.job,
+      progressStage: progress.stage,
+      progressUpdatedAt: progress.updated_at,
+      leaseOwner: null,
+      leaseUntil: null,
+    });
+  }
+
+  for (const progress of progressRowsWithOwner) {
     const lease = await getCronLeaseForJob(db, progress.job);
     if (!lease || lease.lease_owner !== progress.lease_owner) {
       continue;

@@ -410,8 +410,18 @@ export async function loadCronHealth(
   if (!cronProgressQueryFailed) {
     const progressArtifacts: CronStaleArtifact[] = [];
     const filteredProgressRows = progressResult.rows.filter((row) => {
-      if (cronLeaseQueryFailed || cronLeaseByJob == null || !row.lease_owner) {
+      if (cronLeaseQueryFailed || cronLeaseByJob == null) {
         return true;
+      }
+      if (!row.lease_owner) {
+        progressArtifacts.push({
+          kind: "orphaned-progress",
+          job: row.job,
+          progressUpdatedAt: row.updated_at,
+          ...(row.stage ? { progressStage: row.stage } : {}),
+          slotStartedAt: row.slot_started_at,
+        });
+        return false;
       }
 
       const lease = cronLeaseByJob.get(row.job);

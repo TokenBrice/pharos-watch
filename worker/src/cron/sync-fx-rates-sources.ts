@@ -1,6 +1,6 @@
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { USER_AGENT } from "../lib/constants";
-import { fetchJsonWithRetry, fetchWithRetry } from "../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import type {
   ExchangeRateApiPayload,
   SecondaryCurrencyCandidate,
@@ -60,19 +60,18 @@ async function fetchSecondaryCurrencyCandidate(
   url: string,
   signal?: AbortSignal,
 ): Promise<SecondaryCurrencyCandidate | null> {
-  const res = await fetchWithRetry(url, {
+  const result = await fetchJsonWithRetry(url, {
     headers: { "User-Agent": USER_AGENT },
     signal,
   });
-  if (!res || !res.ok) {
+  if (!result || !result.response.ok) {
     return null;
   }
 
   try {
-    const payload = await res.json();
     const validation = validatePayloadWithSchema(
       SecondaryCurrencyResponseSchema,
-      payload,
+      result.body,
       `sync-fx-rates:secondary:${endpoint}`,
     );
     if (!validation.ok) {
@@ -163,18 +162,17 @@ export async function loadSecondaryCurrencyCandidate(signal?: AbortSignal): Prom
 }
 
 export async function loadExchangeRateApiPayload(signal?: AbortSignal): Promise<ExchangeRateApiPayload | null> {
-  const res = await fetchWithRetry(TERTIARY_FX_URL, {
+  const result = await fetchJsonWithRetry(TERTIARY_FX_URL, {
     headers: { "User-Agent": USER_AGENT },
     signal,
   });
-  if (!res || !res.ok) {
+  if (!result || !result.response.ok) {
     return null;
   }
 
-  const payload = await res.json();
   const validation = validatePayloadWithSchema(
     ExchangeRateApiResponseSchema,
-    payload,
+    result.body,
     "sync-fx-rates:exchange-rate-api",
   );
   if (!validation.ok) {

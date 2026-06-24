@@ -152,9 +152,9 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
     allowBareFetch: false,
     resilience: {
-      transport: "fetchWithRetry",
-      timeout: "Uses fetchWithRetry timeouts plus cron AbortSignal.",
-      body: "Parses typed payloads and records circuit outcomes on failed paths.",
+      transport: "fetchJsonWithRetry",
+      timeout: "Uses fetchJsonWithRetry timeouts plus cron AbortSignal.",
+      body: "Keeps per-request timeouts active through typed JSON body parsing and records circuit outcomes on failed paths.",
       circuitSources: [
         "CIRCUIT_SOURCE.FX_FRANKFURTER",
         "CIRCUIT_SOURCE.FX_REALTIME",
@@ -162,7 +162,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       ],
     },
     requiredMarkers: [
-      "fetchWithRetry",
+      "fetchJsonWithRetry",
       "CIRCUIT_SOURCE.FX_FRANKFURTER",
       "CIRCUIT_SOURCE.FX_REALTIME",
       "CIRCUIT_SOURCE.CHAINLINK_FEEDS",

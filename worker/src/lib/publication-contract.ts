@@ -332,16 +332,20 @@ async function loadGenericPublicationSurface(
 
 function stablecoinsCacheFailureRow(
   reason: string,
-  updatedAt: number,
+  updatedAt: number | null,
+  now: number,
   metadata: Record<string, unknown>,
 ): PublicationGenerationRow {
+  const attemptedAt = updatedAt ?? now;
   return {
-    generation_id: `stablecoins-cache:${updatedAt}:invalid`,
+    generation_id: updatedAt == null
+      ? "stablecoins-cache:missing"
+      : `stablecoins-cache:${updatedAt}:invalid`,
     source_state: "failed",
-    started_at: updatedAt,
+    started_at: attemptedAt,
     validated_at: null,
     published_at: null,
-    failed_at: updatedAt,
+    failed_at: attemptedAt,
     candidate_rows: null,
     published_rows: null,
     expected_rows: null,
@@ -397,9 +401,12 @@ async function loadStablecoinsPublicationSurface(
     return buildSurfaceHealth(STABLECOINS_CACHE_SURFACE, now, row, row, null);
   }
 
-  const failedRow = stablecoinsCache.updatedAt == null
-    ? null
-    : stablecoinsCacheFailureRow(stablecoinsCache.reason, stablecoinsCache.updatedAt, metadata);
+  const failedRow = stablecoinsCacheFailureRow(
+    stablecoinsCache.reason,
+    stablecoinsCache.updatedAt,
+    now,
+    metadata,
+  );
   return buildSurfaceHealth(STABLECOINS_CACHE_SURFACE, now, failedRow, null, failedRow);
 }
 

@@ -29,6 +29,18 @@ interface ResolvedRawStatus {
   snapshotError?: string;
 }
 
+function stripCanarySummaryFields(
+  summary: StatusResponse["summary"],
+): StatusResponse["summary"] {
+  const rest: StatusResponse["summary"] = { ...summary };
+  delete rest.canaryTotalChecks;
+  delete rest.canaryErrorCount;
+  delete rest.canaryDegradedCount;
+  delete rest.canarySkippedCount;
+  delete rest.canaryStaleCount;
+  return rest;
+}
+
 function shouldBypassStatusSnapshot(request?: Request): boolean {
   if (!request) return false;
   try {
@@ -208,7 +220,7 @@ export function handleStatus(
         },
         datasetFreshness: raw.datasetFreshness,
         summary: {
-          ...raw.summary,
+          ...stripCanarySummaryFields(raw.summary),
           ...canarySummary,
         },
         reserveComposition: raw.reserveComposition,

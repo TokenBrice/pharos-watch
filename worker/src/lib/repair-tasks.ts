@@ -98,11 +98,12 @@ function claimableStateSql(): string {
   return ["open", "deferred"].map(() => "?").join(",");
 }
 
-function dueClaimWhereSql(): string {
-  return `(
-    (state IN (${claimableStateSql()}) AND (next_attempt_at IS NULL OR next_attempt_at <= ?))
-    OR (state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?))
-  )`;
+function dueOpenOrDeferredWhereSql(): string {
+  return `state IN (${claimableStateSql()}) AND (next_attempt_at IS NULL OR next_attempt_at <= ?)`;
+}
+
+function staleClaimWhereSql(): string {
+  return "state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?)";
 }
 
 function normalizeBatchLimit(value: number | null | undefined): number {
@@ -171,13 +172,13 @@ async function upsertRepairTask(
         ON CONFLICT(task_id) DO UPDATE SET
           priority = excluded.priority,
           state = CASE
-            WHEN worker_repair_tasks.state IN ('closed', 'cancelled') THEN 'open'
+            WHEN worker_repair_tasks.state IN ('closed', 'failed', 'cancelled') THEN 'open'
             ELSE worker_repair_tasks.state
           END,
           next_attempt_at = excluded.next_attempt_at,
           payload_json = excluded.payload_json,
           closed_at = CASE
-            WHEN worker_repair_tasks.state IN ('closed', 'cancelled') THEN NULL
+            WHEN worker_repair_tasks.state IN ('closed', 'failed', 'cancelled') THEN NULL
             ELSE worker_repair_tasks.closed_at
           END,
           updated_at = excluded.updated_at`,
@@ -362,24 +363,28 @@ async function inspectRepairRunnerBacklog(
 ): Promise<{ dueCount: number; staleClaimCount: number; tableMissing: boolean }> {
   throwIfAborted(input.signal);
   try {
-    const row = await db
-      .prepare(
-        `SELECT
-           SUM(CASE
-             WHEN state IN (${claimableStateSql()}) AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
-             THEN 1 ELSE 0 END) AS due_count,
-           SUM(CASE
-             WHEN state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?)
-             THEN 1 ELSE 0 END) AS stale_claim_count
-         FROM worker_repair_tasks
-         WHERE state IN (${ACTIVE_REPAIR_TASK_STATES.map(() => "?").join(",")})`,
-      )
-      .bind("open", "deferred", input.nowSec, input.nowSec, ...ACTIVE_REPAIR_TASK_STATES)
-      .first<RepairRunnerInspectRow>();
+    const [dueRow, staleClaimRow] = await Promise.all([
+      db
+        .prepare(
+          `SELECT COUNT(*) AS due_count
+             FROM worker_repair_tasks
+            WHERE ${dueOpenOrDeferredWhereSql()}`,
+        )
+        .bind("open", "deferred", input.nowSec)
+        .first<RepairRunnerInspectRow>(),
+      db
+        .prepare(
+          `SELECT COUNT(*) AS stale_claim_count
+             FROM worker_repair_tasks
+            WHERE ${staleClaimWhereSql()}`,
+        )
+        .bind(input.nowSec)
+        .first<RepairRunnerInspectRow>(),
+    ]);
 
     return {
-      dueCount: Math.max(0, Math.floor(Number(row?.due_count ?? 0))),
-      staleClaimCount: Math.max(0, Math.floor(Number(row?.stale_claim_count ?? 0))),
+      dueCount: Math.max(0, Math.floor(Number(dueRow?.due_count ?? 0))),
+      staleClaimCount: Math.max(0, Math.floor(Number(staleClaimRow?.stale_claim_count ?? 0))),
       tableMissing: false,
     };
   } catch (err) {
@@ -394,9 +399,7 @@ async function loadClaimableRepairTasks(
 ): Promise<{ rows: RepairTaskRow[]; tableMissing: boolean }> {
   throwIfAborted(input.signal);
   try {
-    const rows = await db
-      .prepare(
-        `SELECT
+    const selectColumns = `
            task_id,
            kind,
            subject_id,
@@ -407,15 +410,44 @@ async function loadClaimableRepairTasks(
            locked_until,
            payload_json,
            created_at,
-           updated_at
+           updated_at`;
+    const [dueRows, staleClaimRows] = await Promise.all([
+      db
+        .prepare(
+          `SELECT
+           ${selectColumns}
          FROM worker_repair_tasks
-         WHERE ${dueClaimWhereSql()}
-         ORDER BY priority ASC, COALESCE(next_attempt_at, created_at) ASC, updated_at ASC
+         WHERE ${dueOpenOrDeferredWhereSql()}
+         ORDER BY next_attempt_at ASC, priority ASC, updated_at ASC
          LIMIT ?`,
+        )
+        .bind("open", "deferred", input.nowSec, input.limit)
+        .all<RepairTaskRow>(),
+      db
+        .prepare(
+          `SELECT
+           ${selectColumns}
+         FROM worker_repair_tasks
+         WHERE ${staleClaimWhereSql()}
+         ORDER BY locked_until ASC, updated_at ASC
+         LIMIT ?`,
+        )
+        .bind(input.nowSec, input.limit)
+        .all<RepairTaskRow>(),
+    ]);
+    const rowsByTaskId = new Map<string, RepairTaskRow>();
+    for (const row of [...(dueRows.results ?? []), ...(staleClaimRows.results ?? [])]) {
+      rowsByTaskId.set(row.task_id, row);
+    }
+    const rows = [...rowsByTaskId.values()]
+      .sort((a, b) =>
+        (a.priority ?? 100) - (b.priority ?? 100) ||
+        (a.next_attempt_at ?? a.created_at) - (b.next_attempt_at ?? b.created_at) ||
+        a.updated_at - b.updated_at ||
+        a.task_id.localeCompare(b.task_id)
       )
-      .bind("open", "deferred", input.nowSec, input.nowSec, input.limit)
-      .all<RepairTaskRow>();
-    return { rows: rows.results ?? [], tableMissing: false };
+      .slice(0, input.limit);
+    return { rows, tableMissing: false };
   } catch (err) {
     if (isMissingTableError(err)) return { rows: [], tableMissing: true };
     throw err;
@@ -444,7 +476,7 @@ async function claimRepairTask(
              last_attempt_at = ?,
              updated_at = ?
          WHERE task_id = ?
-           AND ${dueClaimWhereSql()}`,
+           AND (${dueOpenOrDeferredWhereSql()} OR ${staleClaimWhereSql()})`,
       )
       .bind(
         input.owner,
@@ -454,6 +486,7 @@ async function claimRepairTask(
         input.taskId,
         "open",
         "deferred",
+        input.nowSec,
         input.nowSec,
         input.nowSec,
       )
@@ -525,24 +558,24 @@ async function deferRepairTask(
 
 async function failRepairTask(
   db: D1Database,
-  input: { taskId: string; owner: string; nowSec: number; error: unknown; signal?: AbortSignal },
+  input: { taskId: string; owner: string; nowSec: number; nextAttemptAt: number; error: unknown; signal?: AbortSignal },
 ): Promise<void> {
   throwIfAborted(input.signal);
   await runWithOverloadRetry(() =>
     db
       .prepare(
         `UPDATE worker_repair_tasks
-         SET state = 'failed',
+         SET state = 'deferred',
              locked_by = NULL,
              locked_until = NULL,
-             next_attempt_at = NULL,
+             next_attempt_at = ?,
              last_error = ?,
              updated_at = ?
          WHERE task_id = ?
            AND state = 'claimed'
            AND locked_by = ?`,
       )
-      .bind(truncateError(input.error), input.nowSec, input.taskId, input.owner)
+      .bind(input.nextAttemptAt, truncateError(input.error), input.nowSec, input.taskId, input.owner)
       .run(),
     3,
     input.signal,
@@ -721,6 +754,7 @@ export async function runWorkerRepairTaskRunner(
         taskId: row.task_id,
         owner,
         nowSec: timestamp,
+        nextAttemptAt: timestamp + REPAIR_RUNNER_DEFER_SEC,
         error: err,
         signal: options.signal,
       });

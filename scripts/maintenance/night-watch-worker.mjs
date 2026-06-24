@@ -6,6 +6,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_API_URL = "https://api.pharos.watch";
+const DEFAULT_ADMIN_API_URL = "https://ops-api.pharos.watch";
 const DEFAULT_DATABASE = "stablecoin-db";
 const DEFAULT_EVIDENCE_JSON = "agents/night-watch-evidence.json";
 const DEFAULT_OUTPUT = "agents/night-watch-report.md";
@@ -34,7 +35,8 @@ function usage() {
     "  --include-d1                 Include remote/local D1 snapshots through watch-worker-cron",
     "  --include-worker-tail        Mark worker-tail evidence as requested (manual attachment)",
     "  --database <name>            D1 database name (default: stablecoin-db)",
-    "  --api-url <url>              API origin (default: https://api.pharos.watch)",
+    "  --api-url <url>              Public API origin for /api/health (default: https://api.pharos.watch)",
+    "  --admin-api-url <url>        Admin API origin for /api/status* (default: https://ops-api.pharos.watch)",
     "  --metadata-bytes <n>         Metadata preview bytes for D1 rows (default: 800)",
     "  --sample-limit <n>           cron_runs limit per D1 sample (default: 120)",
     "  --output <path>              Markdown report path (default: agents/night-watch-report.md)",
@@ -73,6 +75,7 @@ export function parseArgs(argv, now = new Date()) {
     includeWorkerTail: false,
     database: DEFAULT_DATABASE,
     apiUrl: DEFAULT_API_URL,
+    adminApiUrl: DEFAULT_ADMIN_API_URL,
     metadataBytes: DEFAULT_METADATA_BYTES,
     sampleLimit: DEFAULT_SAMPLE_LIMIT,
     outputPath: DEFAULT_OUTPUT,
@@ -123,6 +126,9 @@ export function parseArgs(argv, now = new Date()) {
         break;
       case "--api-url":
         args.apiUrl = next();
+        break;
+      case "--admin-api-url":
+        args.adminApiUrl = next();
         break;
       case "--metadata-bytes":
         args.metadataBytes = parseInteger(next(), "--metadata-bytes");
@@ -184,8 +190,8 @@ function accessHeaders(args) {
   return headers;
 }
 
-async function fetchJsonProbe(args, path) {
-  const url = new URL(path, args.apiUrl);
+async function fetchJsonProbe(args, path, origin = args.apiUrl) {
+  const url = new URL(path, origin);
   const startedAt = Date.now();
   try {
     const response = await fetch(url, { method: "GET", headers: accessHeaders(args) });
@@ -211,8 +217,8 @@ async function fetchJsonProbe(args, path) {
 async function collectProbeOnlySnapshot(args) {
   const probes = {};
   probes.health = await fetchJsonProbe(args, "/api/health");
-  if (args.includeStatus) probes.status = await fetchJsonProbe(args, "/api/status");
-  if (args.includeStatusHistory) probes.statusHistory = await fetchJsonProbe(args, "/api/status-history");
+  if (args.includeStatus) probes.status = await fetchJsonProbe(args, "/api/status", args.adminApiUrl);
+  if (args.includeStatusHistory) probes.statusHistory = await fetchJsonProbe(args, "/api/status-history", args.adminApiUrl);
   return {
     collectedAt: new Date().toISOString(),
     mode: "probe-only",
@@ -236,6 +242,8 @@ function collectD1Snapshot(args, sinceMinutes) {
     String(args.sampleLimit),
     "--api-url",
     args.apiUrl,
+    "--admin-api-url",
+    args.adminApiUrl,
     "--metadata-bytes",
     String(args.metadataBytes),
   ];
@@ -503,6 +511,7 @@ export function renderNightWatchMarkdown(evidence) {
   const analysis = evidence.analysis ?? summarizeAnalysis(evidence);
   const startedAt = evidence.options.start;
   const endedAt = evidence.options.end;
+  const adminApiUrl = evidence.options.adminApiUrl ?? DEFAULT_ADMIN_API_URL;
   const accessLevel = [
     "public health",
     evidence.options.includeStatus ? "admin status" : null,
@@ -587,7 +596,7 @@ export function renderNightWatchMarkdown(evidence) {
     "",
     "## Verification Appendix",
     "",
-    `- Command: \`node scripts/maintenance/night-watch-worker.mjs --cycles ${evidence.options.cycles}${evidence.options.includeD1 ? " --include-d1" : ""}${evidence.options.includeStatus ? " --include-status" : ""}${evidence.options.includeStatusHistory ? " --include-status-history" : ""}\``,
+    `- Command: \`node scripts/maintenance/night-watch-worker.mjs --cycles ${evidence.options.cycles}${evidence.options.includeD1 ? " --include-d1" : ""}${evidence.options.includeStatus ? ` --include-status --admin-api-url ${adminApiUrl}` : ""}${evidence.options.includeStatusHistory ? " --include-status-history" : ""}\``,
     `- Samples collected: ${evidence.snapshots.length}`,
     `- Schedule registry jobs: ${evidence.scheduleMatrix.cronJobs.length}`,
     `- Slot plans: ${Object.keys(evidence.scheduleMatrix.slotPlans).length}`,

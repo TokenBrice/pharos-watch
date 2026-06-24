@@ -94,9 +94,10 @@ matching `sectionErrors.*` entry and `null` supplement value, not a failed
 contract so a newer frontend can read an older Worker during rollback.
 
 The current `publicationHealth` slice covers DEX-liquidity and yield-ranking
-publication generations only. Do not treat missing DEWS, PSI, stablecoins, or
-report-card publication rows as rollout failures until those surfaces get their
-own generation contracts.
+publication generations, plus the stablecoins cache through a published-cache
+fallback until generic surface rows are written. Do not treat missing DEWS, PSI,
+or report-card publication rows as rollout failures until those surfaces get
+their own generation contracts.
 
 ## Night Watch
 

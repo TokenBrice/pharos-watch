@@ -3,22 +3,45 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 
-// Stub fetchWithRetry to use our mocked global fetch
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: async (url: string, opts?: RequestInit) => {
-    return fetch(url, opts);
-  },
-  fetchJsonWithRetry: async (url: string, opts?: RequestInit) => {
-    const response = await fetch(url, opts);
-    return {
-      response,
-      body: await response.json(),
-    };
-  },
+const fetchRetryMocks = vi.hoisted(() => ({
+  fetchWithRetry: vi.fn(async (url: string, opts?: RequestInit) => fetch(url, opts)),
+  fetchJsonWithRetry: vi.fn(async (url: string, opts?: RequestInit) => {
+    try {
+      const response = await fetch(url, opts);
+      return {
+        response,
+        body: await response.json(),
+      };
+    } catch {
+      return null;
+    }
+  }),
 }));
 
+vi.mock("../../lib/fetch-retry", () => ({
+  fetchWithRetry: fetchRetryMocks.fetchWithRetry,
+  fetchJsonWithRetry: fetchRetryMocks.fetchJsonWithRetry,
+}));
+
+function resetFetchRetryMocks(): void {
+  fetchRetryMocks.fetchWithRetry.mockImplementation(async (url: string, opts?: RequestInit) => fetch(url, opts));
+  fetchRetryMocks.fetchJsonWithRetry.mockImplementation(async (url: string, opts?: RequestInit) => {
+    try {
+      const response = await fetch(url, opts);
+      return {
+        response,
+        body: await response.json(),
+      };
+    } catch {
+      return null;
+    }
+  });
+  fetchRetryMocks.fetchWithRetry.mockClear();
+  fetchRetryMocks.fetchJsonWithRetry.mockClear();
+}
+
 import { syncFxRates } from "../sync-fx-rates";
-import { loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
+import { loadExchangeRateApiPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
 
 function findCacheWrite(
   db: ReturnType<typeof mockD1>,
@@ -33,6 +56,7 @@ describe("syncFxRates", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    resetFetchRetryMocks();
   });
 
   afterEach(() => {
@@ -115,6 +139,44 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceCadenceByPeg.peggedCNH).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+  });
+
+  it("loads secondary and ExchangeRate-API fallback JSON through body-aware retry helpers", async () => {
+    mockFetch([
+      {
+        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest",
+        body: { date: "2025-06-15", usd: { cnh: 7.28 } },
+      },
+      {
+        match: "latest.currency-api.pages.dev",
+        body: { date: "2025-06-14", usd: { cnh: 7.29 } },
+      },
+      {
+        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@2025.6.15",
+        body: { date: "2025-06-15", usd: { cnh: 7.27 } },
+      },
+      {
+        match: "open.er-api.com",
+        body: { result: "success", time_last_update_unix: 1_750_000_000, rates: { EUR: 0.92 } },
+      },
+    ]);
+    fetchRetryMocks.fetchWithRetry.mockImplementation(async () => {
+      throw new Error("raw fetchWithRetry JSON path should not be used");
+    });
+
+    const secondary = await loadSecondaryCurrencyCandidate();
+    const tertiary = await loadExchangeRateApiPayload();
+
+    expect(secondary?.endpoint).toBe("jsdelivr");
+    expect(tertiary?.rates.EUR).toBe(0.92);
+    expect(fetchRetryMocks.fetchWithRetry).not.toHaveBeenCalled();
+    const jsonUrls = fetchRetryMocks.fetchJsonWithRetry.mock.calls.map(([url]) => String(url));
+    expect(jsonUrls).toEqual(expect.arrayContaining([
+      expect.stringContaining("@fawazahmed0/currency-api@latest"),
+      expect.stringContaining("latest.currency-api.pages.dev"),
+      expect.stringContaining("@fawazahmed0/currency-api@2025.6.15"),
+      expect.stringContaining("open.er-api.com"),
+    ]));
   });
 
   it("uses fresh commodity peer medians from the stablecoins cache when gold-api.com is unavailable", async () => {

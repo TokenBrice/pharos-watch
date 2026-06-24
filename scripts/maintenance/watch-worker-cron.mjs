@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 
 const DEFAULT_DATABASE = "stablecoin-db";
 const DEFAULT_API_URL = "https://api.pharos.watch";
+const DEFAULT_ADMIN_API_URL = "https://ops-api.pharos.watch";
 const DEFAULT_METADATA_BYTES = 800;
 const DEFAULT_MAX_BUFFER_MB = 32;
 
@@ -18,6 +19,7 @@ function usage() {
     "  --since-minutes <n>      Recent cron_runs lookback window (default: 180)",
     "  --limit <n>              Maximum recent cron_runs rows (default: 80)",
     "  --api-url <url>          Public API origin for /api/health (default: https://api.pharos.watch)",
+    "  --admin-api-url <url>    Admin API origin for /api/status* (default: https://ops-api.pharos.watch)",
     "  --metadata-bytes <n>     Metadata preview bytes for D1 rows (default: 800)",
     "  --include-full-metadata  Select full metadata blobs instead of bounded previews",
     "  --include-status         Fetch /api/status in addition to /api/health",
@@ -38,6 +40,7 @@ function parseArgs(argv) {
     sinceMinutes: 180,
     limit: 80,
     apiUrl: DEFAULT_API_URL,
+    adminApiUrl: DEFAULT_ADMIN_API_URL,
     remote: true,
     json: false,
     skipHealth: false,
@@ -70,6 +73,9 @@ function parseArgs(argv) {
         break;
       case "--api-url":
         args.apiUrl = next();
+        break;
+      case "--admin-api-url":
+        args.adminApiUrl = next();
         break;
       case "--metadata-bytes":
         args.metadataBytes = Number.parseInt(next(), 10);
@@ -182,8 +188,8 @@ function accessHeaders(args) {
   return headers;
 }
 
-async function fetchJsonProbe(args, path) {
-  const url = new URL(path, args.apiUrl);
+async function fetchJsonProbe(args, path, origin = args.apiUrl) {
+  const url = new URL(path, origin);
   const startedAt = Date.now();
   try {
     const response = await fetch(url, { method: "GET", headers: accessHeaders(args) });
@@ -218,10 +224,10 @@ async function fetchProbes(args) {
     probes.health = await fetchJsonProbe(args, "/api/health");
   }
   if (args.includeStatus) {
-    probes.status = await fetchJsonProbe(args, "/api/status");
+    probes.status = await fetchJsonProbe(args, "/api/status", args.adminApiUrl);
   }
   if (args.includeStatusHistory) {
-    probes.statusHistory = await fetchJsonProbe(args, "/api/status-history");
+    probes.statusHistory = await fetchJsonProbe(args, "/api/status-history", args.adminApiUrl);
   }
   return probes;
 }
@@ -367,6 +373,17 @@ async function main() {
      ORDER BY started_at DESC
      LIMIT 20
   `);
+  const surfacePublicationGenerations = optionalD1Select(args, `
+    SELECT surface, generation_id, state, started_at, validated_at, published_at, failed_at,
+           candidate_rows, published_rows, expected_rows, failure_reason,
+           artifact_cache_key, previous_generation_id,
+           length(input_watermarks_json) AS input_watermarks_bytes,
+           length(dependency_snapshot_json) AS dependency_snapshot_bytes,
+           length(validation_summary_json) AS validation_summary_bytes
+      FROM surface_publication_generations
+     ORDER BY started_at DESC
+     LIMIT 40
+  `);
   const probes = await fetchProbes(args);
   const artifactErrors = Object.fromEntries(
     Object.entries({
@@ -375,6 +392,7 @@ async function main() {
       canaryRuns: canaryRuns.error,
       dexPublicationGenerations: dexPublicationGenerations.error,
       yieldPublicationGenerations: yieldPublicationGenerations.error,
+      surfacePublicationGenerations: surfacePublicationGenerations.error,
     }).filter(([, error]) => error),
   );
 
@@ -396,6 +414,7 @@ async function main() {
     publicationGenerations: {
       dexLiquidity: dexPublicationGenerations.rows,
       yieldRankings: yieldPublicationGenerations.rows,
+      surface: surfacePublicationGenerations.rows,
     },
     artifactErrors,
   };
