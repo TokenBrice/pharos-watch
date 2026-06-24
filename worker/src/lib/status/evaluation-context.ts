@@ -3,6 +3,7 @@ import type {
 } from "@shared/types/status";
 import { computeReserveCompositionOverview } from "../live-reserves-store";
 import type { PublicHealthAssessment } from "../public-health-assessment";
+import type { CronHealthSnapshot } from "./cron-health";
 import {
   emptyReserveComposition,
   getDatasetFreshness,
@@ -141,4 +142,35 @@ export function countDiagnosticIssues(input: {
   if (input.reserveCompositionQueryFailed) count += 1;
   count += input.dataQuality.sourceFailures.filter((failure) => failure.source !== "stablecoins-cache").length;
   return count;
+}
+
+export function countStatusDiagnosticIssues(input: {
+  publicHealth: PublicHealthAssessment;
+  dataQuality: StatusResponse["dataQuality"];
+  reserveCompositionQueryFailed: boolean;
+  cronHealth: CronHealthSnapshot;
+  cronBudgetSurfaceTelemetryQueryFailed?: boolean;
+}): number {
+  return countDiagnosticIssues({
+    publicHealth: input.publicHealth,
+    dataQuality: input.dataQuality,
+    reserveCompositionQueryFailed: input.reserveCompositionQueryFailed,
+    cronHistoryQueryFailed: input.cronHealth.cronHistoryQueryFailed,
+    cronProgressQueryFailed: input.cronHealth.cronProgressQueryFailed,
+    cronLeaseQueryFailed: input.cronHealth.cronLeaseQueryFailed,
+    jobAttemptQueryFailed: input.cronHealth.jobAttemptQueryFailed,
+    cronBudgetSurfaceTelemetryQueryFailed: input.cronBudgetSurfaceTelemetryQueryFailed,
+  });
+}
+
+export function applyCronHealthSectionErrors(
+  sectionErrors: StatusResponse["sectionErrors"],
+  cronHealth: CronHealthSnapshot,
+): void {
+  if (cronHealth.jobAttemptQueryFailed) {
+    sectionErrors.jobAttempts = {
+      code: "job_attempts_query_failed",
+      message: getStatusSectionMessage("jobAttempts"),
+    };
+  }
 }

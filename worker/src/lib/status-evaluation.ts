@@ -6,7 +6,8 @@ import {
 } from "./status/derived-data";
 import { emptyDataQuality, getDataQuality } from "./status/data-quality";
 import {
-  countDiagnosticIssues,
+  applyCronHealthSectionErrors,
+  countStatusDiagnosticIssues,
   deriveStatusAssessmentInputs,
   loadSupplementalStatusSections,
 } from "./status/evaluation-context";
@@ -31,7 +32,6 @@ import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
 import type { CacheFreshnessDiagnostic } from "./api-utils";
-import { getStatusSectionMessage } from "./status/section-errors";
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -156,7 +156,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
-    jobAttemptQueryFailed,
   } = cronHealth;
   const {
     sectionErrors,
@@ -173,22 +172,14 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     onchainAssessment,
   } = deriveStatusAssessmentInputs(dataQuality);
   const reserveAssessment = deriveReserveCompositionStatus(reserveComposition);
-  const diagnosticIssueCount = countDiagnosticIssues({
+  const diagnosticIssueCount = countStatusDiagnosticIssues({
     publicHealth,
     dataQuality,
     reserveCompositionQueryFailed,
-    cronHistoryQueryFailed,
-    cronProgressQueryFailed,
-    cronLeaseQueryFailed,
-    jobAttemptQueryFailed,
+    cronHealth,
     cronBudgetSurfaceTelemetryQueryFailed: budgetOnlySurfaceResult.queryFailed,
   });
-  if (jobAttemptQueryFailed) {
-    sectionErrors.jobAttempts = {
-      code: "job_attempts_query_failed",
-      message: getStatusSectionMessage("jobAttempts"),
-    };
-  }
+  applyCronHealthSectionErrors(sectionErrors, cronHealth);
 
   const availabilityStatus = deriveAvailabilityStatus({
     publicHealth,
