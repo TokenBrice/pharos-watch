@@ -21,6 +21,7 @@ const DURATION_ALERT_CAP_HITS = 3;
 const DURATION_ALERT_BUDGET_TRUNCATIONS = 3;
 const SLOT_ABANDONMENT_ALERT_COUNT = 3;
 const SLOT_ABANDONMENT_ALERT_RATIO = 0.1;
+const SLOT_ABANDONMENT_RECENT_WINDOW_SEC = 24 * 3600;
 const LOOKBACK_SEC = 7 * 86400;
 // Skip jobs with too few recent runs (fresh deploys, paused lanes) — a 7d
 // average over a handful of runs is noise, not a trend.
@@ -77,8 +78,11 @@ function isRuntimeBreaching(stats: JobDurationStats): boolean {
   );
 }
 
-function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats): boolean {
+function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats, nowSec: number): boolean {
   if (stats.slots < MIN_SLOTS_FOR_ABANDONMENT_TREND) return false;
+  if (stats.latestAbandonedAt == null || stats.latestAbandonedAt < nowSec - SLOT_ABANDONMENT_RECENT_WINDOW_SEC) {
+    return false;
+  }
   return (
     stats.abandonedSlots >= SLOT_ABANDONMENT_ALERT_COUNT &&
     stats.abandonmentRatio >= SLOT_ABANDONMENT_ALERT_RATIO
@@ -195,10 +199,20 @@ export async function runCronDurationWatchdog(
   });
 
   const runtimeBreaching = stats.filter(isRuntimeBreaching);
-  const slotAbandonmentBreaching = slotStats.filter(isSlotAbandonmentBreaching);
+  const slotAbandonmentBreaching = slotStats.filter((entry) => isSlotAbandonmentBreaching(entry, nowSec));
 
   if (runtimeBreaching.length === 0 && slotAbandonmentBreaching.length === 0) {
-    return { itemCount: stats.length + slotStats.length, metadata: JSON.stringify({ stats, slotStats }) };
+    return {
+      itemCount: stats.length + slotStats.length,
+      metadata: JSON.stringify({
+        stats,
+        slotStats,
+        slotAbandonmentRecentWindowSec: SLOT_ABANDONMENT_RECENT_WINDOW_SEC,
+        runtimeBreaching: [],
+        slotAbandonmentBreaching: [],
+        breaching: [],
+      }),
+    };
   }
 
   const marker = await getCache(db, ALERT_MARKER_KEY);
@@ -240,6 +254,7 @@ export async function runCronDurationWatchdog(
     metadata: JSON.stringify({
       stats,
       slotStats,
+      slotAbandonmentRecentWindowSec: SLOT_ABANDONMENT_RECENT_WINDOW_SEC,
       runtimeBreaching: runtimeBreaching.map((entry) => entry.job),
       slotAbandonmentBreaching: slotAbandonmentBreaching.map((entry) => entry.scheduleKey),
       breaching: [

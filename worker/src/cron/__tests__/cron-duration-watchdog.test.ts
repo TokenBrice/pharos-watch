@@ -206,6 +206,34 @@ describe("runCronDurationWatchdog", () => {
     expect(db.getHistory().every((entry) => !entry.sql.includes("LIKE"))).toBe(true);
   });
 
+  it("keeps recovered slot abandonment history visible without degrading", async () => {
+    const db = mockD1([
+      slotStatsMatcher([{
+        slot_key: "hourlyYieldSync",
+        slots: 168,
+        error_slots: 42,
+        abandoned_slots: 42,
+        latest_abandoned_at: NOW_SEC - 3 * 86400,
+      }]),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(result.status).toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      slotAbandonmentRecentWindowSec: 86400,
+      slotAbandonmentBreaching: [],
+      slotStats: expect.arrayContaining([
+        expect.objectContaining({
+          scheduleKey: "hourlyYieldSync",
+          abandonedSlots: 42,
+          latestAbandonedAt: NOW_SEC - 3 * 86400,
+        }),
+      ]),
+    });
+  });
+
   it("does not degrade on low-ratio slot abandonment noise", async () => {
     const db = mockD1([
       slotStatsMatcher([{
