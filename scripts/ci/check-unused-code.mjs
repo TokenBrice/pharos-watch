@@ -228,6 +228,11 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/lib/live-reserves-store.ts::upsertReserveComposition",
   "worker/src/lib/mint-burn-health-config.ts::computeMintBurnSyncFreshnessStatus",
   "worker/src/lib/mint-burn-scoring.ts::MIN_ACTIVITY_USD",
+  // Provider execution wrappers are the staged transport facade for later
+  // provider migrations; DEX direct APIs currently consume providerJson while
+  // the fetch/text variants remain available for the next fetch-heavy surfaces.
+  "worker/src/lib/provider-execution.ts::providerFetch",
+  "worker/src/lib/provider-execution.ts::providerTextBounded",
   "worker/src/lib/schemas.ts::CronMetadataSchema",
   "worker/src/lib/stability-index.ts::BAND_COLORS",
   "worker/src/__mocks__/resvg-stub.ts::Resvg",

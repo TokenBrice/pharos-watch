@@ -2,15 +2,7 @@ import type { RepairDebtSummary } from "@shared/types/status";
 import { buildInClause, isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
 
-const REPAIR_TASK_STATE_VALUES = [
-  "open",
-  "claimed",
-  "deferred",
-  "closed",
-  "failed",
-  "cancelled",
-] as const;
-export type RepairTaskState = (typeof REPAIR_TASK_STATE_VALUES)[number];
+export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed" | "cancelled";
 
 const ACTIVE_REPAIR_TASK_STATES: RepairTaskState[] = ["open", "claimed", "deferred", "failed"];
 const TERMINAL_REPAIR_TASK_STATES: RepairTaskState[] = ["closed", "cancelled"];

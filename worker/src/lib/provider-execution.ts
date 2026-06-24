@@ -440,7 +440,7 @@ async function cancelOrDrainResponse(
   await cancelResponseBodyQuietly(response);
 }
 
-async function providerFetch(
+export async function providerFetch(
   context: ProviderExecutionContext,
   policy: ProviderExecutionPolicy<Response>,
   input: RequestInfo | URL,
@@ -509,7 +509,7 @@ async function readResponseTextBounded(response: Response, maxBytes: number): Pr
   return text;
 }
 
-async function providerTextBounded(
+export async function providerTextBounded(
   context: ProviderExecutionContext,
   policy: ProviderExecutionPolicy<string>,
   input: RequestInfo | URL,
