@@ -1,6 +1,7 @@
 import type { ScheduledRuntimeContext } from "./context";
 import { runPruneStatusProbeRuns } from "../../cron/prune-status-probe-runs";
 import { runPruneCronHistory } from "../../cron/prune-cron-history";
+import { runRepairTaskRunner } from "../../cron/repair-task-runner";
 import { runPruneDetailCache } from "../../cron/prune-detail-cache";
 import { runTelegramInactiveCleanup } from "../../cron/telegram-inactive-cleanup";
 import { runTelegramRetentionCleanup } from "../../cron/telegram-retention-cleanup";
@@ -21,6 +22,10 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
         {
           job: "prune-cron-history",
           run: (signal) => runPruneCronHistory(runtime.db, signal),
+        },
+        {
+          job: "worker-repair-runner",
+          run: (signal) => runRepairTaskRunner(runtime.db, runtime.env.WORKER_REPAIR_RUNNER_MODE, signal),
         },
         {
           job: "prune-detail-cache",

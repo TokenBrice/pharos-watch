@@ -523,6 +523,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     maxConnections: 0, // DB-only DELETE of cron_runs + cron_slot_executions
   },
   {
+    job: "worker-repair-runner",
+    label: "Worker repair runner",
+    group: "daily",
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only bounded repair-task claim/defer/close loop
+  },
+  {
     job: "prune-detail-cache",
     label: "Detail cache orphan/stale prune",
     group: "daily",

@@ -546,7 +546,7 @@ export const ENV_BINDINGS = [
   {
     key: "WORKER_REPAIR_RUNNER_MODE",
     valueType: "string",
-    description: "Worker repair-task runner mode. Unset or `off` disables repair processing; `shadow` may record reconciliation telemetry before an enabled runner claims tasks.",
+    description: "Worker repair-task runner mode. Unset or `off` disables repair processing; `shadow` records due/stale backlog telemetry without claiming rows; `enabled` lets the daily DB-only runner claim, close, or defer a small batch.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 47, status: "optional" },

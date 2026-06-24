@@ -52,6 +52,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "yield-coverage-audit": DEFAULT_CRON_TIMEOUT_MS,
   "prune-status-probe-runs": DEFAULT_CRON_TIMEOUT_MS,
   "prune-cron-history": DEFAULT_CRON_TIMEOUT_MS,
+  "worker-repair-runner": DEFAULT_CRON_TIMEOUT_MS,
   "prune-detail-cache": DEFAULT_CRON_TIMEOUT_MS,
   "telegram-inactive-cleanup": DEFAULT_CRON_TIMEOUT_MS,
   "telegram-retention-cleanup": DEFAULT_CRON_TIMEOUT_MS,

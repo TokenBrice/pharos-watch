@@ -3,6 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   buildRepairTaskId,
   loadRepairDebtSummary,
+  runWorkerRepairTaskRunner,
   syncDdrRepairDebtTasks,
 } from "../repair-tasks";
 
@@ -96,5 +97,154 @@ describe("repair tasks", () => {
       nextRunnerDueAt: NOW + 900,
       source: "worker-repair-tasks",
     });
+  });
+
+  it("no-ops the repair runner when mode is off", async () => {
+    const db = mockD1();
+
+    const result = await runWorkerRepairTaskRunner(db, { mode: "off", nowSec: NOW });
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      mode: "off",
+      skipped: "mode-off",
+      claimed: 0,
+    });
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("inspects due repair tasks in shadow mode without claiming rows", async () => {
+    const db = mockD1([
+      {
+        match: "SUM(CASE",
+        rows: [],
+        first: {
+          due_count: 2,
+          stale_claim_count: 1,
+        },
+      },
+    ]);
+
+    const result = await runWorkerRepairTaskRunner(db, { mode: "shadow", nowSec: NOW });
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      mode: "shadow",
+      skipped: "shadow-mode",
+      dueCount: 2,
+      staleClaimCount: 1,
+      claimed: 0,
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("SET state = 'claimed'"))).toBe(false);
+  });
+
+  it("claims a bounded batch and closes or defers DDR repair tasks", async () => {
+    const linkedTaskId = buildRepairTaskId("ddr-repair-required-event", "42");
+    const unresolvedTaskId = buildRepairTaskId("ddr-repair-required-event", "43");
+    const db = mockD1([
+      {
+        match: "SUM(CASE",
+        rows: [],
+        first: {
+          due_count: 2,
+          stale_claim_count: 0,
+        },
+      },
+      {
+        match: "FROM worker_repair_tasks",
+        rows: [
+          {
+            task_id: linkedTaskId,
+            kind: "ddr-repair-required-event",
+            subject_id: "42",
+            priority: 50,
+            state: "open",
+            attempt_count: 0,
+            next_attempt_at: null,
+            locked_until: null,
+            payload_json: JSON.stringify({ eventId: 42, reason: "incident-conflict" }),
+            created_at: NOW - 100,
+            updated_at: NOW - 100,
+          },
+          {
+            task_id: unresolvedTaskId,
+            kind: "ddr-repair-required-event",
+            subject_id: "43",
+            priority: 50,
+            state: "open",
+            attempt_count: 0,
+            next_attempt_at: null,
+            locked_until: null,
+            payload_json: JSON.stringify({ eventId: 43, reason: "incident-conflict" }),
+            created_at: NOW - 90,
+            updated_at: NOW - 90,
+          },
+        ],
+      },
+      {
+        match: "FROM depeg_resolver_incident_event_links",
+        matchBinds: [42],
+        rows: [{ ok: 1 }],
+        first: { ok: 1 },
+      },
+      {
+        match: "FROM depeg_resolver_incident_event_links",
+        matchBinds: [43],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "FROM depeg_events",
+        matchBinds: [43],
+        rows: [{ ok: 1 }],
+        first: { ok: 1 },
+      },
+    ]);
+
+    const result = await runWorkerRepairTaskRunner(db, {
+      mode: "enabled",
+      nowSec: NOW,
+      batchLimit: 5,
+    });
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(2);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      mode: "enabled",
+      dueCount: 2,
+      claimed: 2,
+      closed: 1,
+      deferred: 1,
+      failed: 0,
+      outcomes: [
+        {
+          taskId: linkedTaskId,
+          action: "closed",
+          reason: "ddr-event-linked",
+        },
+        {
+          taskId: unresolvedTaskId,
+          action: "deferred",
+          reason: "manual-ddr-repair-required",
+        },
+      ],
+    });
+
+    const history = db.getHistory();
+    expect(history.filter((entry) => entry.sql.includes("SET state = 'claimed'"))).toHaveLength(2);
+    expect(history.find((entry) => entry.sql.includes("SET state = 'closed'"))?.binds).toEqual([
+      NOW,
+      NOW,
+      linkedTaskId,
+      expect.stringContaining(`repair-runner:${NOW}:`),
+    ]);
+    expect(history.find((entry) => entry.sql.includes("SET state = 'deferred'"))?.binds).toEqual([
+      NOW + 24 * 60 * 60,
+      "manual-ddr-repair-required",
+      NOW,
+      unresolvedTaskId,
+      expect.stringContaining(`repair-runner:${NOW}:`),
+    ]);
   });
 });

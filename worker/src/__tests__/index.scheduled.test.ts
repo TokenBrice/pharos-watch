@@ -50,6 +50,7 @@ const cronMocks = vi.hoisted(() => ({
   runDiscoveryScan: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneCronHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runRepairTaskRunner: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
   runPruneDetailCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -70,10 +71,21 @@ const cronMocks = vi.hoisted(() => ({
     _db: D1Database,
     _job: string,
     fn: (ctx: { signal: AbortSignal }) => Promise<unknown>,
-    _opts?: { abortSignal?: AbortSignal },
+    _opts?: {
+      abortSignal?: AbortSignal;
+      owner?: string;
+      onLeaseState?: (state: {
+        event: "acquired" | "renewed";
+        job: string;
+        leaseOwner: string;
+        leaseUntil: number;
+        heartbeatAt: number;
+        ttlSec: number;
+      }) => Promise<void> | void;
+    },
   ) => ({
     status: "ok",
-    leaseOwner: "test-lease",
+    leaseOwner: _opts?.owner ?? "test-lease",
     renewFailures: 0,
     leaseLost: false,
     leaseTtlSec: 360,
@@ -83,7 +95,17 @@ const cronMocks = vi.hoisted(() => ({
     leaseRenewSuccesses: 0,
     leaseRenewFailuresTotal: 0,
     leaseLastRenewedAt: null,
-    result: await fn({ signal: new AbortController().signal }),
+    result: await (async () => {
+      await _opts?.onLeaseState?.({
+        event: "acquired",
+        job: _job,
+        leaseOwner: _opts?.owner ?? "test-lease",
+        leaseUntil: 1_777_777_900,
+        heartbeatAt: 1_777_777_540,
+        ttlSec: 360,
+      });
+      return fn({ signal: new AbortController().signal });
+    })(),
   })),
   runScheduledSlotWithFence: vi.fn(async (
     _db: D1Database,
@@ -159,6 +181,7 @@ vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generate
 vi.mock("../cron/discovery-scan", () => ({ runDiscoveryScan: cronMocks.runDiscoveryScan }));
 vi.mock("../cron/prune-status-probe-runs", () => ({ runPruneStatusProbeRuns: cronMocks.runPruneStatusProbeRuns }));
 vi.mock("../cron/prune-cron-history", () => ({ runPruneCronHistory: cronMocks.runPruneCronHistory }));
+vi.mock("../cron/repair-task-runner", () => ({ runRepairTaskRunner: cronMocks.runRepairTaskRunner }));
 vi.mock("../cron/prune-detail-cache", () => ({ runPruneDetailCache: cronMocks.runPruneDetailCache }));
 vi.mock("../cron/telegram-inactive-cleanup", () => ({
   runTelegramInactiveCleanup: cronMocks.runTelegramInactiveCleanup,
@@ -426,6 +449,31 @@ describe("worker.scheduled", () => {
       "sync-stablecoins",
       expect.any(Function),
       expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it("records worker job attempt lease_until from the lease acquisition callback", async () => {
+    const { ctx, waits } = makeCtx();
+    const db = mockD1();
+    const env = {
+      DB: db,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      WORKER_JOB_LEDGER_MODE: "shadow",
+      WORKER_JOB_LEDGER_ALLOWLIST: "sync-fx-rates",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "*/15 * * * *", scheduledTime: Date.parse("2026-04-01T00:15:00Z") } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    const leaseUpdate = db.getHistory().find((entry) => entry.sql.includes("lease_until = ?"));
+    expect(leaseUpdate?.binds[1]).toBe(1_777_777_900);
+    expect(leaseUpdate?.binds[6]).toBe(
+      "attempt|scheduled-slot|quarterHourly|1775002500|sync-fx-rates|1",
     );
   });
 
@@ -943,6 +991,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.runPruneStatusProbeRuns).toHaveBeenCalledTimes(1);
     expect(cronMocks.runPruneCronHistory).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runRepairTaskRunner).toHaveBeenCalledTimes(1);
     expect(cronMocks.runTelegramInactiveCleanup).toHaveBeenCalledTimes(1);
     expect(cronMocks.runTelegramRetentionCleanup).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
