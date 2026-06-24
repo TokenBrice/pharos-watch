@@ -94,6 +94,7 @@ function minimalStatusResponse() {
     gtProbe: null,
     coingeckoPriceDiff: null,
     d1Usage: null,
+    budgetOnlySurfaces: [],
     discoveryCandidates: null,
     mintBurnReconciliation: null,
     reserveComposition: {
