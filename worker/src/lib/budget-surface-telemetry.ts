@@ -47,7 +47,7 @@ const BUDGET_ONLY_BY_KEY = new Map(
   BUDGET_ONLY_DEFINITIONS.map((entry) => [budgetSurfaceTelemetryCacheKey(entry.job), entry]),
 );
 
-export function budgetSurfaceTelemetryCacheKey(surface: string): string {
+function budgetSurfaceTelemetryCacheKey(surface: string): string {
   return `${CACHE_PREFIX}${surface}`;
 }
 

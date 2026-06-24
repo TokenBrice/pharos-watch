@@ -1,6 +1,6 @@
 import { deleteCache, getCache, setCache } from "./db-cache";
 
-export const DDR_REPAIR_DEBT_CACHE_KEY = "ddr:repair-debt:v1";
+const DDR_REPAIR_DEBT_CACHE_KEY = "ddr:repair-debt:v1";
 const DDR_REPAIR_DEBT_EVENT_LIMIT = 25;
 
 export interface DdrRepairDebtEvent {
@@ -21,7 +21,7 @@ function isRepairDebtEvent(value: unknown): value is DdrRepairDebtEvent {
   return typeof record.eventId === "number" && Number.isFinite(record.eventId) && typeof record.reason === "string";
 }
 
-export function buildDdrRepairDebtSummary(
+function buildDdrRepairDebtSummary(
   events: readonly DdrRepairDebtEvent[],
   checkedAt: number,
 ): DdrRepairDebtSummary {
