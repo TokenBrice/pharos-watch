@@ -191,9 +191,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-prefetch-stablecoin.ts` - PREFETCH_DEBOUNCE_MS, usePrefetchStablecoin
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
+- `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
-- `src/hooks/use-row-cursor.ts` - UseRowCursorOptions, UseRowCursorResult, useRowCursor
-- ... 28 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 29 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-selection-insights.ts` - CompareSelectionInsights, buildCompareSelectionInsights
 - `src/lib/compare-share-image.ts` - ShareCoinData, ShareRadarData, canvasToBlob, loadImage, renderCompareShareImage
 - `src/lib/compare-types.ts` - CoinOption, ComparePreset
-- ... 140 more files omitted; use `rg --files src/lib` for the full list.
+- ... 141 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 384 more files omitted; use `rg --files src/components` for the full list.
+- ... 387 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -406,7 +406,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/autousd-auto-finance.json` - 25 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 22 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 21 keys
-- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 26 keys
+- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 24 keys
 - `shared/data/stablecoins/coins/bbqusdc-steakhouse.json` - 26 keys
 - `shared/data/stablecoins/coins/bc3m-backed.json` - 28 keys
 - `shared/data/stablecoins/coins/bd-basedollar.json` - 16 keys
