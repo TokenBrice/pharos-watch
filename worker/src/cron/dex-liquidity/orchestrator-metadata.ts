@@ -80,6 +80,8 @@ export function buildDexLiquidityCronMetadata(params: {
       candidateRowsWritten: params.persistence.candidateRowsWritten ?? null,
       currentGenerationRows: params.persistence.currentGenerationRows ?? null,
       placeholderRowsWritten: params.persistence.placeholderCount,
+      inactiveMetricRowsSkipped: params.persistence.inactiveMetricRowsSkipped,
+      inactiveMetricIdsSkipped: params.persistence.inactiveMetricIdsSkipped?.slice(0, 25) ?? [],
       orphanRowsDeleted: params.persistence.orphanRowsDeleted,
       orphanCleanupFailed: params.persistence.orphanCleanupFailed,
       skipped: params.persistence.skipped ?? false,

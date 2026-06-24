@@ -681,6 +681,8 @@ async function persistDexLiquidityScoreState(
     return {
       persistence: {
         placeholderCount: 0,
+        inactiveMetricRowsSkipped: 0,
+        inactiveMetricIdsSkipped: [],
         orphanRowsDeleted: 0,
         orphanCleanupFailed: false,
         skipped: true,
@@ -715,7 +717,13 @@ async function persistDexLiquidityScoreState(
     persistScores(ctx.db, poolState.metrics, scoreState.scoreResults, scoreState.globalAgg, ctx.syncStartSec, ctx.signal),
     3,
     ctx.signal,
-  )) ?? { placeholderCount: 0, orphanRowsDeleted: 0, orphanCleanupFailed: false };
+  )) ?? {
+    placeholderCount: 0,
+    inactiveMetricRowsSkipped: 0,
+    inactiveMetricIdsSkipped: [],
+    orphanRowsDeleted: 0,
+    orphanCleanupFailed: false,
+  };
   const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => {
@@ -756,6 +764,8 @@ async function persistDexLiquidityScoreState(
       countTotals: {
         rowsWritten: scoreState.scoreResults.size,
         placeholderRowsWritten: persistence.placeholderCount,
+        inactiveMetricRowsSkipped: persistence.inactiveMetricRowsSkipped,
+        inactiveMetricIdsSkipped: persistence.inactiveMetricIdsSkipped?.slice(0, 25) ?? [],
         orphanRowsDeleted: persistence.orphanRowsDeleted,
         historicalSnapshotRows: historicalSnapshot.snapshotRowsWritten,
       },

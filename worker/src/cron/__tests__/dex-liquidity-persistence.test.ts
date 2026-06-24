@@ -6,7 +6,7 @@ vi.mock("../../lib/db", () => ({
   isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
 }));
 
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
@@ -16,6 +16,12 @@ import {
   writeHistoricalSnapshots,
 } from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
+
+const INACTIVE_TRACKED_STABLECOIN = TRACKED_STABLECOINS.find((coin) => !ACTIVE_IDS.has(coin.id));
+
+if (!INACTIVE_TRACKED_STABLECOIN) {
+  throw new Error("dex-liquidity persistence tests require at least one tracked inactive stablecoin");
+}
 
 interface PreparedStatementWithMeta extends D1PreparedStatement {
   sql: string;
@@ -211,6 +217,8 @@ describe("dex-liquidity persistence", () => {
       expectedRowCount: ACTIVE_STABLECOINS.length + 1,
       candidateRowsWritten: ACTIVE_STABLECOINS.length + 1,
       currentGenerationRows: ACTIVE_STABLECOINS.length + 1,
+      inactiveMetricRowsSkipped: 0,
+      inactiveMetricIdsSkipped: [],
     });
 
     expect(batchExecute).toHaveBeenCalledTimes(3);
@@ -324,6 +332,69 @@ describe("dex-liquidity persistence", () => {
 
     const publishStatements = vi.mocked(batchExecute).mock.calls[1]?.[1] as PreparedStatementWithMeta[] | undefined;
     expect(publishStatements?.some((stmt) => stmt.sql.includes("INSERT INTO dex_liquidity"))).toBe(true);
+  });
+
+  it("skips tracked inactive metrics when staging the active current generation", async () => {
+    const activeMetrics = initMetrics("usdt-tether", "USDT");
+    activeMetrics.totalTvlUsd = 123;
+    activeMetrics.poolCount = 1;
+    const inactiveMetrics = initMetrics(
+      INACTIVE_TRACKED_STABLECOIN.id,
+      INACTIVE_TRACKED_STABLECOIN.symbol,
+    );
+    inactiveMetrics.totalTvlUsd = 456;
+    inactiveMetrics.poolCount = 1;
+
+    const db = makeDb();
+    const result = await persistScores(
+      db,
+      new Map([
+        ["usdt-tether", activeMetrics],
+        [INACTIVE_TRACKED_STABLECOIN.id, inactiveMetrics],
+      ]),
+      new Map([
+        ["usdt-tether", makeFullScoreResult({ score: 78 })],
+        [INACTIVE_TRACKED_STABLECOIN.id, makeFullScoreResult({ score: 42 })],
+      ]),
+      {
+        totalTvl: 579,
+        totalVol24h: 0,
+        totalVol7d: 0,
+        poolCount: 2,
+        chainCount: 1,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      1_700_000_000,
+    );
+
+    expect(result).toMatchObject({
+      expectedRowCount: ACTIVE_STABLECOINS.length + 1,
+      candidateRowsWritten: ACTIVE_STABLECOINS.length + 1,
+      currentGenerationRows: ACTIVE_STABLECOINS.length + 1,
+      placeholderCount: ACTIVE_STABLECOINS.length - 1,
+      inactiveMetricRowsSkipped: 1,
+      inactiveMetricIdsSkipped: [INACTIVE_TRACKED_STABLECOIN.id],
+    });
+
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    expect(prepared.some((stmt) => stmt.boundValues[1] === INACTIVE_TRACKED_STABLECOIN.id)).toBe(false);
+    expect(prepared.some((stmt) => stmt.boundValues[1] === "usdt-tether")).toBe(true);
+    expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length + 1);
+
+    const stageMetadata = db
+      .getHistory()
+      .map((entry) => entry.binds[3])
+      .find((value): value is string => typeof value === "string" && value.includes("inactiveMetricRowsSkipped"));
+    expect(JSON.parse(stageMetadata ?? "{}")).toMatchObject({
+      metricsCount: 2,
+      scoredCount: 2,
+      activeMetricsCount: 1,
+      activeScoredCount: 1,
+      inactiveMetricRowsSkipped: 1,
+      inactiveMetricIdsSkipped: [INACTIVE_TRACKED_STABLECOIN.id],
+    });
   });
 
   it("does not publish freshness when the signal aborts after score batch writes", async () => {

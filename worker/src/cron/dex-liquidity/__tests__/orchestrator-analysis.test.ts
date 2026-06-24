@@ -117,6 +117,8 @@ describe("analyzeDexLiquidityPostScoring", () => {
         analysis,
         persistence: {
           placeholderCount: 0,
+          inactiveMetricRowsSkipped: 0,
+          inactiveMetricIdsSkipped: [],
           orphanRowsDeleted: 0,
           orphanCleanupFailed: false,
         },

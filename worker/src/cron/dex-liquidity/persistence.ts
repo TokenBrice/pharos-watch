@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
@@ -93,6 +93,8 @@ export interface PersistScoresResult {
   candidateRowsWritten?: number;
   currentGenerationRows?: number;
   placeholderCount: number;
+  inactiveMetricRowsSkipped: number;
+  inactiveMetricIdsSkipped?: string[];
   orphanRowsDeleted: number;
   orphanCleanupFailed: boolean;
   skipped?: boolean;
@@ -120,6 +122,10 @@ async function stageDexLiquidityPublicationGeneration(
     expectedRowCount: number;
     metricsCount: number;
     scoredCount: number;
+    activeMetricsCount: number;
+    activeScoredCount: number;
+    inactiveMetricRowsSkipped: number;
+    inactiveMetricIdsSkipped: string[];
     signal?: AbortSignal;
   },
 ): Promise<void> {
@@ -174,6 +180,10 @@ async function stageDexLiquidityPublicationGeneration(
             activeStablecoinCount: ACTIVE_STABLECOINS.length,
             metricsCount: params.metricsCount,
             scoredCount: params.scoredCount,
+            activeMetricsCount: params.activeMetricsCount,
+            activeScoredCount: params.activeScoredCount,
+            inactiveMetricRowsSkipped: params.inactiveMetricRowsSkipped,
+            inactiveMetricIdsSkipped: params.inactiveMetricIdsSkipped.slice(0, 25),
           }),
           params.nowSec,
         )
@@ -389,6 +399,9 @@ export async function persistScores(
   let orphanCleanupFailed = false;
   const generationId = buildDexLiquidityPublicationGenerationId(nowSec);
   const expectedRowCount = ACTIVE_STABLECOINS.length + 1;
+  const activeMetrics = new Map([...metrics].filter(([id]) => ACTIVE_IDS.has(id)));
+  const activeScoreResults = new Map([...scoreResults].filter(([id]) => ACTIVE_IDS.has(id)));
+  const inactiveMetricIdsSkipped = [...metrics.keys()].filter((id) => !ACTIVE_IDS.has(id)).sort();
 
   await stageDexLiquidityPublicationGeneration(db, {
     generationId,
@@ -396,11 +409,15 @@ export async function persistScores(
     expectedRowCount,
     metricsCount: metrics.size,
     scoredCount: scoreResults.size,
+    activeMetricsCount: activeMetrics.size,
+    activeScoredCount: activeScoreResults.size,
+    inactiveMetricRowsSkipped: inactiveMetricIdsSkipped.length,
+    inactiveMetricIdsSkipped,
     signal,
   });
 
-  for (const [id, m] of metrics) {
-    const sr = scoreResults.get(id);
+  for (const [id, m] of activeMetrics) {
+    const sr = activeScoreResults.get(id);
     if (!sr) continue;
 
     stmts.push(
@@ -442,7 +459,7 @@ export async function persistScores(
   // Write placeholder rows for tracked stablecoins with no DEX presence
   // liquidity_score = NULL so report cards treat them as NR (not rated)
   for (const meta of ACTIVE_STABLECOINS) {
-    if (!metrics.has(meta.id)) {
+    if (!activeMetrics.has(meta.id)) {
       placeholderCount++;
       stmts.push(
         db
@@ -591,7 +608,7 @@ export async function persistScores(
   }
 
   console.log(
-    `[dex-liquidity] Published ${currentGenerationRows} current rows from ${generationId} (${metrics.size} with data, ${placeholderCount} zero, 1 global)`,
+    `[dex-liquidity] Published ${currentGenerationRows} current rows from ${generationId} (${activeMetrics.size} active with data, ${placeholderCount} zero, ${inactiveMetricIdsSkipped.length} inactive skipped, 1 global)`,
   );
   return {
     generationId,
@@ -599,6 +616,8 @@ export async function persistScores(
     candidateRowsWritten,
     currentGenerationRows,
     placeholderCount,
+    inactiveMetricRowsSkipped: inactiveMetricIdsSkipped.length,
+    inactiveMetricIdsSkipped,
     orphanRowsDeleted,
     orphanCleanupFailed,
   };
