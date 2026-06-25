@@ -38,7 +38,7 @@ export async function tryFredCsv(
 // dates (`YYYY-MM-DD,<index>`); the header and missing-value (".") rows fail
 // the finite/positive checks and drop out. The derived rate is identical to the
 // BoE source because it is the same index series and derivation window.
-export function parseFredSoniaCompoundedIndexCsv(csv: string): { recordDate: string; rate: number } | null {
+function parseFredSoniaCompoundedIndexCsv(csv: string): { recordDate: string; rate: number } | null {
   const observations = csv
     .split(/\r?\n/)
     .map((line) => line.trim())
