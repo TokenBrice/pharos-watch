@@ -573,15 +573,16 @@ describe("orderConfiguredCoinsForSync", () => {
 describe("live reserve sync budget defaults", () => {
   const TWELVE_MINUTE_LEASE_MS = 12 * 60 * 1000;
 
-  it("defaults the internal run budget to 11 minutes", () => {
-    expect(resolveLiveReserveSyncBudgetConfig().runBudgetMs).toBe(11 * 60 * 1000);
+  it("defaults the internal run budget to 10 minutes", () => {
+    expect(resolveLiveReserveSyncBudgetConfig().runBudgetMs).toBe(10 * 60 * 1000);
   });
 
   it("keeps default budget + finalize + margin under the 12-minute lease with headroom", () => {
     const config = resolveLiveReserveSyncBudgetConfig();
     const worstCaseMs = config.runBudgetMs + config.d1FinalizeTimeoutMs + config.finalizationMarginMs;
-    // Leave at least 20s of lease headroom for deferred-tail writes,
-    // run finalization, and cron logging.
-    expect(worstCaseMs).toBeLessThanOrEqual(TWELVE_MINUTE_LEASE_MS - 20_000);
+    // Leave at least 60s of lease headroom for the untimed pre-loop D1 load,
+    // deferred-tail writes, run finalization, and cron logging — the prior 20s
+    // margin let occasional runs get killed at the outer 12-minute cap.
+    expect(worstCaseMs).toBeLessThanOrEqual(TWELVE_MINUTE_LEASE_MS - 60_000);
   });
 });
