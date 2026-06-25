@@ -373,6 +373,8 @@ describe("TimelineClient", () => {
   });
 
   it("collapses quiet days (<=3 events) into a single <details> row", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-22T12:00:00.000Z"));
     const yesterday = Date.now() - 86_400_000;
     mockEvents([
       makeTapeEvent({
