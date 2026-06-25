@@ -57,7 +57,7 @@ function inferExpectedProtocolLabel(project: string): string {
 }
 
 describe("buildProtocolCategoryLookupFromCachePayload", () => {
-  it("parses raw cached DeFiLlama protocol payloads by normalized slug", () => {
+  it("parses compact cached DeFiLlama protocol category payloads by normalized slug", () => {
     const lookup = buildProtocolCategoryLookupFromCachePayload({
       protocols: [
         { slug: "Aave-V3", category: " Lending " },

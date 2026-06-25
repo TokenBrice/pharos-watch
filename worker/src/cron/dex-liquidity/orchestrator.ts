@@ -302,7 +302,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     metadata: {
       countTotals: {
         defillamaPools: dataSources.pools.length,
-        curveResponses: dataSources.curveResponses.length,
+        curvePayloads: dataSources.curvePayloads.filter((payload) => payload != null).length,
         dexProjects: dataSources.dexProjects.size,
       },
       dlYieldsAvailable: dataSources.dlYieldsAvailable,
@@ -323,7 +323,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
 
   const lookups = buildSymbolLookups();
   const { curvePoolMap, priceObservations } = await buildCurveLookups(
-    dataSources.curveResponses,
+    dataSources.curvePayloads,
     lookups.symbolToIds,
     lookups.symbolToChainScopedIds,
     lookups.chainAddressToId,

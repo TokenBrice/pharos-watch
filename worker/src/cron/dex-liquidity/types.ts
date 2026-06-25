@@ -218,10 +218,14 @@ export interface DataSources {
   dexProjects: Set<string>;
   /** DL protocol slug → total protocol TVL. Used to cap inflated CG/GT per-pool TVL. */
   protocolTvlCaps: Map<string, number>;
-  curveResponses: (Response | null)[];
+  curvePayloads: (CurveApiPayload | null)[];
   graphApiKey: string | null;
   dlYieldsAvailable: boolean;
   dlProtocolsAvailable: boolean;
+}
+
+export interface CurveApiPayload {
+  data?: { poolData?: CurvePool[] };
 }
 
 export interface CurveLookups {

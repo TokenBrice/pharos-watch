@@ -3,7 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Isolate the module under test from its heavy dependency tree
 vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
+  fetchJsonWithRetry: vi.fn(),
 }));
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(),
@@ -47,7 +47,7 @@ vi.mock("../dex-liquidity/subgraph-source-families", () => ({
 }));
 
 
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { recordOutcome } from "../../lib/circuit-breaker";
@@ -66,19 +66,12 @@ describe("fetchDataSources — malformed JSON resilience", () => {
   });
 
   it("degrades gracefully when DL yields returns invalid JSON", async () => {
-    const badResponse = {
-      ok: true,
-      json: () => Promise.reject(new SyntaxError("Unexpected token")),
-      body: { cancel: async () => {} },
-      bodyUsed: false,
-    } as unknown as Response;
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(badResponse)   // yields
-      .mockResolvedValueOnce(null);                                 // protocols
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce(null)   // yields
+      .mockResolvedValueOnce(null);                              // protocols
 
     const db = mockD1();
     const result = await fetchDataSources(null, db);
-    // Curve circuit is closed → curveResponses are all null → catastrophic check triggers → null
+    // Curve circuit is closed → curve payloads are all null → catastrophic check triggers → null
     // The key assertion: no unhandled SyntaxError thrown — function ran to completion.
     expect(result).toBeNull();
     // Circuit breaker should record DL yields failure
@@ -91,21 +84,11 @@ describe("fetchDataSources — malformed JSON resilience", () => {
       pool: `pool-${i}`, chain: "Ethereum", project: `proj-${i}`, symbol: "USDC",
       tvlUsd: 1000, apy: 1, apyBase: 1, apyReward: 0, stablecoin: true, exposure: "single",
     }));
-    const goodYieldsResponse = {
-      ok: true,
-      json: async () => ({ data: pools }),
-      body: { cancel: async () => {} },
-      bodyUsed: false,
-    } as unknown as Response;
-    const badProtocolsResponse = {
-      ok: true,
-      json: () => Promise.reject(new SyntaxError("Unexpected token")),
-      body: { cancel: async () => {} },
-      bodyUsed: false,
-    } as unknown as Response;
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(goodYieldsResponse)
-      .mockResolvedValueOnce(badProtocolsResponse);
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
+      response: new Response("", { status: 200 }),
+      body: { data: pools },
+    })
+      .mockResolvedValueOnce(null);
 
     const db = mockD1();
     const result = await fetchDataSources(null, db);
@@ -116,7 +99,7 @@ describe("fetchDataSources — malformed JSON resilience", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-protocols", false);
   });
 
-  it("caches raw DL protocols for yield source-management audits after a successful fetch", async () => {
+  it("caches compact DL protocol categories for yield source-management audits after a successful fetch", async () => {
     const pools = Array.from({ length: 1001 }, (_, i) => ({
       pool: `pool-${i}`, chain: "Ethereum", project: `proj-${i}`, symbol: "USDC",
       tvlUsd: 1000, apy: 1, apyBase: 1, apyReward: 0, stablecoin: true, exposure: "single",
@@ -125,26 +108,29 @@ describe("fetchDataSources — malformed JSON resilience", () => {
       { slug: "aave-v3", category: "Lending", tvl: 1_000_000_000 },
       { slug: "curve-dex", category: "Dexs", tvl: 500_000_000 },
     ];
-    const goodYieldsResponse = {
-      ok: true,
-      json: async () => ({ data: pools }),
-      body: { cancel: async () => {} },
-      bodyUsed: false,
-    } as unknown as Response;
-    const goodProtocolsResponse = {
-      ok: true,
-      json: async () => protocols,
-      body: { cancel: async () => {} },
-      bodyUsed: false,
-    } as unknown as Response;
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(goodYieldsResponse)
-      .mockResolvedValueOnce(goodProtocolsResponse);
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
+      response: new Response("", { status: 200 }),
+      body: { data: pools },
+    })
+      .mockResolvedValueOnce({
+        response: new Response("", { status: 200 }),
+        body: protocols,
+      });
 
     const db = mockD1();
     const result = await fetchDataSources(null, db);
 
     expect(result).not.toBeNull();
-    expect(setCache).toHaveBeenCalledWith(db, "defillama-protocols", JSON.stringify(protocols));
+    expect(setCache).toHaveBeenCalledWith(
+      db,
+      "defillama-protocols",
+      JSON.stringify({
+        protocols: [
+          { slug: "aave-v3", category: "Lending" },
+          { slug: "curve-dex", category: "Dexs" },
+        ],
+      }),
+      undefined,
+    );
   });
 });

@@ -8,7 +8,10 @@ vi.mock("../../../lib/circuit-breaker", () => ({
 
 // Mock fetch-retry
 vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async () => new Response("{}", { status: 200 })),
+  fetchJsonWithRetry: vi.fn(async () => ({
+    response: new Response("{}", { status: 200 }),
+    body: {},
+  })),
 }));
 
 // Mock db-cache
@@ -23,7 +26,7 @@ vi.mock("../../yield-sync/cache", () => ({
 }));
 
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
-import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { fetchDataSources } from "../fetch-primary";
 
 function createMockDb(): D1Database {
@@ -60,18 +63,30 @@ const FAKE_DL_POOLS = Array.from({ length: 1001 }, (_, i) => ({
 }));
 
 function mockDlYieldsSuccess() {
-  vi.mocked(fetchWithRetry).mockImplementation(async (url: string | URL | Request) => {
+  vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
     const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
     if (urlStr.includes("yields.llama.fi")) {
-      return new Response(JSON.stringify({ data: FAKE_DL_POOLS }), { status: 200 });
+      return {
+        response: new Response("", { status: 200 }),
+        body: { data: FAKE_DL_POOLS },
+      };
     }
     if (urlStr.includes("api.llama.fi/protocols")) {
-      return new Response(JSON.stringify([]), { status: 200 });
+      return {
+        response: new Response("", { status: 200 }),
+        body: [],
+      };
     }
     if (urlStr.includes("api.curve.finance")) {
-      return new Response(JSON.stringify({ data: { poolData: [] } }), { status: 200 });
+      return {
+        response: new Response("", { status: 200 }),
+        body: { data: { poolData: [] } },
+      };
     }
-    return new Response("{}", { status: 200 });
+    return {
+      response: new Response("", { status: 200 }),
+      body: {},
+    };
   });
 }
 
@@ -95,7 +110,7 @@ describe("fetchDataSources", () => {
     const result = await fetchDataSources(null, createMockDb());
     expect(result).not.toBeNull();
     // Curve calls should not have been made
-    const curveCalls = vi.mocked(fetchWithRetry).mock.calls.filter(
+    const curveCalls = vi.mocked(fetchJsonWithRetry).mock.calls.filter(
       (call) => String(call[0]).includes("api.curve.finance"),
     );
     expect(curveCalls).toHaveLength(0);
@@ -113,18 +128,27 @@ describe("fetchDataSources", () => {
   });
 
   it("records failure when all Curve chains fail", async () => {
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string | URL | Request) => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
       if (urlStr.includes("yields.llama.fi")) {
-        return new Response(JSON.stringify({ data: FAKE_DL_POOLS }), { status: 200 });
+        return {
+          response: new Response("", { status: 200 }),
+          body: { data: FAKE_DL_POOLS },
+        };
       }
       if (urlStr.includes("api.llama.fi/protocols")) {
-        return new Response(JSON.stringify([]), { status: 200 });
+        return {
+          response: new Response("", { status: 200 }),
+          body: [],
+        };
       }
       if (urlStr.includes("api.curve.finance")) {
-        return new Response("error", { status: 500 });
+        return null;
       }
-      return new Response("{}", { status: 200 });
+      return {
+        response: new Response("", { status: 200 }),
+        body: {},
+      };
     });
 
     const result = await fetchDataSources(null, createMockDb());
@@ -137,18 +161,27 @@ describe("fetchDataSources", () => {
   });
 
   it("returns DL-only data when Curve fails", async () => {
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string | URL | Request) => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
       if (urlStr.includes("yields.llama.fi")) {
-        return new Response(JSON.stringify({ data: FAKE_DL_POOLS }), { status: 200 });
+        return {
+          response: new Response("", { status: 200 }),
+          body: { data: FAKE_DL_POOLS },
+        };
       }
       if (urlStr.includes("api.llama.fi/protocols")) {
-        return new Response(JSON.stringify([]), { status: 200 });
+        return {
+          response: new Response("", { status: 200 }),
+          body: [],
+        };
       }
       if (urlStr.includes("api.curve.finance")) {
-        return new Response("error", { status: 500 });
+        return null;
       }
-      return new Response("{}", { status: 200 });
+      return {
+        response: new Response("", { status: 200 }),
+        body: {},
+      };
     });
 
     const result = await fetchDataSources(null, createMockDb());
@@ -157,9 +190,7 @@ describe("fetchDataSources", () => {
   });
 
   it("returns null when both DL and Curve fail (catastrophic)", async () => {
-    vi.mocked(fetchWithRetry).mockImplementation(async () => {
-      return new Response("error", { status: 500 });
-    });
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(null);
 
     const result = await fetchDataSources(null, createMockDb());
     expect(result).toBeNull();
@@ -176,4 +207,3 @@ describe("fetchDataSources", () => {
     expect(result!.dlYieldsAvailable).toBe(true);
   });
 });
-

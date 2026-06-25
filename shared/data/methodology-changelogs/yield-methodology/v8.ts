@@ -183,7 +183,7 @@ export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
     summary:
       "Yield Intelligence now uses cached DeFiLlama protocol categories for coverage-audit recommendations, table-driven chain lending TVL floors, monthly quarantine re-probes, a fully reviewed venue-risk tier registry for tracked source families, and observability metadata for deterministic-envelope rejections and comparison-anchor freshness.",
     impact: [
-      "The DEX-liquidity job caches DeFiLlama `/protocols` metadata under `defillama-protocols`, and the monthly yield coverage audit reuses that cache to annotate protocol recommendations with DeFiLlama category metadata",
+      "The DEX-liquidity job caches a compact DeFiLlama `/protocols` slug/category snapshot under `defillama-protocols`, and the monthly yield coverage audit reuses that cache to annotate protocol recommendations with DeFiLlama category metadata",
       "`high-confidence` lending-allowlist recommendations now require a category of Lending, CDP, RWA Lending, or Uncollateralized Lending; missing categories and non-lending categories stay `review-needed` even when TVL and pool count are high",
       "Auto-discovered lending opportunities now use the table-driven `CHAIN_LENDING_TVL_FLOOR_USD`: `$100K` remains the default floor, while Aptos, Berachain, Cardano, Ink, Monad, Plasma, Solana, Stacks, Stellar, and Sui use the configured `$25K` smaller/pre-mainnet floor",
       "The supply-relative lending gate still applies on top of the chain floor for eligible tracked stablecoins",

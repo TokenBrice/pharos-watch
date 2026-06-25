@@ -114,7 +114,7 @@ Internal changelog reconstructed from git history. Runtime currently reports Yie
 
 ## v8.24 - Source Management, Venue Risk, and Sync Telemetry (June 9, 2026)
 
-- The DEX-liquidity job caches DeFiLlama `/protocols` metadata under `defillama-protocols`, and the monthly yield coverage audit reuses that cache for protocol-category annotations
+- The DEX-liquidity job caches a compact DeFiLlama `/protocols` slug/category snapshot under `defillama-protocols`, and the monthly yield coverage audit reuses that cache for protocol-category annotations
 - Coverage-audit protocol recommendations carry DeFiLlama category metadata when available; `high-confidence` lending-allowlist recommendations require a category of Lending, CDP, RWA Lending, or Uncollateralized Lending instead of relying on TVL and pool count alone
 - Auto-discovered lending opportunities move from a binary small-ecosystem TVL gate to `CHAIN_LENDING_TVL_FLOOR_USD`: `$100K` remains the default floor, while Aptos, Berachain, Cardano, Ink, Monad, Plasma, Solana, Stacks, Stellar, and Sui use `$25K`; the supply-relative `0.1%` gate still applies
 - The reviewed venue-risk backlog assigns sourced tiers across the tracked venue registry: `spark-savings`, `yearn`, `yearn-finance`, and `pendle` move to `low`; `maple`, `morpho`, `morpho-v1`, `morpho-blue`, and `beefy` move to `medium`; unknown or unreviewed venues remain neutral

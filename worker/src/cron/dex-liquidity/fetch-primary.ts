@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
@@ -7,7 +7,7 @@ import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type {
-  LlamaPool, CurvePool, CurvePoolEntry, DexPriceObs,
+  LlamaPool, CurveApiPayload, CurvePoolEntry, DexPriceObs,
   DataSources, CurveLookups,
 } from "./types";
 import {
@@ -30,6 +30,32 @@ import {
 } from "./token-resolution";
 import { toErrorMessage } from "../../lib/error-utils";
 
+const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
+
+interface DefiLlamaYieldsPayload {
+  data?: LlamaPool[];
+}
+
+interface DefiLlamaProtocolRow {
+  slug?: string;
+  category?: string;
+  tvl?: number | null;
+  deadFrom?: number | null;
+  rugged?: boolean | null;
+  deprecated?: boolean | null;
+}
+
+function buildProtocolCategoryCachePayload(protocols: DefiLlamaProtocolRow[]): string {
+  const compactProtocols = protocols
+    .filter((protocol) => typeof protocol.slug === "string" && typeof protocol.category === "string")
+    .map((protocol) => ({
+      slug: protocol.slug,
+      category: protocol.category,
+    }));
+
+  return JSON.stringify({ protocols: compactProtocols });
+}
+
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
   const dlYieldsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS);
@@ -38,12 +64,22 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   // Fetch DL first, consume bodies immediately to release connections before Curve batch.
   // Jobs on this trigger run sequentially; consume early to stay within the 6-connection
   // pool budget during the Curve parallel phase that follows.
-  const [llamaRes, protocolsRes] = await Promise.all([
+  const [llamaResult, protocolsResult] = await Promise.all([
     dlYieldsAllowed
-      ? fetchWithRetry(DEFILLAMA_YIELDS_URL, { headers: { "User-Agent": USER_AGENT }, signal })
+      ? fetchJsonWithRetry<DefiLlamaYieldsPayload>(
+          DEFILLAMA_YIELDS_URL,
+          { headers: { "User-Agent": USER_AGENT }, signal },
+          2,
+          { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
+        )
       : Promise.resolve(null),
     dlProtocolsAllowed
-      ? fetchWithRetry(DEFILLAMA_PROTOCOLS_URL, { headers: { "User-Agent": USER_AGENT }, signal })
+      ? fetchJsonWithRetry<unknown>(
+          DEFILLAMA_PROTOCOLS_URL,
+          { headers: { "User-Agent": USER_AGENT }, signal },
+          2,
+          { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
+        )
       : Promise.resolve(null),
   ]);
 
@@ -53,9 +89,9 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   let dlYieldsAvailable = false;
 
   if (dlYieldsAllowed) {
-    if (llamaRes?.ok) {
+    if (llamaResult?.response.ok) {
       try {
-        const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
+        const llamaData = llamaResult.body;
         if (llamaData.data && llamaData.data.length >= 1000) {
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
           pools = llamaData.data;
@@ -103,23 +139,22 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   let dlProtocolsAvailable = false;
 
   if (dlProtocolsAllowed) {
-    if (protocolsRes?.ok) {
+    if (protocolsResult?.response.ok) {
       try {
-        const protocols = (await protocolsRes.json()) as {
-          slug: string;
-          category?: string;
-          tvl?: number | null;
-          deadFrom?: number | null;
-          rugged?: boolean | null;
-          deprecated?: boolean | null;
-        }[];
+        if (!Array.isArray(protocolsResult.body)) {
+          throw new Error("DefiLlama protocols payload is not an array");
+        }
+        const protocols = protocolsResult.body as DefiLlamaProtocolRow[];
         try {
-          await setCache(db, CIRCUIT_SOURCE.DL_PROTOCOLS, JSON.stringify(protocols));
-        } catch {
-          // Non-critical: the same payload is still consumed in this run, and the next
-          // successful DEX cron refreshes the source-management snapshot.
+          await setCache(db, CIRCUIT_SOURCE.DL_PROTOCOLS, buildProtocolCategoryCachePayload(protocols), signal);
+        } catch (cacheError) {
+          if (signal?.aborted) {
+            throw cacheError;
+          }
+          // Non-critical: the run has already loaded the categories it needs.
         }
         for (const p of protocols) {
+          if (typeof p.slug !== "string") continue;
           if (p.category !== "Dexs") continue;
           if (p.deadFrom || p.rugged || p.deprecated) continue;
           dexProjects.add(p.slug);
@@ -156,34 +191,40 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   }
 
   // Now safe to start Curve batch — DL connections are released (max 4 concurrent)
-  let curveResponses: (Response | null)[];
+  let curvePayloads: (CurveApiPayload | null)[];
   const curveCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API);
 
   if (curveCircuitAllowed) {
-    curveResponses = await Promise.all(
+    const curveResults = await Promise.all(
       CURVE_CHAINS.map((chain) =>
-        fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT }, signal }),
+        fetchJsonWithRetry<CurveApiPayload>(
+          `${CURVE_API_BASE}/${chain}`,
+          { headers: { "User-Agent": USER_AGENT }, signal },
+          2,
+          { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
+        ),
       ),
     );
-    const curveSuccess = curveResponses.some((r) => r?.ok);
+    curvePayloads = curveResults.map((result) => result?.body ?? null);
+    const curveSuccess = curvePayloads.some((payload) => payload != null);
     await recordOutcome(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, curveSuccess);
   } else {
     console.warn("[dex-liquidity] Curve liquidity API circuit open — skipping Curve pool data");
-    curveResponses = CURVE_CHAINS.map(() => null);
+    curvePayloads = CURVE_CHAINS.map(() => null);
   }
 
   // Only abort if BOTH DL sources AND Curve all failed (truly catastrophic)
-  if (!dlYieldsAvailable && curveResponses.every((r) => !r?.ok)) {
+  if (!dlYieldsAvailable && curvePayloads.every((payload) => payload == null)) {
     console.error("[dex-liquidity] All pool data sources failed — aborting");
     return null;
   }
 
-  return { pools, dexProjects, protocolTvlCaps, curveResponses, graphApiKey, dlYieldsAvailable, dlProtocolsAvailable };
+  return { pools, dexProjects, protocolTvlCaps, curvePayloads, graphApiKey, dlYieldsAvailable, dlProtocolsAvailable };
 }
 
 /** Parse Curve API responses into pool lookup maps and per-token price observations. */
 export async function buildCurveLookups(
-  curveResponses: (Response | null)[],
+  curvePayloads: (CurveApiPayload | null)[],
   symbolToIds: Map<string, string[]>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   chainAddressToId: Map<string, string>,
@@ -193,10 +234,9 @@ export async function buildCurveLookups(
   const priceObservations = new Map<string, DexPriceObs[]>();
 
   for (let i = 0; i < CURVE_CHAINS.length; i++) {
-    const res = curveResponses[i];
-    if (!res?.ok) continue;
+    const json = curvePayloads[i];
+    if (!json) continue;
     try {
-      const json = (await res.json()) as { data?: { poolData?: CurvePool[] } };
       const curvePools = json.data?.poolData ?? [];
       for (const pool of curvePools) {
         const chain = CURVE_CHAINS[i];
