@@ -1,6 +1,6 @@
 {
   "api-reference": {
-    "dateModified": "2026-06-24T14:09:12+02:00",
+    "dateModified": "2026-06-25T11:22:27+02:00",
     "dateCreated": "2026-02-23T15:28:17+01:00"
   },
   "architecture": {
@@ -48,7 +48,7 @@
     "dateCreated": "2026-02-25T19:21:45+01:00"
   },
   "redemption-backstops": {
-    "dateModified": "2026-06-23T20:04:32+02:00",
+    "dateModified": "2026-06-25T11:22:27+02:00",
     "dateCreated": "2026-03-12T23:06:41+01:00"
   },
   "chain-health": {
