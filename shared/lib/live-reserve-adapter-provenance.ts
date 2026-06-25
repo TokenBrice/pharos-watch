@@ -65,7 +65,13 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "m0-wrapper-underlying": { status: "active", rationale: ACTIVE_RATIONALE },
   mento: { status: "active", rationale: ACTIVE_RATIONALE },
   "nest-vault-positions": { status: "active", rationale: ACTIVE_RATIONALE },
-  "openeden-usdo": { status: "active", rationale: ACTIVE_RATIONALE },
+  "openeden-usdo": {
+    status: "parked",
+    rationale:
+      "OpenEden USDO adapter is retained, but its live config was suspended 2026-06-25 because OpenEden's gateway drops Cloudflare Worker egress; rebind once the issuer allowlists our egress.",
+    parkedSince: "2026-06-25",
+    nextReview: "2026-12-25",
+  },
   "origin-vault-balances": { status: "active", rationale: ACTIVE_RATIONALE },
   "quantoz-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "re-metrics": { status: "active", rationale: ACTIVE_RATIONALE },

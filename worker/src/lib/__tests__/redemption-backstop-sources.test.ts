@@ -376,7 +376,7 @@ describe("buildRedemptionBackstopEntry", () => {
   it("resolves reserve-sync-metadata capacity with fresh data", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
-      "usdo-openeden",
+      "lusd-liquity",
       {
         routeFamily: "queue-redeem",
         accessModel: "permissionless-onchain",
@@ -391,7 +391,7 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
       {
         reserveSnapshotMetadata: {
-          stablecoinId: "usdo-openeden",
+          stablecoinId: "lusd-liquity",
           fetchedAt: now - 1800,
           source: "test",
           metadata: {
@@ -1313,7 +1313,7 @@ describe("buildRedemptionBackstopEntry", () => {
     // Dynamic capacity + fixed fee → high
     const highEntry = await buildRedemptionBackstopEntry(
       mockD1(),
-      "usdo-openeden",
+      "lusd-liquity",
       {
         routeFamily: "queue-redeem",
         accessModel: "permissionless-onchain",
@@ -1328,7 +1328,7 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
       {
         reserveSnapshotMetadata: {
-          stablecoinId: "usdo-openeden",
+          stablecoinId: "lusd-liquity",
           fetchedAt: now - 100,
           source: "test",
           metadata: {

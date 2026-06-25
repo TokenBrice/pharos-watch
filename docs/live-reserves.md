@@ -493,6 +493,7 @@ Current unbound registered adapters are explicit:
 | ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ----------- |
 | `buck-io-transparency` | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                      | 2026-05-12   | 2026-11-12  |
 | `centrifuge-vault`     | `parked` | Centrifuge vault implementation is retained, but tracked Anemoy/JTRSY coverage now uses Chainlink NAV.               | 2026-05-12   | 2026-11-12  |
+| `openeden-usdo`        | `parked` | OpenEden USDO adapter is retained, but its live config was suspended because OpenEden's gateway blocks Cloudflare Worker egress; rebind once the issuer allowlists our egress. | 2026-06-25   | 2026-12-25  |
 | `tether`               | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. | 2026-05-12   | 2026-11-12  |
 
 `parked` and `retired` adapters carry `parkedSince` and `nextReview` ISO dates in `shared/lib/live-reserve-adapter-provenance.ts`. Default cadence is a six-month review window; when `nextReview` passes, the adapter is up for one of: revival under an active coin binding, status downgrade to `retired`, or full removal alongside its tests and fixtures. The registry test asserts both fields are populated for every non-active entry.
