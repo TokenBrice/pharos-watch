@@ -334,6 +334,17 @@ const morphoVaultV2RedemptionLiquiditySchema = z
   })
   .strict();
 
+// Reviewer-asserted: the vault redeems atomically against its full ERC-4626
+// backing because the underlying is released on demand from an external savings
+// module (e.g. the Sky DSR pot) rather than held as an idle balance in the
+// vault. Use only where the unconstrained-redemption property is verified, since
+// the default idle-balance telemetry understates such vaults to ~0.
+const atomicFullBackingRedemptionLiquiditySchema = z
+  .object({
+    source: z.literal("atomic-full-backing"),
+  })
+  .strict();
+
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
@@ -341,6 +352,7 @@ const erc4626SingleAssetParamsSchema = z
       .discriminatedUnion("source", [
         morphoVaultV1RedemptionLiquiditySchema,
         morphoVaultV2RedemptionLiquiditySchema,
+        atomicFullBackingRedemptionLiquiditySchema,
       ])
       .optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),

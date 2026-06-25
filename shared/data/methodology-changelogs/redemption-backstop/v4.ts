@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.15",
+    title: "Atomic-full-backing capacity for external savings-module vaults",
+    date: "2026-06-25",
+    effectiveAt: 1782345600,
+    summary:
+      "ERC-4626 savings vaults whose redemption is atomic and unconstrained — because the underlying is released on demand from an external savings module rather than held as an idle vault balance — now score their full convertible backing as current executable redemption capacity instead of the near-zero idle-underlying probe.",
+    impact: [
+      "`sdai-sky` no longer scores ~$0 instant-exit capacity: the legacy Sky DSR routes redeemed DAI through the Maker pot, so `DAI.balanceOf(sDAI)` is ~0 even though sDAI→DAI redemption is atomic and unconstrained against the full ~$175M backing",
+      "A reviewer-asserted `redemptionLiquidity: { source: \"atomic-full-backing\" }` adapter flag treats the supply-equivalent convertible backing (ratio 1.0) as live-direct same-run on-chain capacity; it is set only where the unconstrained-redemption property is verified, since the default idle-balance telemetry understates such vaults to ~0",
+      "sDAI's redemption backstop score rises 69→93 and its effective-exit liquidity dimension 62→93 as the capacity component moves from 0 to 97",
+      "Sky's modern `susds-sky`/`stusds-sky` savings vaults are unaffected: they hold their underlying in-contract, so the existing idle-balance probe already measured full backing — only the legacy pot-routed sDAI needed the flag",
+      "The scoring formula and confidence gates are unchanged; this only corrects capacity measurement for vaults whose backing is verifiably redeemable in full but invisible to an idle-balance read",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.14",
     title: "Morpho V1/V2 vault liquidity for curated vault exits",
     date: "2026-06-23",

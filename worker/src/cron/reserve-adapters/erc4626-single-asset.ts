@@ -30,7 +30,7 @@ interface SingleAssetSliceConfig {
   coinId?: string;
   depType?: ReserveSlice["depType"];
   expectedAssetAddress?: string;
-  redemptionLiquidity?: MorphoVaultRedemptionLiquidityConfig;
+  redemptionLiquidity?: RedemptionLiquidityConfig;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
 }
@@ -47,9 +47,14 @@ interface MorphoVaultV2RedemptionLiquidityConfig {
   apiUrl?: string;
 }
 
-type MorphoVaultRedemptionLiquidityConfig =
+interface AtomicFullBackingRedemptionLiquidityConfig {
+  source: "atomic-full-backing";
+}
+
+type RedemptionLiquidityConfig =
   | MorphoVaultV1RedemptionLiquidityConfig
-  | MorphoVaultV2RedemptionLiquidityConfig;
+  | MorphoVaultV2RedemptionLiquidityConfig
+  | AtomicFullBackingRedemptionLiquidityConfig;
 
 type MorphoVaultLiquiditySource = "morpho-vault-v1-liquidity" | "morpho-vault-v2-liquidity";
 
@@ -64,7 +69,7 @@ interface MorphoVaultLiquidityTelemetry {
 interface RedemptionCapacityTelemetry {
   capacityUsd: number;
   capacityRaw: string;
-  capacitySource: "erc4626-idle-underlying" | MorphoVaultLiquiditySource;
+  capacitySource: "erc4626-idle-underlying" | "erc4626-atomic-full-backing" | MorphoVaultLiquiditySource;
   freshnessKind: "same-run-onchain" | "same-run-api";
   routeStatusSource: "onchain" | "protocol-api";
   idleUnderlyingBalanceRaw?: string;
@@ -540,9 +545,31 @@ function buildRedemptionCapacityTelemetry(
   underlyingDecimalsRaw: bigint | null,
   supplyAssetsRaw: bigint,
   morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null,
+  atomicFullBacking: boolean,
 ): RedemptionCapacityTelemetry | null {
   const underlyingDecimals = decodeErc20Decimals(underlyingDecimalsRaw);
   if (underlyingDecimals == null) return null;
+
+  if (atomicFullBacking) {
+    // Reviewer-asserted unconstrained redemption: the underlying is released on
+    // demand from an external savings module (e.g. the Sky DSR pot), so the full
+    // convertible backing is immediately redeemable. The idle-balance probe
+    // below would understate this to ~0 because the vault holds no idle
+    // underlying. Capacity is the supply-equivalent backing (ratio 1.0).
+    const capacityUsd = decimalNumberFromBigInt(supplyAssetsRaw, underlyingDecimals);
+    if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
+    const capacityRatioOfSupply = ratioFromRaw(supplyAssetsRaw, supplyAssetsRaw);
+    return {
+      capacityUsd,
+      capacityRaw: supplyAssetsRaw.toString(),
+      capacitySource: "erc4626-atomic-full-backing",
+      freshnessKind: "same-run-onchain",
+      routeStatusSource: "onchain",
+      ...(idleUnderlyingBalanceRaw != null ? { idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString() } : {}),
+      underlyingDecimals,
+      ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
+    };
+  }
 
   const idleCapacityRaw = idleUnderlyingBalanceRaw ?? 0n;
   const morphoCapacityRaw = morphoVaultLiquidity?.liquidityRaw ?? 0n;
@@ -696,6 +723,7 @@ export async function fetchErc4626SingleAssetReserves(
         timeoutMs: timeout,
       }),
     ]);
+    const atomicFullBacking = sliceConfig.redemptionLiquidity?.source === "atomic-full-backing";
     let morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null = null;
     if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v2") {
       const morphoResult = await fetchMorphoVaultV2LiquidityTelemetry({
@@ -725,6 +753,7 @@ export async function fetchErc4626SingleAssetReserves(
       underlyingDecimalsRaw,
       convertToAssetsRaw ?? totalAssetsRaw,
       morphoVaultLiquidity,
+      atomicFullBacking,
     );
   }
 

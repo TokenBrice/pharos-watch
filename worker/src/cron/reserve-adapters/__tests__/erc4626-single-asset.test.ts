@@ -32,6 +32,14 @@ function cloneConfigWithMorphoVaultV1Liquidity(config: LiveReservesConfig): Live
   return cloned;
 }
 
+function cloneConfigWithAtomicFullBacking(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params: { redemptionLiquidity?: { source: "atomic-full-backing" } };
+  };
+  cloned.params.redemptionLiquidity = { source: "atomic-full-backing" };
+  return cloned;
+}
+
 describe("fetchErc4626SingleAssetReserves", () => {
   beforeEach(() => {
     resetRpcMocks();
@@ -308,6 +316,60 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
         routeStatus: "unknown",
+      },
+    });
+  });
+
+  it("uses full convertible backing as capacity for atomic-full-backing vaults even with zero idle balance", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        // Vault holds no idle underlying — backing lives in an external savings module.
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithAtomicFullBacking(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "0",
+      redemptionCapacityRaw: "100000000",
+      redemptionCapacitySource: "erc4626-atomic-full-backing",
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 100,
+        capacityRatioOfSupply: 1,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "onchain",
       },
     });
   });

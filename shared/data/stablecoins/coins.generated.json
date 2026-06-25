@@ -52342,6 +52342,9 @@
           "coinId": "dai-makerdao",
           "depType": "wrapper",
           "expectedAssetAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
+        },
+        "redemptionLiquidity": {
+          "source": "atomic-full-backing"
         }
       }
     },
@@ -70478,6 +70481,22 @@
         "coinId": "vbill-vaneck"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usdo-openeden",
+      "display": {
+        "url": "https://openeden.com/usdo/transparency",
+        "label": "OpenEden USDO"
+      },
+      "adapter": "openeden-usdo",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+        }
+      }
+    },
     "yieldConfig": {
       "yieldSource": "OpenEden USDO daily rebase",
       "yieldType": "rebase"
