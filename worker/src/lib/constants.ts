@@ -96,6 +96,8 @@ export const FRED_EFFR_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.cs
  * Cloudflare Worker egress. Same series the BoE source derives from.
  */
 export const FRED_SONIA_COMPOUNDED_INDEX_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2";
+/** ALFRED graph CSV mirror of the same Bank of England SONIA Compounded Index series. */
+export const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL = "https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2";
 /** Official ECB data API endpoint for 3-month compounded €STR. */
 export const ECB_ESTR_3M_CSV_URL = "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata";
 export const TREASURY_YIELD_XML_URL = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml";

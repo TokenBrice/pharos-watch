@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.296",
+    title: "GBP SONIA St. Louis Fed Mirror Redundancy",
+    date: "2026-06-25",
+    effectiveAt: 1782345600,
+    summary:
+      "The GBP benchmark now tries the ALFRED graph CSV mirror of the same SONIA Compounded Index after the FRED graph CSV and before the Bank of England IADB fallback, reducing retained-fallback days when one St. Louis Fed graph host is unavailable from Workers.",
+    impact: [
+      "GBP benchmark refreshes still derive `GBP 3M compounded SONIA` from the Bank of England SONIA Compounded Index (`IUDZOS2`) over the same trailing 90-day window",
+      "Source failover is now FRED graph CSV (`fred-sonia-compounded-index`), then ALFRED graph CSV (`alfred-sonia-compounded-index`), then Bank of England IADB (`boe-sonia-compounded-index`)",
+      "The GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, history semantics, and publication guards are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.295",
     title: "GBP SONIA Benchmark Source Failover to FRED Mirror",
     date: "2026-06-25",

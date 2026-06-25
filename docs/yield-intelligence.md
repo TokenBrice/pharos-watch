@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.295`
+- **Current methodology version:** `v8.296`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.296 adds ALFRED's graph CSV as a second St. Louis Fed mirror for the GBP SONIA Compounded Index (`IUDZOS2`). The daily benchmark cron still derives `GBP 3M compounded SONIA` from the same trailing 90-day index window, but now tries FRED (`fred-sonia-compounded-index`), then ALFRED (`alfred-sonia-compounded-index`), then Bank of England IADB (`boe-sonia-compounded-index`). The GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, history semantics, and publication guards are unchanged.
 
 Yield v8.295 fails the GBP benchmark over to the FRED mirror of the SONIA Compounded Index (`IUDZOS2`) because the Bank of England IADB host blocks Cloudflare Worker egress. The daily benchmark cron fetches `IUDZOS2` from FRED's reachable graph CSV first and records successful observations with source `fred-sonia-compounded-index`; the Bank of England IADB feed is retained as a fallback with provenance `boe-sonia-compounded-index`. The derived value is unchanged — the same `IUDZOS2` compounded-index series and trailing 90-day annualization are applied — so the GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, and publication guards are unchanged.
 
@@ -510,7 +512,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `USD_EFFR` | USD effective federal funds rate | New York Fed latest EFFR endpoint, then FRED `DFF` | Optional product-specific benchmark for EFFR-linked products such as USDGO; not the default USD hurdle |
 | `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
-| `GBP` | GBP 3M compounded SONIA | FRED mirror of the SONIA Compounded Index `IUDZOS2` CSV, then Bank of England IADB `IUDZOS2` fallback | Annualized from the trailing 90-day index change; metadata source `fred-sonia-compounded-index` (BoE IADB host blocks Worker egress, retained as `boe-sonia-compounded-index` fallback), fallback mode `gbp-sonia-compounded-index-failed` |
+| `GBP` | GBP 3M compounded SONIA | FRED graph CSV for SONIA Compounded Index `IUDZOS2`, then ALFRED graph CSV, then Bank of England IADB `IUDZOS2` fallback | Annualized from the trailing 90-day index change; metadata source `fred-sonia-compounded-index` or `alfred-sonia-compounded-index` before the BoE fallback (`boe-sonia-compounded-index`), fallback mode `gbp-sonia-compounded-index-failed` |
 | `JPY` | JPY overnight call (TONA proxy) | Bank of Japan Time-Series Data Search `STRDCLUCON` | Used as a TONA-equivalent proxy |
 | `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`) | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, MXN retains the last market source when available or remains unavailable so rows fall back to USD. Etherfuse CETES current issuance is deliberately limited to the CETES product APY source, not the shared MXN benchmark. |
 | `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily percentage annualized over 252 business days before scoring |
@@ -758,7 +760,7 @@ Fetches the benchmark registry used by Yield Intelligence:
 - USD Effective Federal Funds Rate from the New York Fed latest EFFR endpoint, with FRED `DFF` as fallback, stored as optional `USD_EFFR` for EFFR-linked products such as USDGO
 - EUR 3M compounded €STR from the ECB Data API (`EST/B.EU000A2QQF32.CR`)
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
-- GBP 3M compounded SONIA from the Bank of England IADB SONIA Compounded Index `IUDZOS2`, annualized from the trailing 90-day index change (v8.28)
+- GBP 3M compounded SONIA from the SONIA Compounded Index `IUDZOS2`, annualized from the trailing 90-day index change, fetched through FRED graph CSV, ALFRED graph CSV, then Bank of England IADB fallback (v8.296)
 - JPY call-rate proxy from Bank of Japan Time-Series Data Search `STRDCLUCON` (v8.22)
 - MXN CETES 28-day from Banxico SIE (`SF43936`), with retained-last-market fallback only when a prior market source exists (v8.293 removed the Etherfuse degraded benchmark proxy)
 - BRL SELIC overnight from BCB SGS series 11 (no auth), annualized from the daily percentage over 252 business days before scoring (v8.13)
@@ -873,8 +875,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.295",
-    "currentVersion": "8.295",
+    "version": "8.296",
+    "currentVersion": "8.296",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
@@ -1058,6 +1060,8 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
 | `NYFED_EFFR_JSON_URL`           | `https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json` | New York Fed latest Effective Federal Funds Rate endpoint used for EFFR-linked yield products |
 | `FRED_EFFR_CSV_URL`             | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF` | FRED daily Effective Federal Funds Rate series retained as the USD_EFFR fallback feed |
+| `FRED_SONIA_COMPOUNDED_INDEX_CSV_URL` | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2` | FRED graph CSV mirror for the Bank of England SONIA Compounded Index (`IUDZOS2`) |
+| `ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL` | `https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2` | ALFRED graph CSV mirror for the same SONIA Compounded Index series |
 | `TREASURY_YIELD_XML_URL`        | `https://home.treasury.gov/sites/default/files/interest-rates/yield.xml` | Treasury.gov daily yield curve XML fallback for USD 3M |
 | `ECB_ESTR_3M_CSV_URL`           | `https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata` | Official ECB 3M compounded €STR feed |
 | `SIX_OAUTH_TOKEN_URL`           | `https://indexdata.six-group.com/pro/oauth/token` | Public SIX guest OAuth endpoint for delayed downloads |

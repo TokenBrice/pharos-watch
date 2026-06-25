@@ -38,7 +38,7 @@ export interface SoniaCompoundedObservation {
 /**
  * Derive the trailing ~3-month annualized SONIA rate from a series of SONIA
  * Compounded Index observations. Source-agnostic: callers parse their own CSV
- * format (BoE IADB or the FRED IUDZOS2 mirror) into observations.
+ * format (BoE IADB or St. Louis Fed IUDZOS2 graph mirrors) into observations.
  */
 export function deriveSoniaCompoundedRate(
   observations: readonly SoniaCompoundedObservation[],

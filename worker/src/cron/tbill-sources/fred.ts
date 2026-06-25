@@ -1,4 +1,4 @@
-import { FRED_SONIA_COMPOUNDED_INDEX_CSV_URL, USER_AGENT } from "../../lib/constants";
+import { ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL, FRED_SONIA_COMPOUNDED_INDEX_CSV_URL, USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,
@@ -34,10 +34,11 @@ export async function tryFredCsv(
   });
 }
 
-// FRED's IUDZOS2 graph CSV mirrors the BoE SONIA Compounded Index with ISO
-// dates (`YYYY-MM-DD,<index>`); the header and missing-value (".") rows fail
-// the finite/positive checks and drop out. The derived rate is identical to the
-// BoE source because it is the same index series and derivation window.
+// The St. Louis Fed graph CSV mirrors for IUDZOS2 expose the BoE SONIA
+// Compounded Index with ISO dates (`YYYY-MM-DD,<index>`); the header and
+// missing-value (".") rows fail the finite/positive checks and drop out. The
+// derived rate is identical to the BoE source because it is the same index
+// series and derivation window.
 function parseFredSoniaCompoundedIndexCsv(csv: string): { recordDate: string; rate: number } | null {
   const observations = csv
     .split(/\r?\n/)
@@ -63,6 +64,18 @@ export async function tryFredSoniaCompoundedIndex(
     headers: { "User-Agent": USER_AGENT },
     parse: parseFredSoniaCompoundedIndexCsv,
     warnLabel: "FRED SONIA Compounded Index CSV",
+    signal,
+  });
+}
+
+export async function tryAlfredSoniaCompoundedIndex(
+  signal?: AbortSignal,
+): Promise<{ rate: number; recordDate: string } | null> {
+  return fetchAndParseBenchmark({
+    url: ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
+    headers: { "User-Agent": USER_AGENT },
+    parse: parseFredSoniaCompoundedIndexCsv,
+    warnLabel: "ALFRED SONIA Compounded Index CSV",
     signal,
   });
 }
