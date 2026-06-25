@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.295",
+    title: "GBP SONIA Benchmark Source Failover to FRED Mirror",
+    date: "2026-06-25",
+    effectiveAt: 1782345600,
+    summary:
+      "The GBP benchmark now resolves the SONIA Compounded Index from the FRED mirror of the same IUDZOS2 series first, because the Bank of England IADB host blocks Cloudflare Worker egress; BoE IADB is retained as a fallback.",
+    impact: [
+      "GBP benchmark refreshes fetch the SONIA Compounded Index (`IUDZOS2`) from FRED's reachable graph CSV and record successful observations with source `fred-sonia-compounded-index`",
+      "Bank of England IADB remains wired as the secondary GBP source with provenance `boe-sonia-compounded-index`, used only when the FRED mirror is unavailable",
+      "The derived value is unchanged: the same IUDZOS2 compounded-index series and trailing 90-day annualization are applied, so the GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, and publication guards are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.294",
     title: "NY Fed EFFR Benchmark Source Hardening",
     date: "2026-06-22",

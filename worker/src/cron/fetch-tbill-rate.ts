@@ -29,7 +29,7 @@ import type {
   BenchmarkProviderKey,
   StandardBenchmarkProviderKey,
 } from "./tbill-sources/shared";
-import { tryFredCsv } from "./tbill-sources/fred";
+import { tryFredCsv, tryFredSoniaCompoundedIndex } from "./tbill-sources/fred";
 import { tryNyFedEffr } from "./tbill-sources/nyfed";
 import { tryTreasuryXml } from "./tbill-sources/treasury";
 import { tryEcbCompoundedEstrCsv } from "./tbill-sources/ecb";
@@ -257,8 +257,15 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
   },
   GBP: {
     key: "GBP",
-    fetch: ({ signal }) => tryBoeSoniaCompoundedIndex(signal),
-    source: "boe-sonia-compounded-index",
+    // Primary: FRED mirror of the SONIA Compounded Index (IUDZOS2) — the BoE
+    // IADB host blocks Cloudflare Worker egress. BoE retained as fallback only.
+    fetch: async ({ signal }) => {
+      const fred = await tryFredSoniaCompoundedIndex(signal);
+      if (fred) return { ...fred, source: "fred-sonia-compounded-index" };
+      const boe = await tryBoeSoniaCompoundedIndex(signal);
+      return boe ? { ...boe, source: "boe-sonia-compounded-index" } : null;
+    },
+    source: "fred-sonia-compounded-index",
     fallbackMode: "gbp-sonia-compounded-index-failed",
   },
   JPY: {

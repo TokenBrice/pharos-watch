@@ -29,6 +29,38 @@ export function parseBoeSoniaCsv(csv: string): { recordDate: string; rate: numbe
   return null;
 }
 
+export interface SoniaCompoundedObservation {
+  recordDate: string;
+  indexValue: number;
+  timestampMs: number;
+}
+
+/**
+ * Derive the trailing ~3-month annualized SONIA rate from a series of SONIA
+ * Compounded Index observations. Source-agnostic: callers parse their own CSV
+ * format (BoE IADB or the FRED IUDZOS2 mirror) into observations.
+ */
+export function deriveSoniaCompoundedRate(
+  observations: readonly SoniaCompoundedObservation[],
+): { recordDate: string; rate: number } | null {
+  const sorted = [...observations].sort((a, b) => a.timestampMs - b.timestampMs);
+
+  const latest = sorted[sorted.length - 1];
+  if (!latest) return null;
+
+  const targetStartMs = latest.timestampMs - BOE_COMPOUNDED_SONIA_WINDOW_DAYS * DAY_MS;
+  const start = [...sorted].reverse().find((entry) => entry.timestampMs <= targetStartMs);
+  if (!start || start.indexValue <= 0) return null;
+
+  const dayCount = (latest.timestampMs - start.timestampMs) / DAY_MS;
+  if (!Number.isFinite(dayCount) || dayCount < 80) return null;
+
+  const rate = ((latest.indexValue / start.indexValue - 1) * 365 / dayCount) * 100;
+  if (!isValidBenchmarkRate(rate)) return null;
+
+  return { recordDate: latest.recordDate, rate };
+}
+
 export function parseBoeSoniaCompoundedIndexCsv(csv: string): { recordDate: string; rate: number } | null {
   const observations = csv
     .split(/\r?\n/)
@@ -42,23 +74,9 @@ export function parseBoeSoniaCompoundedIndexCsv(csv: string): { recordDate: stri
       return recordDate && Number.isFinite(timestampMs) && Number.isFinite(indexValue) && indexValue > 0
         ? [{ recordDate, indexValue, timestampMs }]
         : [];
-    })
-    .sort((a, b) => a.timestampMs - b.timestampMs);
+    });
 
-  const latest = observations[observations.length - 1];
-  if (!latest) return null;
-
-  const targetStartMs = latest.timestampMs - BOE_COMPOUNDED_SONIA_WINDOW_DAYS * DAY_MS;
-  const start = [...observations].reverse().find((entry) => entry.timestampMs <= targetStartMs);
-  if (!start || start.indexValue <= 0) return null;
-
-  const dayCount = (latest.timestampMs - start.timestampMs) / DAY_MS;
-  if (!Number.isFinite(dayCount) || dayCount < 80) return null;
-
-  const rate = ((latest.indexValue / start.indexValue - 1) * 365 / dayCount) * 100;
-  if (!isValidBenchmarkRate(rate)) return null;
-
-  return { recordDate: latest.recordDate, rate };
+  return deriveSoniaCompoundedRate(observations);
 }
 
 function formatBoeRequestDate(date: Date): string {

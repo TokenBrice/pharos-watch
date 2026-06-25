@@ -90,6 +90,12 @@ export const FRED_TBILL_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.c
 export const NYFED_EFFR_JSON_URL = "https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json";
 /** FRED Effective Federal Funds Rate series (DFF), retained as the USD_EFFR fallback feed. */
 export const FRED_EFFR_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF";
+/**
+ * FRED mirror of the Bank of England SONIA Compounded Index (series IUDZOS2),
+ * used as the primary GBP benchmark feed because the BoE IADB host blocks
+ * Cloudflare Worker egress. Same series the BoE source derives from.
+ */
+export const FRED_SONIA_COMPOUNDED_INDEX_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2";
 /** Official ECB data API endpoint for 3-month compounded €STR. */
 export const ECB_ESTR_3M_CSV_URL = "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata";
 export const TREASURY_YIELD_XML_URL = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml";

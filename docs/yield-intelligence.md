@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.294`
+- **Current methodology version:** `v8.295`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.295 fails the GBP benchmark over to the FRED mirror of the SONIA Compounded Index (`IUDZOS2`) because the Bank of England IADB host blocks Cloudflare Worker egress. The daily benchmark cron fetches `IUDZOS2` from FRED's reachable graph CSV first and records successful observations with source `fred-sonia-compounded-index`; the Bank of England IADB feed is retained as a fallback with provenance `boe-sonia-compounded-index`. The derived value is unchanged — the same `IUDZOS2` compounded-index series and trailing 90-day annualization are applied — so the GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, and publication guards are unchanged.
 
 Yield v8.294 hardens the optional `USD_EFFR` benchmark source path. The daily benchmark cron now prefers the New York Fed Markets Data API latest EFFR endpoint (`nyfed-effr`) and retains FRED DFF (`fred-dff`) as a secondary market source. If both live EFFR feeds fail, the cron retains the prior market `USD_EFFR` benchmark when available and marks the fallback as `usd-effr-sources-failed-retained`; otherwise it reports `usd-effr-sources-failed`. PYS formula shape, source-risk calibration, benchmark selection semantics, history semantics, and publication guards are unchanged.
 
@@ -508,7 +510,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `USD_EFFR` | USD effective federal funds rate | New York Fed latest EFFR endpoint, then FRED `DFF` | Optional product-specific benchmark for EFFR-linked products such as USDGO; not the default USD hurdle |
 | `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
-| `GBP` | GBP 3M compounded SONIA | Bank of England IADB SONIA Compounded Index `IUDZOS2` CSV | Annualized from the trailing 90-day index change; metadata source `boe-sonia-compounded-index`, fallback mode `gbp-sonia-compounded-index-failed` |
+| `GBP` | GBP 3M compounded SONIA | FRED mirror of the SONIA Compounded Index `IUDZOS2` CSV, then Bank of England IADB `IUDZOS2` fallback | Annualized from the trailing 90-day index change; metadata source `fred-sonia-compounded-index` (BoE IADB host blocks Worker egress, retained as `boe-sonia-compounded-index` fallback), fallback mode `gbp-sonia-compounded-index-failed` |
 | `JPY` | JPY overnight call (TONA proxy) | Bank of Japan Time-Series Data Search `STRDCLUCON` | Used as a TONA-equivalent proxy |
 | `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`) | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, MXN retains the last market source when available or remains unavailable so rows fall back to USD. Etherfuse CETES current issuance is deliberately limited to the CETES product APY source, not the shared MXN benchmark. |
 | `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily percentage annualized over 252 business days before scoring |
@@ -871,8 +873,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.294",
-    "currentVersion": "8.294",
+    "version": "8.295",
+    "currentVersion": "8.295",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

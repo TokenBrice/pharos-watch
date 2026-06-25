@@ -78,6 +78,8 @@ const NYFED_EFFR_JSON_SNIPPET = JSON.stringify({
   ],
 });
 const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
+// FRED mirror of the same IUDZOS2 series, ISO dates — derives to the same rate.
+const FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2\n2026-01-01,100\n2026-04-01,101\n";
 const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
   totalCount: 2,
   items: [
@@ -151,6 +153,7 @@ function okExtendedBenchmarkMocks(): Record<string, Response> {
   return {
     "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
     "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
+    "id=IUDZOS2": new Response(FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
     "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
     "stat-search.boj.or.jp": new Response(JSON.stringify({
       RESULTSET: [{
@@ -263,7 +266,7 @@ describe("fetchTbillRate", () => {
     expect(metadata.eurRate).toBe(1.9358);
     expect(metadata.chfSource).toBe("six-sar3mc");
     expect(metadata.chfRate).toBe(-0.0539);
-    expect(metadata.gbpSource).toBe("boe-sonia-compounded-index");
+    expect(metadata.gbpSource).toBe("fred-sonia-compounded-index");
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
     expect(metadata.jpySource).toBe("boj-call-rate");
     expect(metadata.jpyRate).toBe(0.1);
@@ -301,6 +304,24 @@ describe("fetchTbillRate", () => {
       isFallback: false,
       fallbackMode: null,
     });
+  });
+
+  it("falls back to the BoE SONIA index when the FRED mirror is unreachable", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+      "id=IUDZOS2": null,
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(metadata.gbpSource).toBe("boe-sonia-compounded-index");
+    expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
   });
 
   it("falls back to Treasury XML when FRED fails", async () => {

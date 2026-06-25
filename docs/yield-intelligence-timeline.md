@@ -1,10 +1,18 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.294`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.295`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent.
+
+## v8.295 - GBP SONIA Benchmark Source Failover to FRED Mirror (June 25, 2026)
+
+- GBP benchmark refreshes now fetch the SONIA Compounded Index (`IUDZOS2`) from FRED's reachable graph CSV and record successful observations with source `fred-sonia-compounded-index`
+- The Bank of England IADB feed is retained as the secondary GBP source with provenance `boe-sonia-compounded-index`, used only when the FRED mirror is unavailable, because the BoE IADB host blocks Cloudflare Worker egress
+- The derived value is unchanged: the same `IUDZOS2` compounded-index series and trailing 90-day annualization are applied, so the GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, and publication guards are unchanged
+
+---
 
 ## v8.294 - NY Fed EFFR Benchmark Source Hardening (June 22, 2026)
 
