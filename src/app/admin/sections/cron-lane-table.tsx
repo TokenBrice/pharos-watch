@@ -101,6 +101,20 @@ function CronRunDots({ runs }: { runs: RecentRun[] }) {
 function CronRunHistoryPanel({ runs }: { runs: RecentRun[] }) {
   const recentRuns = runs.slice(0, 5);
 
+  // The "Reserve queue" column only carries meaning for the cursor-bearing
+  // sync-stablecoins lane. For every other job (e.g. snapshot-safety-grade-history)
+  // there is no reserve cursor, so render a neutral dash instead of the misleading
+  // "no reserve queue metadata" text that reads like a reserve fault.
+  const hasReserveQueueLane = recentRuns.some((run) => {
+    const metadata = readRecord(run.metadata);
+    return (
+      readNumber(metadata?.deferredCoins) != null ||
+      readString(metadata?.nextCursorStablecoinId) ||
+      readString(metadata?.loadedCursorNextStablecoinId) ||
+      readString(metadata?.cursorTailState)
+    );
+  });
+
   if (recentRuns.length === 0) {
     return (
       <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
@@ -138,9 +152,11 @@ function CronRunHistoryPanel({ runs }: { runs: RecentRun[] }) {
                   ]
                     .filter(Boolean)
                     .join(" · ")
-                : index === 0
-                  ? "no reserve queue metadata"
-                  : "metadata retained for latest run only";
+                : !hasReserveQueueLane
+                  ? "—"
+                  : index === 0
+                    ? "no reserve queue metadata"
+                    : "metadata retained for latest run only";
 
             return (
               <div
