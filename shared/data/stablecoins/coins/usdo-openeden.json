@@ -267,21 +267,5 @@
     "yieldSource": "OpenEden USDO daily rebase",
     "yieldType": "rebase"
   },
-  "liveReservesConfig": {
-    "adapter": "openeden-usdo",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "usdo-openeden",
-    "display": {
-      "url": "https://openeden.com/usdo/transparency",
-      "label": "OpenEden USDO"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
-      }
-    }
-  },
   "launchDate": "2025-02-21"
 }

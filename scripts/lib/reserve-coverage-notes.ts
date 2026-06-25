@@ -238,6 +238,15 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "An exchange-managed opaque reserve pool should remain curated-only until independently measured reserve data is available.",
   },
+  "usdo-openeden": {
+    sourceUrl: "https://openeden.com/usdo/transparency",
+    sourceQuality: "independent",
+    expectedAdapterFamily: "openeden-usdo (implemented; live config suspended pending issuer egress allowlist)",
+    freshnessEvidence:
+      "OpenEden's issuer API (prod-gw.openeden.com) publishes dated reserve composition and the openeden-usdo adapter verified it through 2026-06-10; the endpoint stays healthy for ordinary clients with a valid TLS chain.",
+    scoreGradePlausible: true,
+    note: "Genuine independent live feed, temporarily curated-only: OpenEden's AWS/APISIX gateway began dropping Cloudflare Worker egress (~2026-06-10), so every sync fails at the network layer before any HTTP response while the source itself stays reachable. The openeden-usdo adapter is retained; restore liveReservesConfig to re-enable once OpenEden allowlists our Worker egress (Cloudflare ASN AS13335).",
+  },
 };
 
 export const DEFAULT_SOURCE_QUALITY_NOTE: LiveReserveSourceQualityNote = {
