@@ -339,10 +339,13 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdo-openeden": {
     ...issuerBase,
-    capacityModel: { kind: "reserve-sync-metadata" },
+    ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: "2026-06-25",
     costModel: fixedFee(10, "OpenEden docs list a 10 bps redemption fee"),
-    reviewedAt: "2026-03-22",
     docs: [sourceRef("OpenEden Transparency", "https://openeden.com/usdo/transparency", ["route", "capacity", "fees"])],
+    notes: [
+      "Live reserve-sync capacity telemetry suspended 2026-06-25 because OpenEden's gateway blocks Cloudflare Worker egress; falls back to documented 1:1 USDC redemption via OpenEden until the live feed is restored",
+    ],
   },
   "usdm-moneta": {
     ...issuerBase,
