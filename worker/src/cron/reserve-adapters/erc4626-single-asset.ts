@@ -26,6 +26,7 @@ import {
   makeContractRawCaller,
 } from "./erc4626";
 import { parseBoundedDecimals, ratioFromRaw } from "./slice-math";
+import { throwIfAborted } from "../../lib/abort";
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -356,6 +357,7 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
   let withdrawableRaw = totalIdleRaw;
 
   for (const strategyAddress of defaultQueue) {
+    throwIfAborted(args.signal);
     const strategyParamsResult = await args.call(`${YEARN_V3_STRATEGIES_SELECTOR}${encodeAddress(strategyAddress)}`);
     const currentDebtRaw = parseAbiUint256Word(strategyParamsResult, 2);
     if (currentDebtRaw == null) {
