@@ -950,14 +950,14 @@
     "factsAsOf": "2026-05-15"
   },
   "msusd-main-street": {
-    "title": "USDC Base, Strategy Token Above",
-    "text": "Main Street's USDC-backed dollar layer mintable and redeemable 1:1 by verified users; strategy risk lives in the separate msY staking token, not here. Main Street USD is the liquid stablecoin in Main Street's two-token design: unstaked msUSD is described by the issuer as 1:1 backed by USDC and directly mintable or redeemable by verified users via {{term:redemption}}redemption{{/term}} flows. The options-box strategy risk belongs to the separate msY staking token, where users opt into NAV-accreting {{term:yield-bearing}}yield{{/term}} after depositing msUSD. That distinction keeps msUSD as the USDC-backed redemption asset, while msY carries the strategy exposure.",
-    "updatedAt": "2026-05-15",
+    "title": "Redemption Target, Not A Clean Vault",
+    "text": "msUSD is Main Street's dollar token with a USDC redemption target, but Pharos no longer treats it as a clean USDC reserve passthrough. Main Street documents 1:1 USDC minting and {{term:redemption}}redemption{{/term}} for verified users, yet the redemption path is capacity-managed, cooldown-bound, and can require position unwinds, asset conversion, and strategy liquidity before settlement. The separate msY token still owns the explicit options-box {{term:yield-bearing}}yield{{/term}} wrapper, but that split does not independently verify that unstaked msUSD is segregated from liquidity needed to support the strategy. The June 2026 depeg made that distinction material, so Pharos models msUSD with unresolved reserve-verification risk and very-high-risk reserve exposure rather than as fully backed idle USDC.",
+    "updatedAt": "2026-06-26",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex issue #384 review",
+    "reviewedAt": "2026-06-26",
+    "factsAsOf": "2026-06-26"
   },
   "iusd-infinifi": {
     "title": "Credit Fund in Token Clothing",
