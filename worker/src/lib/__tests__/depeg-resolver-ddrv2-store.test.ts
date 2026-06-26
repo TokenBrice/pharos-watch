@@ -3,9 +3,16 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
-import { ensureCanonicalIncidents, loadCanonicalIncidents, recordLockOpportunity } from "../depeg-resolver-incident-store";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  ensureCanonicalIncidents,
+  loadCanonicalIncidents,
+  recordLockDeferral,
+  recordLockOpportunity,
+} from "../depeg-resolver-incident-store";
 import {
   loadFirstPublicationMembership,
+  loadLatestPublicationManifest,
   loadSealedPublicPredictions,
   sealPublicNoCall,
   sealPublicPrediction,
@@ -613,6 +620,73 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("maps persisted incident membership and lock state rows on read", async () => {
+    const db = makeSqliteD1();
+    try {
+      insertOpenEvent(db);
+      const incident = await ensureIncident(db);
+      const backstopAt = 100000 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
+
+      await recordLockDeferral(db, {
+        incidentKey: incident.incidentKey,
+        eventId: 1,
+        predictionPolicyVersion: "sticky-24h-v1",
+        eligibleAt: 143200,
+        runAt: 143200,
+        action: "deferred",
+        reason: "scheduler unhealthy",
+        healthStatus: "degraded",
+        runId: "ddr:test:deferral",
+        lockTrigger: "forecast_readiness",
+        forecastReadinessScore: 0.81,
+        forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+        readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+        backstopAt,
+        backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      });
+
+      const [loaded] = await loadCanonicalIncidents(db, {
+        stablecoinIds: ["lusd-liquity"],
+        predictionPolicyVersion: "sticky-24h-v1",
+        policyUniverseIncluded: true,
+      });
+
+      expect(loaded).toMatchObject({
+        incidentKey: incident.incidentKey,
+        eventId: 1,
+        relation: undefined,
+        stablecoinId: "lusd-liquity",
+        policyUniverseIncluded: true,
+        rolloutActiveAtEnablement: false,
+        policyMembership: {
+          incidentKey: incident.incidentKey,
+          stablecoinId: "lusd-liquity",
+          predictionPolicyVersion: "sticky-24h-v1",
+          publicTrackedAtFirstSeen: true,
+          psiShadowAtFirstSeen: false,
+          policyUniverseIncluded: true,
+          policyUniverseReason: "post_effective_public_tracked",
+          registrySnapshotJson: '{"id":"lusd-liquity","symbol":"LUSD"}',
+          createdAt: 200000,
+        },
+        lockState: {
+          eligibleAt: 143200,
+          deferralCount: 1,
+          lastDeferralReason: "scheduler unhealthy",
+          lastState: "lock_deferred",
+          lockTrigger: "forecast_readiness",
+          forecastReadinessScore: 0.81,
+          forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+          readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+          backstopAt,
+          backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+        },
+      });
+    } finally {
+      db.close();
+    }
+  });
+
   it("detects exact-key collisions for unlinked events via the batched pre-loop check", async () => {
     // A second, differently-IDed event with an identical canonical signature
     // maps to the existing incident's key. The batched key-collision check must
@@ -1032,6 +1106,20 @@ describe("DDRv2 storage migrations and stores", () => {
     } finally {
       db.close();
     }
+  });
+
+  it("propagates D1 read failures from incident reads", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_resolver_incidents i",
+        rows: [],
+        throwError: new Error("D1_ERROR: incident read failed"),
+      },
+    ]);
+
+    await expect(loadCanonicalIncidents(db, { stablecoinIds: ["lusd-liquity"] })).rejects.toThrow(
+      "D1_ERROR: incident read failed",
+    );
   });
 
   it("seals exactly one public prediction and makes the assessment immutable", async () => {
@@ -1685,6 +1773,7 @@ describe("DDRv2 storage migrations and stores", () => {
       });
       expect(manifest.publicPredictionIds).toEqual([prediction.id]);
       expect(manifest.publicPredictionCount).toBe(1);
+      expect(manifest.publicPredictionRowHashes).toEqual({ [prediction.id]: prediction.rowHash });
       expect(() =>
         db.sqlite
           .prepare(
@@ -1706,9 +1795,100 @@ describe("DDRv2 storage migrations and stores", () => {
       const membership = await loadFirstPublicationMembership(db, { publicPredictionIds: [prediction.id] });
       expect(membership).toHaveLength(1);
       expect(membership[0]?.snapshotToken).toBe("ddrpub:test:1");
+
+      const latest = await loadLatestPublicationManifest(db);
+      expect(latest).toMatchObject({
+        snapshotToken: "ddrpub:test:2",
+        snapshotKind: "ddr_public",
+        snapshotSequence: 2,
+        snapshotGeneration: 2,
+        publishedAt: 200100,
+        publicPredictionIds: [prediction.id],
+        publicPredictionRowHashes: { [prediction.id]: prediction.rowHash },
+        baseRowCount: 1,
+        publicPredictionCount: 1,
+        validatorVersion: "vitest",
+      });
     } finally {
       db.close();
     }
+  });
+
+  it("rejects malformed publication manifest metadata JSON on read", async () => {
+    const db = makeSqliteD1();
+    try {
+      const { prediction } = await sealPredictionFixture(db);
+      const rawManifestPayload = sealedPayload(prediction.incidentKey);
+      const manifestPayload = attachDdrPublicRowHash(
+        {
+          ...rawManifestPayload,
+          prediction: {
+            ...(rawManifestPayload.prediction as Record<string, unknown>),
+            publicPredictionId: prediction.id,
+            state: "frozen",
+            publishedAt: 200000,
+            publicationSnapshotToken: "ddrpub:test:bad-json",
+            snapshotGeneration: 2,
+          },
+        },
+        prediction.rowHash,
+      );
+
+      await writePublicationManifest(db, {
+        snapshotToken: "ddrpub:test:bad-json",
+        snapshotGeneration: 2,
+        publishedAt: 200000,
+        validatorVersion: "vitest",
+        basePayload: {
+          _meta: {
+            publicPredictionIds: [prediction.id],
+            publicPredictionRowHashes: { [prediction.id]: prediction.rowHash },
+          },
+          rows: [manifestPayload],
+        },
+      });
+
+      db.sqlite.exec("DROP TRIGGER trg_ddr_publication_snapshots_no_update");
+      db.sqlite
+        .prepare(
+          `UPDATE depeg_resolver_publication_snapshots
+           SET public_prediction_ids_json = ?
+           WHERE snapshot_token = ?`,
+        )
+        .run("{}", "ddrpub:test:bad-json");
+
+      await expect(loadLatestPublicationManifest(db)).rejects.toThrow(
+        /publicPredictionIdsJson must be a JSON array/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  it("propagates D1 batch failures while writing publication manifests", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO depeg_resolver_publication_snapshots",
+        rows: [],
+        throwError: new Error("D1_ERROR: manifest batch failed"),
+      },
+    ]);
+
+    await expect(
+      writePublicationManifest(db, {
+        snapshotToken: "ddrpub:test:empty",
+        snapshotGeneration: 2,
+        publishedAt: 200000,
+        validatorVersion: "vitest",
+        basePayload: {
+          _meta: {
+            publicPredictionIds: [],
+            publicPredictionRowHashes: {},
+          },
+          rows: [],
+        },
+      }),
+    ).rejects.toThrow("D1_ERROR: manifest batch failed");
   });
 
   it("persists publication retry state for sealed rows", async () => {

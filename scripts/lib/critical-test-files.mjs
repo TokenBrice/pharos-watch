@@ -57,6 +57,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/cron/__tests__/compute-depeg-resolver.test.ts",
   "worker/src/cron/__tests__/depeg-resolver-public-projection.test.ts",
   "worker/src/cron/__tests__/compute-depeg-resolver-review.test.ts",
+  "worker/src/lib/__tests__/depeg-resolver-ddrv2-store.test.ts",
   "worker/src/cron/depeg-detection/__tests__/decision-engine.test.ts",
   "worker/src/cron/depeg-detection/__tests__/repair.test.ts",
   "worker/src/cron/depeg-resolver/__tests__/incident-resolution.test.ts",

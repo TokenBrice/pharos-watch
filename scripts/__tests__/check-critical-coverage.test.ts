@@ -285,18 +285,12 @@ describe("critical coverage changed-file detection", () => {
 
     expect(validateCriticalCoverageWaiverMetadata(CRITICAL_COVERAGE_WAIVERS, { candidateFiles: candidates })).toEqual([]);
     expect(findCriticalCoverageCandidatesMissingEnrollment(candidates)).toEqual([]);
-    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-incident-store.ts"]).toMatchObject({
-      reviewAfter: "2026-08-30",
-      nextAction:
-        "Add direct DDR store tests for row mapping, state transitions, malformed payloads, and D1 failures before enrollment.",
-    });
-    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-publication-store.ts"]).toMatchObject({
-      reviewAfter: "2026-08-30",
-      nextAction:
-        "Add direct DDR store tests for row mapping, state transitions, malformed payloads, and D1 failures before enrollment.",
-    });
-    expect(CRITICAL_FILES).not.toContain("worker/src/lib/depeg-resolver-incident-store.ts");
-    expect(CRITICAL_FILES).not.toContain("worker/src/lib/depeg-resolver-publication-store.ts");
+    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-incident-store.ts"]).toBeUndefined();
+    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-publication-store.ts"]).toBeUndefined();
+    expect(CRITICAL_FILES).toEqual(expect.arrayContaining([
+      "worker/src/lib/depeg-resolver-incident-store.ts",
+      "worker/src/lib/depeg-resolver-publication-store.ts",
+    ]));
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
