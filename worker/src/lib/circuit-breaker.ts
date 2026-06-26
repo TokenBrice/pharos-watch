@@ -29,7 +29,7 @@ const DEFAULT_RECORD: CircuitRecord = {
   lastSuccessAt: null,
   openedAt: null,
 };
-export const PROVIDER_CIRCUIT_INDEX_CACHE_KEY = "provider:circuit:index";
+const PROVIDER_CIRCUIT_INDEX_CACHE_KEY = "provider:circuit:index";
 const CIRCUIT_RECORD_MEMO_TTL_MS = 5_000;
 
 interface CircuitRecordMemoCache {
@@ -190,9 +190,41 @@ export async function removeProviderCircuitFromIndexSafe(
   }
 }
 
-export async function getProviderCircuitIndex(db: D1Database): Promise<Record<string, CircuitRecord>> {
-  const cached = await getCache(db, PROVIDER_CIRCUIT_INDEX_CACHE_KEY);
-  return parseProviderCircuitIndex(cached?.value);
+const CIRCUIT_RECORD_READ_CHUNK_SIZE = 100;
+
+/**
+ * Read authoritative circuit rows for a bounded source allowlist. Status
+ * surfaces use this instead of the aggregate provider index so lost index
+ * updates or pre-index circuit rows cannot be reported as closed.
+ */
+export async function getCircuitRecordsForSources(
+  db: D1Database,
+  sources: readonly string[],
+): Promise<Record<string, CircuitRecord>> {
+  const records: Record<string, CircuitRecord> = {};
+  const uniqueSources = [...new Set(sources)].filter((source) => source.length > 0);
+  for (let offset = 0; offset < uniqueSources.length; offset += CIRCUIT_RECORD_READ_CHUNK_SIZE) {
+    const chunk = uniqueSources.slice(offset, offset + CIRCUIT_RECORD_READ_CHUNK_SIZE);
+    const keys = chunk.map(cacheKey);
+    const placeholders = keys.map(() => "?").join(", ");
+    const result = await db
+      .prepare(`SELECT key, value FROM cache WHERE key IN (${placeholders})`)
+      .bind(...keys)
+      .all<{ key: string; value: string }>();
+    for (const row of result.results ?? []) {
+      if (!row.key.startsWith("circuit:")) continue;
+      const source = row.key.slice("circuit:".length);
+      try {
+        const parsed = JSON.parse(row.value);
+        if (isCircuitRecord(parsed)) {
+          records[source] = cloneCircuitRecord(parsed);
+        }
+      } catch {
+        // skip malformed rows
+      }
+    }
+  }
+  return records;
 }
 
 /**
