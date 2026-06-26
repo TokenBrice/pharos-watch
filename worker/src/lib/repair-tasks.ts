@@ -488,7 +488,6 @@ async function claimRepairTask(
         "deferred",
         input.nowSec,
         input.nowSec,
-        input.nowSec,
       )
       .run(),
     3,

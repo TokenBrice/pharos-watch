@@ -248,7 +248,32 @@ describe("repair tasks", () => {
     });
 
     const history = db.getHistory();
-    expect(history.filter((entry) => entry.sql.includes("SET state = 'claimed'"))).toHaveLength(2);
+    const claimUpdates = history.filter((entry) => entry.sql.includes("SET state = 'claimed'"));
+    expect(claimUpdates).toHaveLength(2);
+    expect(claimUpdates.map((entry) => entry.binds)).toEqual([
+      [
+        expect.stringContaining(`repair-runner:${NOW}:`),
+        NOW + 15 * 60,
+        NOW,
+        NOW,
+        linkedTaskId,
+        "open",
+        "deferred",
+        NOW,
+        NOW,
+      ],
+      [
+        expect.stringContaining(`repair-runner:${NOW}:`),
+        NOW + 15 * 60,
+        NOW,
+        NOW,
+        unresolvedTaskId,
+        "open",
+        "deferred",
+        NOW,
+        NOW,
+      ],
+    ]);
     expect(history.find((entry) => entry.sql.includes("SET state = 'closed'"))?.binds).toEqual([
       NOW,
       NOW,
