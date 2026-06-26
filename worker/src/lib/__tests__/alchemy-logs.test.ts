@@ -356,6 +356,36 @@ describe("resolveBlockTimestamps", () => {
     expect(budget.count).toBe(1);
   });
 
+  it("retries missing timestamp items with smaller batches", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify([
+          { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
+          { jsonrpc: "2.0", id: 2, result: { timestamp: "0x6651a2e4" } },
+        ]),
+        { status: 200 },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify([
+          { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2cc" } },
+        ]),
+        { status: 200 },
+      ));
+
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [0x176f050, 0x176f051, 0x176f052],
+      budget,
+    );
+
+    expect(result.get(0x176f050)).toBe(0x6651a2c0);
+    expect(result.get(0x176f051)).toBe(0x6651a2cc);
+    expect(result.get(0x176f052)).toBe(0x6651a2e4);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(budget.count).toBe(2);
+  });
+
   it("uses local cache before fetching", async () => {
     const budget = createBudget(100);
     const local = new Map<number, number>([[0x176f050, 0x6651a2c0]]);

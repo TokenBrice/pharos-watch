@@ -411,6 +411,97 @@ const TIMESTAMP_CACHE_READ_CHUNK = Math.max(
   D1_SAFE_MAX_SQL_VARIABLES - TIMESTAMP_CACHE_READ_FIXED_BINDINGS,
 );
 const DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC = 14 * DAY_SECONDS;
+const TIMESTAMP_RETRY_BATCH_SIZES = [TIMESTAMP_BATCH_SIZE, 10, 1] as const;
+
+interface BlockTimestampBatchResult {
+  timestamps: Map<number, number>;
+  missingBlocks: number[];
+  issueCount: number;
+}
+
+async function fetchBlockTimestampBatch(
+  alchemyUrl: string,
+  batch: number[],
+  signal?: AbortSignal,
+): Promise<BlockTimestampBatchResult> {
+  const missingAll = (issueCount = 1): BlockTimestampBatchResult => ({
+    timestamps: new Map<number, number>(),
+    missingBlocks: batch,
+    issueCount,
+  });
+
+  const payload = batch.map((block, idx) => ({
+    jsonrpc: "2.0",
+    id: idx,
+    method: "eth_getBlockByNumber",
+    params: ["0x" + block.toString(16), false],
+  }));
+
+  try {
+    const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
+    const res = await fetch(alchemyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+    if (!res.ok) {
+      console.warn(`[alchemy-logs] batch eth_getBlockByNumber HTTP ${res.status}`);
+      await cancelResponseBodyQuietly(res);
+      return missingAll();
+    }
+
+    const parsed = await res.json() as unknown;
+    if (!Array.isArray(parsed)) {
+      console.warn("[alchemy-logs] batch eth_getBlockByNumber returned non-array JSON body");
+      return missingAll();
+    }
+
+    const timestamps = new Map<number, number>();
+    let issueCount = 0;
+    for (const response of parsed) {
+      if (!response || typeof response !== "object") {
+        issueCount++;
+        continue;
+      }
+      const rpc = response as Partial<JsonRpcResponse<{ timestamp: string }>>;
+      const requestIndex = rpc.id;
+      if (typeof requestIndex !== "number" || !Number.isInteger(requestIndex)) {
+        issueCount++;
+        continue;
+      }
+      if (requestIndex < 0 || requestIndex >= batch.length) {
+        issueCount++;
+        continue;
+      }
+      if (rpc.error) {
+        issueCount++;
+        continue;
+      }
+
+      const tsHex = rpc.result?.timestamp;
+      if (typeof tsHex !== "string") {
+        issueCount++;
+        continue;
+      }
+
+      const ts = parseInt(tsHex, 16);
+      if (Number.isFinite(ts)) {
+        // Duplicate IDs are deterministic: the last valid mapping wins.
+        timestamps.set(batch[requestIndex]!, ts);
+      } else {
+        issueCount++;
+      }
+    }
+
+    const missingBlocks = batch.filter((block) => !timestamps.has(block));
+    if (missingBlocks.length > 0) issueCount++;
+    return { timestamps, missingBlocks, issueCount };
+  } catch (e) {
+    console.warn("[alchemy-logs] batch timestamp fetch failed:", e);
+    return missingAll();
+  }
+}
 
 export async function resolveBlockTimestamps(
   alchemyUrl: string,
@@ -462,67 +553,41 @@ export async function resolveBlockTimestamps(
   }
 
   const freshResolvedForCache = new Map<number, number>();
-  let batchErrors = 0;
-  for (let i = 0; i < unresolved.length; i += TIMESTAMP_BATCH_SIZE) {
-    throwIfAborted(options?.signal);
-    if (budgetExhausted(budget)) break;
-    budget.count++;
+  let fetchIssues = 0;
+  let remotePending = unresolved;
+  for (const batchSize of TIMESTAMP_RETRY_BATCH_SIZES) {
+    if (remotePending.length === 0) break;
+    const stillMissing: number[] = [];
 
-    const batch = unresolved.slice(i, i + TIMESTAMP_BATCH_SIZE);
-    const payload = batch.map((block, idx) => ({
-      jsonrpc: "2.0",
-      id: idx,
-      method: "eth_getBlockByNumber",
-      params: ["0x" + block.toString(16), false],
-    }));
-
-    try {
-      const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
-      const res = await fetch(alchemyUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: options?.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
-      });
-      if (!res.ok) {
-        console.warn(`[alchemy-logs] batch eth_getBlockByNumber HTTP ${res.status}`);
-        await cancelResponseBodyQuietly(res);
-        continue;
+    for (let i = 0; i < remotePending.length; i += batchSize) {
+      throwIfAborted(options?.signal);
+      if (budgetExhausted(budget)) {
+        stillMissing.push(...remotePending.slice(i));
+        break;
       }
-      const parsed = await res.json() as unknown;
-      if (!Array.isArray(parsed)) {
-        console.warn("[alchemy-logs] batch eth_getBlockByNumber returned non-array JSON body");
-        continue;
+      budget.count++;
+
+      const batch = remotePending.slice(i, i + batchSize);
+      const result = await fetchBlockTimestampBatch(alchemyUrl, batch, options?.signal);
+      fetchIssues += result.issueCount;
+      for (const [block, ts] of result.timestamps) {
+        timestamps.set(block, ts);
+        localCache?.set(block, ts);
+        freshResolvedForCache.set(block, ts);
       }
-
-      for (const response of parsed) {
-        if (!response || typeof response !== "object") continue;
-        const rpc = response as Partial<JsonRpcResponse<{ timestamp: string }>>;
-        const requestIndex = rpc.id;
-        if (typeof requestIndex !== "number" || !Number.isInteger(requestIndex)) continue;
-        if (requestIndex < 0 || requestIndex >= batch.length) continue;
-
-        const tsHex = rpc.result?.timestamp;
-        if (typeof tsHex !== "string") continue;
-
-        const ts = parseInt(tsHex, 16);
-        if (Number.isFinite(ts)) {
-          // Duplicate IDs are deterministic: the last valid mapping wins.
-          timestamps.set(batch[requestIndex], ts);
-          localCache?.set(batch[requestIndex], ts);
-          freshResolvedForCache.set(batch[requestIndex], ts);
-        }
-      }
-    } catch (e) {
-      batchErrors++;
-      console.warn(`[alchemy-logs] batch timestamp fetch failed (${batchErrors}):`, e);
+      stillMissing.push(...result.missingBlocks.filter((block) => !timestamps.has(block)));
     }
+
+    remotePending = stillMissing;
+    if (budgetExhausted(budget)) break;
   }
 
-  if (batchErrors > 0) {
+  if (fetchIssues > 0) {
     const totalNeeded = uniqueBlocks.length;
     const stillMissing = uniqueBlocks.filter((b) => !timestamps.has(b)).length;
-    console.warn(`[alchemy-logs] timestamp resolution incomplete: ${stillMissing}/${totalNeeded} blocks still unresolved after ${batchErrors} batch error(s)`);
+    if (stillMissing > 0) {
+      console.warn(`[alchemy-logs] timestamp resolution incomplete: ${stillMissing}/${totalNeeded} blocks still unresolved after ${fetchIssues} fetch issue(s)`);
+    }
   }
 
   if (persistentCache && freshResolvedForCache.size > 0) {
@@ -536,6 +601,7 @@ export async function resolveBlockTimestamps(
         .bind(persistentCache.chainId, block, ts, nowSec),
     );
     for (let i = 0; i < stmts.length; i += TIMESTAMP_CACHE_READ_CHUNK) {
+      throwIfAborted(options?.signal);
       await persistentCache.db.batch(stmts.slice(i, i + TIMESTAMP_CACHE_READ_CHUNK));
     }
   }
