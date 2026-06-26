@@ -4,10 +4,10 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { getCache } from "../lib/db-cache";
-import { reportCronProgress } from "../lib/cron-progress";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY, parseYieldHistoryWriterPause } from "../lib/yield-history-cleanup";
+import { createYieldProgressReporter } from "./yield-progress";
 import { resolveYieldSources } from "./yield-sync/resolve";
 import { loadYieldHistorySnapshots } from "./yield-sync/history";
 import { evaluateYieldSourcesCooperative } from "./yield-sync/evaluation";
@@ -40,34 +40,10 @@ export async function syncYieldData(
   const opportunityCoinIdSet = new Set(
     ACTIVE_STABLECOINS.map((coin) => coin.id).filter((id) => !yieldCoinIdSet.has(id)),
   );
-  const progressTotal = yieldCoins.length + opportunityCoinIdSet.size;
-  const reportYieldProgress = async (
-    stage: string,
-    message: string,
-    providerFamily: string,
-    options: {
-      itemsDone?: number;
-      itemsTotal?: number;
-      metadata?: Record<string, unknown>;
-    } = {},
-  ) => {
-    await reportCronProgress(reportProgress, {
-      stage,
-      message,
-      itemsDone: options.itemsDone,
-      itemsTotal: options.itemsTotal ?? progressTotal,
-      metadata: {
-        providerFamily,
-        phase: stage,
-        countTotals: {
-          yieldBearingCoins: yieldCoins.length,
-          opportunityCoins: opportunityCoinIdSet.size,
-          totalTrackedForYield: progressTotal,
-        },
-        ...options.metadata,
-      },
-    });
-  };
+  const { progressTotal, reportYieldProgress } = createYieldProgressReporter(reportProgress, {
+    yieldBearingCoins: yieldCoins.length,
+    opportunityCoins: opportunityCoinIdSet.size,
+  });
 
   await reportYieldProgress("preflight", "Preparing yield publication inputs", "yield", {
     itemsDone: 0,
