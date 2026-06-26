@@ -17,6 +17,8 @@ const SELF_SERVE_SERVICE_UNAVAILABLE = "API key self-serve is temporarily unavai
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const API_KEY_REQUEST_ID_BYTES = 18;
 const VERIFICATION_TOKEN_BYTES = 32;
+const API_KEY_SELF_SERVE_REQUEST_MAX_BYTES = 16 * 1024;
+const API_KEY_SELF_SERVE_VERIFY_MAX_BYTES = 1024;
 
 const PUBLIC_ENDPOINT_PATHS = new Set(
   ENDPOINT_DEFINITIONS
@@ -69,6 +71,7 @@ export function requireVerifySelfServeEnv(env: ApiKeySelfServeEnv): RequiredVeri
 
 export async function parseSelfServeRequest(request: Request): Promise<ParsedApiKeySelfServeRequest | Response> {
   return parseRequestJsonWithSchema(request, ApiKeySelfServeRequestSchema, {
+    maxBytes: API_KEY_SELF_SERVE_REQUEST_MAX_BYTES,
     responseOptions: { noStore: true },
     formatSchemaError: (issues) => issues[0]?.message ?? "Invalid API key request data",
   });
@@ -76,6 +79,7 @@ export async function parseSelfServeRequest(request: Request): Promise<ParsedApi
 
 export async function parseSelfServeVerifyRequest(request: Request): Promise<ParsedApiKeySelfServeVerify | Response> {
   return parseRequestJsonWithSchema(request, ApiKeySelfServeVerifySchema, {
+    maxBytes: API_KEY_SELF_SERVE_VERIFY_MAX_BYTES,
     responseOptions: { noStore: true },
     formatSchemaError: (issues) => issues[0]?.message ?? "Invalid verification data",
   });

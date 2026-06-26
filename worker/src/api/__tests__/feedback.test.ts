@@ -10,6 +10,7 @@ vi.stubGlobal("fetch", fetchSpy);
 stubCryptoForAuth();
 
 const { handleFeedback } = await import("../feedback");
+const encoder = new TextEncoder();
 
 /** Build a valid feedback request body */
 function makeFeedbackBody(
@@ -49,6 +50,39 @@ function makeRequest(body: unknown): Request {
   });
 }
 
+function makeRawRequest(body: BodyInit, headers: Record<string, string> = {}): Request {
+  return new Request("https://x/api/feedback", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "CF-Connecting-IP": "1.2.3.4",
+      ...headers,
+    },
+    body,
+  });
+}
+
+function makeStreamedRequest(chunks: string[], headers: Record<string, string> = {}): Request {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+  return new Request("https://x/api/feedback", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "CF-Connecting-IP": "1.2.3.4",
+      ...headers,
+    },
+    body,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+}
+
 function makeEnv(overrides: Partial<FeedbackEnv> = {}): FeedbackEnv {
   return {
     GITHUB_PAT: overrides.GITHUB_PAT ?? "ghp_test_token",
@@ -72,6 +106,38 @@ describe("handleFeedback", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toMatch(/Invalid JSON/i);
+  });
+
+  it("returns 413 for oversized declared bodies before side effects", async () => {
+    const db = mockD1([], { requireMatch: true });
+    const res = await handleFeedback(
+      db,
+      makeRawRequest(JSON.stringify(makeFeedbackBody()), { "Content-Length": String(17 * 1024) }),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toEqual({ error: "Request body too large" });
+    expect(db.getHistory()).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 413 for oversized streamed bodies before side effects", async () => {
+    const db = mockD1([], { requireMatch: true });
+    const res = await handleFeedback(
+      db,
+      makeStreamedRequest([
+        "{\"type\":\"bug\",\"title\":\"Broken\",\"description\":\"",
+        "x".repeat(17 * 1024),
+        "\",\"pageUrl\":\"/stablecoin/usdt-tether\"}",
+      ]),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toEqual({ error: "Request body too large" });
+    expect(db.getHistory()).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("returns 400 for invalid feedback type", async () => {
@@ -136,6 +202,19 @@ describe("handleFeedback", () => {
     const body = (await res.json()) as { ok: boolean };
     expect(body.ok).toBe(true);
     // Should NOT call GitHub API for honeypot
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized honeypot fields before side effects", async () => {
+    const db = mockD1([], { requireMatch: true });
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody({ website: "x".repeat(301) })),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(400);
+    expect(db.getHistory()).toHaveLength(0);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

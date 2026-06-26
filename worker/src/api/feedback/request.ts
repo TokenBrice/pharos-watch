@@ -13,9 +13,11 @@ import {
 import { logWorkerEvent } from "../../lib/structured-log";
 
 const FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC = 60;
+const FEEDBACK_REQUEST_MAX_BYTES = 16 * 1024;
 
 export async function parseFeedbackRequest(request: Request): Promise<FeedbackBody | Response> {
   return parseRequestJsonWithSchema(request, FeedbackBodySchema, {
+    maxBytes: FEEDBACK_REQUEST_MAX_BYTES,
     formatSchemaError: (issues) => issues[0]?.message ?? "Invalid feedback data",
   });
 }

@@ -8,6 +8,8 @@ import {
   SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
 
+const HONEYPOT_MAX_LENGTH = 300;
+
 export interface ApiKeySelfServeEnv {
   API_KEY_SELF_SERVE_IP_SALT?: string;
   API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER?: string;
@@ -120,7 +122,7 @@ export const ApiKeySelfServeRequestSchema = z.object({
   acceptedTerms: z.literal(true, {
     message: "You must accept the fair-use terms",
   }),
-  website: z.string().optional(),
+  website: z.string().max(HONEYPOT_MAX_LENGTH).optional(),
 }).strict();
 
 export const ApiKeySelfServeVerifySchema = z.object({

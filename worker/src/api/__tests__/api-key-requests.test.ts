@@ -206,6 +206,31 @@ function postRequest(path: string, body: unknown, headers: Record<string, string
   });
 }
 
+function rawPostRequest(path: string, body: BodyInit, headers: Record<string, string> = {}) {
+  return new Request(`https://api.pharos.watch${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "CF-Connecting-IP": "203.0.113.10",
+      "User-Agent": "vitest",
+      ...headers,
+    },
+    body,
+  });
+}
+
+function throwingD1(): D1Database {
+  const reject = () => {
+    throw new Error("D1 should not be touched");
+  };
+  return {
+    prepare: reject,
+    batch: reject,
+    exec: reject,
+    dump: reject,
+  } as unknown as D1Database;
+}
+
 function extractVerificationToken(sentBody: unknown): string {
   const text = (sentBody as { text: string }).text;
   const match = text.match(/https:\/\/pharos\.watch\/api\/#(akv_[A-Za-z0-9_-]+)/);
@@ -260,6 +285,68 @@ describe("api key self-serve request handlers", () => {
       status: "pending_verification",
     });
     expect((sentEmails[0] as { text: string }).text).toContain("https://pharos.watch/api/#akv_");
+  });
+
+  it("returns no-store 400 for invalid initial request JSON", async () => {
+    const response = await handleApiKeyRequest(
+      throwingD1(),
+      rawPostRequest("/api/api-key-requests", "{"),
+      env(),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("returns no-store 400 for invalid verify request JSON", async () => {
+    const response = await handleApiKeyRequestVerify(
+      throwingD1(),
+      rawPostRequest("/api/api-key-requests/verify", "{"),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("returns no-store 413 for oversized initial request bodies before side effects", async () => {
+    const response = await handleApiKeyRequest(
+      throwingD1(),
+      rawPostRequest(
+        "/api/api-key-requests",
+        JSON.stringify(validBody()),
+        { "Content-Length": String(17 * 1024) },
+      ),
+      env(),
+    );
+
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("returns no-store 413 for oversized verify bodies before side effects", async () => {
+    const response = await handleApiKeyRequestVerify(
+      throwingD1(),
+      rawPostRequest(
+        "/api/api-key-requests/verify",
+        JSON.stringify({ token: "akv_example_verification_token" }),
+        { "Content-Length": "2048" },
+      ),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    expect(sentEmails).toHaveLength(0);
   });
 
   it("accepts concise human-readable use cases", async () => {
@@ -420,6 +507,20 @@ describe("api key self-serve request handlers", () => {
     expect(response.status).toBe(200);
     expect(sentEmails).toHaveLength(0);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 0 });
+  });
+
+  it("rejects oversized honeypot fields before side effects", async () => {
+    const response = await handleApiKeyRequest(
+      throwingD1(),
+      postRequest("/api/api-key-requests", validBody({
+        website: "x".repeat(301),
+      })),
+      env(),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(sentEmails).toHaveLength(0);
   });
 
   it("releases stale orphan pending claims via the deferred waitUntil sweep", async () => {

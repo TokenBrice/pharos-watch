@@ -1,0 +1,95 @@
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
+import { parseRequestJsonWithSchema } from "../../lib/api-utils";
+
+const encoder = new TextEncoder();
+const schema = z.object({ ok: z.boolean() });
+
+function postRequest(body: BodyInit, headers: Record<string, string> = {}): Request {
+  return new Request("https://api.pharos.watch/api/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body,
+  });
+}
+
+function streamedRequest(chunks: string[], headers: Record<string, string> = {}): Request {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+  return new Request("https://api.pharos.watch/api/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+}
+
+describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
+  it("accepts valid JSON under the byte cap", async () => {
+    await expect(
+      parseRequestJsonWithSchema(postRequest(JSON.stringify({ ok: true })), schema, {
+        maxBytes: 64,
+      }),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it("preserves invalid JSON as 400 under the byte cap", async () => {
+    const response = await parseRequestJsonWithSchema(postRequest("{"), schema, {
+      maxBytes: 64,
+    });
+
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    }
+  });
+
+  it("rejects oversized declared Content-Length before reading", async () => {
+    const response = await parseRequestJsonWithSchema(
+      postRequest(JSON.stringify({ ok: true }), { "Content-Length": "65" }),
+      schema,
+      { maxBytes: 64 },
+    );
+
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(413);
+      await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    }
+  });
+
+  it("rejects oversized chunked bodies without relying on Content-Length", async () => {
+    const response = await parseRequestJsonWithSchema(
+      streamedRequest(["{\"ok\":", "true", ",\"pad\":\"", "x".repeat(80), "\"}"]),
+      schema,
+      { maxBytes: 64 },
+    );
+
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(413);
+      await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    }
+  });
+
+  it("rejects lying-small Content-Length bodies while streaming", async () => {
+    const response = await parseRequestJsonWithSchema(
+      streamedRequest(["{\"ok\":true,\"pad\":\"", "x".repeat(80), "\"}"], { "Content-Length": "12" }),
+      schema,
+      { maxBytes: 64 },
+    );
+
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(413);
+      await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    }
+  });
+});

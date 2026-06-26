@@ -229,6 +229,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 401    | Unauthorized          | Public `/api/*` endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth)                                                                                                                                     |
 | 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1`                                                                                                                                                             |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                                                                                                                                                      |
+| 413    | Payload Too Large     | Public JSON `POST` body exceeds that endpoint's defensive byte cap before parsing or side effects                                                                                                                                                                                                                                               |
 | 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter or feedback-specific limiter; feedback uses its own message body)                                                                                                                                                                                                                              |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                                                                                                                                                             |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api`                                                                                                                                                                                            |
@@ -3273,7 +3274,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 | `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"` | Yes      | Used for review context                                                                                                         |
 | `expectedVolume`    | `string`                                                            | No       | Private operator context only                                                                                                   |
 | `acceptedTerms`     | `true`                                                              | Yes      | Fair-use acknowledgement                                                                                                        |
-| `website`           | `string`                                                            | No       | Honeypot field; non-empty submissions are silently accepted without issuing work                                                |
+| `website`           | `string`                                                            | No       | Honeypot field, max 300 chars; non-empty submissions are silently accepted without issuing work                                |
 
 **Success response:** `202 Accepted`
 
@@ -3288,6 +3289,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 
 - `400` invalid body, invalid email, invalid project URL, unknown/admin intended endpoint, or missing fair-use acknowledgement
 - duplicate active or pending self-serve key claims receive the same `202` response shape as a new pending request and do not send a second verification link
+- `413` request body above the 16 KiB defensive cap
 - `429` request throttle exceeded; responses include `Retry-After`
 - `503` self-serve env/email dependency unavailable (`Retry-After: 60`)
 
@@ -3330,6 +3332,7 @@ Public self-serve verification endpoint used by the email link. Links carry the 
 **Error responses**
 
 - `400` invalid, expired, used, or no-longer-pending verification token
+- `413` request body above the 1 KiB defensive cap
 - `429` verification attempt throttle exceeded or daily issuance limit for the salted IP hash reached; responses include `Retry-After`
 - `503` self-serve dependency unavailable or issuance consistency compensation triggered (`Retry-After: 60`)
 
@@ -3369,7 +3372,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 | `title`                                                       | `string`                                          | Conditional | Required for `bug` and `feature-request` (3–100 chars); optional for `data-correction`                                                     |
 | `description`                                                 | `string`                                          | Yes         | 10–2000 chars                                                                                                                              |
 | `pageUrl`                                                     | `string`                                          | Yes         | Relative app path (must be a single-slash internal path such as `/stablecoin/usdc-circle/`; protocol-relative `//...` values are rejected) |
-| `website`                                                     | `string`                                          | No          | Honeypot field; non-empty is silently accepted/dropped                                                                                     |
+| `website`                                                     | `string`                                          | No          | Honeypot field, max 300 chars; non-empty is silently accepted/dropped                                                                     |
 | `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string`                                          | No          | Optional metadata                                                                                                                          |
 | `contactHandle`                                               | `string`                                          | No          | Optional Telegram/X handle that appears publicly on GitHub                                                                                 |
 
@@ -3382,6 +3385,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 **Error responses**
 
 - `400` invalid payload
+- `413` request body above the 16 KiB defensive cap
 - `429` rate limited (3 submissions / 10 minutes per salted IP hash)
 - `500` forwarding/processing failure
 - `503` service misconfigured (missing `FEEDBACK_IP_SALT` or `GITHUB_PAT`) or feedback limiter/storage dependency failure (`Retry-After: 60`)
