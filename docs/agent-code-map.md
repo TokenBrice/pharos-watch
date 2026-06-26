@@ -716,6 +716,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-shared-types-imports.test.ts`
 - `scripts/__tests__/check-table-primitives.test.ts` - Page
 - `scripts/__tests__/check-telegram-load.test.ts`
+- `scripts/__tests__/check-test-typecheck.test.ts`
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
 - `scripts/__tests__/client-registry-field-contract.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/mint-authority-review-audit.test.ts`
 - `scripts/__tests__/night-watch-worker.test.ts`
 - `scripts/__tests__/oracle-risk-coverage.test.ts`
-- `scripts/__tests__/parse-version-upload.test.ts`
-- ... 216 more files omitted; use `rg --files scripts` for the full list.
+- ... 217 more files omitted; use `rg --files scripts` for the full list.

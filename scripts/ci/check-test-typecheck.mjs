@@ -17,10 +17,15 @@ const TSC_COMMAND = [
 
 function parseDiagnostics(output) {
   const diagnosticsByKey = new Map();
+  const unparsedErrors = [];
   const diagnosticPattern = /^(.+\.(?:ts|tsx))\((\d+),(\d+)\): error TS(\d+): (.+)$/;
+  const errorPattern = /(^|\s)error TS\d+:/;
   for (const line of output.split("\n")) {
     const match = diagnosticPattern.exec(line);
-    if (!match) continue;
+    if (!match) {
+      if (errorPattern.test(line)) unparsedErrors.push(line);
+      continue;
+    }
     const [, file, lineNumber, columnNumber, code, message] = match;
     const key = `${file}\0${code}\0${message}`;
     const entry = diagnosticsByKey.get(key) ?? {
@@ -36,11 +41,24 @@ function parseDiagnostics(output) {
     }
     diagnosticsByKey.set(key, entry);
   }
-  return [...diagnosticsByKey.values()].sort((a, b) =>
-    a.file.localeCompare(b.file) ||
-    a.code.localeCompare(b.code) ||
-    a.message.localeCompare(b.message),
-  );
+  return {
+    diagnostics: [...diagnosticsByKey.values()].sort((a, b) =>
+      a.file.localeCompare(b.file) ||
+      a.code.localeCompare(b.code) ||
+      a.message.localeCompare(b.message),
+    ),
+    unparsedErrors,
+  };
+}
+
+function failTscExecution(message, output) {
+  console.error(`[typecheck:tests] ${message}`);
+  const trimmedOutput = output.trim();
+  if (trimmedOutput) {
+    console.error("[typecheck:tests] Raw tsc output:");
+    console.error(trimmedOutput);
+  }
+  process.exit(1);
 }
 
 function baselineKey(entry) {
@@ -86,7 +104,26 @@ const tsc = spawnSync("npx", TSC_COMMAND, {
   shell: process.platform === "win32",
 });
 const output = `${tsc.stdout ?? ""}${tsc.stderr ?? ""}`;
-const diagnostics = parseDiagnostics(output);
+const { diagnostics, unparsedErrors } = parseDiagnostics(output);
+
+if (tsc.error) {
+  failTscExecution(`Failed to start ${TSC_COMMAND[0]}: ${tsc.error.message}`, output);
+}
+if (tsc.signal) {
+  failTscExecution(`${TSC_COMMAND[0]} exited after signal ${tsc.signal}.`, output);
+}
+if (tsc.status !== 0 && unparsedErrors.length > 0) {
+  failTscExecution(
+    `${TSC_COMMAND[0]} failed with ${unparsedErrors.length} unparsed TypeScript diagnostic line(s); refusing to treat the test typecheck as a clean ratchet run.`,
+    output,
+  );
+}
+if (tsc.status !== 0 && diagnostics.length === 0) {
+  failTscExecution(
+    `${TSC_COMMAND[0]} failed without parseable test-file diagnostics; refusing to treat the test typecheck as a clean ratchet run.`,
+    output,
+  );
+}
 
 if (UPDATE_BASELINE) {
   writeFileSync(
