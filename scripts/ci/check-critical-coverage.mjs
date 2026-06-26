@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import {
   CRITICAL_COVERAGE_WAIVERS,
   CRITICAL_FILES,
+  collectCriticalCoverageWaiverReviewQueue,
   collectCriticalCoverageCandidates,
   findCriticalCoverageCandidatesMissingEnrollment,
   findCoverageFor,
@@ -81,6 +82,7 @@ export function runCriticalCoverageCompletenessGuard({
   candidateFiles = collectCriticalCoverageCandidates(),
   criticalFiles = CRITICAL_FILES,
   waivers = CRITICAL_COVERAGE_WAIVERS,
+  reviewToday = new Date(),
   consoleImpl = console,
   exit = process.exit,
 } = {}) {
@@ -93,8 +95,25 @@ export function runCriticalCoverageCompletenessGuard({
     criticalFiles,
     waivers,
   });
+  const waiverReviewQueue = collectCriticalCoverageWaiverReviewQueue(waivers, {
+    candidateFiles,
+    today: reviewToday,
+  });
 
-  if (waiverErrors.length === 0 && staleWaivers.length === 0 && missingEnrollment.length === 0) {
+  if (
+    waiverErrors.length === 0 &&
+    staleWaivers.length === 0 &&
+    missingEnrollment.length === 0 &&
+    waiverReviewQueue.due.length === 0
+  ) {
+    if (waiverReviewQueue.upcoming.length > 0) {
+      consoleImpl.log("[coverage] Critical coverage waiver reviews due soon:");
+      for (const waiver of waiverReviewQueue.upcoming) {
+        consoleImpl.log(
+          `  ${waiver.file} reviewAfter=${waiver.reviewAfter} owner=${waiver.owner} nextAction=${waiver.nextAction}`,
+        );
+      }
+    }
     return true;
   }
 
@@ -115,6 +134,14 @@ export function runCriticalCoverageCompletenessGuard({
     consoleImpl.error("[coverage] High-stakes candidates missing critical coverage enrollment or waiver:");
     for (const file of missingEnrollment) {
       consoleImpl.error(`  ${file}`);
+    }
+  }
+  if (waiverReviewQueue.due.length > 0) {
+    consoleImpl.error("[coverage] Critical coverage waiver reviews are due or overdue:");
+    for (const waiver of waiverReviewQueue.due) {
+      consoleImpl.error(
+        `  ${waiver.file} reviewAfter=${waiver.reviewAfter} owner=${waiver.owner} nextAction=${waiver.nextAction}`,
+      );
     }
   }
   consoleImpl.error(

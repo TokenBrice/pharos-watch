@@ -2,6 +2,16 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  captureProcessExit,
+  commandTexts,
+  executionBatchCommandTexts,
+  executionUnitCommandTexts,
+  mockCommandRunner,
+  mockExecFileSync,
+  testEnv,
+  type TestEnv,
+} from "../test-utils/ci-script-test-helpers";
+import {
   buildExecutionBatches,
   buildCommandPlan,
   buildFullCommandPlan,
@@ -44,7 +54,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("runs the Pages path without worker typecheck for frontend export changes", () => {
-    expect(buildCommandPlan(["src/app/page.tsx"]).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(["src/app/page.tsx"]))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -53,7 +63,7 @@ describe("buildCommandPlan", () => {
 
   it("runs the worker path without build or SEO for worker-only changes", () => {
     expect(
-      buildCommandPlan(["worker/src/api/status.ts", "worker/src/cron/sync-yield-data.ts"]).map((item) => item.cmd),
+      commandTexts(buildCommandPlan(["worker/src/api/status.ts", "worker/src/cron/sync-yield-data.ts"])),
     ).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -62,7 +72,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("adds the Telegram advisory load guard for Telegram dispatch changes", () => {
-    expect(buildCommandPlan(["worker/src/cron/dispatch-telegram-alerts.ts"]).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(["worker/src/cron/dispatch-telegram-alerts.ts"]))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
@@ -71,7 +81,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("runs the full path for shared runtime changes", () => {
-    expect(buildCommandPlan(["shared/lib/classification.ts"]).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(["shared/lib/classification.ts"]))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -80,7 +90,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("runs the Pages path only for known Pages-only shared helpers", () => {
-    expect(buildCommandPlan(["shared/lib/public-docs.ts"]).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(["shared/lib/public-docs.ts"]))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -88,7 +98,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("can force the full deploy validate path when the push base is unavailable", () => {
-    expect(buildFullCommandPlan().map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildFullCommandPlan())).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -105,7 +115,7 @@ describe("buildCommandPlan", () => {
       "shared/lib/redemption-backstop-configs/usdt.ts",
     ];
 
-    expect(buildCommandPlan(allSkippableFiles).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(allSkippableFiles))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -115,14 +125,14 @@ describe("buildCommandPlan", () => {
   });
 
   it("provides the changed-file set to the local critical coverage command", () => {
-    expect(getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"], {})).toEqual({
+    expect(getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts,docs/testing.md",
     });
 
-    expect(getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], {})).toEqual({
+    expect(getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -135,14 +145,14 @@ describe("buildCommandPlan", () => {
     expect(getValidatePrebuildSurface(["shared/lib/classification.ts"])).toBe("full");
     expect(getValidatePrebuildSurface([])).toBe("full");
 
-    expect(getCommandEnv("npm run validate:prebuild", ["src/app/page.tsx"], {})).toEqual({
+    expect(getCommandEnv("npm run validate:prebuild", ["src/app/page.tsx"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
       [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
     });
-    expect(getCommandEnv("npm run validate:prebuild", ["worker/src/api/status.ts"], {})).toEqual({
+    expect(getCommandEnv("npm run validate:prebuild", ["worker/src/api/status.ts"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -152,24 +162,24 @@ describe("buildCommandPlan", () => {
   });
 
   it("path-gates network-backed prebuild audits in the local merge gate", () => {
-    expect(getValidatePrebuildSkipCommands(["src/app/page.tsx"], {})).toEqual([
+    expect(getValidatePrebuildSkipCommands(["src/app/page.tsx"], testEnv())).toEqual([
       "npm run audit:deps",
       "npm run audit:pricing-providers",
     ]);
-    expect(getValidatePrebuildSkipCommands(["package-lock.json"], {})).toEqual([
+    expect(getValidatePrebuildSkipCommands(["package-lock.json"], testEnv())).toEqual([
       "npm run audit:pricing-providers",
     ]);
-    expect(getValidatePrebuildSkipCommands(["shared/lib/pricing-provider-config.ts"], {})).toEqual([
+    expect(getValidatePrebuildSkipCommands(["shared/lib/pricing-provider-config.ts"], testEnv())).toEqual([
       "npm run audit:deps",
     ]);
-    expect(getValidatePrebuildSkipCommands(["package-lock.json", "shared/lib/pricing-provider-config.ts"], {})).toEqual([]);
-    expect(getValidatePrebuildSkipCommands([], { MERGE_GATE_FULL_DEPLOY: "1" })).toEqual([]);
+    expect(getValidatePrebuildSkipCommands(["package-lock.json", "shared/lib/pricing-provider-config.ts"], testEnv())).toEqual([]);
+    expect(getValidatePrebuildSkipCommands([], testEnv({ MERGE_GATE_FULL_DEPLOY: "1" }))).toEqual([]);
   });
 
   it("keeps inherited non-full validate:prebuild tiers from weakening the merge gate", () => {
-    const commandEnv = getCommandEnv("npm run validate:prebuild", ["src/app/page.tsx"], {
+    const commandEnv = getCommandEnv("npm run validate:prebuild", ["src/app/page.tsx"], testEnv({
       [VALIDATE_PREBUILD_TIER_ENV]: "blocking",
-    });
+    }));
 
     expect(commandEnv).toEqual({
       TZ: "UTC",
@@ -182,7 +192,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("applies the production Pages build env for local static export validation", () => {
-    expect(getCommandEnv("npm run build", ["src/app/page.tsx"], {})).toEqual({
+    expect(getCommandEnv("npm run build", ["src/app/page.tsx"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -196,11 +206,11 @@ describe("buildCommandPlan", () => {
   });
 
   it("keeps Pages public env offline by default for local Pages validation", () => {
-    const env = {
+    const env = testEnv({
       NEXT_PUBLIC_GA_ID: "G-PROD",
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
       NEXT_PUBLIC_UNRELATED: "keep-out",
-    };
+    });
 
     expect(getCommandEnv("npm run build", ["src/app/page.tsx"], env)).toEqual({
       TZ: "UTC",
@@ -225,13 +235,13 @@ describe("buildCommandPlan", () => {
   });
 
   it("mirrors production Pages public env when the local rehearsal mode is enabled", () => {
-    const env = {
+    const env = testEnv({
       MERGE_GATE_PRODUCTION_ENV: "1",
       NEXT_PUBLIC_GA_ID: "G-PROD",
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: "false",
       NEXT_PUBLIC_UNRELATED: "keep-out",
-    };
+    });
 
     expect(getProductionPagesPublicEnv(env)).toEqual({
       NEXT_PUBLIC_GA_ID: "G-PROD",
@@ -264,18 +274,18 @@ describe("buildCommandPlan", () => {
 
   it("skips base env injection when MERGE_GATE_NATIVE_ENV=1 is set", () => {
     expect(
-      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], { MERGE_GATE_NATIVE_ENV: "1" }),
+      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], testEnv({ MERGE_GATE_NATIVE_ENV: "1" })),
     ).toEqual({
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts",
     });
 
     expect(
-      getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], { MERGE_GATE_NATIVE_ENV: "1" }),
+      getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], testEnv({ MERGE_GATE_NATIVE_ENV: "1" })),
     ).toEqual({});
   });
 
   it("skips local mobile smoke when pages smoke runs for non-UI diffs", () => {
-    expect(getCommandEnv("npm run validate:pages-smoke", [".github/workflows/pages-release.yml"], {})).toEqual({
+    expect(getCommandEnv("npm run validate:pages-smoke", [".github/workflows/pages-release.yml"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -287,7 +297,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("applies the local mobile canary profile for UI-impacting pages smoke", () => {
-    expect(getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {})).toEqual({
+    expect(getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -306,10 +316,10 @@ describe("buildCommandPlan", () => {
 
   it("expects GA during production Pages smoke rehearsal when the production GA id is provided", () => {
     expect(
-      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], testEnv({
         MERGE_GATE_PRODUCTION_ENV: "1",
         NEXT_PUBLIC_GA_ID: "G-PROD",
-      }),
+      })),
     ).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
@@ -330,17 +340,17 @@ describe("buildCommandPlan", () => {
 
   it("does not override an explicit GA expectation during Pages smoke", () => {
     expect(
-      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], testEnv({
         MERGE_GATE_PRODUCTION_ENV: "1",
         NEXT_PUBLIC_GA_ID: "G-PROD",
         SMOKE_UI_EXPECT_GA_ID: "G-CUSTOM",
-      }),
+      })),
     ).not.toHaveProperty("SMOKE_UI_EXPECT_GA_ID");
   });
 
   it("does not override explicit local mobile smoke env overrides", () => {
     expect(
-      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], testEnv({
         SMOKE_UI_OVERFLOW_ROUTES: "/desktop/",
         SMOKE_UI_OVERFLOW_WORKERS: "2",
         SMOKE_MOBILE_UI_ROUTES: "/custom/",
@@ -348,7 +358,7 @@ describe("buildCommandPlan", () => {
         SMOKE_MOBILE_UI_SKIP_DESKTOP: "0",
         SMOKE_MOBILE_UI_WORKERS: "5",
         SMOKE_MOBILE_UI_WAIT_MS: "2100",
-      }),
+      })),
     ).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
@@ -358,7 +368,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("defaults local worker smoke to canary API scope", () => {
-    expect(getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], {})).toEqual({
+    expect(getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -368,7 +378,7 @@ describe("buildCommandPlan", () => {
 
   it("preserves explicit local worker smoke API scope overrides", () => {
     expect(
-      getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], { SMOKE_API_SCOPE: "full" }),
+      getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], testEnv({ SMOKE_API_SCOPE: "full" })),
     ).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
@@ -379,7 +389,7 @@ describe("buildCommandPlan", () => {
   it("groups independent post-validate checks for parallel local execution", () => {
     const plan = buildCommandPlan(["shared/lib/classification.ts"]);
     expect(
-      buildExecutionBatches(plan).map((batch) => batch.map((unit) => unit.commands.map((item) => item.cmd))),
+      executionBatchCommandTexts(buildExecutionBatches(plan)),
     ).toEqual([
       [["npm run validate:prebuild"]],
       [
@@ -407,9 +417,7 @@ describe("buildCommandPlan", () => {
       ...buildCommandPlan(["shared/lib/classification.ts"]),
       { cmd: "npm run check:future-guardrail", reasons: ["test"] },
     ];
-    const batches = buildExecutionBatches(plan).map((batch) =>
-      batch.map((unit) => unit.commands.map((item) => item.cmd)),
-    );
+    const batches = executionBatchCommandTexts(buildExecutionBatches(plan));
 
     expect(batches).toHaveLength(2);
     expect(batches[1]).toContainEqual(["npm run check:future-guardrail"]);
@@ -424,12 +432,12 @@ describe("buildCommandPlan", () => {
     await runExecutionBatches(
       plan,
       ["shared/lib/classification.ts"],
-      { MERGE_GATE_PARALLEL: "1" },
+      testEnv({ MERGE_GATE_PARALLEL: "1" }),
       {
-        exit: (status) => {
+        exit: captureProcessExit((status) => {
           exitStatus = status;
-        },
-        runCommandImpl: (cmd, _extraEnv, { signal } = {}) => {
+        }),
+        runCommandImpl: mockCommandRunner((cmd, _extraEnv = {}, { signal } = {}) => {
           calls.push(cmd);
 
           if (cmd === "npm run validate:prebuild") {
@@ -446,7 +454,7 @@ describe("buildCommandPlan", () => {
               resolve({ status: 130, aborted: true });
             });
           });
-        },
+        }),
       },
     );
 
@@ -467,10 +475,10 @@ describe("buildCommandPlan", () => {
     const plan = buildCommandPlan(["shared/lib/classification.ts"], { pagesSmoke: true, workerSmoke: true });
     const groups = buildDiscoveryExecutionGroups(plan);
 
-    expect(groups.prebuildUnits.map((unit) => unit.commands.map((item) => item.cmd))).toEqual([
+    expect(executionUnitCommandTexts(groups.prebuildUnits)).toEqual([
       ["npm run validate:prebuild"],
     ]);
-    expect(groups.postValidateUnits.map((unit) => unit.commands.map((item) => item.cmd))).toEqual([
+    expect(executionUnitCommandTexts(groups.postValidateUnits)).toEqual([
       [
         "npm run build",
         "npm run test:a11y",
@@ -494,17 +502,17 @@ describe("buildCommandPlan", () => {
     const plan = buildCommandPlan(["shared/lib/classification.ts"], { pagesSmoke: true, workerSmoke: true });
     const groups = buildDiscoveryExecutionGroups(plan, { includeSmoke: true });
 
-    expect(groups.postValidateUnits.map((unit) => unit.commands.map((item) => item.cmd))).not.toContainEqual([
+    expect(executionUnitCommandTexts(groups.postValidateUnits)).not.toContainEqual([
       "npm run validate:pages-smoke",
     ]);
-    expect(groups.smokeUnits.map((unit) => unit.commands.map((item) => item.cmd))).toEqual([
+    expect(executionUnitCommandTexts(groups.smokeUnits)).toEqual([
       ["npm run validate:pages-smoke"],
       ["npm run validate:worker-smoke"],
     ]);
   });
 
   it("forces validate:prebuild discovery to continue on errors", () => {
-    expect(getDiscoveryCommandEnv({ cmd: "npm run validate:prebuild" }, ["src/app/page.tsx"], {})).toEqual({
+    expect(getDiscoveryCommandEnv({ cmd: "npm run validate:prebuild" }, ["src/app/page.tsx"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -512,19 +520,19 @@ describe("buildCommandPlan", () => {
       [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
       VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
     });
-    expect(getDiscoveryCommandEnv({ cmd: "npm run build" }, ["src/app/page.tsx"], {})).toEqual(
-      getCommandEnv("npm run build", ["src/app/page.tsx"], {}),
+    expect(getDiscoveryCommandEnv({ cmd: "npm run build" }, ["src/app/page.tsx"], testEnv())).toEqual(
+      getCommandEnv("npm run build", ["src/app/page.tsx"], testEnv()),
     );
   });
 
   it("bounds discovery parallelism with an explicit override", () => {
-    expect(resolveDiscoveryMaxParallel({}, 16)).toBe(6);
-    expect(resolveDiscoveryMaxParallel({}, 4)).toBe(2);
-    expect(resolveDiscoveryMaxParallel({ MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" }, 16)).toBe(3);
+    expect(resolveDiscoveryMaxParallel(testEnv(), 16)).toBe(6);
+    expect(resolveDiscoveryMaxParallel(testEnv(), 4)).toBe(2);
+    expect(resolveDiscoveryMaxParallel(testEnv({ MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" }), 16)).toBe(3);
   });
 
   it("passes changed-file env only to coverage during execution", async () => {
-    const envByCommand = new Map<string, Record<string, string>>();
+    const envByCommand = new Map<string, TestEnv>();
 
     await runExecutionBatches(
       [
@@ -532,15 +540,15 @@ describe("buildCommandPlan", () => {
         { cmd: "npm run coverage:critical", reasons: ["test"] },
       ],
       ["src/app/page.tsx", "worker/src/api/status.ts"],
-      { MERGE_GATE_SERIAL: "1", MERGE_GATE_NATIVE_ENV: "1" },
+      testEnv({ MERGE_GATE_SERIAL: "1", MERGE_GATE_NATIVE_ENV: "1" }),
       {
-        exit: () => {
+        exit: captureProcessExit(() => {
           throw new Error("unexpected exit");
-        },
-        runCommandImpl: (cmd, extraEnv) => {
+        }),
+        runCommandImpl: mockCommandRunner((cmd, extraEnv = {}) => {
           envByCommand.set(cmd, extraEnv);
           return 0;
-        },
+        }),
       },
     );
 
@@ -559,19 +567,19 @@ describe("buildCommandPlan", () => {
         { cmd: "npm run check:feature-flag-inlining", reasons: ["test"] },
       ],
       ["src/app/page.tsx"],
-      {
+      testEnv({
         MERGE_GATE_PRODUCTION_ENV: "1",
         NEXT_PUBLIC_GA_ID: "G-PROD",
         NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
-      },
+      }),
       {
-        exit: () => {
+        exit: captureProcessExit(() => {
           throw new Error("unexpected exit");
-        },
-        runCommandImpl: (cmd, extraEnv) => {
+        }),
+        runCommandImpl: mockCommandRunner((cmd, extraEnv = {}) => {
           envByCommand.set(cmd, extraEnv);
           return 0;
-        },
+        }),
       },
     );
 
@@ -591,10 +599,10 @@ describe("buildCommandPlan", () => {
 describe("getChangedFiles", () => {
   it("passes the base and head refs to git diff as a single range argument", () => {
     const calls: unknown[] = [];
-    const execFile = (cmd: string, args: string[]) => {
+    const execFile = mockExecFileSync((cmd, args) => {
       calls.push([cmd, args]);
       return "worker/src/api/status.ts\n";
-    };
+    });
 
     expect(
       getChangedFiles({
@@ -610,17 +618,17 @@ describe("getChangedFiles", () => {
 
   it("uses argument arrays for staged diffs", () => {
     const calls: unknown[] = [];
-    const execFile = (cmd: string, args: string[]) => {
+    const execFile = mockExecFileSync((cmd, args) => {
       calls.push([cmd, args]);
       return "src/app/page.tsx\n";
-    };
+    });
 
     expect(getChangedFiles({ stagedMode: true, execFile })).toEqual(["src/app/page.tsx"]);
     expect(calls).toEqual([["git", ["diff", "--name-only", "--cached"]]]);
   });
 
   it("rejects empty push bases unless the full deploy gate is requested by the caller", () => {
-    expect(() => getChangedFiles({ baseRef: "0000000000000000000000000000000000000000" })).toThrow(
+    expect(() => getChangedFiles({ baseRef: "0000000000000000000000000000000000000000" } as never)).toThrow(
       "MERGE_GATE_FULL_DEPLOY=1",
     );
   });
@@ -666,7 +674,7 @@ describe("validate workflow command model", () => {
 
 describe("opt-in smoke wiring", () => {
   it("appends Pages smoke after Pages build when MERGE_GATE_PAGES_SMOKE is requested", () => {
-    expect(buildCommandPlan(["src/app/page.tsx"], { pagesSmoke: true }).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(["src/app/page.tsx"], { pagesSmoke: true }))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -675,7 +683,7 @@ describe("opt-in smoke wiring", () => {
   });
 
   it("does not append Pages smoke for worker-only changes", () => {
-    expect(buildCommandPlan(["worker/src/api/status.ts"], { pagesSmoke: true }).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(["worker/src/api/status.ts"], { pagesSmoke: true }))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
@@ -683,7 +691,7 @@ describe("opt-in smoke wiring", () => {
   });
 
   it("appends worker smoke after worker typechecks when MERGE_GATE_WORKER_SMOKE is requested", () => {
-    expect(buildCommandPlan(["worker/src/api/status.ts"], { workerSmoke: true }).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildCommandPlan(["worker/src/api/status.ts"], { workerSmoke: true }))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
@@ -692,7 +700,7 @@ describe("opt-in smoke wiring", () => {
   });
 
   it("appends both smokes in buildFullCommandPlan when requested", () => {
-    expect(buildFullCommandPlan("forced", { pagesSmoke: true, workerSmoke: true }).map((item) => item.cmd)).toEqual([
+    expect(commandTexts(buildFullCommandPlan("forced", { pagesSmoke: true, workerSmoke: true }))).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -706,7 +714,7 @@ describe("opt-in smoke wiring", () => {
   it("sequences smoke commands in a third batch after the parallel post-validate batch", () => {
     const plan = buildCommandPlan(["shared/lib/classification.ts"], { pagesSmoke: true, workerSmoke: true });
     expect(
-      buildExecutionBatches(plan).map((batch) => batch.map((unit) => unit.commands.map((item) => item.cmd))),
+      executionBatchCommandTexts(buildExecutionBatches(plan)),
     ).toEqual([
       [["npm run validate:prebuild"]],
       [
@@ -734,41 +742,41 @@ describe("opt-in smoke wiring", () => {
 describe("fetchBaseRef", () => {
   it("runs git fetch for the branch suffix of origin-prefixed base refs", () => {
     const calls: unknown[] = [];
-    const execFile = (cmd: string, args: string[]) => {
+    const execFile = mockExecFileSync((cmd, args) => {
       calls.push([cmd, args]);
       return "";
-    };
+    });
 
-    fetchBaseRef({ baseRef: "origin/main", execFile });
+    fetchBaseRef({ baseRef: "origin/main", execFile } as never);
     expect(calls).toEqual([["git", ["fetch", "--quiet", "origin", "main"]]]);
   });
 
   it("skips non-origin base refs", () => {
     const calls: unknown[] = [];
-    const execFile = (cmd: string, args: string[]) => {
+    const execFile = mockExecFileSync((cmd, args) => {
       calls.push([cmd, args]);
       return "";
-    };
+    });
 
-    fetchBaseRef({ baseRef: "abc123", execFile });
+    fetchBaseRef({ baseRef: "abc123", execFile } as never);
     expect(calls).toEqual([]);
   });
 
   it("warns but does not throw when the fetch fails", () => {
-    const execFile = () => {
+    const execFile = mockExecFileSync(() => {
       throw new Error("network down");
-    };
+    });
 
-    expect(() => fetchBaseRef({ baseRef: "origin/main", execFile })).not.toThrow();
+    expect(() => fetchBaseRef({ baseRef: "origin/main", execFile } as never)).not.toThrow();
   });
 });
 
 describe("runMergeGate fetch and node_modules wiring", () => {
   function makeStubs() {
     const fetchCalls: string[][] = [];
-    const execFile = (cmd: string, args: string[], options?: { encoding?: string }) => {
+    const execFile = mockExecFileSync((_cmd, args, options) => {
       if (args[0] === "fetch") {
-        fetchCalls.push(args);
+        fetchCalls.push([...args]);
         return "";
       }
       if (args[0] === "diff") {
@@ -778,18 +786,18 @@ describe("runMergeGate fetch and node_modules wiring", () => {
         return Buffer.from("");
       }
       return "";
-    };
+    });
     const runCommandCalls: string[] = [];
-    const runCommandImpl = (cmd: string) => {
+    const runCommandImpl = mockCommandRunner((cmd) => {
       runCommandCalls.push(cmd);
       return Promise.resolve({ status: 0, aborted: false });
-    };
+    });
     return { fetchCalls, execFile, runCommandCalls, runCommandImpl };
   }
 
   it("runs git fetch when no MERGE_GATE_BASE_REF is set and not in staged or full-deploy mode", async () => {
     const { fetchCalls, execFile, runCommandImpl } = makeStubs();
-    await runMergeGate({ argv: [], env: {}, runCommandImpl, execFile });
+    await runMergeGate({ argv: [], env: testEnv(), runCommandImpl, execFile });
     expect(fetchCalls).toEqual([["fetch", "--quiet", "origin", "main"]]);
   });
 
@@ -797,7 +805,7 @@ describe("runMergeGate fetch and node_modules wiring", () => {
     const { fetchCalls, execFile, runCommandImpl } = makeStubs();
     await runMergeGate({
       argv: [],
-      env: { MERGE_GATE_BASE_REF: "abc123", MERGE_GATE_HEAD_REF: "def456" },
+      env: testEnv({ MERGE_GATE_BASE_REF: "abc123", MERGE_GATE_HEAD_REF: "def456" }),
       runCommandImpl,
       execFile,
     });
@@ -808,7 +816,7 @@ describe("runMergeGate fetch and node_modules wiring", () => {
     const { fetchCalls, execFile, runCommandImpl } = makeStubs();
     await runMergeGate({
       argv: [],
-      env: { MERGE_GATE_NO_FETCH: "1" },
+      env: testEnv({ MERGE_GATE_NO_FETCH: "1" }),
       runCommandImpl,
       execFile,
     });
@@ -817,39 +825,39 @@ describe("runMergeGate fetch and node_modules wiring", () => {
 
   it("skips the fetch in --staged mode", async () => {
     const { fetchCalls, execFile, runCommandImpl } = makeStubs();
-    await runMergeGate({ argv: ["--staged"], env: {}, runCommandImpl, execFile });
+    await runMergeGate({ argv: ["--staged"], env: testEnv(), runCommandImpl, execFile });
     expect(fetchCalls).toEqual([]);
   });
 
   it("invokes the node_modules drift check before executing validation commands", async () => {
     const { execFile: baseExecFile, runCommandImpl, runCommandCalls } = makeStubs();
-    const execFile = (cmd: string, args: string[], options?: { encoding?: string }) => {
+    const execFile = mockExecFileSync((cmd, args, options) => {
       if (args[0] === "diff" && options?.encoding === "utf8") {
         return "src/app/page.tsx\n";
       }
       return baseExecFile(cmd, args, options);
-    };
-    await runMergeGate({ argv: [], env: {}, runCommandImpl, execFile });
+    });
+    await runMergeGate({ argv: [], env: testEnv(), runCommandImpl, execFile });
     expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs --strict");
     expect(runCommandCalls[1]).toBe("npm run validate:prebuild");
   });
 
   it("prints the dry-run plan without requiring a node_modules freshness check", async () => {
-    const execFile = (_cmd: string, args: string[], options?: { encoding?: string }) => {
+    const execFile = mockExecFileSync((_cmd, args, options) => {
       if (args[0] === "diff" && options?.encoding === "utf8") {
         return "src/app/page.tsx\n";
       }
       return "";
-    };
+    });
     const runCommandCalls: string[] = [];
-    const runCommandImpl = (cmd: string) => {
+    const runCommandImpl = mockCommandRunner((cmd) => {
       runCommandCalls.push(cmd);
       return Promise.resolve({ status: 0, aborted: false });
-    };
+    });
 
     await runMergeGate({
       argv: [],
-      env: { MERGE_GATE_DRY_RUN: "1", MERGE_GATE_NO_FETCH: "1" },
+      env: testEnv({ MERGE_GATE_DRY_RUN: "1", MERGE_GATE_NO_FETCH: "1" }),
       runCommandImpl,
       execFile,
     });
@@ -858,15 +866,15 @@ describe("runMergeGate fetch and node_modules wiring", () => {
   });
 
   it("runs merge-gate discovery after prebuild failures and reports the final nonzero status", async () => {
-    const execFile = (_cmd: string, args: string[], options?: { encoding?: string }) => {
+    const execFile = mockExecFileSync((_cmd, args, options) => {
       if (args[0] === "diff" && options?.encoding === "utf8") {
         return "shared/lib/classification.ts\n";
       }
       return "";
-    };
+    });
     const runCommandCalls: string[] = [];
     let exitStatus: number | undefined;
-    const runCommandImpl = (cmd: string) => {
+    const runCommandImpl = mockCommandRunner((cmd) => {
       runCommandCalls.push(cmd);
       if (cmd === "npm run validate:prebuild") {
         return Promise.resolve({ status: 7, aborted: false });
@@ -875,16 +883,16 @@ describe("runMergeGate fetch and node_modules wiring", () => {
         return Promise.resolve({ status: 9, aborted: false });
       }
       return Promise.resolve({ status: 0, aborted: false });
-    };
+    });
 
     const result = await runMergeGateDiscovery({
       argv: [],
-      env: { MERGE_GATE_NO_FETCH: "1", MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" },
+      env: testEnv({ MERGE_GATE_NO_FETCH: "1", MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" }),
       runCommandImpl,
       execFile,
-      exit: (status) => {
+      exit: captureProcessExit((status) => {
         exitStatus = status;
-      },
+      }),
     });
 
     expect(result).toEqual({ status: 7 });
@@ -916,39 +924,39 @@ describe("runMergeGate fetch and node_modules wiring", () => {
   });
 
   it("defaults Pages smoke on for the normal local merge gate", async () => {
-    const execFile = (cmd: string, args: string[], options?: { encoding?: string }) => {
+    const execFile = mockExecFileSync((_cmd, args, options) => {
       if (args[0] === "diff" && options?.encoding === "utf8") {
         return "src/app/page.tsx\n";
       }
       return "";
-    };
+    });
     const runCommandCalls: string[] = [];
-    const runCommandImpl = (cmd: string) => {
+    const runCommandImpl = mockCommandRunner((cmd) => {
       runCommandCalls.push(cmd);
       return Promise.resolve({ status: 0, aborted: false });
-    };
+    });
 
-    await runMergeGate({ argv: [], env: { MERGE_GATE_NO_FETCH: "1" }, runCommandImpl, execFile });
+    await runMergeGate({ argv: [], env: testEnv({ MERGE_GATE_NO_FETCH: "1" }), runCommandImpl, execFile });
 
     expect(runCommandCalls).toContain("npm run validate:pages-smoke");
   });
 
   it("allows Pages smoke to be disabled explicitly", async () => {
-    const execFile = (_cmd: string, args: string[], options?: { encoding?: string }) => {
+    const execFile = mockExecFileSync((_cmd, args, options) => {
       if (args[0] === "diff" && options?.encoding === "utf8") {
         return "src/app/page.tsx\n";
       }
       return "";
-    };
+    });
     const runCommandCalls: string[] = [];
-    const runCommandImpl = (cmd: string) => {
+    const runCommandImpl = mockCommandRunner((cmd) => {
       runCommandCalls.push(cmd);
       return Promise.resolve({ status: 0, aborted: false });
-    };
+    });
 
     await runMergeGate({
       argv: [],
-      env: { MERGE_GATE_NO_FETCH: "1", MERGE_GATE_PAGES_SMOKE: "0" },
+      env: testEnv({ MERGE_GATE_NO_FETCH: "1", MERGE_GATE_PAGES_SMOKE: "0" }),
       runCommandImpl,
       execFile,
     });

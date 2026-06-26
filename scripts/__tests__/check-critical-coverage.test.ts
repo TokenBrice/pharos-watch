@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+  captureProcessExit,
+  mockConsole,
+  mockExecFileSync,
+  mockFsImpl,
+  testEnv,
+} from "../test-utils/ci-script-test-helpers";
 
 import {
   getChangedFilesFromGit,
@@ -11,6 +18,7 @@ import {
   CRITICAL_COVERAGE_WAIVERS,
   CRITICAL_FILES,
   collectCriticalCoverageCandidates,
+  collectCriticalCoverageWaiverReviewQueue,
   findCriticalCoverageCandidatesMissingEnrollment,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
@@ -18,9 +26,9 @@ import {
 describe("critical coverage changed-file detection", () => {
   it("parses explicit changed files before falling back to git", () => {
     expect(
-      parseChangedFilesFromEnv({
+      parseChangedFilesFromEnv(testEnv({
         CRITICAL_COVERAGE_CHANGED_FILES: "worker\\src\\api\\status.ts, docs/testing.md\n\n",
-      }),
+      })),
     ).toEqual(["worker/src/api/status.ts", "docs/testing.md"]);
   });
 
@@ -32,10 +40,10 @@ describe("critical coverage changed-file detection", () => {
 
   it("passes malicious-looking compare refs to git diff as a single argument", () => {
     const calls: unknown[] = [];
-    const execFile = (cmd: string, args: string[]) => {
+    const execFile = mockExecFileSync((cmd, args) => {
       calls.push([cmd, args]);
       return "worker\\src\\api\\status.ts\n";
-    };
+    });
 
     expect(
       getChangedFilesFromGit("origin/main; touch /tmp/should-not-run", { execFile }),
@@ -47,16 +55,16 @@ describe("critical coverage changed-file detection", () => {
 
   it("returns no changed files when git diff fails", () => {
     const warnings: string[] = [];
-    const execFile = () => {
+    const execFile = mockExecFileSync(() => {
       throw new Error("bad ref");
-    };
+    });
 
     expect(
       getChangedFilesFromGit("bad-ref", {
         execFile,
-        consoleImpl: {
+        consoleImpl: mockConsole({
           warn: (message: string) => warnings.push(message),
-        },
+        }),
       }),
     ).toEqual([]);
     expect(warnings[0]).toContain('Could not diff against ref "bad-ref"');
@@ -103,7 +111,10 @@ describe("critical coverage changed-file detection", () => {
             disposition: "covered-by-enrolled-entrypoint",
             owner: "platform",
             createdAt: "2026-06-05",
+            reviewAfter: "2026-09-05",
             reason: "covered elsewhere",
+            nextAction: "add direct tests before enrollment",
+            directEnrollmentCondition: "direct tests cover critical behavior",
           },
         },
       }),
@@ -118,7 +129,10 @@ describe("critical coverage changed-file detection", () => {
             disposition: "covered-by-enrolled-entrypoint",
             owner: "platform",
             createdAt: "2026-06-05",
+            reviewAfter: "2026-09-05",
             reason: "covered elsewhere",
+            nextAction: "add direct tests before enrollment",
+            directEnrollmentCondition: "direct tests cover critical behavior",
           },
         },
         {
@@ -135,11 +149,23 @@ describe("critical coverage changed-file detection", () => {
             disposition: "unknown",
             owner: "",
             createdAt: "not-a-date",
+            reviewAfter: "not-a-date",
             reason: "",
+            nextAction: "",
+            directEnrollmentCondition: "",
+          },
+          "worker/src/lib/old-review-helper.ts": {
+            disposition: "covered-by-enrolled-entrypoint",
+            owner: "platform",
+            createdAt: "2026-06-05",
+            reviewAfter: "2026-01-01",
+            reason: "covered elsewhere",
+            nextAction: "review helper",
+            directEnrollmentCondition: "direct tests cover helper behavior",
           },
         },
         {
-          candidateFiles: ["worker/src/lib/new-price-helper.ts"],
+          candidateFiles: ["worker/src/lib/new-price-helper.ts", "worker/src/lib/old-review-helper.ts"],
           criticalFiles: [],
         },
       ),
@@ -148,7 +174,86 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/new-price-helper.ts: missing waiver reason",
       "worker/src/lib/new-price-helper.ts: missing waiver owner",
       "worker/src/lib/new-price-helper.ts: missing or invalid waiver createdAt",
+      "worker/src/lib/new-price-helper.ts: missing or invalid waiver reviewAfter",
+      "worker/src/lib/new-price-helper.ts: missing waiver nextAction",
+      "worker/src/lib/new-price-helper.ts: missing waiver directEnrollmentCondition",
+      "worker/src/lib/old-review-helper.ts: waiver reviewAfter must be on or after createdAt",
     ]);
+  });
+
+  it("collects and enforces critical waiver review queues", () => {
+    const waivers = {
+      "worker/src/lib/overdue-price-helper.ts": {
+        disposition: "covered-by-enrolled-entrypoint",
+        owner: "platform",
+        createdAt: "2026-06-05",
+        reviewAfter: "2026-06-10",
+        reason: "covered elsewhere",
+        nextAction: "review overdue helper",
+        directEnrollmentCondition: "direct tests cover helper behavior",
+      },
+      "worker/src/lib/upcoming-price-helper.ts": {
+        disposition: "covered-by-enrolled-entrypoint",
+        owner: "platform",
+        createdAt: "2026-06-05",
+        reviewAfter: "2026-06-30",
+        reason: "covered elsewhere",
+        nextAction: "review upcoming helper",
+        directEnrollmentCondition: "direct tests cover helper behavior",
+      },
+    };
+    const candidateFiles = Object.keys(waivers);
+
+    expect(
+      collectCriticalCoverageWaiverReviewQueue(waivers, {
+        candidateFiles,
+        today: new Date("2026-06-20T00:00:00.000Z"),
+        lookaheadDays: 14,
+      }),
+    ).toEqual({
+      due: [
+        {
+          file: "worker/src/lib/overdue-price-helper.ts",
+          owner: "platform",
+          reviewAfter: "2026-06-10",
+          nextAction: "review overdue helper",
+          directEnrollmentCondition: "direct tests cover helper behavior",
+        },
+      ],
+      upcoming: [
+        {
+          file: "worker/src/lib/upcoming-price-helper.ts",
+          owner: "platform",
+          reviewAfter: "2026-06-30",
+          nextAction: "review upcoming helper",
+          directEnrollmentCondition: "direct tests cover helper behavior",
+        },
+      ],
+    });
+
+    const errors: string[] = [];
+    const exits: number[] = [];
+    expect(
+      runCriticalCoverageCompletenessGuard({
+        candidateFiles,
+        criticalFiles: [],
+        waivers,
+        reviewToday: new Date("2026-06-20T00:00:00.000Z"),
+        consoleImpl: mockConsole({
+          error: (message: string) => errors.push(message),
+          log: () => {},
+        }),
+        exit: captureProcessExit((code) => {
+          if (code !== undefined) exits.push(code);
+        }),
+      }),
+    ).toBe(false);
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] Critical coverage waiver reviews are due or overdue:");
+    expect(errors).toContain(
+      "  worker/src/lib/overdue-price-helper.ts reviewAfter=2026-06-10 owner=platform nextAction=review overdue helper",
+    );
   });
 
   it("fails the checker when a high-stakes candidate lacks enrollment or waiver", () => {
@@ -160,12 +265,12 @@ describe("critical coverage changed-file detection", () => {
         candidateFiles: ["worker/src/cron/sync-stablecoins/new-price-path.ts"],
         criticalFiles: [],
         waivers: {},
-        consoleImpl: {
+        consoleImpl: mockConsole({
           error: (message: string) => errors.push(message),
-        },
-        exit: (code: number) => {
-          exits.push(code);
-        },
+        }),
+        exit: captureProcessExit((code) => {
+          if (code !== undefined) exits.push(code);
+        }),
       }),
     ).toBe(false);
 
@@ -180,6 +285,18 @@ describe("critical coverage changed-file detection", () => {
 
     expect(validateCriticalCoverageWaiverMetadata(CRITICAL_COVERAGE_WAIVERS, { candidateFiles: candidates })).toEqual([]);
     expect(findCriticalCoverageCandidatesMissingEnrollment(candidates)).toEqual([]);
+    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-incident-store.ts"]).toMatchObject({
+      reviewAfter: "2026-08-30",
+      nextAction:
+        "Add direct DDR store tests for row mapping, state transitions, malformed payloads, and D1 failures before enrollment.",
+    });
+    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-publication-store.ts"]).toMatchObject({
+      reviewAfter: "2026-08-30",
+      nextAction:
+        "Add direct DDR store tests for row mapping, state transitions, malformed payloads, and D1 failures before enrollment.",
+    });
+    expect(CRITICAL_FILES).not.toContain("worker/src/lib/depeg-resolver-incident-store.ts");
+    expect(CRITICAL_FILES).not.toContain("worker/src/lib/depeg-resolver-publication-store.ts");
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
@@ -203,27 +320,27 @@ describe("critical coverage changed-file detection", () => {
     const exits: number[] = [];
 
     runCriticalCoverageCheck({
-      env: {
+      env: testEnv({
         CRITICAL_COVERAGE_CHANGED_FILES: CRITICAL_FILES[0],
         CRITICAL_COVERAGE_RATCHET_ALL: "1",
-      },
-      fsImpl: {
+      }),
+      fsImpl: mockFsImpl({
         existsSync: (path: string) => files.has(path),
         readFileSync: (path: string) => {
           const value = files.get(path);
           if (value == null) throw new Error(`missing ${path}`);
           return value;
         },
-      },
-      execFile: () => "",
-      consoleImpl: {
+      }),
+      execFile: mockExecFileSync(() => ""),
+      consoleImpl: mockConsole({
         log: (message: string) => logs.push(message),
         error: (message: string) => errors.push(message),
         warn: (message: string) => logs.push(message),
-      },
-      exit: (code: number) => {
-        exits.push(code);
-      },
+      }),
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
     });
 
     expect(errors).toEqual([]);

@@ -147,6 +147,8 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^worker\/src\/lib\/live-reserves-store.*\.ts$/,
 ];
 const CRITICAL_COVERAGE_WAIVER_CREATED_AT = "2026-06-05";
+const CRITICAL_COVERAGE_WAIVER_DEFAULT_REVIEW_AFTER = "2026-09-05";
+const CRITICAL_COVERAGE_WAIVER_DDR_REVIEW_AFTER = "2026-08-30";
 const CRITICAL_COVERAGE_WAIVER_DISPOSITIONS = new Set([
   "covered-by-enrolled-entrypoint",
   "barrel-or-contract",
@@ -291,6 +293,10 @@ export function findStaleCriticalCoverageWaivers(candidateFiles, waivers = CRITI
   return Object.keys(waivers).filter((file) => !candidateSet.has(file));
 }
 
+/**
+ * @param {Record<string, object>} waivers
+ * @param {{ candidateFiles?: string[], criticalFiles?: string[] }} [options]
+ */
 export function validateCriticalCoverageWaiverMetadata(
   waivers,
   {
@@ -323,9 +329,70 @@ export function validateCriticalCoverageWaiverMetadata(
     if (!isValidDateOnly(waiver.createdAt)) {
       errors.push(`${file}: missing or invalid waiver createdAt`);
     }
+    if (!isValidDateOnly(waiver.reviewAfter)) {
+      errors.push(`${file}: missing or invalid waiver reviewAfter`);
+    }
+    if (isValidDateOnly(waiver.createdAt) && isValidDateOnly(waiver.reviewAfter) && waiver.reviewAfter < waiver.createdAt) {
+      errors.push(`${file}: waiver reviewAfter must be on or after createdAt`);
+    }
+    if (typeof waiver.nextAction !== "string" || waiver.nextAction.trim().length === 0) {
+      errors.push(`${file}: missing waiver nextAction`);
+    }
+    if (
+      typeof waiver.directEnrollmentCondition !== "string" ||
+      waiver.directEnrollmentCondition.trim().length === 0
+    ) {
+      errors.push(`${file}: missing waiver directEnrollmentCondition`);
+    }
   }
 
   return errors;
+}
+
+/**
+ * @param {Record<string, object>} waivers
+ * @param {{ today?: Date, lookaheadDays?: number, candidateFiles?: string[] }} [options]
+ */
+export function collectCriticalCoverageWaiverReviewQueue(
+  waivers,
+  {
+    today = new Date(),
+    lookaheadDays = 14,
+    candidateFiles,
+  } = {},
+) {
+  const candidateSet = candidateFiles ? new Set(candidateFiles) : null;
+  const todayString = toUtcDateOnly(today);
+  const lookahead = new Date(`${todayString}T00:00:00.000Z`);
+  lookahead.setUTCDate(lookahead.getUTCDate() + lookaheadDays);
+  const lookaheadString = toUtcDateOnly(lookahead);
+  const due = [];
+  const upcoming = [];
+
+  for (const [file, waiver] of Object.entries(waivers)) {
+    if (candidateSet && !candidateSet.has(file)) continue;
+    if (!isValidDateOnly(waiver?.reviewAfter)) continue;
+    const row = {
+      file,
+      owner: waiver.owner ?? "unknown",
+      reviewAfter: waiver.reviewAfter,
+      nextAction: waiver.nextAction ?? "",
+      directEnrollmentCondition: waiver.directEnrollmentCondition ?? "",
+    };
+    if (waiver.reviewAfter <= todayString) {
+      due.push(row);
+    } else if (waiver.reviewAfter <= lookaheadString) {
+      upcoming.push(row);
+    }
+  }
+
+  const sortByReviewDate = (left, right) =>
+    left.reviewAfter.localeCompare(right.reviewAfter) || left.file.localeCompare(right.file);
+
+  return {
+    due: due.sort(sortByReviewDate),
+    upcoming: upcoming.sort(sortByReviewDate),
+  };
 }
 
 function collectCriticalCoverageSourceFiles(cwd) {
@@ -371,13 +438,24 @@ function buildCriticalCoverageWaiver(file) {
     file.endsWith("pricing-provider-lifecycle.ts") ||
     file.endsWith("pricing-provider-diagnostics.ts") ||
     file.endsWith("pricing-source-policy.ts");
+  const disposition = isContractOnly ? "barrel-or-contract" : isDeferred ? "deferred-ratchet" : "covered-by-enrolled-entrypoint";
 
   return {
-    disposition: isContractOnly ? "barrel-or-contract" : isDeferred ? "deferred-ratchet" : "covered-by-enrolled-entrypoint",
+    disposition,
     owner: "platform",
     createdAt: CRITICAL_COVERAGE_WAIVER_CREATED_AT,
+    reviewAfter: waiverReviewAfterForFile(file),
     reason: waiverReasonForFile(file),
+    nextAction: waiverNextActionForFile(file, disposition),
+    directEnrollmentCondition: waiverDirectEnrollmentConditionForFile(file, disposition),
   };
+}
+
+function waiverReviewAfterForFile(file) {
+  if (file.includes("/depeg-resolver/") || file.includes("/depeg-resolver-")) {
+    return CRITICAL_COVERAGE_WAIVER_DDR_REVIEW_AFTER;
+  }
+  return CRITICAL_COVERAGE_WAIVER_DEFAULT_REVIEW_AFTER;
 }
 
 function waiverReasonForFile(file) {
@@ -406,4 +484,61 @@ function waiverReasonForFile(file) {
     return "Live-reserve support/config helper is covered by the enrolled sync-live-reserves suite; promote it if it starts owning persistence or scoring logic.";
   }
   return "Reviewed high-stakes support module; current critical behavior is covered by an enrolled entrypoint test suite.";
+}
+
+function waiverNextActionForFile(file, disposition) {
+  if (disposition === "barrel-or-contract") {
+    return "Keep as a metadata-only waiver while the module remains a barrel, config, or contract surface; enroll the concrete runtime module instead.";
+  }
+  if (file.includes("/sync-stablecoins/")) {
+    return "Review split pricing helpers for independent source-selection, fallback, or publication behavior before the next coverage ratchet cycle.";
+  }
+  if (file.includes("/address-price-providers/")) {
+    return "Add provider-specific critical tests before promoting the fetcher from entrypoint-covered waiver to direct coverage.";
+  }
+  if (file.endsWith("depeg-resolver-incident-store.ts") || file.endsWith("depeg-resolver-publication-store.ts")) {
+    return "Add direct DDR store tests for row mapping, state transitions, malformed payloads, and D1 failures before enrollment.";
+  }
+  if (file.includes("/depeg-resolver/") || file.includes("/depeg-resolver-")) {
+    return "Review DDR support helpers after the store-level test tranche and promote any decision-boundary module to direct coverage.";
+  }
+  if (file.includes("/dews/")) {
+    return "Promote to direct coverage if the helper starts owning DEWS scoring decisions instead of support plumbing.";
+  }
+  if (file.includes("sync-live-reserves") || file.includes("live-reserves-store")) {
+    return "Promote reserve support modules when persistence, scoring, or row-decoding behavior has direct critical tests.";
+  }
+  return "Review whether entrypoint coverage still exercises the file's critical behavior; add direct tests before enrollment.";
+}
+
+function waiverDirectEnrollmentConditionForFile(file, disposition) {
+  if (disposition === "barrel-or-contract") {
+    return "Runtime behavior is added to this module, or the barrel starts hiding critical branch logic that cannot be ratcheted through concrete implementation files.";
+  }
+  if (file.includes("/sync-stablecoins/")) {
+    return "Focused critical tests cover the helper's source selection, fallback, cache-publication, or payload-shaping behavior without relying only on the enrolled sync entrypoint.";
+  }
+  if (file.includes("/address-price-providers/")) {
+    return "Provider-specific tests cover success, malformed response, non-OK response, timeout or circuit behavior, and normalized diagnostics.";
+  }
+  if (file.endsWith("depeg-resolver-incident-store.ts")) {
+    return "Direct incident-store tests cover row mapping, lock transitions, malformed payload handling, and D1 failure behavior.";
+  }
+  if (file.endsWith("depeg-resolver-publication-store.ts")) {
+    return "Direct publication-store tests cover publication row mapping, payload validation, projection reads, and D1 failure behavior.";
+  }
+  if (file.includes("/depeg-resolver/") || file.includes("/depeg-resolver-")) {
+    return "Direct DDR tests cover the helper's decision boundary or durable-store behavior instead of only cron-level orchestration.";
+  }
+  if (file.includes("/dews/")) {
+    return "Direct DEWS tests cover scoring or source-state decisions owned by the helper.";
+  }
+  if (file.includes("sync-live-reserves") || file.includes("live-reserves-store")) {
+    return "Direct reserve tests cover persistence, row decoding, or scoring behavior owned by the module.";
+  }
+  return "Direct critical tests cover this module's high-stakes behavior independently of the enrolled entrypoint suite.";
+}
+
+function toUtcDateOnly(date) {
+  return date.toISOString().slice(0, 10);
 }
