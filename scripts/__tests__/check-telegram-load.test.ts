@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildQueryPlanChecks,
   buildSyntheticTelegramFixture,
   buildTelegramLoadCheckReport,
   evaluateQueryPlan,
@@ -153,6 +154,15 @@ describe("Telegram query-plan evaluation", () => {
     binds: [],
     requiredDetails: ["idx_needed"],
   };
+
+  it("keeps only the claim-based pending drain readiness guard", () => {
+    const pendingDrainIds = buildQueryPlanChecks()
+      .filter((check) => check.category === "pending-drain")
+      .map((check) => check.id);
+
+    expect(pendingDrainIds).toContain("pending-claim-ready");
+    expect(pendingDrainIds).not.toContain("pending-drain-ready");
+  });
 
   it("passes when required index details are present", () => {
     const result = evaluateQueryPlan(check, ["SEARCH sub USING INDEX idx_needed (stablecoin_id=?)"]);

@@ -95,7 +95,7 @@ DEX discovery sources write to `dex_pool_staging` every 2 hours on the dedicated
 
 ## Getting Started
 
-Requires Node 24 LTS (`package.json#engines.node`, `.nvmrc`, and `.npmrc` `engine-strict=true`). Activate the pinned version before installing dependencies from the repo root; npm workspaces will wire both the frontend and `worker/` package:
+The primary supported local and CI baseline is Node 24 LTS (`.nvmrc` pins 24.16.0). `package.json#engines.node` also allows Node 26, and pull-request CI runs a non-blocking Node 26 proof lane for typecheck coverage. Use the pinned version for release-parity installs unless you are explicitly testing the wider engine range:
 
 ```bash
 nvm use

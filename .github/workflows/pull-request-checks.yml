@@ -38,6 +38,24 @@ jobs:
       pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
       worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
 
+  node26-proof:
+    name: Node 26 proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: "26"
+          tooling-cache: "true"
+      - run: npm run typecheck
+      - run: npm run typecheck:worker
+
   gitleaks:
     runs-on: ubuntu-latest
     timeout-minutes: 10

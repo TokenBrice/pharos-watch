@@ -155,7 +155,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run build`, `npm run test:a11y`, `npm run check:feature-flag-inlining`, `npm run seo:check`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, `npm run check:build-size`, and `npm run check:build-attribution` only when `pages_changed=true` (pull-request validation only; the push/manual production deploy path runs Pages build/SEO/static-export guardrails inside `pages-release`, not the validate gate)
    - includes `npm run typecheck:worker` and `npm run validate:worker-scheduled-smoke` only when `worker_changed=true`
    - CI runs `validate-prebuild`, `pages-build`, `test-noncritical`, `coverage-critical`, and `typecheck-worker` as independent parallel GitHub jobs, with the aggregate `validate` job waiting on all of them; the `typecheck-worker` job also runs `npm run validate:worker-scheduled-smoke` after the Worker typecheck. `npm run build` still precedes `npm run seo:check` and the built-artifact classifier guardrails inside `pages-build`. The local merge gate provides the equivalent coverage through `scripts/maintenance/test-merge-gate.mjs`, which uses `buildCommandPlan` to construct a per-trigger execution plan and defaults to serial post-prebuild execution; set `MERGE_GATE_PARALLEL=1` to opt into local fan-out.
-   - installs Node 24.16.0 through the shared workspace setup action, matching the repo engine baseline; there is no separate LTS proof lane because Node 24 is the primary contract
+   - installs Node 24.16.0 through the shared workspace setup action, matching the primary repo baseline; pull-request checks also run a non-blocking Node 26 proof lane because the engine range allows Node 26
    - pull requests call the same reusable workflow with diff-derived `pages_changed` and `worker_changed` inputs, so PR Pages build/SEO and Worker validation coverage follows the deploy-surface classifier while the shared non-deploy guardrails and tests still run on every PR
 3. `no-deploy-required`
    - runs only when `deploy_required=false`
@@ -287,7 +287,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 - The repo uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
 - Worker production releases prefer Wrangler Versions plus Preview URLs: CI uploads a candidate version early, captures the current production version as the required rollback target, waits for validation before D1 mutation, smokes that preview inside `deploy-worker`, then promotes that exact version to production traffic through the Cloudflare Workers Deployments API. If the previous version cannot be captured while Worker Versions are available, the workflow stops before production D1 mutation or promotion. If Cloudflare rejects Workers Versions with `entitlements.not_available [code: 10007]`, CI falls back to `wrangler deploy` after the same validation and migration gates and keeps the production smoke as the deployment proof; this legacy fallback has reduced rollback safety and any failure requires operator-led Worker rollback from Cloudflare deployment history.
 - The validate and Pages release lanes restore `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` outputs so unchanged build/lint/typecheck work can be reused across runs.
-- The repo engine floor is Node 24 LTS for the primary local/runtime baseline, with CI and `.nvmrc` pinned to Node 24.16.0.
+- The repo engine floor is Node 24 LTS for the primary local/runtime baseline, with CI and `.nvmrc` pinned to Node 24.16.0. `package.json#engines.node` allows Node 26, and pull-request checks run a non-blocking Node 26 typecheck proof lane.
 
 ### Failure Stop and Surface Classification
 
@@ -297,7 +297,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 ### Validate Lane Fan-out and Deploy Ordering
 
-- The Node 24.16.0 validate lane starts `validate:prebuild`, non-critical-test shards, critical coverage, and conditional Worker validation as independent jobs, then uses the aggregate `validate / validate` job to require every needed result.
+- The Node 24.16.0 validate lane starts `validate:prebuild`, non-critical-test shards, critical coverage, and conditional Worker validation as independent jobs, then uses the aggregate `validate / validate` job to require every needed result. The pull-request Node 26 proof lane is separate and non-blocking; failures there should be triaged before widening Node-dependent behavior.
 - The deploy workflow waits for the aggregate `validate / validate` result before starting Cloudflare-secret-bearing preparation, including Worker candidate upload and the Pages build/local-smoke/publish job.
 - Production D1 mutation and Worker promotion remain behind the aggregate `validate / validate` result; Pages publish also waits for validation and, on combined deploys, successful Worker promotion.
 

@@ -729,7 +729,7 @@ export function evaluateQueryPlan(
   };
 }
 
-function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
+export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   const activeSubscriptionCountsSql = `SELECT chat_id,
         SUM(
           CASE
@@ -820,34 +820,6 @@ function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
           AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)`,
       binds: [1_800_000_000],
       requiredDetails: ["idx_telegram_subscribers_global_alert_reserve"],
-    },
-    {
-      id: "pending-drain-ready",
-      category: "pending-drain",
-      sql: `SELECT p.id, p.chat_id, p.message_html, p.disable_notification, p.created_at,
-              p.expires_at, p.attempts, p.not_before_at, p.priority, p.source_type,
-              p.alert_type, u.alert_snooze_until_ts, u.quiet_hours_enabled,
-              u.quiet_hours_start_utc, u.quiet_hours_end_utc, u.timezone
-         FROM telegram_pending_alerts p
-         LEFT JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-        WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
-          AND (p.not_before_at IS NULL OR p.not_before_at <= ?)
-          AND (? IS NULL OR COALESCE(p.priority, ?) <= ?)
-        ORDER BY COALESCE(p.priority, ?) ASC,
-                 COALESCE(p.not_before_at, p.created_at) ASC,
-                 p.created_at ASC
-        LIMIT ?`,
-      binds: [
-        PENDING_TTL_SECONDS,
-        1_800_000_000,
-        1_800_000_000,
-        RISK_ALERT_PRIORITY,
-        LEGACY_PENDING_PRIORITY,
-        RISK_ALERT_PRIORITY,
-        LEGACY_PENDING_PRIORITY,
-        PENDING_DRAIN_ATTEMPTS_PER_RUN,
-      ],
-      requiredDetails: ["idx_tpa_ready", "idx_tpa_not_before", "sqlite_autoindex_telegram_subscribers_1"],
     },
     {
       id: "pending-claim-ready",
