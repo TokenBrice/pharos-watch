@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Returns a ref + a "near" boolean that flips to `true` once the element
@@ -12,13 +12,14 @@ import { useEffect, useRef, useState } from "react";
  * `near` flag as opaque and not gate critical-for-SEO content on it.
  */
 export function useNearViewport<T extends HTMLElement>(rootMargin = "300px") {
-  const ref = useRef<T | null>(null);
+  const [target, setTarget] = useState<T | null>(null);
   const [near, setNear] = useState(false);
+  const ref = useCallback((el: T | null) => {
+    setTarget(el);
+  }, []);
 
   useEffect(() => {
-    if (near) return;
-    const el = ref.current;
-    if (!el) return;
+    if (near || !target) return;
     if (typeof window === "undefined" || typeof window.IntersectionObserver === "undefined") {
       // Defensive — older browsers + jsdom mount immediately. The setState
       // here is one-shot at first mount (the `near` dep returns early on the
@@ -36,11 +37,11 @@ export function useNearViewport<T extends HTMLElement>(rootMargin = "300px") {
       },
       { rootMargin },
     );
-    io.observe(el);
+    io.observe(target);
     return () => {
       io.disconnect();
     };
-  }, [near, rootMargin]);
+  }, [near, rootMargin, target]);
 
   return { ref, near };
 }
