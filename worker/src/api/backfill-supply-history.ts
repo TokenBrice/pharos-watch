@@ -442,6 +442,7 @@ async function backfillHistoricalTotalSupply(
     blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
     priceSeries?: TimestampedRatePoint[];
     requirePrice: boolean;
+    skipSnapshotDates?: ReadonlySet<number>;
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
@@ -497,6 +498,7 @@ async function backfillHistoricalTotalSupply(
   for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
     throwIfAborted(options.signal);
     if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
+    if (options.skipSnapshotDates?.has(snapshotDate)) continue;
 
     const price = findHistoricalPrice(snapshotDate);
     if (options.requirePrice && price == null) {
@@ -627,8 +629,20 @@ async function backfillCommodity(
     if (stmts.length > 0) {
       await batchExecute(db, stmts);
       if (missingMarketCapDays > 0) {
+        const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
+          chainRpcs: config.chainRpcs,
+          blockSearchCachesByChain: config.blockSearchCachesByChain,
+          priceSeries: normalizeCoinGeckoDailyPrices(marketHistory.prices),
+          requirePrice: true,
+          skipSnapshotDates: seenSnapshotDates,
+          window: config.window,
+          signal: config.signal,
+        });
+        if (!historicalTotalSupply.error) {
+          return { rows: stmts.length + historicalTotalSupply.rows };
+        }
         console.warn(
-          `[backfill-commodity] ${id}: skipped ${missingMarketCapDays} day(s) without CoinGecko market caps instead of projecting current supply backward`,
+          `[backfill-commodity] ${id}: skipped ${missingMarketCapDays} day(s) without CoinGecko market caps; historical totalSupply fallback failed (${historicalTotalSupply.error})`,
         );
       }
       return { rows: stmts.length };
