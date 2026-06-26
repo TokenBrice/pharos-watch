@@ -96,6 +96,7 @@ export const CRITICAL_FILES = [
   "worker/src/api/report-cards.ts",
   "worker/src/api/dex-liquidity.ts",
   "worker/src/api/stress-signals.ts",
+  "worker/src/lib/stress-signals-current-rows.ts",
   "worker/src/api/mint-burn-flows.ts",
   "worker/src/api/status.ts",
   "worker/src/api/telegram-webhook.ts",
@@ -142,6 +143,7 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_FILES = new Set([
   "worker/src/cron/compute-dews.ts",
   "worker/src/cron/reserve-adapters/cap-vault.ts",
   "worker/src/cron/sync-live-reserves.ts",
+  "worker/src/lib/stress-signals-current-rows.ts",
 ]);
 const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^worker\/src\/cron\/sync-live-reserves-[a-z0-9-]+\.ts$/,

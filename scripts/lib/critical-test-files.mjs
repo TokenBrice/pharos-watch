@@ -43,6 +43,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/__tests__/yield-rankings.test.ts",
   "worker/src/api/__tests__/yield-history.test.ts",
   "worker/src/api/__tests__/stress-signals.test.ts",
+  "worker/src/lib/__tests__/stress-signals-current-rows.test.ts",
   "worker/src/api/__tests__/mint-burn-flows.test.ts",
   "worker/src/api/__tests__/stablecoin-detail.test.ts",
   "worker/src/api/__tests__/stablecoin-reserves.test.ts",

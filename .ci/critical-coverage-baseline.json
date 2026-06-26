@@ -94,6 +94,7 @@
     "worker/src/api/report-cards.ts": 90.9,
     "worker/src/api/dex-liquidity.ts": 100,
     "worker/src/api/stress-signals.ts": 99,
+    "worker/src/lib/stress-signals-current-rows.ts": 97.1,
     "worker/src/api/mint-burn-flows.ts": 100,
     "worker/src/api/status.ts": 100,
     "worker/src/api/telegram-webhook.ts": 89.2,
