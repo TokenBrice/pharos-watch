@@ -8,6 +8,9 @@ import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-c
 import { deferConfig, loadDeferredConfigs, shouldDeferConfig } from "./run-state";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
+const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
+const MINT_BURN_MIN_CONFIG_WINDOW_MS = 60_000;
+
 function configCoverageRatio(summary: MintBurnConfigSummary): number | null {
   if (summary.eventCoverage.length === 0) return null;
   const okCount = summary.eventCoverage.filter((c) => c.status === "ok").length;
@@ -41,6 +44,7 @@ export interface MintBurnRunConfigPhaseResult {
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
+  runtimeBudgetHit: boolean;
 }
 
 export async function runMintBurnConfigPhase(input: {
@@ -66,6 +70,8 @@ export async function runMintBurnConfigPhase(input: {
   extendedConfigBudgetLimit: number;
   evmSafetyMarginBlocks: number;
   affectedHours: Map<string, MintBurnAffectedHour>;
+  deadlineMs?: number;
+  minimumConfigWindowMs?: number;
 }): Promise<MintBurnRunConfigPhaseResult> {
   let rowsRead = 0;
   let rowsParsed = 0;
@@ -84,9 +90,12 @@ export async function runMintBurnConfigPhase(input: {
   let bridgeClassificationDeferredRows = 0;
   let criticalContractsSatisfied = 0;
   let criticalContractsUnsatisfied = 0;
+  let runtimeBudgetHit = false;
 
   const configBreakdown: MintBurnConfigSummary[] = [];
   const affectedHours = input.affectedHours;
+  const deadlineMs = input.deadlineMs ?? Date.now() + MINT_BURN_RUNTIME_BUDGET_MS;
+  const minimumConfigWindowMs = input.minimumConfigWindowMs ?? MINT_BURN_MIN_CONFIG_WINDOW_MS;
 
   const nowSec = Math.floor(Date.now() / 1000);
   const deferredKeys = await loadDeferredConfigs(input.db, nowSec);
@@ -94,6 +103,25 @@ export async function runMintBurnConfigPhase(input: {
   for (let i = 0; i < input.configs.length; i++) {
     if (input.signal?.aborted) {
       throw input.signal.reason instanceof Error ? input.signal.reason : new Error("sync-mint-burn aborted");
+    }
+
+    if (
+      Date.now() + minimumConfigWindowMs >= deadlineMs
+    ) {
+      runtimeBudgetHit = true;
+      for (let remainingIndex = i; remainingIndex < input.configs.length; remainingIndex++) {
+        const remainingConfig = input.configs[remainingIndex]!;
+        const remainingKey = configKey(remainingConfig);
+        const remainingTier = configTier(remainingConfig);
+        const remainingSummary = createMintBurnConfigSummary(remainingConfig, remainingKey, remainingTier);
+        remainingSummary.skippedReason = "runtime-budget-exhausted";
+        contractsSkipped++;
+        if (remainingTier === "critical") {
+          criticalContractsUnsatisfied++;
+        }
+        configBreakdown.push(remainingSummary);
+      }
+      break;
     }
 
     const config = input.configs[i]!;
@@ -275,5 +303,6 @@ export async function runMintBurnConfigPhase(input: {
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,
     configBreakdown,
+    runtimeBudgetHit,
   };
 }

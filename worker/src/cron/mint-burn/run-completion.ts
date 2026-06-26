@@ -52,6 +52,7 @@ export async function completeMintBurnRun(input: {
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
+  runtimeBudgetHit: boolean;
   signal?: AbortSignal;
 }): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown>; error: string | null }> {
   const laggingConfigs = input.configs
@@ -227,6 +228,7 @@ export async function completeMintBurnRun(input: {
     configBreakdown: input.configBreakdown,
     laggingConfigs,
     coverageRatio,
+    runtimeBudgetHit: input.runtimeBudgetHit,
     degradedSignal,
     degradedStreak,
     runStatePersistenceFailed,

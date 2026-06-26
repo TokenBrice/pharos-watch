@@ -64,6 +64,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
 | Subrequest budget | 200 per cron run | Global Alchemy API call budget |
 | Per-config request cap | 60 critical, 150 bridge-aware critical, 25 extended | Prevents one hot config from consuming the full lane while allowing high-volume bridge-aware critical configs to finish tx-context classification |
+| Runtime self-budget | 9 minutes, with a 60-second minimum next-config window | Stops starting new configs before the 10-minute cron wrapper timeout so the run can persist controlled metadata and resume on the next slot |
 | Config tier policy | `critical` / `extended` | Critical and extended lanes run on separate cron schedules; each config also has a per-config request cap |
 | Coverage lag threshold | public freshness window by chain block cadence, capped at 10K blocks | Marks established per-coin coverage `lagging` once current block progress exceeds the public freshness cadence |
 
@@ -211,7 +212,7 @@ When omitted, the default is the Transfer convention: mint → `topics[2]` (reci
 ## Sync Algorithm
 
 1. **Load sync state** — batch query `mint_burn_sync_state` for all lane-selected contract keys. Falls back to `startBlock - 1` for new configs.
-2. **Apply runtime policy** — filter disabled configs (`MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`), select the requested lane (`critical`, `extended`, or `all`), rotate start index from the lane-specific `mint_burn_run_state.job`, front-load critical configs inside mixed/all runs, and assign a per-config request cap inside the global budget.
+2. **Apply runtime policy** — filter disabled configs (`MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`), select the requested lane (`critical`, `extended`, or `all`), rotate start index from the lane-specific `mint_burn_run_state.job`, front-load critical configs inside mixed/all runs, and assign a per-config request cap inside the global budget. The cron runner reserves a 9-minute self-budget inside the 10-minute wrapper timeout and skips the remaining config tail once fewer than 60 seconds remain for starting another config.
 3. **Skip deferred configs** — load active deferrals from `mint_burn_config_deferral` (rows with `deferred_until > now`) and remove them from the run. A config is deferred for a 1-hour grace period when it exits a run with `apiErrors > 5` AND `coverage < 0.8`, so chronically failing configs cannot starve healthy ones of subrequest budget.
 4. **Get chain head** — Alchemy `eth_blockNumber` call per chain (cached per chain ID).
 5. **Load price cache** — query `price_cache` for all tracked stablecoin IDs (used for USD conversion).
@@ -219,7 +220,7 @@ When omitted, the default is the Transfer convention: mint → `topics[2]` (reci
    - Skip if `fromBlock > chainHead` or the lane/global budget is exhausted.
    - For each event definition, call Alchemy `eth_getLogs` with adaptive recursive block-range splitting on provider/range failures.
    - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge activity so a single config cannot monopolize the lane.
-   - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs, using local + persistent (`block_timestamp_cache`) caches.
+   - Resolve block timestamps — batch `eth_getBlockByNumber` for unique blocks that contain non-dust candidate logs, using local + persistent (`block_timestamp_cache`) caches. Dust-only blocks are dropped before timestamp resolution so they cannot pin the sync frontier.
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
    - Resolve transaction-context receipts for candidate bridge rows with the local `mapWithConcurrency` helper (`TX_CONTEXT_CONCURRENCY = 4`) instead of a serial loop. Each worker fetches transaction and receipt context together through one batched Alchemy JSON-RPC request per transaction, so this is a bounded best-effort speedup rather than a fixed per-trigger headroom guarantee.
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.

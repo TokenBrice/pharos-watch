@@ -42,6 +42,7 @@ function buildRunInput(overrides: { apiErrors?: number; signal?: AbortSignal } =
     contractsProcessed: 0,
     contractsSkipped: 0,
     contractsDeferredExtended: 0,
+    runtimeBudgetHit: false,
     apiErrors: overrides.apiErrors ?? 0,
     effectiveBurns: 0,
     bridgeBurns: 0,

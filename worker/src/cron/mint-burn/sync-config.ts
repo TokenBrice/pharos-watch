@@ -1,6 +1,6 @@
 import type { AlchemyLogEntry } from "../../lib/alchemy-logs";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
-import { budgetExhausted, createBudget } from "../../lib/evm-logs";
+import { budgetExhausted, createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
 import type { TopicFilter } from "../../lib/evm-logs";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
@@ -136,6 +136,21 @@ function minOrNull(values: number[]): number | null {
   return values.reduce((min, value) => Math.min(min, value), values[0]);
 }
 
+function timestampRequiredBlockForLog(
+  config: MintBurnContractConfig,
+  eventDef: MintBurnEventDef,
+  log: AlchemyLogEntry,
+): number | null {
+  const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
+  const amount = decodeUint256AtSlot(log.data, slot, config.decimals);
+  if (amount <= 0 || amount < config.dustThreshold) return null;
+
+  const blockNum = parseInt(log.blockNumber, 16);
+  const logIndex = parseInt(log.logIndex, 16);
+  if (!Number.isFinite(blockNum) || !Number.isFinite(logIndex)) return null;
+  return blockNum;
+}
+
 export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promise<SyncMintBurnConfigResult> {
   const {
     db,
@@ -232,11 +247,15 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     }
   }
 
-  const uniqueBlocks = [
-    ...new Set(allConfigLogs.flatMap(({ logs }) => logs.map((log) => parseInt(log.blockNumber, 16)))),
+  const timestampRequiredBlocks = [
+    ...new Set(allConfigLogs.flatMap(({ eventDef, logs }) =>
+      logs
+        .map((log) => timestampRequiredBlockForLog(config, eventDef, log))
+        .filter((block): block is number => block != null),
+    )),
   ];
-  const blockTimestamps = uniqueBlocks.length > 0
-    ? await resolveBlockTimestamps(alchemyUrl, uniqueBlocks, configBudget, {
+  const blockTimestamps = timestampRequiredBlocks.length > 0
+    ? await resolveBlockTimestamps(alchemyUrl, timestampRequiredBlocks, configBudget, {
         signal,
         localCache: chainTimestampCache,
         persistentCache: {
@@ -246,7 +265,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       })
     : new Map<number, number>();
 
-  const missingTimestampBlocks = uniqueBlocks
+  const missingTimestampBlocks = timestampRequiredBlocks
     .filter((blockNum) => !blockTimestamps.has(blockNum))
     .sort((a, b) => a - b);
   summary.missingTimestampCount = missingTimestampBlocks.length;
@@ -258,7 +277,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.failedEventDefs.push(`timestamps:${missingTimestampBlocks.length}`);
     console.warn(
       `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
-      `${missingTimestampBlocks.length}/${uniqueBlocks.length} blocks missing timestamps`,
+      `${missingTimestampBlocks.length}/${timestampRequiredBlocks.length} candidate blocks missing timestamps`,
     );
   }
 

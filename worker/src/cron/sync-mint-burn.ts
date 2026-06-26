@@ -295,7 +295,7 @@ export async function syncMintBurn(
     criticalContractsEnabled,
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,
-    configBreakdown,
+    configBreakdown, runtimeBudgetHit: phaseResult.runtimeBudgetHit,
     signal,
   });
 

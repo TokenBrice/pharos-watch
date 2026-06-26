@@ -177,7 +177,7 @@ import {
   getAlchemyTransactionContextBatch,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
-import { createBudget } from "../../lib/evm-logs";
+import { createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
 
 function makeDb(opts: {
   runState?: { nextIndex: number; degradedStreak: number } | null;
@@ -265,6 +265,7 @@ describe("syncMintBurn", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-04T12:00:00Z"));
     vi.mocked(createBudget).mockReset().mockImplementation((limit = 200) => ({ count: 0, limit }));
+    vi.mocked(decodeUint256AtSlot).mockReset().mockReturnValue(50_000);
     vi.mocked(getAlchemyBlockNumber).mockReset().mockResolvedValue(22_000_000);
     vi.mocked(getAlchemyTransactionContextBatch).mockReset().mockResolvedValue({
       tx: { hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" },
@@ -468,6 +469,37 @@ describe("syncMintBurn", () => {
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
+  it("does not require timestamps for dust-only logs", async () => {
+    const db = makeDb();
+
+    vi.mocked(decodeUint256AtSlot).mockReturnValue(1);
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ blockNumber: 21_950_000 })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [makeBurnLog({ blockNumber: 21_950_001 })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+
+    const result = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
+    const meta = JSON.parse(result.metadata);
+    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+
+    expect(resolveBlockTimestamps).not.toHaveBeenCalled();
+    expect(usdt?.missingTimestampCount).toBe(0);
+    expect(usdt?.rowsDropped).toBe(2);
+    expect(usdt?.advanceReason).toBe("full-success-empty");
+    expect(usdt?.advancedTo).toBe(21_949_999);
+  });
+
   it("marks run as degraded after consecutive degraded streak", async () => {
     const db = makeDb({ runState: { nextIndex: 0, degradedStreak: 1 } });
 
@@ -657,6 +689,29 @@ describe("syncMintBurn", () => {
     expect(fetchedContracts[0]).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
     expect(fetchedContracts).toContain("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
     expect(meta.configBreakdown[0].requestBudgetUsed).toBe(meta.configBreakdown[0].requestBudgetLimit);
+  });
+
+  it("stops before starting another config when the runtime budget tail is reserved", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async () => {
+      vi.setSystemTime(new Date("2026-03-04T12:08:31Z"));
+      return {
+        logs: [],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      };
+    });
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+    const usdc = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDC");
+
+    expect(meta.runtimeBudgetHit).toBe(true);
+    expect(usdc?.attempted).toBe(false);
+    expect(usdc?.skippedReason).toBe("runtime-budget-exhausted");
   });
 
   it("allows bridge-aware critical configs to use the larger tx-context budget", async () => {
