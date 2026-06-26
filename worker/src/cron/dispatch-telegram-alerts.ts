@@ -556,7 +556,6 @@ async function executeFullFanoutPath({
 
   const formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE;
   const {
-    plannedQueue,
     subscriberQueue,
     overflowPlanned,
     combinedOverflowPlanned,
