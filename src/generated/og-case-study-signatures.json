@@ -118,12 +118,12 @@
       "slug": "susd-sip420-2025",
       "kicker": "Governance depeg",
       "title": "sUSD and SIP-420: the depeg a governance vote chose",
-      "outcome": "wounded",
+      "outcome": "died",
       "logo": {
         "path": "public/logos/22-susd.png",
         "sha256": "f90d5e697f91d33c0eaf81ce4f177e8783d0dfc9df6bd16f34127365f1e28844"
       },
-      "svgSha256": "71263b32da6b93af177cfe40c91e61c54699ad04c88992acc3df70c8e774d208"
+      "svgSha256": "62253992317bc16892f50db297d0674250507ef72ea67227311f97045f27aa33"
     },
     {
       "file": "og-learn-case-iron-titan-2021.png",

@@ -57,7 +57,7 @@ export const CASE_STUDY_CLIENT_BY_COIN_ID: Record<string, CaseStudyClientSummary
   "susd-synthetix": {
     "slug": "susd-sip420-2025",
     "title": "sUSD and SIP-420: the depeg a governance vote chose",
-    "outcome": "wounded"
+    "outcome": "died"
   },
   "usr-resolv": {
     "slug": "usr-resolv-2026",
@@ -257,7 +257,7 @@ export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem
     "primaryCoinId": "susd-synthetix",
     "relatedCoinIds": [],
     "startISO": "2025-04-18",
-    "endISO": "2025-08-31"
+    "endISO": "2026-06-26"
   },
   {
     "slug": "iron-titan-2021",
