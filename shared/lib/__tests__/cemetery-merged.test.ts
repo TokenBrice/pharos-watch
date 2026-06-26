@@ -52,4 +52,12 @@ describe("buildMergedCemetery", () => {
     expect(result.id).toBe(sample.id);
     expect(result.archivedDataAvailable).toBe(true);
   });
+
+  it("uses existing tracked logo paths for frozen DefiLlama assets", () => {
+    const eurr = FROZEN_STABLECOINS.find((coin) => coin.id === "eurr-stablr");
+    expect(eurr).toBeDefined();
+
+    const result = frozenToDeadShape(eurr!);
+    expect(result.logo).toBe("/logos/239-eurr.png");
+  });
 });

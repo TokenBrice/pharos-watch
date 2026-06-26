@@ -205,6 +205,11 @@ function getObituaryPreview(obituary: string, isEditorial: boolean): string {
   return bounded || getObituaryLead(obituary);
 }
 
+function getCemeteryLogoUrl(logo?: string): string | undefined {
+  if (!logo) return undefined;
+  return logo.startsWith("/") ? logo : `/logos/cemetery/${logo}`;
+}
+
 function Tombstone({
   coin,
   index,
@@ -262,7 +267,7 @@ function Tombstone({
   const cfg = SIZE[size];
   const color = CAUSE_HEX[coin.causeOfDeath];
   const cause = CAUSE_META[coin.causeOfDeath];
-  const logoUrl = coin.logo ? `/logos/cemetery/${coin.logo}` : undefined;
+  const logoUrl = getCemeteryLogoUrl(coin.logo);
   const staggerLevel = index % 3;
   const staggerOffset = staggerLevel * 10;
   const rotation = ((index % 5) - 2) * 0.65;

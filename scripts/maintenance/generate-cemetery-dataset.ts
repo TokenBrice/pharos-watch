@@ -84,6 +84,13 @@ function getDeathDatePrecision(deathDate: string): CemeteryDatasetRow["deathDate
   return "unknown";
 }
 
+function getLogoUrl(logo?: string): string | null {
+  if (!logo) return null;
+  return logo.startsWith("/")
+    ? `${SITE_ORIGIN}${logo}`
+    : `${SITE_ORIGIN}/logos/cemetery/${logo}`;
+}
+
 function coinToRow(coin: CemeteryEntry): CemeteryDatasetRow {
   const archivedDataAvailable = coin.archivedDataAvailable === true;
   return {
@@ -91,7 +98,7 @@ function coinToRow(coin: CemeteryEntry): CemeteryDatasetRow {
     name: coin.name,
     symbol: coin.symbol,
     llamaId: coin.llamaId ?? null,
-    logoUrl: coin.logo ? `${SITE_ORIGIN}/logos/cemetery/${coin.logo}` : null,
+    logoUrl: getLogoUrl(coin.logo),
     pegCurrency: coin.pegCurrency,
     causeOfDeath: coin.causeOfDeath,
     causeLabel: CAUSE_META[coin.causeOfDeath].label,

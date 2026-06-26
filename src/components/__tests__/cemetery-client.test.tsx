@@ -35,6 +35,7 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
       pegCurrency: "USD",
       causeOfDeath: "liquidity-drain",
       deathDate: "2024-01",
+      logo: "/logos/239-eurr.png",
       obituary: "First obituary.",
       sourceUrl: "https://example.com/first",
       sourceLabel: "Example",
@@ -95,5 +96,11 @@ describe("CemeteryClient", () => {
     fireEvent.keyDown(tombstone, { key: "F" });
 
     expect(document.querySelectorAll("svg.animate-in")).toHaveLength(1);
+  });
+
+  it("renders absolute cemetery logo paths without the cemetery prefix", () => {
+    render(<CemeteryClient entries={DEAD_STABLECOINS} />);
+
+    expect(screen.getByAltText("First USDL logo").getAttribute("src")).toBe("/logos/239-eurr.png");
   });
 });

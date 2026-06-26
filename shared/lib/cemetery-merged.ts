@@ -10,6 +10,11 @@ export type CemeteryEntry = DeadStablecoin & { archivedDataAvailable?: boolean }
 
 type FrozenStablecoin = (typeof FROZEN_STABLECOINS)[number];
 
+function frozenLogoPath(coin: FrozenStablecoin): string {
+  const symbolSlug = coin.symbol.toLowerCase();
+  return coin.llamaId ? `/logos/${coin.llamaId}-${symbolSlug}.png` : `${symbolSlug}.png`;
+}
+
 export function frozenToDeadShape(coin: FrozenStablecoin): CemeteryEntry {
   if (!coin.obituary) {
     throw new Error(`Frozen coin ${coin.id} is missing obituary block`);
@@ -18,7 +23,8 @@ export function frozenToDeadShape(coin: FrozenStablecoin): CemeteryEntry {
     id: coin.id,
     name: coin.name,
     symbol: coin.symbol,
-    logo: `${coin.symbol.toLowerCase()}.png`,
+    llamaId: coin.llamaId,
+    logo: frozenLogoPath(coin),
     pegCurrency: coin.flags.pegCurrency,
     causeOfDeath: coin.obituary.causeOfDeath,
     deathDate: coin.obituary.deathDate,
