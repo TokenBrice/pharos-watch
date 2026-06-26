@@ -21,24 +21,23 @@ import {
   TELEGRAM_PENDING_PRIORITY,
 } from "./telegram-pending";
 import {
-  collapseBurstChats,
-  routeAlertEvents,
-  type AlertsByChatEntry,
   type BurstMarkerMap,
   type PlannedSubscriberAlert,
-  type SubscriberRow,
 } from "./dispatch-telegram-routing";
 import {
   loadFanoutSubscriptionInputs,
   pendingCapacityFields,
 } from "./dispatch-telegram-alerts-fanout";
+import {
+  buildTelegramFanoutPlan,
+  summarizePresetFanoutFailures,
+} from "./dispatch-telegram-fanout-plan";
 import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
 import {
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,
 } from "./telegram-alert-jobs";
 import {
-  buildOverflowAwareSubscriberQueue,
   drainOverflowBacklogOnly,
   persistEventlessOverflowBacklog,
   persistFanoutOverflowBacklog,
@@ -57,15 +56,8 @@ import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,
 } from "./dispatch-telegram-events";
+import { getSymbol } from "./dispatch-telegram-predicates";
 import {
-  getSymbol,
-  meetsDepegStepThreshold,
-  meetsDewsThreshold,
-  shouldIncludeDepegWorsening,
-  shouldIncludeSafetyForSubscriber,
-} from "./dispatch-telegram-predicates";
-import {
-  buildPerAlertTypeTargets,
   emptyResult,
   type DispatchResult,
 } from "./dispatch-telegram-result";
@@ -75,7 +67,6 @@ import {
   loadPerCoinSnoozeMap,
   loadPresetSubscriberRowsBatch,
   loadSubscriberRowsBatch,
-  mergeSubscriberMaps,
 } from "./dispatch-telegram-subscribers";
 
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
@@ -524,23 +515,7 @@ async function executeFullFanoutPath({
     presetStablecoinsCacheResult ??= loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
     return presetStablecoinsCacheResult;
   };
-  const {
-    directDewsSubs,
-    directDepegSubs,
-    directSafetySubs,
-    launchSubs,
-    presetDewsResult,
-    presetDepegResult,
-    presetSafetyResult,
-    globalDewsSubs,
-    globalDepegSubs,
-    globalSafetySubs,
-    globalLaunchSubs,
-    reserveSubs,
-    globalReserveSubs,
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps,
-  } = await loadFanoutSubscriptionInputs(
+  const fanoutInputs = await loadFanoutSubscriptionInputs(
     db,
     { dewsIds, depegIds, safetyIds, launchIds, reserveIds },
     {
@@ -558,95 +533,15 @@ async function executeFullFanoutPath({
   const fanoutQueryMs = Math.max(0, Date.now() - fanoutQueryStartedAtMs);
   const fanoutBuildStartedAtMs = Date.now();
 
-  const presetResults = [presetDewsResult, presetDepegResult, presetSafetyResult];
-  const presetQueryFailures = presetResults.filter((r) => r.kind === "query-failed").length;
-  const presetResolutionFailures = presetResults.filter((r) => r.kind === "resolution-failed").length;
+  const presetFailureSummary = summarizePresetFanoutFailures(fanoutInputs);
+  const { presetQueryFailures, presetResolutionFailures } = presetFailureSummary;
 
   if (presetQueryFailures > 0 || presetResolutionFailures > 0) {
     const failureCount = (await readPresetFailureCount(db)) + 1;
     await writePresetFailureCount(db, failureCount);
   }
 
-  const presetDewsSubs = presetDewsResult.kind === "ok" ? presetDewsResult.rows : new Map<string, SubscriberRow[]>();
-  const presetDepegSubs = presetDepegResult.kind === "ok" ? presetDepegResult.rows : new Map<string, SubscriberRow[]>();
-  const presetSafetySubs = presetSafetyResult.kind === "ok" ? presetSafetyResult.rows : new Map<string, SubscriberRow[]>();
-  const dewsSubs = mergeSubscriberMaps(directDewsSubs, presetDewsSubs);
-  const depegSubs = mergeSubscriberMaps(directDepegSubs, presetDepegSubs);
-  const safetySubs = mergeSubscriberMaps(directSafetySubs, presetSafetySubs);
-
   throwIfAborted(signal);
-
-  const alertsByChat = new Map<string, AlertsByChatEntry>();
-  routeAlertEvents(
-    dewsChanges,
-    dewsSubs,
-    globalDewsSubs,
-    alertsByChat,
-    (alerts) => alerts.dews,
-    (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band),
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps.dews,
-  );
-  routeAlertEvents(
-    depegTriggered,
-    depegSubs,
-    globalDepegSubs,
-    alertsByChat,
-    (alerts) => alerts.depegTriggered,
-    (sub, event) => meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step),
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps.depeg,
-  );
-  routeAlertEvents(
-    depegResolved,
-    depegSubs,
-    globalDepegSubs,
-    alertsByChat,
-    (alerts) => alerts.depegResolved,
-    (sub, event) => meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step),
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps.depeg,
-  );
-  routeAlertEvents(
-    depegWorsening,
-    depegSubs,
-    globalDepegSubs,
-    alertsByChat,
-    (alerts) => alerts.depegWorsening,
-    shouldIncludeDepegWorsening,
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps.depeg,
-  );
-  routeAlertEvents(
-    safetyChanges,
-    safetySubs,
-    globalSafetySubs,
-    alertsByChat,
-    (alerts) => alerts.safety,
-    shouldIncludeSafetyForSubscriber,
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps.safety,
-  );
-  routeAlertEvents(
-    launchPromoted,
-    launchSubs,
-    globalLaunchSubs,
-    alertsByChat,
-    (alerts) => alerts.launch,
-    undefined,
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps.launch,
-  );
-  routeAlertEvents(
-    reservePromoted,
-    reserveSubs,
-    globalReserveSubs,
-    alertsByChat,
-    (alerts) => alerts.reserve,
-    undefined,
-    perCoinSnoozeMap,
-    perCoinExplicitlyOffMaps.reserve,
-  );
 
   const burstMarkersCached = await getCache(db, "telegram:burst-markers");
   let burstMarkers: BurstMarkerMap = {};
@@ -658,7 +553,6 @@ async function executeFullFanoutPath({
       burstMarkers = {};
     }
   }
-  const burstOutcome = collapseBurstChats(alertsByChat, burstMarkers, nowSec);
 
   const formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE;
   const {
@@ -668,12 +562,29 @@ async function executeFullFanoutPath({
     combinedOverflowPlanned,
     overflowFormatBudget,
     resolveDisableNotification,
-  } = buildOverflowAwareSubscriberQueue({ alertsByChat, overflowBacklog, nowSec, formatBudget });
+    perAlertTypeTargets,
+    freshCandidateChats,
+    freshCandidateCount,
+    formattedChats,
+    burstOutcome,
+  } = buildTelegramFanoutPlan({
+    events: {
+      dewsChanges,
+      depegTriggered,
+      depegResolved,
+      depegWorsening,
+      safetyChanges,
+      launchPromoted,
+      reservePromoted,
+    },
+    inputs: fanoutInputs,
+    overflowBacklog,
+    burstMarkers,
+    nowSec,
+    formatBudget,
+    presetFailureSummary,
+  });
   const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
-  const perAlertTypeTargets = buildPerAlertTypeTargets(subscriberQueue);
-  const freshCandidateChats = plannedQueue.length;
-  const freshCandidateCount = plannedQueue.reduce((sum, plan) => sum + plan.estimatedChunks, 0);
-  const formattedChats = subscriberQueue.length;
   await reportDigestProgress(reportProgress, {
     stage: "fanout-built",
     message: "Built Telegram subscriber fanout queue",
