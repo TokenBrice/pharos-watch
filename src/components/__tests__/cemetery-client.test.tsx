@@ -102,5 +102,6 @@ describe("CemeteryClient", () => {
     render(<CemeteryClient entries={DEAD_STABLECOINS} />);
 
     expect(screen.getByAltText("First USDL logo").getAttribute("src")).toBe("/logos/239-eurr.png");
+    expect(screen.getByAltText("USDL").getAttribute("src")).toBe("/logos/239-eurr.png");
   });
 });

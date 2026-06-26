@@ -1677,7 +1677,7 @@
     "id": "must-mustang-2026-01",
     "name": "Mustang Finance",
     "symbol": "MUST",
-    "logo": "mustang.svg",
+    "logo": "mustang.webp",
     "llamaId": "328",
     "pegCurrency": "USD",
     "causeOfDeath": "counterparty-failure",

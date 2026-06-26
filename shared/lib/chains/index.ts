@@ -127,7 +127,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   rootstock:      { name: "Rootstock",       explorerUrl: "https://rootstock.blockscout.com",              evmChainId: 30,       type: "evm",   logoPath: "/chains/rootstock.png",     providers: { coingecko: "rootstock" } },
   fluent:         { name: "Fluent",          explorerUrl: "https://fluentscan.xyz",                       evmChainId: 25363,    type: "evm",   logoPath: "/chains/fluent.png"         },
   initia:         { name: "Initia",          explorerUrl: "https://scan.initia.xyz",                      evmChainId: null,     type: "other", logoPath: "/chains/initia.png"         },
-  agoric:         { name: "Agoric",          explorerUrl: "https://www.mintscan.io/agoric",               evmChainId: null,     type: "other", logoPath: "/chains/agoric.png"         },
+  agoric:         { name: "Agoric",          explorerUrl: "https://www.mintscan.io/agoric",               evmChainId: null,     type: "other", logoPath: "/chains/agoric.webp"        },
 };
 
 /** Alias chains that share a display name. Map alias -> canonical key. */

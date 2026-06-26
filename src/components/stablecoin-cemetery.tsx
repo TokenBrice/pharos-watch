@@ -32,7 +32,11 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
   onToggle,
 }: CemeteryObituaryRowProps) {
   const cause = CAUSE_META[coin.causeOfDeath];
-  const logoUrl = coin.logo ? `/logos/cemetery/${coin.logo}` : undefined;
+  const logoUrl = coin.logo
+    ? coin.logo.startsWith("/")
+      ? coin.logo
+      : `/logos/cemetery/${coin.logo}`
+    : undefined;
 
   return (
     <div id={`obituary-${coin.id}`} className={isHighlighted ? "ring-2 ring-primary/50" : undefined}>
