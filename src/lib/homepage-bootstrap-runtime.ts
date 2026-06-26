@@ -1,34 +1,21 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { normalizeApiMeta, type ApiMeta } from "@/lib/api";
-import {
-  FRONTEND_API_QUERY_RUNTIME_REGISTRY,
-  type FrontendApiQueryDescriptor,
-} from "@/lib/api-query-runtime-registry";
+import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 // Shared version/helpers also consumed by homepage-bootstrap.ts. This runtime
 // module deliberately stays Zod-free (no descriptor.schema validation) to keep
 // Zod out of the inline-hydration bundle.
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
+  buildHomepageBootstrapDescriptors,
   makeBootstrapCodec,
+  type HomepageBootstrapQueryId,
 } from "@/lib/homepage-bootstrap-shared";
 
 export const HOMEPAGE_BOOTSTRAP_SCRIPT_ID = "pharos-homepage-bootstrap";
 
-const registry = FRONTEND_API_QUERY_RUNTIME_REGISTRY;
+const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = buildHomepageBootstrapDescriptors(FRONTEND_API_QUERY_RUNTIME_REGISTRY);
 
-const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = [
-  { id: "stablecoins", descriptor: registry.stablecoins },
-  { id: "pegSummary", descriptor: registry.pegSummary },
-  { id: "dexLiquidity", descriptor: registry.dexLiquidity },
-  { id: "reportCards", descriptor: registry.reportCards },
-  { id: "stressSignals", descriptor: registry.stressSignals },
-  { id: "stabilityIndex", descriptor: registry.stabilityIndex },
-] as const satisfies readonly {
-  id: string;
-  descriptor: FrontendApiQueryDescriptor<unknown>;
-}[];
-
-export type HomepageBootstrapQueryId = (typeof HOMEPAGE_BOOTSTRAP_DESCRIPTORS)[number]["id"];
+export type { HomepageBootstrapQueryId };
 
 export interface HomepageBootstrapQuery {
   id: HomepageBootstrapQueryId;

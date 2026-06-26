@@ -15,7 +15,6 @@
  *   tsx scripts/maintenance/build-og-case-studies.ts --check
  */
 import { firefox } from "playwright";
-import sharp from "sharp";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -29,6 +28,11 @@ import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 import { escapeXml } from "../lib/og-svg.mjs";
+import {
+  assertNoStaleOgOutputs,
+  formatOgWriteStatus,
+  stalePngCheckLabel,
+} from "../lib/og-image-checks.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -115,46 +119,6 @@ function buildSignatureManifest(
     null,
     2,
   )}\n`;
-}
-
-async function comparePngContent(expectedPath: string, actualPath: string) {
-  const expected = await sharp(expectedPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const actual = await sharp(actualPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  if (
-    expected.info.width !== actual.info.width ||
-    expected.info.height !== actual.info.height ||
-    expected.info.channels !== actual.info.channels
-  ) {
-    return {
-      matches: false,
-      summary: `dimension/channel mismatch expected ${expected.info.width}x${expected.info.height}x${expected.info.channels}, got ${actual.info.width}x${actual.info.height}x${actual.info.channels}`,
-    };
-  }
-
-  let totalAbs = 0;
-  let changedPixels = 0;
-  const { data: expectedData } = expected;
-  const { data: actualData } = actual;
-  const channels = expected.info.channels;
-  const pixelCount = expected.info.width * expected.info.height;
-  for (let offset = 0; offset < expectedData.length; offset += channels) {
-    let pixelDelta = 0;
-    for (let channel = 0; channel < channels; channel += 1) {
-      const channelDelta = Math.abs(expectedData[offset + channel] - actualData[offset + channel]);
-      pixelDelta += channelDelta;
-      totalAbs += channelDelta;
-    }
-    if (pixelDelta / channels > 8) {
-      changedPixels += 1;
-    }
-  }
-
-  const meanAbsPerChannel = totalAbs / expectedData.length;
-  const changedPixelRatio = changedPixels / pixelCount;
-  return {
-    matches: meanAbsPerChannel <= 2.5 && changedPixelRatio <= 0.04,
-    summary: `meanAbsPerChannel=${meanAbsPerChannel.toFixed(3)}, changedPixels=${(changedPixelRatio * 100).toFixed(2)}%`,
-  };
 }
 
 /** Greedy word-wrap into at most `maxLines` lines of ~`maxChars` each. */
@@ -318,17 +282,13 @@ async function main() {
       await page.close();
 
       if (CHECK_MODE) {
-        const expected = existsSync(publicPath) ? readFileSync(publicPath) : null;
-        const actual = readFileSync(outPath);
-        if (!expected) {
-          staleFiles.push(fileName);
-        } else if (!actual.equals(expected)) {
-          const comparison = await comparePngContent(publicPath, outPath);
-          if (comparison.matches) {
-            console.warn(`${fileName}: byte-level PNG drift tolerated (${comparison.summary})`);
-          } else {
-            staleFiles.push(`${fileName} (${comparison.summary})`);
-          }
+        const staleLabel = await stalePngCheckLabel({
+          fileLabel: fileName,
+          expectedPath: publicPath,
+          actualPath: outPath,
+        });
+        if (staleLabel) {
+          staleFiles.push(staleLabel);
         }
       }
 
@@ -339,7 +299,7 @@ async function main() {
       } catch {
         /* swallow */
       }
-      console.log(`${CHECK_MODE ? "Checked" : "Wrote"} ${publicPath}`);
+      console.log(formatOgWriteStatus({ check: CHECK_MODE, publicPath }));
     }
 
     const signatureManifest = buildSignatureManifest(signatures);
@@ -352,11 +312,11 @@ async function main() {
       writeFileSync(SIGNATURE_PATH, signatureManifest);
     }
 
-    if (staleFiles.length > 0) {
-      throw new Error(
-        `Case-study OG images are stale: ${staleFiles.join(", ")}. Run \`npm run build:og-case-studies\` to refresh them.`,
-      );
-    }
+    assertNoStaleOgOutputs({
+      family: "Case-study",
+      staleFiles,
+      refreshCommand: "npm run build:og-case-studies",
+    });
   } finally {
     await browser.close();
     rmSync(STAGING, { recursive: true, force: true });

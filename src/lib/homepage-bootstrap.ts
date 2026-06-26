@@ -1,30 +1,18 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
-import { FRONTEND_API_QUERY_REGISTRY, type FrontendApiQueryDescriptor } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 // Shared version/helpers also consumed by homepage-bootstrap-runtime.ts; this
 // module adds the Zod-validating layer (ApiMetaSchema, descriptor.schema).
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
+  buildHomepageBootstrapDescriptors,
   makeBootstrapCodec,
+  type HomepageBootstrapQueryId,
 } from "@/lib/homepage-bootstrap-shared";
 
-export { HOMEPAGE_BOOTSTRAP_VERSION };
+export { HOMEPAGE_BOOTSTRAP_VERSION, type HomepageBootstrapQueryId };
 
-const registry = FRONTEND_API_QUERY_REGISTRY;
-
-const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = [
-  { id: "stablecoins", descriptor: registry.stablecoins },
-  { id: "pegSummary", descriptor: registry.pegSummary },
-  { id: "dexLiquidity", descriptor: registry.dexLiquidity },
-  { id: "reportCards", descriptor: registry.reportCards },
-  { id: "stressSignals", descriptor: registry.stressSignals },
-  { id: "stabilityIndex", descriptor: registry.stabilityIndex },
-] as const satisfies readonly {
-  id: string;
-  descriptor: FrontendApiQueryDescriptor<unknown>;
-}[];
-
-export type HomepageBootstrapQueryId = (typeof HOMEPAGE_BOOTSTRAP_DESCRIPTORS)[number]["id"];
+const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = buildHomepageBootstrapDescriptors(FRONTEND_API_QUERY_REGISTRY);
 
 export interface HomepageBootstrapQuery {
   id: HomepageBootstrapQueryId;

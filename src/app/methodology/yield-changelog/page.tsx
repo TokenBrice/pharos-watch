@@ -1,21 +1,19 @@
-import {
-  YIELD_METHODOLOGY_CHANGELOG,
-  YIELD_METHODOLOGY_CHANGELOG_PATH,
-  YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/yield-methodology-version";
+import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
+const changelog = getMethodologyChangelogEntry("yield");
+
 const route = createStandardMethodologyChangelogRoute({
-  path: YIELD_METHODOLOGY_CHANGELOG_PATH,
+  path: changelog.publicPath,
   metadataTitle: "Yield Intelligence Changelog - Version History",
   metadataDescription:
-    `Full version history of the Pharos Yield Intelligence methodology, from v1.0 through ${YIELD_METHODOLOGY_VERSION_LABEL}. Every source-resolution and scoring revision documented.`,
+    `Full version history of the Pharos Yield Intelligence methodology, from v1.0 through ${changelog.currentLabel}. Every source-resolution and scoring revision documented.`,
   breadcrumbName: "Yield Intelligence Changelog",
   title: "Yield Intelligence Changelog",
   leadSubject: "Yield Intelligence",
-  versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
-  entries: YIELD_METHODOLOGY_CHANGELOG,
-  citation: { id: "yield", versionLabel: YIELD_METHODOLOGY_VERSION_LABEL },
+  versionLabel: changelog.currentLabel,
+  entries: changelog.entries,
+  citation: { id: changelog.citationId, versionLabel: changelog.currentLabel },
 });
 
 export const metadata = route.metadata;

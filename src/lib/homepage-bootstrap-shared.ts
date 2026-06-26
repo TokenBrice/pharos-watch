@@ -10,6 +10,17 @@ import { isRecord } from "@shared/lib/type-guards";
 /** Payload schema version. Bump in lockstep with the generator. */
 export const HOMEPAGE_BOOTSTRAP_VERSION = 1;
 
+export const HOMEPAGE_BOOTSTRAP_QUERY_IDS = [
+  "stablecoins",
+  "pegSummary",
+  "dexLiquidity",
+  "reportCards",
+  "stressSignals",
+  "stabilityIndex",
+] as const;
+
+export type HomepageBootstrapQueryId = (typeof HOMEPAGE_BOOTSTRAP_QUERY_IDS)[number];
+
 function normalizeTimestamp(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 }
@@ -29,12 +40,18 @@ interface SeedableDescriptor {
   metaMaxAgeSec?: number;
 }
 
-interface BootstrapDescriptor<TQueryId extends string> {
-  id: TQueryId;
-  descriptor: SeedableDescriptor & {
+interface BootstrapDescriptor<
+  TQueryId extends string,
+  TDescriptor extends SeedableDescriptor & {
     path: string;
     queryKey: readonly unknown[];
-  };
+  } = SeedableDescriptor & {
+    path: string;
+    queryKey: readonly unknown[];
+  },
+> {
+  id: TQueryId;
+  descriptor: TDescriptor;
 }
 
 interface BootstrapQuery<TQueryId extends string, TMeta> {
@@ -56,6 +73,20 @@ interface BootstrapCodecOptions<TQueryId extends string, TMeta> {
   descriptors: readonly BootstrapDescriptor<TQueryId>[];
   normalizeMeta: (raw: unknown) => TMeta | null | undefined;
   validateData?: (id: TQueryId, data: unknown) => { data: unknown } | null;
+}
+
+type HomepageBootstrapRegistry = {
+  [K in HomepageBootstrapQueryId]: BootstrapDescriptor<HomepageBootstrapQueryId>["descriptor"];
+};
+
+type HomepageBootstrapDescriptorForRegistry<TRegistry extends HomepageBootstrapRegistry> = {
+  [K in HomepageBootstrapQueryId]: BootstrapDescriptor<K, TRegistry[K]>;
+}[HomepageBootstrapQueryId];
+
+export function buildHomepageBootstrapDescriptors<TRegistry extends HomepageBootstrapRegistry>(
+  registry: TRegistry,
+): readonly HomepageBootstrapDescriptorForRegistry<TRegistry>[] {
+  return HOMEPAGE_BOOTSTRAP_QUERY_IDS.map((id) => ({ id, descriptor: registry[id] })) as readonly HomepageBootstrapDescriptorForRegistry<TRegistry>[];
 }
 
 export function descriptorMaxAgeMs(descriptor: SeedableDescriptor): number {

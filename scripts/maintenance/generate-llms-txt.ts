@@ -10,6 +10,7 @@ import { CEMETERY_ENTRIES } from "../../shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
+import { METHODOLOGY_CHANGELOG_REGISTRY } from "../../shared/lib/methodology-versions/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../shared/types/core";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 import { GLOSSARY_ENTRIES } from "../../src/app/learn/glossary/content";
@@ -97,16 +98,11 @@ const coreDataLinks = [
 
 const methodologyLinks = [
   ["Methodology Hub", absolute("/methodology/"), "Full scoring model for safety, peg, liquidity, yield, contagion."],
-  ["Safety Scores Changelog", absolute("/methodology/scoring-changelog/"), "Every weight change since v1.0."],
-  ["Depeg + DEWS Changelog", absolute("/methodology/depeg-changelog/"), ""],
-  ["Depeg Duration Resolver Changelog", absolute("/methodology/depeg-resolver-changelog/"), ""],
-  ["Liquidity Score Changelog", absolute("/methodology/liquidity-score-changelog/"), ""],
-  ["Stability Index Changelog", absolute("/methodology/stability-index-changelog/"), ""],
-  ["Chain Health Changelog", absolute("/methodology/chain-health-changelog/"), ""],
-  ["Yield Intelligence Changelog", absolute("/methodology/yield-changelog/"), ""],
-  ["Blacklist Tracker Changelog", absolute("/methodology/blacklist-tracker-changelog/"), ""],
-  ["Mint/Burn Flow Changelog", absolute("/methodology/mint-burn-flow-changelog/"), ""],
-  ["Pricing Pipeline Changelog", absolute("/methodology/pricing-pipeline-changelog/"), ""],
+  ...METHODOLOGY_CHANGELOG_REGISTRY.map((entry) => [
+    entry.linkTitle,
+    absolute(entry.publicPath),
+    entry.llmsDescription,
+  ] as const),
 ] as const;
 
 const glossaryHighlights = ["psi", "dews", "pegscore", "safety-score", "liquidity-score", "freezewatch"] as const;

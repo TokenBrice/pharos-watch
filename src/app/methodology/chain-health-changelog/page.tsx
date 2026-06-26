@@ -1,21 +1,19 @@
-import {
-  CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
-  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
-  CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/chain-health-version";
+import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
+const changelog = getMethodologyChangelogEntry("chain-health");
+
 const route = createStandardMethodologyChangelogRoute({
-  path: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  path: changelog.publicPath,
   metadataTitle: "Chain Health Score Changelog — Version History",
   metadataDescription:
-    `Full version history of the Pharos Chain Health Score methodology, from v1.0 through ${CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL}. Every weight, factor, and tier revision documented.`,
+    `Full version history of the Pharos Chain Health Score methodology, from v1.0 through ${changelog.currentLabel}. Every weight, factor, and tier revision documented.`,
   breadcrumbName: "Chain Health Changelog",
   title: "Chain Health Score Changelog",
   leadSubject: "Chain Health Score",
-  versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
-  entries: CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
-  citation: { id: "chain-health", versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL },
+  versionLabel: changelog.currentLabel,
+  entries: changelog.entries,
+  citation: { id: changelog.citationId, versionLabel: changelog.currentLabel },
 });
 
 export const metadata = route.metadata;

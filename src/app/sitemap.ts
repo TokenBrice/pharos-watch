@@ -11,6 +11,9 @@ import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
+import {
+  METHODOLOGY_CHANGELOG_SITEMAP_PATHS as SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
+} from "@shared/lib/methodology-versions/registry";
 import type { DigestContentEntry } from "@shared/types";
 import digests from "../../data/digests.json";
 import sitemapDates from "@/generated/sitemap-dates.json";
@@ -47,18 +50,7 @@ type StaticPageSpec = readonly [
   resolveLastModified?: (path: string) => Date,
 ];
 
-export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = [
-  "/methodology/scoring-changelog/",
-  "/methodology/depeg-changelog/",
-  "/methodology/depeg-resolver-changelog/",
-  "/methodology/blacklist-tracker-changelog/",
-  "/methodology/liquidity-score-changelog/",
-  "/methodology/stability-index-changelog/",
-  "/methodology/mint-burn-flow-changelog/",
-  "/methodology/yield-changelog/",
-  "/methodology/pricing-pipeline-changelog/",
-  "/methodology/chain-health-changelog/",
-] as const;
+export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS;
 
 function readDepegEventEntries(): readonly DepegEventSitemapEntry[] {
   const filePath = join(process.cwd(), "data/depeg-events.json");

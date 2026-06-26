@@ -118,6 +118,143 @@ export function resolveGeneratedAt(options: { generatedAt: string | null }): str
   return options.generatedAt ?? new Date().toISOString();
 }
 
+export type CoverageAuditReportFormat = "markdown" | "json";
+
+export interface CandidateReportCliOptions {
+  coinIds: string[];
+  limit: number;
+  all: boolean;
+  format: CoverageAuditReportFormat;
+  reportPath: string | null;
+  stdout: boolean;
+  generatedAt: string | null;
+}
+
+export function createCandidateReportCliOptions({
+  defaultLimit,
+  defaultOutputPath,
+}: {
+  defaultLimit: number;
+  defaultOutputPath: string;
+}): CandidateReportCliOptions {
+  return {
+    coinIds: [],
+    limit: defaultLimit,
+    all: false,
+    format: "markdown",
+    reportPath: defaultOutputPath,
+    stdout: false,
+    generatedAt: null,
+  };
+}
+
+export function parseCandidateReportOption(
+  options: CandidateReportCliOptions,
+  argv: readonly string[],
+  index: number,
+  {
+    usage,
+  }: {
+    usage: () => string;
+  },
+): number | null {
+  const arg = argv[index];
+  if (arg === "--coin") {
+    const value = argv[index + 1];
+    if (!value) throw new Error("--coin requires a stablecoin ID");
+    options.coinIds.push(value);
+    return index + 1;
+  }
+  if (arg === "--limit") {
+    options.limit = toPositiveInt(argv[index + 1] ?? "", "--limit");
+    return index + 1;
+  }
+  if (arg === "--all") {
+    options.all = true;
+    return index;
+  }
+  if (arg === "--json") {
+    options.format = "json";
+    return index;
+  }
+  if (arg === "--markdown") {
+    options.format = "markdown";
+    return index;
+  }
+  if (arg === "--report") {
+    const value = argv[index + 1];
+    if (!value) throw new Error("--report requires a path");
+    options.reportPath = value;
+    return index + 1;
+  }
+  if (arg === "--stdout") {
+    options.stdout = true;
+    return index;
+  }
+  if (arg === "--generated-at") {
+    const value = argv[index + 1];
+    if (!value) throw new Error("--generated-at requires an ISO timestamp");
+    options.generatedAt = value;
+    return index + 1;
+  }
+  if (arg === "--help" || arg === "-h") {
+    process.stdout.write(`${usage()}\n`);
+    process.exit(0);
+  }
+  return null;
+}
+
+export function assertCandidateReportLimitChoice(
+  options: Pick<CandidateReportCliOptions, "all" | "limit">,
+  defaultLimit: number,
+): void {
+  if (options.all && options.limit !== defaultLimit) {
+    throw new Error("Choose either --all or --limit, not both.");
+  }
+}
+
+export function renderCoverageAuditReport<T>(
+  audit: T,
+  format: CoverageAuditReportFormat,
+  renderMarkdown: (audit: T) => string,
+): string {
+  return format === "json" ? `${JSON.stringify(audit, null, 2)}\n` : renderMarkdown(audit);
+}
+
+export function writeCandidateReportCliOutput({
+  options,
+  output,
+  cwd,
+  stdout,
+  protectedRoot,
+  protectedMessage,
+  missingMessage,
+  writtenMessage,
+}: {
+  options: Pick<CandidateReportCliOptions, "stdout" | "reportPath">;
+  output: string;
+  cwd: string;
+  stdout: Pick<NodeJS.WriteStream, "write">;
+  protectedRoot: string;
+  protectedMessage: string;
+  missingMessage: (target: string) => string;
+  writtenMessage: (target: string) => string;
+}): void {
+  if (options.stdout || !options.reportPath) {
+    stdout.write(output);
+    return;
+  }
+
+  const target = writeAdvisoryReport(cwd, options.reportPath, output, {
+    protectedRoot,
+    message: protectedMessage,
+  });
+  if (!existsSync(target)) {
+    throw new Error(missingMessage(target));
+  }
+  stdout.write(`${writtenMessage(target)}\n`);
+}
+
 export async function loadCoverageAuditSiteDataInputs(
   options: { prod: boolean; apiBase: string | null; apiKeyEnv: string },
   fetchImpl: typeof fetch,

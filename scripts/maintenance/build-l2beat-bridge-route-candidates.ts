@@ -1,6 +1,5 @@
 #!/usr/bin/env tsx
 
-import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -10,12 +9,16 @@ import {
 } from "../../shared/lib/chains/l2beat-audit";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import {
+  assertCandidateReportLimitChoice,
+  createCandidateReportCliOptions,
+  type CandidateReportCliOptions,
   markdownValue,
+  parseCandidateReportOption,
+  renderCoverageAuditReport,
   resolveGeneratedAt,
   resolveSelectedStablecoins,
   runAsMain,
-  toPositiveInt,
-  writeAdvisoryReport,
+  writeCandidateReportCliOutput,
 } from "../lib/coverage-audit-cli";
 
 const DEFAULT_OUTPUT_PATH = "agents/l2beat-bridge-route-candidates.md";
@@ -23,15 +26,7 @@ const DEFAULT_LIMIT = 75;
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const STABLECOIN_DATA_ROOT = resolve(REPO_ROOT, "shared/data/stablecoins");
 
-interface CliOptions {
-  coinIds: string[];
-  limit: number;
-  all: boolean;
-  format: "markdown" | "json";
-  reportPath: string | null;
-  stdout: boolean;
-  generatedAt: string | null;
-}
+type CliOptions = CandidateReportCliOptions;
 
 function usage(): string {
   return [
@@ -51,51 +46,21 @@ function usage(): string {
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    coinIds: [],
-    limit: DEFAULT_LIMIT,
-    all: false,
-    format: "markdown",
-    reportPath: DEFAULT_OUTPUT_PATH,
-    stdout: false,
-    generatedAt: null,
-  };
+  const options = createCandidateReportCliOptions({
+    defaultLimit: DEFAULT_LIMIT,
+    defaultOutputPath: DEFAULT_OUTPUT_PATH,
+  });
 
   for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--coin") {
-      const value = argv[++index];
-      if (!value) throw new Error("--coin requires a stablecoin ID");
-      options.coinIds.push(value);
-    } else if (arg === "--limit") {
-      options.limit = toPositiveInt(argv[++index] ?? "", "--limit");
-    } else if (arg === "--all") {
-      options.all = true;
-    } else if (arg === "--json") {
-      options.format = "json";
-    } else if (arg === "--markdown") {
-      options.format = "markdown";
-    } else if (arg === "--report") {
-      const value = argv[++index];
-      if (!value) throw new Error("--report requires a path");
-      options.reportPath = value;
-    } else if (arg === "--stdout") {
-      options.stdout = true;
-    } else if (arg === "--generated-at") {
-      const value = argv[++index];
-      if (!value) throw new Error("--generated-at requires an ISO timestamp");
-      options.generatedAt = value;
-    } else if (arg === "--help" || arg === "-h") {
-      process.stdout.write(`${usage()}\n`);
-      process.exit(0);
-    } else {
+    const nextIndex = parseCandidateReportOption(options, argv, index, { usage });
+    if (nextIndex == null) {
+      const arg = argv[index];
       throw new Error(`Unknown argument: ${arg}`);
     }
+    index = nextIndex;
   }
 
-  if (options.all && options.limit !== DEFAULT_LIMIT) {
-    throw new Error("Choose either --all or --limit, not both.");
-  }
+  assertCandidateReportLimitChoice(options, DEFAULT_LIMIT);
 
   return options;
 }
@@ -170,23 +135,18 @@ export async function runCli(
   const stablecoins = resolveSelectedStablecoins(options.coinIds, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS);
   const generatedAt = resolveGeneratedAt({ generatedAt: options.generatedAt });
   const audit = limitAuditRows(buildL2BeatBridgeRouteReviewAudit({ stablecoins, generatedAt }), options);
-  const output = options.format === "json"
-    ? `${JSON.stringify(audit, null, 2)}\n`
-    : renderL2BeatBridgeRouteReviewAuditMarkdown(audit);
+  const output = renderCoverageAuditReport(audit, options.format, renderL2BeatBridgeRouteReviewAuditMarkdown);
 
-  if (options.stdout || !options.reportPath) {
-    stdout.write(output);
-    return 0;
-  }
-
-  const target = writeAdvisoryReport(cwd, options.reportPath, output, {
+  writeCandidateReportCliOutput({
+    options,
+    output,
+    cwd,
+    stdout,
     protectedRoot: STABLECOIN_DATA_ROOT,
-    message: "L2BEAT bridge-route reports are advisory; write them under agents/ or another scratch path.",
+    protectedMessage: "L2BEAT bridge-route reports are advisory; write them under agents/ or another scratch path.",
+    missingMessage: (target) => `Failed to write L2BEAT bridge-route candidate report: ${target}`,
+    writtenMessage: (target) => `wrote ${audit.reviewRows.length} L2BEAT bridge-route candidate row(s) to ${target}`,
   });
-  if (!existsSync(target)) {
-    throw new Error(`Failed to write L2BEAT bridge-route candidate report: ${target}`);
-  }
-  stdout.write(`wrote ${audit.reviewRows.length} L2BEAT bridge-route candidate row(s) to ${target}\n`);
   return 0;
 }
 

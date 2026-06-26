@@ -1,21 +1,19 @@
-import {
-  LIQUIDITY_METHODOLOGY_CHANGELOG,
-  LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
-  LIQUIDITY_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/liquidity-score-version";
+import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
+const changelog = getMethodologyChangelogEntry("liquidity-score");
+
 const route = createStandardMethodologyChangelogRoute({
-  path: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  path: changelog.publicPath,
   metadataTitle: "Liquidity Score Changelog - Version History",
   metadataDescription:
-    `Full version history of the Pharos Liquidity Score methodology, from v1.0 through ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}. Every scoring and normalization revision documented.`,
+    `Full version history of the Pharos Liquidity Score methodology, from v1.0 through ${changelog.currentLabel}. Every scoring and normalization revision documented.`,
   breadcrumbName: "Liquidity Score Changelog",
   title: "Liquidity Score Changelog",
   leadSubject: "Liquidity Score",
-  versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
-  entries: LIQUIDITY_METHODOLOGY_CHANGELOG,
-  citation: { id: "liquidity-score", versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL },
+  versionLabel: changelog.currentLabel,
+  entries: changelog.entries,
+  citation: { id: changelog.citationId, versionLabel: changelog.currentLabel },
 });
 
 export const metadata = route.metadata;

@@ -4,6 +4,10 @@ import { ArrowUpRight } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import {
+  getMethodologyChangelogEntry,
+  type MethodologyChangelogRegistryKey,
+} from "@shared/lib/methodology-versions/registry";
+import {
   NAV_GROUPS,
   PRIMARY_NAV_ITEMS,
   BOTTOM_NAV_ITEMS,
@@ -70,58 +74,68 @@ const TAXONOMY_ROUTES: readonly RouteRow[] = [
     .map(navToRow),
 ];
 
-const METHODOLOGY_CHANGELOGS: readonly RouteRow[] = [
+const METHODOLOGY_CHANGELOG_ROUTE_COPY = [
   {
-    href: "/methodology/scoring-changelog/",
+    key: "safety-score",
     label: "Report Card scoring",
     description: "Safety Score weights and grading rules",
   },
   {
-    href: "/methodology/depeg-changelog/",
+    key: "depeg-dews",
     label: "Depeg detection",
     description: "DEWS event criteria and severity thresholds",
   },
   {
-    href: "/methodology/depeg-resolver-changelog/",
+    key: "depeg-resolver",
     label: "Depeg Duration Resolver",
     description: "Resolution outlook and duration support rules",
   },
   {
-    href: "/methodology/liquidity-score-changelog/",
+    key: "liquidity-score",
     label: "Liquidity score",
     description: "DEX depth, durability, and market support",
   },
   {
-    href: "/methodology/stability-index-changelog/",
+    key: "stability-index",
     label: "Stability Index",
     description: "PSI regime bands and aggregation",
   },
   {
-    href: "/methodology/pricing-pipeline-changelog/",
+    key: "pricing-pipeline",
     label: "Pricing pipeline",
     description: "Price source consensus rules",
   },
   {
-    href: "/methodology/chain-health-changelog/",
+    key: "chain-health",
     label: "Chain Health",
     description: "Chain mix and stablecoin concentration grades",
   },
   {
-    href: "/methodology/mint-burn-flow-changelog/",
+    key: "mint-burn-flow",
     label: "Mint/burn flow",
     description: "Issuance-chain accounting and reconciliation",
   },
   {
-    href: "/methodology/yield-changelog/",
+    key: "yield",
     label: "Yield intelligence",
     description: "Risk-adjusted yield computation",
   },
   {
-    href: "/methodology/blacklist-tracker-changelog/",
+    key: "blacklist-tracker",
     label: "Blacklist tracker",
     description: "Address-freeze tracking surface",
   },
-];
+] as const satisfies readonly {
+  key: MethodologyChangelogRegistryKey;
+  label: string;
+  description: string;
+}[];
+
+const METHODOLOGY_CHANGELOGS: readonly RouteRow[] = METHODOLOGY_CHANGELOG_ROUTE_COPY.map((row) => ({
+  href: getMethodologyChangelogEntry(row.key).publicPath,
+  label: row.label,
+  description: row.description,
+}));
 
 const ABOUT_ROUTES: readonly RouteRow[] = [
   {

@@ -1,21 +1,19 @@
-import {
-  DEPEG_DEWS_METHODOLOGY_CHANGELOG,
-  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/depeg-dews-version";
+import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
+const changelog = getMethodologyChangelogEntry("depeg-dews");
+
 const route = createStandardMethodologyChangelogRoute({
-  path: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  path: changelog.publicPath,
   metadataTitle: "Depeg Tracker + DEWS Changelog - Version History",
   metadataDescription:
-    `Full version history of the Pharos Depeg Tracker + DEWS methodology, from v1.0 through ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}. Every threshold, formula, and confirmation-policy revision documented.`,
+    `Full version history of the Pharos Depeg Tracker + DEWS methodology, from v1.0 through ${changelog.currentLabel}. Every threshold, formula, and confirmation-policy revision documented.`,
   breadcrumbName: "Depeg Tracker + DEWS Changelog",
   title: "Depeg Tracker + DEWS Changelog",
   leadSubject: "Depeg Tracker and DEWS",
-  versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-  entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
-  citation: { id: "dews", versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL },
+  versionLabel: changelog.currentLabel,
+  entries: changelog.entries,
+  citation: { id: changelog.citationId, versionLabel: changelog.currentLabel },
 });
 
 export const metadata = route.metadata;

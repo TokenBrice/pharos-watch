@@ -15,7 +15,8 @@ import {
   resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
 import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
-import { FRONTEND_API_QUERY_REGISTRY, type FrontendApiQueryDescriptor } from "../../src/lib/api-query-registry";
+import { FRONTEND_API_QUERY_REGISTRY } from "../../src/lib/api-query-registry";
+import { buildHomepageBootstrapDescriptors } from "../../src/lib/homepage-bootstrap-shared";
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
   normalizeHomepageBootstrapPayload,
@@ -36,17 +37,7 @@ const registry = FRONTEND_API_QUERY_REGISTRY;
 const MAX_HOMEPAGE_BOOTSTRAP_BYTES = 5_000;
 const MAX_HOMEPAGE_BOOTSTRAP_QUERY_BYTES = 5_000;
 const TRUSTED_API_KEY_ORIGINS = new Set(["https://api.pharos.watch"]);
-const HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS = [
-  { id: "stablecoins", descriptor: registry.stablecoins },
-  { id: "pegSummary", descriptor: registry.pegSummary },
-  { id: "dexLiquidity", descriptor: registry.dexLiquidity },
-  { id: "reportCards", descriptor: registry.reportCards },
-  { id: "stressSignals", descriptor: registry.stressSignals },
-  { id: "stabilityIndex", descriptor: registry.stabilityIndex },
-] as const satisfies readonly {
-  id: HomepageBootstrapQueryId;
-  descriptor: FrontendApiQueryDescriptor<unknown>;
-}[];
+const HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS = buildHomepageBootstrapDescriptors(registry);
 
 function emptyPayload(): HomepageBootstrapPayload {
   return {

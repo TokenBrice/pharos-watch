@@ -1,21 +1,19 @@
-import {
-  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
-  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
-  MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/mint-burn-flow-version";
+import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
+const changelog = getMethodologyChangelogEntry("mint-burn-flow");
+
 const route = createStandardMethodologyChangelogRoute({
-  path: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+  path: changelog.publicPath,
   metadataTitle: "Mint/Burn Flow Changelog - Version History",
   metadataDescription:
-    `Full version history of the Pharos Mint/Burn Flow methodology, from v1.0 through ${MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}. Every scoring and ingestion-policy revision documented.`,
+    `Full version history of the Pharos Mint/Burn Flow methodology, from v1.0 through ${changelog.currentLabel}. Every scoring and ingestion-policy revision documented.`,
   breadcrumbName: "Mint/Burn Flow Changelog",
   title: "Mint/Burn Flow Changelog",
   leadSubject: "Mint/Burn Flow",
-  versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
-  entries: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
-  citation: { id: "mint-burn-flow", versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL },
+  versionLabel: changelog.currentLabel,
+  entries: changelog.entries,
+  citation: { id: changelog.citationId, versionLabel: changelog.currentLabel },
 });
 
 export const metadata = route.metadata;

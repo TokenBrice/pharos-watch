@@ -1,21 +1,19 @@
-import {
-  PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
-  PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
-  PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/pricing-pipeline-version";
+import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
+const changelog = getMethodologyChangelogEntry("pricing-pipeline");
+
 const route = createStandardMethodologyChangelogRoute({
-  path: PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
+  path: changelog.publicPath,
   metadataTitle: "Pricing Pipeline Changelog - Version History",
   metadataDescription:
-    `Full version history of the Pharos Pricing Pipeline methodology, from v1.0 through ${PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL}. Every source addition and consensus algorithm revision documented.`,
+    `Full version history of the Pharos Pricing Pipeline methodology, from v1.0 through ${changelog.currentLabel}. Every source addition and consensus algorithm revision documented.`,
   breadcrumbName: "Pricing Pipeline Changelog",
   title: "Pricing Pipeline Changelog",
   leadSubject: "Pricing Pipeline",
-  versionLabel: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
-  entries: PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
-  citation: { id: "pricing-pipeline", versionLabel: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL },
+  versionLabel: changelog.currentLabel,
+  entries: changelog.entries,
+  citation: { id: changelog.citationId, versionLabel: changelog.currentLabel },
 });
 
 export const metadata = route.metadata;

@@ -1,21 +1,19 @@
-import {
-  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
-  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
-  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/blacklist-tracker-version";
+import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
+const changelog = getMethodologyChangelogEntry("blacklist-tracker");
+
 const route = createStandardMethodologyChangelogRoute({
-  path: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+  path: changelog.publicPath,
   metadataTitle: "Blacklist Tracker Changelog — Version History",
   metadataDescription:
-    `Full version history of the Pharos Blacklist Tracker methodology, from v1.0 through ${BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}. Every event-coverage, cursor, and enrichment revision documented.`,
+    `Full version history of the Pharos Blacklist Tracker methodology, from v1.0 through ${changelog.currentLabel}. Every event-coverage, cursor, and enrichment revision documented.`,
   breadcrumbName: "Blacklist Tracker Changelog",
   title: "Blacklist Tracker Changelog",
   leadSubject: "Blacklist Tracker",
-  versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-  entries: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
-  citation: { id: "blacklist-tracker", versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL },
+  versionLabel: changelog.currentLabel,
+  entries: changelog.entries,
+  citation: { id: changelog.citationId, versionLabel: changelog.currentLabel },
 });
 
 export const metadata = route.metadata;

@@ -1,6 +1,3 @@
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import type { BlacklistResponse } from "@shared/types";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
@@ -38,30 +35,20 @@ import {
   YieldRankingsResponseSchema,
 } from "@shared/types/yield";
 import {
-  CRON_1H,
-  CRON_1MIN,
-  CRON_15MIN,
-  CRON_24H,
-  CRON_30MIN,
-  CRON_BLACKLIST,
-  CRON_MINT_BURN,
-  CRON_RESERVE_SYNC,
-  CRON_TELEGRAM_PULSE,
-  CRON_YIELD,
-} from "@/lib/cron-intervals";
+  FRONTEND_API_QUERY_BASE_REGISTRY,
+  type FrontendApiQueryBaseDescriptor,
+  type FrontendStaticApiQueryBaseDescriptor,
+  type MintBurnEventsDescriptorOptions,
+} from "@/lib/api-query-base-registry";
 import { z, type ZodType } from "zod";
 
-export interface FrontendApiQueryDescriptor<T> {
-  queryKey: readonly unknown[];
-  path: string;
-  producerIntervalMs: number;
+export type { MintBurnEventsDescriptorOptions };
+
+export interface FrontendApiQueryDescriptor<T> extends FrontendApiQueryBaseDescriptor {
   schema?: ZodType<T>;
-  metaMaxAgeSec?: number;
 }
 
-export interface FrontendStaticApiQueryDescriptor<T> {
-  queryKey: readonly unknown[];
-  path: string;
+export interface FrontendStaticApiQueryDescriptor<T> extends FrontendStaticApiQueryBaseDescriptor {
   schema?: ZodType<T>;
 }
 
@@ -83,261 +70,63 @@ const NonUsdSharePointSchema = z.object({
   total: z.number(),
 });
 
-type YieldHistoryMode = "best" | "source";
-type BlacklistEventsDescriptorInput = Pick<
-  FrontendApiQueryDescriptor<BlacklistResponse>,
-  "queryKey" | "path"
->;
+const base = FRONTEND_API_QUERY_BASE_REGISTRY;
 
-export interface MintBurnEventsDescriptorOptions {
-  direction?: string;
-  burnType?: "effective_burn" | "bridge_burn" | "review_required";
-  scope?: "all" | "counted";
-  limit?: number;
-  offset?: number;
+function withSchema<T>(
+  descriptor: FrontendApiQueryBaseDescriptor,
+  schema: ZodType<T>,
+): FrontendApiQueryDescriptor<T> {
+  return { ...descriptor, schema };
 }
 
-const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
+function withStaticSchema<T>(
+  descriptor: FrontendStaticApiQueryBaseDescriptor,
+  schema: ZodType<T>,
+): FrontendStaticApiQueryDescriptor<T> {
+  return { ...descriptor, schema };
+}
 
 export const FRONTEND_API_QUERY_REGISTRY = {
-  stablecoins: {
-    queryKey: ["stablecoins"],
-    path: API_PATHS.stablecoins(),
-    producerIntervalMs: CRON_15MIN,
-    schema: StablecoinListResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
-  },
-  chains: {
-    queryKey: ["chains"],
-    path: API_PATHS.chains(),
-    producerIntervalMs: CRON_15MIN,
-    schema: ChainsResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
-  },
-  bluechipRatings: {
-    queryKey: ["bluechip-ratings"],
-    path: API_PATHS.bluechipRatings(),
-    producerIntervalMs: CRON_24H,
-    schema: BluechipRatingsMapSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip,
-  },
-  dailyDigest: {
-    queryKey: ["daily-digest"],
-    path: API_PATHS.dailyDigest(),
-    producerIntervalMs: CRON_24H,
-    schema: DailyDigestResponseSchema,
-  },
-  dexLiquidity: {
-    queryKey: ["dex-liquidity"],
-    path: API_PATHS.dexLiquidity(),
-    producerIntervalMs: CRON_30MIN,
-    schema: DexLiquidityMapSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
-  },
-  dexLiquidityHistory: (stablecoinId: string, days = 90) =>
-    ({
-      queryKey: ["dex-liquidity-history", stablecoinId, days],
-      path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
-      producerIntervalMs: CRON_24H,
-      schema: DexLiquidityHistoryResponseSchema,
-    }),
-  digestArchive: {
-    queryKey: ["digest-archive"],
-    path: API_PATHS.digestArchive(),
-    producerIntervalMs: CRON_24H,
-    schema: DigestArchiveResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive,
-  },
-  digestSnapshot: (date: string) =>
-    ({
-      queryKey: ["digest-snapshot", date],
-      path: API_PATHS.digestSnapshot(date),
-      schema: DigestSnapshotResponseSchema,
-    }),
-  health: {
-    queryKey: ["health"],
-    path: API_PATHS.health(),
-    producerIntervalMs: CRON_1MIN,
-    schema: HealthResponseSchema,
-  },
-  blacklistSummary: {
-    queryKey: ["blacklist-summary"],
-    path: API_PATHS.blacklistSummary(),
-    producerIntervalMs: CRON_BLACKLIST,
-    schema: BlacklistSummaryResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
-  },
-  blacklistEvents: ({ queryKey, path }: BlacklistEventsDescriptorInput) =>
-    ({
-      queryKey,
-      path,
-      producerIntervalMs: CRON_BLACKLIST,
-      schema: BlacklistResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
-    }),
-  mintBurnFlows: (hours = 24) =>
-    ({
-      queryKey: ["mint-burn-flows", "all", hours],
-      path: API_PATHS.mintBurnFlows(hours !== 24 ? { hours } : undefined),
-      producerIntervalMs: CRON_MINT_BURN,
-      schema: MintBurnFlowsResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows,
-    }),
-  mintBurnFlowsCoin: (stablecoinId: string, hours = 24) =>
-    ({
-      queryKey: ["mint-burn-flows", stablecoinId, hours],
-      path: API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
-      producerIntervalMs: CRON_MINT_BURN,
-      schema: MintBurnPerCoinResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows,
-    }),
-  mintBurnEvents: (stablecoinId: string, opts?: MintBurnEventsDescriptorOptions) => {
-    const params = new URLSearchParams({ stablecoin: stablecoinId });
-    if (opts?.direction) params.set("direction", opts.direction);
-    if (opts?.burnType) params.set("burnType", opts.burnType);
-    if (opts?.scope && opts.scope !== "all") params.set("scope", opts.scope);
-    if (opts?.limit) params.set("limit", opts.limit.toString());
-    if (opts?.offset) params.set("offset", opts.offset.toString());
-
-    return {
-      queryKey: [
-        "mint-burn-events",
-        stablecoinId,
-        opts?.scope ?? "all",
-        opts?.direction ?? "all",
-        opts?.burnType ?? "all",
-        opts?.limit ?? 50,
-        opts?.offset ?? 0,
-      ],
-      path: API_PATHS.mintBurnEvents(Object.fromEntries(params.entries())),
-      producerIntervalMs: CRON_MINT_BURN,
-      schema: MintBurnEventsResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
-    };
-  },
-  pegSummary: {
-    queryKey: ["peg-summary"],
-    path: API_PATHS.pegSummary(),
-    producerIntervalMs: CRON_15MIN,
-    schema: PegSummaryResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
-  },
-  reportCards: {
-    queryKey: ["report-cards"],
-    path: API_PATHS.reportCards(),
-    producerIntervalMs: CRON_15MIN,
-    schema: ReportCardsResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
-  },
-  depegResolver: {
-    queryKey: ["depeg-resolver"],
-    path: API_PATHS.depegResolver(),
-    producerIntervalMs: CRON_15MIN,
-    schema: DdrResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-  },
-  depegResolverReview: {
-    queryKey: ["depeg-resolver-review"],
-    path: API_PATHS.depegResolverReview(),
-    producerIntervalMs: CRON_15MIN,
-    schema: DdrrResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
-  },
-  redemptionBackstops: {
-    queryKey: ["redemption-backstops"],
-    path: API_PATHS.redemptionBackstops(),
-    producerIntervalMs: CRON_RESERVE_SYNC,
-    schema: RedemptionBackstopsResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
-  },
-  safetyScoreHistory: (stablecoinId: string, days = 3650) =>
-    ({
-      queryKey: ["safety-score-history", stablecoinId, days],
-      path: API_PATHS.safetyScoreHistory(stablecoinId, days),
-      producerIntervalMs: CRON_24H,
-      schema: SafetyScoreHistoryResponseSchema,
-      metaMaxAgeSec: CRON_24H / 1000,
-    }),
-  stablecoinCharts: {
-    queryKey: ["stablecoin-charts"],
-    path: API_PATHS.stablecoinCharts(),
-    producerIntervalMs: CRON_1H,
-    schema: StablecoinChartResponseSchema,
-  },
-  nonUsdShare: {
-    queryKey: ["non-usd-share"],
-    path: API_PATHS.nonUsdShare(),
-    producerIntervalMs: CRON_24H,
-    schema: z.array(NonUsdSharePointSchema),
-  },
-  stabilityIndex: {
-    queryKey: ["stability-index"],
-    path: API_PATHS.stabilityIndex(),
-    producerIntervalMs: CRON_30MIN,
-    schema: StabilityIndexResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
-  },
-  stabilityIndexDetail: {
-    queryKey: ["stability-index-detail"],
-    path: API_PATHS.stabilityIndex(true),
-    producerIntervalMs: CRON_30MIN,
-    schema: StabilityIndexResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
-  },
-  usdsStatus: {
-    queryKey: ["usds-status"],
-    path: API_PATHS.usdsStatus(),
-    producerIntervalMs: CRON_15MIN,
-    schema: UsdsStatusResponseSchema,
-  },
-  telegramPulse: {
-    queryKey: ["telegram-pulse"],
-    path: API_PATHS.telegramPulse(),
-    producerIntervalMs: CRON_TELEGRAM_PULSE,
-    schema: TelegramPulseSchema,
-  },
-  yieldHistory: (stablecoinId: string, days: number, mode: YieldHistoryMode, sourceKey?: string | null) =>
-    ({
-      queryKey: ["yield-history", stablecoinId, days, mode, sourceKey ?? null],
-      path: API_PATHS.yieldHistory(stablecoinId, days, mode, sourceKey ?? undefined),
-      producerIntervalMs: CRON_YIELD,
-      schema: YieldHistoryResponseSchema,
-      metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
-    }),
-  yieldRankings: {
-    queryKey: ["yield-rankings"],
-    path: API_PATHS.yieldRankings(),
-    producerIntervalMs: CRON_YIELD,
-    schema: YieldRankingsResponseSchema,
-    metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
-  },
-  yieldAdapterManifest: {
-    queryKey: ["yield-adapter-manifest"],
-    path: API_PATHS.yieldAdapterManifest(),
-    producerIntervalMs: CRON_YIELD,
-    schema: YieldAdapterManifestResponseSchema,
-    metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
-  },
-  stressSignals: {
-    queryKey: ["stress-signals"],
-    path: API_PATHS.stressSignals(),
-    producerIntervalMs: CRON_30MIN,
-    schema: StressSignalsAllResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-  },
-  stressSignalDetail: (stablecoinId: string, days = 30) =>
-    ({
-      queryKey: ["stress-signals", stablecoinId, days],
-      path: API_PATHS.stressSignals(stablecoinId, days),
-      producerIntervalMs: CRON_30MIN,
-      schema: StressSignalDetailResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-    }),
-  supplyHistory: (stablecoinId: string, days = 1825) =>
-    ({
-      queryKey: ["supply-history", stablecoinId, days],
-      path: API_PATHS.supplyHistory(stablecoinId, days),
-      producerIntervalMs: CRON_24H,
-      schema: SupplyHistoryResponseSchema,
-    }),
+  stablecoins: withSchema(base.stablecoins, StablecoinListResponseSchema),
+  chains: withSchema(base.chains, ChainsResponseSchema),
+  bluechipRatings: withSchema(base.bluechipRatings, BluechipRatingsMapSchema),
+  dailyDigest: withSchema(base.dailyDigest, DailyDigestResponseSchema),
+  dexLiquidity: withSchema(base.dexLiquidity, DexLiquidityMapSchema),
+  dexLiquidityHistory: (...args: Parameters<typeof base.dexLiquidityHistory>) =>
+    withSchema(base.dexLiquidityHistory(...args), DexLiquidityHistoryResponseSchema),
+  digestArchive: withSchema(base.digestArchive, DigestArchiveResponseSchema),
+  digestSnapshot: (...args: Parameters<typeof base.digestSnapshot>) =>
+    withStaticSchema(base.digestSnapshot(...args), DigestSnapshotResponseSchema),
+  health: withSchema(base.health, HealthResponseSchema),
+  blacklistSummary: withSchema(base.blacklistSummary, BlacklistSummaryResponseSchema),
+  blacklistEvents: (...args: Parameters<typeof base.blacklistEvents>) =>
+    withSchema(base.blacklistEvents(...args), BlacklistResponseSchema),
+  mintBurnFlows: (...args: Parameters<typeof base.mintBurnFlows>) =>
+    withSchema(base.mintBurnFlows(...args), MintBurnFlowsResponseSchema),
+  mintBurnFlowsCoin: (...args: Parameters<typeof base.mintBurnFlowsCoin>) =>
+    withSchema(base.mintBurnFlowsCoin(...args), MintBurnPerCoinResponseSchema),
+  mintBurnEvents: (...args: Parameters<typeof base.mintBurnEvents>) =>
+    withSchema(base.mintBurnEvents(...args), MintBurnEventsResponseSchema),
+  pegSummary: withSchema(base.pegSummary, PegSummaryResponseSchema),
+  reportCards: withSchema(base.reportCards, ReportCardsResponseSchema),
+  depegResolver: withSchema(base.depegResolver, DdrResponseSchema),
+  depegResolverReview: withSchema(base.depegResolverReview, DdrrResponseSchema),
+  redemptionBackstops: withSchema(base.redemptionBackstops, RedemptionBackstopsResponseSchema),
+  safetyScoreHistory: (...args: Parameters<typeof base.safetyScoreHistory>) =>
+    withSchema(base.safetyScoreHistory(...args), SafetyScoreHistoryResponseSchema),
+  stablecoinCharts: withSchema(base.stablecoinCharts, StablecoinChartResponseSchema),
+  nonUsdShare: withSchema(base.nonUsdShare, z.array(NonUsdSharePointSchema)),
+  stabilityIndex: withSchema(base.stabilityIndex, StabilityIndexResponseSchema),
+  stabilityIndexDetail: withSchema(base.stabilityIndexDetail, StabilityIndexResponseSchema),
+  usdsStatus: withSchema(base.usdsStatus, UsdsStatusResponseSchema),
+  telegramPulse: withSchema(base.telegramPulse, TelegramPulseSchema),
+  yieldHistory: (...args: Parameters<typeof base.yieldHistory>) =>
+    withSchema(base.yieldHistory(...args), YieldHistoryResponseSchema),
+  yieldRankings: withSchema(base.yieldRankings, YieldRankingsResponseSchema),
+  yieldAdapterManifest: withSchema(base.yieldAdapterManifest, YieldAdapterManifestResponseSchema),
+  stressSignals: withSchema(base.stressSignals, StressSignalsAllResponseSchema),
+  stressSignalDetail: (...args: Parameters<typeof base.stressSignalDetail>) =>
+    withSchema(base.stressSignalDetail(...args), StressSignalDetailResponseSchema),
+  supplyHistory: (...args: Parameters<typeof base.supplyHistory>) =>
+    withSchema(base.supplyHistory(...args), SupplyHistoryResponseSchema),
 } as const;

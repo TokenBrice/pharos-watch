@@ -18,12 +18,16 @@
  *   node scripts/maintenance/build-og-editorial.mjs --check
  */
 import { firefox } from "playwright";
-import sharp from "sharp";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { escapeXml } from "../lib/og-svg.mjs";
+import {
+  assertNoStaleOgOutputs,
+  formatOgWriteStatus,
+  stalePngCheckLabel,
+} from "../lib/og-image-checks.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -158,46 +162,6 @@ function buildSignatureManifest(cards) {
   )}\n`;
 }
 
-async function comparePngContent(expectedPath, actualPath) {
-  const expected = await sharp(expectedPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const actual = await sharp(actualPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  if (
-    expected.info.width !== actual.info.width ||
-    expected.info.height !== actual.info.height ||
-    expected.info.channels !== actual.info.channels
-  ) {
-    return {
-      matches: false,
-      summary: `dimension/channel mismatch expected ${expected.info.width}x${expected.info.height}x${expected.info.channels}, got ${actual.info.width}x${actual.info.height}x${actual.info.channels}`,
-    };
-  }
-
-  let totalAbs = 0;
-  let changedPixels = 0;
-  const { data: expectedData } = expected;
-  const { data: actualData } = actual;
-  const channels = expected.info.channels;
-  const pixelCount = expected.info.width * expected.info.height;
-  for (let offset = 0; offset < expectedData.length; offset += channels) {
-    let pixelDelta = 0;
-    for (let channel = 0; channel < channels; channel += 1) {
-      const channelDelta = Math.abs(expectedData[offset + channel] - actualData[offset + channel]);
-      pixelDelta += channelDelta;
-      totalAbs += channelDelta;
-    }
-    if (pixelDelta / channels > 8) {
-      changedPixels += 1;
-    }
-  }
-
-  const meanAbsPerChannel = totalAbs / expectedData.length;
-  const changedPixelRatio = changedPixels / pixelCount;
-  return {
-    matches: meanAbsPerChannel <= 2.5 && changedPixelRatio <= 0.04,
-    summary: `meanAbsPerChannel=${meanAbsPerChannel.toFixed(3)}, changedPixels=${(changedPixelRatio * 100).toFixed(2)}%`,
-  };
-}
-
 // Wrap SVG in an HTML page that loads the Pharos local fonts via @font-face
 // so Playwright Firefox can use the exact serif/mono the dashboard renders.
 function buildHtml(svg) {
@@ -261,17 +225,13 @@ try {
     await page.close();
 
     if (CHECK_MODE) {
-      const expected = existsSync(publicPath) ? readFileSync(publicPath) : null;
-      const actual = readFileSync(outPath);
-      if (!expected) {
-        staleFiles.push(card.file);
-      } else if (!actual.equals(expected)) {
-        const comparison = await comparePngContent(publicPath, outPath);
-        if (comparison.matches) {
-          console.warn(`${card.file}: byte-level PNG drift tolerated (${comparison.summary})`);
-        } else {
-          staleFiles.push(`${card.file} (${comparison.summary})`);
-        }
+      const staleLabel = await stalePngCheckLabel({
+        fileLabel: card.file,
+        expectedPath: publicPath,
+        actualPath: outPath,
+      });
+      if (staleLabel) {
+        staleFiles.push(staleLabel);
       }
     }
 
@@ -283,7 +243,11 @@ try {
     } catch {
       /* swallow */
     }
-    console.log(`${CHECK_MODE ? "Checked" : "Wrote"} ${publicPath} (kicker: ${card.kicker})`);
+    console.log(formatOgWriteStatus({
+      check: CHECK_MODE,
+      publicPath,
+      suffix: ` (kicker: ${card.kicker})`,
+    }));
   }
 
   const signatureManifest = buildSignatureManifest(signatures);
@@ -296,11 +260,11 @@ try {
     writeFileSync(SIGNATURE_PATH, signatureManifest);
   }
 
-  if (staleFiles.length > 0) {
-    throw new Error(
-      `Editorial OG images are stale: ${staleFiles.join(", ")}. Run \`npm run build:og-editorial\` to refresh them.`,
-    );
-  }
+  assertNoStaleOgOutputs({
+    family: "Editorial",
+    staleFiles,
+    refreshCommand: "npm run build:og-editorial",
+  });
 } finally {
   await browser.close();
 }
