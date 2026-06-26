@@ -345,8 +345,8 @@
     "semantics": "attestation-mix",
     "breakerScope": "ausd-agora",
     "display": {
-      "url": "https://www.agora.finance/",
-      "label": "Agora"
+      "url": "https://docs.agora.finance/developer/transparency",
+      "label": "Agora transparency"
     },
     "inputs": {
       "primary": {

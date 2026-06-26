@@ -501,13 +501,13 @@
   },
   "ausd-agora": {
     "title": "VanEck's Quiet Dollar",
-    "text": "AUSD is Agora's centralized dollar stablecoin, redeemable 1:1 and backed by cash, short-dated U.S. {{term:treasury}}Treasury bills{{/term}}, and overnight repos managed by VanEck. Agora's AUSD deploys the kind of institutional firepower that most stablecoin issuers can only fantasize about: VanEck manages the reserves, State Street provides {{term:custody}}custody{{/term}} through a bankruptcy-remote Delaware Statutory Trust, and Chaos Labs delivers real-time proof of reserves on-chain — a trust stack that earns an A- report card with near-perfect peg stability and only a handful of depeg events on record, none exceeding 191 basis points. The revenue-sharing model with distribution partners, where Agora splits reserve yield with platforms that drive adoption, has fueled aggressive expansion to 15 chains and over $125M in DEX liquidity across 62 pools with a healthy 0.12 concentration HHI. AUSD rarely strays from the calm end of the stress scale, and a 4.6% lending yield via Upshift against an A- safety grade makes it one of the better-compensated risk profiles on the dashboard. The only tension is the familiar one: institutional-top custody and centralized issuance from Bermuda deliver excellent safety metrics everywhere except decentralization, where every centralized issuer collects its inevitable F.",
-    "updatedAt": "2026-06-03",
+    "text": "AUSD is Agora's centralized dollar stablecoin, redeemable 1:1 and backed by cash, short-dated U.S. {{term:treasury}}Treasury bills{{/term}}, and overnight repos managed by VanEck. Agora's institutional stack is unusually explicit: VanEck manages the reserves, State Street provides {{term:custody}}custody{{/term}} through a bankruptcy-remote Delaware Statutory Trust, and Grant Thornton publishes monthly {{term:attestation}}reserve attestations{{/term}} rather than a token-specific real-time proof feed. The revenue-sharing model with distribution partners, where Agora splits reserve yield with platforms that drive adoption, has supported broad multichain expansion and meaningful DEX liquidity without changing the basic risk profile. AUSD rarely strays from the calm end of the stress scale, and its B+ safety grade reflects strong peg behavior and high-quality reserves offset by centralized issuance, issuer-operated controls, and off-chain custody. The main read is simple: AUSD is one of the cleaner institutional fiat-backed dollars, but its transparency is monthly attestation-based, not live on-chain reserve verification.",
+    "updatedAt": "2026-06-26",
     "authoredBy": "ai",
     "model": "claude-opus-4-8",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-06-26",
+    "factsAsOf": "2026-06-26"
   },
   "usds-sky": {
     "title": "The PSM Moat Deepens",
