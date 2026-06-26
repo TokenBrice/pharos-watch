@@ -6,7 +6,8 @@
  * batch processing; delegates classification logic to the pure module.
  */
 import {
-  getAlchemyTransactionContextBatch,
+  getAlchemyTransactionContextBatchMany,
+  type AlchemyTransactionContextBatch,
 } from "../alchemy-logs";
 import { mapWithConcurrency } from "../concurrency";
 import {
@@ -23,43 +24,89 @@ import type {
 
 // Keep <= half of CF's 6-connection-per-trigger pool so other
 // ctx.waitUntil() work in the same cron trigger has headroom.
-const TX_CONTEXT_CONCURRENCY = 4;
+const TX_CONTEXT_BATCH_SIZE = 20;
+const TX_CONTEXT_BATCH_CONCURRENCY = 3;
+const TX_CONTEXT_MIN_REMAINING_MS = 2_000;
+
+interface BridgeClassificationOptions {
+  deadlineMs?: number;
+}
 
 interface TxContextResolution {
   context: MintBurnTxContext | null;
   shortfall: boolean;
 }
 
-async function resolveTxContext(
+function hasRuntimeWindow(options?: BridgeClassificationOptions): boolean {
+  return options?.deadlineMs == null || Date.now() + TX_CONTEXT_MIN_REMAINING_MS < options.deadlineMs;
+}
+
+function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution {
+  if (!batch.tx || !batch.receipt) {
+    return { context: null, shortfall: true };
+  }
+
+  return {
+    context: {
+      to: batch.tx.to ?? batch.receipt.to ?? null,
+      inputSelector: batch.tx.input?.slice(0, 10) ?? null,
+      logTopics: batch.receipt.logs.flatMap((log) => log.topics ?? []),
+      logAddresses: batch.receipt.logs.map((log) => log.address).filter((address): address is string => Boolean(address)),
+    },
+    shortfall: false,
+  };
+}
+
+async function resolveTxContextBatch(
   alchemyUrl: string,
-  txHash: string,
+  txHashes: string[],
   budget: MintBurnRequestBudget,
   txContextCache: Map<string, MintBurnTxContext | null>,
   signal?: AbortSignal,
-): Promise<TxContextResolution> {
-  const cached = txContextCache.get(txHash);
-  if (cached !== undefined) {
-    return { context: cached, shortfall: false };
+  options?: BridgeClassificationOptions,
+): Promise<Map<string, TxContextResolution>> {
+  const resolutions = new Map<string, TxContextResolution>();
+  const uncached: string[] = [];
+
+  for (const txHash of txHashes) {
+    const cached = txContextCache.get(txHash);
+    if (cached !== undefined) {
+      resolutions.set(txHash, { context: cached, shortfall: false });
+    } else {
+      uncached.push(txHash);
+    }
   }
 
-  if (budgetExhausted(budget)) {
-    return { context: null, shortfall: true };
+  if (uncached.length === 0) return resolutions;
+  if (budgetExhausted(budget) || !hasRuntimeWindow(options) || signal?.aborted) {
+    for (const txHash of uncached) {
+      resolutions.set(txHash, { context: null, shortfall: true });
+    }
+    return resolutions;
   }
 
-  const { tx, receipt } = await getAlchemyTransactionContextBatch(alchemyUrl, txHash, budget, signal);
+  const timeoutMs = options?.deadlineMs != null
+    ? Math.max(1, options.deadlineMs - Date.now())
+    : undefined;
+  const fetched = await getAlchemyTransactionContextBatchMany(alchemyUrl, uncached, budget, signal, timeoutMs);
 
-  if (!tx || !receipt) {
-    return { context: null, shortfall: true };
+  for (const txHash of uncached) {
+    const resolution = toTxContext(fetched.get(txHash) ?? { tx: null, receipt: null });
+    if (!resolution.shortfall) {
+      txContextCache.set(txHash, resolution.context);
+    }
+    resolutions.set(txHash, resolution);
   }
 
-  const context: MintBurnTxContext = {
-    to: tx.to ?? receipt.to ?? null,
-    inputSelector: tx.input?.slice(0, 10) ?? null,
-    logTopics: receipt.logs.flatMap((log) => log.topics ?? []),
-    logAddresses: receipt.logs.map((log) => log.address).filter((address): address is string => Boolean(address)),
-  };
-  txContextCache.set(txHash, context);
-  return { context, shortfall: false };
+  return resolutions;
+}
+
+function chunkTxHashes(txHashes: string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < txHashes.length; i += TX_CONTEXT_BATCH_SIZE) {
+    chunks.push(txHashes.slice(i, i + TX_CONTEXT_BATCH_SIZE));
+  }
+  return chunks;
 }
 
 export async function classifyBridgeBurnRows(
@@ -69,6 +116,7 @@ export async function classifyBridgeBurnRows(
   budget: MintBurnRequestBudget,
   txContextCache: Map<string, MintBurnTxContext | null>,
   signal?: AbortSignal,
+  options?: BridgeClassificationOptions,
 ): Promise<BurnClassificationCounters> {
   if (rows.length === 0) {
     return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, txContextShortfalls: 0, deferredTxHashes: [] };
@@ -88,17 +136,22 @@ export async function classifyBridgeBurnRows(
 
   const burnRows = rows.filter((row) => row.direction === "burn");
   const txHashes = [...new Set(rows.map((row) => row.tx_hash))];
-  const resolutions = await mapWithConcurrency(
-    txHashes,
-    TX_CONTEXT_CONCURRENCY,
-    (txHash) => resolveTxContext(alchemyUrl, txHash, budget, txContextCache, signal),
+  const batchResults = await mapWithConcurrency(
+    chunkTxHashes(txHashes),
+    TX_CONTEXT_BATCH_CONCURRENCY,
+    (txHashBatch) => resolveTxContextBatch(alchemyUrl, txHashBatch, budget, txContextCache, signal, options),
   );
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
   let txContextShortfalls = 0;
   const deferredTxHashes: string[] = [];
-  for (let i = 0; i < txHashes.length; i++) {
-    const resolution = resolutions[i]!;
-    const txHash = txHashes[i]!;
+  const resolutions = new Map<string, TxContextResolution>();
+  for (const batchResult of batchResults) {
+    for (const [txHash, resolution] of batchResult) {
+      resolutions.set(txHash, resolution);
+    }
+  }
+  for (const txHash of txHashes) {
+    const resolution = resolutions.get(txHash) ?? { context: null, shortfall: true };
     txContextByHash.set(txHash, resolution.context);
     if (resolution.shortfall) {
       txContextShortfalls++;

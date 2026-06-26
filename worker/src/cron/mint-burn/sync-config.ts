@@ -74,6 +74,7 @@ export interface SyncMintBurnConfigInput {
   txContextCache: Map<string, MintBurnTxContext | null>;
   affectedHours: Map<string, MintBurnAffectedHour>;
   safetyMarginBlocks: number;
+  deadlineMs?: number;
 }
 
 export interface SyncMintBurnConfigResult {
@@ -169,6 +170,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     txContextCache,
     affectedHours,
     safetyMarginBlocks,
+    deadlineMs,
   } = input;
   const configBudget = createBudget(configBudgetLimit);
   const summary = createMintBurnConfigSummary(config, key, tier, {
@@ -258,6 +260,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     ? await resolveBlockTimestamps(alchemyUrl, timestampRequiredBlocks, configBudget, {
         signal,
         localCache: chainTimestampCache,
+        deadlineMs,
         persistentCache: {
           db,
           chainId: config.chain.chainId,
@@ -306,6 +309,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     configBudget,
     txContextCache,
     signal,
+    { deadlineMs },
   );
   summary.txContextShortfalls = burnCounts.txContextShortfalls;
   const deferredTxHashSet = new Set(burnCounts.deferredTxHashes);

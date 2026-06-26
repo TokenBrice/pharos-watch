@@ -230,6 +230,7 @@ export async function runMintBurnConfigPhase(input: {
       txContextCache: chainContext.txContextCache,
       affectedHours,
       safetyMarginBlocks: input.evmSafetyMarginBlocks,
+      deadlineMs,
     });
     Object.assign(summary, result.summary);
 

@@ -129,6 +129,12 @@ vi.mock("../../lib/alchemy-logs", () => ({
     tx: { hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" },
     receipt: { transactionHash: "0xtx", to: "0xrouter", logs: [] },
   })),
+  getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
+    new Map(txHashes.map((txHash) => [txHash, {
+      tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
+      receipt: { transactionHash: txHash, to: "0xrouter", logs: [] },
+    }])),
+  ),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
@@ -174,7 +180,7 @@ import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sw
 import {
   fetchAlchemyLogs,
   getAlchemyBlockNumber,
-  getAlchemyTransactionContextBatch,
+  getAlchemyTransactionContextBatchMany,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
 import { createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
@@ -267,10 +273,12 @@ describe("syncMintBurn", () => {
     vi.mocked(createBudget).mockReset().mockImplementation((limit = 200) => ({ count: 0, limit }));
     vi.mocked(decodeUint256AtSlot).mockReset().mockReturnValue(50_000);
     vi.mocked(getAlchemyBlockNumber).mockReset().mockResolvedValue(22_000_000);
-    vi.mocked(getAlchemyTransactionContextBatch).mockReset().mockResolvedValue({
-      tx: { hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" },
-      receipt: { transactionHash: "0xtx", to: "0xrouter", logs: [] },
-    });
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockReset().mockImplementation(async (_url, txHashes: string[]) =>
+      new Map(txHashes.map((txHash) => [txHash, {
+        tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
+        receipt: { transactionHash: txHash, to: "0xrouter", logs: [] },
+      }])),
+    );
     vi.mocked(fetchAlchemyLogs).mockReset().mockResolvedValue({
       logs: [],
       complete: true,
@@ -538,34 +546,33 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
-    vi.mocked(getAlchemyTransactionContextBatch).mockImplementation(async (_url, txHash) => {
-      if (txHash === "0xbridge") {
-        return {
-          tx: {
-            hash: txHash,
-            to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-            input: "0x96f4e9f9",
-          },
-          receipt: {
-            transactionHash: txHash,
-            to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-            logs: [makeReceiptLog(txHash, [CCIP_SEND_REQUESTED_TOPIC])],
-          },
-        };
-      }
-      return {
-        tx: {
-          hash: txHash,
-          to: "0x1111111111111111111111111111111111111111",
-          input: "0xdeadbeef",
-        },
-        receipt: {
-          transactionHash: txHash,
-          to: "0x1111111111111111111111111111111111111111",
-          logs: [makeReceiptLog(txHash, [])],
-        },
-      };
-    });
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(async (_url, txHashes: string[]) =>
+      new Map(txHashes.map((txHash) => [txHash, txHash === "0xbridge"
+        ? {
+            tx: {
+              hash: txHash,
+              to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
+              input: "0x96f4e9f9",
+            },
+            receipt: {
+              transactionHash: txHash,
+              to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
+              logs: [makeReceiptLog(txHash, [CCIP_SEND_REQUESTED_TOPIC])],
+            },
+          }
+        : {
+            tx: {
+              hash: txHash,
+              to: "0x1111111111111111111111111111111111111111",
+              input: "0xdeadbeef",
+            },
+            receipt: {
+              transactionHash: txHash,
+              to: "0x1111111111111111111111111111111111111111",
+              logs: [makeReceiptLog(txHash, [])],
+            },
+          }])),
+    );
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
@@ -590,7 +597,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
-    vi.mocked(getAlchemyTransactionContextBatch).mockResolvedValueOnce({ tx: null, receipt: null });
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map());
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
@@ -738,7 +745,7 @@ describe("syncMintBurn", () => {
     expect(usdt?.requestBudgetLimit).toBe(150);
     expect(usdt?.txContextShortfalls).toBe(0);
     expect(usdt?.advanceReason).toBe("full-success-events");
-    expect(vi.mocked(getAlchemyTransactionContextBatch)).toHaveBeenCalledTimes(70);
+    expect(vi.mocked(getAlchemyTransactionContextBatchMany)).toHaveBeenCalledTimes(4);
   });
 
   it("rejects when ALCHEMY_API_KEY is missing", async () => {

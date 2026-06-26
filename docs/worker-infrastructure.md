@@ -466,7 +466,7 @@ Dedicated 6-hourly trigger for blacklist sync. Blacklist events are infrequent e
 | ---------------- | ------------------------------ | ----------------------------------- | ---------------- |
 | `sync-mint-burn` | `syncMintBurn()` critical lane | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
 
-Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus the Alchemy circuit breaker. Moved from 20-minute to 30-minute cadence alongside the extended lane. `MINT_BURN_CRITICAL_LANE_INTERVAL_SEC` (in `worker/src/lib/mint-burn-health-config.ts`) anchors the public freshness SLA (`MAX_AGE = interval × 2`), which is therefore 60 minutes — still well inside the 6h operator-alert threshold.
+Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus the Alchemy circuit breaker. Bridge-aware transaction context is batched at 20 transaction hashes per HTTP request with at most three concurrent batch requests, and timestamp/bridge-classification phases inherit the lane's 9-minute self-budget so a single high-volume config stops with partial-frontier diagnostics instead of hitting the 10-minute wrapper timeout. Moved from 20-minute to 30-minute cadence alongside the extended lane. `MINT_BURN_CRITICAL_LANE_INTERVAL_SEC` (in `worker/src/lib/mint-burn-health-config.ts`) anchors the public freshness SLA (`MAX_AGE = interval × 2`), which is therefore 60 minutes — still well inside the 6h operator-alert threshold.
 
 ### Trigger 5: `6 */2 * * *` (DEX discovery — dedicated, every 2h)
 

@@ -73,6 +73,7 @@ export interface ResolveBlockTimestampOptions {
   signal?: AbortSignal;
   localCache?: Map<number, number>;
   persistentCache?: PersistentBlockTimestampCache;
+  deadlineMs?: number;
 }
 
 // --- URL builder ---
@@ -187,25 +188,40 @@ export async function getAlchemyTransactionContextBatch(
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<AlchemyTransactionContextBatch> {
-  if (budgetExhausted(budget)) return { tx: null, receipt: null };
+  const results = await getAlchemyTransactionContextBatchMany(alchemyUrl, [txHash], budget, signal);
+  return results.get(txHash) ?? { tx: null, receipt: null };
+}
+
+export async function getAlchemyTransactionContextBatchMany(
+  alchemyUrl: string,
+  txHashes: string[],
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+  timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
+): Promise<Map<string, AlchemyTransactionContextBatch>> {
+  const uniqueTxHashes = [...new Set(txHashes)];
+  const results = new Map<string, AlchemyTransactionContextBatch>(
+    uniqueTxHashes.map((txHash) => [txHash, { tx: null, receipt: null }]),
+  );
+  if (uniqueTxHashes.length === 0 || budgetExhausted(budget)) return results;
   budget.count++;
 
-  const payload = [
+  const payload = uniqueTxHashes.flatMap((txHash, index) => [
     {
       jsonrpc: "2.0",
-      id: 1,
+      id: index * 2,
       method: "eth_getTransactionByHash",
       params: [txHash],
     },
     {
       jsonrpc: "2.0",
-      id: 2,
+      id: index * 2 + 1,
       method: "eth_getTransactionReceipt",
       params: [txHash],
     },
-  ];
+  ]);
 
-  const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)));
   let res: Response;
   try {
     res = await fetch(alchemyUrl, {
@@ -216,13 +232,13 @@ export async function getAlchemyTransactionContextBatch(
     });
   } catch (err) {
     console.debug("[alchemy-logs] transaction-context batch fetch failed", err);
-    return { tx: null, receipt: null };
+    return results;
   }
 
   if (!res.ok) {
     console.warn(`[alchemy-logs] transaction-context batch HTTP ${res.status}`);
     await cancelResponseBodyQuietly(res);
-    return { tx: null, receipt: null };
+    return results;
   }
 
   let parsed: unknown;
@@ -230,29 +246,34 @@ export async function getAlchemyTransactionContextBatch(
     parsed = await res.json();
   } catch (err) {
     console.debug("[alchemy-logs] transaction-context batch response body parse failed", err);
-    return { tx: null, receipt: null };
+    return results;
   }
 
   if (!Array.isArray(parsed)) {
     console.warn("[alchemy-logs] transaction-context batch returned non-array JSON body");
-    return { tx: null, receipt: null };
+    return results;
   }
 
-  let tx: AlchemyTransactionEntry | null = null;
-  let receipt: AlchemyTransactionReceipt | null = null;
   for (const item of parsed as Array<JsonRpcResponse<unknown>>) {
     if (item?.error) {
       console.warn(`[alchemy-logs] transaction-context batch item error (${item.error.code}): ${item.error.message}`);
       continue;
     }
-    if (item?.id === 1) {
-      tx = (item.result ?? null) as AlchemyTransactionEntry | null;
-    } else if (item?.id === 2) {
-      receipt = (item.result ?? null) as AlchemyTransactionReceipt | null;
+    if (typeof item?.id !== "number" || !Number.isInteger(item.id) || item.id < 0) {
+      continue;
     }
+    const txHash = uniqueTxHashes[Math.floor(item.id / 2)];
+    if (!txHash) continue;
+    const current = results.get(txHash) ?? { tx: null, receipt: null };
+    if (item.id % 2 === 0) {
+      current.tx = (item.result ?? null) as AlchemyTransactionEntry | null;
+    } else {
+      current.receipt = (item.result ?? null) as AlchemyTransactionReceipt | null;
+    }
+    results.set(txHash, current);
   }
 
-  return { tx, receipt };
+  return results;
 }
 
 // --- Log fetching ---
@@ -423,6 +444,7 @@ async function fetchBlockTimestampBatch(
   alchemyUrl: string,
   batch: number[],
   signal?: AbortSignal,
+  timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
 ): Promise<BlockTimestampBatchResult> {
   const missingAll = (issueCount = 1): BlockTimestampBatchResult => ({
     timestamps: new Map<number, number>(),
@@ -438,7 +460,7 @@ async function fetchBlockTimestampBatch(
   }));
 
   try {
-    const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
+    const timeout = AbortSignal.timeout(Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)));
     const res = await fetch(alchemyUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -561,6 +583,10 @@ export async function resolveBlockTimestamps(
 
     for (let i = 0; i < remotePending.length; i += batchSize) {
       throwIfAborted(options?.signal);
+      if (options?.deadlineMs != null && Date.now() >= options.deadlineMs) {
+        stillMissing.push(...remotePending.slice(i));
+        break;
+      }
       if (budgetExhausted(budget)) {
         stillMissing.push(...remotePending.slice(i));
         break;
@@ -568,7 +594,10 @@ export async function resolveBlockTimestamps(
       budget.count++;
 
       const batch = remotePending.slice(i, i + batchSize);
-      const result = await fetchBlockTimestampBatch(alchemyUrl, batch, options?.signal);
+      const timeoutMs = options?.deadlineMs != null
+        ? Math.max(1, options.deadlineMs - Date.now())
+        : ALCHEMY_RPC_TIMEOUT_MS;
+      const result = await fetchBlockTimestampBatch(alchemyUrl, batch, options?.signal, timeoutMs);
       fetchIssues += result.issueCount;
       for (const [block, ts] of result.timestamps) {
         timestamps.set(block, ts);

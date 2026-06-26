@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   buildAlchemyUrl,
   getAlchemyBlockNumber,
+  getAlchemyTransactionContextBatchMany,
   fetchAlchemyLogs,
   resolveBlockTimestamps,
 } from "../alchemy-logs";
@@ -117,6 +118,50 @@ describe("getAlchemyBlockNumber", () => {
 
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// --- getAlchemyTransactionContextBatchMany ---
+
+describe("getAlchemyTransactionContextBatchMany", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it("batches transaction and receipt lookups into one HTTP request", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify([
+        { jsonrpc: "2.0", id: 0, result: { hash: "0xaaa", to: "0xrouter", input: "0x12345678" } },
+        { jsonrpc: "2.0", id: 1, result: { transactionHash: "0xaaa", to: "0xrouter", logs: [] } },
+        { jsonrpc: "2.0", id: 2, result: { hash: "0xbbb", to: "0xrouter", input: "0x87654321" } },
+        { jsonrpc: "2.0", id: 3, result: { transactionHash: "0xbbb", to: "0xrouter", logs: [] } },
+      ]),
+      { status: 200 },
+    ));
+
+    const budget = createBudget(100);
+    const result = await getAlchemyTransactionContextBatchMany(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      ["0xaaa", "0xbbb"],
+      budget,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(budget.count).toBe(1);
+    expect(result.get("0xaaa")?.tx?.hash).toBe("0xaaa");
+    expect(result.get("0xbbb")?.receipt?.transactionHash).toBe("0xbbb");
+  });
+
+  it("returns null contexts without fetching when budget is exhausted", async () => {
+    const budget = createBudget(0);
+    const result = await getAlchemyTransactionContextBatchMany(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      ["0xaaa"],
+      budget,
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.get("0xaaa")).toEqual({ tx: null, receipt: null });
   });
 });
 

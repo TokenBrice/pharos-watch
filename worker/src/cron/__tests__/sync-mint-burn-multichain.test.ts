@@ -78,6 +78,12 @@ vi.mock("../../lib/alchemy-logs", () => ({
   getAlchemyBlockNumber: vi.fn(async (url: string) =>
     url.includes("ethereum") ? 22_000_000 : 250_000_000,
   ),
+  getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
+    new Map(txHashes.map((txHash) => [txHash, {
+      tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
+      receipt: { transactionHash: txHash, to: "0xrouter", logs: [] },
+    }])),
+  ),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 0, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
