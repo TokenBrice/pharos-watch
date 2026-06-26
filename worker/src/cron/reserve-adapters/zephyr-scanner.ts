@@ -4,11 +4,10 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
-  requireJsonInputFromConfig,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -236,7 +235,12 @@ export async function fetchZephyrScannerReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireJsonInputFromConfig(config, "zephyr-scanner");
-  const payload = await fetchJsonWithRetry<ZephyrScannerPayload>(input.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<ZephyrScannerPayload>(
+    config,
+    "zephyr-scanner",
+    signal,
+    12_000,
+    ctx,
+  );
   return adaptZephyrScanner(payload);
 }

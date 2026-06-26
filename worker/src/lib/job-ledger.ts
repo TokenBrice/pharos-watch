@@ -6,6 +6,7 @@ import type {
 import { CronJobAbandonedError } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
+import { boundedJson, parseObjectMetadata } from "./json-metadata";
 import { logWorkerEvent } from "./structured-log";
 
 export type WorkerJobLedgerMode = "off" | "shadow" | "write";
@@ -178,34 +179,8 @@ function buildWorkerJobAttemptIdentity(input: CreateWorkerJobAttemptInput): Work
   };
 }
 
-function safeJsonObject(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  return value as Record<string, unknown>;
-}
-
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> | undefined {
-  if (!value) return undefined;
-  try {
-    return safeJsonObject(JSON.parse(value));
-  } catch {
-    return { raw: value.slice(0, 1_000) };
-  }
-}
-
-function boundedJson(value: unknown): string | null {
-  if (value == null) return null;
-  try {
-    const json = JSON.stringify(value);
-    if (!json) return null;
-    if (json.length <= MAX_ATTEMPT_METADATA_JSON_CHARS) return json;
-    return JSON.stringify({
-      truncated: true,
-      preview: json.slice(0, MAX_ATTEMPT_METADATA_JSON_CHARS),
-      originalLength: json.length,
-    });
-  } catch {
-    return JSON.stringify({ unserializable: true });
-  }
+  return parseObjectMetadata(value);
 }
 
 function cronResultMetadata(result: WorkerJobAttemptCronResult | void): Record<string, unknown> | undefined {
@@ -216,7 +191,10 @@ function cronResultMetadata(result: WorkerJobAttemptCronResult | void): Record<s
 function normalizeResultMetadata(result: WorkerJobAttemptCronResult | void): string | null {
   if (!result?.metadata) return null;
   const parsed = parseJsonObject(result.metadata);
-  return boundedJson(parsed ?? { raw: result.metadata.slice(0, MAX_ATTEMPT_METADATA_JSON_CHARS) });
+  return boundedJson(
+    parsed ?? { raw: result.metadata.slice(0, MAX_ATTEMPT_METADATA_JSON_CHARS) },
+    MAX_ATTEMPT_METADATA_JSON_CHARS,
+  );
 }
 
 function hasDeferredMetadata(metadata: Record<string, unknown> | undefined): boolean {
@@ -260,7 +238,7 @@ function progressMetadata(update: WorkerJobAttemptProgressUpdate): string | null
       ...(update.leaseOwner !== undefined ? { leaseOwner: update.leaseOwner } : {}),
       ...(update.metadata !== undefined ? { metadata: update.metadata } : {}),
     },
-  });
+  }, MAX_ATTEMPT_METADATA_JSON_CHARS);
 }
 
 function terminalStateSql(): string {
@@ -457,7 +435,7 @@ export async function finishWorkerJobAttempt(
       : { state: "failed" as const, statusClass: "thrown_error" as const }
     : classifyCronResult(input.result);
   const resultMetadataJson = input.error instanceof CronJobAbandonedError
-    ? boundedJson(input.error.metadata)
+    ? boundedJson(input.error.metadata, MAX_ATTEMPT_METADATA_JSON_CHARS)
     : normalizeResultMetadata(input.result);
   const error = input.error
     ? toErrorMessage(input.error)
@@ -525,7 +503,7 @@ export async function markWorkerJobAttemptsAbandonedForSlot(
       .bind(
         timestamp,
         input.error,
-        boundedJson(input.metadata),
+        boundedJson(input.metadata, MAX_ATTEMPT_METADATA_JSON_CHARS),
         timestamp,
         input.scheduleKey,
         input.slotStartedAt,

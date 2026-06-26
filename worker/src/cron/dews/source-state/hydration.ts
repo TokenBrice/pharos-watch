@@ -38,19 +38,17 @@ import {
   normalizeYieldSourceRisk,
 } from "./legacy-bridge";
 import { resolveBootstrapAllowed } from "./fallback";
-import { readDewsPublishedGeneration } from "../../../lib/dews-publication-pointer";
+import {
+  loadPreviousStressSignalCurrentRows,
+  type PreviousStressSignalCurrentRow,
+} from "../../../lib/stress-signals-current-rows";
 
 export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
 const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
 const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 
-type PreviousStressSignalRow = {
-  stablecoin_id: string;
-  signals_json: string;
-  band: string;
-  computed_at: number;
-};
+type PreviousStressSignalRow = PreviousStressSignalCurrentRow;
 
 export interface HydrationCallbacks {
   registerSourceFailure: (source: string, error: unknown, options?: { bootstrapAllowed?: boolean }) => void;
@@ -74,96 +72,15 @@ function getRowAgeSec(updatedAt: number | null | undefined, nowSec: number): num
   return typeof updatedAt === "number" && Number.isFinite(updatedAt) ? Math.max(0, nowSec - updatedAt) : null;
 }
 
-function arePreviousStressSignalRowsStale(rows: PreviousStressSignalRow[], nowSec: number): boolean {
-  if (rows.length === 0) return true;
-  const newestComputedAt = rows.reduce(
-    (max, row) => Math.max(max, Number.isFinite(row.computed_at) ? row.computed_at : 0),
-    0,
-  );
-  return newestComputedAt <= 0 || nowSec - newestComputedAt > DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC;
-}
-
-function mergeNewestPreviousStressSignalRows(
-  legacyRows: PreviousStressSignalRow[],
-  latestRows: PreviousStressSignalRow[],
-): PreviousStressSignalRow[] {
-  const byId = new Map<string, PreviousStressSignalRow>();
-  for (const row of legacyRows) {
-    byId.set(row.stablecoin_id, row);
-  }
-  for (const row of latestRows) {
-    const existing = byId.get(row.stablecoin_id);
-    if (!existing || row.computed_at >= existing.computed_at) {
-      byId.set(row.stablecoin_id, row);
-    }
-  }
-  return [...byId.values()];
-}
-
 async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<PreviousStressSignalRow[]> {
-  let completedAt: number | null = null;
-  try {
-    completedAt = await readDewsPublishedGeneration(ctx.db, ctx.nowSec);
-  } catch {
-    completedAt = null;
-  }
-  let latestRows: PreviousStressSignalRow[] = [];
-  try {
-    const latestStmt = ctx.db.prepare(
-      completedAt == null
-        ?
-        `SELECT /* pharos:dews:previous-stress-latest */
-           stablecoin_id, signals_json, band, computed_at
-         FROM stress_signals_latest`
-        :
-        `SELECT /* pharos:dews:previous-stress-latest */
-           stablecoin_id, signals_json, band, computed_at
-         FROM stress_signals_latest
-         WHERE computed_at <= ?`,
-    );
-    const rows = await (
-      completedAt == null
-        ? latestStmt
-        : latestStmt.bind(completedAt)
-    ).all<PreviousStressSignalRow>();
-    latestRows = rows.results ?? [];
-  } catch (error) {
-    latestRows = [];
-    if (!isMissingTableError(error)) {
-      ctx.registerSourceFailure("stress-signals-latest", error);
-    }
-  }
-
-  const legacyStmt = ctx.db.prepare(
-    completedAt == null
-      ?
-      `SELECT /* pharos:dews:previous-stress-legacy */
-         s.stablecoin_id, s.signals_json, s.band, s.computed_at
-       FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) as max_at
-         FROM stress_signals GROUP BY stablecoin_id
-       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
-      :
-      `SELECT /* pharos:dews:previous-stress-legacy */
-         s.stablecoin_id, s.signals_json, s.band, s.computed_at
-       FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) as max_at
-         FROM stress_signals
-         WHERE computed_at <= ?
-         GROUP BY stablecoin_id
-       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-  );
-  const legacyRows = await (
-    completedAt == null
-      ? legacyStmt
-      : legacyStmt.bind(completedAt)
-  ).all<PreviousStressSignalRow>();
-  const legacyResults = legacyRows.results ?? [];
-  if (legacyResults.length === 0) return latestRows;
-  if (arePreviousStressSignalRowsStale(latestRows, ctx.nowSec)) return legacyResults;
-  return mergeNewestPreviousStressSignalRows(legacyResults, latestRows);
+  return loadPreviousStressSignalCurrentRows(ctx.db, ctx.nowSec, {
+    staleAfterSec: DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
+    onLatestReadError: (error) => {
+      if (!isMissingTableError(error)) {
+        ctx.registerSourceFailure("stress-signals-latest", error);
+      }
+    },
+  });
 }
 
 export interface DexLiquidityHydration {

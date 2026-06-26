@@ -9,6 +9,7 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { getResponseReadyCacheKey } from "./api-cache-read";
 import { getCacheUpdatedAt } from "./db-cache";
 import { isMissingTableError } from "./db";
+import { parseObjectMetadata } from "./json-metadata";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 
 interface PublicationGenerationRow {
@@ -54,18 +55,6 @@ const STABLECOINS_CACHE_SURFACE: PublicationSurfaceDefinition = {
   sourceOfTruth: "cache[stablecoins]",
 };
 
-function parseMetadata(value: string | null | undefined): Record<string, unknown> | undefined {
-  if (!value) return undefined;
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : undefined;
-  } catch {
-    return { raw: value.slice(0, 1_000) };
-  }
-}
-
 function mapSourceState(state: string): PublicationGenerationState {
   if (state === "staged") return "candidate";
   if (
@@ -92,7 +81,7 @@ function mapGenerationRow(
     latestPublished.generation_id !== row.generation_id
       ? "superseded"
       : mapSourceState(row.source_state);
-  const metadata = parseMetadata(row.metadata_json);
+  const metadata = parseObjectMetadata(row.metadata_json);
   return {
     generationId: row.generation_id,
     sourceState: row.source_state,

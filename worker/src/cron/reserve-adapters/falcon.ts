@@ -5,10 +5,9 @@ import {
   accumulateBucketedExposure,
   buildBucketSlices,
   buildRedemptionSnapshotMetadata,
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
-  requireJsonInputFromConfig,
   reserveDegradedWarning,
 } from "./helpers";
 
@@ -263,9 +262,9 @@ export async function fetchFalconReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "falcon");
-  const payload = await fetchJsonWithRetry<FalconTransparencyResponse>(
-    primaryInput.url,
+  const payload = await fetchJsonAdapterInput<FalconTransparencyResponse>(
+    config,
+    "falcon",
     signal,
     12_000,
     ctx,

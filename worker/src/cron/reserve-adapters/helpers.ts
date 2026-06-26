@@ -46,6 +46,7 @@ export {
 } from "./html";
 export {
   ADAPTER_USER_AGENT,
+  fetchJsonAdapterInput,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
   fetchPrimaryHtmlInput,

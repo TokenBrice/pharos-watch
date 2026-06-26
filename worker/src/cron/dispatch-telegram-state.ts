@@ -11,9 +11,7 @@ import {
   type AlertSafetySourceSnapshot,
 } from "../lib/alert-safety-source-cache";
 import { getCache } from "../lib/db-cache";
-import {
-  readDewsPublishedGeneration,
-} from "../lib/dews-publication-pointer";
+import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import {
   SNAPSHOT_KEYS,
   buildDepegSnapshot,
@@ -32,101 +30,13 @@ import {
 } from "./telegram-alert-snapshots";
 
 type CachedValue = { value: string; updatedAt: number } | null;
-type DewsLatestRow = DewsRow & { computed_at: number };
 
 const TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC = 2 * 3600;
 
-function areDewsLatestRowsStale(rows: DewsLatestRow[], nowSec: number): boolean {
-  if (rows.length === 0) return true;
-  const newestComputedAt = rows.reduce(
-    (max, row) => Math.max(max, Number.isFinite(row.computed_at) ? row.computed_at : 0),
-    0,
-  );
-  return newestComputedAt <= 0 || nowSec - newestComputedAt > TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC;
-}
-
-function mergeNewestDewsRows(legacyRows: DewsLatestRow[], latestRows: DewsLatestRow[]): DewsRow[] {
-  const byId = new Map<string, DewsLatestRow>();
-  for (const row of legacyRows) {
-    byId.set(row.stablecoin_id, row);
-  }
-  for (const row of latestRows) {
-    const existing = byId.get(row.stablecoin_id);
-    if (!existing || row.computed_at >= existing.computed_at) {
-      byId.set(row.stablecoin_id, row);
-    }
-  }
-  return [...byId.values()];
-}
-
-async function loadCompletedDewsComputedAt(db: D1Database, nowSec: number): Promise<number | null> {
-  try {
-    return await readDewsPublishedGeneration(db, nowSec);
-  } catch {
-    return null;
-  }
-}
-
 export async function loadDewsRows(db: D1Database, nowSec: number): Promise<DewsRow[]> {
-  const completedAt = await loadCompletedDewsComputedAt(db, nowSec);
-  let latestRows: DewsLatestRow[] = [];
-  try {
-    const latestStmt = db.prepare(
-      completedAt == null
-        ?
-        `SELECT /* pharos:telegram-dispatch:dews-latest */
-           stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest`
-        :
-        `SELECT /* pharos:telegram-dispatch:dews-latest */
-           stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest
-         WHERE computed_at <= ?`,
-    );
-    const rows = await (
-      completedAt == null
-        ? latestStmt
-        : latestStmt.bind(completedAt)
-    ).all<DewsLatestRow>();
-    latestRows = rows.results ?? [];
-  } catch {
-    latestRows = [];
-  }
-
-  // Fallback keeps stale-materialization and partial latest-table deployments
-  // safe. stress_signals_latest is an optimization over the canonical history
-  // table, so Telegram dispatch merges both and keeps the newest row per coin.
-
-  const legacyStmt = db.prepare(
-    completedAt == null
-      ?
-      `SELECT /* pharos:telegram-dispatch:dews-legacy */
-         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
-         FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) AS max_at
-           FROM stress_signals GROUP BY stablecoin_id
-      ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
-      :
-      `SELECT /* pharos:telegram-dispatch:dews-legacy */
-         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) AS max_at
-             FROM stress_signals
-            WHERE computed_at <= ?
-            GROUP BY stablecoin_id
-      ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-  );
-  const legacyRows = await (
-    completedAt == null
-      ? legacyStmt
-      : legacyStmt.bind(completedAt)
-  ).all<DewsLatestRow>();
-  const legacyResults = legacyRows.results ?? [];
-  if (legacyResults.length === 0) return latestRows;
-  if (areDewsLatestRowsStale(latestRows, nowSec)) return legacyResults;
-  return mergeNewestDewsRows(legacyResults, latestRows);
+  return loadTelegramDewsCurrentRows(db, nowSec, {
+    staleAfterSec: TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC,
+  });
 }
 
 function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {

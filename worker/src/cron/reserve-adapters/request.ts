@@ -2,7 +2,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { USER_AGENT } from "../../lib/constants";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { requireHtmlInput } from "./input-guards";
+import { requireHtmlInput, requireJsonInputFromConfig } from "./input-guards";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { toErrorMessage } from "../../lib/error-utils";
@@ -160,6 +160,18 @@ export async function fetchJsonPostWithRetry<T>(
     }),
     ctx,
   );
+}
+
+export async function fetchJsonAdapterInput<T>(
+  config: LiveReservesConfig,
+  adapterName: string,
+  signal: AbortSignal,
+  timeoutMs = 12_000,
+  ctx?: AdapterContext,
+  options?: JsonRetryOptions,
+): Promise<T> {
+  const input = requireJsonInputFromConfig(config, adapterName);
+  return fetchJsonWithRetry<T>(input.url, signal, timeoutMs, ctx, options);
 }
 
 export async function fetchTextWithRetry(

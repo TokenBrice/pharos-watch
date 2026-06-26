@@ -2,10 +2,9 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
-  requireJsonInputFromConfig,
 } from "./helpers";
 
 interface SolsticeTimelinePoint {
@@ -91,7 +90,12 @@ export async function fetchSolsticeAttestationReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireJsonInputFromConfig(config, "solstice-attestation");
-  const payload = await fetchJsonWithRetry<SolsticeDashboardPayload>(input.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<SolsticeDashboardPayload>(
+    config,
+    "solstice-attestation",
+    signal,
+    12_000,
+    ctx,
+  );
   return adaptSolsticeAttestation(payload);
 }

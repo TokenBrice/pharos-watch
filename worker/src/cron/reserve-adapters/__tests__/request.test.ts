@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   buildBrowserHeaders,
+  fetchJsonAdapterInput,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
   fetchTextWithRetry,
@@ -160,5 +162,26 @@ describe("adapter request cache", () => {
     await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "eurc" }, signal, 1_000, ctx);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("fetches the primary JSON input from a live-reserve config", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ reserves: "ok" }), {
+      headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const config = {
+      adapter: "tether",
+      version: 1,
+      semantics: "attestation-mix",
+      inputs: {
+        primary: { kind: "http-json", url: "https://issuer.example/reserves" },
+      },
+    } as LiveReservesConfig;
+    const signal = new AbortController().signal;
+    const payload = await fetchJsonAdapterInput<{ reserves: string }>(config, "tether", signal, 1_000);
+
+    expect(payload).toEqual({ reserves: "ok" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

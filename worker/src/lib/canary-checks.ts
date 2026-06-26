@@ -6,6 +6,7 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { isMissingColumnError, isMissingTableError } from "./db";
 import { toErrorMessage } from "./error-utils";
 import { throwIfAborted } from "./abort";
+import { boundedJson, parseObjectMetadata } from "./json-metadata";
 
 export type WorkerCanaryMode = "off" | "shadow" | "status" | "alert";
 
@@ -124,34 +125,6 @@ function nowSec(): number {
 
 function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
   return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;
-}
-
-function boundedJson(value: unknown): string | null {
-  if (value == null) return null;
-  try {
-    const json = JSON.stringify(value);
-    if (!json) return null;
-    if (json.length <= MAX_CANARY_METADATA_JSON_CHARS) return json;
-    return JSON.stringify({
-      truncated: true,
-      preview: json.slice(0, MAX_CANARY_METADATA_JSON_CHARS),
-      originalLength: json.length,
-    });
-  } catch {
-    return JSON.stringify({ unserializable: true });
-  }
-}
-
-function parseMetadata(value: string | null | undefined): Record<string, unknown> | undefined {
-  if (!value) return undefined;
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : undefined;
-  } catch {
-    return { raw: value.slice(0, 1_000) };
-  }
 }
 
 function skippedResult(reason: string, metadata?: Record<string, unknown>) {
@@ -636,7 +609,7 @@ async function persistCanaryRun(
     description: result.description,
     mode: options.mode ?? "shadow",
     ...(result.metadata ?? {}),
-  });
+  }, MAX_CANARY_METADATA_JSON_CHARS);
   await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -695,7 +668,7 @@ export async function pruneWorkerCanaryRuns(
 }
 
 function mapCanaryStatusRow(row: WorkerCanaryRunRow): CanaryStatus["checks"][string] {
-  const metadata = parseMetadata(row.metadata_json);
+  const metadata = parseObjectMetadata(row.metadata_json);
   const label = typeof metadata?.label === "string" ? metadata.label : row.check_id;
   const description = typeof metadata?.description === "string" ? metadata.description : "";
   const publicMetadata = metadata ? { ...metadata } : undefined;

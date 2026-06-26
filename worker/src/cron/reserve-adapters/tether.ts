@@ -2,8 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchJsonWithRetry,
-  requireJsonInputFromConfig,
+  fetchJsonAdapterInput,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -68,12 +67,12 @@ export async function fetchTetherReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "tether");
-  const payload = await fetchJsonWithRetry<TetherTransparencyResponse>(
-      primaryInput.url,
-      signal,
-      12_000,
-      ctx,
+  const payload = await fetchJsonAdapterInput<TetherTransparencyResponse>(
+    config,
+    "tether",
+    signal,
+    12_000,
+    ctx,
   );
   return adaptTetherTransparency(payload);
 }
