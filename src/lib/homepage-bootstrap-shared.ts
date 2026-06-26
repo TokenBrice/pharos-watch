@@ -10,7 +10,7 @@ import { isRecord } from "@shared/lib/type-guards";
 /** Payload schema version. Bump in lockstep with the generator. */
 export const HOMEPAGE_BOOTSTRAP_VERSION = 1;
 
-export const HOMEPAGE_BOOTSTRAP_QUERY_IDS = [
+const HOMEPAGE_BOOTSTRAP_QUERY_IDS = [
   "stablecoins",
   "pegSummary",
   "dexLiquidity",

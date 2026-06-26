@@ -77,6 +77,10 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_WEIGHT",
   // Backward-compatible type export for callers that imported the old lib path.
   "shared/lib/cause-of-death.ts::CauseOfDeath",
+  // Consumed by scripts/lib/methodology-to-markdown.ts for checked-in markdown
+  // export generation outside this runtime source graph.
+  "shared/lib/methodology-versions/registry.ts::METHODOLOGY_CHANGELOG_MARKDOWN_KEYS",
+  "shared/lib/methodology-versions/registry.ts::getMethodologyChangelogEntryByMarkdownKey",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",
   "shared/lib/mint-burn-signals.ts::PRESSURE_SHIFT_STABLE_BAND_MAX",
   "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",
@@ -149,6 +153,9 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/compare-config.ts::ID_TO_COMPARE_COIN",
   // Consumed by scripts/ci/check-frozen-invariants.ts (out-of-scan-scope).
   "src/lib/compare-pages.ts::STATIC_COMPARE_PAIRS",
+  // Consumed by scripts/maintenance/generate-homepage-bootstrap.ts for static
+  // bootstrap payload generation outside this runtime source graph.
+  "src/lib/homepage-bootstrap.ts::HomepageBootstrapQueryId",
   // Consumed by scripts/ci/check-cron-connection-budget.ts (out-of-scan-scope).
   "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET",
   "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET_ENTRIES",

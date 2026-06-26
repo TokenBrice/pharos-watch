@@ -168,7 +168,7 @@ const DEWS_PREVIOUS_ALL_QUERIES: AllRowsQueries = {
   legacyBounded: DEWS_PREVIOUS_LEGACY_ALL_BOUNDED_SQL,
 };
 
-export function isStressSignalRowStale(
+function isStressSignalRowStale(
   row: { computed_at: number } | null | undefined,
   nowSec: number,
   staleAfterSec: number,
@@ -176,7 +176,7 @@ export function isStressSignalRowStale(
   return !row || nowSec - row.computed_at > staleAfterSec;
 }
 
-export function areStressSignalRowsStale(
+function areStressSignalRowsStale(
   rows: readonly { computed_at: number }[],
   nowSec: number,
   staleAfterSec: number,
