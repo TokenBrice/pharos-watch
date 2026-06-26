@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
@@ -148,7 +148,7 @@ export async function computeStablecoinScores(
   const globalChains = new Set<string>();
   const protocolCapDiagnostics: ProtocolCapDiagnostics = { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
 
-  for (const [id, m] of metrics) {
+  for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
     m.topPools = filterRetainedPools(m.topPools);
     const capResult = applyProtocolCaps(m.topPools, protocolTvlCaps);
     protocolCapDiagnostics.cappedPoolCount += capResult.cappedPoolCount;
