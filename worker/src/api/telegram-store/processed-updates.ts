@@ -1,11 +1,8 @@
-import {
-  TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC,
-  TELEGRAM_PROCESSING_STALE_SEC,
-} from "../../lib/telegram-constants";
+import { TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC, TELEGRAM_PROCESSING_STALE_SEC } from "../../lib/telegram-constants";
 import { d1ChangeCount } from "./_internals";
 import { unixNow } from "./subscribers";
 
-const TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT = 5_000;
+export const TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT = 5_000;
 
 export type TelegramProcessedUpdateClaimStatus = "claimed" | "duplicate" | "in_flight";
 
@@ -52,9 +49,7 @@ export async function claimTelegramProcessedUpdate(
   }
 
   const existing = await db
-    .prepare(
-      "SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?",
-    )
+    .prepare("SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?")
     .bind(input.updateId)
     .first<ProcessedUpdateRow>();
 
@@ -186,10 +181,7 @@ export async function acquireTelegramCommandCooldown(
     return { allowed: true, retryAfterSec: 0 };
   }
 
-  const row = await db
-    .prepare("SELECT updated_at FROM cache WHERE key = ?")
-    .bind(key)
-    .first<{ updated_at: number }>();
+  const row = await db.prepare("SELECT updated_at FROM cache WHERE key = ?").bind(key).first<{ updated_at: number }>();
   const lastUsedAt = Number(row?.updated_at);
   const retryAfterSec = Number.isFinite(lastUsedAt)
     ? Math.max(1, input.cooldownSec - (input.nowSec - lastUsedAt))
