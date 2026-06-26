@@ -1,4 +1,8 @@
-import { ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL, FRED_SONIA_COMPOUNDED_INDEX_CSV_URL, USER_AGENT } from "../../lib/constants";
+import {
+  ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
+  FRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
+  USER_AGENT,
+} from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,
@@ -6,6 +10,10 @@ import {
   parseRate,
 } from "./shared";
 import { deriveSoniaCompoundedRate } from "./boe";
+
+const ST_LOUIS_FED_SONIA_MAX_OBSERVATION_AGE_DAYS = 140;
+const ST_LOUIS_FED_SONIA_MAX_FUTURE_SKEW_DAYS = 1;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function parseFredLatest(csv: string): { recordDate: string; rate: number } | null {
   const lines = csv.split(/\r?\n/);
@@ -53,7 +61,25 @@ function parseFredSoniaCompoundedIndexCsv(csv: string): { recordDate: string; ra
         : [];
     });
 
-  return deriveSoniaCompoundedRate(observations);
+  const derived = deriveSoniaCompoundedRate(observations);
+  if (!derived) return null;
+
+  // The St. Louis Fed graph endpoints are unbounded historical CSVs; reject
+  // stale/future latest observations so they trigger the next GBP fallback
+  // instead of being stamped as a fresh market benchmark for this cron run.
+  const latestTimestampMs = parseIsoDateMs(derived.recordDate);
+  const nowMs = Date.now();
+  const oldestAllowedMs = nowMs - ST_LOUIS_FED_SONIA_MAX_OBSERVATION_AGE_DAYS * DAY_MS;
+  const newestAllowedMs = nowMs + ST_LOUIS_FED_SONIA_MAX_FUTURE_SKEW_DAYS * DAY_MS;
+  if (
+    !Number.isFinite(latestTimestampMs) ||
+    latestTimestampMs < oldestAllowedMs ||
+    latestTimestampMs > newestAllowedMs
+  ) {
+    return null;
+  }
+
+  return derived;
 }
 
 export async function tryFredSoniaCompoundedIndex(

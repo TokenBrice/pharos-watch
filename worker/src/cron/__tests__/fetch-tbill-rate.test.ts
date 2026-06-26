@@ -327,6 +327,59 @@ describe("fetchTbillRate", () => {
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
   });
 
+  it("falls back to ALFRED when the FRED SONIA index is stale", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
+        "observation_date,IUDZOS2\n2000-01-01,100\n2000-04-01,101\n",
+        { status: 200 },
+      ),
+      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": new Response(
+        ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET,
+        { status: 200 },
+      ),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(metadata.gbpSource).toBe("alfred-sonia-compounded-index");
+    expect(metadata.gbpRecordDate).toBe("2026-04-01");
+    expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
+  });
+
+  it("falls back to the BoE SONIA index when St. Louis Fed SONIA observations are future dated", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
+        "observation_date,IUDZOS2\n2099-01-01,100\n2099-04-01,101\n",
+        { status: 200 },
+      ),
+      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": new Response(
+        "observation_date,IUDZOS2_20990401\n2099-01-01,100\n2099-04-01,101\n",
+        { status: 200 },
+      ),
+      "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(metadata.gbpSource).toBe("boe-sonia-compounded-index");
+    expect(metadata.gbpRecordDate).toBe("2026-04-01");
+    expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
+  });
+
   it("falls back to the BoE SONIA index when the St. Louis Fed mirrors are unreachable", async () => {
     mockByUrl({
       "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
