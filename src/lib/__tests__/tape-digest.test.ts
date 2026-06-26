@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  digestByDay,
   digestPage,
   mergeDigestedPages,
   type DigestedDay,
@@ -53,18 +52,22 @@ function sortDesc(events: TapeEvent[]): TapeEvent[] {
   return [...events].sort((a, b) => b.ts - a.ts);
 }
 
+function digestByDayForTest(events: readonly TapeEvent[], nowMs: number): DigestedDay[] {
+  return mergeDigestedPages([digestPage(events, nowMs)]);
+}
+
 // ---------------------------------------------------------------------------
-// digestByDay back-compat
+// single-page digest
 // ---------------------------------------------------------------------------
 
-describe("digestByDay (back-compat)", () => {
+describe("single-page digest", () => {
   it("buckets events by UTC day, newest day first", () => {
     const events = sortDesc([
       makeEvent(NOW_MS - HOUR_MS, "depeg.opened"),
       makeEvent(NOW_MS - 25 * HOUR_MS, "depeg.opened"),
       makeEvent(NOW_MS - 50 * HOUR_MS, "depeg.opened"),
     ]);
-    const days = digestByDay(events, NOW_MS);
+    const days = digestByDayForTest(events, NOW_MS);
     expect(days.map((d) => d.dayKey)).toEqual([
       TODAY_KEY,
       YESTERDAY_KEY,
@@ -77,7 +80,7 @@ describe("digestByDay (back-compat)", () => {
   });
 
   it("returns empty array for empty input", () => {
-    expect(digestByDay([], NOW_MS)).toEqual([]);
+    expect(digestByDayForTest([], NOW_MS)).toEqual([]);
   });
 
   it("sets useDigestWrapper at the digest threshold", () => {
@@ -86,7 +89,7 @@ describe("digestByDay (back-compat)", () => {
       makeEvent(NOW_MS - 2, "depeg.opened", { coinId: "b" }),
       makeEvent(NOW_MS - 3, "depeg.opened", { coinId: "c" }),
     ]);
-    const [today] = digestByDay(events, NOW_MS);
+    const [today] = digestByDayForTest(events, NOW_MS);
     const depegClass = today!.classes.find((c) => c.classSlug === "depeg")!;
     expect(depegClass.rawCount).toBe(3);
     expect(depegClass.useDigestWrapper).toBe(true);
@@ -111,7 +114,7 @@ describe("yield class summary", () => {
       }),
     ]);
 
-    const [today] = digestByDay(events, NOW_MS);
+    const [today] = digestByDayForTest(events, NOW_MS);
     const yieldClass = today!.classes.find((c) => c.classSlug === "yield")!;
 
     expect(yieldClass.summary).toBe("1 warning · 2 PYS drops · worst -25 pts · usdt ×3");
@@ -125,7 +128,7 @@ describe("yield class summary", () => {
       }),
     ]);
 
-    const [today] = digestByDay(events, NOW_MS);
+    const [today] = digestByDayForTest(events, NOW_MS);
     const yieldClass = today!.classes.find((c) => c.classSlug === "yield")!;
 
     expect(yieldClass.summary).toBe("1 PYS drop · worst -18 pts · usdt");
@@ -133,11 +136,11 @@ describe("yield class summary", () => {
 });
 
 // ---------------------------------------------------------------------------
-// digestPage parity with digestByDay
+// digestPage parity with single-page composition
 // ---------------------------------------------------------------------------
 
 describe("digestPage", () => {
-  it("matches digestByDay for a single-page input", () => {
+  it("matches single-page composition for a single-page input", () => {
     const events = sortDesc([
       makeEvent(NOW_MS - 1, "depeg.opened", { severity: "warning" }),
       makeEvent(NOW_MS - 2, "freeze.blocked", {
@@ -148,7 +151,7 @@ describe("digestPage", () => {
     ]);
 
     const viaPage = mergeDigestedPages([digestPage(events, NOW_MS)]);
-    const viaDirect = digestByDay(events, NOW_MS);
+    const viaDirect = digestByDayForTest(events, NOW_MS);
 
     // Strip ordering-stable equality by JSON snapshot — both should be
     // identical including class ordering.
@@ -191,7 +194,7 @@ describe("mergeDigestedPages", () => {
       digestPage(page1, NOW_MS),
       digestPage(page2, NOW_MS),
     ]);
-    const direct = digestByDay([...page1, ...page2], NOW_MS);
+    const direct = digestByDayForTest([...page1, ...page2], NOW_MS);
 
     expect(asPlain(merged)).toEqual(asPlain(direct));
     expect(merged.map((d) => d.dayKey)).toEqual([TODAY_KEY, YESTERDAY_KEY]);
@@ -213,7 +216,7 @@ describe("mergeDigestedPages", () => {
       digestPage(page1, NOW_MS),
       digestPage(page2, NOW_MS),
     ]);
-    const direct = digestByDay([...page1, ...page2], NOW_MS);
+    const direct = digestByDayForTest([...page1, ...page2], NOW_MS);
 
     expect(asPlain(merged)).toEqual(asPlain(direct));
 
@@ -249,7 +252,7 @@ describe("mergeDigestedPages", () => {
       digestPage(page2, NOW_MS),
       digestPage(page3, NOW_MS),
     ]);
-    const direct = digestByDay([...page1, ...page2, ...page3], NOW_MS);
+    const direct = digestByDayForTest([...page1, ...page2, ...page3], NOW_MS);
     expect(asPlain(merged)).toEqual(asPlain(direct));
 
     expect(merged.map((d) => d.dayKey)).toEqual([
@@ -278,7 +281,7 @@ describe("mergeDigestedPages", () => {
       digestPage(page1, NOW_MS),
       digestPage([], NOW_MS),
     ]);
-    const direct = digestByDay(page1, NOW_MS);
+    const direct = digestByDayForTest(page1, NOW_MS);
 
     expect(asPlain(merged)).toEqual(asPlain(direct));
   });

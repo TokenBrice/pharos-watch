@@ -3,7 +3,6 @@ import {
   getReportCardGradeRank,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
 } from "@shared/lib/report-card-core";
-import { formatCompactUsdShortLowerK } from "@shared/lib/format";
 import type { TapeEventRow } from "./tape-event-types";
 
 /** Stable per-row hash for the wire `event_id`. djb2 → 8 hex chars. */
@@ -77,9 +76,6 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
   if (delta >= 2) return "warning";
   return "notice";
 }
-
-/** @deprecated tape-feed alias for the shared formatCompactUsdShortLowerK helper. */
-export const formatUsdShort = formatCompactUsdShortLowerK;
 
 /**
  * Parse a "YYYY-MM-DD" or "YYYY-MM" date string to epoch-seconds (UTC).

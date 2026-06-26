@@ -11,8 +11,9 @@
  * month at 00:00:00 UTC.
  */
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { formatCompactUsdShortLowerK } from "@shared/lib/format";
 
-import { buildTapeEventId, formatUsdShort, parseDateStringToEpochSec, truncateSummary } from "../tape-event-helpers";
+import { buildTapeEventId, parseDateStringToEpochSec, truncateSummary } from "../tape-event-helpers";
 import { insertTapeEvents, loadObservedSourceRowIds } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { ProjectorOptions, ProjectorResult } from "./types";
@@ -24,7 +25,7 @@ function buildEvent(entry: CemeteryEntry): TapeEventInsert {
   const type = "cemetery.entry.added";
 
   const peakLabel = entry.peakMcap != null && entry.peakMcap > 0
-    ? formatUsdShort(entry.peakMcap)
+    ? formatCompactUsdShortLowerK(entry.peakMcap)
     : null;
   const title = peakLabel
     ? `${entry.symbol} entered cemetery (peak ${peakLabel})`

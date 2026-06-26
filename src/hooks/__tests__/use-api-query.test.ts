@@ -37,6 +37,33 @@ function makeJsonResponse(body: unknown, status = 200): Response {
   } as unknown as Response;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+  return { promise, resolve, reject };
+}
+
+async function withAbortSignalAnyAbsent<T>(run: () => Promise<T>): Promise<T> {
+  const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, "any");
+  Object.defineProperty(AbortSignal, "any", {
+    configurable: true,
+    value: undefined,
+  });
+  try {
+    return await run();
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(AbortSignal, "any", descriptor);
+    } else {
+      delete (AbortSignal as unknown as { any?: typeof AbortSignal.any }).any;
+    }
+  }
+}
+
 describe("use-api-query", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -192,6 +219,45 @@ describe("use-api-query", () => {
       expect(capturedSignal!.aborted).toBe(false);
       controller.abort();
       expect(capturedSignal!.aborted).toBe(true);
+    });
+
+    it("falls back when AbortSignal.any is absent and either merged signal aborts", async () => {
+      await withAbortSignalAnyAbsent(async () => {
+        const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+        for (const abortSource of ["fetchInit", "context"] as const) {
+          const response = deferred<Response>();
+          const fetchInitController = new AbortController();
+          const contextController = new AbortController();
+          let capturedSignal: AbortSignal | undefined;
+
+          fetchSpy.mockImplementationOnce(async (_url, init) => {
+            capturedSignal = init?.signal ?? undefined;
+            return response.promise;
+          });
+
+          const fn = createApiQueryFn<SomeData>(
+            "/api/test",
+            SomeSchema,
+            { signal: fetchInitController.signal },
+          );
+          const promise = fn({ signal: contextController.signal });
+
+          expect(capturedSignal).toBeDefined();
+          const signal = capturedSignal!;
+          expect(signal.aborted).toBe(false);
+
+          if (abortSource === "fetchInit") {
+            fetchInitController.abort(new Error("fetch-init-abort"));
+          } else {
+            contextController.abort(new Error("context-abort"));
+          }
+          expect(signal.aborted).toBe(true);
+
+          response.resolve(makeJsonResponse({ value: abortSource === "fetchInit" ? 8 : 9 }));
+          await expect(promise).resolves.toEqual({ value: abortSource === "fetchInit" ? 8 : 9 });
+        }
+      });
     });
   });
 

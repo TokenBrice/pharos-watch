@@ -40,11 +40,47 @@ export interface PollingWindow {
   refetchInterval: number;
 }
 
+function mergeAbortSignals(signals: readonly AbortSignal[]): AbortSignal {
+  if (signals.length === 1) return signals[0]!;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([...signals]);
+  }
+
+  const controller = new AbortController();
+  const listeners: Array<readonly [AbortSignal, () => void]> = [];
+  const cleanup = () => {
+    for (const [source, listener] of listeners) {
+      source.removeEventListener("abort", listener);
+    }
+    listeners.length = 0;
+  };
+  const abortFrom = (source: AbortSignal) => {
+    if (controller.signal.aborted) return;
+    controller.abort(source.reason);
+    cleanup();
+  };
+
+  for (const source of signals) {
+    if (source.aborted) {
+      abortFrom(source);
+      return controller.signal;
+    }
+  }
+
+  for (const source of signals) {
+    const listener = () => abortFrom(source);
+    listeners.push([source, listener]);
+    source.addEventListener("abort", listener, { once: true });
+  }
+
+  return controller.signal;
+}
+
 function mergeFetchInitSignal(fetchInit: RequestInit | undefined, signal: AbortSignal | undefined): RequestInit | undefined {
   if (!signal) return fetchInit;
   if (!fetchInit) return { signal };
   if (!fetchInit.signal || fetchInit.signal === signal) return { ...fetchInit, signal };
-  return { ...fetchInit, signal: AbortSignal.any([fetchInit.signal, signal]) };
+  return { ...fetchInit, signal: mergeAbortSignals([fetchInit.signal, signal]) };
 }
 
 export function createApiQueryFn<T>(

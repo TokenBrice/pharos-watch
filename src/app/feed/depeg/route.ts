@@ -6,6 +6,8 @@ import {
   selectStaticDepegEventPages,
 } from "@/app/depeg/[event]/config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { DepegEventSchema } from "@shared/types/market";
+import { z } from "zod";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -15,26 +17,48 @@ const MAX_ITEMS = 100;
 /** W3-D will populate this file during prebuild. Until then, treat absence as zero events. */
 const DEPEG_EVENTS_PATH = path.join(process.cwd(), "data/depeg-events.json");
 
-interface DepegFeedEvent {
-  id: number | string;
-  stablecoinId: string;
-  symbol: string;
-  direction: "above" | "below";
-  peakDeviationBps: number;
-  startedAt: number;
-  endedAt: number | null;
-  slug: string;
+const DepegFeedEventSchema = DepegEventSchema.extend({
+  slug: z.string().min(1),
+});
+const DepegFeedEventsSchema = z.array(DepegFeedEventSchema);
+type DepegFeedEvent = z.infer<typeof DepegFeedEventSchema>;
+
+function isEnoent(error: unknown): boolean {
+  return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
+}
+
+function parseEvents(raw: string): DepegFeedEvent[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (cause) {
+    throw new Error(`Failed to parse ${DEPEG_EVENTS_PATH} as JSON.`, { cause });
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Expected ${DEPEG_EVENTS_PATH} to contain an array of depeg events.`);
+  }
+
+  const result = DepegFeedEventsSchema.safeParse(parsed);
+  if (!result.success) {
+    const firstIssue = result.error.issues[0];
+    const issuePath = firstIssue?.path.length ? firstIssue.path.join(".") : "<root>";
+    const issueMessage = firstIssue?.message ?? "schema validation failed";
+    throw new Error(`Invalid depeg feed event data at ${issuePath}: ${issueMessage}`);
+  }
+
+  return result.data;
 }
 
 function loadEvents(): DepegFeedEvent[] {
+  let raw: string;
   try {
-    const raw = readFileSync(DEPEG_EVENTS_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as DepegFeedEvent[];
-  } catch {
-    return [];
+    raw = readFileSync(DEPEG_EVENTS_PATH, "utf-8");
+  } catch (cause) {
+    if (isEnoent(cause)) return [];
+    throw cause;
   }
+  return parseEvents(raw);
 }
 
 function depegItems(events: readonly DepegFeedEvent[]): RssItem[] {

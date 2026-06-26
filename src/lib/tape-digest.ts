@@ -339,17 +339,3 @@ export function mergeDigestedPages(
   out.sort((a, b) => b.dayKey.localeCompare(a.dayKey));
   return out;
 }
-
-/**
- * Backward-compatible single-pass digest. Equivalent to
- * `mergeDigestedPages([digestPage(events, nowMs)])`.
- *
- * @deprecated Use the composable paged API directly: `digestPage(events, nowMs)`
- * for a single page, or `mergeDigestedPages(pages)` to merge multiple pages
- * across page seams. This shim allocates a throwaway one-element array and hides
- * the paged design; new call sites should not use it. Retained only as a parity
- * oracle for the paged API in tests — no production callers remain.
- */
-export function digestByDay(events: readonly TapeEvent[], nowMs: number): DigestedDay[] {
-  return mergeDigestedPages([digestPage(events, nowMs)]);
-}

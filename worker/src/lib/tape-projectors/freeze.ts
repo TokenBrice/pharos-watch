@@ -5,9 +5,9 @@
  *   - freeze.unblocked  : event_type = 'unblacklist'
  *   - freeze.destroyed  : event_type = 'destroy'
  */
+import { formatCompactUsdShortLowerK } from "@shared/lib/format";
 import {
   buildTapeEventId,
-  formatUsdShort,
   severityForFreezeBlocked,
   severityForFreezeDestroyed,
 } from "../tape-event-helpers";
@@ -71,7 +71,7 @@ async function projectFreezeVariant(
     else severity = "info";
 
     const amountStr = row.amount_usd_at_event != null && row.amount_usd_at_event > 0
-      ? formatUsdShort(row.amount_usd_at_event)
+      ? formatCompactUsdShortLowerK(row.amount_usd_at_event)
       : null;
     let title: string;
     let summary: string;
