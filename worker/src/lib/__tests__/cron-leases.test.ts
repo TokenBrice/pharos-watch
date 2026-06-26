@@ -705,6 +705,76 @@ describe("runCronWithLease", () => {
     ]);
   });
 
+  it("isolates acquisition observer failures from job execution and lease release", async () => {
+    const db = makeLeaseDb();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const result = await runCronWithLease(
+        db,
+        "sync-stablecoins",
+        async () => "done",
+        {
+          owner: "owner-z",
+          ttlSec: 120,
+          heartbeatSec: 30,
+          onLeaseState: () => {
+            throw new Error("observer failed");
+          },
+        },
+      );
+
+      expect(result).toMatchObject({ status: "ok", result: "done" });
+      expect(consoleError).toHaveBeenCalledWith(
+        "[cron-lease] Lease state observer failed for sync-stablecoins (acquired):",
+        expect.any(Error),
+      );
+      const reacquired = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
+      expect(reacquired).toBe(true);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("isolates renewal observer failures from lease health", async () => {
+    const db = makeLeaseDb();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const runPromise = runCronWithLease(
+        db,
+        "sync-stablecoins",
+        async () => new Promise((resolve) => setTimeout(() => resolve("done"), 1500)),
+        {
+          owner: "owner-z",
+          ttlSec: 120,
+          heartbeatSec: 1,
+          maxRenewFailures: 1,
+          onLeaseState: (state) => {
+            if (state.event === "renewed") {
+              throw new Error("observer failed");
+            }
+          },
+        },
+      );
+
+      await vi.advanceTimersByTimeAsync(1500);
+      await expect(runPromise).resolves.toMatchObject({
+        status: "ok",
+        result: "done",
+        renewFailures: 0,
+        leaseRenewFailuresTotal: 0,
+        leaseRenewSuccesses: 1,
+      });
+      expect(consoleError).toHaveBeenCalledWith(
+        "[cron-lease] Lease state observer failed for sync-stablecoins (renewed):",
+        expect.any(Error),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("resets renew failures after a successful heartbeat", async () => {
     const renewOutcomes = [0, 1, 0, 0];
     const sequencedRenewDb = {

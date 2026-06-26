@@ -203,14 +203,18 @@ export async function runCronWithLease<T>(
     event: CronLeaseStateUpdate["event"],
     state: { leaseUntil: number; heartbeatAt: number },
   ): Promise<void> => {
-    await opts?.onLeaseState?.({
-      event,
-      job,
-      leaseOwner: owner,
-      leaseUntil: state.leaseUntil,
-      heartbeatAt: state.heartbeatAt,
-      ttlSec,
-    });
+    try {
+      await opts?.onLeaseState?.({
+        event,
+        job,
+        leaseOwner: owner,
+        leaseUntil: state.leaseUntil,
+        heartbeatAt: state.heartbeatAt,
+        ttlSec,
+      });
+    } catch (err) {
+      console.error(`[cron-lease] Lease state observer failed for ${job} (${event}):`, err);
+    }
   };
 
   const acquisition = await runWithOverloadRetry(() => acquireCronLeaseState(db, job, owner, ttlSec), 3, opts?.abortSignal);
