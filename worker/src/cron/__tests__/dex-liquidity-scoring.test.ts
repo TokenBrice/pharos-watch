@@ -336,6 +336,63 @@ describe("dex-liquidity scoring", () => {
     expect(globalAgg.chainTvl.base).toBeCloseTo(87_368.421, 3);
   });
 
+  it("excludes inactive tracked metrics from scores, retained pools, and global aggregates", async () => {
+    const db = makeQueryDb([
+      { match: "FROM dex_liquidity_history", all: [] },
+    ]);
+
+    const activeMetrics = initMetrics("usdt-tether", "USDT");
+    activeMetrics.totalVolume24hUsd = 10_000;
+    activeMetrics.totalVolume7dUsd = 70_000;
+    activeMetrics.topPools = [
+      {
+        poolId: "ethereum:active",
+        project: "curve",
+        chain: "Ethereum",
+        tvlUsd: 100_000,
+        symbol: "USDT-USDC",
+        volumeUsd1d: 10_000,
+        volumeUsd7d: 70_000,
+        poolType: "curve-stableswap",
+        source: "dl",
+      },
+    ];
+
+    const inactiveMetrics = initMetrics("usr-resolv", "USR");
+    inactiveMetrics.totalVolume24hUsd = 90_000;
+    inactiveMetrics.totalVolume7dUsd = 630_000;
+    inactiveMetrics.topPools = [
+      {
+        poolId: "ethereum:inactive",
+        project: "curve",
+        chain: "Ethereum",
+        tvlUsd: 900_000,
+        symbol: "USR-USDC",
+        volumeUsd1d: 90_000,
+        volumeUsd7d: 630_000,
+        poolType: "curve-stableswap",
+        source: "dl",
+      },
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([
+        ["usdt-tether", activeMetrics],
+        ["usr-resolv", inactiveMetrics],
+      ]),
+      new Map(),
+    );
+
+    expect(result.scores.has("usdt-tether")).toBe(true);
+    expect(result.scores.has("usr-resolv")).toBe(false);
+    expect(result.retainedPoolsByStablecoin.has("usr-resolv")).toBe(false);
+    expect(result.globalAgg.totalTvl).toBe(100_000);
+    expect(result.globalAgg.totalVol24h).toBe(10_000);
+    expect(result.globalAgg.totalVol7d).toBe(70_000);
+    expect(result.globalAgg.poolCount).toBe(1);
+  });
+
   it("treats missing stability and volume-history tables as first-run state", async () => {
     const db = makeQueryDb([
       { match: "depth_stability", throwError: new Error("no such table: dex_liquidity") },
