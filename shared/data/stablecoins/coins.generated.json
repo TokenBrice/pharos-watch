@@ -70201,6 +70201,7 @@
         "wrapperAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
         "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
         "expectedSwapFacilityAddress": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "swapperAddress": "0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd",
         "slice": {
           "name": "M token held by Nerona USDnr",
           "risk": "very-low",
