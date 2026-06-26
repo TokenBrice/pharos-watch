@@ -196,6 +196,14 @@ function getObituaryLead(obituary: string): string {
   return lead.endsWith(".") ? lead : `${lead}.`;
 }
 
+function getObituaryPreview(obituary: string, isEditorial: boolean): string {
+  if (!isEditorial) return getObituaryLead(obituary);
+
+  const sentences = obituary.match(/[^.!?]+[.!?]+(?:\s|$)/g) ?? [obituary];
+  const preview = sentences.slice(0, 2).join(" ").trim();
+  const bounded = preview.length > 380 ? `${preview.slice(0, 377).trimEnd()}...` : preview;
+  return bounded || getObituaryLead(obituary);
+}
 
 function Tombstone({
   coin,
@@ -222,10 +230,10 @@ function Tombstone({
       return;
     }
     const rect = tombRef.current.getBoundingClientRect();
-    const tooltipW = 288;
+    const tooltipW = 320;
     const center = rect.left + rect.width / 2;
     const leftOverflow = 8 - (center - tooltipW / 2);
-    const rightOverflow = (center + tooltipW / 2) - (window.innerWidth - 8);
+    const rightOverflow = center + tooltipW / 2 - (window.innerWidth - 8);
     setTooltipShift(leftOverflow > 0 ? leftOverflow : rightOverflow > 0 ? -rightOverflow : 0);
   }, []);
 
@@ -476,10 +484,10 @@ function Tombstone({
         </span>
 
         <p
-          className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground"
+          className={cn(styles.plaqueObituary, "mt-2.5 text-[12px] leading-relaxed text-muted-foreground")}
           style={EDITORIAL_BODY_STYLE}
         >
-          {isEditorial ? coin.obituary : getObituaryLead(coin.obituary)}
+          {getObituaryPreview(coin.obituary, isEditorial)}
         </p>
 
         <div className={styles.detailGrid}>
@@ -505,7 +513,6 @@ function Tombstone({
           </div>
         </div>
       </div>
-
     </div>
   );
 }

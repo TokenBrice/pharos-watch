@@ -323,9 +323,11 @@
 .plaque {
   position: absolute;
   left: 50%;
-  bottom: calc(100% - 16rem);
+  bottom: calc(100% - 2.1rem);
   z-index: 90;
   width: min(20rem, calc(100vw - 2rem));
+  max-height: min(24rem, calc(100vh - 2rem));
+  overflow: auto;
   border-radius: 0.8rem;
   border: 1px solid color-mix(in oklch, var(--tomb-accent) 38%, var(--border));
   background:
@@ -342,6 +344,13 @@
     transform 150ms ease-out,
     visibility 150ms ease-out;
   visibility: hidden;
+}
+
+.plaqueObituary {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 7;
 }
 
 .plaque::before {
@@ -448,7 +457,6 @@
   .tombRoot:focus-visible .plaque {
     transform: translateX(-50%) scale(1);
   }
-
 }
 
 @media (max-width: 360px) {
