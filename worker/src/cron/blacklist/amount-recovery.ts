@@ -593,12 +593,16 @@ export async function backfillAmounts(
             return matches.length === 1 ? matches[0] : undefined;
           })();
     if (!config) {
+      const wasLegacyDerived = row.amount_source === "derived";
+      const derivedRetryExhausted =
+        wasLegacyDerived && (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
       stmts.push(
         buildAttemptUpdate(
           row.id,
           attemptAt,
           row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
           "none",
+          derivedRetryExhausted ? "permanently_unavailable" : undefined,
         ),
       );
       continue;
