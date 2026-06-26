@@ -126,7 +126,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "xusd-straitsx", dustThreshold: 10_000 },
   { stablecoinId: "musd-metamask", dustThreshold: 10_000 },
   { stablecoinId: "yusd-aegis", dustThreshold: 10_000 },
-  { stablecoinId: "susd-synthetix", dustThreshold: 10_000 },
   { stablecoinId: "lusd-liquity", dustThreshold: 10_000 },
   { stablecoinId: "usdcv-societe-generale-forge", dustThreshold: 10_000 },
   { stablecoinId: "eure-monerium", dustThreshold: 10_000 },

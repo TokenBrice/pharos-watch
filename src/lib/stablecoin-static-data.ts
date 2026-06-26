@@ -3,19 +3,19 @@ import type { PegCurrency } from "@shared/types";
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
 export const TRACKED_STABLECOIN_COUNT = 407;
-export const ACTIVE_STABLECOIN_COUNT = 368;
+export const ACTIVE_STABLECOIN_COUNT = 367;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 32;
-export const FROZEN_STABLECOIN_COUNT = 7;
+export const FROZEN_STABLECOIN_COUNT = 8;
 export const DEAD_STABLECOIN_COUNT = 88;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
   "centralized": 179,
-  "centralized-dependent": 170,
+  "centralized-dependent": 169,
   "decentralized": 19,
 } as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  "USD": 267,
+  "USD": 266,
   "RUB": 1,
   "EUR": 20,
   "BRL": 6,
@@ -526,6 +526,7 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "ejpy-jbfd",
   "aed-rakbank",
   "bils-bitsofgold",
+  "susd-synthetix",
 ] as const);
 
 export const ACTIVE_STABLECOIN_IDS = TRACKED_STABLECOIN_IDS.filter(

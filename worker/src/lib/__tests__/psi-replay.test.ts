@@ -252,8 +252,8 @@ describe("psi-replay", () => {
     const day = 1_608_508_800; // 2020-12-21
     const now = day + DAY;
     const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 64_026_005, price: 1.0026849879160749 },
-      { stablecoin_id: "susd-synthetix", snapshot_date: day - 7 * DAY, circulating_usd: 58_685_677, price: 1.0285746209170659 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 64_026_005, price: 1.0026849879160749 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 58_685_677, price: 1.0285746209170659 },
     ]);
 
     const replay = replayHistoricalPsiForDay({
@@ -262,7 +262,7 @@ describe("psi-replay", () => {
       methodologyVersion: "1.0",
       depegEvents: [
         {
-          stablecoin_id: "susd-synthetix",
+          stablecoin_id: "usdt-tether",
           peak_deviation_bps: 339,
           peg_reference: 1,
           started_at: day + 22 * 3600 + 113,

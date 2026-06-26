@@ -447,5 +447,100 @@
       ],
       "price": null
     }
+  },
+  {
+    "id": "susd-synthetix",
+    "capturedAt": "2026-06-26T14:51:33Z",
+    "peggedAssetRow": {
+      "id": "susd-synthetix",
+      "name": "sUSD",
+      "symbol": "SUSD",
+      "geckoId": "nusd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "priceUpdatedAt": null,
+      "priceObservedAt": null,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": null,
+      "consensusSources": [],
+      "agreeSources": [],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 16298811.58813856
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 16289476.202759314
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 12239417.021415565
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 12239251.00062283
+      },
+      "chainCirculating": {
+        "OP Mainnet": {
+          "current": 5407061.590611445,
+          "circulatingPrevDay": 5392938.317834123,
+          "circulatingPrevWeek": 4543221.005088924,
+          "circulatingPrevMonth": 4583906.28820281
+        },
+        "Ethereum": {
+          "current": 10891579.067978371,
+          "circulatingPrevDay": 10896366.955376448,
+          "circulatingPrevWeek": 7696025.086777901,
+          "circulatingPrevMonth": 7655173.78287128
+        },
+        "Ontology": {
+          "current": 0,
+          "circulatingPrevDay": 0,
+          "circulatingPrevWeek": 0,
+          "circulatingPrevMonth": 0
+        },
+        "Arbitrum": {
+          "current": 157.17275892505316,
+          "circulatingPrevDay": 157.17275892505316,
+          "circulatingPrevWeek": 157.17275892505316,
+          "circulatingPrevMonth": 157.17275892505316
+        },
+        "Fantom": {
+          "current": 13.756789815979861,
+          "circulatingPrevDay": 13.756789815979861,
+          "circulatingPrevWeek": 13.756789815979861,
+          "circulatingPrevMonth": 13.756789815979861
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "OP Mainnet",
+        "Arbitrum",
+        "Fantom",
+        "Ontology"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+          "decimals": 18
+        },
+        {
+          "chain": "optimism",
+          "address": "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9",
+          "decimals": 18
+        },
+        {
+          "chain": "fantom",
+          "address": "0x0e1694483ebb3b74d3054e383840c6cf011e518e",
+          "decimals": 18
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xa970af1a584579b618be4d69ad6f73459d112f95",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

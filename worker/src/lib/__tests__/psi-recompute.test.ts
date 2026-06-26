@@ -331,12 +331,12 @@ describe("buildStabilityInputForDay", () => {
     const day = 40 * DAY;
     const now = day + DAY;
     const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 64_000_000, price: 1.0027 },
-      { stablecoin_id: "susd-synthetix", snapshot_date: day - 7 * DAY, circulating_usd: 63_000_000, price: 1 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 64_000_000, price: 1.0027 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 63_000_000, price: 1 },
     ]);
     const events: PsiDepegEventRow[] = [
       {
-        stablecoin_id: "susd-synthetix",
+        stablecoin_id: "usdt-tether",
         peak_deviation_bps: 339,
         peg_reference: 1,
         started_at: day + 22 * 3600,

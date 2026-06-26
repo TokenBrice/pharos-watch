@@ -125,7 +125,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["musd-metamask", "MetaMask USD", "MUSD"],
   ["yusd-aegis", "Aegis YUSD", "YUSD"],
   ["syusd-aegis", "Aegis Staked YUSD", "sYUSD"],
-  ["susd-synthetix", "sUSD", "SUSD"],
+  ["susd-synthetix", "sUSD", "SUSD", "frozen", "2026-06-26"],
   ["bold-liquity", "Liquity BOLD", "BOLD"],
   ["sbold-k3-capital", "sBOLD by K3 Capital", "sBOLD"],
   ["ybold-yearn", "Yearn BOLD", "yBOLD"],

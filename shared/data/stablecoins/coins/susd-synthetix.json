@@ -2,7 +2,18 @@
   "id": "susd-synthetix",
   "name": "sUSD",
   "symbol": "SUSD",
-  "oneLiner": "Synthetix sUSD is an overcollateralized debt-pool stablecoin backed by SNX, ETH, and USDC; SNX minting was deprecated in 2025 and sUSD has traded below peg.",
+  "oneLiner": "sUSD was Synthetix's SNX-backed synthetic dollar; SIP-420 removed the peg defense and, after a year-long depeg, it was frozen and retired via SIP-423.",
+  "status": "frozen",
+  "frozenAt": "2026-06-26",
+  "obituary": {
+    "causeOfDeath": "algorithmic-failure",
+    "deathDate": "2026-06",
+    "epitaph": "Saved the protocol at the cost of its dollar",
+    "obituary": "Launched in 2018, sUSD was Synthetix's flagship synthetic dollar — an overcollateralized stablecoin minted against staked SNX. Its peg held for years on a single reflex: whenever sUSD slipped below $1, stakers bought it back at a discount to repay their debt at par. SIP-420 (April 2025) dismantled that reflex, cutting the required collateral ratio from 750% to 200% and pooling debt collectively — minting got cheap, but no individual was left with a reason to defend the dollar. sUSD fell to $0.68 within weeks and never recovered, drifting below peg for over a year as supply bled from a ~$329M peak toward a functionally insolvent tail near $0.23. In June 2026 Synthetix governance stopped repairing it and passed SIP-423: the contract was frozen, a holder snapshot taken, and sUSD made permanently non-transferable, with remaining holders repaid in vested SNX on a 4:1 schedule.",
+    "peakMcap": 328803410,
+    "sourceUrl": "https://sips.synthetix.io/sips/sip-423/",
+    "sourceLabel": "SIP-423: sUSD wind-down (Synthetix SIPs)"
+  },
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -96,30 +107,6 @@
       "name": "Protocol treasury buybacks / SLP vault activity",
       "pct": 10,
       "risk": "high"
-    }
-  ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "susd-synthetix",
-    "display": {
-      "url": "https://www.synthetix.io/",
-      "label": "Synthetix"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
-  "notices": [
-    {
-      "type": "warning",
-      "title": "Prolonged depeg",
-      "message": "sUSD has traded materially below its $1 target since the SIP-420 C-ratio reduction. Use live runtime data for the current price; peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
     }
   ],
   "mintAuthority": {
