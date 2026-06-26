@@ -4132,7 +4132,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `dependencyHealth` is a read-only derived matrix over existing status signals. The worker combines `caches`, `crons`, `publicationHealth`, and the static registry in `shared/lib/data-dependency-registry.ts` into per-dependency status rows plus `rootCauseGroups` that group degraded/stale symptoms under the highest upstream dependency. This is operator triage metadata only: it does not perform extra D1 reads, does not change `availabilityStatus` / `dataQualityStatus`, and does not mutate publication ledgers.
 
-`providerCircuitHealth` is a read-only admin supplement over the provider circuit-breaker index. Breaker decisions still use the individual `cache["circuit:<source>"]` rows; successful/failing breaker writes maintain `cache["provider:circuit:index"]` so `/api/status` can report `openCount`, `halfOpenCount`, `openProviders`, and `byFamily` without scanning circuit rows. Loader failures return `providerCircuitHealth: null` and `sectionErrors.providerCircuitHealth`; public `/api/health.circuits` remains the raw per-circuit surface.
+`providerCircuitHealth` is a read-only admin supplement over active provider circuit-breaker rows. Breaker decisions use the individual `cache["circuit:<source>"]` rows; `/api/status` reads those same authoritative rows through a bounded active-source allowlist so lost or stale aggregate-index writes cannot hide open providers. Successful/failing breaker writes still maintain `cache["provider:circuit:index"]` as best-effort telemetry. Loader failures return `providerCircuitHealth: null` and `sectionErrors.providerCircuitHealth`; public `/api/health.circuits` remains the raw per-circuit surface.
 
 `canaries` is a read-only admin supplement over `worker_canary_runs`, populated by the DB/cache-only `data-invariant-canary` cron when `WORKER_CANARY_MODE` is `shadow`, `status`, or `alert`. It reports the latest row per structural check, including DEX publication/current-row invariants, stablecoins-cache active coverage, PSI and DEWS latest samples, and report-card cache generation/methodology freshness. Loader failures return `canaries: null` and `sectionErrors.canaries`; canary findings are operator diagnostics and do not directly change availability.
 
@@ -4987,7 +4987,7 @@ Deletes the `cron_leases` row for the named job so the next scheduled tick can c
 
 ### `POST /api/reset-circuit-breaker`
 
-Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against active source-wide `CIRCUIT_SOURCE` values plus configured scoped live-reserve breakers such as `live-reserves:<scope>`. The reset also removes the source from `cache["provider:circuit:index"]`, the aggregate row used by `/api/status.providerCircuitHealth`.
+Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against active source-wide `CIRCUIT_SOURCE` values plus configured scoped live-reserve breakers such as `live-reserves:<scope>`. The reset also removes the source from `cache["provider:circuit:index"]`, the best-effort aggregate telemetry row; `/api/status.providerCircuitHealth` reads authoritative `cache["circuit:<source>"]` rows.
 
 **Authentication:** admin. **Required query:** `?circuit=<circuit-source>`.
 

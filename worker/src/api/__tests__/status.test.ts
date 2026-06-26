@@ -241,8 +241,13 @@ describe("handleStatus", () => {
     expect(body.confidence).toBe(0.72);
     expect(body.causes.availability[0]?.code).toBe("snapshot-availability");
 
+    const nonCircuitBatchCacheReads = db.getHistory()
+      .filter((entry) => entry.sql.includes("cache WHERE key IN"))
+      .filter((entry) => !entry.binds.every(
+        (bind) => typeof bind === "string" && bind.startsWith("circuit:"),
+      ));
+    expect(nonCircuitBatchCacheReads).toEqual([]);
     const sql = db.getHistory().map((entry) => entry.sql).join("\n");
-    expect(sql).not.toContain("cache WHERE key IN");
     expect(sql).not.toContain("blacklist_events");
   });
 

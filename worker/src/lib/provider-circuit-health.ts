@@ -4,7 +4,7 @@ import type {
   ProviderCircuitHealthEntry,
   ProviderCircuitHealthFamilySummary,
 } from "@shared/types/status";
-import { getProviderCircuitIndex, listActiveCircuitSources } from "./circuit-breaker";
+import { getCircuitRecordsForSources, listActiveCircuitSources } from "./circuit-breaker";
 
 function providerFamily(source: string): string {
   if (source.startsWith("live-reserves:")) return "live-reserves";
@@ -74,7 +74,7 @@ export async function loadProviderCircuitHealth(
     };
   }
 
-  const indexedRecords = await getProviderCircuitIndex(db);
+  const indexedRecords = await getCircuitRecordsForSources(db, sources);
 
   let closedCount = 0;
   let halfOpenCount = 0;
