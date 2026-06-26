@@ -31,6 +31,6 @@ export const YBOLD_YEARN_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig
   notes: [
     "yBOLD exits into BOLD through ERC-4626 withdrawal/redeem mechanics; downstream BOLD par exit remains Liquity's collateral-redemption route.",
     "The Yearn API currently identifies yBOLD as a tokenized BOLD Stability Pool product and reports zero management and performance fees.",
-    "Fresh ERC-4626 reserve telemetry reads the vault's idle BOLD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+    "Fresh ERC-4626 reserve telemetry measures Yearn V3 default-queue withdrawable capacity from total idle BOLD plus each funded strategy's maxRedeem(vault) value; if the live snapshot is unavailable, the route is left unrated instead of falling back to full NAV.",
   ],
 });

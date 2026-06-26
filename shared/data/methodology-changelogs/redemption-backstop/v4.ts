@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.16",
+    title: "Yearn V3 strategy-queue capacity for verified vault exits",
+    date: "2026-06-26",
+    effectiveAt: 1782432000,
+    summary:
+      "Reviewed Yearn V3 ERC-4626 vault exits now use same-run on-chain strategy-queue withdrawability instead of the idle underlying balance when the default queue proves strategy-backed assets are redeemable by the vault.",
+    impact: [
+      "`ybold-yearn` and `yvusdc-yearn` no longer score near-zero direct exit capacity solely because the vault contracts hold little or no idle BOLD/USDC; the adapter measures `totalIdle()` plus each funded default-queue strategy's `min(currentDebt, convertToAssets(maxRedeem(vault)))`",
+      "The new `redemptionLiquidity: { source: \"yearn-v3-withdrawable\", settlementDelaySec: 0 }` mode is reviewer-configured and re-probes Yearn V3 strategy liquidity every reserve sync, so it is narrower than treating generic ERC-4626 `convertToAssets(totalSupply)` as executable capacity",
+      "Unconfigured ERC-4626 wrappers remain conservative: idle underlying, reviewed Morpho vault liquidity, or explicit atomic-full-backing modes are still the only scoring capacity sources",
+      "If a funded Yearn strategy's debt, maxRedeem, or conversion probe is unavailable, the live reserve snapshot degrades and the route fails closed instead of falling back to full NAV",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.15",
     title: "Atomic-full-backing capacity for external savings-module vaults",
     date: "2026-06-25",

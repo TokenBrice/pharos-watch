@@ -87602,6 +87602,10 @@
           "coinId": "bold-liquity",
           "depType": "wrapper",
           "expectedAssetAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d"
+        },
+        "redemptionLiquidity": {
+          "source": "yearn-v3-withdrawable",
+          "settlementDelaySec": 0
         }
       }
     },
@@ -88702,6 +88706,10 @@
           "coinId": "usdc-circle",
           "depType": "wrapper",
           "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        },
+        "redemptionLiquidity": {
+          "source": "yearn-v3-withdrawable",
+          "settlementDelaySec": 0
         }
       }
     },

@@ -8,6 +8,27 @@ function uint256Result(value: bigint | number): string {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
 }
 
+function addressWord(address: string): string {
+  return address.replace(/^0x/i, "").toLowerCase().padStart(64, "0");
+}
+
+function addressArrayResult(addresses: string[]): string {
+  return `0x${[
+    BigInt(32).toString(16).padStart(64, "0"),
+    BigInt(addresses.length).toString(16).padStart(64, "0"),
+    ...addresses.map(addressWord),
+  ].join("")}`;
+}
+
+function strategyParamsResult(currentDebtRaw: bigint | number): string {
+  return `0x${[
+    BigInt(1).toString(16).padStart(64, "0"),
+    BigInt(2).toString(16).padStart(64, "0"),
+    BigInt(currentDebtRaw).toString(16).padStart(64, "0"),
+    BigInt(1_000_000_000_000n).toString(16).padStart(64, "0"),
+  ].join("")}`;
+}
+
 function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReservesConfig {
   const cloned = structuredClone(config) as LiveReservesConfig & {
     params: { slice?: { expectedAssetAddress?: string } };
@@ -37,6 +58,14 @@ function cloneConfigWithAtomicFullBacking(config: LiveReservesConfig): LiveReser
     params: { redemptionLiquidity?: { source: "atomic-full-backing" } };
   };
   cloned.params.redemptionLiquidity = { source: "atomic-full-backing" };
+  return cloned;
+}
+
+function cloneConfigWithYearnV3Withdrawable(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params: { redemptionLiquidity?: { source: "yearn-v3-withdrawable"; settlementDelaySec: number } };
+  };
+  cloned.params.redemptionLiquidity = { source: "yearn-v3-withdrawable", settlementDelaySec: 0 };
   return cloned;
 }
 
@@ -370,6 +399,92 @@ describe("fetchErc4626SingleAssetReserves", () => {
         freshnessKind: "same-run-onchain",
         routeStatus: "unknown",
         routeStatusSource: "onchain",
+      },
+    });
+  });
+
+  it("uses Yearn V3 default-queue withdrawable capacity when configured", async () => {
+    const strategyA = "0x1111111111111111111111111111111111111111";
+    const strategyB = "0x2222222222222222222222222222222222222222";
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      const to = call.to?.toLowerCase();
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a") && to === "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(5_000_000n) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      if (call.data === "0x9aa7df94") {
+        return jsonResponse({ result: uint256Result(5_000_000n) });
+      }
+      if (call.data === "0xa9bbf1cc") {
+        return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
+      }
+      if (call.data.startsWith("0x39ebf823")) {
+        if (call.data.toLowerCase().includes(strategyA.slice(2).toLowerCase())) {
+          return jsonResponse({ result: strategyParamsResult(60_000_000n) });
+        }
+        if (call.data.toLowerCase().includes(strategyB.slice(2).toLowerCase())) {
+          return jsonResponse({ result: strategyParamsResult(35_000_000n) });
+        }
+      }
+      if (call.data.startsWith("0xd905777e") && to === strategyA) {
+        return jsonResponse({ result: uint256Result(60_000_000n) });
+      }
+      if (call.data.startsWith("0xd905777e") && to === strategyB) {
+        return jsonResponse({ result: uint256Result(20_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a") && to === strategyA) {
+        return jsonResponse({ result: uint256Result(60_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a") && to === strategyB) {
+        return jsonResponse({ result: uint256Result(20_000_000n) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithYearnV3Withdrawable(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "5000000",
+      redemptionCapacityRaw: "85000000",
+      redemptionCapacitySource: "yearn-v3-withdrawable",
+      yearnV3WithdrawableRaw: "85000000",
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 85,
+        capacityRatioOfSupply: 0.85,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "onchain",
+        settlementDelaySec: 0,
       },
     });
   });

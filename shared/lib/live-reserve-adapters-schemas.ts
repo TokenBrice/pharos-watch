@@ -345,6 +345,18 @@ const atomicFullBackingRedemptionLiquiditySchema = z
   })
   .strict();
 
+// Reviewer-asserted Yearn V3 multi-strategy vault path: the adapter measures
+// same-run withdrawable capacity from totalIdle plus each funded strategy's
+// maxRedeem(vault) value through the vault's default withdrawal queue. This is
+// narrower than generic ERC-4626 NAV because strategy liquidity is re-probed on
+// every reserve sync.
+const yearnV3WithdrawableRedemptionLiquiditySchema = z
+  .object({
+    source: z.literal("yearn-v3-withdrawable"),
+    settlementDelaySec: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
@@ -353,6 +365,7 @@ const erc4626SingleAssetParamsSchema = z
         morphoVaultV1RedemptionLiquiditySchema,
         morphoVaultV2RedemptionLiquiditySchema,
         atomicFullBackingRedemptionLiquiditySchema,
+        yearnV3WithdrawableRedemptionLiquiditySchema,
       ])
       .optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),

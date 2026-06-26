@@ -4,7 +4,9 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import {
   DECIMALS_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
+  encodeAddress,
   encodeBalanceOfCallData,
+  encodeUint256,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
@@ -18,6 +20,7 @@ import {
 } from "./helpers";
 import {
   ERC4626_ASSET_SELECTOR,
+  ERC4626_CONVERT_TO_ASSETS_SELECTOR,
   ERC4626_TOTAL_ASSETS_SELECTOR,
   computeErc4626CollateralizationRatio,
   makeContractRawCaller,
@@ -51,12 +54,19 @@ interface AtomicFullBackingRedemptionLiquidityConfig {
   source: "atomic-full-backing";
 }
 
+interface YearnV3WithdrawableRedemptionLiquidityConfig {
+  source: "yearn-v3-withdrawable";
+  settlementDelaySec?: number;
+}
+
 type RedemptionLiquidityConfig =
   | MorphoVaultV1RedemptionLiquidityConfig
   | MorphoVaultV2RedemptionLiquidityConfig
-  | AtomicFullBackingRedemptionLiquidityConfig;
+  | AtomicFullBackingRedemptionLiquidityConfig
+  | YearnV3WithdrawableRedemptionLiquidityConfig;
 
 type MorphoVaultLiquiditySource = "morpho-vault-v1-liquidity" | "morpho-vault-v2-liquidity";
+type YearnV3WithdrawableLiquiditySource = "yearn-v3-withdrawable";
 
 interface MorphoVaultLiquidityTelemetry {
   source: MorphoVaultLiquiditySource;
@@ -66,15 +76,27 @@ interface MorphoVaultLiquidityTelemetry {
   forceDeallocatableLiquidityUsd?: number;
 }
 
+interface YearnV3WithdrawableLiquidityTelemetry {
+  source: YearnV3WithdrawableLiquiditySource;
+  withdrawableRaw: bigint;
+  settlementDelaySec: number;
+}
+
 interface RedemptionCapacityTelemetry {
   capacityUsd: number;
   capacityRaw: string;
-  capacitySource: "erc4626-idle-underlying" | "erc4626-atomic-full-backing" | MorphoVaultLiquiditySource;
+  capacitySource:
+    | "erc4626-idle-underlying"
+    | "erc4626-atomic-full-backing"
+    | MorphoVaultLiquiditySource
+    | YearnV3WithdrawableLiquiditySource;
   freshnessKind: "same-run-onchain" | "same-run-api";
   routeStatusSource: "onchain" | "protocol-api";
   idleUnderlyingBalanceRaw?: string;
   underlyingDecimals: number;
   capacityRatioOfSupply?: number;
+  settlementDelaySec?: number;
+  yearnV3WithdrawableRaw?: string;
   morphoVaultV1LiquidityRaw?: string;
   morphoVaultV1LiquidityUsd?: number;
   morphoVaultV2LiquidityRaw?: string;
@@ -132,6 +154,12 @@ interface MorphoVaultV2LiquidityResponse {
 }
 
 const DEFAULT_MORPHO_GRAPHQL_URL = "https://api.morpho.org/graphql";
+const YEARN_V3_TOTAL_IDLE_SELECTOR = "0x9aa7df94";
+const YEARN_V3_GET_DEFAULT_QUEUE_SELECTOR = "0xa9bbf1cc";
+const YEARN_V3_STRATEGIES_SELECTOR = "0x39ebf823";
+const YEARN_V3_MAX_REDEEM_SELECTOR = "0xd905777e";
+const ABI_WORD_HEX_LENGTH = 64;
+const MAX_YEARN_V3_QUEUE_LENGTH = 10;
 
 const MORPHO_VAULT_V1_LIQUIDITY_QUERY = `
 query PharosVaultV1Liquidity($address: String!, $chainId: Int!) {
@@ -217,6 +245,190 @@ function parseNonNegativeBigIntLike(value: unknown): bigint | null {
   if (!/^\d+$/.test(trimmed)) return null;
   const parsed = BigInt(trimmed);
   return parsed >= 0n ? parsed : null;
+}
+
+function normalizeAbiHex(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("0x")) return null;
+  const hex = raw.slice(2);
+  if (hex.length === 0 || hex.length % ABI_WORD_HEX_LENGTH !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) return null;
+  return hex;
+}
+
+function getAbiWord(raw: string | null, index: number): string | null {
+  const hex = normalizeAbiHex(raw);
+  if (hex == null || index < 0) return null;
+  const start = index * ABI_WORD_HEX_LENGTH;
+  const end = start + ABI_WORD_HEX_LENGTH;
+  if (end > hex.length) return null;
+  return hex.slice(start, end);
+}
+
+function parseAbiUint256Word(raw: string | null, index: number): bigint | null {
+  const word = getAbiWord(raw, index);
+  if (word == null) return null;
+  return BigInt(`0x${word}`);
+}
+
+function parseAbiAddressWord(raw: string | null, index: number): string | null {
+  const word = getAbiWord(raw, index);
+  if (word == null) return null;
+  const normalized = word.toLowerCase();
+  if (!/^0{24}[0-9a-f]{40}$/.test(normalized)) return null;
+  return `0x${normalized.slice(-40)}`;
+}
+
+function parseAbiAddressArray(raw: string | null): string[] | null {
+  const offsetBytes = parseAbiUint256Word(raw, 0);
+  if (offsetBytes == null || offsetBytes % 32n !== 0n) return null;
+  const offsetWords = Number(offsetBytes / 32n);
+  if (!Number.isSafeInteger(offsetWords) || offsetWords < 1) return null;
+  const length = parseAbiUint256Word(raw, offsetWords);
+  if (length == null || length > BigInt(MAX_YEARN_V3_QUEUE_LENGTH)) return null;
+  const lengthNumber = Number(length);
+  const addresses: string[] = [];
+  for (let index = 0; index < lengthNumber; index += 1) {
+    const address = parseAbiAddressWord(raw, offsetWords + 1 + index);
+    if (address == null) return null;
+    addresses.push(address);
+  }
+  return addresses;
+}
+
+async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
+  coinId: string;
+  contractAddress: string;
+  call: (data: string) => Promise<string | null>;
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+  rpcMode: ReturnType<typeof requireOnchainInput>["rpcMode"];
+  chain: string;
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+  timeoutMs: number;
+  settlementDelaySec?: number;
+}): Promise<{
+  telemetry: YearnV3WithdrawableLiquidityTelemetry | null;
+  warnings: LiveReserveWarning[];
+}> {
+  const warnings: LiveReserveWarning[] = [];
+  const [totalIdleResult, defaultQueueResult] = await Promise.all([
+    args.call(YEARN_V3_TOTAL_IDLE_SELECTOR),
+    args.call(YEARN_V3_GET_DEFAULT_QUEUE_SELECTOR),
+  ]);
+
+  if (!totalIdleResult || !defaultQueueResult) {
+    return {
+      telemetry: null,
+      warnings: [
+        reserveDegradedWarning(
+          "yearn-v3-withdrawable-unavailable",
+          `Yearn V3 withdrawable-capacity probes failed for ${args.coinId}`,
+        ),
+      ],
+    };
+  }
+
+  const defaultQueue = parseAbiAddressArray(defaultQueueResult);
+  const totalIdleRaw = parseAbiUint256Word(totalIdleResult, 0);
+  if (totalIdleRaw == null) {
+    return {
+      telemetry: null,
+      warnings: [
+        reserveDegradedWarning(
+          "yearn-v3-total-idle-malformed",
+          `Yearn V3 totalIdle() could not be decoded for ${args.coinId}`,
+        ),
+      ],
+    };
+  }
+  if (defaultQueue == null) {
+    return {
+      telemetry: null,
+      warnings: [
+        reserveDegradedWarning(
+          "yearn-v3-default-queue-malformed",
+          `Yearn V3 default withdrawal queue could not be decoded for ${args.coinId}`,
+        ),
+      ],
+    };
+  }
+
+  let withdrawableRaw = totalIdleRaw;
+
+  for (const strategyAddress of defaultQueue) {
+    const strategyParamsResult = await args.call(`${YEARN_V3_STRATEGIES_SELECTOR}${encodeAddress(strategyAddress)}`);
+    const currentDebtRaw = parseAbiUint256Word(strategyParamsResult, 2);
+    if (currentDebtRaw == null) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "yearn-v3-strategy-debt-unavailable",
+            `Yearn V3 strategy debt could not be decoded for ${args.coinId} strategy ${strategyAddress}`,
+          ),
+        ],
+      };
+    }
+    if (currentDebtRaw === 0n) continue;
+
+    const maxRedeemRaw = await fetchOnchainUint256({
+      contract: strategyAddress,
+      data: `${YEARN_V3_MAX_REDEEM_SELECTOR}${encodeAddress(args.contractAddress)}` as `0x${string}`,
+      signal: args.signal,
+      ctx: args.ctx,
+      rpcMode: args.rpcMode,
+      chain: args.chain,
+      rpcUrl: args.rpcUrl,
+      fallbackRpcUrl: args.fallbackRpcUrl,
+      timeoutMs: args.timeoutMs,
+    });
+    if (maxRedeemRaw == null) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "yearn-v3-strategy-max-redeem-unavailable",
+            `Yearn V3 strategy maxRedeem() failed for ${args.coinId} strategy ${strategyAddress}`,
+          ),
+        ],
+      };
+    }
+    if (maxRedeemRaw === 0n) continue;
+
+    const strategyWithdrawableRaw = await fetchOnchainUint256({
+      contract: strategyAddress,
+      data: `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(maxRedeemRaw)}` as `0x${string}`,
+      signal: args.signal,
+      ctx: args.ctx,
+      rpcMode: args.rpcMode,
+      chain: args.chain,
+      rpcUrl: args.rpcUrl,
+      fallbackRpcUrl: args.fallbackRpcUrl,
+      timeoutMs: args.timeoutMs,
+    });
+    if (strategyWithdrawableRaw == null) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            "yearn-v3-strategy-convert-unavailable",
+            `Yearn V3 strategy convertToAssets(maxRedeem) failed for ${args.coinId} strategy ${strategyAddress}`,
+          ),
+        ],
+      };
+    }
+
+    withdrawableRaw += strategyWithdrawableRaw > currentDebtRaw ? currentDebtRaw : strategyWithdrawableRaw;
+  }
+
+  return {
+    telemetry: {
+      source: "yearn-v3-withdrawable",
+      withdrawableRaw,
+      settlementDelaySec: args.settlementDelaySec ?? 0,
+    },
+    warnings,
+  };
 }
 
 function parseOptionalNonNegativeNumber(value: unknown): number | undefined {
@@ -545,6 +757,7 @@ function buildRedemptionCapacityTelemetry(
   underlyingDecimalsRaw: bigint | null,
   supplyAssetsRaw: bigint,
   morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null,
+  yearnV3WithdrawableLiquidity: YearnV3WithdrawableLiquidityTelemetry | null,
   atomicFullBacking: boolean,
 ): RedemptionCapacityTelemetry | null {
   const underlyingDecimals = decodeErc20Decimals(underlyingDecimalsRaw);
@@ -573,11 +786,23 @@ function buildRedemptionCapacityTelemetry(
 
   const idleCapacityRaw = idleUnderlyingBalanceRaw ?? 0n;
   const morphoCapacityRaw = morphoVaultLiquidity?.liquidityRaw ?? 0n;
-  const capacitySource = morphoCapacityRaw > idleCapacityRaw
-    ? morphoVaultLiquidity?.source ?? "morpho-vault-v2-liquidity"
-    : "erc4626-idle-underlying";
-  const uncappedCapacityRaw = morphoCapacityRaw > idleCapacityRaw ? morphoCapacityRaw : idleCapacityRaw;
-  if (uncappedCapacityRaw === 0n && idleUnderlyingBalanceRaw == null && morphoVaultLiquidity == null) {
+  const yearnCapacityRaw = yearnV3WithdrawableLiquidity?.withdrawableRaw ?? 0n;
+  let capacitySource: RedemptionCapacityTelemetry["capacitySource"] = "erc4626-idle-underlying";
+  let uncappedCapacityRaw = idleCapacityRaw;
+  if (morphoCapacityRaw > uncappedCapacityRaw) {
+    capacitySource = morphoVaultLiquidity?.source ?? "morpho-vault-v2-liquidity";
+    uncappedCapacityRaw = morphoCapacityRaw;
+  }
+  if (yearnCapacityRaw > uncappedCapacityRaw) {
+    capacitySource = yearnV3WithdrawableLiquidity?.source ?? "yearn-v3-withdrawable";
+    uncappedCapacityRaw = yearnCapacityRaw;
+  }
+  if (
+    uncappedCapacityRaw === 0n
+    && idleUnderlyingBalanceRaw == null
+    && morphoVaultLiquidity == null
+    && yearnV3WithdrawableLiquidity == null
+  ) {
     return null;
   }
 
@@ -586,16 +811,24 @@ function buildRedemptionCapacityTelemetry(
   if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
 
   const capacityRatioOfSupply = ratioFromRaw(capacityRaw, supplyAssetsRaw);
-  const usesMorphoCapacity = capacitySource !== "erc4626-idle-underlying";
+  const usesProtocolApiCapacity =
+    capacitySource === "morpho-vault-v1-liquidity" || capacitySource === "morpho-vault-v2-liquidity";
+  const usesYearnV3Capacity = capacitySource === "yearn-v3-withdrawable";
   return {
     capacityUsd,
     capacityRaw: capacityRaw.toString(),
     capacitySource,
-    freshnessKind: usesMorphoCapacity ? "same-run-api" : "same-run-onchain",
-    routeStatusSource: usesMorphoCapacity ? "protocol-api" : "onchain",
+    freshnessKind: usesProtocolApiCapacity && !usesYearnV3Capacity ? "same-run-api" : "same-run-onchain",
+    routeStatusSource: usesProtocolApiCapacity && !usesYearnV3Capacity ? "protocol-api" : "onchain",
     ...(idleUnderlyingBalanceRaw != null ? { idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString() } : {}),
     underlyingDecimals,
     ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
+    ...(usesYearnV3Capacity && yearnV3WithdrawableLiquidity
+      ? {
+          settlementDelaySec: yearnV3WithdrawableLiquidity.settlementDelaySec,
+          yearnV3WithdrawableRaw: yearnV3WithdrawableLiquidity.withdrawableRaw.toString(),
+        }
+      : {}),
     ...(morphoVaultLiquidity?.source === "morpho-vault-v1-liquidity"
       ? {
           morphoVaultV1LiquidityRaw: morphoVaultLiquidity.liquidityRaw.toString(),
@@ -725,6 +958,7 @@ export async function fetchErc4626SingleAssetReserves(
     ]);
     const atomicFullBacking = sliceConfig.redemptionLiquidity?.source === "atomic-full-backing";
     let morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null = null;
+    let yearnV3WithdrawableLiquidity: YearnV3WithdrawableLiquidityTelemetry | null = null;
     if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v2") {
       const morphoResult = await fetchMorphoVaultV2LiquidityTelemetry({
         coinId: coin.id,
@@ -747,12 +981,29 @@ export async function fetchErc4626SingleAssetReserves(
       });
       warnings.push(...morphoResult.warnings);
       morphoVaultLiquidity = morphoResult.telemetry;
+    } else if (sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable") {
+      const yearnResult = await fetchYearnV3WithdrawableLiquidityTelemetry({
+        coinId: coin.id,
+        contractAddress,
+        call,
+        signal,
+        ctx: _ctx,
+        rpcMode: primaryInput.rpcMode,
+        chain: primaryInput.chain,
+        rpcUrl: sliceConfig.rpcUrl,
+        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+        timeoutMs: timeout,
+        settlementDelaySec: sliceConfig.redemptionLiquidity.settlementDelaySec,
+      });
+      warnings.push(...yearnResult.warnings);
+      yearnV3WithdrawableLiquidity = yearnResult.telemetry;
     }
     redemptionCapacity = buildRedemptionCapacityTelemetry(
       idleUnderlyingBalanceRaw,
       underlyingDecimalsRaw,
       convertToAssetsRaw ?? totalAssetsRaw,
       morphoVaultLiquidity,
+      yearnV3WithdrawableLiquidity,
       atomicFullBacking,
     );
   }
@@ -793,6 +1044,9 @@ export async function fetchErc4626SingleAssetReserves(
             ...(redemptionCapacity.morphoVaultV1LiquidityUsd != null
               ? { morphoVaultV1LiquidityUsd: redemptionCapacity.morphoVaultV1LiquidityUsd }
               : {}),
+            ...(redemptionCapacity.yearnV3WithdrawableRaw != null
+              ? { yearnV3WithdrawableRaw: redemptionCapacity.yearnV3WithdrawableRaw }
+              : {}),
             ...(redemptionCapacity.morphoVaultV2LiquidityRaw != null
               ? { morphoVaultV2LiquidityRaw: redemptionCapacity.morphoVaultV2LiquidityRaw }
               : {}),
@@ -826,6 +1080,9 @@ export async function fetchErc4626SingleAssetReserves(
                 ? { capacityRatioOfSupply: redemptionCapacity.capacityRatioOfSupply }
                 : {}),
               capacityKind: "live-direct" as const,
+              ...(redemptionCapacity.settlementDelaySec != null
+                ? { settlementDelaySec: redemptionCapacity.settlementDelaySec }
+                : {}),
             }
           : {
               capacityKind: "documented-eventual" as const,

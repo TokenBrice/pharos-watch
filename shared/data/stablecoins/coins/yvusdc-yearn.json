@@ -127,6 +127,10 @@
       }
     },
     "params": {
+      "redemptionLiquidity": {
+        "source": "yearn-v3-withdrawable",
+        "settlementDelaySec": 0
+      },
       "slice": {
         "name": "USDC routed through Yearn v3 strategy allocator",
         "risk": "medium",

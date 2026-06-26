@@ -178,6 +178,10 @@
       }
     },
     "params": {
+      "redemptionLiquidity": {
+        "source": "yearn-v3-withdrawable",
+        "settlementDelaySec": 0
+      },
       "slice": {
         "name": "BOLD deployed into Liquity V2 Stability Pools",
         "risk": "medium",
