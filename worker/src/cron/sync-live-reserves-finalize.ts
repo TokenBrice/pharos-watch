@@ -3,9 +3,11 @@ import { toErrorMessage } from "../lib/error-utils";
 import { throwIfAborted } from "../lib/abort";
 import {
   filterStaleLiveReserveCircuitStates,
+  getCircuitRecordsForSources,
   getCircuitStates,
   recoverBreakerOnNoCandidate,
   recordOutcomeSafe,
+  type CircuitRecord,
 } from "../lib/circuit-breaker";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
@@ -70,6 +72,11 @@ interface LiveReserveFinalizationWarning {
 interface LiveReserveFinalizationBudget {
   deadlineMs: number;
   remainingMs: number;
+  breakerOutcomesRecorded: number;
+  breakerOutcomesSkippedBudget: number;
+  breakerOutcomesSkippedClosedSuccess: number;
+  breakerOutcomeBudgetExhausted: boolean;
+  staleBreakerRecoveriesSkipped: number;
   artifactCleanupSkipped: boolean;
   historyPruneSkipped: boolean;
 }
@@ -79,6 +86,11 @@ function resolveFinalizationBudget(args: FinalizeReserveSyncRunArgs): LiveReserv
   return {
     deadlineMs,
     remainingMs: Math.max(0, deadlineMs - Date.now()),
+    breakerOutcomesRecorded: 0,
+    breakerOutcomesSkippedBudget: 0,
+    breakerOutcomesSkippedClosedSuccess: 0,
+    breakerOutcomeBudgetExhausted: false,
+    staleBreakerRecoveriesSkipped: 0,
     artifactCleanupSkipped: false,
     historyPruneSkipped: false,
   };
@@ -89,10 +101,92 @@ function hasD1FinalizationWindow(args: FinalizeReserveSyncRunArgs, budget: LiveR
   return budget.remainingMs > args.budgetConfig.finalizationMarginMs;
 }
 
-async function recoverNoCandidateLiveReserveBreakers(db: D1Database): Promise<void> {
+function shouldRecordBreakerOutcome(
+  source: string,
+  success: boolean,
+  records: Record<string, CircuitRecord>,
+): boolean {
+  if (!success) return true;
+
+  const current = records[source];
+  return (
+    !current
+    || current.state !== "closed"
+    || current.consecutiveFailures !== 0
+    || current.lastSuccessAt == null
+    || current.openedAt != null
+  );
+}
+
+async function loadBreakerRecordsForOutcomes(
+  db: D1Database,
+  outcomes: ReadonlyMap<string, boolean>,
+): Promise<Record<string, CircuitRecord>> {
+  if (outcomes.size === 0) return {};
+  try {
+    return await getCircuitRecordsForSources(db, Array.from(outcomes.keys()));
+  } catch (error) {
+    await logCronEvent(db, {
+      job: "sync-live-reserves",
+      eventType: "live-reserve-breaker-bulk-read-failed",
+      severity: "warning",
+      message: "Failed to bulk-read live reserve breaker states; breaker finalization will fall back to per-outcome writes.",
+      metadata: {
+        error: toErrorMessage(error),
+      },
+    });
+    return {};
+  }
+}
+
+async function recordBreakerOutcomesForRun(
+  args: FinalizeReserveSyncRunArgs,
+  budget: LiveReserveFinalizationBudget,
+): Promise<void> {
+  const existingBreakerRecords = await loadBreakerRecordsForOutcomes(args.db, args.breakerOutcomes);
+  const candidates: Array<[string, boolean]> = [];
+  for (const [key, success] of args.breakerOutcomes) {
+    if (shouldRecordBreakerOutcome(key, success, existingBreakerRecords)) {
+      candidates.push([key, success]);
+    } else {
+      budget.breakerOutcomesSkippedClosedSuccess++;
+    }
+  }
+
+  candidates.sort((left, right) => Number(left[1]) - Number(right[1]));
+
+  for (let index = 0; index < candidates.length; index++) {
+    throwIfAborted(args.signal);
+    if (!hasD1FinalizationWindow(args, budget)) {
+      budget.breakerOutcomeBudgetExhausted = true;
+      budget.breakerOutcomesSkippedBudget += candidates.length - index;
+      break;
+    }
+
+    const [key, success] = candidates[index]!;
+    await recordOutcomeSafe(args.db, key, success);
+    budget.breakerOutcomesRecorded++;
+  }
+}
+
+async function recoverNoCandidateLiveReserveBreakers(
+  db: D1Database,
+  signal: AbortSignal | undefined,
+  budget: LiveReserveFinalizationBudget,
+  hasBudget: () => boolean,
+): Promise<void> {
+  if (!hasBudget()) {
+    budget.staleBreakerRecoveriesSkipped++;
+    return;
+  }
   const circuits = await getCircuitStates(db);
   const configuredCircuits = filterStaleLiveReserveCircuitStates(circuits);
   for (const source of Object.keys(circuits)) {
+    throwIfAborted(signal);
+    if (!hasBudget()) {
+      budget.staleBreakerRecoveriesSkipped++;
+      break;
+    }
     if (!source.startsWith("live-reserves:") || Object.prototype.hasOwnProperty.call(configuredCircuits, source)) {
       continue;
     }
@@ -206,13 +300,19 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   });
 
   throwIfAborted(args.signal);
-  for (const [key, success] of args.breakerOutcomes) {
-    await recordOutcomeSafe(args.db, key, success);
-  }
+  const { cursorPersistFailed, cursorPersistError } = await persistCursorStateForRun(args);
+
+  throwIfAborted(args.signal);
+  await recordBreakerOutcomesForRun(args, finalizationBudget);
 
   throwIfAborted(args.signal);
   try {
-    await recoverNoCandidateLiveReserveBreakers(args.db);
+    await recoverNoCandidateLiveReserveBreakers(
+      args.db,
+      args.signal,
+      finalizationBudget,
+      () => hasD1FinalizationWindow(args, finalizationBudget),
+    );
   } catch (error) {
     await recordFinalizationWarning(
       args.db,
@@ -251,8 +351,6 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     });
   }
 
-  throwIfAborted(args.signal);
-  const { cursorPersistFailed, cursorPersistError } = await persistCursorStateForRun(args);
   let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;
   throwIfAborted(args.signal);
   if (hasD1FinalizationWindow(args, finalizationBudget)) {
@@ -310,7 +408,16 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
       finalizationDeadlineMs: finalizationBudget.deadlineMs,
       finalizationRemainingMs: finalizationBudget.remainingMs,
-      finalizationTailBudgetExhausted: finalizationBudget.artifactCleanupSkipped || finalizationBudget.historyPruneSkipped,
+      finalizationTailBudgetExhausted:
+        finalizationBudget.breakerOutcomeBudgetExhausted
+        || finalizationBudget.artifactCleanupSkipped
+        || finalizationBudget.historyPruneSkipped,
+      breakerOutcomesTotal: args.breakerOutcomes.size,
+      breakerOutcomesRecorded: finalizationBudget.breakerOutcomesRecorded,
+      breakerOutcomesSkippedBudget: finalizationBudget.breakerOutcomesSkippedBudget,
+      breakerOutcomesSkippedClosedSuccess: finalizationBudget.breakerOutcomesSkippedClosedSuccess,
+      breakerOutcomeBudgetExhausted: finalizationBudget.breakerOutcomeBudgetExhausted,
+      staleBreakerRecoveriesSkipped: finalizationBudget.staleBreakerRecoveriesSkipped,
       artifactCleanupSkipped: finalizationBudget.artifactCleanupSkipped,
       historyPruneSkipped: finalizationBudget.historyPruneSkipped,
       cursorPersistFailed,

@@ -408,6 +408,182 @@ describe("syncLiveReserves", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeys.size);
   });
 
+  it("skips closed success breaker heartbeats but still records failed outcomes", async () => {
+    const firstQueuedCoin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
+    const failedBreakerKey = `live-reserves:${
+      firstQueuedCoin.liveReservesConfig!.breakerScope ?? firstQueuedCoin.liveReservesConfig!.adapter
+    }`;
+    mockAdapterRegistry(async (coin) => {
+      if (coin?.id === firstQueuedCoin.id) {
+        throw new Error("forced reserve source outage");
+      }
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const uniqueBreakerKeys = new Set(
+      ACTIVE_STABLECOINS
+        .filter((c) => c.liveReservesConfig)
+        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
+    );
+    const closedBreakerRows = Array.from(uniqueBreakerKeys, (key) => ({
+      key: `circuit:${key}`,
+      value: JSON.stringify({
+        state: "closed",
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastSuccessAt: 1_700_000_000,
+        openedAt: null,
+      }),
+    }));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([
+      {
+        match: "SELECT key, value FROM cache WHERE key IN",
+        rows: closedBreakerRows,
+      },
+    ]);
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      breakerOutcomesRecorded?: number;
+      breakerOutcomesSkippedClosedSuccess?: number;
+    };
+
+    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(1);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, failedBreakerKey, false);
+    expect(metadata.breakerOutcomesRecorded).toBe(1);
+    expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(uniqueBreakerKeys.size - 1);
+  });
+
+  it("records success breaker outcomes that still need state recovery", async () => {
+    mockAdapterRegistry(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
+    const uniqueBreakerKeys = Array.from(new Set(
+      ACTIVE_STABLECOINS
+        .filter((c) => c.liveReservesConfig)
+        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
+    ));
+    const keysNeedingRecovery = new Set(uniqueBreakerKeys.slice(0, 4));
+    const [halfOpenKey, failureDebtKey, missingSuccessKey, lingeringOpenedKey] = uniqueBreakerKeys;
+    const closedBreakerRows = uniqueBreakerKeys.map((key) => {
+      let record = {
+        state: "closed",
+        consecutiveFailures: 0,
+        lastFailureAt: null as number | null,
+        lastSuccessAt: 1_700_000_000 as number | null,
+        openedAt: null as number | null,
+      };
+      if (key === halfOpenKey) {
+        record = { ...record, state: "half-open", consecutiveFailures: 2, lastFailureAt: 1_699_999_990, openedAt: 1_699_999_990 };
+      } else if (key === failureDebtKey) {
+        record = { ...record, consecutiveFailures: 2, lastFailureAt: 1_699_999_990 };
+      } else if (key === missingSuccessKey) {
+        record = { ...record, lastSuccessAt: null };
+      } else if (key === lingeringOpenedKey) {
+        record = { ...record, openedAt: 1_699_999_990 };
+      }
+      return {
+        key: `circuit:${key}`,
+        value: JSON.stringify(record),
+      };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([
+      {
+        match: "SELECT key, value FROM cache WHERE key IN",
+        rows: closedBreakerRows,
+      },
+    ]);
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      breakerOutcomesRecorded?: number;
+      breakerOutcomesSkippedClosedSuccess?: number;
+    };
+
+    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(keysNeedingRecovery.size);
+    for (const key of keysNeedingRecovery) {
+      expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, key, true);
+    }
+    expect(metadata.breakerOutcomesRecorded).toBe(keysNeedingRecovery.size);
+    expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(uniqueBreakerKeys.length - keysNeedingRecovery.size);
+  });
+
+  it("falls back to per-outcome breaker writes when the bulk breaker read fails", async () => {
+    mockAdapterRegistry(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
+    const uniqueBreakerKeys = new Set(
+      ACTIVE_STABLECOINS
+        .filter((c) => c.liveReservesConfig)
+        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
+    );
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([
+      {
+        match: "SELECT key, value FROM cache WHERE key IN",
+        rows: [],
+        throwError: new Error("bulk breaker read unavailable"),
+      },
+    ]);
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      breakerOutcomesRecorded?: number;
+      breakerOutcomesSkippedClosedSuccess?: number;
+    };
+
+    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeys.size);
+    expect(metadata.breakerOutcomesRecorded).toBe(uniqueBreakerKeys.size);
+    expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(0);
+    expect(db.getHistory().some((entry) => (
+      entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-breaker-bulk-read-failed"
+    ))).toBe(true);
+  });
+
+  it("skips breaker outcome writes when finalization tail budget is exhausted", async () => {
+    let nowMs = 1_700_000_000_000;
+    const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    mockAdapterRegistry(async () => {
+      nowMs += 10_000;
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    try {
+      const { syncLiveReserves } = await import("../sync-live-reserves");
+      const db = mockD1();
+      const result = await syncLiveReserves(
+        db,
+        new AbortController().signal,
+        {},
+        undefined,
+        {
+          runBudgetMs: 5_000,
+          adapterTimeoutMs: 1,
+          d1FinalizeTimeoutMs: 1,
+          finalizationMarginMs: 1,
+        },
+      );
+      const metadata = JSON.parse(result?.metadata ?? "{}") as {
+        breakerOutcomeBudgetExhausted?: boolean;
+        breakerOutcomesRecorded?: number;
+        breakerOutcomesSkippedBudget?: number;
+        staleBreakerRecoveriesSkipped?: number;
+      };
+
+      expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
+      expect(metadata.breakerOutcomeBudgetExhausted).toBe(true);
+      expect(metadata.breakerOutcomesRecorded).toBe(0);
+      expect(metadata.breakerOutcomesSkippedBudget).toBe(1);
+      expect(metadata.staleBreakerRecoveriesSkipped).toBe(1);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it("cleans stale reserve artifacts by deleting only rows outside the active keep-list", async () => {
     mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
@@ -582,7 +758,18 @@ describe("syncLiveReserves", () => {
 
   it("recovers stale live-reserve circuit breakers with no configured candidates", async () => {
     const staleBreakerKey = "live-reserves:removed-adapter-key";
+    const configuredBreakerKey = `live-reserves:${
+      SYNC_ORDERED_CONFIGURED_COINS[0]!.liveReservesConfig!.breakerScope
+      ?? SYNC_ORDERED_CONFIGURED_COINS[0]!.liveReservesConfig!.adapter
+    }`;
     const staleState = JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: Math.floor(Date.now() / 1000) - 30,
+      lastSuccessAt: null,
+      openedAt: Math.floor(Date.now() / 1000) - 30,
+    });
+    const configuredState = JSON.stringify({
       state: "open",
       consecutiveFailures: 3,
       lastFailureAt: Math.floor(Date.now() / 1000) - 30,
@@ -595,7 +782,10 @@ describe("syncLiveReserves", () => {
     const db = mockD1([
       {
         match: "key LIKE 'circuit:%'",
-        rows: [{ key: `circuit:${staleBreakerKey}`, value: staleState }],
+        rows: [
+          { key: `circuit:${staleBreakerKey}`, value: staleState },
+          { key: `circuit:${configuredBreakerKey}`, value: configuredState },
+        ],
       },
     ]);
 
@@ -603,6 +793,8 @@ describe("syncLiveReserves", () => {
 
     const staleRecoveryCalls = recoverNoCandidateMock.mock.calls.filter((call) => call[1] === staleBreakerKey);
     expect(staleRecoveryCalls).toHaveLength(1);
+    const configuredRecoveryCalls = recoverNoCandidateMock.mock.calls.filter((call) => call[1] === configuredBreakerKey);
+    expect(configuredRecoveryCalls).toHaveLength(0);
   });
 
   it("classifies parser drift in sync attempt metadata", async () => {
