@@ -41,7 +41,7 @@ Visible slash-separated breadcrumb trails are retired from page headers. Routes 
 
 ### Root + Fonts
 
-- Body carries four font variables: `geistSans`, `geistMono`, `jetbrainsMono`, `bricolageDisplay` (+ `antialiased`); scoped utilities `pharos-font-sans` / `pharos-font-mono`
+- Body carries four font variables/classes: `geistSans`, `geistMono`, `jetbrainsMono`, `bricolageDisplay` (+ `antialiased`); scoped utilities `pharos-font-sans` / `pharos-font-mono`. The display token `--font-pharos-display` is resolved on `body` so it can see the Next-provided `--font-bricolage` fallback variable.
 - Sans / UI token: Geist Sans (system-first fallback)
 - Mono / data token: **JetBrains Mono** (Figma redesign), folded into `--font-geist-mono` so every `.pharos-numeric` / table figure inherits it
 - Display token (`--font-display`, `.pharos-display`, `.pharos-page-title`): **ABC Whyte Inktrap** for headings + the top-nav wordmark when licensed files are installed at `public/fonts/abc-whyte-inktrap/`; **Bricolage Grotesque** remains the tracked fallback for clean builds.
