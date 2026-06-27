@@ -183,6 +183,7 @@ Displayed peg deviation now uses the same peg-reference authority gate as the de
 - Historical backfill delete+insert share a single D1 batch, so a worker interruption during backfill no longer leaves a coin with zero depeg rows
 - Off-chain (CoinGecko/DefiLlama) confirmation fetches are now circuit-breaker-guarded, so a provider outage no longer hammers the endpoint for 45 min per pending row
 - Promoted depeg events now persist `confirmation_sources` (e.g. `"DEX+CEX"`) and `pending_reason` (e.g. `"large-cap+low-confidence"`) for ex-post diagnostics
+- The large-cap confirmation floor is tiered below $1B for weak or severe evidence: >= $750M requires pending confirmation when source depth is below 2 or severity is at least 2x threshold, and >= $500M requires it only when both conditions hold
 - DEWS liquidity sub-signal fails closed when both 7-day anchors (score erosion and TVL erosion) are missing instead of silently contributing `0`
 
 ---

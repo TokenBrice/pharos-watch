@@ -19,7 +19,9 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 |----------|-------|---------|
 | `DEPEG_THRESHOLD_BPS` | 100 (1%) | USD peg deviation threshold |
 | `DEPEG_THRESHOLD_BPS_NON_USD` | 150 (1.5%) | Non-USD peg threshold (accounts for FX noise + thin liquidity) |
-| `DEPEG_CONFIRMATION_SUPPLY_THRESHOLD` | $1,000,000,000 | Coins above this require multi-source confirmation |
+| `DEPEG_CONFIRMATION_SUPPLY_THRESHOLD` | $1,000,000,000 | Coins at or above this require multi-source confirmation |
+| `DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD` | $750,000,000 | Coins at or above this also require confirmation when source depth is below 2 or severity is at least 2x the peg threshold |
+| `DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD` | $500,000,000 | Coins at or above this also require confirmation when both source depth is below 2 and severity is at least 2x the peg threshold |
 | `DEPEG_PENDING_MIN_AGE_SEC` | 900 (15 min) | Minimum time before a pending record can be promoted |
 | `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Base time before a pending record can expire |
 | `DEPEG_PENDING_EXTENDED_EXPIRY_SEC` | 8100 (135 min) | Extended limit when primary evidence still points same-direction or confirmation sources are unavailable/circuit-open |
@@ -184,7 +186,7 @@ direction = bps >= 0 ? "above" : "below"
 
 - If the peg reference is a thin non-USD fiat peer median without FX fallback: skip live-state mutation for this cycle
 - If a supported direct native-peg quote is back inside threshold or shows the opposite side of the peg: suppress the new event for this cycle
-- If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific)
+- If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific). The same large-cap confirmation lane also catches near-large-cap cases: >= $750M when source depth is below 2 or severity is >= 2x the peg threshold, and >= $500M only when both source depth is below 2 and severity is >= 2x threshold.
 - If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
 - If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement, or a fresh primary cluster spanning at least two independent depeg source families, may still promote the move immediately for non-large-cap coins
 - Otherwise (authoritative primary input, non-large-cap, non-extreme): use corroborated trusted DEX recovery suppression and insert into `depeg_events` immediately

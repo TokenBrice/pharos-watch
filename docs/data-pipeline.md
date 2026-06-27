@@ -231,9 +231,9 @@ The live `/price/` endpoint requires no API key and is called only on cooldown-e
 
 ## Pending Depeg Confirmation
 
-For stablecoins with >$1B circulating supply, depeg detection uses a two-phase confirmation system:
+For stablecoins at or above the large-cap confirmation floor, plus tiered near-large-cap cases, depeg detection uses a two-phase confirmation system:
 
-1. **Phase 1** (`detect-depegs.ts`): When a coin requires confirmation instead of direct mutation, a record is inserted into `depeg_pending` (schema in `worker/migrations/0000_baseline.sql`). This now covers three cases: `>$1B` supply, low-confidence/cached/stale primary prices, and extreme moves (`abs(bps) >= 5000`)
+1. **Phase 1** (`detect-depegs.ts`): When a coin requires confirmation instead of direct mutation, a record is inserted into `depeg_pending` (schema in `worker/migrations/0000_baseline.sql`). This now covers large-cap supply (`>= $1B`), tiered near-large-cap checks (`>= $750M` with weak source depth or >= 2x severity; `>= $500M` only when both weak-source and severe), low-confidence/cached/stale primary prices, and extreme moves (`abs(bps) >= 5000`)
 2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists and a secondary source agrees, a real depeg event is opened. If an **authoritative** primary price recovered, the pending record is deleted
 
 This prevents false positive depeg events for systemically important stablecoins during brief price feed glitches.
