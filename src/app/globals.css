@@ -365,28 +365,12 @@
 
   /* Table density tokens. Application rules live in the utilities layer so
      caller padding utilities can still replace the shared TableCell defaults. */
-  .pharos-density-list {
-    --pharos-table-cell-padding-x: 0.5rem;
-    --pharos-table-cell-padding-y: 0.125rem;
-    --pharos-table-font-size: 0.75rem;
-    --pharos-table-line-height: 1rem;
-    --pharos-table-head-height: 1.75rem;
-  }
-
   .pharos-density-compact {
     --pharos-table-cell-padding-x: 0.5rem;
     --pharos-table-cell-padding-y: 0.25rem;
     --pharos-table-font-size: 0.75rem;
     --pharos-table-line-height: 1rem;
     --pharos-table-head-height: 2rem;
-  }
-
-  .pharos-density-comfortable {
-    --pharos-table-cell-padding-x: 0.75rem;
-    --pharos-table-cell-padding-y: 0.5rem;
-    --pharos-table-font-size: 0.875rem;
-    --pharos-table-line-height: 1.25rem;
-    --pharos-table-head-height: 2.5rem;
   }
 
   .pharos-density-spacious {
@@ -1424,23 +1408,23 @@
     box-shadow: var(--table-header-shadow);
   }
 
-  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
+  :where(.pharos-density-compact, .pharos-density-spacious)
     :where([data-slot="table"]).text-sm {
     font-size: var(--pharos-table-font-size);
     line-height: var(--pharos-table-line-height);
   }
 
-  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
+  :where(.pharos-density-compact, .pharos-density-spacious)
     :where([data-slot="table-cell"], [data-slot="table-head"]).px-3 {
     padding-inline: var(--pharos-table-cell-padding-x);
   }
 
-  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
+  :where(.pharos-density-compact, .pharos-density-spacious)
     :where([data-slot="table-cell"]).py-2 {
     padding-block: var(--pharos-table-cell-padding-y);
   }
 
-  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
+  :where(.pharos-density-compact, .pharos-density-spacious)
     :where([data-slot="table-head"]).h-10 {
     height: var(--pharos-table-head-height);
   }
