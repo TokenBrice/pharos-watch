@@ -30,7 +30,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
 
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-      <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+      <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <p className="pharos-kicker">Current Lens</p>
         <p className="mt-1 text-sm text-foreground">{lensSummary}</p>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -38,7 +38,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
           into a single coin.
         </p>
       </div>
-      <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+      <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <p className="pharos-kicker">Market Share In View</p>
         <p className="mt-1 text-sm text-foreground">{filteredMcapSharePct.toFixed(0)}% of active market cap</p>
         <p className="mt-1 text-xs text-muted-foreground">

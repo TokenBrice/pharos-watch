@@ -17,7 +17,7 @@ export function DependencyMapMobileSummary({ model, logos }: DependencyMapMobile
   if (hubs.length === 0) return null;
 
   return (
-    <Card className="rounded-2xl border-border/70 md:hidden">
+    <Card className="rounded-xl border-border/70 shadow-none md:hidden">
       <CardHeader className="space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div>

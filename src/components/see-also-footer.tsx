@@ -36,7 +36,7 @@ export function SeeAlsoFooter({ links, className }: SeeAlsoFooterProps) {
           <li key={link.href}>
             <Link
               href={link.href}
-              className="pharos-focus-ring group flex items-start gap-2 rounded-lg border border-border/50 bg-card/55 px-3 py-2.5 transition-colors hover:border-border hover:bg-card/80"
+              className="pharos-focus-ring group flex items-start gap-2 rounded-lg border border-border/50 bg-background/55 px-3 py-2.5 transition-colors hover:border-border hover:bg-muted/40"
             >
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-sm font-medium text-foreground">

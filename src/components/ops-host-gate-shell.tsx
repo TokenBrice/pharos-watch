@@ -34,7 +34,7 @@ export function OpsHostGateShell({
     resolvedLeadParagraphs = [publicLeadParagraph];
     content = (
       <div className="pt-4">
-        <div className="rounded-[1.6rem] border border-border/60 bg-background/35 p-6 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
+        <div className="pharos-card-shell p-6">
           <div className="space-y-3">
             <p className="pharos-kicker">Private Surface</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">{publicTitle}</h2>

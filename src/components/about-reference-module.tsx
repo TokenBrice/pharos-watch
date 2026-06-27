@@ -16,7 +16,7 @@ export function AboutReferenceModule() {
   return (
     <section
       aria-label="Reference pages"
-      className="rounded-2xl border border-border/60 bg-card/72 px-3 py-4 shadow-[0_16px_36px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-5"
+      className="pharos-card-shell px-3 py-4 sm:px-5 sm:py-5"
     >
       <h2 className="sr-only">Reference pages</h2>
       <div className="mb-4 flex items-center gap-3">
@@ -34,9 +34,9 @@ export function AboutReferenceModule() {
               key={item.href}
               href={item.href}
               className={cn(
-                "pharos-focus-ring group flex min-h-[9.5rem] flex-col rounded-xl border border-border/60 bg-background/55 px-5 py-5",
+                "pharos-focus-ring pharos-interactive-card group flex min-h-[9.5rem] flex-col rounded-xl border border-border/60 bg-background/55 px-5 py-5",
                 "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                "hover:-translate-y-1.5 hover:bg-muted/20 hover:shadow-[0_20px_44px_oklch(0_0_0_/0.18)]",
+                "hover:bg-muted/20",
                 accent.hover,
               )}
             >

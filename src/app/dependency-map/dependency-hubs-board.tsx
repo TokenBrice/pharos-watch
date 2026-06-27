@@ -65,7 +65,7 @@ function DependencyHubRow({
           {hub.edgeTypeBreakdown.map((entry) => (
             <span
               key={entry.type}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-border/60 bg-card/70 px-2 py-1 text-[11px] text-muted-foreground"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground"
             >
               <svg width="18" height="6" aria-hidden="true" className="shrink-0">
                 <line
@@ -135,7 +135,7 @@ export function DependencyHubsBoard({ model, logos }: { model: DependencyHubsMod
   const maxWeight = Math.max(...hubs.map((hub) => hub.summedDirectDependencyWeight), 0);
 
   return (
-    <Card className="hidden overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none md:block">
+    <Card className="hidden overflow-hidden rounded-xl border-border/70 shadow-none md:block">
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
