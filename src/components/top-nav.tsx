@@ -14,7 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { openCommandPalette } from "@/lib/command-palette";
-import { NAV_GROUPS, normalizeNavPath, PRIMARY_NAV_ITEMS, type NavItem } from "@/lib/nav-config";
+import {
+  NAV_GROUPS,
+  normalizeNavPath,
+  PRIMARY_NAV_ITEMS,
+  stickyChromeTopOffsetClass,
+  type NavItem,
+} from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
 
 // The Figma top nav collapses the existing IA into six menus. Terminal carries
@@ -124,7 +130,7 @@ function ThemeControls() {
 export function TopNav() {
   const pathname = usePathname();
   const normalizedPath = normalizeNavPath(pathname ?? "/");
-  const topOffsetClass = pathname === "/" ? "top-0" : "top-[3px]";
+  const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
   return (
     <header

@@ -7,7 +7,13 @@ import { PharosLogo } from "@/components/pharos-logo";
 import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, NAV_GROUPS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
+import {
+  BOTTOM_NAV_ITEMS,
+  COMPANION_NAV_ITEMS,
+  NAV_GROUPS,
+  PRIMARY_NAV_ITEMS,
+  stickyChromeTopOffsetClass,
+} from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { ExternalLink, Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
@@ -80,7 +86,7 @@ export function Header() {
   const groups = NAV_GROUPS;
   const [dashboardNavItem, ...remainingPrimaryNavItems] = primaryItems;
   const mobileLeadItemCount = primaryItems.length + priorityBottomNavItems.length;
-  const topOffsetClass = pathname === "/" ? "top-0" : "top-[3px]";
+  const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
   // The header renders above the core rail in flow, so it pins directly under
   // the PSI strip on every route; z-[56] keeps the tape and rail sliding
