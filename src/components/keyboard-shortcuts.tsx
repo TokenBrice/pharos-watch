@@ -16,7 +16,6 @@ interface Shortcut {
 const SHORTCUTS: Shortcut[] = [
   { keys: ["?"], description: "Show keyboard shortcuts", category: "Global" },
   { keys: ["Ctrl", "K"], description: "Open command palette", category: "Global" },
-  { keys: ["[ / ]"], description: "Toggle sidebar pin", category: "Global" },
   { keys: ["/"], description: "Focus search", category: "Global" },
   { keys: ["Esc"], description: "Close modals/panels", category: "Global" },
   { keys: ["↑", "↓"], description: "Navigate items", category: "Navigation", join: "or" },
@@ -92,7 +91,6 @@ export function KeyboardShortcuts({
         <label className="flex items-center justify-between gap-3 border-t border-border/60 px-2 pt-3 text-sm">
           <span>
             Enable single-key shortcuts (
-            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">[ / ]</kbd>,{" "}
             <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">?</kbd>,{" "}
             <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>)
           </span>

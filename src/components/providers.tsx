@@ -105,7 +105,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
         !event.altKey
       ) {
         // WCAG 2.1.4: single-character shortcut, read the disable flag at
-        // keypress time (same mechanism as the sidebar's [ / ] shortcut).
+        // keypress time so the shortcuts dialog preference applies immediately.
         if (isSidebarShortcutDisabled()) return;
         event.preventDefault();
         setKeyboardShortcutsLoaded(true);

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/header";
-import { SidebarProvider } from "@/components/sidebar-context";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
@@ -108,29 +107,27 @@ export default function RootLayout({
           Skip to data table
         </a>
         <Providers>
-          <SidebarProvider>
-            <RouteChrome>
-              <RegimeBarChrome>
-                <RegimeBar />
-                <div className="h-[3px] shrink-0" />
-              </RegimeBarChrome>
-              {/* Desktop primary nav (≥lg); replaces the retired left sidebar. */}
-              <TopNav />
-              {/* Mobile flow order: site header first, then the tape + core
-                  rail beneath it. Desktop nav is the TopNav above (lg:flex);
-                  Header is lg:hidden. */}
-              <Header />
-              <CoreTopRail />
-            </RouteChrome>
-            <div className="flex min-h-screen">
-              <div className="flex-1 flex flex-col min-w-0">
-                <MainContent>{children}</MainContent>
-                <GlobalFooterChrome>
-                  <Footer />
-                </GlobalFooterChrome>
-              </div>
+          <RouteChrome>
+            <RegimeBarChrome>
+              <RegimeBar />
+              <div className="h-[3px] shrink-0" />
+            </RegimeBarChrome>
+            {/* Desktop primary nav (≥lg); replaces the retired left sidebar. */}
+            <TopNav />
+            {/* Mobile flow order: site header first, then the tape + core
+                rail beneath it. Desktop nav is the TopNav above (lg:flex);
+                Header is lg:hidden. */}
+            <Header />
+            <CoreTopRail />
+          </RouteChrome>
+          <div className="flex min-h-screen">
+            <div className="flex-1 flex flex-col min-w-0">
+              <MainContent>{children}</MainContent>
+              <GlobalFooterChrome>
+                <Footer />
+              </GlobalFooterChrome>
             </div>
-          </SidebarProvider>
+          </div>
           <RouteChrome>
             <MobileUtilityDock />
             <ScrollToTop />
