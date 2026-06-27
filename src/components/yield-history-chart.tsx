@@ -104,7 +104,7 @@ export function YieldHistoryChart({
             Loading history
           </div>
         </div>
-        <div className={cn("overflow-hidden rounded-2xl border border-border/60 bg-background/40", compact ? "p-2.5" : "p-3.5")}>
+        <div className={cn("overflow-hidden rounded-xl border border-border/60 bg-background/40", compact ? "p-2.5" : "p-3.5")}>
           <ChartSkeleton className={cn("w-full rounded-xl", chartHeightClass)} />
         </div>
       </div>

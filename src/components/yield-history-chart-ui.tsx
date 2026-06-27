@@ -340,7 +340,7 @@ export function Controls({
 
 export function ChartShell({ compact, children }: { compact: boolean; children: ReactNode }) {
   return (
-    <div className={cn("overflow-hidden rounded-2xl border border-border/60 bg-background/40", compact ? "p-2.5" : "p-3.5")}>
+    <div className={cn("overflow-hidden rounded-xl border border-border/60 bg-background/40", compact ? "p-2.5" : "p-3.5")}>
       {children}
     </div>
   );

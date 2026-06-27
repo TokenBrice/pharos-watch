@@ -1,4 +1,4 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { clampScore } from "@shared/lib/math";
 
@@ -44,10 +44,12 @@ export function YieldSourceRiskBar({
     );
     if (!tooltip) return bar;
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>{bar}</TooltipTrigger>
-        <TooltipContent>Source-risk score unavailable</TooltipContent>
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{bar}</TooltipTrigger>
+          <TooltipContent>Source-risk score unavailable</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
@@ -66,10 +68,12 @@ export function YieldSourceRiskBar({
 
   if (!tooltip) return bar;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{bar}</TooltipTrigger>
-      <TooltipContent>Source-risk score: {Math.round(clamped)} of 100</TooltipContent>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{bar}</TooltipTrigger>
+        <TooltipContent>Source-risk score: {Math.round(clamped)} of 100</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

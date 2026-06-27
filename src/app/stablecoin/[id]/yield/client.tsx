@@ -116,7 +116,7 @@ function StablecoinYieldDetailHeader({
         </div>
 
         {ranking && pysBreakdown && scalingFactor !== null ? (
-          <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
+          <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Pharos Yield Score
             </p>
@@ -147,7 +147,7 @@ function StablecoinYieldDetailHeader({
 
 function EmptyStateCard({ title, message }: { title: string; message: string }) {
   return (
-    <Card className="rounded-xl">
+    <Card className="pharos-card-shell">
       <CardContent className="px-4 py-6">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{message}</p>
@@ -357,7 +357,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         <YieldChangeAttributionCard attribution={apyChangeAttribution} />
       ) : null}
 
-      <Card id="source-comparison" className="scroll-mt-24 rounded-xl border-l-[3px] border-l-emerald-500">
+      <Card id="source-comparison" className="pharos-card-shell scroll-mt-24">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Source comparison</DetailSectionTitle>
         </CardHeader>
@@ -388,7 +388,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         </CardContent>
       </Card>
 
-      <Card id="warning-signals" className="scroll-mt-24 rounded-xl">
+      <Card id="warning-signals" className="pharos-card-shell scroll-mt-24">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Warning signals timeline</DetailSectionTitle>
         </CardHeader>
@@ -451,7 +451,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         </CardContent>
       </Card>
 
-      <Card id="source-switches" className="scroll-mt-24 rounded-xl">
+      <Card id="source-switches" className="pharos-card-shell scroll-mt-24">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Source-switch history</DetailSectionTitle>
         </CardHeader>
