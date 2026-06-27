@@ -6,7 +6,7 @@ Contract for the broader learning-center surfaces:
 - `/learn/case-studies/[slug]/` - static case-study article pages
 - `/learn/glossary/` - alphabetized, methodology-version-pinned Pharos vocabulary
 
-Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mechanisms-page.md). This page covers the adjacent learning surfaces that sit beside them under `/learn/*`. The `/learn/` overview route is a server-rendered orientation hub linking Mechanisms, Case Studies, and Glossary.
+Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mechanisms-page.md). This page covers the adjacent learning surfaces that sit beside them under `/learn/*`. The `/learn/` overview route exists in source and static export as a server-rendered orientation hub linking Mechanisms, Case Studies, and Glossary, but current Cloudflare Pages redirects still send browser requests for `/learn` and `/learn/` to `/learn/mechanisms/`.
 
 ---
 
@@ -70,7 +70,7 @@ Glossary entries live in `src/app/learn/glossary/content.ts`. Each entry owns:
 
 ## Sitemap + Inbound Surfaces
 
-`src/app/sitemap.ts` includes `/learn/`, `/learn/glossary/`, `/learn/mechanisms/`, every mechanism archetype page, `/learn/case-studies/`, and every case-study slug. `scripts/maintenance/generate-sitemap-dates.ts` derives case-study `lastModified` dates from content modules rather than stamping deploy-time `now`.
+`src/app/sitemap.ts` includes `/learn/`, `/learn/glossary/`, `/learn/mechanisms/`, every mechanism archetype page, `/learn/case-studies/`, and every case-study slug. Current `public/_redirects` still maps `/learn` and `/learn/` to `/learn/mechanisms/`, so the sitemap entry and exported overview route are not the browser landing target until that redirect is retired. `scripts/maintenance/generate-sitemap-dates.ts` derives case-study `lastModified` dates from content modules rather than stamping deploy-time `now`.
 
 Primary inbound surfaces:
 

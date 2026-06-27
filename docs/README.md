@@ -135,7 +135,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/feed/methodology.xml/`                        | [architecture.md](./architecture.md), [methodology-page.md](./methodology-page.md)                                                                    |
 | `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
 | `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
-| `/learn/`                                       | [learn-page.md](./learn-page.md), [learn-mechanisms-page.md](./learn-mechanisms-page.md)                                                              |
+| `/learn/`                                       | [learn-page.md](./learn-page.md), [learn-mechanisms-page.md](./learn-mechanisms-page.md) — source/exported overview exists, but current Pages redirects send browser requests to `/learn/mechanisms/` |
 | `/learn/case-studies/`                          | [learn-page.md](./learn-page.md)                                                                                                                      |
 | `/learn/case-studies/[slug]/`                   | [learn-page.md](./learn-page.md), [depeg-detection.md](./depeg-detection.md)                                                                          |
 | `/learn/glossary/`                              | [learn-page.md](./learn-page.md), [methodology-page.md](./methodology-page.md)                                                                        |
