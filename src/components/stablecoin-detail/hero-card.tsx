@@ -101,7 +101,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   };
 
   return (
-    <Card className="rounded-xl gap-0">
+    <Card className="pharos-card-shell gap-0">
       <HeroCardHeader
         coinId={header.coinId}
         coinName={header.coinName}

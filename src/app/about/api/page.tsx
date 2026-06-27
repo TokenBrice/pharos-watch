@@ -232,7 +232,7 @@ function MarkdownBlockRenderer({
 
   if (block.type === "code") {
     return (
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100 shadow-[0_12px_28px_oklch(0_0_0_/0.18)]">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">
         <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
           {block.language ? (
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
@@ -255,7 +255,7 @@ function MarkdownBlockRenderer({
 
 function SectionRenderer({ section }: { section: ApiReferenceSection }) {
   return (
-    <section id={section.id} className="space-y-5 rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
+    <section id={section.id} className="pharos-card-shell space-y-5 px-4 py-5 sm:px-5 sm:py-6">
       <div className="space-y-2">
         <p className="pharos-kicker">Reference Section</p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground"><InlineMarkdown text={section.title} /></h2>
@@ -280,7 +280,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
             <article
               key={subsection.id}
               id={subsection.id}
-              className="rounded-[1.2rem] border border-border/60 bg-background/45 px-4 py-4"
+              className="rounded-xl border border-border/60 bg-background/45 px-4 py-4"
             >
               <h3 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
                 {subsection.method ? <MethodBadge method={subsection.method} tone="section" /> : null}
@@ -310,7 +310,7 @@ const HIDDEN_SECTIONS = new Set(["admin-auth-and-idempotency", "admin-endpoints"
 
 function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSummary[] }) {
   return (
-    <section className="rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
+    <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <p className="pharos-kicker">Endpoint Directory</p>
@@ -437,7 +437,7 @@ export default async function AboutApiPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4">
+          <div className="pharos-card-shell px-4 py-4">
             <p className="pharos-kicker">Quick Facts</p>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <li>
@@ -458,7 +458,7 @@ export default async function AboutApiPage() {
         {HERO_LANES.map((lane) => {
           const Icon = lane.icon;
           return (
-            <section key={lane.title} className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4">
+            <section key={lane.title} className="pharos-card-shell px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5">
                   <p className="pharos-kicker">{lane.eyebrow}</p>
@@ -474,7 +474,7 @@ export default async function AboutApiPage() {
         })}
       </div>
 
-      <section className="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/8 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
+      <section className="rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-2">
           <p className="pharos-kicker text-amber-700 dark:text-amber-400">Need A Key?</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Request API access by email verification</h2>
@@ -499,7 +499,7 @@ export default async function AboutApiPage() {
       <FaqSection items={ABOUT_API_FAQ} title="API Access FAQ" includeJsonLd />
 
       {document.introBlocks.length > 0 ? (
-        <section className="rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
+        <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
           <div className="space-y-2">
             <p className="pharos-kicker">Getting Started</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">Before You Call The API</h2>

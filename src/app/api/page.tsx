@@ -105,7 +105,7 @@ events = response.json()`,
 
 function CodeExampleCard({ example }: { example: (typeof CODE_EXAMPLES)[number] }) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-border/60 bg-zinc-950 text-zinc-100 shadow-[0_12px_28px_oklch(0_0_0_/0.18)]">
+    <article className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">{example.label}</span>
         <CopyButton text={example.code} />
@@ -174,7 +174,7 @@ export default function ApiAccessPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4">
+          <div className="pharos-card-shell px-4 py-4">
             <p className="pharos-kicker">Call Pattern</p>
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <p>
@@ -199,7 +199,7 @@ export default function ApiAccessPage() {
         {ACCESS_FACTS.map((fact) => {
           const Icon = fact.icon;
           return (
-            <section key={fact.title} className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4">
+            <section key={fact.title} className="pharos-card-shell px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">{fact.title}</h2>
                 <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground">
@@ -229,7 +229,7 @@ export default function ApiAccessPage() {
               <Link
                 key={endpoint.path}
                 href="/about/api/#endpoint-directory"
-                className="pharos-focus-ring rounded-2xl border border-border/60 bg-card/72 px-4 py-4 transition-colors hover:bg-accent"
+                className="pharos-focus-ring pharos-card-shell pharos-interactive-card px-4 py-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight text-emerald-600 dark:text-emerald-400">
@@ -264,7 +264,7 @@ export default function ApiAccessPage() {
           </div>
         </div>
 
-        <aside className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4">
+        <aside className="pharos-card-shell px-4 py-4">
           <p className="pharos-kicker">Auth And Limits</p>
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
             <li>

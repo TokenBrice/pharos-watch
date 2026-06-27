@@ -162,7 +162,7 @@ export function SafetyScoreHistorySection({
   // --- render --------------------------------------------------------------
 
   return (
-    <Card className="rounded-xl">
+    <Card className="pharos-card-shell">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-1">
         <DetailSectionTitle>Grade History</DetailSectionTitle>
         {meta?.updatedAt != null && meta.updatedAt > 0 ? (

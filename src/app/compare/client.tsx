@@ -313,7 +313,7 @@ export function CompareClient() {
         ]}
       />
       {selectedIds.length >= 2 ? (
-        <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
+        <div className="pharos-card-shell px-4 py-3">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -328,14 +328,14 @@ export function CompareClient() {
             </div>
             {selectionInsights ? (
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-                <div className="rounded-2xl border border-border/60 bg-background/50 px-3.5 py-3">
+                <div className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3">
                   <p className="pharos-kicker">How To Read This Set</p>
                   <p className="mt-1 text-sm text-foreground">{selectionInsights.lens}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {selectionInsights.cohort} {selectionInsights.structure}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border/60 bg-background/50 px-3.5 py-3">
+                <div className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3">
                   <p className="pharos-kicker">Jump To Detail</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectionInsights.links.map((coin) => (
@@ -416,7 +416,7 @@ export function CompareClient() {
             />
           )}
           {(flowCardData.length > 0 || flowSeries.length > 0) && (
-            <div className="rounded-2xl border border-border/60 bg-card/50 p-4 space-y-4">
+            <div className="pharos-card-shell space-y-4 p-4">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="pharos-kicker">
                   Live Flow Signals
@@ -472,7 +472,7 @@ export function CompareClient() {
             )}
 
             {radarCards.length >= 2 && (
-              <Card className="h-full flex flex-col">
+              <Card className="pharos-card-shell h-full flex flex-col">
                 <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <CardTitle className="pharos-kicker">Safety Score Comparison</CardTitle>
                   <CohortToggle

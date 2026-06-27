@@ -34,7 +34,7 @@ function ComparePreview({
         </span>
       </div>
 
-      <div className="min-w-0 rounded-2xl border border-border/60 bg-background/45 p-4">
+      <div className="min-w-0 rounded-xl border border-border/60 bg-background/45 p-4">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {featuredCoins.map((coinId) => {
             const coin = TRACKED_META_BY_ID.get(coinId);
@@ -52,7 +52,7 @@ function ComparePreview({
         </div>
 
         <div className="mt-4 grid min-w-0 gap-3">
-          <div className="rounded-2xl border border-border/50 bg-muted/20 p-3">
+          <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
             <div className="mb-3 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-medium text-foreground">Market cap history</p>
               <span className="text-xs text-muted-foreground">Normalized overlays</span>
@@ -63,7 +63,7 @@ function ComparePreview({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[1.05fr_0.95fr]">
-            <div className="min-w-0 rounded-2xl border border-border/50 bg-muted/20 p-3">
+            <div className="min-w-0 rounded-xl border border-border/50 bg-muted/20 p-3">
               <div className="mb-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm font-medium text-foreground">Quick deltas</p>
                 <span className="text-xs text-muted-foreground">peg, supply, liquidity</span>
@@ -85,7 +85,7 @@ function ComparePreview({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border/50 bg-muted/20 p-3">
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm font-medium text-foreground">Safety score radar</p>
                 <Waves className="h-4 w-4 text-primary/80" />
@@ -166,7 +166,7 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
                 key={preset.title}
                 type="button"
                 onClick={() => onApplyPreset(preset)}
-                className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm font-medium text-foreground hover:border-primary/45 hover:bg-primary/8"
+                className="pharos-focus-ring pharos-control-pill inline-flex min-h-11 items-center gap-2 px-4 py-2 text-sm font-medium text-foreground"
               >
                 {preset.title}
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />

@@ -91,7 +91,7 @@ export function MethodologyChangelogPage({
 
       <section
         id="overview"
-        className="scroll-mt-28 rounded-[1.5rem] border border-border/60 bg-card/70 px-5 py-5 sm:px-6"
+        className="pharos-card-shell scroll-mt-28 px-5 py-5 sm:px-6"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
           <div className="space-y-2">
@@ -103,7 +103,7 @@ export function MethodologyChangelogPage({
               retained so historical charts and citations can be read against the rules active at the time.
             </p>
           </div>
-          <div className="space-y-2 rounded-2xl border border-border/50 bg-background/45 px-4 py-4">
+          <div className="space-y-2 rounded-xl border border-border/50 bg-background/45 px-4 py-4">
             <p className="pharos-kicker">Primary References</p>
             <div className="flex flex-col gap-2 text-sm">
               <Link
@@ -133,7 +133,7 @@ export function MethodologyChangelogPage({
           {latestEntry && (
             <section
               id="latest-updates"
-              className="scroll-mt-28 rounded-[1.5rem] border border-border/60 border-l-[3px] border-l-foreground/50 bg-card/88 px-5 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.12)] sm:px-6"
+              className="pharos-card-shell scroll-mt-28 px-5 py-5 sm:px-6"
             >
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
                 <div className="space-y-3">
@@ -154,7 +154,7 @@ export function MethodologyChangelogPage({
                   <h2 className="text-xl font-semibold tracking-tight">{latestEntry.title}</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">{latestEntry.summary}</p>
                 </div>
-                <div className="rounded-2xl border border-border/50 bg-background/45 px-4 py-4">
+                <div className="rounded-xl border border-border/50 bg-background/45 px-4 py-4">
                   <p className="pharos-kicker">Impact Snapshot</p>
                   {latestEntry.impact.length > 0 ? (
                     <ul className="mt-3 space-y-2 text-sm text-muted-foreground">

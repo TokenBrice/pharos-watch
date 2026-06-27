@@ -34,10 +34,9 @@ export function EmptyStateSurface({
   return (
     <section
       className={cn(
-        "w-full max-w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-border/70 px-4 py-5 shadow-[0_22px_60px_oklch(0_0_0_/0.22)] sm:px-6 sm:py-6",
+        "pharos-card-shell w-full max-w-full min-w-0 overflow-hidden px-4 py-5 sm:px-6 sm:py-6",
         className,
       )}
-      style={{ background: "var(--surface-onboarding-gradient)" }}
     >
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-start">
         <div className="min-w-0 space-y-5">
@@ -54,7 +53,7 @@ export function EmptyStateSurface({
           {steps.length > 0 ? (
             <ol className="grid gap-3 sm:grid-cols-3">
               {steps.map((step, index) => (
-                <li key={step.title} className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
+                <li key={step.title} className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
                   <p className="pharos-kicker text-primary/80">0{index + 1}</p>
                   <p className="mt-2 text-sm font-semibold text-foreground">{step.title}</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
@@ -66,14 +65,14 @@ export function EmptyStateSurface({
           {actions}
           {children}
           {footnote ? (
-            <div className="rounded-2xl border border-border/60 bg-background/35 px-4 py-3 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-border/60 bg-background/35 px-4 py-3 text-sm text-muted-foreground">
               {footnote}
             </div>
           ) : null}
         </div>
 
         {preview ? (
-          <div className="min-w-0 rounded-[1.35rem] border border-border/70 bg-background/60 p-4 shadow-[inset_0_1px_0_oklch(1_0_0_/0.06)]">
+          <div className="min-w-0 rounded-xl border border-border/70 bg-background/60 p-4">
             {preview}
           </div>
         ) : null}

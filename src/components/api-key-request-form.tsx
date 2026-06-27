@@ -84,7 +84,7 @@ export function ApiKeyRequestForm() {
           : "lg:grid-cols-[minmax(0,0.58fr)_minmax(20rem,0.42fr)]",
       )}
     >
-      <form onSubmit={handleSubmit} className="rounded-[1.5rem] border border-border/60 bg-card/78 p-4 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5">
+      <form onSubmit={handleSubmit} className="pharos-card-shell p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <p className="pharos-kicker">Email Verification</p>
@@ -290,9 +290,9 @@ export function ApiKeyRequestForm() {
       <aside className={cn("space-y-4", issuedKey ? "lg:sticky lg:top-24 lg:self-start" : "")}>
         <section
           className={cn(
-            "rounded-[1.5rem] border border-border/60 bg-card/78 p-4 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5",
+            "pharos-card-shell p-4 sm:p-5",
             issuedKey
-              ? "border-emerald-500/45 bg-emerald-500/8 shadow-[0_24px_70px_oklch(0.73_0.17_160_/0.18)] ring-1 ring-emerald-500/20"
+              ? "border-emerald-500/45 bg-emerald-500/8 ring-1 ring-emerald-500/20"
               : "",
           )}
           aria-live={verificationStatus === "issued" || verificationStatus === "verifying" ? "polite" : undefined}
@@ -362,7 +362,7 @@ export function ApiKeyRequestForm() {
                 </div>
               ) : null}
 
-              <div className="overflow-hidden rounded-2xl border border-emerald-500/35 bg-zinc-950 text-zinc-100 shadow-inner">
+              <div className="overflow-hidden rounded-xl border border-emerald-500/35 bg-zinc-950 text-zinc-100">
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <span className="text-xs font-semibold uppercase text-zinc-400">Token</span>
                   <Button
@@ -416,7 +416,7 @@ export function ApiKeyRequestForm() {
 
         <section
           className={cn(
-            "rounded-[1.5rem] border border-border/60 bg-card/78 p-4 text-sm leading-relaxed text-muted-foreground shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:p-5",
+            "pharos-card-shell p-4 text-sm leading-relaxed text-muted-foreground sm:p-5",
             issuedKey ? "border-emerald-500/25 bg-emerald-500/6" : "",
           )}
         >

@@ -132,7 +132,7 @@ function DonutCard({
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
-    <Card className="rounded-xl">
+    <Card className="pharos-card-shell">
       <CardHeader className="pb-2">
         <DetailSectionTitle>{title}</DetailSectionTitle>
       </CardHeader>
@@ -237,7 +237,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl">
+      <Card className="pharos-card-shell">
         <CardHeader className="pb-2">
           <DetailSectionTitle>
             <MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>
@@ -281,7 +281,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl">
+      <Card className="pharos-card-shell">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Liquidity by Protocol</DetailSectionTitle>
         </CardHeader>
@@ -296,7 +296,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (data.length === 0) {
     return (
-      <Card className="rounded-xl">
+      <Card className="pharos-card-shell">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Liquidity by Protocol</DetailSectionTitle>
         </CardHeader>

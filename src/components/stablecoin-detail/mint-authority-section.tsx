@@ -184,7 +184,7 @@ export function MintAuthoritySection({
   return (
     <Card
       id="mint-authority"
-      className={cn("rounded-xl", SECTION_SCROLL_MT)}
+      className={cn("pharos-card-shell", SECTION_SCROLL_MT)}
     >
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -48,7 +48,7 @@ export function MetricStatCard({
   return (
     <Card
       className={cn(
-        "@container rounded-xl",
+        "@container pharos-card-shell",
         (borderColorClass || borderColorHex) && "border-l-[3px]",
         borderColorClass,
         isInteractive &&

@@ -24,7 +24,7 @@ export interface CoverageMobileCardProps {
 
 export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
   return (
-    <details className="group rounded-2xl border border-border/70 bg-background/35 open:bg-background/42">
+    <details className="group rounded-xl border border-border/70 bg-background/35 open:bg-background/42">
       <summary className="pharos-focus-ring flex cursor-pointer list-none flex-col gap-4 p-4 [&::-webkit-details-marker]:hidden">
         <div className="flex items-start justify-between gap-3">
           <CoverageCoinIdentity row={row} logoSrc={logoSrc} logoSize={32} variant="mobile" />

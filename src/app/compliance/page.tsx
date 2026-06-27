@@ -42,7 +42,7 @@ const COMPLIANCE_FAQ_ITEMS = [
 
 const COMPLIANCE_STATIC_SECTION = (
   <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+    <div className="pharos-card-shell px-4 py-4">
       <p className="pharos-kicker">How To Read Status</p>
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
         <p>
@@ -57,7 +57,7 @@ const COMPLIANCE_STATIC_SECTION = (
         </p>
       </div>
     </div>
-    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+    <div className="pharos-card-shell px-4 py-4">
       <p className="pharos-kicker">GENIUS Regime State</p>
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Public law</dt>

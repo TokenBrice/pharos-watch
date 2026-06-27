@@ -84,7 +84,7 @@ export default async function StaticComparisonPage({ params }: { params: Promise
       }
     >
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.58fr)]">
-        <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+        <div className="pharos-card-shell px-4 py-4">
           <p className="pharos-kicker">Comparison Brief</p>
           <p className="mt-3 max-w-4xl text-sm leading-relaxed text-muted-foreground">{page.summary}</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
@@ -127,7 +127,7 @@ export default async function StaticComparisonPage({ params }: { params: Promise
         </div>
 
         <aside
-          className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4"
+          className="pharos-card-shell px-4 py-4"
           aria-labelledby="comparison-short-answer-title"
         >
           <p className="pharos-kicker">Short Answer</p>
@@ -143,7 +143,7 @@ export default async function StaticComparisonPage({ params }: { params: Promise
 
       <section className="grid gap-4 lg:grid-cols-2">
         {[page.left, page.right].map((coin) => (
-          <article key={coin.id} className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+          <article key={coin.id} className="pharos-card-shell px-4 py-4">
             <p className="pharos-kicker">{coin.symbol}</p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">{coin.name}</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
@@ -176,7 +176,7 @@ export default async function StaticComparisonPage({ params }: { params: Promise
           tableId="static-compare-at-a-glance"
           testId="static-compare-at-a-glance-table"
           chrome="bare"
-          className="overflow-hidden rounded-2xl border border-border/60"
+          className="overflow-hidden rounded-xl border border-border/60"
           viewportProps={{ mobileScrollHint: false, scrollShadow: false, compactBottomPadding: false }}
         >
           <TableCaption className="sr-only">{page.shortTitle} comparison summary</TableCaption>
@@ -207,7 +207,7 @@ export default async function StaticComparisonPage({ params }: { params: Promise
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="space-y-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+        <div className="pharos-card-shell space-y-3 px-4 py-4">
           <h2 className="pharos-kicker">Research Links</h2>
           <div className="flex flex-col gap-2">
             {researchLinks.map((link) => (
@@ -222,7 +222,7 @@ export default async function StaticComparisonPage({ params }: { params: Promise
           </div>
         </div>
 
-        <div className="space-y-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+        <div className="pharos-card-shell space-y-3 px-4 py-4">
           <h2 className="pharos-kicker">Related Taxonomies</h2>
           <div className="flex flex-col gap-2">
             {taxonomyLinks.map((link) => (

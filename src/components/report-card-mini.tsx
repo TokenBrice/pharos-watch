@@ -71,7 +71,7 @@ export function ReportCardMini({
   const cardBody = (
     <Card
       className={cn(
-        "hover:bg-accent/50 hover:shadow-md transition-all cursor-pointer h-full",
+        "pharos-card-shell pharos-interactive-card h-full cursor-pointer",
         isSimulated && "border-dashed border-amber-500/40",
         dimUnaffected && "opacity-60"
       )}

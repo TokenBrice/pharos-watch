@@ -40,7 +40,7 @@ const LIQUIDITY_FAQ_ITEMS = [
 
 const LIQUIDITY_STATIC_SECTION = (
   <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+    <div className="pharos-card-shell px-4 py-4">
       <p className="pharos-kicker">How To Read Liquidity</p>
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
         <p>
@@ -73,7 +73,7 @@ const LIQUIDITY_STATIC_SECTION = (
         </p>
       </div>
     </div>
-    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+    <div className="pharos-card-shell px-4 py-4">
       <p className="pharos-kicker">Best Questions</p>
       <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
         <li>Is liquidity spread across several protocols or concentrated in one pool?</li>

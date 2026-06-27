@@ -17,7 +17,7 @@ export function BlacklistDetailStats({ symbol, stats, isLoading }: BlacklistDeta
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="rounded-xl">
+          <Card key={i} className="pharos-card-shell">
             <CardHeader>
               <Skeleton className="h-4 w-24" />
             </CardHeader>

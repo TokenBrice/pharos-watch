@@ -95,7 +95,7 @@ export default function StablecoinsHubPage() {
     >
       <section className="grid gap-4 sm:grid-cols-2">
         {AXES.map((axis) => (
-          <div key={axis.href} className="space-y-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+          <div key={axis.href} className="pharos-card-shell space-y-3 px-4 py-4">
             <h2 className="text-base font-semibold tracking-tight">
               <Link href={axis.href} className="pharos-focus-ring rounded-sm underline-offset-4 hover:underline">
                 {axis.label}

@@ -23,7 +23,7 @@ const COVERAGE_FAQ_JSON_LD = buildFaqJsonLd(COVERAGE_FAQ_ITEMS.map((item) => ({ 
 const COVERAGE_DATASET_JSON_LD = buildCoverageDatasetJsonLd();
 
 const COVERAGE_STATIC_SECTION = (
-  <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+  <section className="pharos-card-shell px-4 py-4">
     <p className="pharos-kicker">How To Read Coverage</p>
     <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
       <p>

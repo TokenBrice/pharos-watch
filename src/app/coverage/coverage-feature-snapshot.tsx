@@ -124,7 +124,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
 
       <div className="min-w-0">
         <div
-          className="relative flex h-10 overflow-hidden rounded-md border border-border/60 bg-muted/65 shadow-[inset_0_1px_0_oklch(0_0_0_/0.18)]"
+          className="relative flex h-10 overflow-hidden rounded-md border border-border/60 bg-muted/65"
           role="img"
           aria-label={`${summary.feature.label} coverage: ${segmentLabel}`}
         >

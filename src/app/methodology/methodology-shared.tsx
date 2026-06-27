@@ -107,9 +107,9 @@ export function MethodologyDetails({
       data-methodology-details="true"
       data-methodology-primary={primary ? "true" : undefined}
       open={defaultOpen}
-      className="group rounded-2xl border border-border/60 bg-background/45 shadow-[inset_0_1px_0_oklch(1_0_0_/0.04)]"
+      className="group rounded-xl border border-border/60 bg-background/45"
     >
-      <summary className="pharos-focus-ring cursor-pointer rounded-2xl px-4 py-3.5 text-sm font-semibold text-foreground">{summary}</summary>
+      <summary className="pharos-focus-ring cursor-pointer rounded-xl px-4 py-3.5 text-sm font-semibold text-foreground">{summary}</summary>
       <div className="space-y-6 border-t border-border/50 px-4 pb-5 pt-4">{children}</div>
     </details>
   );
@@ -119,7 +119,7 @@ export function MethodologyFacts({ facts }: { facts: Array<{ label: string; valu
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {facts.map((fact) => (
-        <div key={fact.label} className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
+        <div key={fact.label} className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
           <p className="pharos-kicker">{fact.label}</p>
           <p className="mt-2 text-sm text-foreground">{fact.value}</p>
         </div>
@@ -130,8 +130,8 @@ export function MethodologyFacts({ facts }: { facts: Array<{ label: string; valu
 
 export function WorkedExample({ children, summary }: { children: ReactNode; summary: string }) {
   return (
-    <details data-methodology-worked-example="true" className="rounded-2xl border border-border/60 bg-background/80">
-      <summary className="pharos-focus-ring cursor-pointer rounded-2xl px-4 py-3.5 text-sm font-semibold text-foreground">{summary}</summary>
+    <details data-methodology-worked-example="true" className="rounded-xl border border-border/60 bg-background/80">
+      <summary className="pharos-focus-ring cursor-pointer rounded-xl px-4 py-3.5 text-sm font-semibold text-foreground">{summary}</summary>
       <div className="space-y-2 border-t border-border/50 px-4 pb-4 pt-4 text-sm leading-relaxed text-muted-foreground">
         {children}
       </div>

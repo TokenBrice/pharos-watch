@@ -30,7 +30,7 @@ export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "err
   const isError = state === "error";
 
   return (
-    <Card className="rounded-[1.45rem] border border-border/70 bg-card/80">
+    <Card className="pharos-card-shell">
       <CardHeader className="space-y-2">
         <p className="pharos-kicker">Coverage Matrix</p>
         <CardTitle as="h2" className="text-xl">
@@ -43,7 +43,7 @@ export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "err
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-8 text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border/70 bg-background/30 px-4 py-8 text-sm text-muted-foreground">
           {isError
             ? "Active-coin denominator isn't ready this round."
             : "Preparing feature availability, market-cap reach, and per-coin statuses."}
@@ -70,8 +70,8 @@ export function CoverageFeatureSnapshotCard({
       : 0;
 
   return (
-    <Card className="overflow-hidden rounded-xl border border-border/80 bg-card/90 shadow-[0_22px_54px_oklch(0_0_0_/0.18)]">
-      <CardHeader className="border-b border-border/70 bg-muted/20 px-4 py-5 sm:px-6 sm:py-6">
+    <Card className="pharos-card-shell overflow-hidden">
+      <CardHeader className="pharos-panel-header px-4 py-5 sm:px-6 sm:py-6">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-end">
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -196,7 +196,7 @@ export function CoveragePricingSourcesCard({
   }
 
   return (
-    <Card className="rounded-[1.6rem] border border-border/70 bg-card/85 shadow-[0_18px_44px_oklch(0_0_0_/0.14)]">
+    <Card className="pharos-card-shell">
       <CardHeader className="space-y-2">
         <p className="pharos-kicker">Pricing Sources</p>
         <CardTitle as="h2" className="text-xl tracking-tight">
@@ -212,7 +212,7 @@ export function CoveragePricingSourcesCard({
           {pricingSources.map((source) => (
             <div
               key={source.name}
-              className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-border/60 bg-background/40 px-4 py-4"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-border/60 bg-background/40 px-4 py-4"
             >
               <span className="text-sm font-semibold text-foreground">{getPricingSourceLabel(source.name)}</span>
               <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">{source.count}</span>
@@ -286,7 +286,7 @@ export function CoverageMatrixCard(
     .join(", ");
 
   return (
-    <Card className="rounded-[1.45rem] border border-border/70 bg-card/80">
+    <Card className="pharos-card-shell">
       <CardHeader className="space-y-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -319,7 +319,7 @@ export function CoverageMatrixCard(
                 value={model.search}
                 onChange={(event) => model.setSearch(event.target.value)}
                 placeholder="Search stablecoin or ticker"
-                className="h-11 rounded-2xl border-border/65 bg-background/45 pl-10 sm:h-10"
+                className="h-11 rounded-lg border-border/65 bg-background/45 pl-10 sm:h-10"
                 aria-label="Search stablecoin coverage table"
               />
             </div>
@@ -329,7 +329,7 @@ export function CoverageMatrixCard(
               <select
                 value={model.sort}
                 onChange={(event) => model.setSort(event.target.value as CoverageSortKey)}
-                className="pharos-focus-ring h-11 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground transition-colors sm:h-10"
+                className="pharos-focus-ring h-11 rounded-lg border border-border/65 bg-background/45 px-3 text-sm text-foreground transition-colors sm:h-10"
                 aria-label="Sort coverage table"
               >
                 {SORT_OPTIONS.map((group) => (
@@ -362,10 +362,10 @@ export function CoverageMatrixCard(
                     aria-controls="coverage-results"
                     onClick={() => model.setFilter(option.key)}
                     className={cn(
-                      "pharos-focus-ring min-h-11 rounded-full border px-3 text-xs font-medium transition-colors sm:h-8 sm:min-h-0",
+                      "pharos-focus-ring pharos-control-pill min-h-11 px-3 text-xs font-medium sm:h-8 sm:min-h-0",
                       model.filter === option.key
-                        ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
-                        : "border-border/60 bg-background/45 text-muted-foreground hover:text-foreground",
+                        ? "pharos-control-pill-active"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {option.label}
@@ -401,14 +401,14 @@ export function CoverageMatrixCard(
         {model.unavailableFeatures.length > 0 ? (
           <div
             role="status"
-            className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:text-amber-200"
+            className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:text-amber-200"
           >
             Some feature feeds are unavailable, so affected cells are marked Data n/a, or Checking for reserve sync,
             instead of being counted as coverage gaps: {unavailableFeatureLabels}.
           </div>
         ) : null}
 
-        <details className="group rounded-2xl border border-border/60 bg-background/35">
+        <details className="group rounded-xl border border-border/60 bg-background/35">
           <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
             <span>Status legend</span>
             <ChevronDown
@@ -438,7 +438,7 @@ export function CoverageMatrixCard(
 
       <CardContent id="coverage-results" className="space-y-4">
         {model.filteredRows.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-10 text-center">
+          <div className="rounded-xl border border-dashed border-border/70 bg-background/30 px-4 py-10 text-center">
             <SearchX className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
             <p className="mt-4 text-sm font-medium text-foreground">No stablecoins match your search or filters.</p>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -481,7 +481,7 @@ export function CoverageMatrixCard(
                 caption={`Per-coin feature availability across ${model.rows.length} active stablecoins.`}
                 captionClassName="sr-only"
                 chrome="bare"
-                className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block"
+                className="hidden overflow-hidden rounded-xl border border-border/70 bg-background/30 md:block"
                 tableClassName="min-w-[64rem] table-fixed"
                 viewportClassName="overflow-auto"
                 viewportProps={{

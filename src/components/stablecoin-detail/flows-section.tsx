@@ -28,7 +28,7 @@ interface FlowHistorySectionProps {
 export function FlowHistorySection({ stablecoinId }: FlowHistorySectionProps) {
   return (
     <section id="flow-history">
-      <Card className="p-4">
+      <Card className="pharos-card-shell p-4">
         <div className="mb-3">
           <DetailSectionTitle>
             <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flow History</MethodologyLabel>

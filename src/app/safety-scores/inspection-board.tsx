@@ -14,7 +14,6 @@ import type {
 interface ScoreTone {
   text: string;
   bar: string;
-  borderL: string;
   panel: string;
   label: string;
 }
@@ -22,7 +21,6 @@ interface ScoreTone {
 const NOT_RATED_SCORE_TONE = {
   text: "text-zinc-700 dark:text-zinc-300",
   bar: "bg-zinc-500",
-  borderL: "border-l-zinc-500",
   panel: "border-zinc-500/30 bg-zinc-500/10",
   label: "Not rated",
 } satisfies ScoreTone;
@@ -32,7 +30,6 @@ const SCORE_TONE_BANDS = [
     min: 80,
     text: "text-emerald-700 dark:text-emerald-300",
     bar: "bg-emerald-500",
-    borderL: "border-l-emerald-500",
     panel: "border-emerald-500/30 bg-emerald-500/10",
     label: "Clean",
   },
@@ -40,7 +37,6 @@ const SCORE_TONE_BANDS = [
     min: 65,
     text: "text-sky-700 dark:text-sky-300",
     bar: "bg-sky-500",
-    borderL: "border-l-sky-500",
     panel: "border-sky-500/30 bg-sky-500/10",
     label: "Watch",
   },
@@ -48,7 +44,6 @@ const SCORE_TONE_BANDS = [
     min: 50,
     text: "text-amber-700 dark:text-amber-300",
     bar: "bg-amber-500",
-    borderL: "border-l-amber-500",
     panel: "border-amber-500/30 bg-amber-500/10",
     label: "Finding",
   },
@@ -56,7 +51,6 @@ const SCORE_TONE_BANDS = [
     min: Number.NEGATIVE_INFINITY,
     text: "text-red-700 dark:text-red-300",
     bar: "bg-red-500",
-    borderL: "border-l-red-500",
     panel: "border-red-500/30 bg-red-500/10",
     label: "Critical",
   },
@@ -67,7 +61,6 @@ const CRITICAL_SCORE_TONE = SCORE_TONE_BANDS[SCORE_TONE_BANDS.length - 1];
 function scoreTone(row: SafetyInspectionRow): {
   text: string;
   bar: string;
-  borderL: string;
   panel: string;
   label: string;
 } {
@@ -99,7 +92,7 @@ export function SafetyInspectionBoard({
   const totalFindings = model.rows.reduce((sum, row) => sum + row.findingCount, 0);
 
   return (
-    <Card className={cn("overflow-hidden rounded-xl border-l-[3px]", leadTone.borderL)}>
+    <Card className="pharos-card-shell overflow-hidden">
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">

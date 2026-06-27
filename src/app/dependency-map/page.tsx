@@ -35,7 +35,7 @@ const DEPENDENCY_MAP_FAQ_ITEMS = [
 ] as const satisfies readonly FaqItem[];
 
 const DEPENDENCY_MAP_STATIC_SECTION = (
-  <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+  <section className="pharos-card-shell px-4 py-4">
     <p className="pharos-kicker">Dependency Lens</p>
     <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
       <p>

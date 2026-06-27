@@ -128,7 +128,7 @@ function ComparePairDirectory() {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {STATIC_COMPARISON_PAGES.map((page) => (
-          <article key={page.href} className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+          <article key={page.href} className="pharos-card-shell px-4 py-4">
             <div className="flex h-full flex-col gap-3">
               <div className="min-w-0 space-y-2">
                 <p className="pharos-kicker">

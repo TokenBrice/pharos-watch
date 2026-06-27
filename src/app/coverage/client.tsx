@@ -31,7 +31,7 @@ export default function CoveragePageClient() {
         </>
       )}
 
-      <Card className="pharos-card-shell rounded-[1.45rem] p-5 sm:p-6">
+      <Card className="pharos-card-shell p-5 sm:p-6">
         <CardHeader className="pb-2">
           <p className="pharos-kicker">Frequently Asked</p>
           <CardTitle className="leading-none font-semibold">Coverage FAQ</CardTitle>

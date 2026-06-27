@@ -121,7 +121,7 @@ export default function MethodologyPage() {
                 and frozen coins are excluded from new computations and live aggregates.
               </p>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4 md:hidden">
+            <div className="pharos-card-shell px-4 py-4 md:hidden">
               <div className="space-y-3">
                 <div className="space-y-2">
                   <p className="pharos-kicker">Reader Guide</p>
@@ -143,7 +143,7 @@ export default function MethodologyPage() {
               </div>
             </div>
           </div>
-          <div className="hidden rounded-2xl border border-border/60 bg-card/72 px-4 py-4 md:block">
+          <div className="hidden pharos-card-shell px-4 py-4 md:block">
             <p className="pharos-kicker">Reader Guide</p>
             <p className="mt-2 text-sm text-foreground">
               {READER_GUIDE_COPY} Use the jump rail toggle to switch modes without losing your place in the page.
@@ -163,7 +163,7 @@ export default function MethodologyPage() {
         before the scoring formulas.
       </p>
 
-      <Card className="hidden rounded-xl border border-border/70 bg-card md:block">
+      <Card className="pharos-card-shell hidden md:block">
         <CardHeader className="space-y-3 pb-2">
           <CardTitle as="h2">How to Read This Page</CardTitle>
           <p className="text-sm text-muted-foreground">

@@ -44,7 +44,7 @@ export function RedemptionBackstopCard({
   return (
     <Card
       id="redemption"
-      className={SECTION_SCROLL_MT}
+      className={cn("pharos-card-shell", SECTION_SCROLL_MT)}
     >
       <CardHeader className="pb-3">
         <DetailSectionTitle>

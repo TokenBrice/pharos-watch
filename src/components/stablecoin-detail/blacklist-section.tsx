@@ -40,7 +40,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
       id="blacklist"
       className={SECTION_SCROLL_MT}
     >
-      <Card className="p-4">
+      <Card className="pharos-card-shell p-4">
         <div className="mb-3">
           <DetailSectionTitle>
             <MethodologyLabel topic="blacklistTracker">Blacklist Activity</MethodologyLabel>
@@ -71,7 +71,7 @@ export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
 
   return (
     <section id="blacklist-history">
-      <Card className="p-4">
+      <Card className="pharos-card-shell p-4">
         <div className="mb-3">
           <DetailSectionTitle>
             <MethodologyLabel topic="blacklistTracker">Recent Blacklist Events</MethodologyLabel>

@@ -109,7 +109,7 @@ export function PriceTransparencyCard({
         : "border-border/60 bg-muted/40 text-muted-foreground";
 
   return (
-    <Card className="rounded-xl" id="price-transparency">
+    <Card className="pharos-card-shell" id="price-transparency">
       <CardHeader className="pb-2">
         <DetailSectionTitle>
           <MethodologyLabel topic="pegScore">Price Transparency</MethodologyLabel>

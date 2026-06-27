@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSafetyGradeBadgeClassName, getSafetyGradeMetadata } from "@/lib/report-card-ui";
+import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency } from "@shared/lib/format";
@@ -45,10 +45,10 @@ function GradeFilterButtons({
   return (
     <>
       <Button
-        variant={gradeFilter === "all" ? "default" : "outline"}
+        variant="ghost"
         size="sm"
         onClick={() => onChange("all")}
-        className="pharos-focus-ring rounded-full text-xs min-h-[44px] md:min-h-0"
+        className={cn("pharos-focus-ring pharos-control-pill text-xs min-h-[44px] md:min-h-0", gradeFilter === "all" && "pharos-control-pill-active")}
       >
         All ({totalCards})
       </Button>
@@ -59,12 +59,12 @@ function GradeFilterButtons({
         return (
           <Button
             key={range}
-            variant={isActive ? "default" : "outline"}
+            variant="ghost"
             size="sm"
             onClick={() => onChange(isActive ? "all" : range)}
             className={cn(
-              "pharos-focus-ring rounded-full text-xs min-h-[44px] md:min-h-0",
-              isActive && getSafetyGradeBadgeClassName(range),
+              "pharos-focus-ring pharos-control-pill text-xs min-h-[44px] md:min-h-0",
+              isActive && "pharos-control-pill-active",
             )}
           >
             {range} ({count})
@@ -87,10 +87,10 @@ function SortButtons({
       {SORT_OPTIONS.map((option) => (
         <Button
           key={option.key}
-          variant={sortKey === option.key ? "default" : "outline"}
+          variant="ghost"
           size="sm"
           onClick={() => onChange(option.key)}
-          className="pharos-focus-ring rounded-full text-xs min-h-[44px] md:min-h-0"
+          className={cn("pharos-focus-ring pharos-control-pill text-xs min-h-[44px] md:min-h-0", sortKey === option.key && "pharos-control-pill-active")}
         >
           {option.label}
         </Button>
@@ -128,7 +128,7 @@ function GradeSectionHeader({ grade, count }: { grade: string; count: number }) 
 export function SafetyScoresLoadingState() {
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="pharos-card-shell">
         <CardContent className="pt-6 pb-6 space-y-4">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-10 w-full rounded-xl" />
@@ -137,7 +137,7 @@ export function SafetyScoresLoadingState() {
       </Card>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {Array.from({ length: 24 }, (_, index) => (
-          <Card key={index}>
+          <Card key={index} className="pharos-card-shell">
             <CardContent className="py-4 space-y-2">
               <Skeleton className="h-8 w-8 rounded-full" />
               <Skeleton className="h-4 w-20" />
@@ -162,7 +162,7 @@ export function SafetyHeadlineStats({
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-lg border border-border/50 bg-card/50 px-3 py-3 text-center"
+          className="pharos-card-shell px-3 py-3 text-center"
         >
           <p className="pharos-kicker">{stat.label}</p>
           <p className="text-lg font-bold font-mono tracking-tight">{stat.value}</p>
@@ -257,7 +257,7 @@ export function SafetyControlsPanel({
 }) {
   return (
     <div className="space-y-3 border-t border-border/30 pt-6">
-      <details className="rounded-2xl border border-border/60 bg-card/50 px-4 py-3 md:hidden">
+      <details className="pharos-card-shell px-4 py-3 md:hidden">
         <summary className="pharos-focus-ring cursor-pointer rounded-lg text-sm font-medium text-foreground">
           Sort and filter score cards
         </summary>

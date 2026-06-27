@@ -48,7 +48,7 @@ export function StablecoinDetailLoadingShell({
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {["Price", "Market Cap", "Supply", "Liquidity"].map((label) => (
-            <div key={label} className="rounded-2xl border border-border/60 bg-background/45 px-3.5 py-3">
+            <div key={label} className="rounded-xl border border-border/60 bg-background/45 px-3.5 py-3">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
               <Skeleton className="h-7 w-24" />
               <Skeleton className="mt-2 h-4 w-28" />
@@ -57,7 +57,7 @@ export function StablecoinDetailLoadingShell({
         </div>
       </section>
 
-      <div className="rounded-2xl border border-border/60 bg-background/90 px-4 py-3 shadow-[0_16px_40px_oklch(0_0_0_/0.12)]">
+      <div className="pharos-card-shell px-4 py-3">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="pharos-kicker">Jump to Section</p>
           <span className="text-[11px] text-muted-foreground">{statusLabel}</span>

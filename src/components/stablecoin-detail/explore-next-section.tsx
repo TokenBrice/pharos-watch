@@ -119,7 +119,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
   return (
     <section
       id="explore-next"
-      className="mt-8 -mx-4 space-y-6 rounded-2xl bg-muted/15 px-4 py-6 sm:-mx-6 sm:px-6"
+      className="mt-8 -mx-4 space-y-6 rounded-xl bg-muted/15 px-4 py-6 sm:-mx-6 sm:px-6"
       aria-labelledby="explore-next-heading"
     >
       <div className="space-y-1.5">

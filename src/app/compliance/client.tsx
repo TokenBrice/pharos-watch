@@ -254,7 +254,7 @@ export function ComplianceClient() {
               <span className="font-mono text-xs text-muted-foreground">{rows.length.toLocaleString()} rows</span>
             </div>
             {rows.length === 0 ? (
-              <div className="rounded-2xl border border-border/60 bg-card/40 px-4 py-10 text-center text-sm text-muted-foreground">
+              <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
                 {regimeFilter === "genius" && !isGeniusEffective
                   ? "GENIUS rows remain in implementation watch until the regime is effective."
                   : "No stablecoins match these filters."}
@@ -286,7 +286,7 @@ export function ComplianceClient() {
                 </span>
               </div>
               {watchRows.length === 0 ? (
-                <div className="rounded-2xl border border-border/60 bg-card/40 px-4 py-10 text-center text-sm text-muted-foreground">
+                <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
                   No GENIUS implementation-watch rows match these filters.
                 </div>
               ) : (
@@ -327,7 +327,7 @@ function ComplianceTable({
       tableId={tableId}
       testId={testId}
       chrome="bare"
-      className="overflow-hidden rounded-2xl border border-border/60 bg-card/40"
+      className="pharos-table-shell"
       tableClassName="table-fixed min-w-[1120px]"
       tableProps={{ "aria-label": ariaLabel }}
       viewportClassName="relative w-full"

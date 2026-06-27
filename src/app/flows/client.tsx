@@ -190,7 +190,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         </section>
 
         <section className="order-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+          <div className="pharos-card-shell px-4 py-4">
             <p className="pharos-kicker">Flow Interpretation</p>
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <p>

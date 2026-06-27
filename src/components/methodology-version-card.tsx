@@ -29,7 +29,7 @@ export function MethodologyVersionCard({
     <details
       id={entryId}
       open={defaultOpen}
-      className="group rounded-[1.35rem] border border-border/60 bg-card shadow-sm"
+      className="pharos-card-shell group"
     >
       <summary className="cursor-pointer list-none px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -59,7 +59,7 @@ export function MethodologyVersionCard({
         </div>
       </summary>
       <div className="space-y-4 border-t border-border/60 px-5 pb-5 pt-4 text-sm text-muted-foreground leading-relaxed sm:px-6">
-        <div className="rounded-2xl border border-border/50 bg-background/45 px-4 py-3">
+        <div className="rounded-xl border border-border/50 bg-background/45 px-4 py-3">
           <p className="pharos-kicker">Impact Notes</p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {entry.impact.map((item) => (

@@ -66,7 +66,7 @@ export function StablecoinTaxonomyHub({
           <Link
             key={page.href}
             href={page.href}
-            className="pharos-focus-ring rounded-2xl border border-border/60 bg-card/60 px-4 py-4 transition-colors hover:bg-accent"
+            className="pharos-focus-ring pharos-card-shell pharos-interactive-card px-4 py-4"
           >
             <span className="block text-base font-semibold tracking-tight text-foreground">{page.title}</span>
             <span className="mt-2 block text-sm text-muted-foreground">{page.description}</span>
