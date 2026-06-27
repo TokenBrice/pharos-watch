@@ -727,7 +727,9 @@ export function StablecoinTable({
       }}
       topSlot={
         <>
-          <TableBackgroundRefreshingBar queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS} isPending={isLoading} />
+          {isFigmaOverview ? null : (
+            <TableBackgroundRefreshingBar queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS} isPending={isLoading} />
+          )}
           {isFigmaOverview ? null : tableToolbar}
           {filterPanel}
         </>

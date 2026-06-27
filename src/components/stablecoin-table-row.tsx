@@ -190,6 +190,7 @@ function StablecoinVirtualRowBase({
       style={{ height: densityConfig.rowHeight }}
       data-cursor={isCursor ? "true" : undefined}
       data-index={virtualIndex}
+      data-row-intent={isFigmaOverview ? "scan" : undefined}
       data-row-striped={isStriped ? "true" : undefined}
       tabIndex={isCursor ? 0 : undefined}
       onClick={(event) => {
@@ -213,7 +214,7 @@ function StablecoinVirtualRowBase({
                 isPinned
                   ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
                   : "text-muted-foreground opacity-80 hover:text-foreground xl:opacity-0 xl:group-hover:opacity-100 xl:focus-visible:opacity-100"
-              } ${isFigmaOverview ? "size-6 opacity-100 group-hover:opacity-100 focus-visible:opacity-100" : "size-11 xl:size-6"}`}
+              } ${isFigmaOverview ? "size-5 opacity-100 group-hover:opacity-100 focus-visible:opacity-100" : "size-11 xl:size-6"}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTogglePinned(coin.id);
@@ -222,7 +223,7 @@ function StablecoinVirtualRowBase({
                 e.stopPropagation();
               }}
             >
-              <Star className={`h-3.5 w-3.5 ${isPinned ? "fill-current" : ""}`} aria-hidden />
+              <Star className={`${isFigmaOverview ? "h-3 w-3" : "h-3.5 w-3.5"} ${isPinned ? "fill-current" : ""}`} aria-hidden />
             </button>
           )}
         </TableCell>
