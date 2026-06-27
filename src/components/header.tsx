@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
 import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "./theme-toggle";
 import {
   BOTTOM_NAV_ITEMS,
   COMPANION_NAV_ITEMS,
@@ -263,7 +264,7 @@ export function Header() {
               </nav>
 
               {/* Footer */}
-              <div className="border-t border-border/70 bg-muted/20 px-4 py-3 flex items-center shrink-0">
+              <div className="border-t border-border/70 bg-muted/20 px-4 py-3 flex items-center justify-between shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -276,6 +277,7 @@ export function Header() {
                   <Search className="h-4 w-4" />
                   Search
                 </Button>
+                <ThemeToggle />
               </div>
             </SheetContent>
           </Sheet>
