@@ -105,9 +105,9 @@ export function ResultPane({
     return (
       <div className="space-y-4" aria-busy="true" aria-live="polite">
         <p className="sr-only">Picker result is loading.</p>
-        <Skeleton className="h-32 w-full rounded-2xl" />
-        <Skeleton className="h-40 w-full rounded-2xl" />
-        <Skeleton className="h-40 w-full rounded-2xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
       </div>
     );
   }
@@ -359,7 +359,7 @@ function CompareWatchoutsAction({ href }: { href: string }) {
   return (
     <a
       href={href}
-      className="pharos-focus-ring inline-flex min-h-10 items-center justify-center rounded-full border border-border/65 bg-card/45 px-3 text-sm font-medium text-foreground hover:bg-card/70"
+      className="pharos-focus-ring pharos-control-pill min-h-10 px-3 text-sm"
     >
       Compare shortlist vs watch-outs
     </a>

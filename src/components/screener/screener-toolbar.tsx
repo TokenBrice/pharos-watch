@@ -43,7 +43,7 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
 };
 
 const FILTER_PILL_CLASS_NAME =
-  "min-h-11 font-semibold text-muted-foreground transition-[background-color,border-color,color,box-shadow,filter] hover:text-foreground data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:!border-[oklch(0.72_0.14_248)] data-[state=on]:!bg-[oklch(0.72_0.14_248)] data-[state=on]:!text-slate-950 data-[state=on]:shadow-[0_0_0_1px_oklch(0.72_0.14_248),0_0_18px_oklch(0.72_0.14_248_/_0.2)] sm:min-h-8";
+  "min-h-11 font-semibold text-muted-foreground transition-[background-color,border-color,color,box-shadow,filter] hover:text-foreground data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:!border-transparent data-[state=on]:!bg-foreground data-[state=on]:!text-background data-[state=on]:shadow-none sm:min-h-8";
 
 interface ScreenerToolbarProps {
   filters: ScreenerFilters;
