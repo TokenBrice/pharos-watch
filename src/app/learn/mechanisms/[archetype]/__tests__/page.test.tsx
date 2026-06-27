@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 
 const { notFoundMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
@@ -34,17 +33,13 @@ describe("ArchetypeExplainerPage", () => {
   });
 
   for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
-    it(`renders an <h1> containing the "${archetype}" label`, async () => {
+    it(`renders exactly one semantic <h1> for "${archetype}"`, async () => {
       const element = await ArchetypeExplainerPage({
         params: Promise.resolve({ archetype }),
       });
       const html = renderToStaticMarkup(element);
-      const label = MECHANISM_ARCHETYPE_LABELS[archetype];
-      // Page renders an editorial display <h1> (headline) plus the archetype
-      // label inside the breadcrumb trail. Assert one semantic h1 exists and
-      // the label is present somewhere in the markup.
-      expect(html).toMatch(/<h1\b/);
-      expect(html).toContain(label);
+      const matches = html.match(/<h1\b/g) ?? [];
+      expect(matches).toHaveLength(1);
     });
   }
 

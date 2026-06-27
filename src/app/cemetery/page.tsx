@@ -76,11 +76,6 @@ export default function CemeteryPage() {
         }}
       />
       <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Stablecoin Cemetery</span>
-        </nav>
         <h1 className="text-4xl font-extrabold tracking-tighter">Stablecoin Cemetery</h1>
         <p className="text-sm text-muted-foreground">
           Defunct, depegged, and discontinued. Logos mark each grave, biggest collapses stand tallest, and hover plaques surface the autopsy context.{" "}

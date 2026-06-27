@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ChevronUp, MessageSquarePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { FeedbackModal } from "@/components/feedback-modal-lazy";
 
 export function MobileUtilityDock() {
+  const pathname = usePathname();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -23,6 +25,8 @@ export function MobileUtilityDock() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  if (pathname === "/") return null;
+
   return (
     <>
       <div
@@ -31,19 +35,19 @@ export function MobileUtilityDock() {
           showFeedback
             ? "pointer-events-none visible translate-y-0 opacity-100"
             : "pointer-events-none invisible translate-y-4 opacity-0",
-          !prefersReducedMotion && "transition-[opacity,transform] duration-300 ease-out"
+          !prefersReducedMotion && "transition-[opacity,transform] duration-300 ease-out",
         )}
         style={{
-          transitionTimingFunction: showFeedback
-            ? "cubic-bezier(0.0, 0.0, 0.2, 1)"
-            : "cubic-bezier(0.4, 0.0, 1, 1)",
+          transitionTimingFunction: showFeedback ? "cubic-bezier(0.0, 0.0, 0.2, 1)" : "cubic-bezier(0.4, 0.0, 1, 1)",
         }}
       >
-        <div className={cn(
-          "pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background p-1",
-          "shadow-[0_-4px_20px_oklch(0_0_0_/0.08),0_14px_38px_oklch(0_0_0_/0.28)]",
-          "dark:shadow-[0_-4px_20px_oklch(0_0_0_/0.15),0_14px_38px_oklch(0_0_0_/0.35)]"
-        )}>
+        <div
+          className={cn(
+            "pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background p-1",
+            "shadow-[0_-4px_20px_oklch(0_0_0_/0.08),0_14px_38px_oklch(0_0_0_/0.28)]",
+            "dark:shadow-[0_-4px_20px_oklch(0_0_0_/0.15),0_14px_38px_oklch(0_0_0_/0.35)]",
+          )}
+        >
           <button
             type="button"
             onClick={() => setFeedbackOpen(true)}

@@ -1,102 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment, useEffect, useRef } from "react";
-import { ChevronRight } from "lucide-react";
 import { HomepageTape } from "@/components/homepage-tape";
-import { useSidebar } from "@/components/sidebar-context";
-import { CORE_NAV_ITEMS, isCoreNavPath, normalizeNavPath } from "@/lib/nav-config";
-import { cn } from "@/lib/utils";
+import { isCoreNavPath } from "@/lib/nav-config";
 
+function isChromelessPath(pathname: string | null): boolean {
+  return pathname === "/pharoswatchbot/app" || pathname?.startsWith("/pharoswatchbot/app/") === true;
+}
+
+// The horizontal core-nav pills were retired with the top-nav redesign — the
+// Terminal dropdown now carries the same destinations, so the pill rail was
+// redundant. This sticky strip keeps just the live events tape beneath the nav.
 export function CoreTopRail() {
   const pathname = usePathname();
-  const { expanded } = useSidebar();
-  const activeRef = useRef<HTMLAnchorElement | null>(null);
-  const hasMountedRef = useRef(false);
 
-  const normalizedPath = normalizeNavPath(pathname ?? "/");
-
-  // Keep the lit pill in view after client-side route changes. The initial
-  // render already starts with Dashboard visible, and calling scrollIntoView
-  // during hydration shows up as forced layout work in Lighthouse.
-  useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      return;
-    }
-
-    activeRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
-  }, [normalizedPath]);
-
-  if (!isCoreNavPath(pathname)) return null;
+  if (isChromelessPath(pathname)) return null;
+  const mobileDisplayClass = isCoreNavPath(pathname) ? "contents" : "hidden";
+  const topOffsetClass = pathname === "/" ? "lg:top-14" : "lg:top-[calc(3px+3.5rem)]";
 
   return (
-    <div
-      style={{
-        ["--pharos-core-rail-offset" as string]: expanded
-          ? "var(--sidebar-width-expanded)"
-          : "var(--sidebar-width-collapsed)",
-      }}
-      className="contents lg:sticky lg:top-[3px] lg:z-50 lg:block"
-    >
+    <div className={`${mobileDisplayClass} lg:sticky lg:z-40 lg:block ${topOffsetClass}`}>
       <HomepageTape placement="top" />
-      <nav
-        aria-label="Core pages"
-        // Mobile: pins below the 56px (h-14) site header, which now sits first
-        // in the chrome stack. Desktop: positioned by the lg-sticky wrapper.
-        className="pharos-rail-ground sticky top-[calc(3px+3.5rem)] z-[55] w-full border-b border-border/70 shadow-[0_1px_0_oklch(1_0_0_/0.04)] lg:relative lg:top-auto lg:z-50 lg:ml-[var(--pharos-core-rail-offset)] lg:w-[calc(100%-var(--pharos-core-rail-offset))]"
-      >
-        <div className="pharos-scrollbar-none overflow-x-auto overscroll-x-contain">
-          <div className="mx-auto flex w-max min-w-full items-center justify-center [justify-content:safe_center] gap-1 px-2 py-2 sm:px-3 sm:py-1.5">
-            {CORE_NAV_ITEMS.map((item, index) => {
-              const isActive = normalizeNavPath(item.href) === normalizedPath;
-              const Icon = item.icon;
-
-              return (
-                <Fragment key={item.href}>
-                  {index > 0 && (
-                    <ChevronRight
-                      aria-hidden="true"
-                      className="h-3 w-3 shrink-0 text-muted-foreground/35"
-                    />
-                  )}
-                  <Link
-                    prefetch={false}
-                    ref={isActive ? activeRef : undefined}
-                    href={item.href}
-                    aria-current={isActive ? "page" : undefined}
-                    className={cn(
-                      "group pharos-rail-tab pharos-focus-ring relative isolate inline-flex min-h-11 items-center gap-1.5 overflow-hidden rounded-md px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] whitespace-nowrap sm:min-h-8",
-                      isActive && "pharos-rail-tab-active",
-                    )}
-                  >
-                    {isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
-                    <Icon
-                      aria-hidden="true"
-                      className={cn(
-                        "h-3.5 w-3.5 shrink-0",
-                        isActive
-                          ? "text-frost-blue"
-                          : "text-muted-foreground/80 group-hover:text-foreground",
-                      )}
-                    />
-                    {item.label}
-                  </Link>
-                </Fragment>
-              );
-            })}
-          </div>
-        </div>
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-background to-transparent"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent"
-        />
-      </nav>
     </div>
   );
 }

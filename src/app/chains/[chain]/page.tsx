@@ -262,7 +262,6 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
   return (
     <FeaturePageShell
       breadcrumbName={meta.name}
-      breadcrumbLabel={meta.name}
       path={`/chains/${chain}/`}
       breadcrumbItems={[
         { name: "Home", url: "/" },

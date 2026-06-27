@@ -33,7 +33,7 @@ On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` 
 
 ### Breadcrumbs
 
-`src/components/breadcrumb.tsx` is the shared visual breadcrumb primitive for bespoke deep-route surfaces such as stablecoin detail. Most feature and taxonomy routes use `FeaturePageShell`, which renders its own `Dashboard / current page` breadcrumb and emits `BreadcrumbJsonLd` from either the default `breadcrumbName`/`path` pair or an explicit `breadcrumbItems` override for N-level routes. For new standard feature pages, prefer `FeaturePageShell`; for bespoke deep routes, use `Breadcrumb` directly or consolidate the two renderers first.
+Visible slash-separated breadcrumb trails are retired from page headers. Routes that need crawlable hierarchy should keep emitting `BreadcrumbJsonLd` through `FeaturePageShell`, `LearnPageShell`, or a page-local JSON-LD block, but the hierarchy should not render as `Dashboard / current page` UI above the title.
 
 ---
 
@@ -52,8 +52,13 @@ On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` 
 Public pages use this shell:
 
 ```tsx
-<header className="lg:hidden sticky top-[3px] z-[56] border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }} />
-{/* on core pages CoreTopRail (tape + submenu) follows the header in flow */}
+<header
+  className="lg:hidden sticky top-[3px] z-[56] border-b border-border/80 bg-background"
+  style={{ boxShadow: "var(--elevation-rest)" }}
+/>;
+{
+  /* CoreTopRail (desktop-wide tape) follows the header chrome in flow */
+}
 <div className="flex min-h-screen">
   <aside className="hidden lg:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] z-[55] transition-all duration-200" />
   <div className="hidden lg:block shrink-0 transition-all duration-200 w-[var(--sidebar-width-expanded)]" />
@@ -63,23 +68,23 @@ Public pages use this shell:
       {/* route content */}
     </main>
 
-    <footer className="border-t border-border/70 py-6 sm:py-8" />
+    <footer className="border-t border-border/70 py-1 sm:py-2" />
   </div>
-</div>
+</div>;
 ```
 
 ### Chrome Patterns
 
 - Desktop sidebar widths: `--sidebar-width-expanded` and `--sidebar-width-collapsed`
 - Mobile header height: `h-14`
-- Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement; the dock stays hidden until the first scroll so it does not cover top-fold content
+- Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement; the dock stays hidden until the first scroll so it does not cover top-fold content and is suppressed on `/` so the homepage footer can match the compact Figma frame
 - Main content and footer reserve bottom safe space via `pharos-mobile-utility-safe` + `--mobile-utility-safe-offset`
 - Main container padding:
   - Mobile: `px-4`
   - Vertical rhythm: `py-6` (`md:py-7`)
   - Desktop (`lg`): `px-6`
-- Footer now prioritizes a short list of core routes, keeps category browsing secondary, drops duplicate tagline text beside socials, and lets intro/legal copy breathe across wider lines.
-- The footer intro block is not width-capped inside its header row; on larger screens it expands to fill the available column beside the social icons.
+- Footer is a compact two-row chip surface: a short one-line legal copy plus `Changelog`, `Methodology`, and `API` on the first row; `Independent`, `Funding`, `MIT`, `Privacy Policy`, and the monochrome social icons on the second row. Footer chips use small square rounded controls with muted fill, not tiny outline labels.
+- The homepage footer uses an edge-aligned container and suppresses floating feedback/scroll controls so the footer reads as the final visible band beneath Chart Your Route on desktop and the Horizon panel on mobile.
 
 ---
 
@@ -91,7 +96,6 @@ Most routes use:
 
 - Wrapper: `space-y-6`
 - Title block: `space-y-2.5`
-- Breadcrumb: `flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm`
 - Title row outer layer: `flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3`
 - Title row inner text/action layer: `flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2`
 
@@ -105,7 +109,7 @@ Most routes use:
 
 ### Start Here (Special)
 
-The `/start/` orientation route keeps the shared breadcrumb/title shell, then shifts into a broader planning-board layout:
+The `/start/` orientation route keeps the shared title shell, then shifts into a broader planning-board layout:
 
 Behavioral contract: [Start Page](./start-page.md)
 
@@ -124,12 +128,15 @@ Home keeps a single visible page `h1` owned by `SiteHeader`; the rest of the top
 Behavioral contract: [Homepage](./homepage.md)
 
 - Masthead strip: `pharos-card-shell flex flex-col gap-2 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-2.5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-5 md:py-3` — stacked on mobile, side-by-side from `md` upward
-- Core top rail: the live tape is mounted directly below the global PSI `RegimeBar` on core pages, with a horizontal nav strip underneath for Dashboard, Safety Scores, Depeg/DDR, FreezeWatch, Alt-Pegs, Yield Intelligence, Stability Index, and PharosWatchBot. On desktop, the combined tape + nav rail is sticky at `top-[3px]` with `z-50`, below the fixed PSI strip (`z-[60]`) and below the desktop sidebar (`z-[55]`), so both elements persist while scrolling without covering the sidebar search. On mobile, the sticky site header (`top-[3px]`, `z-[56]`) renders first in the chrome stack; the nav strip pins beneath it at `top-[calc(3px+3.5rem)]` (`z-[55]`) while the events tape remains in normal flow and scrolls away. Each item renders its Lucide icon (`aria-hidden`); the active item's icon is lit `text-frost-blue`, inactive icons are `text-muted-foreground/80`. The active item is a self-contained frost-lit pill (`.pharos-rail-tab-active`) — the same frost wash + hairline inset ring + soft halo recipe as `.pharos-nav-active`, scaled for a small inline chip — with a `.pharos-nav-beam` sweep on activation and a faint frost-tinted ground (`.pharos-rail-ground`) below the tape. No left-edge accent stripe. The tape and nav strip both start at the active sidebar width on desktop and center the nav run within the remaining viewport when it fits (`[justify-content:safe_center]`), with left and right edge gradient fades for overflow and the active pill scrolled into view on route change. While a core page is active, the sidebar suppresses duplicate core shortcuts and keeps Dashboard as the only core entry there.
-- Page Discovery module: production-style five-link route board under the digest preview. It keeps the analytics `pharos-card-shell` treatment and the older product-callout tile rhythm, but the content is randomized from Core, Track, Analyze, and Monitor pages. A slim `Chart your route` header strip (frost-blue mono kicker + warm subline + route count) titles the board; below it sit one larger spotlight tile with the full route description and four compact tiles with one-line short descriptions, semantic accent blocks, and Lucide route icons. The spotlight kicker is a live-dot `Spotlight` accent chip; each compact route carries its nav-group accent as a category chip (text mixed toward `--foreground` for legibility). Compact descriptions may wrap to two lines at `xl`, where the four minor tiles are narrowest. Hover/focus tints the tile toward its `--discovery-accent`, lifts the icon tile with a soft accent ring, and reveals an `ArrowUpRight` in the tile's top-right corner (the spotlight tile keeps its trailing inline arrow). The five tiles fade-and-rise on mount via `pharos-stagger-entrance` (spotlight first, routes cascading), disabled under `prefers-reduced-motion`. No edge accent stripe.
+- Core top rail: the live tape is mounted directly below the desktop `TopNav` on every standard page, and below the mobile `Header` only on core routes. The horizontal core-nav pill strip is retired; the Terminal dropdown now carries those destinations. On desktop, the tape is sticky below the fixed top nav (`lg:top-14` on `/`, `lg:top-[calc(3px+3.5rem)]` elsewhere) so the registry chips and event ticker remain visible across Docs, Learn, Resources, and analytics pages. Non-core mobile routes suppress the tape to avoid crowding the first viewport.
+- Page Discovery module: desktop-only five-link route strip below the workbench. It keeps a Horizon-matched `Chart Your Route` title row plus refresh control above a single `pharos-card-shell` row. The default route sequence is `Chains`, `Portfolio Audit`, `Upcoming`, `Alt-Pegs`, and `Cemetery`. At `md+`, five equal-width tiles render in one line with hairline dividers and a 162px tile height; the first tile carries the neutral `Spotlight` chip, the second tile gets the tinted descriptive treatment, real route description copy, and a short bottom accent rule, and the remaining tiles stay flat with route icons and group chips. There is no pager, no entrance stagger, and no mobile rendering; below `md`, the page moves from the Horizon panel directly into the compact footer.
+- Shortcuts module: the homepage saved-shortcuts panel uses one unified bordered shell with internal hairline dividers. Desktop (`lg+`) presents twelve route shortcuts in a six-column, two-row grid; if a smaller saved list exists, the view backfills from the default route set while edit mode preserves the actual saved list. Smaller breakpoints render only the saved shortcuts so the surface does not overtake the dashboard stack.
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup
+- Market Pulse Daily Digest promo: desktop-only compact editorial card in the equal-height first-row trio with Peg Health and the PSI/Mint-Burn block. It uses a Newsreader masthead, grey icon+text CTA pills, a teal bottom glow, and a clipped layered article preview using the current daily digest title plus short text. Placeholder/funny promo copy is not allowed.
+- Market Pulse lower event trio: desktop uses a compact equal-height row for Biggest Supply Moves, Recent Freezes, and Total Active Depegs. These cards surface only the top homepage rows (three supply up/down rows, four recent freezes, four active depegs) so the second band stays aligned with the Figma workbench; mobile keeps the stack content-height, with the active-depegs list suppressed below `sm`.
 - Digest preview: broadsheet split with a mono masthead, hairline `Executive Summary` label, newspaper-style `Newsreader` title on the left, and the lead paragraph plus CTA rail on the right at desktop. The lazy boundary may reserve space before mount, but the loaded preview itself stays content-height so the page-discovery board follows without a dead desktop band.
-- Upcoming horizon module: a server-rendered `On the Horizon` panel below the main stablecoin board (`home-alt-upcoming-horizon-constellation.tsx`) that summarizes the pre-launch universe. It keeps the analytics `pharos-card-shell` treatment with a frost mono kicker and an approach rail, but represents phases with the actual upcoming coin logos instead of count-only badges. At `xl+` each stage is a circular constellation on its own phase-colored tinted disc (`PHASE_FIELD`, hues mirroring `PHASE_DOT`) so the five zones read as distinct; the disc diameter scales with coin count (a `packCircle` packer lays ≤6 coins as a single polygon ring and 7+ as a center star wrapped by concentric rings spaced one logo apart), so Announced is the largest cluster and sparse stages are small pairs. All discs center on the brightening horizon beam, with the frost-lit launching-soon threshold carrying an extra glow; labels sit below with a `PHASE_DOT` chip and count. Below `xl` the phases stack as full-width labelled lanes whose logos wrap. Each logo links to its detail page, the module links to `/upcoming/`, and there is no separate nearest-launches strip or edge accent stripe.
+- Upcoming horizon module: a server-rendered `On the Horizon` panel below the main stablecoin board (`home-alt-upcoming-horizon-constellation.tsx`) that summarizes the pre-launch universe. It keeps the analytics `pharos-card-shell` treatment with a frost mono kicker and an approach rail, but represents phases with the actual upcoming coin logos instead of count-only badges. At `xl+` each stage is a circular constellation on its own phase-colored tinted disc (`PHASE_FIELD`, hues mirroring `PHASE_DOT`) so the five zones read as distinct; the disc diameter scales with coin count (a `packCircle` packer lays ≤6 coins as a single polygon ring and 7+ as a center star wrapped by concentric rings spaced one logo apart), so Announced is the largest cluster and sparse stages are small pairs. All discs center on the brightening horizon beam, with the frost-lit launching-soon threshold carrying an extra glow; labels sit below with a `PHASE_DOT` chip and count. Below `xl` the phases stack as compact labelled lanes; mobile lanes cap visible logos to one clipped row and rely on the count label for the full total so the homepage footer remains in-frame. Each visible logo links to its detail page, the module links to `/upcoming/`, and there is no separate nearest-launches strip or edge accent stripe.
 
 ### Stablecoin Detail (Special)
 
@@ -208,17 +215,17 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 
 ### Heading Scale
 
-| Role                      | Live class pattern                                                                                                                   |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.05]`                                                          |
-| Shared page title utility | `pharos-page-title`                                                                                                                  |
-| Digest article title      | Newsreader via `digestDisplay.className`, `text-[clamp(2.2rem,5vw,3.5rem)]`, `font-semibold`, `leading-[0.92]`, `tracking-[-0.04em]` |
-| Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]`                              |
-| Home logotype label       | `sr-only md:not-sr-only md:font-mono md:text-[1.02rem] md:font-semibold md:uppercase md:tracking-[0.16em] md:text-foreground` (hidden below md)                |
-| Primary section heading   | `leading-none font-semibold`                                                                                                         |
-| Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                                                                    |
-| Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground`                                         |
-| Subsection heading        | `text-foreground font-medium`                                                                                                        |
+| Role                      | Live class pattern                                                                                                                              |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.05]`                                                                     |
+| Shared page title utility | `pharos-page-title`                                                                                                                             |
+| Digest article title      | Newsreader via `digestDisplay.className`, `text-[clamp(2.2rem,5vw,3.5rem)]`, `font-semibold`, `leading-[0.92]`, `tracking-[-0.04em]`            |
+| Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]`                                         |
+| Home logotype label       | `sr-only md:not-sr-only md:font-mono md:text-[1.02rem] md:font-semibold md:uppercase md:tracking-[0.16em] md:text-foreground` (hidden below md) |
+| Primary section heading   | `leading-none font-semibold`                                                                                                                    |
+| Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                                                                               |
+| Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground`                                                    |
+| Subsection heading        | `text-foreground font-medium`                                                                                                                   |
 
 ### Body + Supporting Text
 
@@ -363,7 +370,7 @@ Default card composition in production:
 
 - `data-slot="card"`
 - `bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-4 shadow-sm`
-- card surfaces now inherit a subtle shell gradient plus top-left highlight through the global token bridge instead of relying on flat fills alone
+- card surfaces use the tokenized flat fill + hairline border treatment; homepage/bento dark surfaces resolve to the charcoal `--card-bg` block fill with no shell gradient or drop shadow
 - `pharos-card-shell` is the promoted authored-surface wrapper for major route modules, tables, and feature cards
 
 ### Card Header + Title
@@ -391,8 +398,7 @@ The **desktop sidebar** navigation active state no longer uses a left stripe (Ju
 `pharos-interactive-card` is the richer hover-lift utility used on the about-page feature grid. Homepage callouts currently stay on lighter `pharos-card-shell` variants without the extra interactive-card class. Following the May 2026 harmonization these surfaces no longer carry a colored left stripe.
 
 ```tsx
-className =
-  "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col p-4";
+className = "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col p-4";
 ```
 
 ### Logo Containers
@@ -613,7 +619,7 @@ The current pattern is a titled trust banner with dataset-specific copy, for exa
 Live app-wide patterns:
 
 - Skip link present on every page: `sr-only focus:not-sr-only ...`
-- Breadcrumb navigation on content routes
+- Structured breadcrumb JSON-LD on content routes that need crawlable hierarchy
 - Focus-visible rings on sidebar links, buttons, table rows, and chips
 - Keyboard-ready clickable rows on interactive tables
 - Color is reinforced with structure and iconography for key status states

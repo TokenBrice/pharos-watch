@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ArrowLeftRight, Flag } from "lucide-react";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { ShareButton } from "@/components/share-button";
 import type {
   Infrastructure,
@@ -36,7 +35,6 @@ export type {
 
 export function HeroCardHeader({
   coinId,
-  coinName,
   compareHref,
   benchmarkSymbol,
   onOpenFeedback,
@@ -49,8 +47,6 @@ export function HeroCardHeader({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 px-4 pb-2.5 pt-3 sm:px-5">
-      <Breadcrumb items={[{ label: "Dashboard", href: "/" }, { label: coinName }]} />
-
       <div className="flex items-center gap-1.5">
         <button type="button"
           onClick={onOpenFeedback}

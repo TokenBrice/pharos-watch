@@ -1,194 +1,106 @@
 import Link from "next/link";
-import { ArrowUpRight, Rss } from "lucide-react";
-import { CATEGORY_LINKS } from "@/lib/constants";
-import { TrustStrip } from "@/components/trust-strip";
+import { Rss, SquareArrowOutUpRight } from "lucide-react";
 
-const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/feed/digest.xml", label: "Digest" },
-  { href: "/feed/depeg.xml", label: "Depeg events" },
-  { href: "/feed/methodology.xml", label: "Methodology" },
-  { href: "/feed/cemetery.xml", label: "Cemetery" },
+const SOCIAL_LINK_CLASS =
+  "pharos-focus-ring grid h-4 w-4 place-items-center rounded-[3px] border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:border-border hover:bg-muted/55 hover:text-foreground";
+
+// Compact footer chips matching the small square Figma controls.
+const PILL_CLASS =
+  "pharos-focus-ring inline-flex h-[22px] items-center gap-1 rounded-[5px] border border-border/65 bg-muted/55 px-2 text-[11px] leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
+
+// Lean footer per the Figma redesign: a disclaimer line, three reference links,
+// a compact about/legal row, and the monochrome social cluster. The previous
+// 15-link nav, RSS feed list, and category browse were retired with the redesign
+// (owner: "match Figma exactly", 2026-06-27) — restore from git if reinstating.
+const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/changelog/", label: "Changelog" },
+  { href: "/methodology/", label: "Methodology" },
+  { href: "/api/", label: "API" },
 ];
 
-const FOOTER_PRIMARY_LINKS: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [
-  { href: "/", label: "Dashboard" },
-  { href: "/stablecoins/", label: "Stablecoins" },
-  { href: "/compare/", label: "Compare" },
-  { href: "/portfolio/", label: "Portfolio" },
-  { href: "/safety-scores/", label: "Safety Scores" },
-  { href: "/yield/", label: "Yield" },
-  { href: "/coverage/", label: "Coverage" },
-  { href: "/methodology/", label: "Methodology" },
+const FOOTER_META: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [
+  { href: "/about/", label: "Independent" },
   { href: "/funding/", label: "Funding" },
-  { href: "/api/", label: "API" },
-  { href: "/about/", label: "About" },
-  { href: "/learn/case-studies/", label: "Case Studies" },
-  { href: "/learn/glossary/", label: "Glossary" },
-  { href: "/sitemap-tree/", label: "All pages" },
-  { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },
+  { href: "https://github.com/TokenBrice/pharos-watch", label: "MIT", external: true },
+  { href: "/privacy/", label: "Privacy Policy" },
 ];
 
 export function Footer() {
   return (
-    <footer className="border-t border-border/70 py-6 sm:py-8">
-      <div className="container mx-auto space-y-6 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-          <div className="min-w-0 space-y-2 lg:pr-6">
-            <p className="group/wordmark pharos-kicker relative inline-block">
-              <span className="relative z-10">Watching The Peg</span>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 220 24"
-                preserveAspectRatio="none"
-                className="pharos-lighthouse-beam pointer-events-none absolute inset-x-0 top-1/2 h-6 w-full -translate-y-1/2 overflow-visible text-foreground opacity-0"
-              >
-                <path
-                  d="M -10 12 Q 110 -6 230 12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                  pathLength={1}
-                  strokeDasharray="0.18 1"
-                  strokeDashoffset={0.91}
-                />
-              </svg>
-            </p>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Pharos tracks live stablecoin conditions across market cap, peg stability, liquidity, and dependency risk.
-            </p>
-          </div>
-
-          <div
-            className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground lg:justify-self-end lg:pt-0.5"
-            aria-label="Social links"
+    <footer className="border-t border-border/70 py-1 sm:py-2">
+      <div className="container mx-auto space-y-1 px-2 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <p className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground sm:text-xs lg:whitespace-nowrap">
+            Pharos tracks stablecoin cap, peg stability, liquidity, and dependency risk. Not financial advice.
+          </p>
+          <nav
+            aria-label="Reference"
+            className="flex flex-wrap items-center gap-1 text-muted-foreground sm:shrink-0 sm:justify-end sm:gap-1.5 lg:flex-nowrap"
           >
+            {FOOTER_NAV.map((link) => (
+              <Link key={link.href} href={link.href} className={PILL_CLASS}>
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <nav
+            aria-label="About"
+            className="flex flex-wrap items-center gap-1 text-muted-foreground sm:gap-1.5 lg:flex-nowrap"
+          >
+            {FOOTER_META.map((link) =>
+              link.external ? (
+                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className={PILL_CLASS}>
+                  {link.label}
+                  <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3" strokeWidth={2} />
+                </a>
+              ) : (
+                <Link key={link.href} href={link.href} className={PILL_CLASS}>
+                  {link.label}
+                </Link>
+              ),
+            )}
+          </nav>
+
+          <div className="flex items-center gap-1 text-muted-foreground" aria-label="Social links">
+            <a href="/feed/digest.xml" className={SOCIAL_LINK_CLASS} aria-label="Pharos digest RSS feed">
+              <Rss aria-hidden="true" className="h-3 w-3" strokeWidth={2} />
+            </a>
             <a
               href="https://x.com/PharosWatch"
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring rounded-full border border-transparent p-1.5 hover:border-border/60 hover:bg-muted/40 hover:text-foreground"
+              className={SOCIAL_LINK_CLASS}
               aria-label="Pharos on X/Twitter"
             >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
-            <a
-              href="https://github.com/TokenBrice/pharos-watch"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pharos-focus-ring rounded-full border border-transparent p-1.5 hover:border-border/60 hover:bg-muted/40 hover:text-foreground"
-              aria-label="Pharos on GitHub"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
               </svg>
             </a>
             <a
               href="https://t.me/pharoswatch"
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring rounded-full border border-transparent p-1.5 hover:border-border/60 hover:bg-muted/40 hover:text-foreground"
+              className={SOCIAL_LINK_CLASS}
               aria-label="Pharos on Telegram"
             >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.820 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
               </svg>
             </a>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border/50 pt-6">
-          <TrustStrip />
-          <nav
-            aria-label="Feeds"
-            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:ml-auto"
-          >
-            <span className="inline-flex items-center gap-1 text-foreground/80">
-              <Rss className="h-3 w-3" aria-hidden="true" />
-              <span className="pharos-kicker">Subscribe</span>
-            </span>
-            {FEED_LINKS.map((feed) => (
-              <Link
-                key={feed.href}
-                href={feed.href}
-                className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
-              >
-                {feed.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2 border-t border-border/50 pt-6">
-          {FOOTER_PRIMARY_LINKS.map((link) =>
-            link.external ? (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4 sm:min-h-0 sm:py-0"
-              >
-                {link.label}
-                <ArrowUpRight className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
-              </a>
-            ) : (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="pharos-focus-ring text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4"
-              >
-                {link.label}
-              </Link>
-            ),
-          )}
-        </nav>
-
-        <details className="sm:hidden">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground">
-            Browse stablecoins by category
-          </summary>
-          <nav
-            aria-label="Browse stablecoins by category"
-            className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground"
-          >
-            {CATEGORY_LINKS.map((cat) => (
-              <Link
-                key={cat.href}
-                href={cat.href}
-                className="pharos-focus-ring rounded-full px-2 py-1 hover:text-foreground hover:underline hover:underline-offset-4"
-              >
-                {cat.label}
-              </Link>
-            ))}
-          </nav>
-        </details>
-
-        <div className="flex flex-col gap-4 border-t border-border/50 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <nav
-            aria-label="Browse by category"
-            className="hidden flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground sm:flex"
-          >
-            {CATEGORY_LINKS.map((cat) => (
-              <Link
-                key={cat.href}
-                href={cat.href}
-                className="pharos-focus-ring hover:text-foreground hover:underline hover:underline-offset-4 transition-colors"
-              >
-                {cat.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            <Link
-              href="/privacy/"
-              className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
+            <a
+              href="https://github.com/TokenBrice/pharos-watch"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={SOCIAL_LINK_CLASS}
+              aria-label="Pharos on GitHub"
             >
-              Privacy
-            </Link>
-            <p>Not financial advice. Data is provided as-is for informational purposes only.</p>
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+              </svg>
+            </a>
           </div>
         </div>
       </div>

@@ -389,18 +389,6 @@ export default async function AboutApiPage() {
       />
 
       <div className="space-y-3">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="pharos-focus-ring rounded-sm hover:text-foreground">
-            Dashboard
-          </Link>
-          <span>/</span>
-          <Link href="/about/" className="pharos-focus-ring rounded-sm hover:text-foreground">
-            About
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">API Reference</span>
-        </nav>
-
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] xl:items-end">
           <div className="space-y-3">
             <div className="space-y-2">

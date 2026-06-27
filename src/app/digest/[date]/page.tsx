@@ -143,25 +143,6 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
       />
       <EditorialMasthead date={formatted} editor="Claude Opus 4.8" />
       <div className="space-y-2">
-        <nav aria-label="Breadcrumb">
-          <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <li>
-              <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">
-                Dashboard
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li>
-              <Link href="/digest/" className="pharos-focus-ring hover:text-foreground transition-colors">
-                Digest Archive
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li aria-current="page" className="text-foreground">
-              {formatted}
-            </li>
-          </ol>
-        </nav>
         <p className="pharos-kicker">{editionKicker}</p>
         <h1
           className={`${digestDisplay.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}

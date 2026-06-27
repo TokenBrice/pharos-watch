@@ -108,15 +108,8 @@ export default function MethodologyPage() {
         }}
       />
 
-      {/* Breadcrumb + heading */}
+      {/* Heading */}
       <div className="space-y-3">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            Dashboard
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">Methodology</span>
-        </nav>
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] xl:items-end">
           <div className="space-y-3">
             <div className="space-y-2">

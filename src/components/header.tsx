@@ -4,13 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, NAV_GROUPS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
@@ -37,9 +31,7 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
           {item.label}
           {item.external && <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />}
         </div>
-        {item.description && (
-          <div className="text-xs text-muted-foreground/70 mt-0.5">{item.description}</div>
-        )}
+        {item.description && <div className="text-xs text-muted-foreground/70 mt-0.5">{item.description}</div>}
       </div>
     </>
   );
@@ -77,7 +69,9 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const { isExpanded: isGroupExpanded, toggle } = useNavCollapse();
   const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
-  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav));
+  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter(
+    (item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav),
+  );
   const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start/");
   const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start/");
   // The drawer is a modal menu with no rail beside it, so unlike the desktop
@@ -86,23 +80,25 @@ export function Header() {
   const groups = NAV_GROUPS;
   const [dashboardNavItem, ...remainingPrimaryNavItems] = primaryItems;
   const mobileLeadItemCount = primaryItems.length + priorityBottomNavItems.length;
+  const topOffsetClass = pathname === "/" ? "top-0" : "top-[3px]";
 
   // The header renders above the core rail in flow, so it pins directly under
   // the PSI strip on every route; z-[56] keeps the tape and rail sliding
   // beneath it while scrolling.
   return (
     <header
-      className="lg:hidden sticky top-[3px] z-[56] border-b border-border/80 bg-background"
+      className={`sticky z-[56] border-b border-border/80 bg-background lg:hidden ${topOffsetClass}`}
       style={{ boxShadow: "var(--elevation-rest)" }}
     >
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link prefetch={false} href="/" className="pharos-focus-ring flex min-h-11 min-w-0 items-center gap-2.5 rounded-md py-1 font-semibold">
+        <Link
+          prefetch={false}
+          href="/"
+          className="pharos-focus-ring flex min-h-11 min-w-0 items-center gap-2.5 rounded-md py-1 font-semibold"
+        >
           <PharosLogo size={32} priority />
-          <span className="flex min-w-0 flex-col leading-tight">
-            <span className="text-[1.05rem] font-mono tabular-nums uppercase tracking-[0.18em]">PHAROS</span>
-            <span className="truncate text-[10px] font-mono tabular-nums lowercase tracking-[0.08em] text-muted-foreground/80">
-              live stablecoin signals
-            </span>
+          <span className="pharos-display truncate text-[1.45rem] font-semibold leading-none tracking-tight text-foreground">
+            Pharos
           </span>
         </Link>
 
@@ -117,161 +113,210 @@ export function Header() {
             <Search className="h-4 w-4" />
           </Button>
 
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-11 w-11">
-              <Menu className="h-4 w-4" />
-              <span className="sr-only">Menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="left"
-            showCloseButton={false}
-            // z-[70] lifts the drawer above the sticky chrome (header z-[56],
-            // rail z-[55], PSI strip z-[60]); the Sheet default z-50 would
-            // leave the drawer's own header row painted beneath them.
-            className="z-[70] w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card/95 p-0"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
-              <Link prefetch={false} href="/" onClick={() => setOpen(false)} className="pharos-focus-ring flex items-center gap-3 rounded-md">
-                <PharosLogo size={28} />
-                <SheetTitle className="text-lg font-mono tabular-nums uppercase tracking-[0.18em]">PHAROS</SheetTitle>
-              </Link>
-              <SheetDescription className="sr-only">
-                Main navigation for Pharos dashboard routes, monitoring tools, references, and companion experiences.
-              </SheetDescription>
-              <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close menu</span>
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-11 w-11">
+                <Menu className="h-4 w-4" />
+                <span className="sr-only">Menu</span>
               </Button>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto px-4 py-4" aria-label="Main navigation">
-              {/* Primary pages */}
-              {dashboardNavItem ? (
-                <div
-                  className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
-                  style={{ animationDelay: "0ms", animationDuration: "200ms" }}
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              showCloseButton={false}
+              // z-[70] lifts the drawer above the sticky chrome (header z-[56],
+              // rail z-[55], PSI strip z-[60]); the Sheet default z-50 would
+              // leave the drawer's own header row painted beneath them.
+              className="z-[70] w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card/95 p-0"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
+                <Link
+                  prefetch={false}
+                  href="/"
+                  onClick={() => setOpen(false)}
+                  className="pharos-focus-ring flex items-center gap-3 rounded-md"
                 >
-                  <MobileNavLink item={dashboardNavItem} active={isRouteActive(pathname, dashboardNavItem.href)} onNavigate={() => setOpen(false)} />
-                </div>
-              ) : null}
+                  <PharosLogo size={28} />
+                  <SheetTitle className="text-lg font-mono tabular-nums uppercase tracking-[0.18em]">PHAROS</SheetTitle>
+                </Link>
+                <SheetDescription className="sr-only">
+                  Main navigation for Pharos dashboard routes, monitoring tools, references, and companion experiences.
+                </SheetDescription>
+                <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setOpen(false)}>
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close menu</span>
+                </Button>
+              </div>
 
-              {priorityBottomNavItems.length > 0 ? (
-                <div
-                  className={`mt-2 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
-                    priorityBottomNavItems.some((item) => isRouteActive(pathname, item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
-                  }`}
-                  style={{ animationDelay: "50ms", animationDuration: "200ms" }}
-                >
-                  {priorityBottomNavItems.map((item) => (
-                    <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
-                  ))}
-                </div>
-              ) : null}
-
-              {remainingPrimaryNavItems.map((item, index) => (
-                <div
-                  key={item.href}
-                  className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
-                  style={{ animationDelay: `${(index + 1 + priorityBottomNavItems.length) * 50}ms`, animationDuration: "200ms" }}
-                >
-                  <MobileNavLink item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
-                </div>
-              ))}
-
-              {/* Grouped sections */}
-              {groups.map((group, groupIndex) => {
-                const groupIsActive = group.items.some((item) => isRouteActive(pathname, item.href));
-                const groupExpanded = isGroupExpanded(group.key);
-                return (
+              {/* Navigation */}
+              <nav className="flex-1 overflow-y-auto px-4 py-4" aria-label="Main navigation">
+                {/* Primary pages */}
+                {dashboardNavItem ? (
                   <div
-                    key={group.key}
-                    className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
-                      groupIsActive ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
-                    }`}
-                    style={{ animationDelay: `${(mobileLeadItemCount + groupIndex) * 50}ms`, animationDuration: "200ms" }}
+                    className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
+                    style={{ animationDelay: "0ms", animationDuration: "200ms" }}
                   >
-                    <button type="button"
-                      onClick={() => toggle(group.key)}
-                      className="flex w-full items-center justify-between mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-                      aria-expanded={groupExpanded}
-                      aria-controls={`mobile-nav-group-${group.key}`}
-                    >
-                      {group.label}
-                      <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${groupExpanded ? "rotate-90" : ""}`} />
-                    </button>
+                    <MobileNavLink
+                      item={dashboardNavItem}
+                      active={isRouteActive(pathname, dashboardNavItem.href)}
+                      onNavigate={() => setOpen(false)}
+                    />
+                  </div>
+                ) : null}
+
+                {priorityBottomNavItems.length > 0 ? (
+                  <div
+                    className={`mt-2 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
+                      priorityBottomNavItems.some((item) => isRouteActive(pathname, item.href))
+                        ? "border-l-2 border-l-frost-blue pl-3"
+                        : "pl-[14px]"
+                    }`}
+                    style={{ animationDelay: "50ms", animationDuration: "200ms" }}
+                  >
+                    {priorityBottomNavItems.map((item) => (
+                      <MobileNavLink
+                        key={item.href}
+                        item={item}
+                        active={isRouteActive(pathname, item.href)}
+                        onNavigate={() => setOpen(false)}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+
+                {remainingPrimaryNavItems.map((item, index) => (
+                  <div
+                    key={item.href}
+                    className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
+                    style={{
+                      animationDelay: `${(index + 1 + priorityBottomNavItems.length) * 50}ms`,
+                      animationDuration: "200ms",
+                    }}
+                  >
+                    <MobileNavLink
+                      item={item}
+                      active={isRouteActive(pathname, item.href)}
+                      onNavigate={() => setOpen(false)}
+                    />
+                  </div>
+                ))}
+
+                {/* Grouped sections */}
+                {groups.map((group, groupIndex) => {
+                  const groupIsActive = group.items.some((item) => isRouteActive(pathname, item.href));
+                  const groupExpanded = isGroupExpanded(group.key);
+                  return (
                     <div
-                      className={`grid transition-[grid-template-rows] duration-200 ease-[var(--motion-ease-standard)] ${groupExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                      aria-hidden={!groupExpanded}
-                      inert={!groupExpanded}
+                      key={group.key}
+                      className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
+                        groupIsActive ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
+                      }`}
+                      style={{
+                        animationDelay: `${(mobileLeadItemCount + groupIndex) * 50}ms`,
+                        animationDuration: "200ms",
+                      }}
                     >
-                      <div className="overflow-hidden">
-                        <div id={`mobile-nav-group-${group.key}`}>
-                          {group.items.map((item) => (
-                            <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
-                          ))}
+                      <button
+                        type="button"
+                        onClick={() => toggle(group.key)}
+                        className="flex w-full items-center justify-between mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+                        aria-expanded={groupExpanded}
+                        aria-controls={`mobile-nav-group-${group.key}`}
+                      >
+                        {group.label}
+                        <ChevronRight
+                          className={`h-3 w-3 transition-transform duration-200 ${groupExpanded ? "rotate-90" : ""}`}
+                        />
+                      </button>
+                      <div
+                        className={`grid transition-[grid-template-rows] duration-200 ease-[var(--motion-ease-standard)] ${groupExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                        aria-hidden={!groupExpanded}
+                        inert={!groupExpanded}
+                      >
+                        <div className="overflow-hidden">
+                          <div id={`mobile-nav-group-${group.key}`}>
+                            {group.items.map((item) => (
+                              <MobileNavLink
+                                key={item.href}
+                                item={item}
+                                active={isRouteActive(pathname, item.href)}
+                                onNavigate={() => setOpen(false)}
+                              />
+                            ))}
+                          </div>
                         </div>
                       </div>
+                      {!groupExpanded && (
+                        <div
+                          className="truncate px-3 py-2 text-xs italic text-muted-foreground/70"
+                          title={group.items.map((item) => item.label).join(" · ")}
+                        >
+                          {group.items.map((item) => item.label).join(" · ")}
+                        </div>
+                      )}
                     </div>
-                    {!groupExpanded && (
-                      <div
-                        className="truncate px-3 py-2 text-xs italic text-muted-foreground/70"
-                        title={group.items.map((item) => item.label).join(" · ")}
-                      >
-                        {group.items.map((item) => item.label).join(" · ")}
-                      </div>
-                    )}
+                  );
+                })}
+
+                {remainingBottomNavItems.length > 0 ? (
+                  <div
+                    className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
+                      remainingBottomNavItems.some((item) => isRouteActive(pathname, item.href))
+                        ? "border-l-2 border-l-frost-blue pl-3"
+                        : "pl-[14px]"
+                    }`}
+                    style={{
+                      animationDelay: `${(primaryItems.length + groups.length) * 50}ms`,
+                      animationDuration: "200ms",
+                    }}
+                  >
+                    {remainingBottomNavItems.map((item) => (
+                      <MobileNavLink
+                        key={item.href}
+                        item={item}
+                        active={isRouteActive(pathname, item.href)}
+                        onNavigate={() => setOpen(false)}
+                      />
+                    ))}
                   </div>
-                );
-              })}
+                ) : null}
 
-              {remainingBottomNavItems.length > 0 ? (
-                <div
-                  className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
-                    remainingBottomNavItems.some((item) => isRouteActive(pathname, item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
-                  }`}
-                  style={{ animationDelay: `${(primaryItems.length + groups.length) * 50}ms`, animationDuration: "200ms" }}
+                {COMPANION_NAV_ITEMS.length > 0 ? (
+                  <div
+                    className="mt-4 pl-[14px] animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
+                    style={{
+                      animationDelay: `${(primaryItems.length + groups.length + 1) * 50}ms`,
+                      animationDuration: "200ms",
+                    }}
+                  >
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/70">
+                      Companion
+                    </p>
+                    {COMPANION_NAV_ITEMS.map((item) => (
+                      <MobileNavLink key={item.href} item={item} active={false} onNavigate={() => setOpen(false)} />
+                    ))}
+                  </div>
+                ) : null}
+              </nav>
+
+              {/* Footer */}
+              <div className="border-t border-border/70 bg-muted/20 px-4 py-3 flex items-center justify-between shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 min-h-11"
+                  onClick={() => {
+                    setOpen(false);
+                    openCommandPalette();
+                  }}
                 >
-                  {remainingBottomNavItems.map((item) => (
-                    <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
-                  ))}
-                </div>
-              ) : null}
-
-              {COMPANION_NAV_ITEMS.length > 0 ? (
-                <div
-                  className="mt-4 pl-[14px] animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
-                  style={{ animationDelay: `${(primaryItems.length + groups.length + 1) * 50}ms`, animationDuration: "200ms" }}
-                >
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/70">Companion</p>
-                  {COMPANION_NAV_ITEMS.map((item) => (
-                    <MobileNavLink key={item.href} item={item} active={false} onNavigate={() => setOpen(false)} />
-                  ))}
-                </div>
-              ) : null}
-            </nav>
-
-            {/* Footer */}
-            <div className="border-t border-border/70 bg-muted/20 px-4 py-3 flex items-center justify-between shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 min-h-11"
-                onClick={() => {
-                  setOpen(false);
-                  openCommandPalette();
-                }}
-              >
-                <Search className="h-4 w-4" />
-                Search
-              </Button>
-              <ThemeToggle />
-            </div>
-          </SheetContent>
-        </Sheet>
+                  <Search className="h-4 w-4" />
+                  Search
+                </Button>
+                <ThemeToggle />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>

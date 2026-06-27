@@ -123,8 +123,8 @@
   --p-pink-800: oklch(0.400 0.120 350);
   --p-pink-900: oklch(0.320 0.090 350);
 
-  /* Frost Blue (brand accent) */
-  --p-frost-blue: oklch(0.72 0.14 248);
+  /* Frost Blue (brand accent) — sampled from the Figma Market Pulse frame. */
+  --p-frost-blue: #4bc4de;
 
   /* ── Spacing Scale ───────────────────────────────────────────────
      Based on 4px grid. Use semantic aliases in components.

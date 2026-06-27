@@ -54,8 +54,8 @@ export default function PrivacyPage() {
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
             access, Pharos stores the email address you verify plus any name, organization, project URL, use-case,
             intended-endpoint, cadence, and volume details you submit; request throttling stores salted hashes of IP
-            address and user-agent data. The homepage page discovery module stores a local rotation cursor for the
-            suggested internal pages. The Stablecoin Picker stores local browser state for callout dismissal and
+            address and user-agent data. The homepage page discovery module does not store route history or a
+            visit-rotation cursor. The Stablecoin Picker stores local browser state for callout dismissal and
             tab-scoped result recovery, and share links can store a content-addressed snapshot of the generated selector
             output in Cloudflare KV.
           </p>
@@ -64,11 +64,9 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">Functional Browser Storage</h2>
           <p>
-            The homepage page discovery module uses{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">localStorage</code> to store a small rotation cursor
-            under <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.homepageDiscovery.v1</code>. It is only
-            used to show a different five-route suggestion set between homepage visits. It does not contain route
-            history, account identifiers, wallet addresses, IP addresses, or a browser fingerprint.
+            The homepage page discovery module is deterministic on first render. Its manual Refresh button rotates
+            route suggestions in memory only, so it does not store route history, account identifiers, wallet addresses,
+            IP addresses, or a browser fingerprint.
           </p>
         </section>
 

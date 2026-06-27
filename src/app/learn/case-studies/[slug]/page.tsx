@@ -50,7 +50,6 @@ export default async function CaseStudyPage({
         { name: "Case Studies", url: "/learn/case-studies/" },
         { name: study.title, url: `/learn/case-studies/${slug}/` },
       ]}
-      finalLabel={study.eyebrow}
       title={study.title}
       subtitle={study.subtitle}
       leadParagraphs={study.lead}

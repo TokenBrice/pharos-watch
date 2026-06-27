@@ -81,11 +81,6 @@ export default async function ArchetypeExplainerPage({
         { name: "Mechanisms", url: "/learn/mechanisms/" },
         { name: label, url: explainerPath },
       ]}
-      visibleBreadcrumbs={[
-        { label: "Dashboard", href: "/" },
-        { label: "Learn" },
-        { label },
-      ]}
       title={content.headline}
       subtitle={content.subtitle}
       leadParagraphs={content.lead}

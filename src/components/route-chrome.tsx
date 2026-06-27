@@ -42,6 +42,12 @@ export function RouteChrome({ children }: { children: ReactNode }) {
   return children;
 }
 
+export function RegimeBarChrome({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  if (isChromelessPath(pathname) || pathname === "/") return null;
+  return children;
+}
+
 /**
  * Wraps the standard global footer. The digest section ships its own editorial
  * colophon (one-line on the archive, full provenance on each dated page), so
@@ -50,6 +56,9 @@ export function RouteChrome({ children }: { children: ReactNode }) {
 export function GlobalFooterChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   if (isChromelessPath(pathname) || isDigestPath(pathname)) return null;
+  if (pathname === "/") {
+    return <div className="pharos-home-footer">{children}</div>;
+  }
   return children;
 }
 
@@ -58,7 +67,9 @@ export function MainContent({ children }: { children: ReactNode }) {
   const chromeless = isChromelessPath(pathname);
   const className = chromeless
     ? "flex-1 min-w-0"
-    : "pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6";
+    : pathname === "/"
+      ? "flex-1 w-full px-4 pt-6 pb-2 md:pt-7 md:pb-3 lg:px-5 xl:px-9"
+      : "pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6";
 
   return (
     <main id="main-content" className={className}>

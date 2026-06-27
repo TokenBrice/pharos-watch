@@ -327,7 +327,6 @@ export default function SitemapTreePage() {
       breadcrumbName="Sitemap"
       path="/sitemap-tree/"
       title="All pages"
-      breadcrumbLabel="Sitemap"
       leadParagraphs={[
         "Every public Pharos route, grouped by the same Track / Analyze / Monitor / Reference tiers as the sidebar. Use this when you want to see the whole surface area in one place, or when you remember the section but not the slug.",
       ]}

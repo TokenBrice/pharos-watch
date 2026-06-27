@@ -9,7 +9,6 @@ export interface FeaturePageShellProps {
   title: string;
   variant?: "standard" | "longform" | "auth-gated";
   containerClassName?: string;
-  breadcrumbLabel?: string;
   methodology?: {
     version: string;
     changelogPath: string;
@@ -28,7 +27,6 @@ export function FeaturePageShell({
   title,
   variant = "standard",
   containerClassName,
-  breadcrumbLabel,
   methodology,
   headerActions,
   leadParagraphs = [],
@@ -55,16 +53,6 @@ export function FeaturePageShell({
       />
       {preface}
       <div className="space-y-2.5">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
-          <Link
-            href="/"
-            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-3 text-foreground hover:text-foreground sm:min-h-0 sm:rounded-sm sm:border-0 sm:bg-transparent sm:px-0 sm:text-inherit"
-          >
-            Dashboard
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{breadcrumbLabel ?? breadcrumbName}</span>
-        </nav>
         <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3">
           <div className="flex min-w-0 max-w-4xl flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="pharos-page-title">{title}</h1>

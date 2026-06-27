@@ -84,18 +84,6 @@ export function MethodologyChangelogPage({
       )}
 
       <div className="space-y-3">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            Dashboard
-          </Link>
-          <span>/</span>
-          <Link href="/methodology/" className="hover:text-foreground transition-colors">
-            Methodology
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{title}</span>
-        </nav>
-
         <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.2rem]">{title}</h1>
 
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{lead}</p>

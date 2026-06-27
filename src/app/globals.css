@@ -23,7 +23,8 @@
 }
 
 .pharos-font-mono {
-  --font-geist-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-geist-mono:
+    var(--font-jetbrains-mono), SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 @theme inline {
@@ -32,6 +33,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: Georgia, "Times New Roman", serif;
+  --font-display: var(--font-bricolage), system-ui, -apple-system, sans-serif;
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -101,8 +103,8 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --surface-raised: var(--p-neutral-100);
-  --page-glow-top: radial-gradient(95rem 48rem at 9% -14%, oklch(0.78 0.08 248 / 18%), transparent 56%);
-  --page-glow-bottom: radial-gradient(84rem 36rem at 92% 114%, oklch(0.86 0.05 200 / 12%), transparent 62%);
+  --page-glow-top: none;
+  --page-glow-bottom: none;
 
   /* Graph workspace HUD tokens — scoped to /dependency-map SVG stage. */
   --graph-canvas-bg: oklch(0.985 0 0);
@@ -136,8 +138,8 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --page-glow-top: radial-gradient(95rem 48rem at 8% -12%, oklch(0.54 0.16 264 / 19%), transparent 56%);
-  --page-glow-bottom: radial-gradient(88rem 38rem at 90% 112%, oklch(0.47 0.13 185 / 14%), transparent 64%);
+  --page-glow-top: none;
+  --page-glow-bottom: none;
 
   /* Graph workspace HUD tokens — scoped to /dependency-map SVG stage. */
   --graph-canvas-bg: oklch(0.145 0 0);
@@ -153,21 +155,22 @@
     /* Smooth scrolling */
     scroll-behavior: smooth;
     /* Smooth theme transitions for color-related properties */
-    transition: background-color var(--theme-transition-duration) var(--motion-ease-standard),
-                color var(--theme-transition-duration) var(--motion-ease-standard);
+    transition:
+      background-color var(--theme-transition-duration) var(--motion-ease-standard),
+      color var(--theme-transition-duration) var(--motion-ease-standard);
     /* M17 — tag root for orchestrated theme cross-dissolve via the View
        Transitions API. The single named region lets the browser fade the
        full viewport in one coordinated act on theme swap. */
     view-transition-name: root;
   }
-  
+
   /* M17 — orchestrated theme cross-dissolve. 220ms with standard ease. */
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation-duration: 220ms;
     animation-timing-function: var(--motion-ease-standard);
   }
-  
+
   @media (prefers-reduced-motion: reduce) {
     ::view-transition-old(root),
     ::view-transition-new(root) {
@@ -227,7 +230,7 @@
     border-color: var(--card-border);
     background-color: var(--card-bg);
     background-image: var(--card-shell-highlight), var(--card-shell-bg);
-    box-shadow: var(--elevation-rest);
+    box-shadow: var(--card-shadow);
     transition:
       box-shadow var(--motion-duration-base) var(--motion-ease-standard),
       border-color var(--motion-duration-fast) var(--motion-ease-standard),
@@ -248,24 +251,24 @@
 
   /* Enhanced button press feedback */
   [data-slot="button"][data-variant="default"]:not(:disabled):active {
-    box-shadow: 
+    box-shadow:
       0 0 0 1px oklch(0 0 0 / 10%) inset,
       0 1px 2px oklch(0 0 0 / 15%);
   }
-  
+
   .dark [data-slot="button"][data-variant="default"]:not(:disabled):active {
-    box-shadow: 
+    box-shadow:
       0 0 0 1px oklch(1 0 0 / 10%) inset,
       0 1px 2px oklch(0 0 0 / 25%);
   }
-  
+
   /* Icon button hover enhancement */
   [data-slot="button"][data-size="icon"]:not(:disabled):hover,
   [data-slot="button"][data-size="icon-sm"]:not(:disabled):hover,
   [data-slot="button"][data-size="icon-xs"]:not(:disabled):hover {
     transform: scale(1.05);
   }
-  
+
   [data-slot="button"][data-size="icon"]:not(:disabled):active,
   [data-slot="button"][data-size="icon-sm"]:not(:disabled):active,
   [data-slot="button"][data-size="icon-xs"]:not(:disabled):active {
@@ -274,25 +277,41 @@
 
   /* Live data change indicators */
   @keyframes pharos-flash-up {
-    0% { background-color: oklch(0.7 0.15 145 / 0.3); }
-    100% { background-color: transparent; }
+    0% {
+      background-color: oklch(0.7 0.15 145 / 0.3);
+    }
+    100% {
+      background-color: transparent;
+    }
   }
 
   @keyframes pharos-flash-up-alt {
-    0% { background-color: oklch(0.7 0.15 145 / 0.3); }
-    100% { background-color: transparent; }
+    0% {
+      background-color: oklch(0.7 0.15 145 / 0.3);
+    }
+    100% {
+      background-color: transparent;
+    }
   }
-  
+
   @keyframes pharos-flash-down {
-    0% { background-color: oklch(0.7 0.15 25 / 0.3); }
-    100% { background-color: transparent; }
+    0% {
+      background-color: oklch(0.7 0.15 25 / 0.3);
+    }
+    100% {
+      background-color: transparent;
+    }
   }
 
   @keyframes pharos-flash-down-alt {
-    0% { background-color: oklch(0.7 0.15 25 / 0.3); }
-    100% { background-color: transparent; }
+    0% {
+      background-color: oklch(0.7 0.15 25 / 0.3);
+    }
+    100% {
+      background-color: transparent;
+    }
   }
-  
+
   .pharos-data-fresh-up {
     animation: pharos-flash-up 1.5s ease-out;
   }
@@ -300,7 +319,7 @@
   .pharos-data-fresh-up-b {
     animation-name: pharos-flash-up-alt;
   }
-  
+
   .pharos-data-fresh-down {
     animation: pharos-flash-down 1.5s ease-out;
   }
@@ -308,7 +327,7 @@
   .pharos-data-fresh-down-b {
     animation-name: pharos-flash-down-alt;
   }
-  
+
   @media (prefers-reduced-motion: reduce) {
     .pharos-data-fresh-up,
     .pharos-data-fresh-down {
@@ -318,12 +337,17 @@
 
   /* Homepage event-tape ticker */
   @keyframes pharos-tape-scroll {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(-50%, 0, 0); }
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
   }
 
   .pharos-tape-track {
     animation: pharos-tape-scroll var(--pharos-tape-duration, 90s) linear infinite;
+    animation-delay: var(--pharos-tape-delay, 0s);
     will-change: transform;
   }
 
@@ -422,15 +446,20 @@
      Telegram theme vars are injected at runtime by telegram-sdk.ts; fallbacks
      keep browser preview and the pre-bridge render usable. */
   .pharos-mini-app {
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
     color-scheme: var(--telegram-color-scheme, light dark);
     --mini-bg: var(--telegram-bg, var(--surface-base));
     --mini-text: var(--telegram-text, var(--text-primary));
-    --mini-panel: var(
-      --telegram-secondary-bg,
-      color-mix(in oklab, var(--mini-bg) 90%, var(--mini-text) 10%)
-    );
+    --mini-panel: var(--telegram-secondary-bg, color-mix(in oklab, var(--mini-bg) 90%, var(--mini-text) 10%));
     --mini-card: var(--telegram-section-bg, var(--mini-panel));
     --mini-control: color-mix(in oklab, var(--mini-card) 88%, var(--mini-text) 12%);
     --mini-accent: var(--telegram-accent-text, var(--telegram-button, var(--brand-accent)));
@@ -486,7 +515,18 @@
 
   .pharos-page-title {
     @apply min-w-0 text-3xl font-extrabold tracking-tight sm:text-4xl;
+    font-family: var(--font-bricolage);
     line-height: 1.05;
+  }
+
+  /* Editorial display face (Bricolage Grotesque ink-trap) for hero/section
+     headings carried over from the Figma redesign. Apply to a heading to lend
+     it the redesign's display character; pairs with font-extrabold/bold.
+     Reference --font-bricolage directly: --font-display lives in @theme inline
+     (it powers the `font-display` utility) and is not emitted as a runtime var. */
+  .pharos-display {
+    font-family: var(--font-bricolage);
+    letter-spacing: -0.01em;
   }
 
   .pharos-lead {
@@ -503,8 +543,10 @@
   }
 
   .pharos-card-shell {
-    @apply rounded-xl border border-border/70 bg-card/78 shadow-sm;
+    @apply rounded-xl border shadow-none;
+    background-color: var(--card-bg);
     background-image: var(--card-shell-highlight), var(--card-shell-bg);
+    border-color: var(--card-border);
     box-shadow: var(--card-shadow);
   }
 
@@ -683,10 +725,20 @@
   }
 
   @keyframes pharos-lighthouse-sweep {
-    0% { opacity: 0; stroke-dashoffset: 0.91; }
-    20% { opacity: 0.18; }
-    80% { opacity: 0.18; }
-    100% { opacity: 0; stroke-dashoffset: -0.18; }
+    0% {
+      opacity: 0;
+      stroke-dashoffset: 0.91;
+    }
+    20% {
+      opacity: 0.18;
+    }
+    80% {
+      opacity: 0.18;
+    }
+    100% {
+      opacity: 0;
+      stroke-dashoffset: -0.18;
+    }
   }
 
   /* Thin shaft of frost light cast from the brand mark along the header
@@ -771,14 +823,139 @@
   }
 
   .pharos-table-shell {
-    @apply overflow-hidden rounded-2xl border border-border/70;
+    @apply overflow-hidden rounded-2xl border;
+    background-color: var(--card-bg);
     background-image: var(--card-shell-highlight), var(--card-shell-bg);
+    border-color: var(--card-border);
     box-shadow: var(--card-shadow);
+  }
+
+  .pharos-home-footer .container {
+    max-width: none;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    padding-bottom: 0 !important;
   }
 
   .pharos-table-toolbar {
     @apply flex flex-col gap-3 border-b border-border/60 px-4 py-3 sm:px-5;
     background: var(--panel-header-bg);
+  }
+
+  .pharos-overview-table-toolbar {
+    --overview-control-bg: oklch(1 0 0 / 0.82);
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .dark .pharos-overview-table-toolbar {
+    --overview-control-bg: oklch(1 0 0 / 0.06);
+  }
+
+  .pharos-overview-table-toolbar input,
+  .pharos-overview-table-toolbar button {
+    background-color: var(--overview-control-bg);
+  }
+
+  .pharos-overview-table-shell {
+    --overview-table-bg: oklch(1 0 0);
+    --overview-table-header-bg: oklch(0.965 0 0);
+    --overview-table-row-alt: oklch(0.975 0 0);
+    --overview-table-footer-bg: oklch(0.96 0 0);
+    --overview-table-border: oklch(0 0 0 / 0.08);
+    --overview-control-bg: oklch(1 0 0 / 0.82);
+    @apply rounded-xl border;
+    background: var(--overview-table-bg);
+    background-image: none;
+    border-color: var(--overview-table-border);
+    box-shadow: none;
+  }
+
+  .dark .pharos-overview-table-shell {
+    --overview-table-bg: oklch(0.105 0 0);
+    --overview-table-header-bg: oklch(0.15 0 0);
+    --overview-table-row-alt: oklch(1 0 0 / 0.035);
+    --overview-table-footer-bg: oklch(0.15 0 0);
+    --overview-table-border: oklch(1 0 0 / 0.095);
+    --overview-control-bg: oklch(1 0 0 / 0.06);
+  }
+
+  .pharos-overview-table-viewport {
+    max-height: min(712px, 68vh);
+    overflow-x: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0;
+    scrollbar-width: none;
+  }
+
+  .pharos-overview-table-viewport::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .pharos-overview-table-shell [data-slot="table"].text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .pharos-overview-table-shell [data-slot="table-head"] {
+    height: 2.375rem;
+    padding-inline: 0.75rem;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .pharos-overview-table-shell [data-slot="table-cell"] {
+    padding-inline: 0.75rem;
+    padding-block: 0.375rem;
+  }
+
+  .pharos-overview-table-header,
+  .pharos-overview-table-header tr {
+    background: var(--overview-table-header-bg) !important;
+  }
+
+  .pharos-overview-table-row {
+    border-left-color: transparent;
+  }
+
+  @media (hover: hover) {
+    .pharos-overview-table-shell [data-slot="table-row"]:hover {
+      transform: none;
+    }
+  }
+
+  .pharos-table-striped-indexed.pharos-overview-table-shell tbody tr[data-row-striped="true"] {
+    background-color: var(--overview-table-row-alt);
+  }
+
+  .pharos-overview-table-footer {
+    @apply flex min-h-14 items-center justify-between gap-3 border-t px-3 py-2 text-sm text-muted-foreground;
+    background: var(--overview-table-footer-bg);
+    border-color: var(--overview-table-border);
+  }
+
+  .pharos-overview-pagination-button {
+    @apply inline-flex min-h-8 items-center gap-1.5 rounded-md border px-3 py-1 text-sm font-medium text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-45;
+    background: var(--overview-control-bg, var(--background));
+    border-color: var(--overview-table-border);
+  }
+
+  .pharos-overview-pagination-button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .pharos-overview-pagination-button:not(:disabled):hover {
+    background: var(--table-row-hover);
+  }
+
+  .pharos-peg-browse-shell {
+    @apply overflow-hidden rounded-xl border;
+    background: var(--overview-table-bg, var(--card-bg));
+    border-color: var(--overview-table-border, var(--card-border));
+    box-shadow: none;
   }
 
   .pharos-table-sticky-primary {
@@ -1020,7 +1197,7 @@
     text-decoration-thickness: 1px;
   }
   .pharos-confidence-fallback {
-    opacity: 0.50;
+    opacity: 0.5;
     text-decoration: underline;
     text-decoration-style: dashed;
     text-decoration-color: var(--border-strong);
@@ -1096,15 +1273,17 @@
     background-color: var(--picker-accent);
     color: oklch(0.98 0.02 330);
     transform: translate3d(var(--cta-tx, 0px), var(--cta-ty, 0px), 0);
-    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 220ms ease,
-                background-color 200ms ease;
+    transition:
+      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms ease,
+      background-color 200ms ease;
     will-change: transform;
   }
   .pharos-picker-cta:hover {
     background-color: color-mix(in oklab, var(--picker-accent) 92%, white);
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--picker-accent) 55%, transparent),
-                0 10px 28px -14px color-mix(in oklab, var(--picker-accent) 60%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--picker-accent) 55%, transparent),
+      0 10px 28px -14px color-mix(in oklab, var(--picker-accent) 60%, transparent);
   }
   .pharos-picker-cta__shimmer {
     background-image: linear-gradient(
@@ -1123,8 +1302,9 @@
     background-position: -140% 0%;
   }
   .pharos-picker-cta__arrow {
-    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-                opacity 220ms ease;
+    transition:
+      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 220ms ease;
   }
   .pharos-picker-cta:hover .pharos-picker-cta__arrow {
     transform: translateX(2px);
@@ -1134,16 +1314,30 @@
   .pharos-picker-stack > * {
     animation: pharos-picker-rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-  .pharos-picker-stack > *:nth-child(1) { animation-delay: 60ms; }
-  .pharos-picker-stack > *:nth-child(2) { animation-delay: 140ms; }
+  .pharos-picker-stack > *:nth-child(1) {
+    animation-delay: 60ms;
+  }
+  .pharos-picker-stack > *:nth-child(2) {
+    animation-delay: 140ms;
+  }
 
   @keyframes pharos-picker-scan {
-    0% { background-position: 220% 0%; }
-    100% { background-position: -220% 0%; }
+    0% {
+      background-position: 220% 0%;
+    }
+    100% {
+      background-position: -220% 0%;
+    }
   }
   @keyframes pharos-picker-rise {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1306,20 +1500,20 @@
     width: 8px;
     height: 8px;
   }
-  
+
   .scroll-shadow::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scroll-shadow::-webkit-scrollbar-thumb {
     background-color: var(--border-default);
     border-radius: 4px;
   }
-  
+
   .scroll-shadow::-webkit-scrollbar-thumb:hover {
     background-color: var(--border-strong);
   }
-  
+
   .dark .scroll-shadow {
     background:
       linear-gradient(to right, var(--background) 30%, transparent) left center,
@@ -1372,8 +1566,12 @@
     animation: pharos-fade-in 200ms var(--motion-ease-standard) both;
   }
   @keyframes pharos-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes pharos-fade-in-up {
@@ -1438,10 +1636,7 @@
      stays in-column and scrolls as before. */
   @media (min-width: 90rem) {
     .pharos-timeline-wide {
-      --pharos-timeline-width: max(
-        100%,
-        min(var(--tl-track, 115rem), 100vw - var(--sidebar-width-expanded) - 4rem)
-      );
+      --pharos-timeline-width: max(100%, min(var(--tl-track, 115rem), 100vw - var(--sidebar-width-expanded) - 4rem));
       width: var(--pharos-timeline-width);
       margin-inline: calc((100% - var(--pharos-timeline-width)) / 2);
     }
@@ -1479,13 +1674,23 @@
   }
 
   @keyframes pharos-risk-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 oklch(0.7 0.2 25 / 0.25); }
-    50% { box-shadow: 0 0 0 4px oklch(0.7 0.2 25 / 0); }
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 oklch(0.7 0.2 25 / 0.25);
+    }
+    50% {
+      box-shadow: 0 0 0 4px oklch(0.7 0.2 25 / 0);
+    }
   }
 
   @keyframes pharos-regime-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .animate-risk-pulse {
@@ -1500,47 +1705,63 @@
 
   /* ── DEWS Radar animations ─────────────────────────────────────────────── */
   @keyframes dews-sweep-rotate {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
   @keyframes dews-glow {
-    0%, 100% { opacity: 0.10; }
-    50%      { opacity: 0.35; }
+    0%,
+    100% {
+      opacity: 0.1;
+    }
+    50% {
+      opacity: 0.35;
+    }
   }
   @keyframes dews-center-pulse {
-    0%, 100% { opacity: 0.65; }
-    50%      { opacity: 1.00; }
+    0%,
+    100% {
+      opacity: 0.65;
+    }
+    50% {
+      opacity: 1;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
-    .dews-sweep-g  { animation-play-state: paused !important; }
-    .dews-glow-r   { animation: none !important; opacity: 0.15; }
-    .dews-center-r { animation: none !important; opacity: 0.80; }
+    .dews-sweep-g {
+      animation-play-state: paused !important;
+    }
+    .dews-glow-r {
+      animation: none !important;
+      opacity: 0.15;
+    }
+    .dews-center-r {
+      animation: none !important;
+      opacity: 0.8;
+    }
   }
 
   /* Shimmer loading effect for skeletons */
   @keyframes pharos-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   .skeleton-shimmer {
-    background: linear-gradient(
-      90deg,
-      var(--p-neutral-200) 0%,
-      var(--p-neutral-100) 50%,
-      var(--p-neutral-200) 100%
-    );
+    background: linear-gradient(90deg, var(--p-neutral-200) 0%, var(--p-neutral-100) 50%, var(--p-neutral-200) 100%);
     background-size: 200% 100%;
     animation: pharos-shimmer 1.5s ease-in-out infinite;
   }
 
   .dark .skeleton-shimmer {
-    background: linear-gradient(
-      90deg,
-      var(--p-neutral-800) 0%,
-      var(--p-neutral-700) 50%,
-      var(--p-neutral-800) 100%
-    );
+    background: linear-gradient(90deg, var(--p-neutral-800) 0%, var(--p-neutral-700) 50%, var(--p-neutral-800) 100%);
     background-size: 200% 100%;
   }
 
@@ -1573,8 +1794,8 @@
   .pharos-shimmer-stagger > *:nth-child(5) .skeleton-shimmer {
     animation-delay: 320ms;
   }
-  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(n+6),
-  .pharos-shimmer-stagger > *:nth-child(n+6) .skeleton-shimmer {
+  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(n + 6),
+  .pharos-shimmer-stagger > *:nth-child(n + 6) .skeleton-shimmer {
     animation-delay: 400ms;
   }
 
@@ -1590,11 +1811,12 @@
 
   /* Breathing animation for live indicators */
   @keyframes pharos-breathe {
-    0%, 100% { 
+    0%,
+    100% {
       opacity: 0.5;
       transform: scale(1);
     }
-    50% { 
+    50% {
       opacity: 1;
       transform: scale(1.2);
     }

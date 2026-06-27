@@ -7,28 +7,30 @@
 /* ── Light Mode (default) ──────────────────────────────────────── */
 :root {
   /* ── Surfaces ─────────────────────────────────────────────────── */
-  --surface-base:    var(--p-neutral-50);
-  --surface-raised:  var(--p-neutral-100);
-  --surface-overlay: oklch(0.998 0.002 260);
+  --surface-base: oklch(0.985 0 0);
+  --surface-raised: oklch(0.97 0 0);
+  --surface-overlay: oklch(1 0 0);
 
   /* ── Text ─────────────────────────────────────────────────────── */
-  --text-primary:   var(--p-neutral-950);
-  --text-secondary: oklch(0.40 0.009 260);
-  --text-tertiary:  oklch(0.52 0.007 260);
-  --text-inverse:   var(--p-neutral-50);
+  --text-primary: var(--p-neutral-950);
+  --text-secondary: oklch(0.4 0.009 260);
+  --text-tertiary: oklch(0.52 0.007 260);
+  --text-inverse: var(--p-neutral-50);
 
   /* ── Borders ──────────────────────────────────────────────────── */
-  --border-default:  var(--p-neutral-200);
-  --border-subtle:   var(--p-neutral-100);
-  --border-strong:   var(--p-neutral-300);
+  --border-default: var(--p-neutral-200);
+  --border-subtle: var(--p-neutral-100);
+  --border-strong: var(--p-neutral-300);
 
   /* ── Brand ────────────────────────────────────────────────────── */
-  --brand-accent:    var(--p-frost-blue);
+  --brand-accent: var(--p-frost-blue);
 
   /* ── Featured Surfaces ─────────────────────────────────────────── */
-  --surface-featured-gradient: radial-gradient(120% 150% at 0% 0%, rgba(125,211,252,0.28), transparent 48%), linear-gradient(145deg, rgba(255,255,255,0.94), rgba(239,246,255,0.96) 52%, rgba(226,232,240,0.92));
+  --surface-featured-gradient:
+    radial-gradient(120% 150% at 0% 0%, rgba(125, 211, 252, 0.28), transparent 48%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(239, 246, 255, 0.96) 52%, rgba(226, 232, 240, 0.92));
   --surface-featured-border: rgba(186, 230, 253, 0.45);
-  --surface-featured-shadow: 0 16px 36px rgba(148,163,184,0.18);
+  --surface-featured-shadow: 0 16px 36px rgba(148, 163, 184, 0.18);
   --surface-campaign-gradient: linear-gradient(135deg, oklch(0.985 0.012 248 / 0.98), oklch(0.958 0.03 220 / 0.96));
   --surface-campaign-border: oklch(0.62 0.12 230 / 0.25);
   --surface-campaign-shadow: 0 18px 40px oklch(0 0 0 / 0.08);
@@ -36,89 +38,89 @@
 
   /* ── Homepage Zone Surfaces ──────────────────────────────────── */
   --surface-zone-monitoring: oklch(0.978 0.006 255 / 0.55);
-  --surface-zone-research:  oklch(0.973 0.004 260 / 0.45);
-  --section-rule:           oklch(0.82 0.012 255 / 0.40);
+  --surface-zone-research: oklch(0.973 0.004 260 / 0.45);
+  --section-rule: oklch(0.82 0.012 255 / 0.4);
 
   /* ── Severity (peg deviation) ─────────────────────────────────── */
-  --severity-healthy:  var(--p-green-500);
+  --severity-healthy: var(--p-green-500);
   /* WCAG 1.4.3: amber-300 fails AA on light surfaces. Light theme uses amber-700;
      .dark restores amber-300 (which passes on dark). */
-  --severity-mild:     var(--p-amber-700);
+  --severity-mild: var(--p-amber-700);
   --severity-moderate: var(--p-orange-500);
-  --severity-severe:   var(--p-red-600);
+  --severity-severe: var(--p-red-600);
 
   /* ── Risk Alert States ─────────────────────────────────────────── */
   --risk-alert-border: var(--p-amber-500);
-  --risk-alert-bg:     oklch(0.98 0.02 85 / 0.6);
+  --risk-alert-bg: oklch(0.98 0.02 85 / 0.6);
   --risk-danger-border: var(--p-red-500);
-  --risk-danger-bg:    oklch(0.97 0.03 25 / 0.5);
-  --risk-calm-border:  var(--p-green-500);
-  --risk-calm-bg:      oklch(0.98 0.02 145 / 0.4);
+  --risk-danger-bg: oklch(0.97 0.03 25 / 0.5);
+  --risk-calm-border: var(--p-green-500);
+  --risk-calm-bg: oklch(0.98 0.02 145 / 0.4);
 
   /* ── Severity hex values (for Recharts / canvas) ──────────────── */
-  --severity-healthy-hex:  #22c55e;
-  --severity-mild-hex:     #b45309;
+  --severity-healthy-hex: #22c55e;
+  --severity-mild-hex: #b45309;
   --severity-moderate-hex: #f97316;
-  --severity-severe-hex:   #ef4444;
+  --severity-severe-hex: #ef4444;
 
   /* ── PSI Bands ────────────────────────────────────────────────── */
-  --psi-bedrock:  var(--p-green-500);
-  --psi-steady:   var(--p-teal-400);
-  --psi-tremor:   var(--p-amber-700);
+  --psi-bedrock: var(--p-green-500);
+  --psi-steady: var(--p-teal-400);
+  --psi-tremor: var(--p-amber-700);
   --psi-fracture: var(--p-orange-500);
-  --psi-crisis:   var(--p-red-500);
+  --psi-crisis: var(--p-red-500);
   --psi-meltdown: var(--p-red-950);
 
   /* ── PSI Band hex values (for Recharts) ───────────────────────── */
-  --psi-bedrock-hex:  #22c55e;
-  --psi-steady-hex:   #14b8a6;
-  --psi-tremor-hex:   #a16207;
+  --psi-bedrock-hex: #22c55e;
+  --psi-steady-hex: #14b8a6;
+  --psi-tremor-hex: #a16207;
   --psi-fracture-hex: #f97316;
-  --psi-crisis-hex:   #ef4444;
+  --psi-crisis-hex: #ef4444;
   --psi-meltdown-hex: #991b1b;
-  --psi-band-opacity: 0.10;
+  --psi-band-opacity: 0.1;
 
   /* ── DEWS Threat Bands ────────────────────────────────────────── */
-  --dews-calm:        var(--p-green-500);
-  --dews-watch:       var(--p-teal-400);
-  --dews-alert:       var(--p-amber-700);
-  --dews-warning:     var(--p-orange-500);
-  --dews-danger:      var(--p-red-500);
+  --dews-calm: var(--p-green-500);
+  --dews-watch: var(--p-teal-400);
+  --dews-alert: var(--p-amber-700);
+  --dews-warning: var(--p-orange-500);
+  --dews-danger: var(--p-red-500);
 
   /* ── DEWS hex values (for Recharts) ─────────────────────────── */
-  --dews-calm-hex:    #22c55e;
-  --dews-watch-hex:   #14b8a6;
-  --dews-alert-hex:   #a16207;
+  --dews-calm-hex: #22c55e;
+  --dews-watch-hex: #14b8a6;
+  --dews-alert-hex: #a16207;
   --dews-warning-hex: #f97316;
-  --dews-danger-hex:  #ef4444;
-  --dews-radar-spoke:              oklch(0.54 0.01 260 / 0.22);
-  --dews-radar-calm-boundary:      oklch(0.50 0.01 260 / 0.28);
-  --dews-radar-band-ring-opacity:  0.42;
+  --dews-danger-hex: #ef4444;
+  --dews-radar-spoke: oklch(0.54 0.01 260 / 0.22);
+  --dews-radar-calm-boundary: oklch(0.5 0.01 260 / 0.28);
+  --dews-radar-band-ring-opacity: 0.42;
   --dews-radar-outer-ring-opacity: 0.48;
-  --dews-radar-calm-dot-bloom:     oklch(0.34 0.01 260 / 0.12);
-  --dews-radar-calm-dot-core:      oklch(0.30 0.01 260 / 0.36);
+  --dews-radar-calm-dot-bloom: oklch(0.34 0.01 260 / 0.12);
+  --dews-radar-calm-dot-core: oklch(0.3 0.01 260 / 0.36);
 
   /* ── Score Tiers ──────────────────────────────────────────────── */
   --score-green: var(--p-green-500);
-  --score-blue:  var(--p-blue-500);
+  --score-blue: var(--p-blue-500);
   --score-amber: var(--p-amber-700);
-  --score-red:   var(--p-red-500);
+  --score-red: var(--p-red-500);
 
   /* ── Mechanism Archetype Accents ──────────────────────────────── */
   /* Used by the mechanism-diagram step numbers and ribbons. */
-  --mechanism-fiat-cash:               oklch(0.67 0.17 252);
-  --mechanism-tbill:                   oklch(0.65 0.21 295);
-  --mechanism-cdp:                     oklch(0.75 0.13 212);
+  --mechanism-fiat-cash: oklch(0.67 0.17 252);
+  --mechanism-tbill: oklch(0.65 0.21 295);
+  --mechanism-cdp: oklch(0.75 0.13 212);
   --mechanism-synthetic-delta-neutral: oklch(0.68 0.13 182);
-  --mechanism-algorithmic:             oklch(0.7  0.18 15);
-  --mechanism-rwa-credit-fund:         oklch(0.7  0.15 50);
+  --mechanism-algorithmic: oklch(0.7 0.18 15);
+  --mechanism-rwa-credit-fund: oklch(0.7 0.15 50);
 
   /* ── Interactive States ───────────────────────────────────────── */
-  --interactive-hover:   oklch(0.95 0.005 260);
-  --interactive-active:  oklch(0.91 0.005 260);
-  --interactive-focus:   var(--p-blue-400);
+  --interactive-hover: oklch(0.95 0.005 260);
+  --interactive-active: oklch(0.91 0.005 260);
+  --interactive-focus: var(--p-blue-400);
   --interactive-disabled: var(--p-neutral-200);
-  --control-pill-bg:     oklch(1 0 0 / 0.78);
+  --control-pill-bg: oklch(1 0 0 / 0.78);
   --control-pill-border: oklch(0.87 0.01 255 / 0.78);
   --control-pill-active-bg: oklch(0.19 0.01 255);
   --control-pill-active-text: var(--p-neutral-50);
@@ -126,46 +128,48 @@
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.12;
   --chart-fill-opacity: 0.28;
-  --chart-primary:   var(--p-blue-500);
-  --chart-secondary: var(--p-green-400);
-  --chart-tertiary:  var(--p-teal-400);
-  --chart-negative:  var(--p-red-500);
-  --chart-stage-bg:      oklch(0.995 0.003 260 / 0.78);
-  --chart-stage-border:  oklch(0.9 0.008 255 / 0.82);
-  --chart-stage-shadow:  inset 0 1px 0 oklch(1 0 0 / 0.78);
+  --chart-primary: var(--p-frost-blue);
+  --chart-secondary: #3bcc87;
+  --chart-tertiary: #23a7c8;
+  --chart-negative: var(--p-red-500);
+  --chart-stage-bg: oklch(0.995 0.003 260 / 0.78);
+  --chart-stage-border: oklch(0.9 0.008 255 / 0.82);
+  --chart-stage-shadow: inset 0 1px 0 oklch(1 0 0 / 0.78);
 
   /* ── Chart hex values (for Recharts) ──────────────────────────── */
-  --chart-primary-hex:   #3b82f6;
-  --chart-secondary-hex: #10b981;
-  --chart-tertiary-hex:  #14b8a6;
-  --chart-negative-hex:  #ef4444;
+  --chart-primary-hex: #4bc4de;
+  --chart-secondary-hex: #3bcc87;
+  --chart-tertiary-hex: #23a7c8;
+  --chart-negative-hex: #ef4444;
 
   /* ── Elevation System ─────────────────────────────────────────── */
-  --elevation-rest:    0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%);
-  --elevation-raised:  0 2px 6px oklch(0 0 0 / 7%), 0 14px 32px oklch(0 0 0 / 8%);
-  --elevation-featured: 0 16px 36px rgba(148,163,184,0.18);
+  --elevation-rest: 0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%);
+  --elevation-raised: 0 2px 6px oklch(0 0 0 / 7%), 0 14px 32px oklch(0 0 0 / 8%);
+  --elevation-featured: 0 16px 36px rgba(148, 163, 184, 0.18);
 
   /* ── Component: Card ──────────────────────────────────────────── */
-  --card-bg:         var(--surface-overlay);
-  --card-border:     var(--border-default);
-  --card-shadow:     var(--elevation-rest);
-  --card-shadow-hover: var(--elevation-raised);
-  --card-shell-bg: linear-gradient(180deg, oklch(0.998 0.002 260 / 0.96), oklch(0.985 0.004 255 / 0.9));
-  --card-shell-highlight: radial-gradient(140% 140% at 0% 0%, oklch(0.76 0.06 248 / 0.12), transparent 48%);
+  /* Flat card treatment per the Figma redesign: no gradient shell, no drop
+     shadow — just a fill + hairline border. */
+  --card-bg: var(--surface-overlay);
+  --card-border: var(--border-default);
+  --card-shadow: none;
+  --card-shadow-hover: var(--elevation-rest);
+  --card-shell-bg: none;
+  --card-shell-highlight: none;
   --panel-header-bg: oklch(0.985 0.004 255 / 0.7);
 
   /* ── Component: Table ─────────────────────────────────────────── */
-  --table-header-bg:    var(--surface-raised);
-  --table-row-hover:    var(--interactive-hover);
-  --table-row-stripe:   oklch(0.97 0.003 260 / 60%);
-  --table-border:       var(--border-subtle);
+  --table-header-bg: var(--surface-raised);
+  --table-row-hover: var(--interactive-hover);
+  --table-row-stripe: oklch(0.97 0.003 260 / 60%);
+  --table-border: var(--border-subtle);
   --table-header-shadow: inset 0 -1px 0 oklch(0.85 0.008 255 / 0.78);
   --table-sticky-column-bg: oklch(0.995 0.003 260 / 0.95);
   --table-sticky-column-shadow: 10px 0 20px oklch(0 0 0 / 0.05);
 
   /* ── Component: Sidebar ───────────────────────────────────────── */
-  --sidebar-bg:        var(--surface-overlay);
-  --sidebar-border:    var(--border-default);
+  --sidebar-bg: var(--surface-overlay);
+  --sidebar-border: var(--border-default);
   --sidebar-item-hover: var(--interactive-hover);
 
   /* ── Component: Sidebar Dimensions ───────────────────────────── */
@@ -179,7 +183,7 @@
   --motion-duration-slow: 600ms;
   --motion-duration-entrance: 400ms;
   --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --motion-ease-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --motion-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
 
   /* ── Theme Transition ─────────────────────────────────────────── */
   --theme-transition-duration: 200ms;
@@ -188,48 +192,50 @@
 /* ── Dark Mode ─────────────────────────────────────────────────── */
 .dark {
   /* ── Surfaces ─────────────────────────────────────────────────── */
-  --surface-base:    var(--p-neutral-975);
-  --surface-raised:  var(--p-neutral-850);
-  --surface-overlay: var(--p-neutral-925);
+  --surface-base: oklch(0.085 0 0);
+  --surface-raised: oklch(0.215 0.003 260);
+  --surface-overlay: oklch(0.2 0.003 260);
 
   /* ── Text ─────────────────────────────────────────────────────── */
-  --text-primary:   var(--p-neutral-50);
+  --text-primary: var(--p-neutral-50);
   --text-secondary: oklch(0.76 0.006 260);
-  --text-tertiary:  var(--p-neutral-400);
-  --text-inverse:   var(--p-neutral-950);
+  --text-tertiary: var(--p-neutral-400);
+  --text-inverse: var(--p-neutral-950);
 
   /* ── Borders ──────────────────────────────────────────────────── */
-  --border-default:  oklch(1 0 0 / 12%);
-  --border-subtle:   oklch(1 0 0 / 8%);
-  --border-strong:   oklch(1 0 0 / 18%);
+  --border-default: oklch(1 0 0 / 12%);
+  --border-subtle: oklch(1 0 0 / 8%);
+  --border-strong: oklch(1 0 0 / 18%);
 
   /* ── Severity (same hues, adjusted lightness for dark bg) ────── */
-  --severity-severe:   var(--p-red-400);
+  --severity-severe: var(--p-red-400);
   /* Restore the bright amber stop on dark surfaces (passes AA against the
      dark background); the light theme darkened these to amber-700 for AA. */
-  --severity-mild:     var(--p-amber-300);
+  --severity-mild: var(--p-amber-300);
   --severity-mild-hex: #f59e0b;
-  --psi-tremor:        var(--p-amber-300);
-  --psi-tremor-hex:    #eab308;
-  --dews-alert:        var(--p-amber-300);
-  --dews-alert-hex:    #eab308;
-  --score-amber:       var(--p-amber-300);
+  --psi-tremor: var(--p-amber-300);
+  --psi-tremor-hex: #eab308;
+  --dews-alert: var(--p-amber-300);
+  --dews-alert-hex: #eab308;
+  --score-amber: var(--p-amber-300);
 
   /* ── Mechanism Archetype Accents (Dark) ────────────────────────
      Same hues, lifted lightness/chroma for legibility on dark bg. */
-  --mechanism-fiat-cash:               oklch(0.74 0.16 252);
-  --mechanism-tbill:                   oklch(0.74 0.18 295);
-  --mechanism-cdp:                     oklch(0.80 0.12 212);
+  --mechanism-fiat-cash: oklch(0.74 0.16 252);
+  --mechanism-tbill: oklch(0.74 0.18 295);
+  --mechanism-cdp: oklch(0.8 0.12 212);
   --mechanism-synthetic-delta-neutral: oklch(0.76 0.12 182);
-  --mechanism-algorithmic:             oklch(0.76 0.16 15);
-  --mechanism-rwa-credit-fund:         oklch(0.78 0.14 50);
+  --mechanism-algorithmic: oklch(0.76 0.16 15);
+  --mechanism-rwa-credit-fund: oklch(0.78 0.14 50);
 
   /* ── Featured Surfaces (Dark) ─────────────────────────────────── */
-  --surface-featured-gradient: radial-gradient(120% 150% at 0% 0%, rgba(34,211,238,0.12), transparent 48%), linear-gradient(145deg, rgba(8,15,28,0.96), rgba(4,19,40,0.96) 55%, rgba(3,9,21,0.98));
+  --surface-featured-gradient:
+    radial-gradient(120% 150% at 0% 0%, rgba(34, 211, 238, 0.12), transparent 48%),
+    linear-gradient(145deg, rgba(8, 15, 28, 0.96), rgba(4, 19, 40, 0.96) 55%, rgba(3, 9, 21, 0.98));
   --surface-featured-border: oklch(0.5 0.12 230 / 0.15);
-  --surface-featured-shadow: 0 20px 44px rgba(2,6,23,0.28);
+  --surface-featured-shadow: 0 20px 44px rgba(2, 6, 23, 0.28);
   --surface-campaign-gradient: linear-gradient(135deg, oklch(0.22 0.03 248 / 0.94), oklch(0.17 0.03 220 / 0.98));
-  --surface-campaign-border: oklch(0.55 0.1 230 / 0.20);
+  --surface-campaign-border: oklch(0.55 0.1 230 / 0.2);
   --surface-campaign-shadow: 0 24px 48px oklch(0 0 0 / 0.18);
   --surface-onboarding-gradient: linear-gradient(135deg, oklch(0.21 0.03 250 / 0.92), oklch(0.16 0.02 250 / 0.98));
 
@@ -237,53 +243,57 @@
   /* Bumped alpha (0.45 -> 0.65, 0.40 -> 0.55) for stronger separation
      from the page background in dark mode without changing hue. */
   --surface-zone-monitoring: oklch(0.19 0.012 250 / 0.65);
-  --surface-zone-research:  oklch(0.175 0.008 255 / 0.55);
-  --section-rule:           oklch(1 0 0 / 0.14);
+  --surface-zone-research: oklch(0.175 0.008 255 / 0.55);
+  --section-rule: oklch(1 0 0 / 0.14);
 
   /* ── Risk Alert States (Dark) ─────────────────────────────────── */
   --risk-alert-border: var(--p-amber-400);
-  --risk-alert-bg:     oklch(0.22 0.03 85 / 0.25);
+  --risk-alert-bg: oklch(0.22 0.03 85 / 0.25);
   --risk-danger-border: var(--p-red-400);
-  --risk-danger-bg:    oklch(0.20 0.04 25 / 0.35);
-  --risk-calm-bg:      oklch(0.22 0.03 145 / 0.15);
+  --risk-danger-bg: oklch(0.2 0.04 25 / 0.35);
+  --risk-calm-bg: oklch(0.22 0.03 145 / 0.15);
 
   /* ── Interactive States ───────────────────────────────────────── */
-  --interactive-hover:   oklch(0.26 0.015 260);
-  --interactive-active:  oklch(0.30 0.016 260);
-  --interactive-focus:   var(--p-blue-500);
+  --interactive-hover: oklch(0.245 0.006 260);
+  --interactive-active: oklch(0.275 0.008 260);
+  --interactive-focus: var(--p-blue-500);
   --interactive-disabled: var(--p-neutral-800);
-  --control-pill-bg:     oklch(1 0 0 / 0.05);
-  --control-pill-border: oklch(1 0 0 / 0.10);
+  --control-pill-bg: oklch(1 0 0 / 0.05);
+  --control-pill-border: oklch(1 0 0 / 0.1);
   --control-pill-active-bg: oklch(0.92 0.01 255);
   --control-pill-active-text: var(--p-neutral-950);
 
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.08;
   --chart-fill-opacity: 0.24;
-  --chart-primary:   var(--p-blue-600);
-  --chart-negative:  var(--p-red-400);
-  --chart-stage-bg:      oklch(1 0 0 / 0.03);
-  --chart-stage-border:  oklch(1 0 0 / 0.08);
-  --chart-stage-shadow:  inset 0 1px 0 oklch(1 0 0 / 0.05);
-  --dews-radar-spoke:              oklch(1 0 0 / 0.12);
-  --dews-radar-calm-boundary:      oklch(1 0 0 / 0.16);
-  --dews-radar-band-ring-opacity:  0.25;
+  --chart-primary: var(--p-frost-blue);
+  --chart-negative: var(--p-red-400);
+  --chart-stage-bg: oklch(1 0 0 / 0.03);
+  --chart-stage-border: oklch(1 0 0 / 0.08);
+  --chart-stage-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
+  --dews-radar-spoke: oklch(1 0 0 / 0.12);
+  --dews-radar-calm-boundary: oklch(1 0 0 / 0.16);
+  --dews-radar-band-ring-opacity: 0.25;
   --dews-radar-outer-ring-opacity: 0.35;
-  --dews-radar-calm-dot-bloom:     oklch(1 0 0 / 0.06);
-  --dews-radar-calm-dot-core:      oklch(1 0 0 / 0.28);
+  --dews-radar-calm-dot-bloom: oklch(1 0 0 / 0.06);
+  --dews-radar-calm-dot-core: oklch(1 0 0 / 0.28);
 
   /* ── Elevation System ─────────────────────────────────────────── */
-  --elevation-rest:    0 1px 2px oklch(0 0 0 / 30%), 0 10px 30px oklch(0 0 0 / 22%);
-  --elevation-raised:  0 2px 6px oklch(0 0 0 / 32%), 0 18px 44px oklch(0 0 0 / 28%);
-  --elevation-featured: 0 20px 44px rgba(2,6,23,0.28);
+  --elevation-rest: 0 1px 2px oklch(0 0 0 / 30%), 0 10px 30px oklch(0 0 0 / 22%);
+  --elevation-raised: 0 2px 6px oklch(0 0 0 / 32%), 0 18px 44px oklch(0 0 0 / 28%);
+  --elevation-featured: 0 20px 44px rgba(2, 6, 23, 0.28);
 
-  /* ── Component: Card ──────────────────────────────────────────── */
-  --card-shell-bg: linear-gradient(180deg, oklch(0.23 0.01 255 / 0.9), oklch(0.19 0.01 255 / 0.94));
-  --card-shell-highlight: radial-gradient(140% 140% at 0% 0%, oklch(0.72 0.14 248 / 0.12), transparent 48%);
-  --panel-header-bg: oklch(1 0 0 / 0.04);
+  /* ── Component: Card (flat charcoal block per Figma redesign) ─── */
+  --card-bg: oklch(0.2 0.003 260);
+  --card-border: oklch(1 0 0 / 0.105);
+  --card-shadow: none;
+  --card-shadow-hover: none;
+  --card-shell-bg: none;
+  --card-shell-highlight: none;
+  --panel-header-bg: oklch(0.225 0.004 260);
 
   /* ── Component: Table ─────────────────────────────────────────── */
-  --table-row-stripe:   oklch(1 0 0 / 4%);
+  --table-row-stripe: oklch(1 0 0 / 4%);
   --table-header-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.08);
   --table-sticky-column-bg: oklch(0.205 0.01 255 / 0.96);
   --table-sticky-column-shadow: 12px 0 24px oklch(0 0 0 / 0.28);

@@ -117,7 +117,6 @@ export default function LearnIndexPage() {
         { name: "Home", url: "/" },
         { name: "Learn", url: "/learn/" },
       ]}
-      visibleBreadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Learn" }]}
       title="How Stables Work & Break"
       subtitle="How stablecoins hold a dollar, why they break it, and the vocabulary Pharos uses to name the risk."
       leadParagraphs={[
