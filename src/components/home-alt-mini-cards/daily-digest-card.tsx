@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { Newspaper, Send } from "lucide-react";
-import { useDailyDigest } from "@/hooks/api-hooks";
+import { useDailyDigest, useDigestArchive } from "@/hooks/api-hooks";
 import { splitDigestParagraphs } from "@/lib/digest";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
+import type { DigestArchiveEntry } from "@shared/types";
 
 const FALLBACK_DIGEST_PREVIEW = {
   title: "USDC Bleeds $819M In A Week",
@@ -17,13 +18,39 @@ function compactDigestText(value: string | null | undefined): string | null {
   return compact ? compact : null;
 }
 
+function getPreviousDailyEditions({
+  entries,
+  currentEditionNumber,
+  currentGeneratedAt,
+}: {
+  entries: readonly DigestArchiveEntry[] | undefined;
+  currentEditionNumber: number | null | undefined;
+  currentGeneratedAt: number | null | undefined;
+}): DigestArchiveEntry[] {
+  if (!entries?.length) return [];
+  return entries
+    .filter((entry) => (entry.digestType ?? "daily") !== "weekly")
+    .filter((entry) => {
+      if (currentEditionNumber != null && entry.editionNumber === currentEditionNumber) return false;
+      if (currentGeneratedAt != null && entry.generatedAt === currentGeneratedAt) return false;
+      return true;
+    })
+    .slice(0, 2);
+}
+
 // Promo card sitting at the top-right of the Market Pulse band. Unlike its
 // data siblings it carries no live signal, so it leads with the serif digest
 // nameplate and two CTAs instead of the label + expand header pattern.
 export function DailyDigestCard(): React.JSX.Element {
   const { data } = useDailyDigest();
+  const { data: archiveData } = useDigestArchive();
   const title = compactDigestText(data?.digestTitle) ?? FALLBACK_DIGEST_PREVIEW.title;
   const editionPrefix = data?.editionNumber ? `#${data.editionNumber}` : null;
+  const previousEditions = getPreviousDailyEditions({
+    entries: archiveData?.digests,
+    currentEditionNumber: data?.editionNumber,
+    currentGeneratedAt: data?.generatedAt,
+  });
   const text =
     compactDigestText(data?.digest) ??
     compactDigestText(splitDigestParagraphs(data?.digestExtended)[0]) ??
@@ -55,16 +82,16 @@ export function DailyDigestCard(): React.JSX.Element {
 
       {/* Serif promo on a subtle layered-card stack — back leaves peek above
           and beside the front card to fake depth without using shadows. */}
-      <div className="absolute inset-x-0 bottom-0 z-10 h-[160px] text-left">
-        <div
-          aria-hidden="true"
-          className="absolute left-10 right-7 top-0 h-[150px] -rotate-[5deg] rounded-xl border border-border/35 bg-card/80"
+      <div className="absolute inset-x-0 bottom-3 z-10 h-[164px] text-left">
+        <DigestFoldPreview
+          entry={previousEditions[1]}
+          className="left-10 right-7 top-0 h-[150px] -rotate-[5deg] border-border/35 bg-card/80 pt-2.5"
         />
-        <div
-          aria-hidden="true"
-          className="absolute left-8 right-5 top-4 h-[152px] -rotate-[1deg] rounded-xl border border-border/45 bg-card/90"
+        <DigestFoldPreview
+          entry={previousEditions[0]}
+          className="left-8 right-5 top-8 h-[152px] -rotate-[1deg] border-border/45 bg-card/90 pt-3"
         />
-        <div className="absolute inset-x-4 bottom-[-3.25rem] top-10 overflow-hidden rounded-xl border border-border/65 bg-card/95 p-4">
+        <div className="absolute inset-x-4 bottom-[-2.25rem] top-[4.625rem] overflow-hidden rounded-xl border border-border/65 bg-card/95 p-4">
           <h4 className={`${digestDisplay.className} text-sm font-semibold uppercase leading-snug tracking-wide`}>
             {editionPrefix ? (
               <>
@@ -84,6 +111,33 @@ export function DailyDigestCard(): React.JSX.Element {
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+function DigestFoldPreview({
+  entry,
+  className,
+}: {
+  entry: DigestArchiveEntry | undefined;
+  className: string;
+}): React.JSX.Element {
+  const title = compactDigestText(entry?.digestTitle);
+  const editionPrefix = entry?.editionNumber ? `#${entry.editionNumber}` : null;
+
+  return (
+    <div aria-hidden="true" className={cn("absolute overflow-hidden rounded-xl border px-4 py-3", className)}>
+      {title && (
+        <p
+          className={cn(
+            digestDisplay.className,
+            "max-w-full truncate text-[9px] font-semibold uppercase leading-none tracking-wide text-foreground/50",
+          )}
+        >
+          {editionPrefix && <span className="text-teal-700/75 dark:text-teal-400/75">{editionPrefix}</span>}
+          {editionPrefix ? ` — ${title}` : title}
+        </p>
+      )}
     </div>
   );
 }
