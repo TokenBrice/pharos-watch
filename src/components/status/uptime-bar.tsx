@@ -116,7 +116,7 @@ export function UptimeBar({
   }, [days, segments]);
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/50 bg-card/60 p-4 dark:bg-card/30">
+    <div className="pharos-card-shell space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Status runway</div>

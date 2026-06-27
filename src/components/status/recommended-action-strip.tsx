@@ -3,7 +3,7 @@ import { AdminActionButton } from "@/components/status/admin-action-button";
 import { SeverityPill } from "@/components/status/severity-pill";
 
 const RECOMMENDED_ACTION_STRIP_CLASS =
-  "rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]";
+  "rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5";
 
 export function RecommendedActionStrip({
   recommendations,
@@ -39,7 +39,7 @@ export function RecommendedActionStrip({
       </div>
       <div className="mt-4 space-y-3">
         {recommendations.slice(0, 3).map((recommendation) => (
-          <div key={recommendation.action.path} className="rounded-[1.15rem] border border-white/10 bg-black/18 p-3.5">
+          <div key={recommendation.action.path} className="rounded-xl border border-white/10 bg-black/18 p-3.5">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">

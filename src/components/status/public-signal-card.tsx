@@ -24,8 +24,8 @@ export function PublicSignalCard({
     <article
       className={
         variant === "panel"
-          ? "rounded-[1.25rem] border border-border/60 bg-background/35 p-4"
-          : "rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30"
+          ? "rounded-xl border border-border/60 bg-background/35 p-4"
+          : "pharos-card-shell p-5"
       }
     >
       <div className={cn("flex flex-wrap justify-between gap-3", description ? "items-start" : "items-center")}>

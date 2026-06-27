@@ -88,7 +88,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
   if (healthLoading && !healthData) {
     content = (
       <div className="space-y-6">
-        <div className="rounded-2xl bg-muted/30 animate-pulse h-[200px]" />
+        <div className="h-[200px] animate-pulse rounded-xl bg-muted/30" />
         <div className="rounded-xl bg-muted/30 animate-pulse h-[60px]" />
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-xl bg-muted/30 animate-pulse h-[300px]" />
@@ -98,7 +98,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     );
   } else if (healthError && !healthData) {
     content = (
-      <div className="rounded-[1.6rem] border border-red-500/30 bg-red-500/10 p-6 text-red-700 shadow-[0_18px_48px_oklch(0_0_0_/0.16)] dark:text-red-300">
+      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-red-700 dark:text-red-300">
         Failed to load public status data: {healthError.message}
       </div>
     );
@@ -167,7 +167,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     <FeaturePageShell {...STATUS_SHELL_PROPS}>
       {content}
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+        <div className="pharos-card-shell px-4 py-4">
           <p className="pharos-kicker">Reading Status</p>
           <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
             <p>

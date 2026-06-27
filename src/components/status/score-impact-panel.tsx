@@ -34,7 +34,7 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
     reserveComposition.writeTimeoutUncertain > 0;
 
   return (
-    <section className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
+    <section className="rounded-xl border border-border/60 bg-background/35 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h3 className="text-base font-semibold tracking-tight text-foreground">Score impact monitor</h3>

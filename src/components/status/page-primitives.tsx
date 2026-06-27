@@ -73,7 +73,7 @@ export function StatusSection({
     <section
       id={id}
       className={cn(
-        "scroll-mt-36 rounded-[1.5rem] border border-border/70 bg-card px-4 py-5 shadow-sm md:scroll-mt-28 sm:px-5 lg:px-6",
+        "pharos-card-shell scroll-mt-36 px-4 py-5 md:scroll-mt-28 sm:px-5 lg:px-6",
         accentClassName,
       )}
     >

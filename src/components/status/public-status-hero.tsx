@@ -126,7 +126,7 @@ export function PublicStatusHero({
   const mintBurnTone = getPublicMintBurnStatus(healthData.mintBurn.sync);
 
   return (
-    <section className={cn("relative overflow-hidden rounded-[1.75rem] border px-4 py-5 shadow-[0_24px_60px_oklch(0_0_0_/0.18)] sm:px-5 lg:px-6", hero.shell)}>
+    <section className={cn("relative overflow-hidden rounded-xl border px-4 py-5 sm:px-5 lg:px-6", hero.shell)}>
       <div className={cn("pointer-events-none absolute inset-0 opacity-100", hero.glowA)} />
       <div className={cn("pointer-events-none absolute inset-0 opacity-100", hero.glowB)} />
 
