@@ -179,7 +179,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-just-entered.ts` - useJustEntered
 - `src/hooks/use-logos.ts` - useLogos
 - `src/hooks/use-mint-burn-flows.ts` - mintBurnFlowsCoinQueryOptions, useMintBurnEvents, useMintBurnFlows, useMintBurnFlowsCoin
-- `src/hooks/use-motion-preference.ts` - MotionPreference, MotionPreferenceApi, getEffectiveReducedMotion, motionPreferenceStore, useMotionPreference
+- `src/hooks/use-motion-preference.ts` - MotionPreference, getEffectiveReducedMotion, motionPreferenceStore
 - `src/hooks/use-nav-collapse.ts` - STORAGE_KEY, getExpandedState, setExpandedState, useNavCollapse
 - `src/hooks/use-nav-prefetch.ts` - useNavPrefetch
 - `src/hooks/use-near-viewport.ts` - useNearViewport
@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 390 more files omitted; use `rg --files src/components` for the full list.
+- ... 389 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 

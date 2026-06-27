@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
 import { createBrowserStorageStore } from "@/lib/browser-storage";
 
 const STORAGE_KEY = "pharos-motion-preference-v1";
@@ -99,28 +98,3 @@ export const motionPreferenceStore = {
   getSnapshot,
   getServerSnapshot,
 };
-
-export interface MotionPreferenceApi {
-  preference: MotionPreference;
-  setPreference: (next: MotionPreference) => void;
-}
-
-/**
- * Site-level reduce-motion toggle (IDEA-11). Persists to localStorage and
- * mirrors the effective state onto the root/body `data-motion` attribute so
- * CSS can honor the explicit override in addition to the OS-level media query.
- */
-export function useMotionPreference(): MotionPreferenceApi {
-  const preference = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-
-  const setPreference = useCallback((next: MotionPreference) => {
-    currentPreference = next;
-    if (typeof window !== "undefined") {
-      motionPreferenceStorage.write(next);
-    }
-    applyToBody(next);
-    notify();
-  }, []);
-
-  return { preference, setPreference };
-}
