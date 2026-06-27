@@ -35,6 +35,20 @@ async function devRewrites() {
   ];
 }
 
+function devAllowedOrigins() {
+  return [
+    "ops.pharos.watch",
+    "*.ngrok-free.app",
+    "*.ngrok.app",
+    ...(
+      process.env.NEXT_ALLOWED_DEV_ORIGINS ?? ""
+    )
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ];
+}
+
 export default function createNextConfig(phase: string): NextConfig {
   // The /api proxy is only useful in `next dev`.
   // Static exports rely on Cloudflare Pages `_redirects`, and leaving rewrites
@@ -42,7 +56,7 @@ export default function createNextConfig(phase: string): NextConfig {
   if (phase === PHASE_DEVELOPMENT_SERVER) {
     return {
       ...baseConfig,
-      allowedDevOrigins: ["ops.pharos.watch"],
+      allowedDevOrigins: devAllowedOrigins(),
       rewrites: devRewrites,
     };
   }
