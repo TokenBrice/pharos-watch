@@ -364,8 +364,8 @@ export function YieldScatterPlot({
       <div
         className={
           compact
-            ? "h-[420px] overflow-hidden rounded-xl border border-border/70 bg-card/60 p-2"
-            : "h-[600px] overflow-hidden rounded-2xl border-2 border-border/80 bg-card/60 p-2 sm:h-[850px] sm:p-4"
+            ? "pharos-chart-stage h-[420px] overflow-hidden p-2"
+            : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
         aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Click a logo to open its detail page.`}

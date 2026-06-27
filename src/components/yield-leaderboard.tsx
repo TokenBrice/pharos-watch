@@ -250,7 +250,7 @@ export function YieldLeaderboard({
               onPrevious={onPreviousPage}
               onNext={onNextPage}
               noun="coins"
-              className="rounded-xl border border-border/70 bg-card/80"
+              className="pharos-table-shell"
               bordered={false}
             />
           </>

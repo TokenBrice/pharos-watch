@@ -219,8 +219,8 @@ export function YieldClient() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-full rounded-xl" />
-        <Skeleton className="h-[500px] w-full rounded-2xl" />
-        <Skeleton className="h-[400px] w-full rounded-2xl" />
+        <Skeleton className="h-[500px] w-full rounded-xl" />
+        <Skeleton className="h-[400px] w-full rounded-xl" />
       </div>
     );
   }
@@ -263,7 +263,7 @@ export function YieldClient() {
       <div className="flex flex-col gap-6">
         <section aria-label="Yield view highlights" className="order-1 space-y-4">
           {exhibitTiles === null ? (
-            <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-5 text-center text-sm text-muted-foreground">
+            <div className="pharos-empty-note px-4 py-5 text-center text-sm">
               No rows match your filters
             </div>
           ) : (
@@ -272,7 +272,7 @@ export function YieldClient() {
                 <button
                   type="button"
                   onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
-                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                  className="pharos-card-shell pharos-focus-ring group px-4 py-4 text-left transition-colors hover:border-border"
                 >
                   <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Top yield this week</h3>
                   <div className="flex items-center gap-2">
@@ -302,7 +302,7 @@ export function YieldClient() {
                 <button
                   type="button"
                   onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
-                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                  className="pharos-card-shell pharos-focus-ring group px-4 py-4 text-left transition-colors hover:border-border"
                 >
                   <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Most stable A+ yield</h3>
                   <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ export function YieldClient() {
                 <button
                   type="button"
                   onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
-                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                  className="pharos-card-shell pharos-focus-ring group px-4 py-4 text-left transition-colors hover:border-border"
                 >
                   <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Largest market</h3>
                   <div className="flex items-center gap-2">
@@ -406,7 +406,7 @@ export function YieldClient() {
 
         <section className="order-5 space-y-6" aria-label="Yield reference rates and sources">
           {viewModel.emptyState.isEmpty ? (
-            <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-6 text-center">
+            <div className="pharos-empty-note px-4 py-6 text-center">
               <p className="font-medium text-foreground">{viewModel.emptyState.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{viewModel.emptyState.description}</p>
               {viewModel.emptyState.suggestions.length > 0 ? (

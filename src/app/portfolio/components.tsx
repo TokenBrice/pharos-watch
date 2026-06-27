@@ -184,7 +184,7 @@ export function PortfolioHoldingsEditor({
           onRemove={() => {}}
         />
         {holdings.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-4 py-3 text-sm text-muted-foreground">
+          <div className="pharos-empty-note border-dashed px-4 py-3 text-sm">
             Add holdings manually or load a starter mix below. Share and clear actions stay hidden until your portfolio
             has at least one position.
           </div>

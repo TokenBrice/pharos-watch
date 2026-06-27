@@ -96,7 +96,7 @@ function YieldSourceSheetBody({
       </SheetHeader>
 
       <div className="space-y-4 px-4">
-        <div className="rounded-xl border border-border/60 border-l-[3px] border-l-emerald-500 bg-background/55 px-3 py-2.5">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Chosen Yield Source
           </p>
