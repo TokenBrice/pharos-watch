@@ -193,7 +193,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
 - `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
-- ... 29 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 30 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-pages.ts` - ComparisonFaqItem, ComparisonSnippetAnswer, STATIC_COMPARE_PAIRS, STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows
 - `src/lib/compare-selection-insights.ts` - CompareSelectionInsights, buildCompareSelectionInsights
 - `src/lib/compare-share-image.ts` - ShareCoinData, ShareRadarData, canvasToBlob, loadImage, renderCompareShareImage
-- ... 142 more files omitted; use `rg --files src/lib` for the full list.
+- ... 143 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 387 more files omitted; use `rg --files src/components` for the full list.
+- ... 389 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -488,7 +488,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/api-key-requests/admin-handlers.ts` - handleApiKeyRequestReject, handleApiKeyRequestRejectRoute, handleApiKeyRequestReleaseClaimRoute, handleApiKeyRequestsAdmin, handleApiKeyRequestsAdminRoute
 - `worker/src/api/api-key-requests/admin.ts` - buildAdminMutationResponse, deactivateLinkedSelfServeKey, listAdminRequests, mapAdminRow, parseAdminMutationBody, recordRequestAdminAction
 - `worker/src/api/api-key-requests/email.ts` - redactProviderBody, sendVerificationEmail
-- `worker/src/api/api-key-requests/notifications.ts` - notifySelfServeIssued
 - `worker/src/api/api-key-requests/public.ts` - handleApiKeyRequest, handleApiKeyRequestVerify
 - `worker/src/api/api-key-requests/rate-limit.ts` - ApiKeyRequestRateLimitResult, ApiKeyRequestRateLimitScope, checkApiKeyRequestRateLimit, pruneOldApiKeyRequestRateLimits
 - `worker/src/api/api-key-requests/request.ts` - buildVerificationUrl, createRequestId, createVerificationToken, hashClientIp, hashForLookup, hashUserAgent
@@ -533,7 +532,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/digest-risk-summary.ts` - selectDigestRiskSignal
 - `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
-- ... 123 more files omitted; use `rg --files worker/src/api` for the full list.
+- `worker/src/api/events.ts` - handleEvents
+- ... 122 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 

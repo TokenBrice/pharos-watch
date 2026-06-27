@@ -32,7 +32,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: ["worker/src/lib/provider-execution.ts"],
     tests: ["worker/src/lib/__tests__/provider-execution.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Central wrapper that owns raw fetch budget permits, provider timeouts, circuit checks, and response-body policy.",
+    directFetchJustification:
+      "Central wrapper that owns raw fetch budget permits, provider timeouts, circuit checks, and response-body policy.",
     resilience: {
       transport: "provider-execution-wrapper",
       timeout: "Uses createTimeoutSignal() to compose the cron/lane AbortSignal with provider timeouts.",
@@ -155,11 +156,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       transport: "fetchJsonWithRetry",
       timeout: "Uses fetchJsonWithRetry timeouts plus cron AbortSignal.",
       body: "Keeps per-request timeouts active through typed JSON body parsing and records circuit outcomes on failed paths.",
-      circuitSources: [
-        "CIRCUIT_SOURCE.FX_FRANKFURTER",
-        "CIRCUIT_SOURCE.FX_REALTIME",
-        "CIRCUIT_SOURCE.CHAINLINK_FEEDS",
-      ],
+      circuitSources: ["CIRCUIT_SOURCE.FX_FRANKFURTER", "CIRCUIT_SOURCE.FX_REALTIME", "CIRCUIT_SOURCE.CHAINLINK_FEEDS"],
     },
     requiredMarkers: [
       "fetchJsonWithRetry",
@@ -186,7 +183,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/cron/__tests__/weekly-recap.test.ts",
     ],
     allowBareFetch: true,
-    directFetchJustification: "Telegram helper maps Bot API statuses and Retry-After into delivery classes before callers record circuit state.",
+    directFetchJustification:
+      "Telegram helper maps Bot API statuses and Retry-After into delivery classes before callers record circuit state.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout() and caller signals.",
@@ -206,17 +204,15 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "telegram-alert-fanout",
     family: "telegram",
     description: "Subscriber Telegram alert fanout and pending retry classification.",
-    files: [
-      "worker/src/lib/telegram.ts",
-      "worker/src/cron/dispatch-telegram-alerts.ts",
-    ],
+    files: ["worker/src/lib/telegram.ts", "worker/src/cron/dispatch-telegram-alerts.ts"],
     tests: [
       "worker/src/lib/__tests__/telegram.test.ts",
       "worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts",
       "worker/src/cron/__tests__/telegram-pending-queue.test.ts",
     ],
     allowBareFetch: true,
-    directFetchJustification: "Fanout needs Telegram-specific retry class, global/chat 429 scope, and queue backoff mapping.",
+    directFetchJustification:
+      "Fanout needs Telegram-specific retry class, global/chat 429 scope, and queue backoff mapping.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout() and caller signals.",
@@ -236,17 +232,11 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "twitter-digest-delivery",
     family: "twitter",
     description: "Twitter/X daily digest delivery.",
-    files: [
-      "worker/src/lib/twitter.ts",
-      "worker/src/cron/digest/platform.ts",
-      "worker/src/cron/daily-digest.ts",
-    ],
-    tests: [
-      "worker/src/lib/__tests__/twitter.test.ts",
-      "worker/src/cron/__tests__/daily-digest.test.ts",
-    ],
+    files: ["worker/src/lib/twitter.ts", "worker/src/cron/digest/platform.ts", "worker/src/cron/daily-digest.ts"],
+    tests: ["worker/src/lib/__tests__/twitter.test.ts", "worker/src/cron/__tests__/daily-digest.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Twitter OAuth signing happens immediately before the raw POST while digest delivery records the circuit outcome.",
+    directFetchJustification:
+      "Twitter OAuth signing happens immediately before the raw POST while digest delivery records the circuit outcome.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",
@@ -265,18 +255,12 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
   {
     id: "github-feedback-issues",
     family: "github-feedback",
-    description: "Feedback and self-serve API-key notification GitHub issue bridge.",
-    files: [
-      "worker/src/api/feedback/github.ts",
-      "worker/src/api/feedback/request.ts",
-      "worker/src/api/api-key-requests/notifications.ts",
-    ],
-    tests: [
-      "worker/src/api/__tests__/feedback.test.ts",
-      "worker/src/api/__tests__/api-key-requests.test.ts",
-    ],
+    description: "Feedback GitHub issue bridge.",
+    files: ["worker/src/api/feedback/github.ts", "worker/src/api/feedback/request.ts"],
+    tests: ["worker/src/api/__tests__/feedback.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Low-volume user action path with explicit secret gating and bounded provider response handling.",
+    directFetchJustification:
+      "Low-volume user action path with explicit secret gating and bounded provider response handling.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",
@@ -337,7 +321,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: ["worker/src/api/status-supplements.ts"],
     tests: ["worker/src/api/__tests__/status.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Small admin/status supplement path with an explicit short timeout and fail-closed body cleanup.",
+    directFetchJustification:
+      "Small admin/status supplement path with an explicit short timeout and fail-closed body cleanup.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",
@@ -353,7 +338,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: ["worker/src/cron/status-self-check.ts"],
     tests: ["worker/src/cron/__tests__/status-self-check.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Probe code intentionally calls external URLs to compare edge behavior with internal routing.",
+    directFetchJustification:
+      "Probe code intentionally calls external URLs to compare edge behavior with internal routing.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses createTimeoutSignal().",
@@ -385,10 +371,12 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/cron/dex-liquidity/__tests__/orchestrator-phases-direct-api-fetch.test.ts",
     ],
     allowBareFetch: true,
-    directFetchJustification: "DEX direct APIs use protocol-specific pagination/rate-limit handling before the orchestration phase records circuit outcomes.",
+    directFetchJustification:
+      "DEX direct APIs use protocol-specific pagination/rate-limit handling before the orchestration phase records circuit outcomes.",
     resilience: {
       transport: "provider-execution plus direct-fetch adapter helpers",
-      timeout: "Uses DIRECT_API_PROVIDER_TIMEOUT_MS around the provider adapter plus buildDirectApiRequestSignal() for per-request timeouts.",
+      timeout:
+        "Uses DIRECT_API_PROVIDER_TIMEOUT_MS around the provider adapter plus buildDirectApiRequestSignal() for per-request timeouts.",
       body: "Provider phase declares stream policy while adapter helpers cancel non-OK bodies and parse through readDexApiJson().",
       circuitSources: [
         "CIRCUIT_SOURCE.FLUID_DEX_API",
@@ -427,12 +415,10 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/lib/cex-tickers.ts",
       "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts",
     ],
-    tests: [
-      "worker/src/lib/__tests__/cex-tickers.test.ts",
-      "worker/src/cron/__tests__/sync-stablecoins.test.ts",
-    ],
+    tests: ["worker/src/lib/__tests__/cex-tickers.test.ts", "worker/src/cron/__tests__/sync-stablecoins.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Binance needs a no-same-host-retry cascade for 5xx/429/403/451 before returning diagnostics.",
+    directFetchJustification:
+      "Binance needs a no-same-host-retry cascade for 5xx/429/403/451 before returning diagnostics.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses CEX_REQUEST_TIMEOUT_MS with AbortSignal.timeout().",
@@ -445,10 +431,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "alchemy-log-rpc",
     family: "evm-rpc",
     description: "Alchemy JSON-RPC log, receipt, and timestamp fetch helpers.",
-    files: [
-      "worker/src/lib/alchemy-logs.ts",
-      "worker/src/handlers/scheduled/mint-burn-slot.ts",
-    ],
+    files: ["worker/src/lib/alchemy-logs.ts", "worker/src/handlers/scheduled/mint-burn-slot.ts"],
     tests: ["worker/src/lib/__tests__/alchemy-logs.test.ts"],
     allowBareFetch: true,
     directFetchJustification: "Alchemy JSON-RPC helpers split block ranges and preserve partial-completeness metadata.",
@@ -458,7 +441,12 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       body: "Cancels non-OK bodies and parses JSON-RPC responses.",
       circuitSources: ["CIRCUIT_SOURCE.ALCHEMY"],
     },
-    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly", "CIRCUIT_SOURCE.ALCHEMY", "transientHttpError"],
+    requiredMarkers: [
+      "AbortSignal.timeout",
+      "cancelResponseBodyQuietly",
+      "CIRCUIT_SOURCE.ALCHEMY",
+      "transientHttpError",
+    ],
   },
   {
     id: "etherscan-log-rpc",
@@ -467,7 +455,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: ["worker/src/lib/evm-logs.ts"],
     tests: ["worker/src/lib/__tests__/evm-logs.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Etherscan helper is rate-limited by caller budget and caller-provided cron/admin signal.",
+    directFetchJustification:
+      "Etherscan helper is rate-limited by caller budget and caller-provided cron/admin signal.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses caller AbortSignal and subrequest budget.",
@@ -499,7 +488,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: ["worker/src/lib/status/d1-usage.ts"],
     tests: ["worker/src/lib/status/__tests__/d1-usage.test.ts"],
     allowBareFetch: true,
-    directFetchJustification: "Operator-only status helper hits Cloudflare API with a short timeout and strict payload parser.",
+    directFetchJustification:
+      "Operator-only status helper hits Cloudflare API with a short timeout and strict payload parser.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",

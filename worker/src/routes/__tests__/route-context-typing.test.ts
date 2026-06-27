@@ -133,7 +133,6 @@ describe("route context typing", () => {
       API_KEY_SELF_SERVE_EMAIL_REPLY_TO: "api@mail.pharos.watch",
       API_KEY_SELF_SERVE_PUBLIC_BASE_URL: "https://pharos.watch/api",
       RESEND_API_KEY: "re_demo",
-      GITHUB_PAT: "ghp_demo",
     });
     expect(selfServeCtx.feedbackEnv).toBeUndefined();
   });
@@ -155,8 +154,7 @@ describe("route context typing", () => {
   });
 
   it("keeps dynamic admin handler bindings exhaustive against shared descriptors", () => {
-    const adminDescriptorKeys = DYNAMIC_ENDPOINT_DESCRIPTORS
-      .filter((descriptor) => descriptor.adminRequired)
+    const adminDescriptorKeys = DYNAMIC_ENDPOINT_DESCRIPTORS.filter((descriptor) => descriptor.adminRequired)
       .map((descriptor) => descriptor.key)
       .sort();
 

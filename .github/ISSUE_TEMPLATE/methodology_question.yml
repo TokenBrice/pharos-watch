@@ -1,0 +1,28 @@
+name: Methodology Question
+description: Ask about or challenge a Pharos methodology decision.
+title: "[Methodology] "
+labels: ["question"]
+body:
+  - type: input
+    id: methodology
+    attributes:
+      label: Affected methodology
+      placeholder: Peg Score, Liquidity Score, Safety Score, FreezeWatch, PSI
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page or doc link
+      placeholder: https://pharos.watch/methodology/...
+  - type: textarea
+    id: concern
+    attributes:
+      label: Question or concern
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or proposed adjustment
+      description: Include primary sources or examples when possible.

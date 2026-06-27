@@ -8,14 +8,10 @@ import {
   SELF_SERVE_VERIFICATION_TOKEN_TTL_SEC,
 } from "@shared/lib/ops-limits";
 import { activateTrustedApiKey, createTrustedApiKey } from "../../lib/api-key-admin";
-import {
-  getNowSec,
-  recordApiKeyAudit,
-} from "../../lib/api-key-core";
+import { getNowSec, recordApiKeyAudit } from "../../lib/api-key-core";
 import { jsonResponse } from "../../lib/api-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { sendVerificationEmail } from "./email";
-import { notifySelfServeIssued } from "./notifications";
 import { checkApiKeyRequestRateLimit, pruneOldApiKeyRequestRateLimits } from "./rate-limit";
 import {
   buildVerificationUrl,
@@ -97,10 +93,14 @@ export async function handleApiKeyRequest(
       nowSec,
     );
     if (!allowedByIp.allowed) {
-      return selfServeError(429, "Too many API key requests. Please wait before trying again.", allowedByIp.retryAfterSec);
+      return selfServeError(
+        429,
+        "Too many API key requests. Please wait before trying again.",
+        allowedByIp.retryAfterSec,
+      );
     }
 
-    execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - (2 * 24 * 60 * 60)));
+    execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - 2 * 24 * 60 * 60));
     execCtx?.waitUntil(
       releaseOrphanPendingClaims(db, nowSec).catch((error) => {
         logWorkerEvent({
@@ -155,7 +155,11 @@ export async function handleApiKeyRequest(
           metadata: { requestId, stage: "email_rate_limit" },
         });
       });
-      return selfServeError(429, "Too many API key requests. Please wait before trying again.", allowedByEmail.retryAfterSec);
+      return selfServeError(
+        429,
+        "Too many API key requests. Please wait before trying again.",
+        allowedByEmail.retryAfterSec,
+      );
     }
 
     try {
@@ -207,9 +211,10 @@ export async function handleApiKeyRequest(
         expiresInMinutes: Math.floor(SELF_SERVE_VERIFICATION_TOKEN_TTL_SEC / 60),
       });
       if (sent.providerMessageId) {
-        await db.prepare(
-          "UPDATE api_key_requests SET email_provider_message_id = ?, verification_sent_at = ?, updated_at = ? WHERE request_id = ?",
-        )
+        await db
+          .prepare(
+            "UPDATE api_key_requests SET email_provider_message_id = ?, verification_sent_at = ?, updated_at = ? WHERE request_id = ?",
+          )
           .bind(sent.providerMessageId, nowSec, nowSec, requestId)
           .run()
           .catch((error) => {
@@ -225,7 +230,8 @@ export async function handleApiKeyRequest(
             });
           });
       } else {
-        await db.prepare("UPDATE api_key_requests SET verification_sent_at = ?, updated_at = ? WHERE request_id = ?")
+        await db
+          .prepare("UPDATE api_key_requests SET verification_sent_at = ?, updated_at = ? WHERE request_id = ?")
           .bind(nowSec, nowSec, requestId)
           .run()
           .catch((error) => {
@@ -348,7 +354,7 @@ export async function handleApiKeyRequestVerify(
         Math.max(allowedByIp.retryAfterSec, allowedByToken.retryAfterSec),
       );
     }
-    execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - (2 * 24 * 60 * 60)));
+    execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - 2 * 24 * 60 * 60));
 
     const row = await selectPendingRequestByTokenHash(db, tokenHash);
     if (!row || row.status !== "pending_verification" || !row.verification_token_hash) {
@@ -425,15 +431,21 @@ export async function handleApiKeyRequestVerify(
       return selfServeError(400, "Invalid or expired verification token.");
     }
 
-    const created = await createTrustedApiKey(db, effectiveApiKeyPepper, {
-      name: buildSelfServeKeyName(row),
-      ownerEmail: row.normalized_email,
-      tier: "self-serve",
-      trafficClass: "external",
-      rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
-      expiresAt: nowSec + SELF_SERVE_API_KEY_EXPIRY_SEC,
-      isActive: false,
-    }, nowSec, null);
+    const created = await createTrustedApiKey(
+      db,
+      effectiveApiKeyPepper,
+      {
+        name: buildSelfServeKeyName(row),
+        ownerEmail: row.normalized_email,
+        tier: "self-serve",
+        trafficClass: "external",
+        rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
+        expiresAt: nowSec + SELF_SERVE_API_KEY_EXPIRY_SEC,
+        isActive: false,
+      },
+      nowSec,
+      null,
+    );
     if (created instanceof Response) {
       await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((error) => {
         logWorkerEvent({
@@ -479,16 +491,23 @@ export async function handleApiKeyRequestVerify(
       if (!claimUpdated) {
         throw new Error("self-serve email claim was not pending for this request");
       }
-      await recordApiKeyAudit(db, created.key.id, "created", {
-        requestId: row.request_id,
-        intendedEndpoints: parseJsonStringArray(row.intended_endpoints_json),
-        expectedCadence: row.expected_cadence,
-        expectedVolume: row.expected_volume,
-        selfServeDefaultQuota: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
-        emailVerified: true,
-        riskScore: row.risk_score,
-        riskReasons: parseJsonStringArray(row.risk_reasons_json),
-      }, nowSec, "self-serve");
+      await recordApiKeyAudit(
+        db,
+        created.key.id,
+        "created",
+        {
+          requestId: row.request_id,
+          intendedEndpoints: parseJsonStringArray(row.intended_endpoints_json),
+          expectedCadence: row.expected_cadence,
+          expectedVolume: row.expected_volume,
+          selfServeDefaultQuota: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
+          emailVerified: true,
+          riskScore: row.risk_score,
+          riskReasons: parseJsonStringArray(row.risk_reasons_json),
+        },
+        nowSec,
+        "self-serve",
+      );
       const requestIssued = await finalizeRequestIssued(db, row.request_id, tokenHash, created.key.id, nowSec);
       if (!requestIssued) {
         throw new Error("self-serve request was not pending during issuance finalize");
@@ -540,19 +559,6 @@ export async function handleApiKeyRequestVerify(
         });
       }
       return selfServeUnavailable();
-    }
-
-    const notification = notifySelfServeIssued(env.GITHUB_PAT, {
-      requestId: row.request_id,
-      keyPrefix: created.key.keyPrefix,
-      expiresAt: created.key.expiresAt,
-    });
-    if (notification) {
-      if (execCtx) {
-        execCtx.waitUntil(notification);
-      } else {
-        void notification;
-      }
     }
 
     return issuedPublicResponse(issuedKey, created.token);

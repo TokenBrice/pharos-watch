@@ -1,0 +1,33 @@
+name: Feature Request
+description: Propose a product, API, or data-surface improvement.
+title: "[Feature Request] "
+labels: ["feature-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Broad ideas often work better in Discussions first. Use this form when the request is specific enough to track.
+  - type: textarea
+    id: workflow
+    attributes:
+      label: User workflow
+      description: What should a Pharos user be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Why this matters
+      description: Who benefits and what decision does this help?
+    validations:
+      required: true
+  - type: input
+    id: surface
+    attributes:
+      label: Suggested route or API surface
+      placeholder: /liquidity/, /about/api/, /api/stablecoins
+  - type: textarea
+    id: sources
+    attributes:
+      label: Data sources or methodology implications
+      description: Add primary sources if this requires new data.

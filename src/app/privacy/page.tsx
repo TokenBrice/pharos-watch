@@ -51,12 +51,13 @@ export default function PrivacyPage() {
             in the feedback form, that handle is included in the GitHub issue created for the submission. Telegram alert
             subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state,
             and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
-            and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API access, Pharos stores the
-            email address you verify plus any name, organization, project URL, use-case, intended-endpoint, cadence, and
-            volume details you submit; request throttling stores salted hashes of IP address and user-agent data. The
-            homepage page discovery module stores a local rotation cursor for the suggested internal pages. The
-            Stablecoin Picker stores local browser state for callout dismissal and tab-scoped result recovery, and share
-            links can store a content-addressed snapshot of the generated selector output in Cloudflare KV.
+            and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
+            access, Pharos stores the email address you verify plus any name, organization, project URL, use-case,
+            intended-endpoint, cadence, and volume details you submit; request throttling stores salted hashes of IP
+            address and user-agent data. The homepage page discovery module stores a local rotation cursor for the
+            suggested internal pages. The Stablecoin Picker stores local browser state for callout dismissal and
+            tab-scoped result recovery, and share links can store a content-addressed snapshot of the generated selector
+            output in Cloudflare KV.
           </p>
         </section>
 
@@ -74,22 +75,20 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">Stablecoin Picker Storage</h2>
           <p>
-            The Picker at{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">/screener/picker/</code> uses functional browser
-            storage. The long-lived local key in the current build is the callout dismissal key,{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.selector.callout.v1</code>. It is scoped to this
-            site, does not contain an IP address or user identifier, and remains until you clear browser site data.
+            The Picker at <code className="text-xs bg-muted px-1 py-0.5 rounded">/screener/picker/</code> uses
+            functional browser storage. The long-lived local key in the current build is the callout dismissal key,{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.selector.callout.v1</code>. It is scoped to
+            this site, does not contain an IP address or user identifier, and remains until you clear browser site data.
             A tab-scoped <code className="text-xs bg-muted px-1 py-0.5 rounded">sessionStorage</code> key,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.selector.sessionResult.v1</code>, can hold the
             last successful live result for accidental navigation recovery and clears when the browser session ends.
           </p>
           <p>
-            Picker share links use a{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">sid</code> that points to a Cloudflare Pages KV
-            snapshot of the form answers and resulting output. Snapshot IDs are content-addressed, so identical answers
-            against an identical dataset produce the same ID. Anyone with the link can view the frozen artifact.
-            Snapshots do not include IP addresses, browser fingerprints, or account identifiers, and are retained for
-            five years.
+            Picker share links use a <code className="text-xs bg-muted px-1 py-0.5 rounded">sid</code> that points to a
+            Cloudflare Pages KV snapshot of the form answers and resulting output. Snapshot IDs are content-addressed,
+            so identical answers against an identical dataset produce the same ID. Anyone with the link can view the
+            frozen artifact. Snapshots do not include IP addresses, browser fingerprints, or account identifiers, and
+            are retained for five years.
           </p>
         </section>
 
@@ -169,13 +168,13 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-foreground">Data Retention</h2>
           <p>
             When GA4 is enabled, analytics data is retained for 14 months per Google&apos;s default settings. We do not
-            maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and issue
-            tracking; optional follow-up contact details are included there when you provide them. The worker stores
-            rate-limit metadata for feedback abuse prevention. A legacy `feedback_submissions` table exists in the D1
-            schema, but the current submission path does not write to it. Self-serve API key requests are stored for
-            operator review and duplicate-claim enforcement; verification tokens are stored only as hashes and expire
-            after 30 minutes. Issued self-serve API keys expire after 60 days by default. Picker localStorage remains
-            until browser site data is cleared. Picker KV snapshots are retained for five years because they are
+            maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and
+            issue tracking; optional follow-up contact details are included there when you provide them. The worker
+            stores rate-limit metadata for feedback abuse prevention. A legacy `feedback_submissions` table exists in
+            the D1 schema, but the current submission path does not write to it. Self-serve API key requests are stored
+            for operator review and duplicate-claim enforcement; verification tokens are stored only as hashes and
+            expire after 30 minutes. Issued self-serve API keys expire after 60 days by default. Picker localStorage
+            remains until browser site data is cleared. Picker KV snapshots are retained for five years because they are
             content-addressed analytical records rather than user-account records.
           </p>
         </section>
@@ -185,10 +184,10 @@ export default function PrivacyPage() {
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
             processed by Google (GA4) only when analytics is enabled for the current deployment. Feedback submissions
-            are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are
-            echoed publicly in those GitHub issues. API request verification emails are sent through Resend. API key
-            issuance notifications can create private operator GitHub issues, but those notifications include request ID,
-            key prefix, quota, expiry, and an ops link only, not requester details or plaintext tokens.
+            are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are echoed publicly in
+            those GitHub issues. API request verification emails are sent through Resend. API key issuance records stay
+            in private operator storage and structured Worker logs; requester details and key material are not published
+            to GitHub Issues.
           </p>
         </section>
 

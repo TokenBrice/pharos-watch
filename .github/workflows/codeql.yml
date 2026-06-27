@@ -8,7 +8,8 @@ on:
     - cron: "0 6 * * 1"
 
 jobs:
-  analyze:
+  codeql-analyze:
+    name: CodeQL analyze
     runs-on: ubuntu-latest
     permissions:
       security-events: write

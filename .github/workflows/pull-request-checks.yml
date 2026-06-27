@@ -57,6 +57,7 @@ jobs:
       - run: npm run typecheck:worker
 
   gitleaks:
+    name: Gitleaks PR scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

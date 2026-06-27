@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature ideas and roadmap discussion
+    url: https://github.com/TokenBrice/pharos-watch/discussions
+    about: Start with a discussion for new methodology, product, or coverage ideas.
+  - name: Live site
+    url: https://pharos.watch
+    about: Use the production dashboard.
+  - name: API access
+    url: https://pharos.watch/api/
+    about: Request a self-serve API key.

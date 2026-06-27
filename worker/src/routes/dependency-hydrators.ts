@@ -1,7 +1,4 @@
-import {
-  ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
-  type EndpointDependency,
-} from "@shared/lib/api-endpoints";
+import { ENDPOINT_DEPENDENCY_HYDRATION_POLICIES, type EndpointDependency } from "@shared/lib/api-endpoints";
 import { buildChainRpcs } from "../lib/chain-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
 import type { Env } from "../lib/env";
@@ -43,7 +40,6 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
       API_KEY_SELF_SERVE_EMAIL_REPLY_TO: env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO,
       API_KEY_SELF_SERVE_PUBLIC_BASE_URL: env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL,
       RESEND_API_KEY: env.RESEND_API_KEY,
-      GITHUB_PAT: env.GITHUB_PAT,
     };
   },
   feedbackEnv(routeCtx, env) {

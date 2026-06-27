@@ -1,0 +1,41 @@
+name: Data Correction
+description: Report incorrect stablecoin, source, or methodology-linked data.
+title: "[Data Correction] "
+labels: ["data-correction", "verified: pending"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Data corrections need sources. Prefer issuer docs, primary dashboards, explorer links, or official announcements.
+  - type: input
+    id: stablecoin
+    attributes:
+      label: Stablecoin or page
+      placeholder: USDC, /stablecoin/usdc/, /liquidity/
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Pharos value
+      description: What appears wrong today?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Corrected value
+      description: What should Pharos show instead?
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: Add links and the date/time you checked them.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context

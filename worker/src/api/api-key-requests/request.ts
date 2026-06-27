@@ -21,13 +21,11 @@ const API_KEY_SELF_SERVE_REQUEST_MAX_BYTES = 16 * 1024;
 const API_KEY_SELF_SERVE_VERIFY_MAX_BYTES = 1024;
 
 const PUBLIC_ENDPOINT_PATHS = new Set(
-  ENDPOINT_DEFINITIONS
-    .filter((endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/"))
-    .map((endpoint) => endpoint.path),
+  ENDPOINT_DEFINITIONS.filter((endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/")).map(
+    (endpoint) => endpoint.path,
+  ),
 );
-const PUBLIC_ENDPOINT_TEMPLATES = new Set([
-  "/api/stablecoin/:id",
-]);
+const PUBLIC_ENDPOINT_TEMPLATES = new Set(["/api/stablecoin/:id"]);
 
 function dependencyUnavailable(message = SELF_SERVE_SERVICE_UNAVAILABLE): Response {
   return errorResponse(503, message, { noStore: true, retryAfterSec: 60 });
@@ -35,13 +33,13 @@ function dependencyUnavailable(message = SELF_SERVE_SERVICE_UNAVAILABLE): Respon
 
 export function requireInitialSelfServeEnv(env: ApiKeySelfServeEnv): RequiredInitialSelfServeEnv | Response {
   if (
-    !hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT)
-    || !hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER)
-    || !hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)
-    || !hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM)
-    || !hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO)
-    || !hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL)
-    || !hasConfiguredValue(env.RESEND_API_KEY)
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT) ||
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER) ||
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER) ||
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM) ||
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO) ||
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL) ||
+    !hasConfiguredValue(env.RESEND_API_KEY)
   ) {
     console.error("[api-key-requests] self-serve email verification env is incomplete");
     return dependencyUnavailable();
@@ -54,12 +52,14 @@ export function requireInitialSelfServeEnv(env: ApiKeySelfServeEnv): RequiredIni
     API_KEY_SELF_SERVE_EMAIL_REPLY_TO: env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO.trim(),
     API_KEY_SELF_SERVE_PUBLIC_BASE_URL: env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL.trim().replace(/\/+$/, ""),
     RESEND_API_KEY: env.RESEND_API_KEY.trim(),
-    GITHUB_PAT: env.GITHUB_PAT?.trim() || undefined,
   };
 }
 
 export function requireVerifySelfServeEnv(env: ApiKeySelfServeEnv): RequiredVerifySelfServeEnv | Response {
-  if (!hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT) || !hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)) {
+  if (
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT) ||
+    !hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)
+  ) {
     console.error("[api-key-requests] self-serve verification env is incomplete");
     return dependencyUnavailable();
   }

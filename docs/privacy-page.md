@@ -49,7 +49,7 @@ The current policy copy covers:
 10. the Mini App auth note: `initData` is never persisted — it is validated request-locally (HMAC signature + freshness window); mutations use a 5-minute auth window plus a per-user mutation cooldown, and session reads use a 24-hour read-only window
 11. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
 12. homepage page discovery stores a browser-local rotation cursor so the five suggested routes can change between visits
-13. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
+13. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; API key issuance records stay in private operator storage and structured Worker logs rather than public GitHub Issues
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
 
@@ -76,19 +76,19 @@ Snapshot share links (`/screener/picker/?sid={sid}`) reference a server-side KV-
 
 The visible policy must enumerate every Telegram-owned D1 table, its purpose, and its retention. Canonical schema descriptions live in [`telegram-alerts.md` § D1 Schema](./telegram-alerts.md#d1-schema); retention sources are `worker/src/cron/telegram-retention-cleanup.ts`, `worker/src/cron/telegram-inactive-cleanup.ts`, `worker/src/lib/telegram-constants.ts`, and `worker/src/api/telegram-webhook-store.ts`.
 
-| Table | Purpose | Retention |
-|-------|---------|-----------|
-| `telegram_subscribers` | Per-chat state (chat ID, optional username, default flags, quiet hours, snooze, `last_active_at`) | 180-day inactive prune via weekly `telegram-inactive-cleanup` (runs from the daily-0300 slot, gated to once per 7 days) |
-| `telegram_subscriptions` | Per-chat per-coin alert preferences | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
-| `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
-| `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies, setup wizard, bulk confirms | 5-minute TTL (`DISAMBIGUATION_TTL_SEC`); swept ≥10 min after expiry |
-| `telegram_pending_alerts` | Overflow and retry delivery queue | Severity-based TTL: 1 h for depeg/dews/safety/reserve/legacy, 30 min for launch and admin broadcasts |
-| `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable discovery manifests and per-target delivery audit | 90-day audit retention |
-| `telegram_alert_dead_letters` | Expired or permanently failed pending-send audit trail | 90-day audit retention |
-| `telegram_processed_updates` | Retry-safe webhook idempotency claims (`update_id`, status, error class) | 7-day prune |
-| `telegram_usage_daily` | Privacy-preserving daily command/setup/action aggregates; no `chat_id` is stored | 400-day aggregate retention |
-| `telegram_watcher_lifecycle_daily` | Daily active-watcher snapshots for public pulse history | Aggregate (no per-chat detail); 400-day prune via `telegram-retention-cleanup` (same window as `telegram_usage_daily`) |
-| `telegram_chat_delivery_diagnostics` | Per-chat delivery diagnostics used by `/health` | Kept while subscriber exists; 90-day stale prune |
+| Table                                                | Purpose                                                                                           | Retention                                                                                                               |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `telegram_subscribers`                               | Per-chat state (chat ID, optional username, default flags, quiet hours, snooze, `last_active_at`) | 180-day inactive prune via weekly `telegram-inactive-cleanup` (runs from the daily-0300 slot, gated to once per 7 days) |
+| `telegram_subscriptions`                             | Per-chat per-coin alert preferences                                                               | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune                                         |
+| `telegram_preset_subscriptions`                      | Persistent dynamic preset follows resolved at dispatch                                            | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune                                         |
+| `telegram_pending_disambiguation`                    | Short-lived state for ambiguous ticker replies, setup wizard, bulk confirms                       | 5-minute TTL (`DISAMBIGUATION_TTL_SEC`); swept ≥10 min after expiry                                                     |
+| `telegram_pending_alerts`                            | Overflow and retry delivery queue                                                                 | Severity-based TTL: 1 h for depeg/dews/safety/reserve/legacy, 30 min for launch and admin broadcasts                    |
+| `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable discovery manifests and per-target delivery audit                                         | 90-day audit retention                                                                                                  |
+| `telegram_alert_dead_letters`                        | Expired or permanently failed pending-send audit trail                                            | 90-day audit retention                                                                                                  |
+| `telegram_processed_updates`                         | Retry-safe webhook idempotency claims (`update_id`, status, error class)                          | 7-day prune                                                                                                             |
+| `telegram_usage_daily`                               | Privacy-preserving daily command/setup/action aggregates; no `chat_id` is stored                  | 400-day aggregate retention                                                                                             |
+| `telegram_watcher_lifecycle_daily`                   | Daily active-watcher snapshots for public pulse history                                           | Aggregate (no per-chat detail); 400-day prune via `telegram-retention-cleanup` (same window as `telegram_usage_daily`)  |
+| `telegram_chat_delivery_diagnostics`                 | Per-chat delivery diagnostics used by `/health`                                                   | Kept while subscriber exists; 90-day stale prune                                                                        |
 
 Telegram also uses the shared D1 `cache` table for short-lived chat-scoped bot state. `/forget` clears the caller's command cooldown/flood, chat-member/admin, group-welcome, and re-engagement warning cache keys immediately. The daily `telegram-retention-cleanup` job also removes stale chat-scoped cache keys in capped batches: 7 days for command cooldown/flood, chat-member/admin, and group-welcome keys, 30 days for re-engagement warning markers.
 
@@ -126,10 +126,10 @@ If the policy date changes, update the visible `Last updated:` line in the page 
 
 ## File Index
 
-| File | Role |
-|------|------|
-| `src/app/privacy/page.tsx` | Longform privacy policy route and metadata |
-| `src/components/feature-page-shell.tsx` | Shared longform shell used by the route |
-| `src/components/footer.tsx` | Footer links to `/privacy/` |
-| `src/app/sitemap.ts` | Includes `/privacy/` in sitemap output |
-| `docs/design-language.md` | Layout token reference for the page width constraint |
+| File                                    | Role                                                 |
+| --------------------------------------- | ---------------------------------------------------- |
+| `src/app/privacy/page.tsx`              | Longform privacy policy route and metadata           |
+| `src/components/feature-page-shell.tsx` | Shared longform shell used by the route              |
+| `src/components/footer.tsx`             | Footer links to `/privacy/`                          |
+| `src/app/sitemap.ts`                    | Includes `/privacy/` in sitemap output               |
+| `docs/design-language.md`               | Layout token reference for the page width constraint |

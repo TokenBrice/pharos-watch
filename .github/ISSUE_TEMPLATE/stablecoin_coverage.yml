@@ -1,0 +1,54 @@
+name: Stablecoin Coverage Request
+description: Request active or pre-launch stablecoin coverage.
+title: "[Coverage] "
+labels: ["feature-request", "data-correction"]
+body:
+  - type: input
+    id: asset
+    attributes:
+      label: Asset name and ticker
+      placeholder: Example USD (exUSD)
+    validations:
+      required: true
+  - type: input
+    id: issuer
+    attributes:
+      label: Issuer or protocol
+    validations:
+      required: true
+  - type: dropdown
+    id: lifecycle
+    attributes:
+      label: Lifecycle status
+      options:
+        - Active
+        - Pre-launch
+        - Testnet
+        - Frozen/retired
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: peg-backing
+    attributes:
+      label: Peg, backing, and redemption model
+      description: Include what the asset is meant to track and how redemption works.
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contracts and chains
+      description: Include explorer links when available.
+  - type: textarea
+    id: market-data
+    attributes:
+      label: Market data IDs
+      description: DefiLlama, CoinGecko, CoinMarketCap, or other canonical IDs.
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: Official docs, issuer announcements, reserve pages, audits, or launch posts.
+    validations:
+      required: true

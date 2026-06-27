@@ -11,7 +11,8 @@ on:
 permissions: {}
 
 jobs:
-  analyze:
+  zizmor-analyze:
+    name: Zizmor analyze
     runs-on: ubuntu-latest
     permissions:
       actions: read

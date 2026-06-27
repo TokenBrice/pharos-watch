@@ -1,418 +1,106 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 407 stablecoins in repo metadata: 367 active assets on public data surfaces, 32 pre-launch entries, 8 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
+[![Live site](https://img.shields.io/badge/live-pharos.watch-0f766e)](https://pharos.watch)
+[![Pull Request Checks](https://github.com/TokenBrice/pharos-watch/actions/workflows/pull-request-checks.yml/badge.svg)](https://github.com/TokenBrice/pharos-watch/actions/workflows/pull-request-checks.yml)
+[![CodeQL](https://github.com/TokenBrice/pharos-watch/actions/workflows/codeql.yml/badge.svg)](https://github.com/TokenBrice/pharos-watch/actions/workflows/codeql.yml)
+[![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-**Live at [pharos.watch](https://pharos.watch)**
+Pharos is an open-source stablecoin intelligence dashboard tracking 407 stablecoins in repo metadata: 367 active assets on public data surfaces, 32 pre-launch entries, 8 frozen historical archives, and 2 PSI-only shadow assets. It is a pure information site: no wallet connectivity, no trading, no custody, and no user accounts.
 
-## Contents
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Data Sources](#data-sources)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [Documentation](#documentation)
-- [Infrastructure](#infrastructure)
-- [Data Reliability](#data-reliability)
-- [Deployment](#deployment)
-- [License](#license)
+Pharos is research infrastructure, not financial advice. Data can be delayed, incomplete, or degraded when upstream providers fail; public surfaces include freshness and status signals so users can judge whether a snapshot is current enough for their use case.
 
-## Features
+- **Use it:** [pharos.watch](https://pharos.watch)
+- **API access:** [pharos.watch/api](https://pharos.watch/api/)
+- **Methodology:** [pharos.watch/methodology](https://pharos.watch/methodology/)
+- **Status:** [pharos.watch/status](https://pharos.watch/status/)
+- **Discuss:** [GitHub Discussions](https://github.com/TokenBrice/pharos-watch/discussions)
 
-- **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
-- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, UAH, ARS, KGS, NGN, XOF, VND, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
-- **Peg Tracker** — 15-minute peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
-- **FreezeWatch** — primary surface for issuer control over stablecoin balances, with a Freezable Supply Meter, Intervention Seismograph, and Sovereignty Lattice on top of 6-hourly on-chain tracking of 35 stablecoins (full list in `docs/blacklist-tracker.md`; examples: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, …) freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, and Tron with BigInt-precision amounts
-- **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
-- **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome and Velodrome Slipstream, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener pools used to suppress false depeg alerts
-- **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
-- **Non-USD Market Structure** — dedicated route for euro, gold, CPI-linked, and other non-USD stablecoin cohorts, with current distribution and historical share growth
-- **Upcoming Stablecoins** — pre-launch tracker with phase, peg, and backing filters plus schedule-drift badges
-- **Chains** — per-chain stablecoin leaderboard and profile pages with Chain Health Score breakdowns
-- **Compare** — side-by-side stablecoin comparison across key metrics
-- **Daily Digest** — AI-generated daily summary of market movements and notable events
-- **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 88 curated dead stablecoins plus 7 frozen archives documented with cause of death, peak market cap, and obituaries
-- **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 313 configured assets
-- **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
-- **Public API access + private operator admin** — self-serve email-verified API keys on `/api/`, read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/` and API management on `ops.pharos.watch/admin-api/`
-- **Backing type breakdown** — active public surfaces expose RWA-backed and crypto-backed cohorts; algorithmic remains a legacy metadata label only, with no generated algorithmic backing route because there are no active algorithmic assets
-- **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
-- **Research-grade data pipeline** — structural validation, concurrent write protection, depeg deduplication, and price validation guardrails
-- **Dark/light mode**
+![Pharos dashboard preview](./public/og-card.png)
 
-## Tech Stack
+## What Pharos Tracks
 
-- **Frontend:** Next.js 16 (App Router, static export), React 19, TypeScript (strict)
-- **Styling:** Tailwind CSS v4, shadcn/ui (Radix primitives)
-- **Data fetching:** TanStack Query
-- **Charts:** Recharts
-- **API:** Cloudflare Worker (cron-based data fetching + REST endpoints)
-- **Database:** Cloudflare D1 (SQLite — caches stablecoin data and stores blacklist/depeg/liquidity/yield/mint-burn histories)
-- **Hosting:** Cloudflare Pages
+- **Peg health:** 15-minute peg monitoring, Peg Score, depeg detection, direction tracking, and historical depeg timelines.
+- **Issuer controls:** FreezeWatch tracks freeze, blacklist, and seize events for supported issuer-controlled assets across major chains.
+- **Liquidity quality:** DEX Liquidity Score combines pool TVL, volume, durability, pool quality, and pair diversity.
+- **DEX price corroboration:** Curve, Uniswap V3, Aerodrome, Velodrome, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener inputs help suppress false depeg alerts.
+- **Market structure:** USD, non-USD fiat, commodity, and CPI-linked stablecoin cohorts with chain and peg distribution views.
+- **Risk context:** safety report cards, Bluechip ratings, redemption backstops, dependency mapping, mint/burn flows, live reserves, and yield intelligence where coverage exists.
+- **Lifecycle coverage:** upcoming stablecoins, frozen archives, and the Stablecoin Cemetery for retired or failed assets.
+- **Public integration:** authenticated public API keys, OpenAPI/Postman artifacts, static dataset mirrors, and RSS/JSON feed routes.
 
-## Data Sources
+## Data And Methodology
 
-All external API calls and on-chain contract reads go through the Cloudflare Worker. The frontend never calls providers directly. Key live sources are listed below; the grouped source families on `/about/` and in `docs/about-page.md` are the fuller source-of-truth summary when this table is intentionally condensed.
+Pharos combines market, oracle, exchange, on-chain, DEX, reserve, issuer, and editorial sources behind a Cloudflare Worker. The frontend never calls third-party providers directly.
 
-| Source                                                                  | Purpose                                                                                                    | Refresh                           |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| [DefiLlama](https://defillama.com/)                                     | Stablecoin supply, price, chain distribution, history                                                      | 15 min                            |
-| [Pyth Network](https://www.pyth.network/)                               | Oracle price input for the 15-minute price consensus pipeline                                              | 15 min                            |
-| [Binance](https://www.binance.com/)                                     | Batch CEX spot prices for listed USD pairs                                                                 | 15 min                            |
-| [Kraken](https://www.kraken.com/)                                       | Batch CEX spot prices for listed USD pairs                                                                 | 15 min                            |
-| [Bitstamp](https://www.bitstamp.net/)                                   | Batch CEX spot prices for listed USD pairs                                                                 | 15 min                            |
-| [Coinbase Exchange](https://exchange.coinbase.com/)                     | Per-symbol CEX spot prices for listed USD pairs                                                            | 15 min                            |
-| [RedStone](https://redstone.finance/)                                   | Exact-case oracle snapshots used as an additional pricing voice                                            | 15 min                            |
-| [Chainlink Data Feeds](https://data.chain.link/)                        | Reference-feed overlays for supported fiat and commodity pegs                                              | 30 min FX lane                    |
-| [DefiLlama Yields](https://defillama.com/yields)                        | DEX pool TVL, volume, and composition for liquidity scoring                                                | 30 min                            |
-| [DefiLlama Protocols](https://api.llama.fi/protocols)                   | Protocol TVL context used by DEX liquidity scoring and fallback coverage checks                            | 30 min                            |
-| [Curve Finance API](https://api.curve.finance/)                         | Pool A-factors, per-token balances, implied prices                                                         | 30 min                            |
-| [The Graph](https://thegraph.com/)                                      | Uniswap V3, Aerodrome, and PancakeSwap V3 subgraphs for fee tiers, volume, and implied prices              | 30 min                            |
-| [CoinGecko Onchain](https://docs.coingecko.com/reference/top-pools-contract-address) | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 2h discovery lane                 |
-| [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 2h discovery lane                 |
-| [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15 min / 30 min / 2h) |
-| [Jupiter Price API](https://developers.jup.ag/docs/price)               | Solana-specific fallback price enrichment for tracked mint addresses                                       | 15 min (as fallback)              |
-| [L2BEAT](https://l2beat.com/scaling/summary)                            | Static chain-risk snapshot used by Chain Health chain-environment scoring, plus Interop evidence for reviewed Safety Score bridge-route risk | Methodology snapshot              |
-| Direct DEX APIs, subgraphs, and view contracts (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome Slipstream, Velodrome Slipstream) | Protocol-native APIs, The Graph subgraphs, and Sugar/view-contract reads that supplement DefiLlama, Curve, and crawl-based DEX coverage | 30 min |
-| [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
-| [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
-| Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as Cap cUSD and infiniFi iUSD                | 15 min                            |
-| Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Every 4h                          |
-| [Etherscan v2](https://etherscan.io/)                                   | Explorer-backed EVM freeze/blacklist/seize event scans for supported issuer-intervention configs           | Every 6h                          |
-| [TronGrid](https://www.trongrid.io/)                                    | Supported Tron blacklist/freeze events and freeze-ledger balance reads                                     | Every 6h                          |
-| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and configured issuance-chain mint/burn event ingestion (Alchemy) | 6h / 30 min                       |
-| [api.frankfurter.dev](https://api.frankfurter.dev/v1/latest)           | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, MYR, and KRW         | 30 min cooldown inside 15-min slot |
-| [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set      | 30 min FX lane, additionally rate-limited to ~55 min |
-| [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, ARS, KGS, NGN, XOF, and VND, plus full-set fallback coverage when Frankfurter fails | 30 min cooldown inside 15-min slot |
-| [ExchangeRate-API](https://www.exchangerate-api.com/)                   | Tertiary live full-set FX fallback when both Frankfurter and the secondary FX mirrors are unavailable      | 30 min cooldown inside 15-min slot |
-| [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 30 min cooldown inside 15-min slot |
-| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / [New York Fed EFFR](https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json) / Treasury.gov yield curve XML / ECB Data API / SIX delayed SARON guest access | USD, USD EFFR, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`), with Treasury.gov and FRED DFF as fallback feeds | Daily                             |
-| [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
-| [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest and Monday weekly recap                                                    | Daily / weekly                    |
+Key live source families include DefiLlama, CoinGecko, CoinMarketCap, Binance, Kraken, Coinbase Exchange, Bitstamp, Pyth, RedStone, Chainlink, Curve, The Graph, GeckoTerminal, DexScreener, Jupiter, Etherscan, TronGrid, dRPC, Alchemy, Frankfurter, Open Exchange Rates, gold-api.com, FRED/New York Fed/Treasury/ECB/SIX benchmark feeds, Bluechip, and protocol-specific reserve or redemption endpoints.
 
-DEX discovery sources write to `dex_pool_staging` every 2 hours on the dedicated discovery cron; `syncDexLiquidity()` then merges staged rows on its separate 30-minute scoring cron. DexScreener also participates in the 15-minute stablecoin price-enrichment path.
+Reliability guardrails include:
 
-## Getting Started
+- structural validation before cache publication
+- compare-and-swap cache writes for concurrent sync safety
+- source-specific circuit breakers and retry policy
+- DEX price cross-validation before severe depeg publication
+- BigInt-safe issuer-control amount handling
+- cross-currency FX normalization for non-USD totals
+- freshness metadata and status surfaces for public consumers
 
-The primary supported local and CI baseline is Node 24 LTS (`.nvmrc` pins 24.16.0). `package.json#engines.node` also allows Node 26, and pull-request CI runs a non-blocking Node 26 proof lane for typecheck coverage. Use the pinned version for release-parity installs unless you are explicitly testing the wider engine range:
+Start with:
+
+- [About Pharos](https://pharos.watch/about/)
+- [Methodology](https://pharos.watch/methodology/)
+- [API reference](https://pharos.watch/about/api/)
+- [Documentation index](./docs/README.md)
+
+## Repository Map
+
+```text
+src/          Next.js 16 static frontend, route pages, components, hooks
+functions/    Cloudflare Pages Functions for same-origin site/ops proxying
+shared/       Runtime-neutral data, types, endpoint registry, scoring helpers
+worker/       Cloudflare Worker API, cron jobs, D1 persistence, admin routes
+docs/         Verified product, architecture, methodology, and runbook docs
+.github/      CI, security scanning, dependency policy, issue templates
+```
+
+Detailed architecture and route ownership live in [docs/architecture.md](./docs/architecture.md) and [docs/agent-task-router.md](./docs/agent-task-router.md).
+
+## Local Development
+
+Use Node 24 LTS. The repo pins the current release-parity version in [.nvmrc](./.nvmrc).
 
 ```bash
 nvm use
 npm ci
+npm run dev
+```
+
+Frontend-only work usually needs only `npm run dev`. Full Worker work needs Cloudflare bindings and provider credentials:
+
+```bash
+cd worker
+npx wrangler dev
+```
+
+Useful checks:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run test:merge-gate
 ```
 
 Use `npm install` instead of `npm ci` only when intentionally changing dependencies.
 
-### Frontend
+## Contributing
 
-```bash
-npm run dev
-```
+Good public contribution lanes are data corrections, source coverage improvements, docs/API examples, bug reports, accessibility fixes, and small UI quality improvements that preserve the existing Pharos design language.
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission, self-serve API key request/verification, Telegram webhook, Telegram Mini App session/mutation, and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time; optional `NEXT_PUBLIC_PHAROS_*` repository variables inline public feature flags during Pages builds.
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. Data corrections should include source links and timestamps. Feature ideas usually belong in [Discussions](https://github.com/TokenBrice/pharos-watch/discussions) before implementation.
 
-### Worker API
+## Security
 
-```bash
-cd worker && npx wrangler dev
-```
-
-To trigger crons manually:
-
-```bash
-cd worker && npx wrangler dev --remote --test-scheduled
-curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
-```
-
-### Local Development Setup
-
-**Frontend-only (`npm run dev`)**
-Use one of these paths:
-
-- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/maintenance/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
-- Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` and run `npm run dev:next` when you are also running a configured local Worker with `cd worker && npx wrangler dev`; `npm run dev` always starts the local site-data proxy as well.
-- `next dev` allows `ops.pharos.watch` as a development origin so the ops host can point at a local dev server during Access/proxy debugging.
-
-**Worker-only (`cd worker && npx wrangler dev`)**
-Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys, including required provider credentials such as `BANXICO_TOKEN` for the official MXN CETES benchmark plus optional provider credentials and operational telemetry kill switches.
-
-**Full-stack local**
-Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separate terminals. `DEV_PROXY_UPSTREAM` and `DEV_PROXY_PORT` override the local site-data proxy target/port when debugging the `npm run dev` proxy path.
-
-### Other commands
-
-```bash
-npm run build    # Production static build
-npm run lint     # ESLint
-npm run typecheck # Type-check frontend, shared, Pages Functions, and root scripts
-npm run typecheck:worker # Type-check worker (includes worker-bound operational scripts)
-```
-
-## Project Structure
-
-```
-src/                              Frontend (Next.js static export)
-├── app/
-│   ├── page.tsx                  Homepage: stats, charts, filters, peg tracker, table
-│   ├── alt-pegs/                 Non-USD market structure route
-│   ├── freezewatch/              FreezeWatch issuer-control tracker
-│   ├── blacklist/                Legacy noindex wrapper / Pages redirect alias for `/freezewatch/`
-│   ├── cemetery/                 Dead stablecoin graveyard
-│   ├── chains/                   Chain analytics leaderboard + per-chain profiles
-│   ├── compare/                  Side-by-side comparison tool + static comparison landing pages
-│   ├── coverage/                 Per-coin feature coverage matrix
-│   ├── depeg/                    Live peg monitoring + event feed
-│   ├── dependency-map/           Collateral dependency graph visualization
-│   ├── digest/                   AI-generated daily market digest (+ digest/[date]/)
-│   ├── docs/                     Public documentation archive (+ docs/[slug]/ pages)
-│   ├── feed/                     Static JSON/XML route handlers for digest, depeg, cemetery, and methodology feeds
-│   ├── flows/                    Mint/burn flow tracker
-│   ├── funding/                  Static public-good funding ledger
-│   ├── learn/                    Learning center: mechanisms, case studies, glossary
-│   ├── api/                      Public API access and self-serve key request flow
-│   ├── liquidity/                DEX liquidity scores and pool breakdown
-│   ├── methodology/              Detailed methodology + changelog routes
-│   ├── portfolio/                Portfolio stress testing & upstream exposure
-│   ├── privacy/                  Privacy policy
-│   ├── safety-scores/            Stablecoin safety grade cards with radar charts
-│   ├── screener/                 Beta multi-signal stablecoin screener (+ screener/picker/)
-│   ├── start/                    First-time-user orientation route
-│   ├── stability-index/          Pharos Stability Index (ecosystem health)
-│   ├── upcoming/                 Pre-launch stablecoin tracker
-│   ├── stablecoin/[id]/          Detail page per stablecoin (+ stablecoin/[id]/yield/)
-│   ├── stablecoins/              Stablecoin taxonomy hub
-│   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
-│   ├── stablecoins/backing/      Backing taxonomy hub
-│   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
-│   ├── stablecoins/governance/   Governance taxonomy hub
-│   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
-│   ├── stablecoins/infrastructure/ Infrastructure taxonomy hub
-│   ├── stablecoins/infrastructure/[infrastructure]/ Infrastructure landing pages
-│   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
-│   ├── admin-api/                Access-gated API key/request management panel (ops.pharos.watch only)
-│   ├── status/                   Public system-status dashboard (read-only, indexable)
-│   ├── timeline/                 Cross-class event tape
-│   ├── pharoswatchbot/           Telegram alerts + digest landing page (+ pharoswatchbot/app/)
-│   ├── sitemap-tree/             Crawlable all-pages route directory
-│   ├── yield/                    Yield intelligence leaderboard
-│   ├── changelog/                Weekly release notes
-│   └── about/                    About / product overview (+ about/api/, about/editorial/, about/principles/, about/style/, about/bluechip/)
-├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
-├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
-└── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
-
-functions/                        Cloudflare Pages Functions for same-origin website/ops proxying
-├── _middleware.ts                Markdown content negotiation for generated `.md` route variants
-├── _site-data/[[path]].ts        Same-origin website data proxy; requires `SITE_API_ORIGIN` and gates on the caller's `Origin`/`Referer`
-├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
-├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
-├── admin-api/[[path]].ts         Host gate for the private API management route
-├── selector-snapshot/[[path]].ts Pages-only Picker snapshot store/replay endpoint backed by `SELECTOR_SNAPSHOTS` KV
-├── stablecoin/[[path]].ts        Legacy numeric stablecoin URL redirector
-├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
-├── lib/ops-origin.ts             Shared ops-origin resolution helper
-├── lib/proxy-utils.ts            Shared proxy request/response helpers
-├── lib/request-attribution.ts    Request source attribution for analytics counters
-├── lib/upstream-proxy.ts         Generic upstream proxy with shared-secret injection
-├── lib/site-api-env.ts           Shared Pages Functions env contract for the `/_site-data/*` proxy
-└── lib/site-data-origin.ts       Shared site-data host-allowlist helper
-
-shared/                           Runtime-neutral shared boundary (`@shared/*`)
-├── lib/                          Stablecoin metadata, supply/peg/classification/report-card logic, runtime origins, endpoint + site-data route registries
-└── types/                        Shared TypeScript types and schema helpers
-
-worker/                           Cloudflare Worker (API + cron jobs)
-├── src/
-│   ├── handlers/                 HTTP and scheduled entrypoint orchestration
-│   ├── routes/                   Shared endpoint-to-handler route registry and dependency hydration
-│   ├── router.ts                 HTTP dispatch, method validation, and dynamic route matching
-│   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
-│   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 baseline + post-squash SQL migrations plus `MANIFEST.md`
-```
-
-## Documentation
-
-Current source-of-truth product docs live in `/docs/` and this README. Durable process guidance now belongs under `/docs/`; see [docs/process/agent-artifacts.md](./docs/process/agent-artifacts.md) for artifact routing.
-
-- [docs/README.md](./docs/README.md) - verified documentation index and topic map
-- [docs/agent-task-router.md](./docs/agent-task-router.md) - agent-first task routing from user intent to docs, files, checks, and gotchas
-- [docs/agent-code-map.md](./docs/agent-code-map.md) - generated compact code entrypoint/export map for fast discovery
-- [docs/alt-pegs-page.md](./docs/alt-pegs-page.md) - `/alt-pegs/` route contract, crawlability pattern, and homepage integration
-- [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
-- [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
-- [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
-- [docs/worker-and-api-limits.md](./docs/worker-and-api-limits.md) - runtime budgets, rate limits, and provider assumptions
-- [docs/stablecoin-detail-page.md](./docs/stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, section composition, and fallback/staleness rules
-- [docs/upcoming-page.md](./docs/upcoming-page.md) - `/upcoming/` pre-launch tracker contract, filters, and crawlability
-- [docs/chains-page.md](./docs/chains-page.md) - `/chains/` and `/chains/[chain]/` route contracts plus Chain Health Score wiring
-- [docs/live-reserves.md](./docs/live-reserves.md) - live reserve-sync config, adapter registry, API modes, and status/detail consumers
-- [docs/redemption-backstops.md](./docs/redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers
-- [docs/deployment-process.md](./docs/deployment-process.md) - local merge gate and CI deploy sequence
-- [docs/testing.md](./docs/testing.md) - lint/test/coverage workflow, CI gates, and helper inventory
-- [docs/methodology-page.md](./docs/methodology-page.md) - `/methodology` section-to-source mapping and update contract
-
-## Infrastructure
-
-Runtime host split:
-
-- website UI: `https://pharos.watch`
-- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` on every Pages host; origin-gated to `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev`
-- external integration API: `https://api.pharos.watch`
-- operator UI/API: `https://ops.pharos.watch` / `https://ops-api.pharos.watch`
-
-```
-Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + snapshot-chain-supply + report-card cache + FX rates (cooldown-gated to 30 min)
-  ├── Cron: 9,24,39,54 * * * *                  → status self-check
-  ├── Cron: 3 */6 * * *                         → blacklist sync (every 6h)
-  ├── Cron: 4,34 * * * *                        → mint/burn critical lane (every 30 min)
-  ├── Cron: 6 */2 * * *                         → DEX discovery staging (every 2h)
-  ├── Cron: 13,43 * * * *                       → mint/burn extended lane (every 30 min)
-  ├── Cron: 10,40 * * * *                       → DEX liquidity
-  ├── Cron: 16,46 * * * *                       → stablecoin charts (1h cooldown)
-  ├── Cron: 26,56 * * * *                       → DEWS + PSI + Live Tape DB-only compute/projector lane
-  ├── Cron: 11 */4 * * *                        → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check (every 4h)
-  ├── Cron: 20 * * * *                          → yield sync
-  ├── Cron: 25 */4 * * *                        → supplemental yield sync
-  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts + bot registration reconciliation + degradation watchdog + disambiguation cleanup + pulse snapshot
-  ├── Cron: */5 * * * *                         → manual digest trigger poll
-  ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune + detail-cache prune + Telegram inactive/retention cleanup + mint/burn and cron-duration watchdogs
-  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + public dataset snapshot + USDS status
-  ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays)
-  ├── Cron: 10 8 * * *                          → discovery scan (Mondays)
-  └── Cron: 0 6 1 * *                           → monthly yield coverage audit
-
-Cloudflare D1 (SQLite database)
-  ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, FX/status/ranking caches) with CAS write guard
-  ├── blacklist_events     → normalized freeze/blacklist events
-  ├── blacklist_current_balances → active blacklist address current-balance cache
-  ├── blacklist_sync_state → incremental sync progress (block numbers for EVM, timestamps for Tron)
-  ├── depeg_events         → peg deviation events with unique constraint + direction tracking
-  ├── price_cache          → historical price snapshots for depeg detection
-  ├── dex_liquidity        → per-stablecoin DEX liquidity scores, pool data, HHI, depth stability
-  ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
-  ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, Velodrome Slipstream, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener
-  ├── dex_price_challengers → published qualifying individual challenger pools used for pool-challenge and depeg-confirmation reads
-  ├── dex_price_challenger_snapshots → latest per-coin challenger snapshot metadata (published_at, has_rows, source coverage completeness)
-  ├── onchain_supply       → per-stablecoin on-chain supply by chain (contract calls)
-  ├── supply_history       → daily per-coin supply snapshots from cached stablecoins data (08:00 UTC + retry upserts)
-  ├── chain_supply_history → daily per-chain supply aggregates for historical analysis
-  ├── reserve_composition  → live reserve slices per coin for live-enabled assets
-  ├── reserve_composition_history → historical reserve composition snapshots per coin per attempt
-  ├── reserve_sync_state   → per-coin reserve-sync freshness, status, and warnings
-  ├── reserve_sync_attempt_history → per-attempt history for reserve syncs
-  ├── redemption_backstop  → current modeled redemption-route / effective-exit snapshot per configured coin
-  ├── redemption_backstop_history → daily redemption-route history snapshot per configured coin
-  ├── redemption_backstop_runs → redemption backstop cron execution tracking
-  ├── stability_index      → daily ecosystem health scores (0–100) with trend band
-  ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
-  ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
-  ├── stress_signals       → DEWS 15-min rolling stress signal samples
-  ├── stress_signal_history → historical stress signal snapshots
-  ├── mint_burn_events     → on-chain mint/burn event log (~1M rows)
-  ├── mint_burn_hourly     → hourly mint/burn aggregates (~630K rows)
-  ├── mint_burn_sync_state → per-config incremental sync progress
-  ├── mint_burn_run_state  → round-robin scheduling state
-  ├── mint_burn_config_deferral → temporary per-config deferral after repeated API errors
-  ├── yield_data           → per-source yield snapshots (multi-source keyed)
-  ├── yield_history        → per-source historical yield timeseries
-  ├── telegram_subscribers → Telegram bot subscriber registrations
-  ├── telegram_subscriptions → per-subscriber alert preferences
-  ├── telegram_pending_alerts → overflow alert queue
-  ├── telegram_pending_disambiguation → pending command disambiguation state
-  ├── safety_grade_history → daily safety grade change snapshots
-  ├── status_state         → cron/system status state machine
-  ├── status_transitions   → status transition log
-  ├── status_probe_runs    → external endpoint probe results
-  ├── status_discrepancy_state → data quality discrepancy tracking
-  ├── dex_pool_staging     → DEX discovery staging table
-  ├── dex_discovery_meta   → DEX discovery backoff tracking per coin per source
-  ├── discovery_candidates → potential new stablecoin coverage candidates pending review/dismissal
-  ├── block_timestamp_cache → cached block-to-timestamp mappings
-  ├── cron_leases          → single-writer cron execution fencing
-  ├── cron_runs            → cron execution log for health monitoring
-  ├── cron_run_progress    → per-job cron progress tracking
-  ├── cron_slot_executions → cron slot execution deduplication tracking
-  ├── daily_digest         → AI-generated daily market summaries
-  ├── admin_idempotency_keys → idempotency keys for admin mutations
-  ├── admin_action_audit   → audited operator/admin mutation outcomes
-  ├── feedback_submissions → legacy/schema-retained feedback table; current submissions go directly to GitHub Issues
-  ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
-  ├── public_api_rate_limit → legacy/schema-retained public API limiter table; no runtime writes after the keyed-only API gate
-  ├── api_keys             → API key registrations for authenticated public API access
-  ├── api_key_rate_limit   → per-key rate-limit state for authenticated API consumers
-  ├── api_key_audit_log    → audit trail for API key lifecycle events
-  ├── api_key_requests     → self-serve API key request and verification state
-  ├── api_key_request_rate_limit → throttles for self-serve request/verification attempts
-  ├── api_key_self_serve_email_claims → one-active-key-per-email self-serve claim state
-  ├── api_key_request_stats → per-key request-volume tracking
-  ├── api_request_source_stats → legacy/schema-retained source stats table; runtime attribution writes moved to consumer/key/site-data stats
-  ├── api_request_consumer_stats → per-consumer API request attribution counters
-  ├── site_data_request_stats → site-data proxy request attribution counters
-  └── kv_config            → general key-value config store for runtime settings
-
-Cloudflare Pages
-  └── Static export from Next.js
-```
-
-## Data Reliability
-
-The data pipeline includes multiple guardrails designed for research-grade accuracy:
-
-- **Structural validation** — API responses are validated for required fields before caching; malformed objects are dropped
-- **Price validation ordering** — unreasonable prices are rejected before entering the 24-hour price cache, not after
-- **Concurrent write protection** — compare-and-swap cache writes prevent slow sync runs from overwriting newer data
-- **Depeg deduplication** — unique constraint on `(stablecoin_id, started_at, source)` prevents duplicate events; overlapping intervals are merged when computing peg scores
-- **DEX price cross-validation** — TVL-weighted median from multiple DEX sources suppresses false depeg alerts
-- **BigInt precision** — blacklist amounts use BigInt division to avoid JavaScript floating-point precision loss above 2^53
-- **Cross-currency totals** — non-USD stablecoin supplies are converted via derived FX rates, not summed at face value
-- **Thin peg group fallbacks** — currencies with <3 qualifying coins fall back to approximate FX rates when the median appears depegged
-- **Freshness header** — `/api/stablecoins` returns `X-Data-Age` so consumers can detect stale data
-- **Atomic backfill** — depeg event backfills use transactional batch operations to prevent data loss on worker crashes
-- **Retry logic** — the shared `fetchWithRetry()` helper provides exponential backoff with opt-in 404 passthrough, while some provider integrations use bespoke timeout/retry handling when batching or raw upstream semantics require it
-- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering many degraded upstreams; N-source weighted primary consensus cross-checks market, oracle, exchange, and on-chain voices, and low-confidence fixed non-NAV selection prefers stronger trust tier, then peg proximity, then weight and source key when sources diverge; CoinGecko supply fallback activates when DefiLlama is unavailable
-- **Mint/burn reliability controls** — rotating config scheduling, per-chain request quotas, adaptive `eth_getLogs` range splitting, timestamp caching, degraded-run escalation, and admin-controlled chunked backfill (`/api/backfill-mint-burn`)
-
-## Deployment
-
-GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys run from `.github/workflows/deploy-cloudflare.yml` on push to `main` or manual `workflow_dispatch`. A separate `.github/workflows/rebuild-pages.yml` handles the daily scheduled Pages rebuild (08:10 UTC, with an 08:25 UTC catch-up after digest generation):
-
-For the canonical delivery workflow (including worktree merge flow and the repo pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
-For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
-For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; historical notes are not runbooks.
-
-1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run test:a11y` + `npm run check:feature-flag-inlining` + `npm run seo:check` plus built-artifact guardrails when Pages-impacting files changed → two `npm run test:noncritical -- --shard=N/2` shards → `npm run coverage:critical` → `npm run typecheck:worker` when worker-impacting files changed
-2. **Worker candidate upload:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler versions upload` to expose the candidate preview URL before validation finishes
-3. **Worker migration + preview smoke:** after the aggregate validate gate passes, rerun the migration checker, apply D1 migrations with `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, then run `npm run test:smoke-api` against the uploaded preview URL
-4. **Worker promotion:** promote the preview-smoked Worker version through `.github/scripts/deploy-worker-version.mjs` (Cloudflare Workers Deployments API) → `cd worker && npx --no-install wrangler triggers deploy`; CI falls back to `wrangler deploy` only when Workers Versions upload is unavailable for the account
-5. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version
-6. **Pages release path:** `npm ci` → fetch `/api/digest-archive`, confirmed depeg events, and public dataset mirrors once from the selected API environment (`SMOKE_API_BASE_URL` fallback `API_BASE_URL`) → `npm run build` → `npm run test:a11y` → `npm run check:feature-flag-inlining` → `npm run seo:check` plus built-artifact guardrails → serve `out/` locally through `npm run serve:static-export` with the same selected API environment for `/api/*` and `/_site-data/*` proxy smoke → `npm run test:a11y:hydrated`
-7. **Pages publish gate:** after the local artifact smoke and, when worker/API changed, after production Worker promotion plus a second local artifact smoke against the promoted Worker, publish the verified artifact with `npx --no-install wrangler pages deploy out` (with retry in CI), then run public live UI, ops, and transport smokes in parallel
-8. **Worker-only live UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API when the static export was unchanged
-9. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `deploy-pages` inside the Pages publish workflow, or after `smoke-api` on worker-only deploys
-10. **Transport smoke:** `npm run test:smoke-transport` verifies production transport behavior after main deploys and scheduled/manual Pages rebuilds, in parallel with the other live smokes
-
-Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SMOKE_API_KEY`, `DIGEST_API_KEY`, `SITE_API_SHARED_SECRET`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
-Optional dedicated GitHub secrets for Pages data sync: `DEPEG_EVENTS_API_KEY` and `PUBLIC_DATASETS_API_KEY` (both fall back to `DIGEST_API_KEY`)
-Scheduled monitor secret: `GOOGLE_SAFE_BROWSING_API_KEY`
-Required GitHub variable: `API_BASE_URL`
-Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
-Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*` feature flags, `CI_VALIDATE_RUNNER`, `CI_WORKER_DEPLOY_RUNNER`
-
-Worker secrets and operator bindings are generated into [.env.example](./.env.example) and the env table in [docs/worker-infrastructure.md](./docs/worker-infrastructure.md). The live surface includes provider credentials (`ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `MORALIS_API_KEY`, `BIRDEYE_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `JUPITER_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `BANXICO_TOKEN`), alert/digest/social credentials (`ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, Twitter and Telegram keys), feedback/API-key self-serve secrets, site-data rotation secrets, Cloudflare D1 status bindings, and operational telemetry kill switches (`REQUEST_SOURCE_ATTRIBUTION_DISABLED`, `API_KEY_REQUEST_ATTRIBUTION_DISABLED`).
-
-`API_KEY_HASH_PEPPER` is optional for Worker startup but required for production protected public API traffic: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, self-serve API-key request/verification, Telegram webhook, and Telegram Mini App session/mutation; Telegram webhook traffic still authenticates with its own secret, and Mini App traffic authenticates with signed Telegram `initData`. Self-serve default keys are email-verified, limited to 30 requests per minute, expire after 60 days, and are managed privately through `ops.pharos.watch/admin-api/`.
-
-Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `ADDRESS_PRICE_PROVIDERS_ENABLED`, `MAINTENANCE_MODE`, and the D1 status trio `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_D1_STATUS_API_TOKEN` + `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
-
-Pages Functions bindings: `SITE_API_SHARED_SECRET` and production `SITE_API_ORIGIN` for `/_site-data/*`; `DB` for site-data attribution; `SELECTOR_SNAPSHOTS` KV for `/selector-snapshot/*`; `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_UI_AUD` for `/api/admin/*`. Optional Pages origin overrides are `SITE_ORIGIN`, `OPS_UI_ORIGIN`, and `OPS_API_ORIGIN`.
-
-Frontend build/runtime vars: `NEXT_PUBLIC_API_BASE` (optional local-dev override), `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY` (CI/local-smoke override that forces same-origin `/_site-data/*` routing), and `NEXT_PUBLIC_GA_ID` (optional GA4 injection)
-
-Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`, `MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`
+Please do not report vulnerabilities in public issues. Use the private vulnerability reporting instructions in [SECURITY.md](./SECURITY.md).
 
 ## License
 
