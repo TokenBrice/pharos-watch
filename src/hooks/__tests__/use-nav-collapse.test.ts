@@ -55,80 +55,97 @@ beforeEach(() => {
 describe("getExpandedState", () => {
   it("returns defaults when localStorage is empty", () => {
     const state = getExpandedState();
-    // TRACK group (data) defaults to expanded so the highest-traffic data
-    // routes are one click away on first render; Analyze, Monitor, and
-    // Reference stay collapsed.
-    expect(state["data"]).toBe(true);
-    expect(state["tools"]).toBe(false);
-    expect(state["monitor"]).toBe(false);
-    expect(state["info"]).toBe(false);
+    // The high-traffic Overview, Markets, and Risk groups default open so
+    // common routes are one click away; deeper research/reference groups stay collapsed.
+    expect(state["overview"]).toBe(true);
+    expect(state["markets"]).toBe(true);
+    expect(state["risk"]).toBe(true);
+    expect(state["analyze"]).toBe(false);
+    expect(state["learn"]).toBe(false);
+    expect(state["reference"]).toBe(false);
   });
 
   it("merges persisted state over defaults", () => {
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: false }));
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ markets: false }));
     const state = getExpandedState();
-    expect(state["data"]).toBe(false);    // overridden
-    expect(state["tools"]).toBe(false);   // default
-    expect(state["monitor"]).toBe(false); // default
-    expect(state["info"]).toBe(false);    // default
+    expect(state["overview"]).toBe(true); // default
+    expect(state["markets"]).toBe(false); // overridden
+    expect(state["risk"]).toBe(true);     // default
+    expect(state["analyze"]).toBe(false); // default
+    expect(state["learn"]).toBe(false);   // default
+    expect(state["reference"]).toBe(false); // default
   });
 
   it("handles corrupted localStorage gracefully", () => {
     mockStorage.setItem(STORAGE_KEY, "not-json");
     const state = getExpandedState();
-    expect(state["data"]).toBe(true); // falls back to defaults
-    expect(state["tools"]).toBe(false);
-    expect(state["monitor"]).toBe(false);
-    expect(state["info"]).toBe(false);
+    expect(state["overview"]).toBe(true); // falls back to defaults
+    expect(state["markets"]).toBe(true);
+    expect(state["risk"]).toBe(true);
+    expect(state["analyze"]).toBe(false);
+    expect(state["learn"]).toBe(false);
+    expect(state["reference"]).toBe(false);
   });
 
   it("ignores valid JSON with an invalid persisted shape", () => {
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify(["data", false]));
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify(["markets", false]));
     const state = getExpandedState();
-    expect(state["data"]).toBe(true);
-    expect(state["tools"]).toBe(false);
-    expect(state["monitor"]).toBe(false);
-    expect(state["info"]).toBe(false);
+    expect(state["overview"]).toBe(true);
+    expect(state["markets"]).toBe(true);
+    expect(state["risk"]).toBe(true);
+    expect(state["analyze"]).toBe(false);
+    expect(state["learn"]).toBe(false);
+    expect(state["reference"]).toBe(false);
   });
 
   it("keeps only boolean values from mixed persisted entries", () => {
     mockStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        data: false,
-        tools: "true",
-        monitor: true,
-        info: null,
+        overview: false,
+        markets: "false",
+        risk: false,
+        analyze: true,
+        reference: null,
       }),
     );
 
     const state = getExpandedState();
 
-    expect(state["data"]).toBe(false);
-    expect(state["tools"]).toBe(false);
-    expect(state["monitor"]).toBe(true);
-    expect(state["info"]).toBe(false);
+    expect(state["overview"]).toBe(false);
+    expect(state["markets"]).toBe(true);
+    expect(state["risk"]).toBe(false);
+    expect(state["analyze"]).toBe(true);
+    expect(state["learn"]).toBe(false);
+    expect(state["reference"]).toBe(false);
   });
 });
 
 describe("setExpandedState", () => {
   it("persists state to localStorage", () => {
-    setExpandedState({ data: true, tools: false, monitor: true, info: true });
+    setExpandedState({ overview: true, markets: false, risk: true, analyze: false, learn: false, reference: true });
     const raw = mockStorage.getItem(STORAGE_KEY);
-    expect(JSON.parse(raw!)).toEqual({ data: true, tools: false, monitor: true, info: true });
+    expect(JSON.parse(raw!)).toEqual({
+      overview: true,
+      markets: false,
+      risk: true,
+      analyze: false,
+      learn: false,
+      reference: true,
+    });
   });
 });
 
 describe("useNavCollapse", () => {
   function NavCollapseProbe() {
     const navCollapse = useNavCollapse();
-    return createElement("div", { "data-expanded": String(navCollapse.isExpanded("data")) });
+    return createElement("div", { "data-expanded": String(navCollapse.isExpanded("markets")) });
   }
 
   it("renders the hydration pass from defaults before applying localStorage state", async () => {
-    // Defaults now expand the data group, so the server pass should reflect
+    // Defaults expand the Markets group, so the server pass should reflect
     // that baseline regardless of the persisted state that will later hydrate.
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: false }));
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ markets: false }));
 
     expect(renderToString(createElement(NavCollapseProbe))).toContain('data-expanded="true"');
 
@@ -137,7 +154,7 @@ describe("useNavCollapse", () => {
     // After client hydration, the persisted override (false) should win over
     // the default (true).
     await waitFor(() => {
-      expect(result.current.isExpanded("data")).toBe(false);
+      expect(result.current.isExpanded("markets")).toBe(false);
     });
   });
 });
