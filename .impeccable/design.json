@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-27T16:07:28Z",
+  "title": "Design System: Pharos",
+  "extensions": {
+    "colorMeta": {
+      "accent-purple": {
+        "role": "primary",
+        "displayName": "Quiet Purple",
+        "canonical": "#8e4ec6",
+        "tonalRamp": ["#1c0a29", "#3b1a55", "#5a2a85", "#7438a8", "#8e4ec6", "#a96fd6", "#cba3e6", "#eddcf8"]
+      },
+      "info-blue": {
+        "role": "primary",
+        "displayName": "Info Blue",
+        "canonical": "#0090ff",
+        "tonalRamp": ["#0d2847", "#0a3a6b", "#0a5c9c", "#0090ff", "#3aa6ff", "#70b8ff", "#a5d0ff", "#dbeeff"]
+      },
+      "status-success": {
+        "role": "tertiary",
+        "displayName": "Good",
+        "canonical": "#30a46c",
+        "tonalRamp": ["#0d2818", "#123b22", "#1a5c34", "#218358", "#30a46c", "#3dd68c", "#7ce0ad", "#c4f0d8"]
+      },
+      "status-alert": {
+        "role": "tertiary",
+        "displayName": "Alert",
+        "canonical": "#ffe629",
+        "tonalRamp": ["#3a3505", "#5c530a", "#8a7d10", "#c2b41a", "#ffe629", "#f5e147", "#fff08a", "#fffac4"]
+      },
+      "status-warning": {
+        "role": "tertiary",
+        "displayName": "Warning",
+        "canonical": "#f76b15",
+        "tonalRamp": ["#3a1505", "#5c220a", "#8a3410", "#cc4e00", "#f76b15", "#ffa057", "#ffc599", "#ffe1cc"]
+      },
+      "status-danger": {
+        "role": "tertiary",
+        "displayName": "Danger",
+        "canonical": "#e5484d",
+        "tonalRamp": ["#3a0d0f", "#5c1518", "#8a2024", "#ce2c31", "#e5484d", "#ff9592", "#ffbdbb", "#ffe0df"]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#202020",
+        "tonalRamp": ["#000000", "#202020", "#404040", "#646464", "#8d8d8d", "#b0b0b0", "#dcdcdc", "#fcfcfc"]
+      },
+      "surface-base": {
+        "role": "neutral",
+        "displayName": "Base Surface",
+        "canonical": "#fcfcfc",
+        "tonalRamp": ["#0f0f0f", "#202020", "#404040", "#646464", "#8d8d8d", "#dcdcdc", "#f0f0f0", "#fcfcfc"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page/route titles and the wordmark. Bricolage Grotesque ink-trap, 800." },
+      "headline": { "displayName": "Headline", "purpose": "Section titles (Market Pulse, Stablecoin Overview). Bricolage 700." },
+      "title": { "displayName": "Title", "purpose": "Card and panel headings. Geist 600." },
+      "body": { "displayName": "Body", "purpose": "UI text and prose. Geist 400, 14px base." },
+      "numeric": { "displayName": "Numeric", "purpose": "Every digit-bearing cell. JetBrains Mono, tabular-nums slashed-zero." },
+      "label": { "displayName": "Label / Kicker", "purpose": "Data-group eyebrows (MARKET COHORTS). JetBrains Mono, ~0.08em tracking, often uppercase." }
+    },
+    "shadows": [
+      { "name": "shadow-universal-x-small", "value": "0 1px 2px rgba(0,0,0,0.06), 0 8px 20px rgba(0,0,0,0.04)", "purpose": "Applied on card hover only, paired with a -2px lift. Never at rest." },
+      { "name": "shadow-universal-medium", "value": "0 2px 6px rgba(0,0,0,0.07), 0 14px 32px rgba(0,0,0,0.08)", "purpose": "Dropdowns, popovers, the Columns menu." },
+      { "name": "background-blur", "value": "saturate(1.2) blur(12px)", "purpose": "Frosted sticky top-nav and overlays only — never a decorative glass card." }
+    ],
+    "motion": [
+      { "name": "duration-fast", "value": "160ms", "purpose": "State/hover transitions." },
+      { "name": "duration-base", "value": "220ms", "purpose": "Default UI transitions." },
+      { "name": "ease-standard", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Decelerating standard easing — no bounce, no elastic." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Flat Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The canonical surface. Raised white fill + 1px hairline, no resting shadow; lifts on hover.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-kicker\">MARKET COHORTS</p><p class=\"ds-card-title\">Peg Health</p><p class=\"ds-card-body\">180 of 210 active stablecoins within band.</p></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; box-shadow: none; padding: 20px; transition: box-shadow 160ms cubic-bezier(0.22,1,0.36,1), transform 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-card:hover { border-color: rgba(0,0,0,0.16); box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 8px 20px rgba(0,0,0,0.04); transform: translateY(-2px); } .ds-card-kicker { margin: 0 0 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: #8d8d8d; } .ds-card-title { margin: 0 0 6px; font-family: 'Geist', system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; color: #202020; } .ds-card-body { margin: 0; font-family: 'Geist', system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; color: #646464; }"
+    },
+    {
+      "name": "Primary Metric",
+      "kind": "custom",
+      "refersTo": "metric-primary",
+      "description": "The headline live figure — info-blue marks Total Market Cap and the Stability Index.",
+      "html": "<div class=\"ds-metric\"><span class=\"ds-metric-label\">Total Market Cap</span><span class=\"ds-metric-value\">$352.16B</span></div>",
+      "css": ".ds-metric { display: flex; flex-direction: column; gap: 10px; } .ds-metric-label { font-family: 'Geist', system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; color: #8d8d8d; } .ds-metric-value { font-family: 'JetBrains Mono', SFMono-Regular, ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; font-size: 2.45rem; font-weight: 600; line-height: 1; letter-spacing: -0.02em; color: #0090ff; }"
+    },
+    {
+      "name": "Numeric Cell",
+      "kind": "custom",
+      "refersTo": "numeric-cell",
+      "description": "Right-aligned tabular figure used in every data column.",
+      "html": "<span class=\"ds-numeric\">$1.0001</span>",
+      "css": ".ds-numeric { font-family: 'JetBrains Mono', SFMono-Regular, ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; font-size: 0.875rem; font-weight: 500; color: #202020; }"
+    },
+    {
+      "name": "Category Badge",
+      "kind": "badge",
+      "refersTo": "badge-category",
+      "description": "Category/grade tag — text on a ~16% alpha tint of its own hue. Purple shown; status hues follow the same pattern. No left-stripe.",
+      "html": "<span class=\"ds-badge\">RWA</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; background: rgba(142,78,198,0.16); color: #8145b5; font-family: 'Geist', system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; }"
+    },
+    {
+      "name": "Pill (default + active)",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "Neutral interactive control. Active state is a quiet near-black ink fill — never info-blue or purple.",
+      "html": "<button class=\"ds-pill\">All chains</button> <button class=\"ds-pill ds-pill-active\" aria-pressed=\"true\">Ethereum</button>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 9999px; background: rgba(255,255,255,0.8); font-family: 'Geist', system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; color: #646464; cursor: pointer; transition: color 160ms cubic-bezier(0.22,1,0.36,1), background-color 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-pill:hover { color: #202020; background: #f0f0f0; } .ds-pill:focus-visible { outline: none; box-shadow: 0 0 0 2px #fcfcfc, 0 0 0 4px rgba(0,144,255,0.55); } .ds-pill-active { background: #202020; color: #fcfcfc; border-color: transparent; }"
+    },
+    {
+      "name": "Segmented Control (density)",
+      "kind": "custom",
+      "refersTo": "pill",
+      "description": "The two-mode density toggle — spacious / compact — and similar segmented switches.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-opt ds-seg-on\">Spacious</button><button class=\"ds-seg-opt\">Compact</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 2px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: #f0f0f0; gap: 2px; } .ds-seg-opt { padding: 5px 12px; border: none; border-radius: 6px; background: transparent; font-family: 'Geist', system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; color: #646464; cursor: pointer; transition: background-color 160ms cubic-bezier(0.22,1,0.36,1), color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-seg-opt:hover { color: #202020; } .ds-seg-on { background: #ffffff; color: #202020; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }"
+    },
+    {
+      "name": "Top Nav",
+      "kind": "nav",
+      "refersTo": "card",
+      "description": "Global frosted top bar; content runs full-width beneath. No sidebar.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-brand\">Pharos</span><span class=\"ds-nav-links\">Terminal · Track · Monitor · Analyze · Docs · Resources</span><span class=\"ds-nav-search\">Search ⌘K</span></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 24px; padding: 10px 20px; border-bottom: 1px solid rgba(0,0,0,0.08); background: rgba(252,252,252,0.8); backdrop-filter: saturate(1.2) blur(12px); } .ds-nav-brand { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; color: #202020; } .ds-nav-links { font-family: 'Geist', system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; color: #646464; } .ds-nav-search { margin-left: auto; font-family: 'Geist', system-ui, sans-serif; font-size: 0.8125rem; color: #8d8d8d; padding: 6px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Instrument",
+    "overview": "Pharos is a precision instrument for crypto-native practitioners — a Bloomberg Terminal scoped to stablecoins. The interface is monochrome by default: a neutral Radix-gray field where the chrome recedes and the data leads. Color is rationed and always means something — a Radix status hue (peg health, risk, trend), the info-blue that marks the primary live metrics, or a quiet purple categorical tag. Nothing is colored for decoration. Light-default with a full dark theme, navigated by a global top-nav with full-width content (no sidebar; the frost-blue lighthouse identity is retired). Rebuilt from a professional designer's Figma against a Radix-based component library.",
+    "keyCharacteristics": [
+      "Monochrome neutral base (Radix gray); color appears only as status, the primary metric, or a categorical tag.",
+      "Global top-nav, full-width content. No sidebar.",
+      "Flat cards: fill + hairline border, no resting shadow. Depth is a hover response.",
+      "Mono + tabular + slashed-zero on every digit-bearing cell.",
+      "Fixed rem type scale; two-mode density (spacious / compact).",
+      "Color is reinforced with structure and iconography, never the sole signal."
+    ],
+    "rules": [
+      { "name": "The Monochrome-Default Rule", "body": "The interface is neutral. A color only appears if it is carrying a status, the primary metric, or a categorical tag. Any other saturation is wrong.", "section": "colors" },
+      { "name": "The Quiet-Purple Rule", "body": "Purple is a categorical accent at the edges (readiness, the active entry card, category tags) — never page chrome, never a button fill, never a gradient.", "section": "colors" },
+      { "name": "The Semantic-Status Rule", "body": "The Radix status ramp encodes state only. Inactive states never take a full-saturation hue; badges sit on ~16% alpha tints and route through shared/lib/classification.ts.", "section": "colors" },
+      { "name": "The Tabular-Figure Rule", "body": "Numbers always use JetBrains Mono with tabular-nums slashed-zero. Proportional digits in a data column are a bug.", "section": "typography" },
+      { "name": "The Fixed-Scale Rule", "body": "Headings use the fixed rem scale, not fluid clamp(). The viewport changes layout, not type size.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. A shadow appears only as a response to state — hover, an overlay, or a deliberately featured block. Nested cards are forbidden.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the interface monochrome (Radix gray); spend color only on status, the primary metric (info-blue), or a categorical purple tag.",
+      "Do use the Radix status ramp — Good #30a46c, Alert #ffe629, Warning #f76b15, Danger #e5484d — with badges on ~16% alpha tints, routed through shared/lib/classification.ts.",
+      "Do keep purple minor and categorical (readiness, active entry card, category tags), flat, never a CTA.",
+      "Do render every digit with JetBrains Mono + tabular-nums slashed-zero.",
+      "Do keep cards flat: surface-raised fill + 1px hairline, no resting shadow; lift only on hover.",
+      "Do use the global top-nav with full-width content; keep the fixed rem type scale and two-mode density.",
+      "Do gate every animation behind prefers-reduced-motion."
+    ],
+    "donts": [
+      "Don't reintroduce frost-blue #4bc4de as a brand accent, or the lighthouse beam / watch-column sidebar — that identity is retired.",
+      "Don't use border-left/right greater than 1px as a colored accent stripe (retired app-wide).",
+      "Don't ship Web3-marketing tropes: purple gradients, glassmorphism cards, gradient text, or buzzwords. Purple as a flat categorical tag is fine; purple as chrome or gradient is not.",
+      "Don't fall into corporate-fintech blandness or the generic-SaaS grid of interchangeable KPI tiles.",
+      "Don't reskin DefiLlama or a generic trading-terminal clone.",
+      "Don't give info-blue or purple to controls, inactive states, or decoration.",
+      "Don't put a resting drop shadow on a card, or nest a card inside a card.",
+      "Don't use fluid clamp() headings or proportional figures in a data column.",
+      "Don't reorder the homepage bands, or introduce a new serif outside the authored editorial carve-out."
+    ]
+  }
+}

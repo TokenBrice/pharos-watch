@@ -1,5 +1,7 @@
 # Design Context
 
+> Canonical human-facing source. The root [`DESIGN.md`](../DESIGN.md) is the machine-readable mirror (Stitch format, for AI agents generating screens), written to the **Figma redesign target** — neutral/monochrome base · Radix status hues · purple as a minor categorical accent · global top-nav, frost-blue lighthouse retired — with a punch-list tracking where live tokens still diverge. **Note:** parts of this doc and `design-language.md`/`design-tokens.md` still describe the pre-migration frost-blue/sidebar identity and need a corpus refresh to match. Regenerate `DESIGN.md` with `/impeccable document` when the Figma or homepage composition changes.
+
 ## Users
 
 Crypto-native DeFi participants who actively monitor stablecoin health — checking market conditions, peg stability, and risk signals regularly to inform financial decisions. The core audience is power-user-leaning: they value density, precision, and speed-to-insight over softness or consumer-app hand-holding.
