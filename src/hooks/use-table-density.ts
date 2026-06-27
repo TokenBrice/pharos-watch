@@ -2,7 +2,7 @@
 
 import { usePreference } from "./use-preferences";
 
-export type TableDensity = "list" | "compact" | "comfortable" | "spacious";
+export type TableDensity = "compact" | "spacious";
 
 interface DensityConfig {
   rowHeight: number;
@@ -10,17 +10,9 @@ interface DensityConfig {
 }
 
 export const DENSITY_CONFIGS: Record<TableDensity, DensityConfig> = {
-  list: {
-    rowHeight: 28,
-    iconSize: 18,
-  },
   compact: {
     rowHeight: 32,
     iconSize: 20,
-  },
-  comfortable: {
-    rowHeight: 40,
-    iconSize: 24,
   },
   spacious: {
     rowHeight: 52,
@@ -29,8 +21,13 @@ export const DENSITY_CONFIGS: Record<TableDensity, DensityConfig> = {
 };
 
 export function useTableDensity(): [TableDensity, (density: TableDensity) => void, () => void, DensityConfig] {
-  const [density, setDensity, reset] = usePreference<TableDensity>("pharos-table-density", "comfortable");
+  const [stored, setDensity, reset] = usePreference<TableDensity>("pharos-table-density", "spacious");
 
+  // The density toggle collapsed from four modes to two (compact + spacious).
+  // Migrate any persisted legacy value ("list" → compact, "comfortable" →
+  // spacious) on read so old localStorage prefs don't hit an undefined config.
+  const legacy = stored as string;
+  const density: TableDensity = legacy === "compact" || legacy === "list" ? "compact" : "spacious";
   const config = DENSITY_CONFIGS[density];
 
   return [density, setDensity, reset, config];

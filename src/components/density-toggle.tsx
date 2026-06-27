@@ -1,6 +1,6 @@
 "use client";
 
-import { List, ListCollapse, ListStart, Rows3 } from "lucide-react";
+import { ListCollapse, ListStart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TableDensity } from "@/hooks/use-table-density";
 
@@ -10,10 +10,8 @@ interface DensityToggleProps {
   className?: string;
 }
 
-const options: { value: TableDensity; label: string; icon: typeof List }[] = [
-  { value: "list", label: "List", icon: Rows3 },
+const options: { value: TableDensity; label: string; icon: typeof ListCollapse }[] = [
   { value: "compact", label: "Compact", icon: ListCollapse },
-  { value: "comfortable", label: "Comfortable", icon: List },
   { value: "spacious", label: "Spacious", icon: ListStart },
 ];
 

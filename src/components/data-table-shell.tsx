@@ -155,7 +155,7 @@ export function DataTableShell<K extends string>({
   stickyHeader,
   pagination,
   striped = false,
-  density = "comfortable",
+  density = "compact",
   refreshingQueryKeys,
   isPending = false,
 }: DataTableShellProps<K>) {

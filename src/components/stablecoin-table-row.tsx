@@ -45,6 +45,7 @@ interface StablecoinVirtualRowProps {
     iconSize: number;
   };
   density: TableDensity;
+  variant?: "default" | "figmaOverview";
   isVisible: (id: ColumnId) => boolean;
   logos?: Record<string, string>;
   pegRates: Record<string, number>;
@@ -81,7 +82,7 @@ function MiniSparkline({ values }: { values: number[] }) {
       <polyline
         points={points}
         fill="none"
-        stroke={trending ? "var(--color-green-500, #22c55e)" : "var(--color-red-500, #ef4444)"}
+        stroke={trending ? "var(--p-green-500, #22c55e)" : "var(--p-red-500, #ef4444)"}
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -103,6 +104,7 @@ function StablecoinVirtualRowBase({
   isStriped,
   densityConfig,
   density,
+  variant = "default",
   isVisible,
   logos,
   pegRates,
@@ -133,17 +135,19 @@ function StablecoinVirtualRowBase({
   const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
   const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
   const supplySparklineValues = [prevWeek, prevDay, circulating];
+  const isFigmaOverview = variant === "figmaOverview";
 
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
-  const riskClass =
-    riskLevel === "depeg"
+  const riskClass = isFigmaOverview
+    ? ""
+    : riskLevel === "depeg"
       ? "pharos-row-risk-depeg"
       : riskLevel === "poor"
         ? "pharos-row-risk-poor"
         : riskLevel === "warning"
           ? "pharos-row-risk-warning"
           : "";
-  const isCompactDensity = density === "list" || density === "compact";
+  const isCompactDensity = density === "compact";
 
   const pegRef = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
   const priceCell = formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef);
@@ -182,7 +186,7 @@ function StablecoinVirtualRowBase({
     <TableRow
       ref={measureElement}
       key={coin.id}
-      className={`group cursor-pointer data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)] ${riskClass}`}
+      className={`group cursor-pointer ${isFigmaOverview ? "pharos-overview-table-row" : "data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)]"} ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
       data-cursor={isCursor ? "true" : undefined}
       data-index={virtualIndex}
@@ -205,11 +209,11 @@ function StablecoinVirtualRowBase({
               aria-label={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
               aria-pressed={isPinned}
               title={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
-              className={`pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md transition-colors xl:size-6 ${
+              className={`pharos-focus-ring inline-flex items-center justify-center rounded-md transition-colors ${
                 isPinned
                   ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
                   : "text-muted-foreground opacity-80 hover:text-foreground xl:opacity-0 xl:group-hover:opacity-100 xl:focus-visible:opacity-100"
-              }`}
+              } ${isFigmaOverview ? "size-6 opacity-100 group-hover:opacity-100 focus-visible:opacity-100" : "size-11 xl:size-6"}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTogglePinned(coin.id);
@@ -233,9 +237,7 @@ function StablecoinVirtualRowBase({
           <div className="flex items-center">
             <Link
               href={buildStablecoinUrl(coin.id)}
-              className={`pharos-focus-ring flex min-w-0 flex-1 items-center rounded-md px-1 py-1 font-medium hover:bg-muted/35 ${
-                density === "list" ? "gap-1.5" : "gap-2"
-              }`}
+              className={`pharos-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-md font-medium hover:bg-muted/35 ${isFigmaOverview ? "px-0 py-0" : "px-1 py-1"}`}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
               onMouseEnter={() => onPrefetch(coin.id)}
@@ -256,13 +258,14 @@ function StablecoinVirtualRowBase({
                   ) : null}
                 </span>
                 <span
-                  className={`max-w-[140px] truncate text-xs text-muted-foreground ${
-                    density === "list" ? "hidden" : "hidden xl:block"
-                  }`}
+                  className={`max-w-[140px] truncate text-xs text-muted-foreground ${isFigmaOverview ? "block" : "hidden xl:block"}`}
                 >
                   {coin.name}
                 </span>
-                <span className="mt-1 flex min-w-0 items-center gap-1 xl:hidden" aria-label="Mobile risk summary">
+                <span
+                  className={`mt-1 min-w-0 items-center gap-1 ${isFigmaOverview ? "hidden" : "flex xl:hidden"}`}
+                  aria-label="Mobile risk summary"
+                >
                   {reportCard ? (
                     <span
                       className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 text-[10px] font-mono font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
@@ -364,9 +367,10 @@ function StablecoinVirtualRowBase({
           >
             {prevWeek > 0 ? (
               <>
-                {/* 2xl gate: below ~1536px the fixed-layout columns are too
-                    narrow for sparkline + delta; the svg painted over Grade. */}
-                <span className="hidden 2xl:inline">
+                {/* xl gate: the 7d column carries a fixed w-[144px] from xl up,
+                    which fits the inline sparkline beside the delta without the
+                    svg spilling onto Grade. Below xl the column is hidden. */}
+                <span className="hidden xl:inline">
                   <MiniSparkline values={supplySparklineValues} />
                 </span>
                 {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
@@ -382,7 +386,7 @@ function StablecoinVirtualRowBase({
           {reportCard && (
             <Badge
               variant="outline"
-              className={`text-xs font-mono px-1.5 py-0.5 transition-all duration-200 ${
+              className={`rounded-full px-2 py-0.5 text-xs font-mono font-semibold transition-all duration-200 ${
                 REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]
               } ${
                 ["D", "F"].includes(reportCard.overallGrade) ? "animate-risk-pulse border-red-500/60 bg-red-500/5" : ""
@@ -442,7 +446,10 @@ function StablecoinVirtualRowBase({
       {isVisible("type") && (
         <TableCell key="type" className="text-center">
           {meta && (
-            <Badge variant="outline" className={`text-xs ${GOVERNANCE_BADGE_STYLES[meta.flags.governance]?.cls ?? ""}`}>
+            <Badge
+              variant="outline"
+              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${GOVERNANCE_BADGE_STYLES[meta.flags.governance]?.cls ?? ""}`}
+            >
               {GOVERNANCE_LABELS_SHORT[meta.flags.governance]}
             </Badge>
           )}

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Columns3 } from "lucide-react";
+import { ChevronDown, Columns3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,12 +10,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ALL_COLUMNS, LOCKED_COLUMNS, type ColumnId } from "@/hooks/use-preferences";
+import { cn } from "@/lib/utils";
 
 interface ColumnVisibilityDropdownProps {
   visibleColumns: ColumnId[];
   setVisibleColumns: (value: ColumnId[] | ((prev: ColumnId[]) => ColumnId[])) => void;
   resetColumns: () => void;
   defaultColumns: ColumnId[];
+  triggerClassName?: string;
+  compactOnMobile?: boolean;
 }
 
 export function ColumnVisibilityDropdown({
@@ -23,6 +26,8 @@ export function ColumnVisibilityDropdown({
   setVisibleColumns,
   resetColumns,
   defaultColumns,
+  triggerClassName,
+  compactOnMobile = false,
 }: ColumnVisibilityDropdownProps) {
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   // Count how many default columns are currently hidden (user has disabled them)
@@ -34,14 +39,22 @@ export function ColumnVisibilityDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="min-h-11 w-full border-border/70 sm:min-h-8 sm:w-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn("min-h-11 w-full rounded-lg border-border/70 sm:min-h-8 sm:w-auto", triggerClassName)}
+        >
           <Columns3 className="h-3.5 w-3.5" />
-          Columns
+          <span className={compactOnMobile ? "sr-only sm:not-sr-only" : undefined}>Columns</span>
           {hiddenCount > 0 && (
-            <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground/10 px-1 font-mono text-[10px] font-semibold tabular-nums text-foreground">
               {hiddenCount}
             </span>
           )}
+          <ChevronDown
+            className={cn("ml-0.5 h-3.5 w-3.5 text-muted-foreground", compactOnMobile && "hidden sm:block")}
+            aria-hidden="true"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">

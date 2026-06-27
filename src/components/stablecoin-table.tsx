@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useCallback, useRef, useEffect } from "react";
+import { useMemo, useCallback, useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import type { QueryKey } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   TableBody,
   TableCaption,
@@ -51,6 +52,7 @@ import {
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 const OVERSCAN = 32;
 const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
+type StablecoinTableVisualVariant = "default" | "figmaOverview";
 const STABLECOIN_FRAME_SHARED = {
   tableId: "stablecoin-overview",
   testId: "stablecoin-overview-table",
@@ -70,11 +72,14 @@ const STABLECOIN_TABLE_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
 const TABLE_BASE_MIN_WIDTH_PX = 420;
 const PINNED_COLUMN_MIN_WIDTH_PX = 56;
 const VIRTUAL_ROW_HEIGHT_ESTIMATE_PX: Record<TableDensity, number> = {
-  list: 32,
   compact: 52,
-  comfortable: 64,
   spacious: 75,
 };
+const OVERVIEW_ROW_HEIGHT_ESTIMATE_PX: Record<TableDensity, number> = {
+  compact: 42,
+  spacious: 56,
+};
+const OVERVIEW_PAGE_SIZE = 20;
 // Per-column content minimums. The table runs `table-fixed`; summing these for
 // the visible set yields the inline min-width at every tier, so the viewport
 // scrolls horizontally instead of squeezing cell content into neighbors.
@@ -85,7 +90,7 @@ const COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   peg: 92,
   mcap: 112,
   change24h: 92,
-  change7d: 96,
+  change7d: 144,
   grade: 76,
   stability: 96,
   liquidity: 72,
@@ -93,6 +98,23 @@ const COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   mintAuthority: 116,
   backing: 92,
   type: 92,
+  flags: 72,
+};
+const OVERVIEW_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
+  rank: 44,
+  name: 190,
+  price: 88,
+  peg: 84,
+  mcap: 100,
+  change24h: 84,
+  change7d: 112,
+  grade: 76,
+  stability: 100,
+  liquidity: 60,
+  blacklistable: 96,
+  mintAuthority: 112,
+  backing: 84,
+  type: 80,
   flags: 72,
 };
 const SKELETON_WIDTH_BY_COLUMN: Partial<Record<ColumnId, string>> = {
@@ -118,10 +140,18 @@ function sameColumnSet(left: readonly ColumnId[], right: readonly ColumnId[]): b
   return left.every((id, index) => id === right[index]);
 }
 
-function getTableMinWidthPx(visibleColumns: readonly ColumnId[], showPinnedControls: boolean): number {
+function getColumnMinWidthPx(id: ColumnId, variant: StablecoinTableVisualVariant): number {
+  return variant === "figmaOverview" ? OVERVIEW_COLUMN_MIN_WIDTH_PX[id] : COLUMN_MIN_WIDTH_PX[id];
+}
+
+function getTableMinWidthPx(
+  visibleColumns: readonly ColumnId[],
+  showPinnedControls: boolean,
+  variant: StablecoinTableVisualVariant,
+): number {
   const selectedWidth = visibleColumns.reduce(
-    (total, id) => total + COLUMN_MIN_WIDTH_PX[id],
-    showPinnedControls ? PINNED_COLUMN_MIN_WIDTH_PX : 0,
+    (total, id) => total + getColumnMinWidthPx(id, variant),
+    showPinnedControls ? (variant === "figmaOverview" ? 48 : PINNED_COLUMN_MIN_WIDTH_PX) : 0,
   );
   return Math.max(TABLE_BASE_MIN_WIDTH_PX, selectedWidth);
 }
@@ -162,14 +192,21 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
   },
   { id: "mcap", label: "Market Cap", sortKey: "mcap", className: "text-right" },
   { id: "change24h", label: "24h", sortKey: "change24h", className: "text-right", title: "24-hour market cap change" },
-  { id: "change7d", label: "7d", sortKey: "change7d", className: "text-right", title: "7-day market cap change" },
+  {
+    id: "change7d",
+    label: "7d",
+    sortKey: "change7d",
+    className: "w-[144px] text-right",
+    title: "7-day market cap change",
+  },
   {
     id: "grade",
     label: "Grade",
     headerAdornment: <MethodologyHint topic="safetyScore" />,
     sortKey: "grade",
     className: "text-center",
-    title: "Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk",
+    title:
+      "Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk",
   },
   {
     id: "stability",
@@ -207,6 +244,43 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
   { id: "flags", label: "Flags", className: "text-center" },
 ] as const;
 
+const OVERVIEW_HEADER_LABELS: Partial<Record<ColumnId, string>> = {
+  mcap: "MC",
+  blacklistable: "Blacklist",
+};
+
+const OVERVIEW_HEADER_CLASS_NAMES: Partial<Record<ColumnId, string>> = {
+  rank: "w-[44px] text-right",
+  name: "w-[190px] max-w-[190px]",
+  price: "w-[88px] text-right",
+  peg: "w-[84px] text-right",
+  mcap: "w-[100px] text-right",
+  change24h: "w-[84px] text-right",
+  change7d: "w-[112px] text-right",
+  grade: "w-[76px] text-center",
+  stability: "w-[100px] text-right",
+  liquidity: "w-[60px] text-right",
+  blacklistable: "w-[96px] text-center",
+  mintAuthority: "w-[112px] text-center",
+  backing: "w-[84px] text-center",
+  type: "w-[80px] text-center",
+  flags: "w-[72px] text-center",
+};
+
+function getHeaderLabel(column: StablecoinHeaderDef, variant: StablecoinTableVisualVariant): string {
+  if (variant === "figmaOverview") {
+    return OVERVIEW_HEADER_LABELS[column.id] ?? column.label;
+  }
+  return column.label;
+}
+
+function getHeaderClassName(column: StablecoinHeaderDef, variant: StablecoinTableVisualVariant): string | undefined {
+  if (variant === "figmaOverview") {
+    return OVERVIEW_HEADER_CLASS_NAMES[column.id] ?? column.className;
+  }
+  return column.className;
+}
+
 interface StablecoinTableHeaderSortProps {
   sortKey: StablecoinTableSortKey;
   sortDirection: "asc" | "desc";
@@ -221,14 +295,26 @@ interface StablecoinTableHeaderProps {
   /** When omitted the header renders in loading/static mode (plain TableHead, rowIntent="static"). */
   sort?: StablecoinTableHeaderSortProps;
   sticky?: boolean;
+  variant?: StablecoinTableVisualVariant;
 }
 
-function StablecoinTableHeader({ showPinnedControls, isVisible, sort, sticky }: StablecoinTableHeaderProps) {
+function StablecoinTableHeader({
+  showPinnedControls,
+  isVisible,
+  sort,
+  sticky,
+  variant = "default",
+}: StablecoinTableHeaderProps) {
   return (
-    <TableHeader className={sticky ? "sticky top-0 z-10 bg-muted" : "bg-muted"}>
+    <TableHeader
+      className={`${sticky ? "sticky top-0 z-10 bg-muted" : "bg-muted"} ${variant === "figmaOverview" ? "pharos-overview-table-header" : ""}`}
+    >
       <TableRow rowIntent={sort ? undefined : "static"}>
         {showPinnedControls ? (
-          <TableHead scope="col" className="w-[44px] text-center xl:w-[36px]">
+          <TableHead
+            scope="col"
+            className={variant === "figmaOverview" ? "w-[48px] text-center" : "w-[44px] text-center xl:w-[36px]"}
+          >
             <span className="sr-only">Starred</span>
           </TableHead>
         ) : null}
@@ -239,16 +325,16 @@ function StablecoinTableHeader({ showPinnedControls, isVisible, sort, sticky }: 
               sortKey={column.sortKey}
               currentSortKey={sort.sortKey}
               sortDirection={sort.sortDirection}
-              label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
+              label={column.sortLabel ?? getHeaderLabel(column, variant)}
               toggleSort={sort.toggleSort}
               getAriaSortValue={sort.getAriaSortValue}
               adornment={sort.showHeaderMethodologyHints ? column.headerAdornment : undefined}
-              className={column.className}
+              className={getHeaderClassName(column, variant)}
               title={column.title}
             />
           ) : (
-            <TableHead key={column.id} scope="col" className={column.className} title={column.title}>
-              {column.label}
+            <TableHead key={column.id} scope="col" className={getHeaderClassName(column, variant)} title={column.title}>
+              {getHeaderLabel(column, variant)}
             </TableHead>
           ),
         )}
@@ -266,6 +352,7 @@ interface StablecoinTableProps {
   logos?: Record<string, string>;
   pegRates?: Record<string, number>;
   searchQuery?: string;
+  onSearchChange?: (value: string) => void;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, ReportCard>;
@@ -281,6 +368,7 @@ interface StablecoinTableProps {
   toolbarDescription?: string | null;
   toolbarTitleId?: string;
   toolbarMeta?: string;
+  toolbarVariant?: "default" | "figmaOverview";
 }
 
 export function StablecoinTable({
@@ -292,6 +380,7 @@ export function StablecoinTable({
   logos,
   pegRates = {},
   searchQuery,
+  onSearchChange,
   pegScores,
   dexLiquidity,
   reportCards,
@@ -307,6 +396,7 @@ export function StablecoinTable({
   toolbarDescription,
   toolbarTitleId,
   toolbarMeta,
+  toolbarVariant = "default",
 }: StablecoinTableProps) {
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<StablecoinTableSortKey>(
     initialSort?.key ?? "mcap",
@@ -315,12 +405,16 @@ export function StablecoinTable({
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const router = useRouter();
   const prefetch = usePrefetchStablecoin();
-  const handleNavigate = useCallback((coinId: string) => {
-    router.push(buildStablecoinUrl(coinId));
-  }, [router]);
+  const handleNavigate = useCallback(
+    (coinId: string) => {
+      router.push(buildStablecoinUrl(coinId));
+    },
+    [router],
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  const isMobileColumns = useIsMobile(1280);
+  const isFigmaOverview = toolbarVariant === "figmaOverview";
+  const isMobileColumns = useIsMobile(isFigmaOverview ? 768 : 1280);
 
   // Density mode
   const [density, setDensity] = useTableDensity();
@@ -330,18 +424,18 @@ export function StablecoinTable({
   // `initialVisibleColumns`, when provided, seeds the default for first-mount on this route
   // (e.g., compact homepage views ship a denser lens). Existing localStorage prefs still win on
   // subsequent loads — the prop only seeds the default branch.
-  const deviceDefault = useMemo<ColumnId[]>(
-    () => {
-      if (isMobileColumns) {
-        return [...MOBILE_DEFAULT_COLUMNS];
-      }
-      if (initialVisibleColumns && initialVisibleColumns.length > 0) {
-        return [...initialVisibleColumns];
-      }
-      return [...DEFAULT_VISIBLE_COLUMNS];
-    },
-    [initialVisibleColumns, isMobileColumns],
-  );
+  const deviceDefault = useMemo<ColumnId[]>(() => {
+    if (isFigmaOverview && initialVisibleColumns && initialVisibleColumns.length > 0) {
+      return [...initialVisibleColumns];
+    }
+    if (isMobileColumns) {
+      return [...MOBILE_DEFAULT_COLUMNS];
+    }
+    if (initialVisibleColumns && initialVisibleColumns.length > 0) {
+      return [...initialVisibleColumns];
+    }
+    return [...DEFAULT_VISIBLE_COLUMNS];
+  }, [initialVisibleColumns, isFigmaOverview, isMobileColumns]);
   const columnPreferenceKey = isMobileColumns
     ? `${columnPreferenceNamespace}-columns-mobile`
     : `${columnPreferenceNamespace}-columns`;
@@ -369,18 +463,20 @@ export function StablecoinTable({
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
   const pinnedStablecoinSet = useMemo(() => new Set(pinnedStablecoinIds), [pinnedStablecoinIds]);
   const tableMinWidthPx = useMemo(
-    () => getTableMinWidthPx(visibleColumns, showPinnedControls),
-    [showPinnedControls, visibleColumns],
+    () => getTableMinWidthPx(visibleColumns, showPinnedControls, toolbarVariant),
+    [showPinnedControls, toolbarVariant, visibleColumns],
   );
   const visibleColumnCount = visibleColumns.length + (showPinnedControls ? 1 : 0);
   const skeletonColumns = useMemo<TableSkeletonColumn[]>(
     () => [
       ...(showPinnedControls
-        ? [{
-          id: "pinned",
-          cellClassName: "w-[44px] text-center xl:w-[36px]",
-          skeletonClassName: "mx-auto h-4 w-4 rounded-full",
-        }]
+        ? [
+            {
+              id: "pinned",
+              cellClassName: "w-[44px] text-center xl:w-[36px]",
+              skeletonClassName: "mx-auto h-4 w-4 rounded-full",
+            },
+          ]
         : []),
       ...STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) => ({
         id: column.id,
@@ -415,9 +511,21 @@ export function StablecoinTable({
     () => prioritizePinnedStablecoins(sorted, pinnedStablecoinIds),
     [pinnedStablecoinIds, sorted],
   );
-  const sortedRankById = useMemo(
-    () => new Map(sorted.map((coin, index) => [coin.id, index + 1] as const)),
-    [sorted],
+  const sortedRankById = useMemo(() => new Map(sorted.map((coin, index) => [coin.id, index + 1] as const)), [sorted]);
+  const [overviewPageIndex, setOverviewPageIndex] = useState(0);
+  const overviewPageCount = isFigmaOverview ? Math.max(1, Math.ceil(displayed.length / OVERVIEW_PAGE_SIZE)) : 1;
+
+  useEffect(() => {
+    setOverviewPageIndex((current) => Math.min(current, overviewPageCount - 1));
+  }, [overviewPageCount]);
+
+  const overviewPageStart = isFigmaOverview ? overviewPageIndex * OVERVIEW_PAGE_SIZE : 0;
+  const overviewPageEnd = isFigmaOverview
+    ? Math.min(displayed.length, overviewPageStart + OVERVIEW_PAGE_SIZE)
+    : displayed.length;
+  const displayedRows = useMemo(
+    () => (isFigmaOverview ? displayed.slice(overviewPageStart, overviewPageEnd) : displayed),
+    [displayed, isFigmaOverview, overviewPageEnd, overviewPageStart],
   );
 
   // Reset scroll when filters, search, sort, or starred row priority changes.
@@ -426,24 +534,28 @@ export function StablecoinTable({
     const prev = prevRef.current;
     if (prev && (prev.rows !== displayed || prev.sort !== sort)) {
       scrollRef.current?.scrollTo({ top: 0 });
+      if (isFigmaOverview) setOverviewPageIndex(0);
     }
     prevRef.current = { rows: displayed, sort };
-  }, [displayed, sort]);
+  }, [displayed, isFigmaOverview, sort]);
 
   const virtualDensityConfig = useMemo(
     () => ({
       ...densityConfig,
-      rowHeight: isMobileColumns
-        ? Math.max(densityConfig.rowHeight, 68)
-        : Math.max(densityConfig.rowHeight, VIRTUAL_ROW_HEIGHT_ESTIMATE_PX[density]),
+      rowHeight: isFigmaOverview
+        ? OVERVIEW_ROW_HEIGHT_ESTIMATE_PX[density]
+        : isMobileColumns
+          ? Math.max(densityConfig.rowHeight, 68)
+          : Math.max(densityConfig.rowHeight, VIRTUAL_ROW_HEIGHT_ESTIMATE_PX[density]),
+      iconSize: isFigmaOverview ? 18 : densityConfig.iconSize,
     }),
-    [density, densityConfig, isMobileColumns],
+    [density, densityConfig, isFigmaOverview, isMobileColumns],
   );
 
   // Virtual scrolling with density-aware row height
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for large datasets.
   const virtualizer = useVirtualizer({
-    count: displayed.length,
+    count: displayedRows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => virtualDensityConfig.rowHeight,
     measureElement: (element) => element?.getBoundingClientRect().height ?? virtualDensityConfig.rowHeight,
@@ -466,6 +578,28 @@ export function StablecoinTable({
     exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
   }, [displayed, pegScores, dexLiquidity, reportCards]);
 
+  const tableToolbar = (
+    <TableToolbar
+      density={density}
+      onDensityChange={setDensity}
+      visibleColumns={visibleColumns}
+      onVisibleColumnsChange={setVisibleColumns}
+      onResetColumns={resetColumns}
+      defaultColumns={deviceDefault}
+      onExport={handleCsvExport}
+      exportDisabled={displayed.length === 0}
+      additionalActions={toolbarActions}
+      searchValue={searchQuery}
+      onSearchChange={onSearchChange}
+      searchPlaceholder={isFigmaOverview ? "Search" : undefined}
+      eyebrow={toolbarEyebrow}
+      description={toolbarDescription}
+      titleId={toolbarTitleId}
+      meta={toolbarMeta}
+      variant={toolbarVariant}
+    />
+  );
+
   // P6 — j/k row cursor over the visible (post-pin) rows, scoped to the table.
   // o/Enter opens the dossier, s toggles the watchlist, c adds to /compare.
   // Cursor scroll-into-view is handled inside the hook via the virtualizer; row
@@ -480,7 +614,7 @@ export function StablecoinTable({
       ? (virtualizer as unknown as Virtualizer<HTMLElement, Element>)
       : null;
   const { activateCursorAtIndex, activeCursorIndex } = useRowCursor<StablecoinData>({
-    rows: displayed,
+    rows: displayedRows,
     virtualizer: cursorVirtualizer,
     getRowId: (coin) => coin.id,
     onOpen: (coin) => router.push(buildStablecoinUrl(coin.id)),
@@ -497,14 +631,19 @@ export function StablecoinTable({
     return (
       <VirtualTableFrame
         {...STABLECOIN_FRAME_SHARED}
+        className={isFigmaOverview ? "pharos-overview-table-shell" : undefined}
         density={density}
         striped="indexed"
+        mobileScrollHint={isFigmaOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
+        viewportClassName={
+          isFigmaOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName
+        }
         tableProps={{
           style: { minWidth: tableMinWidthPx },
         }}
       >
         <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
-        <StablecoinTableHeader showPinnedControls={showPinnedControls} isVisible={isVisible} />
+        <StablecoinTableHeader showPinnedControls={showPinnedControls} isVisible={isVisible} variant={toolbarVariant} />
         <TableBody>
           <TableSkeletonRows columns={skeletonColumns} rowCount={SKELETON_ROWS.length} />
         </TableBody>
@@ -512,115 +651,159 @@ export function StablecoinTable({
     );
   }
 
-  return (
+  const defaultFooterSlot =
+    displayed.length > 0 ? (
+      <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <span className="text-sm text-muted-foreground">
+          Showing{" "}
+          <span className="font-mono tabular-nums text-foreground">{displayed.length.toLocaleString("en-US")}</span>{" "}
+          active stablecoins — pre-launch and frozen excluded,{" "}
+          <Link
+            href="/screener/"
+            className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
+          >
+            see Screener
+          </Link>
+        </span>
+        <span className="pharos-meta sm:text-right">
+          Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.
+        </span>
+      </div>
+    ) : null;
+  const overviewFooterSlot =
+    displayed.length > 0 ? (
+      <div className="pharos-overview-table-footer">
+        <span>
+          Showing{" "}
+          <span className="tabular-nums">
+            {displayed.length > 0 ? overviewPageStart + 1 : 0}-{overviewPageEnd}
+          </span>{" "}
+          of <span className="tabular-nums">{displayed.length.toLocaleString("en-US")}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="pharos-overview-pagination-button"
+            disabled={overviewPageIndex === 0}
+            onClick={() => {
+              setOverviewPageIndex((current) => Math.max(0, current - 1));
+              scrollRef.current?.scrollTo({ top: 0 });
+            }}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            Previous
+          </button>
+          <button
+            type="button"
+            className="pharos-overview-pagination-button"
+            disabled={overviewPageIndex >= overviewPageCount - 1}
+            onClick={() => {
+              setOverviewPageIndex((current) => Math.min(overviewPageCount - 1, current + 1));
+              scrollRef.current?.scrollTo({ top: 0 });
+            }}
+          >
+            Next
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    ) : null;
+
+  const tableFrame = (
     <VirtualTableFrame
       {...STABLECOIN_FRAME_SHARED}
       surfaceRef={tableRef}
-      className="animate-in fade-in duration-300"
+      className={
+        isFigmaOverview
+          ? "pharos-overview-table-shell animate-in fade-in duration-300"
+          : "animate-in fade-in duration-300"
+      }
       density={density}
       viewportRef={scrollRef}
+      mobileScrollHint={isFigmaOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
+      viewportClassName={isFigmaOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName}
       tableProps={{
         style: { minWidth: tableMinWidthPx },
       }}
-      topSlot={(
+      topSlot={
         <>
-          <TableBackgroundRefreshingBar
-            queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS}
-            isPending={isLoading}
-          />
-          <TableToolbar
-            density={density}
-            onDensityChange={setDensity}
-            visibleColumns={visibleColumns}
-            onVisibleColumnsChange={setVisibleColumns}
-            onResetColumns={resetColumns}
-            defaultColumns={deviceDefault}
-            onExport={handleCsvExport}
-            exportDisabled={displayed.length === 0}
-            additionalActions={toolbarActions}
-            eyebrow={toolbarEyebrow}
-            description={toolbarDescription}
-            titleId={toolbarTitleId}
-            meta={toolbarMeta}
-          />
+          <TableBackgroundRefreshingBar queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS} isPending={isLoading} />
+          {isFigmaOverview ? null : tableToolbar}
           {filterPanel}
         </>
-      )}
-      footerSlot={displayed.length > 0 ? (
-        <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
-          <span className="text-sm text-muted-foreground">
-            Showing <span className="font-mono tabular-nums">{displayed.length.toLocaleString("en-US")}</span> active
-            stablecoins — pre-launch and frozen excluded,{" "}
-            <Link
-              href="/screener/"
-              className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
-            >
-              see Screener
-            </Link>
-          </span>
-          <span className="pharos-meta">
-            Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.
-          </span>
-        </div>
-      ) : null}
+      }
+      footerSlot={isFigmaOverview ? overviewFooterSlot : defaultFooterSlot}
     >
-          <TableCaption className="sr-only">Stablecoin data table</TableCaption>
-          <StablecoinTableHeader
-            showPinnedControls={showPinnedControls}
-            isVisible={isVisible}
-            sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue, showHeaderMethodologyHints }}
-            sticky
+      <TableCaption className="sr-only">Stablecoin data table</TableCaption>
+      <StablecoinTableHeader
+        showPinnedControls={showPinnedControls}
+        isVisible={isVisible}
+        sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue, showHeaderMethodologyHints }}
+        sticky
+        variant={toolbarVariant}
+      />
+      <TableBody>
+        {paddingTop > 0 && (
+          <tr>
+            <td colSpan={visibleColumnCount} style={{ height: paddingTop, padding: 0 }} />
+          </tr>
+        )}
+        {virtualItems.map((virtualRow) => {
+          const coin = displayedRows[virtualRow.index];
+          if (!coin) return null;
+          const rowIndex = isFigmaOverview ? overviewPageStart + virtualRow.index : virtualRow.index;
+          return (
+            <StablecoinVirtualRow
+              key={coin.id}
+              coin={coin}
+              rank={sortedRankById.get(coin.id) ?? rowIndex + 1}
+              virtualIndex={virtualRow.index}
+              isStriped={rowIndex % 2 === 1}
+              densityConfig={virtualDensityConfig}
+              density={density}
+              variant={toolbarVariant}
+              isVisible={isVisible}
+              logos={logos}
+              pegRates={pegRates}
+              pegScores={pegScores}
+              dexLiquidity={dexLiquidity}
+              reportCards={reportCards}
+              showPinnedControl={showPinnedControls}
+              isPinned={pinnedStablecoinSet.has(coin.id)}
+              onTogglePinned={onTogglePinnedStablecoin}
+              isCursor={virtualRow.index === activeCursorIndex}
+              onCursorMouseEnter={activateCursorAtIndex}
+              onNavigate={handleNavigate}
+              onPrefetch={prefetch}
+              measureElement={measureVirtualRow}
+            />
+          );
+        })}
+        {paddingBottom > 0 && (
+          <tr>
+            <td colSpan={visibleColumnCount} style={{ height: paddingBottom, padding: 0 }} />
+          </tr>
+        )}
+        {displayed.length === 0 && (
+          <StablecoinTableEmptyState
+            searchQuery={searchQuery}
+            activeFilters={activeFilters}
+            data={data}
+            logos={logos}
+            onClearFilters={onClearFilters}
+            onClearSearch={onClearSearch}
           />
-          <TableBody>
-            {paddingTop > 0 && (
-              <tr>
-                <td colSpan={visibleColumnCount} style={{ height: paddingTop, padding: 0 }} />
-              </tr>
-            )}
-            {virtualItems.map((virtualRow) => {
-              const coin = displayed[virtualRow.index];
-              return (
-                <StablecoinVirtualRow
-                  key={coin.id}
-                  coin={coin}
-                  rank={sortedRankById.get(coin.id) ?? virtualRow.index + 1}
-                  virtualIndex={virtualRow.index}
-                  isStriped={virtualRow.index % 2 === 1}
-                  densityConfig={virtualDensityConfig}
-                  density={density}
-                  isVisible={isVisible}
-                  logos={logos}
-                  pegRates={pegRates}
-                  pegScores={pegScores}
-                  dexLiquidity={dexLiquidity}
-                  reportCards={reportCards}
-                  showPinnedControl={showPinnedControls}
-                  isPinned={pinnedStablecoinSet.has(coin.id)}
-                  onTogglePinned={onTogglePinnedStablecoin}
-                  isCursor={virtualRow.index === activeCursorIndex}
-                  onCursorMouseEnter={activateCursorAtIndex}
-                  onNavigate={handleNavigate}
-                  onPrefetch={prefetch}
-                  measureElement={measureVirtualRow}
-                />
-              );
-            })}
-            {paddingBottom > 0 && (
-              <tr>
-                <td colSpan={visibleColumnCount} style={{ height: paddingBottom, padding: 0 }} />
-              </tr>
-            )}
-            {displayed.length === 0 && (
-              <StablecoinTableEmptyState
-                searchQuery={searchQuery}
-                activeFilters={activeFilters}
-                data={data}
-                logos={logos}
-                onClearFilters={onClearFilters}
-                onClearSearch={onClearSearch}
-              />
-            )}
-          </TableBody>
+        )}
+      </TableBody>
     </VirtualTableFrame>
+  );
+
+  return isFigmaOverview ? (
+    <div className="space-y-3">
+      {tableToolbar}
+      {tableFrame}
+    </div>
+  ) : (
+    tableFrame
   );
 }

@@ -29,7 +29,7 @@ export interface TableSurfaceProps
 export function TableSurface({
   className,
   children,
-  density = "comfortable",
+  density = "compact",
   striped = false,
   chrome = "default",
   stickyHeader = false,

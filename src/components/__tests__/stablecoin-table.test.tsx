@@ -215,7 +215,7 @@ describe("StablecoinTable", () => {
 
     expect(shell.getAttribute("data-table-id")).toBe("stablecoin-overview");
     expect(shell.className).toContain("pharos-table-shell");
-    expect(shell.className).toContain("pharos-density-comfortable");
+    expect(shell.className).toContain("pharos-density-spacious");
     expect(shell.className).toContain("pharos-table-striped-indexed");
     expect(scrollContainer?.getAttribute("data-slot")).toBe("table-viewport");
     expect(scrollContainer?.className).toContain("scroll-shadow");

@@ -33,7 +33,7 @@ describe("table affordances", () => {
 
     render(
       <TableSettingsMenu
-        density="comfortable"
+        density="spacious"
         onDensityChange={onDensityChange}
         columnsSlot={<button type="button">Column picker</button>}
       />,
@@ -63,7 +63,7 @@ describe("table affordances", () => {
 
     render(
       <TableControlsToolbar
-        density="comfortable"
+        density="spacious"
         onDensityChange={onDensityChange}
         columnsSlot={<button type="button">Column picker</button>}
         settingsSlot={<button type="button">Reset filters</button>}

@@ -54,7 +54,7 @@ describe("VirtualTableFrame", () => {
 
     expect(shell.getAttribute("data-table-id")).toBe("stablecoin-overview");
     expect(shell.className).toContain("pharos-table-shell");
-    expect(shell.className).toContain("pharos-density-comfortable");
+    expect(shell.className).toContain("pharos-density-compact");
     expect(shell.className).toContain("pharos-table-striped-indexed");
     expect(shell.className).toContain("animate-in");
     expect(surfaceRef.current).toBe(shell);

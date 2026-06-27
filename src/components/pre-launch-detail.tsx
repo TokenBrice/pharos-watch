@@ -291,7 +291,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
   return (
     <div className="space-y-8">
       {/* ── Back Navigation ───────────────────────────────────────── */}
-      <nav aria-label="Breadcrumb">
+      <nav aria-label="Back navigation">
         <Link
           href="/upcoming/"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
