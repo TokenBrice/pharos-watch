@@ -378,6 +378,7 @@ describe("StablecoinDetailClient", () => {
     expect(scrollspyNavs).toHaveLength(1);
     expect(scrollspyNavs[0]?.dataset.variant).toBe("banner");
     expect(scrollspyNavs[0]?.dataset.railLabel).toBe("Jump to");
+    expect(scrollspyNavs[0]?.className).toContain("lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)]");
     expect(scrollspyNavs[0]?.className).toContain("lg:w-full");
     expect(scrollspyNavs[0]?.className).toContain("lg:[&>div]:justify-center");
     expect(scrollspyNavs[0]?.className).toContain("lg:[&_nav]:flex-none");
