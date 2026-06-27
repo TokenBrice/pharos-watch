@@ -59,7 +59,7 @@ function GoalCard({
       href={href}
       aria-label={`${title} — ${cta}`}
       aria-labelledby={titleId}
-      className="pharos-focus-ring group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-[1.4rem] border border-black/8 bg-[linear-gradient(180deg,oklch(0.995_0.006_248_/_0.92),oklch(0.945_0.01_248_/_0.98))] p-4 text-left shadow-[0_8px_24px_oklch(0_0_0_/0.08)] transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-black/14 hover:shadow-[0_12px_32px_oklch(0_0_0_/0.12)] dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.018_248_/_0.92),oklch(0.11_0.012_248_/_0.98))] dark:shadow-[0_8px_24px_oklch(0_0_0_/0.2)] dark:hover:border-white/16 dark:hover:shadow-[0_12px_32px_oklch(0_0_0_/0.28)] sm:p-5"
+      className="pharos-focus-ring pharos-interactive-card group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-black/8 bg-[linear-gradient(180deg,oklch(0.995_0.006_248_/_0.92),oklch(0.945_0.01_248_/_0.98))] p-4 text-left transition-[transform,border-color,box-shadow] duration-300 hover:border-black/14 dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.018_248_/_0.92),oklch(0.11_0.012_248_/_0.98))] dark:hover:border-white/16 sm:p-5"
     >
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-3">
@@ -136,7 +136,7 @@ function HeroEscapeHatch({ className, desktop = false }: { className?: string; d
         </Link>
       </div>
 
-      <div className="rounded-[1.2rem] border border-black/8 bg-black/[0.03] px-4 py-3 text-sm leading-relaxed text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
+      <div className="rounded-xl border border-black/8 bg-black/[0.03] px-4 py-3 text-sm leading-relaxed text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
         <span className="font-medium text-foreground">Already fluent in stablecoins?</span> Keyboard shortcuts
         and the full feature atlas live below — or skip straight to the dashboard.
       </div>
@@ -148,7 +148,7 @@ function StartHeroSection() {
   return (
     <section
       aria-label="Route planner"
-      className="pharos-card-shell relative overflow-hidden rounded-[2rem] border border-black/8 bg-[linear-gradient(128deg,oklch(0.975_0.01_248_/_0.98),oklch(0.93_0.018_248_/_0.99)_56%,oklch(0.95_0.024_52_/_0.98))] px-4 py-5 text-foreground shadow-[0_28px_72px_oklch(0_0_0_/0.12)] dark:border-white/8 dark:bg-[linear-gradient(128deg,oklch(0.19_0.03_248_/_0.98),oklch(0.11_0.016_248_/_0.99)_56%,oklch(0.15_0.02_40_/_0.98))] dark:shadow-[0_34px_90px_oklch(0_0_0_/0.32)] sm:px-6 sm:py-7 lg:px-7 lg:py-8"
+      className="pharos-card-shell relative overflow-hidden border-black/8 bg-[linear-gradient(128deg,oklch(0.975_0.01_248_/_0.98),oklch(0.93_0.018_248_/_0.99)_56%,oklch(0.95_0.024_52_/_0.98))] px-4 py-5 text-foreground dark:border-white/8 dark:bg-[linear-gradient(128deg,oklch(0.19_0.03_248_/_0.98),oklch(0.11_0.016_248_/_0.99)_56%,oklch(0.15_0.02_40_/_0.98))] sm:px-6 sm:py-7 lg:px-7 lg:py-8"
     >
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(oklch(0_0_0_/_0.05)_1px,transparent_1px),linear-gradient(90deg,oklch(0_0_0_/_0.04)_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.18] dark:bg-[linear-gradient(oklch(1_0_0_/_0.06)_1px,transparent_1px),linear-gradient(90deg,oklch(1_0_0_/_0.05)_1px,transparent_1px)]" />
 
@@ -267,7 +267,7 @@ function ScoresSection() {
           </p>
         </div>
 
-        <article className="overflow-hidden rounded-[1.4rem] border border-border/65 bg-card/58 divide-y divide-border/45">
+        <article className="overflow-hidden rounded-xl border border-border/65 bg-card/58 divide-y divide-border/45">
           {START_HERE_SCORES.map((score, index) => (
             <div
               key={score.name}
@@ -395,7 +395,7 @@ function FeatureAtlasSection() {
           {START_HERE_ATLAS.map((group) => (
             <article
               key={group.title}
-              className="rounded-[1.4rem] border border-border/65 bg-card/58 p-4"
+              className="rounded-xl border border-border/65 bg-card/58 p-4"
             >
               <div className="space-y-2">
                 <p className="pharos-kicker">{group.kickerLabel}</p>
@@ -443,11 +443,11 @@ function PowerMovesSection() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-px overflow-hidden rounded-[1.4rem] border border-border/65 bg-border/40 lg:flex-row">
+        <div className="flex flex-col gap-px overflow-hidden rounded-xl border border-border/65 bg-border/40 lg:flex-row">
           {START_HERE_SHORTCUTS.map((shortcut) => (
             <div
               key={shortcut.title}
-              className="flex flex-1 flex-col gap-3 bg-card/80 p-4"
+              className="flex flex-1 flex-col gap-3 bg-background/70 p-4"
             >
               <div className="space-y-1">
                 <p className="pharos-kicker">{shortcut.kickerLabel}</p>
@@ -494,7 +494,7 @@ function PharosVilleSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Explore PharosVille (opens in new tab)"
-          className="pharos-focus-ring group grid overflow-hidden rounded-[1.4rem] border border-[color:oklch(0.55_0.11_82)] bg-[linear-gradient(135deg,oklch(0.94_0.07_88)_0%,oklch(0.88_0.13_82)_55%,oklch(0.80_0.16_78)_100%)] text-[oklch(0.18_0.04_60)] shadow-[0_12px_28px_oklch(0.20_0.04_50_/_0.18)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-[color:oklch(0.42_0.09_70)] hover:shadow-[0_18px_44px_oklch(0.20_0.04_50_/_0.28)] dark:border-[color:oklch(0.50_0.10_84)] dark:bg-[linear-gradient(135deg,oklch(0.34_0.08_62)_0%,oklch(0.26_0.06_50)_55%,oklch(0.20_0.04_42)_100%)] dark:text-[oklch(0.92_0.05_88)] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]"
+          className="pharos-focus-ring pharos-interactive-card group grid overflow-hidden rounded-xl border border-[color:oklch(0.55_0.11_82)] bg-[linear-gradient(135deg,oklch(0.94_0.07_88)_0%,oklch(0.88_0.13_82)_55%,oklch(0.80_0.16_78)_100%)] text-[oklch(0.18_0.04_60)] transition-[border-color,box-shadow,transform] duration-300 hover:border-[color:oklch(0.42_0.09_70)] dark:border-[color:oklch(0.50_0.10_84)] dark:bg-[linear-gradient(135deg,oklch(0.34_0.08_62)_0%,oklch(0.26_0.06_50)_55%,oklch(0.20_0.04_42)_100%)] dark:text-[oklch(0.92_0.05_88)] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]"
         >
           <div className="relative aspect-[16/9] w-full overflow-hidden bg-[oklch(0.18_0.02_248)] md:aspect-auto md:h-full">
             <img
@@ -531,7 +531,7 @@ function ClosingCta() {
     <div className="mt-10 flex flex-col items-center gap-3 pt-2 pb-4 sm:flex-row sm:flex-wrap sm:justify-center md:mt-14">
         <Button
           asChild
-          className="h-11 rounded-full bg-foreground px-6 text-background shadow-[0_14px_30px_oklch(0_0_0_/0.14)] hover:bg-foreground/90 sm:h-10"
+          className="h-11 rounded-full bg-foreground px-6 text-background hover:bg-foreground/90 sm:h-10"
         >
           <Link href="/">Open the dashboard</Link>
         </Button>
