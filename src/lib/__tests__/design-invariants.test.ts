@@ -12,6 +12,7 @@ import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
 const COMPONENTS_DIR = join(ROOT, "src/components");
+const APP_GLOBALS = join(ROOT, "src/app/globals.css");
 
 // Relative posix-style paths (for stable match regardless of OS separator).
 const ALLOWED_SERIF_FILES = new Set<string>([
@@ -44,6 +45,15 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("design invariants", () => {
+  it("resolves the display font token from the body-level font bridge", () => {
+    const globals = readFileSync(APP_GLOBALS, "utf8");
+
+    expect(globals).toMatch(
+      /body\s*{[^}]*--font-pharos-display:[^}]*"ABC Whyte Inktrap"[^}]*var\(--font-bricolage,/s,
+    );
+    expect(globals).not.toMatch(/:root\s*{[^}]*--font-pharos-display:/s);
+  });
+
   it("font-serif / Newsreader usage is confined to editorial carve-outs", () => {
     const files = walk(COMPONENTS_DIR);
     const offenders: string[] = [];

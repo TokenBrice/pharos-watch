@@ -120,8 +120,6 @@
    ────────────────────────────────────────────────────────────────── */
 :root {
   --radius: 0.5rem;
-  --font-pharos-display:
-    "ABC Whyte Inktrap", var(--font-bricolage), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   /* 2.4.11 Focus Not Obscured (Minimum) — keep focused rows clear of the
      sticky table header and the mobile utility dock. Defaults to 0 on desktop
      where `--table-header-top` is unset; the mobile breakpoint below redefines
@@ -262,6 +260,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    --font-pharos-display:
+      "ABC Whyte Inktrap", var(--font-bricolage, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
     text-rendering: optimizeLegibility;
     min-height: 100vh;
     line-height: 1.45;
