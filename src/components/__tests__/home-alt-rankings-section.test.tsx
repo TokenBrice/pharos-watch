@@ -4,7 +4,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
-import { ALL_COLUMNS } from "@/lib/column-visibility";
 
 const {
   stablecoinTablePropsMock,
@@ -111,15 +110,35 @@ describe("HomeAltRankingsSection", () => {
 
     expect(screen.getByTestId("peg-browse-strip")).toBeTruthy();
     expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
+    // The section now owns the "Stablecoin Overview" heading (carrying the
+    // region's labelled id) rather than the table toolbar.
+    const heading = screen.getByRole("heading", { name: "Stablecoin Overview" });
+    expect(heading.getAttribute("id")).toBe("home-alt-rankings-title");
     expect(stablecoinTablePropsMock).toHaveBeenCalledTimes(1);
-    expect(stablecoinTablePropsMock).toHaveBeenCalledWith(expect.objectContaining({
-      initialVisibleColumns: ALL_COLUMNS.map((column) => column.id),
-      columnPreferenceNamespace: "pharos-home-alt-table-v2",
-      showHeaderMethodologyHints: false,
-      pinnedStablecoinIds: ["usdc-circle"],
-      onTogglePinnedStablecoin: togglePinnedMock,
-      toolbarTitleId: "home-alt-rankings-title",
-    }));
+    expect(stablecoinTablePropsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialVisibleColumns: [
+          "rank",
+          "name",
+          "price",
+          "peg",
+          "mcap",
+          "change24h",
+          "change7d",
+          "grade",
+          "stability",
+          "liquidity",
+          "blacklistable",
+          "backing",
+          "type",
+        ],
+        columnPreferenceNamespace: "pharos-home-alt-table-v3",
+        showHeaderMethodologyHints: false,
+        pinnedStablecoinIds: ["usdc-circle"],
+        onTogglePinnedStablecoin: togglePinnedMock,
+        toolbarVariant: "figmaOverview",
+      }),
+    );
     expect(stablecoinTablePropsMock.mock.calls[0]?.[0]).not.toHaveProperty("usePageVerticalScroll");
   });
 });

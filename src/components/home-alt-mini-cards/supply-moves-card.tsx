@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
+import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -68,13 +69,19 @@ export function SupplyMovesCard(): React.JSX.Element {
   const downsDisplay = !peakInUps && peak !== null ? downs.slice(1, 4) : downs.slice(0, 3);
 
   return (
-    <div className="pharos-card-shell flex h-full flex-col gap-3 p-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="pharos-kicker">Biggest Supply Moves</span>
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          7d · ≥$10M mcap
-        </span>
-      </div>
+    <div className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4">
+      <PulseCardHeader
+        href="/screener/"
+        expandLabel="Open Screener"
+        label={
+          <>
+            Biggest Supply Moves{" "}
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground/70">
+              {"· >10M MC"}
+            </span>
+          </>
+        }
+      />
 
       {isLoading || ups.length === 0 ? (
         <Skeleton className="h-32 w-full" />
@@ -84,19 +91,10 @@ export function SupplyMovesCard(): React.JSX.Element {
             <Link
               prefetch={false}
               href={buildStablecoinUrl(peak.id)}
-              className="pharos-focus-ring -mx-1 flex items-center gap-2.5 rounded-sm px-1 py-0.5 tabular-nums transition-colors hover:bg-muted/50"
+              className="pharos-focus-ring -mx-1 flex items-center justify-between gap-3 rounded-sm px-1 py-0.5 tabular-nums transition-colors hover:bg-muted/50"
               aria-label={`${peak.symbol} — peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
             >
-              <span
-                className={`font-mono text-5xl font-bold tabular-nums tracking-tight ${
-                  peak.pctChange >= 0
-                    ? "text-green-700 dark:text-green-400"
-                    : "text-red-700 dark:text-red-400"
-                }`}
-              >
-                {formatPct(peak.pctChange)}
-              </span>
-              <span className="flex min-w-0 items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              <span className="flex min-w-0 items-center gap-2.5">
                 {logoMap[peak.id] && (
                   <Image
                     src={logoMap[peak.id]}
@@ -107,30 +105,28 @@ export function SupplyMovesCard(): React.JSX.Element {
                     aria-hidden
                   />
                 )}
-                <span className="flex min-w-0 flex-col justify-center leading-none">
-                  <span className="truncate text-sm font-bold tracking-tight text-foreground/90">
-                    {peak.symbol}
-                  </span>
-                  <span className="mt-1 whitespace-nowrap text-[10px] tracking-wider">
-                    Peak 7d
-                  </span>
+                <span className="truncate font-mono text-3xl font-bold uppercase tracking-tight text-foreground">
+                  {peak.symbol}
                 </span>
+              </span>
+              <span
+                className={`font-mono text-3xl font-bold tabular-nums tracking-tight ${
+                  peak.pctChange >= 0
+                    ? "text-green-700 dark:text-green-400"
+                    : "text-red-700 dark:text-red-400"
+                }`}
+              >
+                {formatPct(peak.pctChange)}
               </span>
             </Link>
           )}
-          <div className="mt-auto flex flex-col gap-3">
-            <MoverList
-              label="Supply up"
-              direction="up"
-              rows={upsDisplay}
-              logoMap={logoMap}
-            />
-            <MoverList
-              label="Supply down"
-              direction="down"
-              rows={downsDisplay}
-              logoMap={logoMap}
-            />
+          <div className="grid grid-cols-2 border-t border-border/50 pt-3">
+            <div className="pr-4">
+              <MoverList label="Supply up" rows={upsDisplay} logoMap={logoMap} />
+            </div>
+            <div className="border-l border-border/50 pl-4">
+              <MoverList label="Supply down" rows={downsDisplay} logoMap={logoMap} />
+            </div>
           </div>
         </>
       )}
@@ -140,29 +136,19 @@ export function SupplyMovesCard(): React.JSX.Element {
 
 function MoverList({
   label,
-  direction,
   rows,
   logoMap,
 }: {
   label: string;
-  direction: "up" | "down";
   rows: Mover[];
   logoMap: Record<string, string>;
 }): React.JSX.Element {
-  const arrow = direction === "up" ? "↗" : "↘";
-  const headerClass =
-    direction === "up"
-      ? "text-green-700 dark:text-green-400"
-      : "text-red-700 dark:text-red-400";
   return (
-    <div className="space-y-1">
-      <p
-        className={`font-mono text-[11px] font-bold uppercase tracking-wider ${headerClass}`}
-      >
-        <span aria-hidden="true" className="mr-1">{arrow}</span>
+    <div className="space-y-1.5">
+      <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
-      <ul className="flex flex-col divide-y divide-border/40 font-mono text-[13px]">
+      <ul className="flex flex-col font-mono text-xs">
         {rows.map((row) => {
           const logoSrc = logoMap[row.id];
           return (
@@ -170,7 +156,7 @@ function MoverList({
               <Link
                 prefetch={false}
                 href={buildStablecoinUrl(row.id)}
-                className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1.5 tabular-nums transition-colors hover:bg-muted/50"
+                className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 tabular-nums transition-colors hover:bg-muted/50"
               >
                 <CoinCell logoSrc={logoSrc} />
                 <span className="truncate uppercase tracking-tight text-foreground">

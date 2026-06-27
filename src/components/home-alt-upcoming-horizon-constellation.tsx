@@ -1,29 +1,50 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { SquareArrowRight } from "lucide-react";
 
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LaunchPhase } from "@shared/types";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { LAUNCH_PHASE_LABELS, PHASE_DOT, dateScore } from "@/lib/pre-launch";
 
-// Phases ordered far-from-launch → nearest-to-launch. The approach rail reads
-// left (announced) to right (launching soon = the live-market threshold).
+// Phases ordered far-from-launch → nearest-to-launch. The readiness columns read
+// left (announced) to right (launching = the live-market threshold).
 const PHASE_ORDER: readonly LaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
-const LOGO = 40;
-const STAR_SPACING = 46;
+const DOT = 18;
+const DOT_SPACING = 22;
+const PAD = 8;
+const LOGO_INNER = DOT - 4;
 
-// Phase → tinted circular field (static strings for the Tailwind scanner). Each
-// stage's cluster sits on its own phase-colored disc so the five zones read as
-// distinct constellations. Hues mirror PHASE_BADGE.
+// Dots are uniform neutral markers — past this many a ring caps the visible dots
+// and stands in the remainder as a "+N" pill (the Figma's overflow indicator).
+// The wide ring wraps OVERFLOW_RING dots around that pill; narrow lanes cap inline.
+const MAX_DOTS = 12;
+const OVERFLOW_RING = 8;
+const NARROW_LANE_DOTS = 8;
+
+// Short, single-word phase labels for the visible chips (the readiness rings).
+// Screen-reader/link copy keeps the canonical LAUNCH_PHASE_LABELS; only the
+// compact uppercase chip trims "Launching Soon" → "Launching" to match the
+// redesign and avoid wrapping in the narrow label column.
+const PHASE_SHORT_LABEL: Record<LaunchPhase, string> = {
+  announced: "Announced",
+  testnet: "Testnet",
+  auditing: "Auditing",
+  beta: "Beta",
+  "launching-soon": "Launching",
+};
+
+// Phase → thin tinted ring (static strings for the Tailwind scanner). Every stage
+// shares one ring size; the hue is the only differentiator so the five readiness
+// zones read as distinct. Hues mirror PHASE_BADGE.
 const PHASE_FIELD: Record<LaunchPhase, string> = {
-  announced: "border-amber-500/25 bg-amber-500/[0.06] dark:border-amber-400/25 dark:bg-amber-400/[0.08]",
-  testnet: "border-indigo-500/25 bg-indigo-500/[0.06] dark:border-indigo-400/25 dark:bg-indigo-400/[0.08]",
-  auditing: "border-violet-500/25 bg-violet-500/[0.06] dark:border-violet-400/25 dark:bg-violet-400/[0.08]",
-  beta: "border-emerald-500/25 bg-emerald-500/[0.06] dark:border-emerald-400/25 dark:bg-emerald-400/[0.08]",
-  "launching-soon": "border-sky-500/45 bg-sky-500/[0.09] dark:border-sky-400/45 dark:bg-sky-400/[0.11]",
+  announced: "border-amber-500/35 bg-amber-500/[0.05] dark:border-amber-400/35 dark:bg-amber-400/[0.07]",
+  testnet: "border-indigo-500/35 bg-indigo-500/[0.05] dark:border-indigo-400/35 dark:bg-indigo-400/[0.07]",
+  auditing: "border-violet-500/35 bg-violet-500/[0.05] dark:border-violet-400/35 dark:bg-violet-400/[0.07]",
+  beta: "border-emerald-500/35 bg-emerald-500/[0.05] dark:border-emerald-400/35 dark:bg-emerald-400/[0.07]",
+  "launching-soon": "border-sky-500/45 bg-sky-500/[0.07] dark:border-sky-400/45 dark:bg-sky-400/[0.09]",
 };
 
 interface Packed {
@@ -32,31 +53,30 @@ interface Packed {
   fieldR: number;
 }
 
-// Pack n stars into a circular cluster centered on (0, 0). Up to 6 form a single
-// polygon ring; 7+ get a center star wrapped by concentric rings spaced one S
-// apart, so the disc grows with the count and fills both axes.
+// Pack n dots into a circular cluster centered on (0, 0). Up to 6 form a single
+// polygon ring; 7+ get a center dot wrapped by concentric rings spaced one
+// DOT_SPACING apart, so the disc grows with the count and fills both axes.
 function packCircle(n: number): Packed {
-  const pad = 10;
-  if (n <= 0) return { pts: [], fieldR: STAR_SPACING * 0.7 };
-  if (n === 1) return { pts: [{ x: 0, y: 0 }], fieldR: LOGO / 2 + pad };
+  if (n <= 0) return { pts: [], fieldR: DOT_SPACING * 0.7 };
+  if (n === 1) return { pts: [{ x: 0, y: 0 }], fieldR: DOT / 2 + PAD };
   if (n <= 6) {
-    const r = STAR_SPACING / (2 * Math.sin(Math.PI / n));
+    const r = DOT_SPACING / (2 * Math.sin(Math.PI / n));
     const pts = Array.from({ length: n }, (_, k) => {
       const a = (k / n) * 2 * Math.PI - Math.PI / 2;
       return { x: Math.cos(a) * r, y: Math.sin(a) * r };
     });
-    return { pts, fieldR: r + LOGO / 2 + pad };
+    return { pts, fieldR: r + DOT / 2 + PAD };
   }
   const pts = [{ x: 0, y: 0 }];
   let rem = n - 1;
   let ring = 1;
   let lastR = 0;
   while (rem > 0) {
-    const r = ring * STAR_SPACING;
-    const cap = Math.max(1, Math.round((2 * Math.PI * r) / STAR_SPACING));
+    const r = ring * DOT_SPACING;
+    const cap = Math.max(1, Math.round((2 * Math.PI * r) / DOT_SPACING));
     const cnt = Math.min(cap, rem);
     for (let k = 0; k < cnt; k++) {
-      // Offset each ring's start so outer stars nest between inner ones.
+      // Offset each ring's start so outer dots nest between inner ones.
       const a = (k / cnt) * 2 * Math.PI - Math.PI / 2 + ring * 0.4;
       pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
     }
@@ -64,11 +84,59 @@ function packCircle(n: number): Packed {
     rem -= cnt;
     ring++;
   }
-  return { pts, fieldR: lastR + LOGO / 2 + pad };
+  return { pts, fieldR: lastR + DOT / 2 + PAD };
 }
 
-function logoLinkClass(): string {
-  return "pharos-focus-ring block rounded-full transition-transform duration-200 hover:z-10 hover:scale-110 focus-visible:z-20 active:scale-105 motion-reduce:transition-none motion-reduce:hover:scale-100";
+interface PhaseLayout extends Packed {
+  /** Coins beyond the visible dots, summarised by a "+N" pill (0 when all fit). */
+  hidden: number;
+}
+
+// A readiness stage's dot layout: pack everything that fits, otherwise a single
+// OVERFLOW_RING-dot ring wrapping a "+N" pill for the remainder.
+function layoutPhase(count: number): PhaseLayout {
+  if (count <= MAX_DOTS) {
+    const { pts, fieldR } = packCircle(count);
+    return { pts, fieldR, hidden: 0 };
+  }
+  const r = DOT_SPACING / (2 * Math.sin(Math.PI / OVERFLOW_RING));
+  const pts = Array.from({ length: OVERFLOW_RING }, (_, k) => {
+    const a = (k / OVERFLOW_RING) * 2 * Math.PI - Math.PI / 2;
+    return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+  });
+  return { pts, fieldR: r + DOT / 2 + PAD, hidden: count - OVERFLOW_RING };
+}
+
+function dotLinkClass(): string {
+  return "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-10 hover:scale-125 focus-visible:z-20 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
+}
+
+const DOT_CLASS =
+  "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-[9px] font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-muted";
+
+type PreLaunchCoin = (typeof PRE_LAUNCH_STABLECOINS)[number];
+
+function HorizonLogoDot({ coin }: { coin: PreLaunchCoin }): React.JSX.Element {
+  const logoSrc = resolveCompactLogoSrc(logosById[coin.id], LOGO_INNER);
+  const fallback = (coin.symbol || coin.name).trim().charAt(0).toUpperCase();
+
+  return (
+    <span aria-hidden="true" className={DOT_CLASS} style={{ width: DOT, height: DOT }}>
+      {logoSrc ? (
+        <img
+          src={logoSrc}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          className="rounded-full object-contain"
+          style={{ width: LOGO_INNER, height: LOGO_INNER }}
+        />
+      ) : (
+        fallback
+      )}
+    </span>
+  );
 }
 
 export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null {
@@ -82,140 +150,142 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
     ),
   );
 
-  // Pack each stage into a circular cluster; the disc grows with coin count so
-  // Announced reads as the largest constellation and the sparse stages as small
-  // pairs. One shared row height keeps every disc centered on the same beam.
-  const packs = coinsByPhase.map((c) => packCircle(c.length));
-  const maxDiameter = 2 * Math.max(...packs.map((p) => p.fieldR));
+  // Lay each stage out, then size every ring to the widest cluster so the five
+  // readiness rings share one diameter (the redesign's uniform circles); sparse
+  // stages simply sit centered in their ring.
+  const layouts = coinsByPhase.map((c) => layoutPhase(c.length));
+  const ringSize = 2 * Math.max(...layouts.map((p) => p.fieldR));
 
   return (
-    <section aria-labelledby="upcoming-horizon-constellation-title" className="pharos-card-shell overflow-hidden p-0">
+    <section aria-labelledby="upcoming-horizon-constellation-title" className="space-y-3 sm:space-y-4">
       <h2 id="upcoming-horizon-constellation-title" className="sr-only">
         Upcoming stablecoins on the horizon — constellation view
       </h2>
 
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/50 px-4 py-3 sm:px-6">
-        <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.16em] [color:color-mix(in_oklab,var(--brand-accent)_72%,var(--foreground))]">
-            On the Horizon
-          </span>
-          <span className="text-xs text-muted-foreground">Announced stablecoins at varying levels of readiness</span>
+      {/* ── Section header (sits above the panel, editorial display) ───────── */}
+      <div className="space-y-1 sm:space-y-1.5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="pharos-display text-base font-bold text-foreground sm:text-3xl">On The Horizon</p>
+          <div className="flex shrink-0 items-center gap-3 sm:pt-0">
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              <span className="pharos-numeric font-semibold text-foreground">{total}</span> Tokens
+            </span>
+            <span aria-hidden="true" className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" />
+            <Link
+              href="/upcoming/"
+              aria-label="Open tracker"
+              className="pharos-focus-ring group inline-flex min-h-7 items-center gap-1.5 rounded-[4px] border border-border/70 bg-muted/30 px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-border hover:bg-muted/60 sm:min-h-8 sm:rounded-md sm:px-3 sm:py-1.5 sm:text-[13px]"
+            >
+              Tracker
+              <SquareArrowRight
+                aria-hidden="true"
+                className="h-3 w-3 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground sm:h-3.5 sm:w-3.5"
+                strokeWidth={2}
+              />
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">
-            <span className="font-semibold text-foreground">{total}</span> tracked
-          </span>
-          <Link
-            href="/upcoming/"
-            className="pharos-focus-ring group inline-flex min-h-8 items-center gap-1 rounded-full border border-border/60 px-3 py-1.5 font-mono text-[11px] font-medium text-foreground transition-colors hover:border-frost-blue/40 hover:bg-frost-blue/5"
-          >
-            Open tracker
-            <ArrowRight
-              aria-hidden="true"
-              className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground"
-              strokeWidth={2}
-            />
-          </Link>
-        </div>
+        <p className="max-w-[13rem] text-[10px] leading-snug text-muted-foreground sm:max-w-none sm:text-sm">
+          Explore announced stablecoins and their varying levels of readiness.
+        </p>
       </div>
 
-      {/* ── Approach rail (constellations) ─────────────────────── */}
-      <div className="pharos-rail-ground px-4 py-6 sm:px-6">
-        {/* Wide layout (xl+): a phase-colored circular constellation per stage,
-            sized by coin count, strung along the horizon beam. */}
-        <div className="relative hidden items-start justify-between gap-x-3 xl:flex">
-          {/* The horizon beam: a hairline dimming far from launch and
-              brightening into the frost-lit live-market threshold at the right,
-              threading behind every constellation. */}
-          <span
-            aria-hidden="true"
-            style={{ top: maxDiameter / 2 }}
-            className="pointer-events-none absolute left-[4%] right-[4%] h-px -translate-y-1/2 bg-gradient-to-r from-border to-frost-blue/60 dark:to-frost-blue/90 dark:shadow-[0_0_10px_0_color-mix(in_oklab,var(--frost-blue)_30%,transparent)]"
-          />
+      {/* ── Readiness panel ──────────────────────────────────────────────── */}
+      <div className="pharos-card-shell overflow-hidden">
+        {/* Wide layout (lg+): one uniform tinted ring per readiness stage, the
+            packed dot cluster centered inside, columns split by hairlines. */}
+        <div className="hidden grid-cols-5 divide-x divide-border/50 lg:grid">
           {PHASE_ORDER.map((phase, i) => {
             const coins = coinsByPhase[i];
             const count = coins.length;
-            const { pts, fieldR } = packs[i];
-            const isThreshold = phase === "launching-soon" && count > 0;
-            const diameter = 2 * fieldR;
+            const { pts, hidden } = layouts[i];
             return (
-              <div key={phase} className="relative flex shrink-0 flex-col items-center gap-3">
-                <div className="relative flex items-center justify-center" style={{ height: maxDiameter }}>
-                  <div className="relative" style={{ width: diameter, height: diameter }}>
-                    <span className="sr-only">
-                      {LAUNCH_PHASE_LABELS[phase]}: {count} {count === 1 ? "coin" : "coins"}
-                    </span>
+              <div key={phase} className="flex flex-col items-center gap-4 px-3 py-7">
+                <div className="relative" style={{ width: ringSize, height: ringSize }}>
+                  <span className="sr-only">
+                    {LAUNCH_PHASE_LABELS[phase]}: {count} {count === 1 ? "coin" : "coins"}
+                  </span>
 
-                    {/* Phase-colored field — makes the stage recognizable. */}
+                  {/* Thin tinted ring — the only per-stage hue. */}
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute inset-0 rounded-full border ${PHASE_FIELD[phase]}`}
+                  />
+
+                  {count === 0 ? (
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none absolute inset-0 rounded-full border ${PHASE_FIELD[phase]} ${
-                        isThreshold
-                          ? "shadow-[0_0_26px_-4px_color-mix(in_oklab,var(--frost-blue)_55%,transparent)] dark:shadow-[0_0_30px_-2px_color-mix(in_oklab,var(--frost-blue)_70%,transparent)]"
-                          : ""
-                      }`}
+                      className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-muted/50 opacity-50"
                     />
+                  ) : (
+                    coins.slice(0, pts.length).map((coin, idx) => (
+                      <Link
+                        key={coin.id}
+                        href={buildStablecoinUrl(coin.id)}
+                        title={coin.name}
+                        aria-label={`${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[phase]}`}
+                        style={{
+                          left: ringSize / 2 + pts[idx].x,
+                          top: ringSize / 2 + pts[idx].y,
+                        }}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 ${dotLinkClass()}`}
+                      >
+                        <HorizonLogoDot coin={coin} />
+                      </Link>
+                    ))
+                  )}
 
-                    {count === 0 ? (
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-muted/50 opacity-50"
-                      />
-                    ) : (
-                      coins.map((coin, idx) => (
-                        <Link
-                          key={coin.id}
-                          href={buildStablecoinUrl(coin.id)}
-                          title={coin.name}
-                          aria-label={`${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[phase]}`}
-                          style={{
-                            left: fieldR + pts[idx].x,
-                            top: fieldR + pts[idx].y,
-                          }}
-                          className={`absolute -translate-x-1/2 -translate-y-1/2 ${logoLinkClass()}`}
-                        >
-                          <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={LOGO} />
-                        </Link>
-                      ))
-                    )}
-                  </div>
+                  {/* Overflow: the remainder beyond the capped dots, kept reachable
+                      via the tracker rather than silently dropped. */}
+                  {hidden > 0 && (
+                    <Link
+                      href="/upcoming/"
+                      aria-label={`${hidden} more ${PHASE_SHORT_LABEL[phase].toLowerCase()} stablecoins`}
+                      style={{ left: ringSize / 2, top: ringSize / 2 }}
+                      className="pharos-focus-ring pharos-numeric absolute -translate-x-1/2 -translate-y-1/2 rounded-md border border-border/60 bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+                    >
+                      +{hidden}
+                    </Link>
+                  )}
                 </div>
-                <span className="flex items-center gap-1.5 text-center text-[11px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
-                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${PHASE_DOT[phase]}`} />
-                  {LAUNCH_PHASE_LABELS[phase]}
-                  <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70">{count}</span>
+                <span className="flex w-full items-center gap-1.5">
+                  <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-[3px] ${PHASE_DOT[phase]}`} />
+                  <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                    {PHASE_SHORT_LABEL[phase]}
+                  </span>
+                  <span aria-hidden="true" className="text-[9px] leading-none text-muted-foreground/50 sm:text-[11px]">
+                    ·
+                  </span>
+                  <span className="pharos-numeric text-[11px] text-muted-foreground">{count}</span>
                 </span>
               </div>
             );
           })}
         </div>
 
-        {/* Narrow layout (below xl): phases stack as full-width labelled lanes
-            so the large logos have room to spread and wrap. */}
-        <div className="flex flex-col divide-y divide-border/40 xl:hidden">
+        {/* Narrow layout (below lg): phases stack as labelled lanes — a fixed
+            label column, a hairline, then the dots spread to the right. */}
+        <div className="divide-y divide-border/50 lg:hidden">
           {PHASE_ORDER.map((phase, i) => {
             const coins = coinsByPhase[i];
             const count = coins.length;
+            const visibleCoins = coins.slice(0, NARROW_LANE_DOTS);
             return (
-              <div key={phase} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="flex w-24 shrink-0 items-center gap-1.5 sm:w-32">
+              <div key={phase} className="flex items-center gap-2 px-3 py-[2px] sm:gap-3 sm:px-4 sm:py-3.5">
+                <div className="flex w-[5.1rem] shrink-0 items-center gap-1.5 sm:w-36">
                   <span
                     aria-hidden="true"
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${PHASE_DOT[phase]} ${
-                      count === 0 ? "opacity-40" : ""
-                    }`}
+                    className={`h-2 w-2 shrink-0 rounded-[3px] ${PHASE_DOT[phase]} ${count === 0 ? "opacity-40" : ""}`}
                   />
-                  <span className="min-w-0">
-                    <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
-                      {LAUNCH_PHASE_LABELS[phase]}
-                    </span>
-                    <span className="block font-mono text-[10px] leading-tight text-muted-foreground/70">
-                      {count} {count === 1 ? "coin" : "coins"}
-                    </span>
+                  <span className="font-mono text-[9px] font-semibold uppercase tracking-wide text-foreground sm:text-[11px]">
+                    {PHASE_SHORT_LABEL[phase]}
                   </span>
+                  <span aria-hidden="true" className="text-[9px] leading-none text-muted-foreground/50 sm:text-[11px]">
+                    ·
+                  </span>
+                  <span className="pharos-numeric text-[9px] text-muted-foreground sm:text-[11px]">{count}</span>
                 </div>
-                <div className="flex flex-1 flex-wrap items-center gap-2">
+                <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-0 overflow-hidden border-l border-border/50 pl-2 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pl-3">
                   <span className="sr-only">
                     {count} {count === 1 ? "coin" : "coins"}
                   </span>
@@ -225,15 +295,15 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
                       className="h-3 w-3 rounded-full border border-border bg-muted/50 opacity-50"
                     />
                   ) : (
-                    coins.map((coin) => (
+                    visibleCoins.map((coin) => (
                       <Link
                         key={coin.id}
                         href={buildStablecoinUrl(coin.id)}
                         title={coin.name}
                         aria-label={`${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[phase]}`}
-                        className={logoLinkClass()}
+                        className={dotLinkClass()}
                       >
-                        <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={LOGO} />
+                        <HorizonLogoDot coin={coin} />
                       </Link>
                     ))
                   )}

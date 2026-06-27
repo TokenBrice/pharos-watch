@@ -31,9 +31,9 @@ describe("buildTotalMcapChartRows", () => {
     );
 
     expect(rows).toEqual([
-      { ts: 100000, usdt: 10, usdc: 5, sky: 5, others: 80, total: 100 },
-      { ts: 200000, usdt: 20, usdc: 5, sky: 5, others: 170, total: 200 },
-      { ts: 300000, usdt: 30, usdc: 15, sky: 10, others: 245, total: 300 },
+      { ts: 100000, usdt: 10, usdc: 5, sky: 5, others: 80, nonUsd: 0, total: 100 },
+      { ts: 200000, usdt: 20, usdc: 5, sky: 5, others: 170, nonUsd: 0, total: 200 },
+      { ts: 300000, usdt: 30, usdc: 15, sky: 10, others: 245, nonUsd: 0, total: 300 },
     ]);
   });
 
@@ -52,8 +52,8 @@ describe("buildTotalMcapChartRows", () => {
     );
 
     expect(rows).toEqual([
-      { ts: 100000, usdt: 0, usdc: 0, sky: 0, others: 50, total: 50 },
-      { ts: 200000, usdt: 20, usdc: 0, sky: 0, others: 55, total: 75 },
+      { ts: 100000, usdt: 0, usdc: 0, sky: 0, others: 50, nonUsd: 0, total: 50 },
+      { ts: 200000, usdt: 20, usdc: 0, sky: 0, others: 55, nonUsd: 0, total: 75 },
     ]);
   });
 
@@ -83,8 +83,26 @@ describe("buildTotalMcapChartRows", () => {
     );
 
     expect(rows).toEqual([
-      { ts: 1_580_000_000_000, usdt: 4_000, usdc: 2_000, sky: 1_500, others: 2_500, total: 10_000 },
-      { ts: 1_620_000_000_000, usdt: 8_000, usdc: 4_000, sky: 2_500, others: 5_500, total: 20_000 },
+      { ts: 1_580_000_000_000, usdt: 4_000, usdc: 2_000, sky: 1_500, others: 2_500, nonUsd: 0, total: 10_000 },
+      { ts: 1_620_000_000_000, usdt: 8_000, usdc: 4_000, sky: 2_500, others: 5_500, nonUsd: 0, total: 20_000 },
     ]);
+  });
+
+  it("derives the non-USD line from aggregate non-USD chart buckets", () => {
+    const rows = buildTotalMcapChartRows(
+      [
+        { date: 100, totalCirculatingUSD: { peggedUSD: 100, peggedEUR: 8, peggedGOLD: 2 } },
+        { date: 200, totalCirculatingUSD: { peggedUSD: 140, peggedEUR: 10, peggedCHF: 3 } },
+      ],
+      {
+        usdtHistory: [],
+        usdcHistory: [],
+        usdsHistory: [],
+        daiHistory: [],
+      },
+    );
+
+    expect(rows.map((row) => row.nonUsd)).toEqual([10, 13]);
+    expect(rows.map((row) => row.total)).toEqual([110, 153]);
   });
 });

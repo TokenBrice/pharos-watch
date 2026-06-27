@@ -6,17 +6,15 @@ import { ChevronRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import {
-  collapseForHomepageStrip,
-  eventClassSlug,
-  type CollapsedTapeEntry,
-} from "@/lib/tape-collapse";
-import { tapeClassChipBg } from "@/lib/tape-class-style";
+import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
+import { CHAIN_META } from "@shared/lib/chains";
 import {
-  SEVERITY_DOT_CLASS,
-  SEVERITY_LABEL,
-} from "@shared/types/tape-event-constants";
+  ACTIVE_PEG_CURRENCY_COUNT,
+  ACTIVE_STABLECOIN_COUNT,
+  TRACKED_STABLECOIN_COUNT,
+} from "@/lib/stablecoin-static-data";
+import { SEVERITY_DOT_CLASS, SEVERITY_LABEL } from "@shared/types/tape-event-constants";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 function durationFromCount(count: number): string {
@@ -34,13 +32,7 @@ interface TapeItemProps {
 
 const STACKED_LOGO_LIMIT = 4;
 
-function StackedCoinLogos({
-  coinIds,
-  logos,
-}: {
-  coinIds: ReadonlyArray<string>;
-  logos: Record<string, string>;
-}) {
+function StackedCoinLogos({ coinIds, logos }: { coinIds: ReadonlyArray<string>; logos: Record<string, string> }) {
   const visible = coinIds.slice(0, STACKED_LOGO_LIMIT);
   const overflow = coinIds.length - visible.length;
   return (
@@ -69,6 +61,28 @@ function consolidatedDewsTitle(event: TapeEvent): string | null {
 const EMPTY_EVENTS: ReadonlyArray<TapeEvent> = [];
 type HomepageTapePlacement = "inline" | "top";
 
+// The "top" chrome strip leads with the global registry counts (replacing the
+// retired masthead), then the live events ticker flows to the right.
+const TAPE_STATS: ReadonlyArray<{ label: string; value: number }> = [
+  { label: "Tracked", value: TRACKED_STABLECOIN_COUNT },
+  { label: "Active", value: ACTIVE_STABLECOIN_COUNT },
+  { label: "Pegs", value: ACTIVE_PEG_CURRENCY_COUNT },
+  { label: "Chains", value: Object.keys(CHAIN_META).length },
+];
+
+const STAT_CHIP_CLASS =
+  "inline-flex h-6 items-center gap-1 rounded-md border border-border/35 bg-background/20 px-2 text-xs text-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.025)]";
+
+function TapeStatChip({ label, value }: { label: string; value: number }) {
+  return (
+    <span className={STAT_CHIP_CLASS}>
+      <span>{label}</span>
+      <span aria-hidden="true" className="h-1 w-1 rounded-full bg-muted-foreground/35" />
+      <span className="pharos-numeric font-semibold tabular-nums text-foreground">{value}</span>
+    </span>
+  );
+}
+
 // `min-h-[46px]` keeps the strip's box identical across the loading text state
 // and the populated track. Without it, events resolving (~loading→loaded) grows
 // the strip ~13px and pushes the whole page — including the hero LCP element —
@@ -77,7 +91,7 @@ const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
   inline: "pharos-tape-shell relative -mx-3 min-h-[46px] overflow-hidden border-y border-border/60 bg-card/40 sm:-mx-4",
   // Opaque bg: the band is sticky on desktop, and a translucent card without a
   // backdrop blur lets scrolled content ghost through the strip.
-  top: "pharos-tape-shell relative z-50 min-h-[46px] w-full overflow-hidden border-b border-border/70 bg-card shadow-[0_1px_0_oklch(1_0_0_/0.04)] lg:ml-[var(--pharos-core-rail-offset)] lg:w-[calc(100%-var(--pharos-core-rail-offset))]",
+  top: "pharos-tape-shell relative z-50 min-h-[46px] w-full overflow-hidden border-b border-border/70 bg-card shadow-[0_1px_0_oklch(1_0_0_/0.04)] dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))]",
 };
 
 function resolveEventLogoId(event: TapeEvent, logos: Record<string, string>): string | null {
@@ -101,16 +115,15 @@ function resolveEventHref(event: TapeEvent): string {
 
 function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
   const { event, count, coinIds } = entry;
-  const bgClass = tapeClassChipBg(event.type);
   const consolidated = coinIds && coinIds.length > 1;
-  const title = consolidated ? consolidatedDewsTitle(event) ?? event.title : event.title;
+  const title = consolidated ? (consolidatedDewsTitle(event) ?? event.title) : event.title;
   const badgeValue = consolidated ? coinIds.length : count;
 
   return (
     <Link
       prefetch={false}
       href={resolveEventHref(event)}
-      className={`pharos-focus-ring inline-flex items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap text-sm hover:text-foreground ${bgClass}`}
+      className="pharos-focus-ring inline-flex items-center gap-2 rounded-md border border-border/50 bg-card/50 px-2 py-1 whitespace-nowrap text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground"
     >
       {consolidated ? (
         <StackedCoinLogos coinIds={coinIds} logos={logos} />
@@ -171,20 +184,41 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
     <section
       aria-label="Recent events tape"
       className={TAPE_SHELL_CLASS[placement]}
-      style={{ ["--pharos-tape-duration" as string]: durationFromCount(collapsed.length) }}
+      style={{
+        ["--pharos-tape-duration" as string]: durationFromCount(collapsed.length),
+        ["--pharos-tape-delay" as string]: placement === "top" ? "6s" : "0s",
+      }}
     >
-      <div className="relative flex items-stretch">
-        <div className="pointer-events-none sticky left-0 z-10 hidden shrink-0 items-center gap-2 border-r border-border/60 bg-card px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:flex">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden="true" />
-          Events
-        </div>
+      <div className="relative flex flex-col items-stretch sm:flex-row">
+        {placement === "top" ? (
+          <div className="sticky left-0 z-10 hidden shrink-0 items-center gap-2 border-r border-border/60 bg-card px-3 py-2 whitespace-nowrap dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))] sm:flex">
+            {TAPE_STATS.map((stat) => (
+              <TapeStatChip key={stat.label} label={stat.label} value={stat.value} />
+            ))}
+          </div>
+        ) : (
+          <div className="pointer-events-none sticky left-0 z-10 hidden shrink-0 items-center gap-2 border-r border-border/60 bg-card px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:flex">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse"
+              aria-hidden="true"
+            />
+            Events
+          </div>
+        )}
         <div className="relative min-w-0 flex-1 overflow-hidden">
           {isLoading ? (
             <div className="flex items-center px-3 py-2 text-xs text-muted-foreground" aria-live="polite">
               Loading recent events…
             </div>
           ) : (
-            <div className="pharos-tape-track flex w-max items-center gap-2 px-3 py-1.5" aria-live="off">
+            <div
+              className={
+                placement === "top"
+                  ? "pharos-tape-track flex w-max items-center gap-2 py-1.5 pr-3 pl-6"
+                  : "pharos-tape-track flex w-max items-center gap-2 px-3 py-1.5"
+              }
+              aria-live="off"
+            >
               {duplicated.map((entry, idx) => {
                 const logoId = resolveEventLogoId(entry.event, logos);
                 return (
@@ -205,6 +239,13 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
             className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent"
           />
         </div>
+        {placement === "top" ? (
+          <div className="flex items-center gap-2 overflow-x-auto border-t border-border/60 bg-card px-3 py-2 whitespace-nowrap dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))] sm:hidden">
+            {TAPE_STATS.map((stat) => (
+              <TapeStatChip key={stat.label} label={stat.label} value={stat.value} />
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );

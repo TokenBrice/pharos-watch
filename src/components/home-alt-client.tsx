@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { useHomepageDiscoverySuggestions } from "@/hooks/use-homepage-discovery";
-
 import { HomepageDiscoveryModule } from "@/components/homepage-discovery-module";
+import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
+import { ShortcutsSection } from "@/components/shortcuts-section";
 import { LazySection } from "@/components/lazy-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -36,42 +36,11 @@ function MiniCardGridFallback() {
   );
 }
 
-function DailyDigestFallback() {
-  return (
-    <div className="min-h-[560px] animate-pulse border-y border-border py-6 lg:min-h-[660px]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Skeleton className="h-3 w-48" />
-        <Skeleton className="h-3 w-36" />
-      </div>
-      <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
-        <div className="space-y-4">
-          <Skeleton className="h-3 w-40" />
-          <Skeleton className="h-40 w-full max-w-[20rem] sm:max-w-[24rem] lg:h-64" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-4 w-11/12" />
-          <Skeleton className="h-4 w-9/12" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const HomeAltMiniCardGrid = dynamic(
   () => import("@/components/home-alt-mini-card-grid").then((mod) => mod.HomeAltMiniCardGrid),
   {
     ssr: false,
     loading: MiniCardGridFallback,
-  },
-);
-
-const DailyDigest = dynamic(
-  () => import("@/components/daily-digest").then((mod) => mod.DailyDigest),
-  {
-    ssr: false,
-    loading: DailyDigestFallback,
   },
 );
 
@@ -186,7 +155,6 @@ function BelowFold({
 
 export function HomeAltClient() {
   const hashTargetForcesMount = useHashTargetForceMount();
-  const discoverySuggestions = useHomepageDiscoverySuggestions();
 
   return (
     <div id="data" tabIndex={-1}>
@@ -196,13 +164,18 @@ export function HomeAltClient() {
         </BelowFold>
       </div>
 
-      {/* The directory table is the product's workbench — it follows the KPI
-          band directly; the editorial band reads after it (mythos #8). */}
+      {/* Saved shortcuts sit between the pulse band and the directory table. */}
+      <div className="mt-5 sm:mt-6">
+        <ShortcutsSection />
+      </div>
+
+      {/* The directory table is the product's workbench — it follows the
+          shortcuts directly. */}
       <section
         id="home-alt-rankings"
         role="region"
         aria-labelledby="home-alt-rankings-title"
-        className="mt-3 space-y-4 sm:mt-3.5"
+        className="mt-5 space-y-4 sm:mt-6"
       >
         <BelowFold
           forced={hashTargetForcesMount}
@@ -214,17 +187,14 @@ export function HomeAltClient() {
         </BelowFold>
       </section>
 
-      {/* Editorial band — single hairline divides it from the workbench above */}
+      {/* Discovery band — On The Horizon, then Chart Your Route. */}
       <BelowFold forced={hashTargetForcesMount} minHeight={820}>
-        <section
-          aria-label="Daily digest"
-          className="mt-8 pt-2.5 sm:mt-10 sm:pt-3"
-        >
-          <DailyDigest variant="preview" />
-        </section>
+        <div className="mt-8 sm:mt-10">
+          <HomeAltUpcomingHorizonConstellation />
+        </div>
 
-        <div className="mt-3 sm:mt-3.5">
-          <HomepageDiscoveryModule suggestions={discoverySuggestions} />
+        <div className="mt-6 hidden md:block">
+          <HomepageDiscoveryModule />
         </div>
       </BelowFold>
     </div>

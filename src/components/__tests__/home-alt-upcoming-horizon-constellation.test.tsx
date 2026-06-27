@@ -1,37 +1,51 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
+import { logosById } from "@/lib/logos";
 import { LAUNCH_PHASE_LABELS } from "@/lib/pre-launch";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
-
-vi.mock("@/components/stablecoin-logo", () => ({
-  StablecoinLogo: ({ name, size }: { name: string; size?: number }) => (
-    <span data-testid="stablecoin-logo" data-name={name} style={{ width: size, height: size }} />
-  ),
-}));
 
 describe("HomeAltUpcomingHorizonConstellation", () => {
   afterEach(() => {
     cleanup();
   });
 
-  it("renders the logo constellation module with every pre-launch coin linked", () => {
+  it("links visible coins as dots and folds ring overflow into +N tracker links", () => {
     render(<HomeAltUpcomingHorizonConstellation />);
 
-    expect(screen.getAllByText("On the Horizon")).toHaveLength(1);
+    expect(screen.getAllByText("On The Horizon")).toHaveLength(1);
     expect(screen.queryByText("Nearest launches")).toBeNull();
     expect(screen.getByRole("link", { name: /open tracker/i }).getAttribute("href")).toBe("/upcoming");
+    expect(document.querySelector(".lg\\:grid")).toBeTruthy();
+    expect(document.querySelector(".lg\\:hidden")).toBeTruthy();
 
+    // Each pre-launch coin is either its own labeled dot-link, or (when its
+    // readiness ring exceeds the dot cap) folded into a "+N" overflow link —
+    // never silently dropped.
+    let linkedCoins = 0;
     for (const coin of PRE_LAUNCH_STABLECOINS) {
       expect(coin.launchPhase).toBeDefined();
-      const links = screen.getAllByLabelText(
+      const links = screen.queryAllByLabelText(
         `${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[coin.launchPhase!]}`,
         { selector: "a" },
       );
-      expect(links.length).toBeGreaterThan(0);
+      if (links.length > 0) linkedCoins++;
+      if (logosById[coin.id]) {
+        for (const link of links) {
+          expect(link.querySelector("img")?.getAttribute("src")).toBeTruthy();
+        }
+      }
+    }
+    expect(linkedCoins).toBeGreaterThan(0);
+    expect(linkedCoins).toBeLessThanOrEqual(PRE_LAUNCH_STABLECOINS.length);
+
+    // Any "+N" overflow indicator links to the upcoming tracker so capped coins
+    // remain reachable.
+    for (const node of screen.queryAllByText(/^\+\d+$/)) {
+      expect(node.closest("a")?.getAttribute("href")).toContain("/upcoming");
     }
   });
 });

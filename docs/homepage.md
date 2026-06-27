@@ -33,7 +33,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 The visible top fold is split across four independently composed surfaces:
 
-- `CoreTopRail`, rendered directly under the global PSI `RegimeBar` on `/` and the core pages; it pairs the recent-events tape with the centered horizontal core submenu. On desktop core pages the combined rail is sticky at `top: 3px`, below the fixed PSI strip, so the tape and submenu persist while scrolling. On mobile the sticky site header renders above it in the chrome stack; the events tape scrolls away and the core submenu pins just below the header. The tape uses full mobile width plus the available desktop width to the right of the sidebar, while the submenu spans the full viewport.
+- `CoreTopRail`, rendered directly under the global header chrome. It now contains only the recent-events tape: the former centered core submenu was retired into the Terminal dropdown. On desktop the tape renders on every standard page and sticks below the fixed top nav (`top: 3.5rem` on `/`, `calc(3px + 3.5rem)` elsewhere). On mobile it remains limited to core routes so non-core pages keep their first viewport focused on local content.
 - `SiteHeader` (the masthead; renders across breakpoints with a mobile layout below `md` and a desktop layout at `md`+)
 - `HomeAltHero`, whose text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
 - `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
@@ -48,7 +48,7 @@ The homepage is intentionally decomposed into several cache-sharing clients inst
 
 ### `HomeAltClient`
 
-The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
+The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The desktop Daily Digest promo inside `HomeAltMiniCardGrid` reads `useDailyDigest()` for the current issue title and short text, falling back to static non-placeholder archive copy only while live data is unavailable. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
 
 `HomeAltRankingsSection` query inputs:
 
@@ -73,13 +73,18 @@ Starred stablecoin state is local to the browser:
 - value: normalized stablecoin ID array
 - invalid, inactive, duplicate, or over-limit IDs are ignored on read
 
-Homepage page discovery rotation is also browser-local:
+Saved shortcuts are also browser-local:
 
-- localStorage key: `pharos.homepageDiscovery.v1`
-- value: `{ cursor: number }`, normalized to a non-negative integer
-- `HomeAltClient` chooses and stores a randomized spotlight cursor on homepage-client mount, even though the visual module is lazy-mounted below the fold
-- the suggestion pool is derived from internal navigation config (`PRIMARY_NAV_ITEMS` plus Track/Analyze/Monitor `NAV_GROUPS`), excludes the dashboard itself and Learn/Reference pages, de-duplicates by `href`, interleaves groups, then renders one spotlight plus the next four compact modules
-- compact Page Discovery modules use route-specific `shortDescription` copy sized for the tile width; the one-liners may wrap to a second line at `xl`, where the four minor tiles are narrowest
+- localStorage key: `pharos-shortcuts`
+- value: ordered nav href array
+- legacy six-item default sets hydrate to the expanded twelve-item default
+- the non-editing desktop panel backfills from the default set to keep twelve visible route shortcuts; edit mode still shows only the user's saved hrefs
+
+Homepage page discovery is deterministic on first render:
+
+- the visible default route set is `Chains`, `Portfolio Audit`, `Upcoming`, `Alt-Pegs`, and `Cemetery`
+- the suggestion pool is still derived from internal navigation config (`PRIMARY_NAV_ITEMS` plus Track/Analyze/Monitor `NAV_GROUPS`), excludes the dashboard itself and Learn/Reference pages, de-duplicates by `href`, and interleaves groups for the manual Refresh action
+- the desktop Page Discovery strip is hidden below `md`; the visible row has no pager, keeps a neutral `Spotlight` chip on the first tile, and applies the descriptive tinted treatment to the second tile
 
 ### `SiteHeader`
 
@@ -92,7 +97,7 @@ Homepage page discovery rotation is also browser-local:
 
 ### `HomepageTape`
 
-The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it on the core route set, directly under the global PSI regime bar and above each page's local content. On desktop the combined tape + core submenu rail is sticky at `top: 3px`; the tape starts at the active sidebar width so it does not cover the main navigation. On mobile the site header renders first in the chrome stack (sticky at `top: 3px`, above the rail in flow); the tape spans the full viewport beneath it and scrolls away, while the core submenu is sticky just below the 56px header. The tape shell uses an opaque card background: it is sticky on desktop, and a translucent fill without a backdrop blur let scrolled content ghost through the band. The centered core submenu spans the full viewport and includes Dashboard, Safety Scores, Depeg/DDR, FreezeWatch, Alt-Pegs, Yield Intelligence, Stability Index, and PharosWatchBot. While a core page is active, the sidebar hides duplicate core links and leaves Dashboard as the only core sidebar entry. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, while the core submenu still renders for navigation, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
+The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it under the global header chrome and above each page's local content. On desktop the tape renders on every standard page and is sticky below the fixed `TopNav`; on mobile it renders only on the core route set and scrolls away beneath the site header. The tape shell uses an opaque card background: it is sticky on desktop, and a translucent fill without a backdrop blur let scrolled content ghost through the band. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
 Each item carries the class styling from the homepage tape component. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
 
@@ -120,17 +125,19 @@ Rules:
 
 Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 
-1. `CoreTopRail` directly below the global PSI `RegimeBar`
-2. `SiteHeader`
-3. `HomeAltHero`
+1. `TopNav`
+2. `CoreTopRail` directly below the global header chrome
+3. `SiteHeader`
+4. `HomeAltHero`
 
 Under the fold (`HomeAltClient`):
 
 1. `HomeAltMiniCardGrid`
-2. `PegBrowseStrip`
-3. `StablecoinTable`
-4. `DailyDigest` in `preview` mode
-5. `HomepageDiscoveryModule`
+2. `ShortcutsSection`
+3. `PegBrowseStrip`
+4. `StablecoinTable`
+5. `DailyDigest` in `preview` mode
+6. `HomepageDiscoveryModule`
 
 After `HomeAltClient`: `HomeAltUpcomingHorizonConstellation`, rendered as a page-level sibling in `src/app/page.tsx`.
 
@@ -155,7 +162,7 @@ The `Mint Score` column reads `coin.mintAuthoritySummary` from the slim client r
 
 ## Loading Strategy
 
-`HomeAltHero` keeps the headline and cohort rows in the eager homepage experience. The market-cap chart uses a lightweight SVG renderer in `src/components/home-alt-hero-chart.tsx`, avoiding the shared Recharts runtime, and `HomeAltHeroChartGate` defers the live chart client until the chart surface reaches the viewport and the browser reaches an idle slice.
+`HomeAltHero` keeps the headline and cohort rows in the eager homepage experience. The market-cap chart uses a lightweight SVG renderer in `src/components/home-alt-hero-chart.tsx`, avoiding the shared Recharts runtime, and `HomeAltHeroChartGate` defers the live chart client until the chart surface reaches the viewport and the browser reaches an idle slice. The chart draws the gray total-market envelope and green USDT area as filled layers, then overlays USDC, USDS + DAI, Others, and Non-USD as legend-matched strokes.
 
 The heavier homepage sections are client-only dynamic imports in `src/components/home-alt-client.tsx`:
 

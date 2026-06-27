@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
-import { CHART_SLATE, SKY_YELLOW, USDC_BLUE, USDT_GREEN } from "@/lib/chart-colors";
+import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE, USDC_BLUE, USDT_GREEN } from "@/lib/chart-colors";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
 import { formatCurrency } from "@shared/lib/format";
@@ -31,8 +31,8 @@ interface ChartBounds {
   y1: number;
 }
 
-interface CohortArea {
-  key: keyof Pick<TotalMcapChartRow, "usdt" | "usdc" | "sky" | "others">;
+interface ChartLayer {
+  key: keyof Pick<TotalMcapChartRow, "usdt" | "total">;
   label: string;
   color: string;
   gradientId: string;
@@ -40,39 +40,40 @@ interface CohortArea {
   bottomOpacity: number;
 }
 
-const COHORT_AREAS: readonly CohortArea[] = [
+interface CohortLine {
+  key: keyof Pick<TotalMcapChartRow, "usdc" | "sky" | "others" | "nonUsd">;
+  label: string;
+  color: string;
+  dashArray?: string;
+}
+
+// Two-tone chart per the Figma: a gray total-market-cap envelope with the
+// dominant USDT cohort filled green beneath it. Both areas baseline at zero and
+// draw gray-first so the green cohort reads at the bottom and gray above.
+const CHART_LAYERS: readonly ChartLayer[] = [
+  {
+    key: "total",
+    label: "Total market cap",
+    color: CHART_SLATE,
+    gradientId: "homeAltTotalGrad",
+    topOpacity: 0.5,
+    bottomOpacity: 0.06,
+  },
   {
     key: "usdt",
     label: "USDT",
     color: USDT_GREEN,
     gradientId: "homeAltUsdtGrad",
-    topOpacity: 0.78,
-    bottomOpacity: 0.18,
-  },
-  {
-    key: "usdc",
-    label: "USDC",
-    color: USDC_BLUE,
-    gradientId: "homeAltUsdcGrad",
-    topOpacity: 0.72,
-    bottomOpacity: 0.16,
-  },
-  {
-    key: "sky",
-    label: "USDS + DAI",
-    color: SKY_YELLOW,
-    gradientId: "homeAltSkyGrad",
-    topOpacity: 0.7,
-    bottomOpacity: 0.16,
-  },
-  {
-    key: "others",
-    label: "Others",
-    color: CHART_SLATE,
-    gradientId: "homeAltOthersGrad",
     topOpacity: 0.55,
-    bottomOpacity: 0.12,
+    bottomOpacity: 0.1,
   },
+];
+
+const COHORT_LINES: readonly CohortLine[] = [
+  { key: "usdc", label: "USDC", color: USDC_BLUE },
+  { key: "sky", label: "USDS + DAI", color: CHART_ORANGE },
+  { key: "others", label: "Others", color: CHART_PALETTE[1] },
+  { key: "nonUsd", label: "Non-USD share", color: CHART_SLATE, dashArray: "4 4" },
 ];
 
 function buildEvenTicks(count: number): number[] {
@@ -105,8 +106,7 @@ function makeScales({
 
   return {
     x: (ts: number) => bounds.x0 + ((ts - start) / span) * (bounds.x1 - bounds.x0),
-    y: (value: number) =>
-      bounds.y1 - ((value - yDomain[0]) / ySpan) * (bounds.y1 - bounds.y0),
+    y: (value: number) => bounds.y1 - ((value - yDomain[0]) / ySpan) * (bounds.y1 - bounds.y0),
     start,
     end,
   };
@@ -118,52 +118,60 @@ function formatPoint(x: number, y: number): string {
 
 function buildAreaPath({
   rows,
-  area,
+  layer,
   scales,
 }: {
   rows: TotalMcapChartRow[];
-  area: CohortArea;
+  layer: ChartLayer;
   scales: ReturnType<typeof makeScales>;
 }): string {
   if (rows.length === 0) return "";
-
-  const topPoints: string[] = [];
-  const bottomPoints: string[] = [];
-
-  for (const row of rows) {
-    let bottom = 0;
-    for (const candidate of COHORT_AREAS) {
-      if (candidate.key === area.key) break;
-      bottom += row[candidate.key];
-    }
-    const top = bottom + row[area.key];
-    topPoints.push(formatPoint(scales.x(row.ts), scales.y(top)));
-    bottomPoints.push(formatPoint(scales.x(row.ts), scales.y(bottom)));
-  }
-
-  return `M ${topPoints.join(" L ")} L ${bottomPoints.reverse().join(" L ")} Z`;
+  const topPoints = rows.map((row) => formatPoint(scales.x(row.ts), scales.y(row[layer.key])));
+  const baseY = scales.y(0).toFixed(1);
+  const firstX = scales.x(rows[0]!.ts).toFixed(1);
+  const lastX = scales.x(rows[rows.length - 1]!.ts).toFixed(1);
+  return `M ${topPoints.join(" L ")} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
 }
 
 function buildTopLinePath({
   rows,
-  area,
+  layer,
   scales,
 }: {
   rows: TotalMcapChartRow[];
-  area: CohortArea;
+  layer: ChartLayer;
   scales: ReturnType<typeof makeScales>;
 }): string {
   if (rows.length === 0) return "";
   return rows
-    .map((row, index) => {
-      let top = 0;
-      for (const candidate of COHORT_AREAS) {
-        top += row[candidate.key];
-        if (candidate.key === area.key) break;
-      }
-      return `${index === 0 ? "M" : "L"} ${formatPoint(scales.x(row.ts), scales.y(top))}`;
-    })
+    .map((row, index) => `${index === 0 ? "M" : "L"} ${formatPoint(scales.x(row.ts), scales.y(row[layer.key]))}`)
     .join(" ");
+}
+
+function buildCohortLinePath({
+  rows,
+  line,
+  scales,
+}: {
+  rows: TotalMcapChartRow[];
+  line: CohortLine;
+  scales: ReturnType<typeof makeScales>;
+}): string {
+  let hasPreviousPoint = false;
+  const commands: string[] = [];
+
+  for (const row of rows) {
+    const value = row[line.key];
+    if (value === null || !Number.isFinite(value)) {
+      hasPreviousPoint = false;
+      continue;
+    }
+
+    commands.push(`${hasPreviousPoint ? "L" : "M"} ${formatPoint(scales.x(row.ts), scales.y(value))}`);
+    hasPreviousPoint = true;
+  }
+
+  return commands.join(" ");
 }
 
 function HomeAltChartFrame({
@@ -187,10 +195,7 @@ function HomeAltChartFrame({
   const start = rows.length > 0 ? rows[0].ts : HOME_ALT_PLACEHOLDER_START;
   const end = rows.length > 0 ? rows[rows.length - 1].ts : HOME_ALT_PLACEHOLDER_END;
   const maxFromRows = rows.reduce((max, row) => Math.max(max, row.total), 0);
-  const resolvedYDomain: [number, number] = [
-    yDomain[0],
-    typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows,
-  ];
+  const resolvedYDomain: [number, number] = [yDomain[0], typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows];
   const visibleRows = sampleRows(rows);
   const scales = makeScales({ rows: visibleRows, bounds, yDomain: resolvedYDomain });
 
@@ -203,10 +208,10 @@ function HomeAltChartFrame({
       aria-label="Stablecoin market cap history by major cohort"
     >
       <defs>
-        {COHORT_AREAS.map((area) => (
-          <linearGradient key={area.key} id={area.gradientId} x1={0} y1={0} x2={0} y2={1}>
-            <stop offset="5%" stopColor={area.color} stopOpacity={area.topOpacity} />
-            <stop offset="95%" stopColor={area.color} stopOpacity={area.bottomOpacity} />
+        {CHART_LAYERS.map((layer) => (
+          <linearGradient key={layer.key} id={layer.gradientId} x1={0} y1={0} x2={0} y2={1}>
+            <stop offset="5%" stopColor={layer.color} stopOpacity={layer.topOpacity} />
+            <stop offset="95%" stopColor={layer.color} stopOpacity={layer.bottomOpacity} />
           </linearGradient>
         ))}
       </defs>
@@ -260,32 +265,38 @@ function HomeAltChartFrame({
         })}
         {visibleRows.length > 0 ? (
           <g>
-            {COHORT_AREAS.map((area) => (
+            {CHART_LAYERS.map((layer) => (
               <path
-                key={area.key}
-                d={buildAreaPath({
-                  rows: visibleRows,
-                  area,
-                  scales,
-                })}
-                fill={`url(#${area.gradientId})`}
+                key={layer.key}
+                d={buildAreaPath({ rows: visibleRows, layer, scales })}
+                fill={`url(#${layer.gradientId})`}
               />
             ))}
-            {COHORT_AREAS.map((area) => (
+            {CHART_LAYERS.map((layer) => (
               <path
-                key={`${area.key}-line`}
-                d={buildTopLinePath({
-                  rows: visibleRows,
-                  area,
-                  scales,
-                })}
+                key={`${layer.key}-line`}
+                d={buildTopLinePath({ rows: visibleRows, layer, scales })}
                 fill="none"
-                stroke={area.color}
+                stroke={layer.color}
                 strokeWidth={1.5}
                 strokeLinejoin="round"
                 strokeLinecap="round"
               >
-                <title>{area.label}</title>
+                <title>{layer.label}</title>
+              </path>
+            ))}
+            {COHORT_LINES.map((line) => (
+              <path
+                key={`${line.key}-line`}
+                d={buildCohortLinePath({ rows: visibleRows, line, scales })}
+                fill="none"
+                stroke={line.color}
+                strokeDasharray={line.dashArray}
+                strokeWidth={1.4}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              >
+                <title>{line.label}</title>
               </path>
             ))}
           </g>
@@ -311,17 +322,12 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
   return (
     <div
       ref={chartContainerRef}
-      className="h-[260px] w-full sm:h-[320px] lg:h-auto lg:min-h-[360px]"
+      className="h-[260px] w-full sm:h-[320px] lg:h-auto lg:min-h-[305px]"
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
       {chartReady ? (
-        <HomeAltChartFrame
-          width={width}
-          height={height}
-          rows={rows}
-          yDomain={yDomain}
-        />
+        <HomeAltChartFrame width={width} height={height} rows={rows} yDomain={yDomain} />
       ) : (
         <div className="h-full p-5">
           <HomeAltInlineChartSkeleton />

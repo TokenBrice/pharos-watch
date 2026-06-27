@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
-import type { CSSProperties, JSX } from "react";
+import { RotateCw } from "lucide-react";
+import { useMemo, useState, type CSSProperties, type JSX } from "react";
 
 import {
   HOMEPAGE_DISCOVERY_ROTATION_POOL,
@@ -11,10 +11,7 @@ import {
 } from "@/lib/homepage-discovery";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_SUGGESTIONS = selectHomepageDiscoverySuggestions(
-  HOMEPAGE_DISCOVERY_ROTATION_POOL,
-  0,
-);
+const DEFAULT_SUGGESTIONS = selectHomepageDiscoverySuggestions(HOMEPAGE_DISCOVERY_ROTATION_POOL, 9);
 
 function discoveryAccentStyle(suggestion: HomepageDiscoverySuggestion): CSSProperties {
   return { "--discovery-accent": suggestion.accent } as CSSProperties;
@@ -24,132 +21,76 @@ function staggerStyle(index: number): CSSProperties {
   return { "--stagger-index": index } as CSSProperties;
 }
 
-function GroupTag({ label }: { label: string }): JSX.Element {
+// Neutral category chip — monochrome control surface; the route's hue lives only
+// in the icon so the row reads calm. The spotlight route swaps its group label
+// for "Spotlight".
+function CategoryChip({ label }: { label: string }): JSX.Element {
   return (
-    <span className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-muted-foreground">
+    <span className="inline-flex shrink-0 items-center rounded-full border border-border/60 bg-muted/50 px-3 py-1 font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-muted-foreground">
       {label}
     </span>
   );
 }
 
-// Category chip: carries the nav-group accent so each route reads as its own
-// destination. Text is mixed toward foreground so the hue stays legible on the
-// pale chip fill in light mode and lifts on dark surfaces.
-function GroupChip({ label }: { label: string }): JSX.Element {
-  return (
-    <span className="inline-flex items-center rounded-full border px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.14em] [color:color-mix(in_oklab,var(--discovery-accent)_82%,var(--foreground))] [border-color:color-mix(in_oklab,var(--discovery-accent)_28%,var(--border))] bg-[color-mix(in_oklab,var(--discovery-accent)_9%,transparent)]">
-      {label}
-    </span>
-  );
-}
-
-function DiscoveryIcon({
-  suggestion,
-  featured = false,
-}: {
-  suggestion: HomepageDiscoverySuggestion;
-  featured?: boolean;
-}): JSX.Element {
+function DiscoveryIcon({ suggestion }: { suggestion: HomepageDiscoverySuggestion }): JSX.Element {
   const Icon = suggestion.icon;
 
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        "grid shrink-0 place-items-center rounded-md border bg-[color-mix(in_oklab,var(--discovery-accent)_9%,transparent)] text-[var(--discovery-accent)] transition-[background-color,border-color,box-shadow] duration-200 [border-color:color-mix(in_oklab,var(--discovery-accent)_24%,var(--border))] group-hover:bg-[color-mix(in_oklab,var(--discovery-accent)_16%,transparent)] group-hover:[border-color:color-mix(in_oklab,var(--discovery-accent)_46%,var(--border))] group-hover:shadow-[0_0_0_4px_color-mix(in_oklab,var(--discovery-accent)_9%,transparent)] group-focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_16%,transparent)] group-focus-visible:[border-color:color-mix(in_oklab,var(--discovery-accent)_46%,var(--border))]",
-        // Compact tiles are ~210px wide at xl; an xl icon upsize left the text
-        // column too narrow for the authored titles and one-liners.
-        featured ? "h-20 w-20 sm:h-24 sm:w-24" : "h-14 w-14 sm:h-16 sm:w-16 xl:h-14 xl:w-14",
-      )}
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[color-mix(in_oklab,var(--discovery-accent)_15%,transparent)] text-[var(--discovery-accent)] transition-[background-color,border-color] duration-200 group-hover:bg-[color-mix(in_oklab,var(--discovery-accent)_23%,transparent)] group-focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_23%,transparent)]"
     >
-      <Icon
-        aria-hidden="true"
-        className={featured ? "h-9 w-9 sm:h-10 sm:w-10" : "h-7 w-7 sm:h-8 sm:w-8 xl:h-7 xl:w-7"}
-        strokeWidth={1.85}
-      />
+      <Icon aria-hidden="true" className="h-4 w-4" strokeWidth={1.95} />
     </span>
   );
 }
 
-function FeaturedSurface({ suggestion }: { suggestion: HomepageDiscoverySuggestion }): JSX.Element {
-  return (
-    <Link
-      href={suggestion.href}
-      style={discoveryAccentStyle(suggestion)}
-      className="group pharos-focus-ring relative isolate flex h-full min-h-40 items-center gap-4 overflow-hidden px-5 py-5 transition-colors hover:bg-[color-mix(in_oklab,var(--discovery-accent)_5%,transparent)] focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_5%,transparent)] focus-visible:outline-none sm:gap-5 sm:px-6 xl:min-h-36"
-    >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(130%_150%_at_0%_0%,color-mix(in_oklab,var(--discovery-accent)_16%,transparent),transparent_60%)]"
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 bg-[radial-gradient(130%_150%_at_0%_0%,color-mix(in_oklab,var(--discovery-accent)_9%,transparent),transparent_72%)] group-hover:opacity-100 group-focus-visible:opacity-100"
-      />
-      <DiscoveryIcon suggestion={suggestion} featured />
-      <div className="flex min-w-0 flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--discovery-accent)] [border-color:color-mix(in_oklab,var(--discovery-accent)_30%,var(--border))] bg-[color-mix(in_oklab,var(--discovery-accent)_10%,transparent)]">
-            <span
-              aria-hidden="true"
-              className="h-1.5 w-1.5 rounded-full bg-[var(--discovery-accent)] motion-safe:animate-pulse"
-            />
-            Spotlight
-          </span>
-          <GroupTag label={suggestion.groupLabel} />
-        </div>
-
-        <p className="text-xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-2xl">
-          {suggestion.title}
-        </p>
-        <p className="line-clamp-2 max-w-[40ch] text-sm leading-relaxed text-muted-foreground">
-          {suggestion.description}
-        </p>
-
-        <div className="flex items-center gap-1.5 pt-1">
-          <span className="font-mono text-xs font-medium text-[var(--discovery-accent)]">
-            {suggestion.href}
-          </span>
-          <ArrowUpRight
-            aria-hidden="true"
-            className="h-4 w-4 text-[var(--discovery-accent)] opacity-0 transition-all duration-200 motion-safe:-translate-x-1 group-hover:opacity-100 motion-safe:group-hover:translate-x-0 group-focus-visible:opacity-100 motion-safe:group-focus-visible:translate-x-0"
-            strokeWidth={2}
-          />
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function CompactSurface({
+// One route entry. Equal-width across the row; the Figma target keeps the first
+// tile's "Spotlight" chip but puts the tinted descriptive treatment on the
+// second tile, so the strip reads as a compact carousel preview without a pager.
+function RouteCard({
   suggestion,
+  featured,
+  spotlightLabel,
+  index,
+  total,
 }: {
   suggestion: HomepageDiscoverySuggestion;
+  featured: boolean;
+  spotlightLabel: boolean;
+  index: number;
+  total: number;
 }): JSX.Element {
   return (
-    <Link
-      href={suggestion.href}
-      style={discoveryAccentStyle(suggestion)}
-      className="group pharos-focus-ring relative flex h-full min-h-28 items-center gap-3.5 px-4 py-4 transition-colors hover:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:outline-none sm:px-5 xl:min-h-32"
-    >
-      <DiscoveryIcon suggestion={suggestion} />
-      <div className="min-w-0 flex-1">
-        <GroupChip label={suggestion.groupLabel} />
-        <p className="mt-1.5 font-mono text-[11px] font-semibold uppercase leading-tight tracking-wide text-foreground sm:text-[12px] xl:text-[11px] xl:tracking-normal">
-          {suggestion.title}
-        </p>
-        <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
-          {suggestion.shortDescription}
-        </p>
-      </div>
-      {/* Corner reveal: an inline arrow reserved ~28px the narrow xl tiles
-          can't spare; the one-liners were ellipsizing into noise. */}
-      <ArrowUpRight
-        aria-hidden="true"
-        className="absolute right-3 top-3 h-3.5 w-3.5 text-[var(--discovery-accent)] opacity-0 transition-all duration-200 motion-safe:-translate-x-1 group-hover:opacity-100 motion-safe:group-hover:translate-x-0 group-focus-visible:opacity-100 motion-safe:group-focus-visible:translate-x-0"
-        strokeWidth={2}
-      />
-    </Link>
+    <li style={staggerStyle(index)} className={cn("border-border/50", index < total - 1 && "border-r")}>
+      <Link
+        href={suggestion.href}
+        style={discoveryAccentStyle(suggestion)}
+        className={cn(
+          "group pharos-focus-ring relative flex h-[162px] flex-col gap-4 px-5 py-5 transition-colors focus-visible:outline-none",
+          featured
+            ? "bg-[color-mix(in_oklab,var(--discovery-accent)_9%,transparent)] after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-16 after:bg-[color-mix(in_oklab,var(--discovery-accent)_68%,var(--border))]"
+            : "hover:bg-[color-mix(in_oklab,var(--discovery-accent)_5%,transparent)] focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_5%,transparent)]",
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <DiscoveryIcon suggestion={suggestion} />
+          <span aria-hidden="true" className="h-px flex-1 bg-border/50" />
+          <CategoryChip label={spotlightLabel ? "Spotlight" : suggestion.groupLabel} />
+        </div>
+
+        <div className="mt-auto min-w-0">
+          <p className="truncate text-base font-semibold leading-tight tracking-tight text-foreground">
+            {suggestion.title}
+          </p>
+          {featured ? (
+            <p className="mt-2 line-clamp-2 text-sm leading-snug text-muted-foreground">
+              {suggestion.description}
+            </p>
+          ) : null}
+        </div>
+      </Link>
+    </li>
   );
 }
 
@@ -158,54 +99,55 @@ export function HomepageDiscoveryModule({
 }: {
   suggestions?: readonly HomepageDiscoverySuggestion[];
 }): JSX.Element {
-  const [featured, ...rest] = suggestions;
+  // Refresh re-rolls the visible window over the rotation pool; the initial
+  // render keeps the server-selected `suggestions` so hydration matches.
+  const [spotlight, setSpotlight] = useState(0);
+  const visible = useMemo(
+    () =>
+      spotlight === 0 ? suggestions : selectHomepageDiscoverySuggestions(HOMEPAGE_DISCOVERY_ROTATION_POOL, spotlight),
+    [spotlight, suggestions],
+  );
+  const total = visible.length;
 
   return (
-    <nav aria-labelledby="homepage-discovery-title" className="pharos-card-shell overflow-hidden p-0">
+    <nav aria-labelledby="homepage-discovery-title" className="space-y-3 sm:space-y-4">
       <h2 id="homepage-discovery-title" className="sr-only">
         Page Discovery
       </h2>
 
-      <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2.5 sm:px-5">
-        <div className="flex items-baseline gap-2.5">
-          <span className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.18em] [color:color-mix(in_oklab,var(--brand-accent)_74%,var(--foreground))]">
-            Chart your route
-          </span>
-          <span className="hidden text-xs leading-none text-muted-foreground sm:inline">
-            Five ways into Pharos, refreshed each visit
-          </span>
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div className="space-y-1 sm:space-y-1.5">
+          <p className="pharos-display text-base font-bold text-foreground sm:text-3xl">Chart Your Route</p>
+          <p className="max-w-[13rem] text-[10px] leading-snug text-muted-foreground sm:max-w-none sm:text-sm">
+            Different ways into Pharos — refreshed every time you visit.
+          </p>
         </div>
-        <span className="hidden shrink-0 font-mono text-[10px] uppercase leading-none tracking-[0.14em] text-muted-foreground/70 sm:inline">
-          {suggestions.length} routes
-        </span>
+        <button
+          type="button"
+          onClick={() => setSpotlight((value) => value + (suggestions.length || 5))}
+          className="pharos-focus-ring group inline-flex min-h-7 items-center gap-1.5 rounded-[4px] border border-border/70 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-border hover:bg-muted/60"
+        >
+          Refresh
+          <RotateCw
+            aria-hidden="true"
+            className="h-3 w-3 text-muted-foreground transition-transform duration-300 group-hover:rotate-90 group-hover:text-foreground"
+            strokeWidth={2}
+          />
+        </button>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,2.85fr)]">
-        {featured ? (
-          <div className="pharos-stagger-entrance border-b border-border/40 lg:border-r lg:border-b-0">
-            <FeaturedSurface suggestion={featured} />
-          </div>
-        ) : null}
-
-        <ul className="pharos-stagger-entrance grid md:grid-cols-2 xl:grid-cols-4">
-          {rest.map((suggestion, index) => (
-            <li
-              key={suggestion.href}
-              style={staggerStyle(index + 1)}
-              className={cn(
-                "border-border/40",
-                index < rest.length - 1 && "border-b",
-                index % 2 === 0 && "md:border-r",
-                index < 2 && "md:border-b",
-                "xl:border-r xl:border-b-0",
-                index === rest.length - 1 && "xl:border-r-0",
-              )}
-            >
-              <CompactSurface suggestion={suggestion} />
-            </li>
-          ))}
-        </ul>
-      </div>
+      <ul className="pharos-card-shell grid grid-cols-5 overflow-hidden rounded-lg">
+        {visible.map((suggestion, index) => (
+          <RouteCard
+            key={suggestion.href}
+            suggestion={suggestion}
+            featured={index === 1}
+            spotlightLabel={index === 0}
+            index={index}
+            total={total}
+          />
+        ))}
+      </ul>
     </nav>
   );
 }

@@ -46,25 +46,27 @@ afterEach(() => {
 });
 
 describe("PegBrowseStrip", () => {
-  it("uses the custom collapsed fiat preview with Fiat Except USD replacing GBP", () => {
+  it("uses the Figma collapsed fiat preview", () => {
     render(<PegBrowseStrip pegs={TEST_PEGS} pegCoinCount={pegCoinCount} />);
 
     expect(screen.getByRole("link", { name: "US Dollar (154)" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Euro (13)" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Swiss Franc (3)" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Fiat Except USD (20)" }).getAttribute("href")).toBe("/?peg=fiat-non-usd-peg#home-alt-rankings");
-    expect(screen.queryByRole("link", { name: "British Pound (2)" })).toBeNull();
+    expect(screen.getByRole("link", { name: "British Pound (2)" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Brazilian Real (1)" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Swiss Franc (3)" })).toBeNull();
   });
 
   it("restores individual fiat pegs when expanded", () => {
     render(<PegBrowseStrip pegs={TEST_PEGS} pegCoinCount={pegCoinCount} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "+2 more pegs" }));
+    fireEvent.click(screen.getByRole("button", { name: /View More/ }));
 
     expect(screen.getByRole("link", { name: "British Pound (2)" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Brazilian Real (1)" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "West African CFA Franc (1)" }).getAttribute("href")).toBe("/stablecoins/xof");
-    expect(screen.queryByRole("link", { name: "Fiat Except USD (20)" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Show fewer" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Swiss Franc (3)" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "West African CFA Franc (1)" }).getAttribute("href")).toBe(
+      "/stablecoins/xof",
+    );
+    expect(screen.getByRole("button", { name: /View Less/ })).toBeTruthy();
   });
 });

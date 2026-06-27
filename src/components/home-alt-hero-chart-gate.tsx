@@ -10,7 +10,7 @@ import { scheduleIdle } from "@/lib/browser-utils";
 function HomeAltHeroChartFallback() {
   return (
     <div
-      className="h-[260px] w-full p-5 sm:h-[320px] lg:h-auto lg:min-h-[360px]"
+      className="h-[260px] w-full p-5 sm:h-[320px] lg:h-auto lg:min-h-[305px]"
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
@@ -39,9 +39,5 @@ export function HomeAltHeroChartGate(): React.JSX.Element {
     return scheduleIdle(() => setActive(true), 2_500);
   }, [active, hydrated, near]);
 
-  return (
-    <div ref={ref}>
-      {active ? <HomeAltHeroLiveChart /> : <HomeAltHeroChartFallback />}
-    </div>
-  );
+  return <div ref={ref}>{active ? <HomeAltHeroLiveChart /> : <HomeAltHeroChartFallback />}</div>;
 }

@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { MoreHorizontal } from "lucide-react";
 import type { PegCurrency } from "@shared/types";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS } from "@/lib/peg-landing";
 
 const PEG_PILL_CLASS =
-  "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-9 sm:py-1";
+  "pharos-focus-ring inline-flex min-h-8 items-center gap-1 rounded-md border border-border/70 bg-background/50 px-2 py-1 text-sm font-medium leading-none text-foreground/90 transition-[background-color,border-color,color] hover:border-border hover:bg-muted hover:text-foreground";
 
 interface PegBrowseChip {
   key: string;
@@ -33,12 +34,9 @@ function groupPegs(pegs: typeof ACTIVE_PEGS): PegGroup[] {
   return groups;
 }
 
-const COLLAPSED_FIAT_PREVIEW_ORDER: PegCurrency[] = ["USD", "EUR", "CHF"];
+const COLLAPSED_FIAT_PREVIEW_ORDER: PegCurrency[] = ["USD", "EUR", "GBP", "BRL"];
 
-function buildPegChip(
-  peg: PegCurrency,
-  countFn: (peg: (typeof ACTIVE_PEGS)[number]) => number,
-): PegBrowseChip | null {
+function buildPegChip(peg: PegCurrency, countFn: (peg: (typeof ACTIVE_PEGS)[number]) => number): PegBrowseChip | null {
   const slug = PEG_SLUGS[peg];
   if (!slug) return null;
 
@@ -53,85 +51,87 @@ function buildPegChip(
 function buildCollapsedFiatPreview(
   pegs: typeof ACTIVE_PEGS,
   countFn: (peg: (typeof ACTIVE_PEGS)[number]) => number,
-  fiatExceptUsdHref: string,
 ): PegBrowseChip[] {
-  const preview = COLLAPSED_FIAT_PREVIEW_ORDER.flatMap((peg) => (
-    pegs.includes(peg) ? [buildPegChip(peg, countFn)].filter((chip): chip is PegBrowseChip => chip !== null) : []
-  ));
-
-  const fiatExceptUsdCount = pegs
-    .filter((peg) => peg !== "USD")
-    .reduce((sum, peg) => sum + countFn(peg), 0);
-
-  if (fiatExceptUsdCount > 0) {
-    preview.push({
-      key: "fiat-except-usd",
-      href: fiatExceptUsdHref,
-      label: "Fiat Except USD",
-      count: fiatExceptUsdCount,
-    });
-  }
-
-  return preview;
+  return COLLAPSED_FIAT_PREVIEW_ORDER.flatMap((peg) =>
+    pegs.includes(peg) ? [buildPegChip(peg, countFn)].filter((chip): chip is PegBrowseChip => chip !== null) : [],
+  );
 }
 
 export function PegBrowseStrip({
   pegs,
   pegCoinCount: countFn,
-  fiatExceptUsdHref = "/?peg=fiat-non-usd-peg#home-alt-rankings",
 }: {
   pegs: typeof ACTIVE_PEGS;
   pegCoinCount: (peg: (typeof ACTIVE_PEGS)[number]) => number;
-  fiatExceptUsdHref?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const groups = useMemo(() => groupPegs(pegs), [pegs]);
   const fiatGroup = useMemo(() => groups.find((group) => group.label === "Fiat") ?? null, [groups]);
-  const fiatPreview = useMemo(
-    () => buildCollapsedFiatPreview(fiatGroup?.pegs ?? [], countFn, fiatExceptUsdHref),
-    [countFn, fiatExceptUsdHref, fiatGroup],
-  );
+  const fiatPreview = useMemo(() => buildCollapsedFiatPreview(fiatGroup?.pegs ?? [], countFn), [countFn, fiatGroup]);
 
   // Collapsed: selected fiat previews + an aggregate non-USD fiat lens.
   const fiatPegCount = fiatGroup?.pegs.length ?? 0;
   const hasFiatOverflow = fiatPegCount > fiatPreview.length;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="pharos-kicker">Browse by peg</h3>
+    <div className="pharos-peg-browse-shell">
+      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border/70 px-3 py-2">
+        <h3 className="text-sm font-medium text-muted-foreground">Browse By Peg</h3>
         {hasFiatOverflow && (
-          <button type="button"
+          <button
+            type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="pharos-focus-ring min-h-11 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-0 sm:px-0 sm:py-0"
+            className="pharos-focus-ring inline-flex min-h-8 items-center gap-1 rounded-md border border-border/70 bg-background/45 px-2.5 py-1 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
-            {expanded ? "Show fewer" : `+${fiatPegCount - fiatPreview.length} more pegs`}
+            {expanded ? "View Less" : "View More"}
+            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
           </button>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className={expanded ? "divide-y divide-border/55" : "flex flex-wrap items-center divide-x divide-border/55"}>
         {groups.map((group) => {
-          const visibleItems = !expanded && group.label === "Fiat"
-            ? fiatPreview
-            : group.pegs
-                .map((peg) => buildPegChip(peg, countFn))
-                .filter((chip): chip is PegBrowseChip => chip !== null);
+          const visibleItems =
+            !expanded && group.label === "Fiat"
+              ? fiatPreview
+              : group.pegs
+                  .map((peg) => buildPegChip(peg, countFn))
+                  .filter((chip): chip is PegBrowseChip => chip !== null);
           return (
-            <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mr-0.5">
+            <div
+              key={group.label}
+              className={
+                expanded ? "grid grid-cols-[96px_minmax(0,1fr)]" : "flex min-h-11 items-center gap-2 px-3 py-2"
+              }
+            >
+              <span
+                className={
+                  expanded
+                    ? "border-r border-border/55 px-3 py-2 text-sm text-muted-foreground"
+                    : "text-sm text-muted-foreground"
+                }
+              >
                 {group.label}
               </span>
-              {visibleItems.map((item) => {
-                return (
-                  <Link
-                    key={item.key}
-                    href={item.href}
-                    className={PEG_PILL_CLASS}
-                  >
-                    {item.label} ({item.count})
-                  </Link>
-                );
-              })}
+              <div
+                className={
+                  expanded ? "flex flex-wrap items-center gap-1.5 px-3 py-2" : "flex flex-wrap items-center gap-1.5"
+                }
+              >
+                {visibleItems.map((item) => {
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      className={PEG_PILL_CLASS}
+                      aria-label={`${item.label} (${item.count})`}
+                    >
+                      {item.label}
+                      <span className="text-muted-foreground">·</span>
+                      <span className="font-mono tabular-nums text-muted-foreground">{item.count}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           );
         })}

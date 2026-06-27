@@ -12,6 +12,20 @@ describe("HomepageDiscoveryModule", () => {
     cleanup();
   });
 
+  it("defaults to the Figma route sequence", () => {
+    render(<HomepageDiscoveryModule />);
+
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "SpotlightChains",
+      "ANALYZEPortfolio AuditLook through your holdings as one combined stablecoin book",
+      "MONITORUpcoming",
+      "COREAlt-Pegs",
+      "TRACKCemetery",
+    ]);
+    expect(screen.getByRole("button", { name: /refresh/i })).toBeTruthy();
+    expect(screen.queryByText(/ipsum/i)).toBeNull();
+  });
+
   it("renders a labelled page-discovery nav with five route links", async () => {
     const suggestions: HomepageDiscoverySuggestion[] = [
       {
@@ -69,7 +83,10 @@ describe("HomepageDiscoveryModule", () => {
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(5);
     expect(screen.getByRole("link", { name: /safety scores/i }).getAttribute("href")).toBe("/safety-scores");
-    expect(screen.getByText("DEX scores")).toBeTruthy();
-    expect(screen.queryByText("DEX depth and durability")).toBeNull();
+    expect(screen.getByText("Spotlight")).toBeTruthy();
+    expect(screen.getByText("DEX depth and durability")).toBeTruthy();
+    expect(screen.queryByText("DEX scores")).toBeNull();
+    expect(screen.queryByText(/ipsum/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /previous routes/i })).toBeNull();
   });
 });

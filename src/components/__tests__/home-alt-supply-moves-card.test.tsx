@@ -67,7 +67,8 @@ describe("SupplyMovesCard", () => {
       name: "USDR — peak 7-day supply mover: +202%",
     });
     expect(peakLink.getAttribute("href")).toBe("/stablecoin/usdr-real");
-    expect(peakLink.textContent).toContain("Peak 7d");
+    expect(peakLink.textContent).toContain("USDR");
+    expect(peakLink.textContent).toContain("+202%");
   });
 });
 

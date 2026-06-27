@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
+import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
@@ -63,25 +64,24 @@ export function ActiveDepegsCard(): React.JSX.Element {
         direction: ev.currentDeviationBps >= 0 ? "above" as const : "below" as const,
       }))
       .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps))
-      .slice(0, 8);
+      .slice(0, 4);
   }, [activeEvents]);
 
   // Flash only the lead count when the number of active depegs changes (skips mount).
   const flashClass = useFlashOnChange(rows.length);
 
   return (
-    <div className="pharos-card-shell flex h-full flex-col gap-3 p-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="pharos-kicker">Active Depegs</span>
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          Live · away from peg
-        </span>
-      </div>
+    <div className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4">
+      <PulseCardHeader
+        href="/depeg/"
+        expandLabel="Open Depeg monitor"
+        label="Total Active Depegs"
+      />
 
       {isLoading || isPegSummaryLoading ? (
         <>
           <Skeleton className="h-12 w-28" />
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-20 w-full" />
         </>
       ) : rows.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
@@ -91,21 +91,20 @@ export function ActiveDepegsCard(): React.JSX.Element {
         </div>
       ) : (
         <>
-          <div className="flex items-baseline gap-2.5">
-            <span
-              aria-hidden="true"
-              className="animate-pharos-pulse inline-block h-2 w-2 shrink-0 self-center rounded-full bg-red-600 dark:bg-red-500"
-            />
-            <span className={`rounded-md font-mono text-5xl font-bold tabular-nums tracking-tight text-foreground ${flashClass}`}>
+          <div className="flex items-baseline gap-2 font-mono font-bold tabular-nums tracking-tight">
+            <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>
               {rows.length}
             </span>
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              of {activeEvents.length} live
+            <span aria-hidden="true" className="text-3xl text-muted-foreground/40">
+              /
+            </span>
+            <span className="text-4xl text-muted-foreground">
+              {activeEvents.length}
             </span>
           </div>
-          <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-[13px]">
-            {rows.map((row) => (
-              <DepegRow key={row.id} row={row} logoSrc={logoMap[row.id]} />
+          <ul className="hidden flex-col border-t border-border/50 pt-2.5 font-mono text-xs sm:flex">
+            {rows.map((row, index) => (
+              <DepegRow key={row.id} row={row} logoSrc={logoMap[row.id]} isLead={index === 0} />
             ))}
           </ul>
         </>
@@ -114,7 +113,15 @@ export function ActiveDepegsCard(): React.JSX.Element {
   );
 }
 
-function DepegRow({ row, logoSrc }: { row: ActiveRow; logoSrc: string | undefined }): React.JSX.Element {
+function DepegRow({
+  row,
+  logoSrc,
+  isLead,
+}: {
+  row: ActiveRow;
+  logoSrc: string | undefined;
+  isLead: boolean;
+}): React.JSX.Element {
   const arrow = row.direction === "below" ? "↓" : "↑";
   const colorClass =
     row.direction === "below"
@@ -125,19 +132,20 @@ function DepegRow({ row, logoSrc }: { row: ActiveRow; logoSrc: string | undefine
       <Link
         prefetch={false}
         href={buildStablecoinUrl(row.id)}
-        className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1.5 tabular-nums transition-colors hover:bg-muted/50"
+        className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1 tabular-nums transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
       >
         <CoinCell logoSrc={logoSrc} />
-        <span className="flex min-w-0 items-baseline gap-2">
+        <span className="flex min-w-0 items-baseline gap-1.5">
           <span className="truncate uppercase tracking-tight text-foreground">
             {row.symbol}
           </span>
+          <span aria-hidden="true" className="text-muted-foreground/40">·</span>
           <span className={`shrink-0 font-semibold tabular-nums ${colorClass}`}>
             <span aria-hidden="true" className="mr-0.5">{arrow}</span>
-            {Math.abs(row.bps).toFixed(0)} bps
+            {Math.abs(row.bps).toFixed(0)}
           </span>
         </span>
-        <span className="tabular-nums text-muted-foreground">
+        <span className="uppercase tabular-nums text-muted-foreground">
           {formatElapsedSeconds(row.ageSec)}
         </span>
       </Link>

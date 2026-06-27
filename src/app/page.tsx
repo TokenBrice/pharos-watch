@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { CHAIN_META } from "@shared/lib/chains";
 import { HomeAltClient } from "@/components/home-alt-client";
 import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { HomeAltHero } from "@/components/home-alt-hero";
-import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
-import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -12,7 +9,6 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
 import { getHomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import {
-  ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_STABLECOIN_COUNT,
   HOMEPAGE_TOP_ACTIVE_STABLECOINS,
   TRACKED_STABLECOIN_COUNT,
@@ -90,17 +86,8 @@ export default function HomePage() {
           ]),
         }}
       />
-      <div className="space-y-4 sm:space-y-5">
-        <SiteHeader
-          tracked={TRACKED_STABLECOIN_COUNT}
-          total={total}
-          pegCount={ACTIVE_PEG_CURRENCY_COUNT}
-          chainCount={Object.keys(CHAIN_META).length}
-        />
-      </div>
       <HomeAltHero snapshot={heroSnapshot} />
       <HomeAltClient />
-      <HomeAltUpcomingHorizonConstellation />
     </div>
   );
 }

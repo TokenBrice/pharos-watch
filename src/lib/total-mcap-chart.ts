@@ -6,6 +6,7 @@ export interface TotalMcapChartRow {
   usdc: number;
   sky: number;
   others: number;
+  nonUsd: number | null;
   total: number;
 }
 
@@ -67,6 +68,10 @@ export function buildTotalMcapChartRows(
 
   return chartPoints.map((point, index) => {
     const total = Object.values(point.totalCirculatingUSD).reduce((sum, value) => sum + (value ?? 0), 0);
+    const nonUsd = Object.entries(point.totalCirculatingUSD).reduce(
+      (sum, [bucket, value]) => (bucket === "peggedUSD" ? sum : sum + (value ?? 0)),
+      0,
+    );
     const usdt = usdtSeries[index] ?? 0;
     const usdc = usdcSeries[index] ?? 0;
     const sky = (usdsSeries[index] ?? 0) + (daiSeries[index] ?? 0);
@@ -78,6 +83,7 @@ export function buildTotalMcapChartRows(
       usdc,
       sky,
       others,
+      nonUsd,
       total,
     };
   });

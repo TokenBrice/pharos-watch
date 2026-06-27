@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
+import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { useLogos } from "@/hooks/use-logos";
@@ -9,12 +10,16 @@ import { formatCurrency } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
+// How many recent freeze rows to surface beneath the headline.
+const MAX_RECENT = 4;
+
+type WindowKey = "24h" | "7d";
+
 interface FreezeAggregate {
   count24h: number;
   count7d: number;
   amount24hUsd: number;
   amount7dUsd: number;
-  daily: number[];
   recent: RecentFreezeEvent[];
 }
 
@@ -45,7 +50,6 @@ function aggregate(
   let count7d = 0;
   let amount24hUsd = 0;
   let amount7dUsd = 0;
-  const dayBuckets = new Array<number>(7).fill(0);
   const recent: RecentFreezeEvent[] = [];
   for (const ev of events) {
     if (ev.eventType !== "blacklist" && ev.eventType !== "destroy") continue;
@@ -54,11 +58,6 @@ function aggregate(
     if (ev.amountUsdAtEvent !== null && Number.isFinite(ev.amountUsdAtEvent)) {
       amount7dUsd += ev.amountUsdAtEvent;
     }
-    const dayIndex = Math.min(
-      6,
-      Math.max(0, Math.floor((nowSeconds - ev.timestamp) / DAY_SECONDS)),
-    );
-    dayBuckets[6 - dayIndex] += 1;
     if (ev.timestamp >= cutoff24h) {
       count24h += 1;
       if (ev.amountUsdAtEvent !== null && Number.isFinite(ev.amountUsdAtEvent)) {
@@ -70,7 +69,7 @@ function aggregate(
     // reconstructed) look broken in a discovery list. They still count toward
     // the 24h / 7d totals above; they just don't appear in the row list.
     if (
-      recent.length < 3 &&
+      recent.length < MAX_RECENT &&
       ev.amountUsdAtEvent !== null &&
       Number.isFinite(ev.amountUsdAtEvent) &&
       ev.amountUsdAtEvent > 0
@@ -89,31 +88,7 @@ function aggregate(
       });
     }
   }
-  return { count24h, count7d, amount24hUsd, amount7dUsd, daily: dayBuckets, recent };
-}
-
-function FreezeBars({ values }: { values: number[] }): React.JSX.Element | null {
-  if (values.every((v) => v === 0)) return null;
-  const max = Math.max(...values, 1);
-  return (
-    <div className="flex h-full w-full items-end gap-1" aria-hidden="true">
-      {values.map((v, i) => {
-        const heightPct = v === 0 ? 4 : Math.max(10, (v / max) * 100);
-        const isToday = i === values.length - 1;
-        return (
-          <div
-            key={i}
-            className={`flex-1 rounded-[3px] ${
-              isToday
-                ? "bg-red-600 dark:bg-red-500"
-                : "bg-red-600/40 dark:bg-red-500/35"
-            }`}
-            style={{ height: `${heightPct}%` }}
-          />
-        );
-      })}
-    </div>
-  );
+  return { count24h, count7d, amount24hUsd, amount7dUsd, recent };
 }
 
 // Heuristic: the events endpoint returns events keyed by symbol enum
@@ -138,6 +113,7 @@ export function RecentFreezesCard(): React.JSX.Element {
   });
   const { data: logos } = useLogos();
   const logoMap = useMemo(() => logos ?? {}, [logos]);
+  const [windowKey, setWindowKey] = useState<WindowKey>("24h");
 
   const agg = useMemo(() => {
     const events = eventsQuery.data?.events ?? [];
@@ -150,87 +126,96 @@ export function RecentFreezesCard(): React.JSX.Element {
   }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap]);
 
   const isLoading = eventsQuery.isLoading;
+  const amount = windowKey === "24h" ? agg?.amount24hUsd ?? 0 : agg?.amount7dUsd ?? 0;
+  const count = windowKey === "24h" ? agg?.count24h ?? 0 : agg?.count7d ?? 0;
 
   return (
-    <div className="pharos-card-shell flex h-full flex-col gap-3 p-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="pharos-kicker">Recent Freezes</span>
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          7d window
-        </span>
-      </div>
+    <div className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4">
+      <PulseCardHeader
+        href="/freezewatch/"
+        expandLabel="Open FreezeWatch"
+        label="Recent Freezes"
+        aside={
+          <div
+            role="group"
+            aria-label="Freeze window"
+            className="inline-flex items-stretch overflow-hidden rounded-md border border-border/60 font-mono text-[11px] leading-none"
+          >
+            <button
+              type="button"
+              onClick={() => setWindowKey("24h")}
+              aria-pressed={windowKey === "24h"}
+              className={
+                windowKey === "24h"
+                  ? "bg-muted px-2 py-1 text-foreground"
+                  : "px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+              }
+            >
+              24h
+            </button>
+            <button
+              type="button"
+              onClick={() => setWindowKey("7d")}
+              aria-pressed={windowKey === "7d"}
+              className={
+                windowKey === "7d"
+                  ? "border-l border-border/60 bg-muted px-2 py-1 text-foreground"
+                  : "border-l border-border/60 px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+              }
+            >
+              7d
+            </button>
+          </div>
+        }
+      />
 
       {isLoading || !agg ? (
         <>
           <Skeleton className="h-12 w-28" />
           <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
         </>
       ) : (
         <>
-          <div className="grid grid-cols-2 items-start gap-3">
-            <div className="flex items-baseline gap-2">
-              <span
-                className={`font-mono text-5xl font-bold tabular-nums tracking-tight ${
-                  agg.count24h > 0
-                    ? "text-red-700 dark:text-red-400"
-                    : "text-foreground"
-                }`}
-              >
-                {agg.count24h.toLocaleString("en-US")}
-              </span>
-              <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                24h
-              </span>
-              {agg.amount24hUsd > 0 && (
-                <span className="font-mono text-[11px] tabular-nums text-foreground/85">
-                  {formatCurrency(agg.amount24hUsd, 0)}
-                </span>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                <span className="font-semibold text-foreground/85">
-                  {agg.count7d.toLocaleString("en-US")}
-                </span>{" "}
-                events · 7d
-              </div>
-              <div className="mt-1 font-mono text-[11px] tabular-nums text-foreground/80">
-                {agg.amount7dUsd > 0 ? formatCurrency(agg.amount7dUsd, 0) : "—"}
-              </div>
-            </div>
-          </div>
-          <div className="min-h-20 flex-1">
-            {agg.count7d > 0 ? (
-              <FreezeBars values={agg.daily} />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-green-700 dark:text-green-400">
-                  All quiet
-                </span>
-              </div>
-            )}
+          <div className="flex items-baseline gap-2">
+            <span
+              className={`font-mono text-4xl font-bold tabular-nums tracking-tight ${
+                count > 0 ? "text-red-700 dark:text-red-400" : "text-foreground"
+              }`}
+            >
+              {formatCurrency(amount, 0)}
+            </span>
+            <span aria-hidden="true" className="font-mono text-sm text-muted-foreground/40">
+              ·
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-wider tabular-nums text-muted-foreground/70">
+              {count.toLocaleString("en-US")}X
+            </span>
           </div>
           {agg.recent.length > 0 && (
-            <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-[13px]">
+            <ul className="flex flex-col border-t border-border/50 pt-2.5 font-mono text-xs">
               {agg.recent.map((ev) => {
                 const logoSrc = logoMap[ev.stablecoinId];
                 return (
                   <li
                     key={ev.id}
-                    className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-2 py-1.5 tabular-nums"
+                    className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 tabular-nums"
                   >
                     <CoinCell logoSrc={logoSrc} />
                     <span className="truncate uppercase tracking-tight text-foreground">
                       {ev.symbol}
                     </span>
-                    <span className="font-semibold tabular-nums text-red-700 dark:text-red-400">
-                      {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0
-                        ? formatCurrency(ev.amountUsdAtEvent, 0)
-                        : "—"}
-                    </span>
-                    <span className="tabular-nums text-muted-foreground/80">
-                      {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
+                    <span className="flex items-baseline gap-1.5">
+                      <span className="font-semibold tabular-nums text-red-700 dark:text-red-400">
+                        {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0
+                          ? formatCurrency(ev.amountUsdAtEvent, 0)
+                          : "—"}
+                      </span>
+                      <span aria-hidden="true" className="text-muted-foreground/40">
+                        ·
+                      </span>
+                      <span className="uppercase tabular-nums text-muted-foreground/80">
+                        {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
+                      </span>
                     </span>
                   </li>
                 );

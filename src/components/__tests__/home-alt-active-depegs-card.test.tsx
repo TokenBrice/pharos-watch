@@ -86,12 +86,11 @@ describe("ActiveDepegsCard", () => {
 
     render(<ActiveDepegsCard />);
 
-    expect(screen.getByText("2")).toBeTruthy();
-    expect(screen.getByText("of 2 live")).toBeTruthy();
+    expect(screen.getByText("Total Active Depegs")).toBeTruthy();
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.getByText("EURS")).toBeTruthy();
-    expect(screen.getByText(/120 bps/)).toBeTruthy();
-    expect(screen.queryByText(/9025 bps/)).toBeNull();
+    expect(screen.getByText(/120/)).toBeTruthy();
+    expect(screen.queryByText(/9025/)).toBeNull();
     expect(screen.queryByText("PMUSD")).toBeNull();
   });
 });

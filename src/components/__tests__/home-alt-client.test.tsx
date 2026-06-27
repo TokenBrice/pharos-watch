@@ -8,11 +8,9 @@ import { HomeAltClient } from "@/components/home-alt-client";
 const {
   homeAltRankingsPropsMock,
   homeAltMiniCardGridMock,
-  useHomepageDiscoverySuggestionsMock,
 } = vi.hoisted(() => ({
   homeAltRankingsPropsMock: vi.fn(),
   homeAltMiniCardGridMock: vi.fn(),
-  useHomepageDiscoverySuggestionsMock: vi.fn(),
 }));
 
 vi.mock("next/dynamic", () => ({
@@ -48,10 +46,6 @@ vi.mock("@/components/lazy-section", () => ({
   LazySection: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/hooks/use-homepage-discovery", () => ({
-  useHomepageDiscoverySuggestions: useHomepageDiscoverySuggestionsMock,
-}));
-
 vi.mock("@/components/homepage-discovery-module", () => ({
   HomepageDiscoveryModule: () => <div data-testid="homepage-discovery-module" />,
 }));
@@ -60,7 +54,6 @@ describe("HomeAltClient", () => {
   beforeEach(() => {
     homeAltRankingsPropsMock.mockClear();
     homeAltMiniCardGridMock.mockClear();
-    useHomepageDiscoverySuggestionsMock.mockReturnValue([]);
   });
 
   afterEach(() => {
@@ -71,12 +64,8 @@ describe("HomeAltClient", () => {
     render(<HomeAltClient />);
 
     expect(screen.getByTestId("home-alt-mini-card-grid")).toBeTruthy();
-    expect(screen.getByTestId("daily-digest")).toBeTruthy();
     expect(screen.getByTestId("homepage-discovery-module")).toBeTruthy();
     expect(screen.getByTestId("home-alt-rankings-section")).toBeTruthy();
-    expect(
-      document.querySelector('section[aria-label="Daily digest"]')?.className,
-    ).not.toContain("min-h-");
     expect(document.getElementById("home-alt-rankings")).toBeTruthy();
     expect(homeAltRankingsPropsMock).toHaveBeenCalledWith({
       titleId: "home-alt-rankings-title",

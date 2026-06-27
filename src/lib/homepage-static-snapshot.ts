@@ -1,15 +1,13 @@
 import topStablecoinsDataset from "../../public/datasets/top-stablecoins/latest.json";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
-import {
-  HOMEPAGE_COHORT_BUCKET_IDS,
-  type HomepageCohortBucketKey,
-} from "@/lib/homepage-cohort-config";
+import { HOMEPAGE_COHORT_BUCKET_IDS, type HomepageCohortBucketKey } from "@/lib/homepage-cohort-config";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
 import { numberValue } from "@shared/lib/type-guards";
 
 const COHORT_BUCKET_BY_ID = new Map<string, HomepageCohortBucketKey>(
-  (Object.entries(HOMEPAGE_COHORT_BUCKET_IDS) as Array<[HomepageCohortBucketKey, readonly string[]]>)
-    .flatMap(([bucket, ids]) => ids.map((id) => [id, bucket] as const)),
+  (Object.entries(HOMEPAGE_COHORT_BUCKET_IDS) as Array<[HomepageCohortBucketKey, readonly string[]]>).flatMap(
+    ([bucket, ids]) => ids.map((id) => [id, bucket] as const),
+  ),
 );
 
 interface TopStablecoinsDatasetRow {
@@ -88,6 +86,7 @@ export function getHomepageHeroSnapshot(): HomepageHeroSnapshot {
       usdc,
       sky,
       others,
+      nonUsd: nonUsdUsd,
       total: totalUsd,
     },
   };

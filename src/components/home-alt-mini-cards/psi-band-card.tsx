@@ -2,21 +2,13 @@
 
 import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { useStabilityIndex } from "@/hooks/api-hooks";
-import {
-  PSI_BAND_CLASSES,
-  PSI_HEX_COLORS,
-  type ConditionBand,
-} from "@shared/lib/psi-colors";
+import { CHART_BLUE } from "@/lib/chart-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { buildPsiChartData } from "@shared/lib/psi-view-model";
 
-function PsiSparkline({
-  values,
-  color,
-}: {
-  values: number[];
-  color: string;
-}): React.JSX.Element | null {
+function StabilityAreaChart({ values, color }: { values: number[]; color: string }): React.JSX.Element | null {
   if (values.length < 2) return null;
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -25,17 +17,19 @@ function PsiSparkline({
   const points = values
     .map((v, i) => {
       const x = (i * stepX).toFixed(2);
-      const y = (40 - ((v - min) / range) * 40).toFixed(2);
+      const y = (38 - ((v - min) / range) * 34).toFixed(2);
       return `${x},${y}`;
     })
     .join(" ");
   return (
-    <svg
-      viewBox="0 0 100 40"
-      className="block h-full w-full"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 100 40" className="block h-full w-full" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="stability-area-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.32} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <polygon points={`${points} 100,40 0,40`} fill="url(#stability-area-fill)" stroke="none" />
       <polyline
         points={points}
         fill="none"
@@ -48,7 +42,7 @@ function PsiSparkline({
   );
 }
 
-export function PsiBandCard(): React.JSX.Element {
+export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): React.JSX.Element {
   const { data, isLoading } = useStabilityIndex();
   const current = data?.current ?? null;
   const sparkValues = useMemo(() => {
@@ -62,45 +56,49 @@ export function PsiBandCard(): React.JSX.Element {
   }, [current, sparkValues]);
 
   const band = (current?.band ?? "STEADY") as ConditionBand;
-  const bandColor = PSI_HEX_COLORS[band] ?? PSI_HEX_COLORS.STEADY;
+  const sparkColor = CHART_BLUE;
   const bandClass = PSI_BAND_CLASSES[band] ?? "text-foreground";
-  const avgDeltaClass = avgDelta != null && avgDelta >= 0
-    ? "text-green-700 dark:text-green-400"
-    : "text-red-700 dark:text-red-400";
+  const bandLabel = band.charAt(0) + band.slice(1).toLowerCase();
+  const avgDeltaClass =
+    avgDelta != null && avgDelta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400";
 
   return (
-    <div className="pharos-card-shell flex items-center gap-4 p-4">
-      <div className="min-w-0 shrink-0">
-        <p className="pharos-kicker">PSI</p>
-        {isLoading || !current ? (
-          <Skeleton className="mt-1.5 h-7 w-24" />
-        ) : (
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-              {current.score.toFixed(1)}
-            </span>
-            <span
-              className={`font-mono text-[10px] font-semibold uppercase tracking-wider ${bandClass}`}
-            >
-              {band}
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              raw instant
-            </span>
-          </div>
-        )}
-        <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-          Last 90 days
-          {avgDelta !== null && (
-            <span className={`ml-2 tabular-nums ${avgDeltaClass}`}>
-              {avgDelta >= 0 ? "+" : ""}
-              {avgDelta.toFixed(1)} vs avg
+    <div className={`${embedded ? "h-full min-h-0 gap-3 p-3.5" : "pharos-card-shell gap-4 p-4"} flex flex-col`}>
+      <PulseCardHeader
+        href="/stability-index/"
+        expandLabel="Open Stability Index"
+        label={
+          <span className="flex items-center gap-1.5">
+            Stability Index
+            <span className={`font-medium ${bandClass}`}>· {bandLabel}</span>
+          </span>
+        }
+      />
+      <div className="flex items-center gap-4">
+        <div className="min-w-0 shrink-0">
+          {isLoading || !current ? (
+            <Skeleton className="h-9 w-24" />
+          ) : (
+            <span className="block font-mono text-4xl font-bold tabular-nums tracking-tight text-foreground">
+              {current.score.toFixed(2)}
             </span>
           )}
-        </p>
-      </div>
-      <div className="ml-auto h-12 flex-1">
-        <PsiSparkline values={sparkValues} color={bandColor} />
+          <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            90D{" "}
+            {avgDelta !== null ? (
+              <span className={`tabular-nums ${avgDeltaClass}`}>
+                {avgDelta >= 0 ? "+" : ""}
+                {avgDelta.toFixed(1)}
+              </span>
+            ) : (
+              "—"
+            )}{" "}
+            vs avg
+          </p>
+        </div>
+        <div className={`ml-auto flex-1 ${embedded ? "h-14" : "h-20"}`}>
+          <StabilityAreaChart values={sparkValues} color={sparkColor} />
+        </div>
       </div>
     </div>
   );

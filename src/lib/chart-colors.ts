@@ -8,12 +8,12 @@
 
 /** Centralized color tokens — edit here, not in individual components */
 const TOKEN = {
-  blue:     "#3b82f6",
+  blue:     "#4bc4de",
   purple:   "#8b5cf6",
   pink:     "#ec4899",
   orange:   "#f97316",
-  green:    "#10b981",
-  cyan:     "#06b6d4",
+  green:    "#3bcc87",
+  cyan:     "#23a7c8",
   yellow:   "#eab308",
   red:      "#ef4444",
   indigo:   "#6366f1",
@@ -84,6 +84,6 @@ export const SIGNAL_CHART_COLORS: Record<string, string> = {
 };
 
 /** Brand-specific colors for market-cap charts. */
-export const USDT_GREEN = "#26a17b";
-export const USDC_BLUE = "#2775ca";
+export const USDT_GREEN = "#3bcc87";
+export const USDC_BLUE = "#4bc4de";
 export const SKY_YELLOW = "#f5a623";

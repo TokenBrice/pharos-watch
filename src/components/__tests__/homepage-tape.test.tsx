@@ -199,8 +199,17 @@ describe("HomepageTape", () => {
     const root = container.querySelector(".pharos-tape-shell");
     expect(root?.className).toContain("w-full");
     expect(root?.className).toContain("border-b");
-    expect(root?.className).toContain("lg:ml-[var(--pharos-core-rail-offset)]");
     expect(root?.className).not.toContain("-mx-3");
+
+    for (const label of ["Tracked", "Active", "Pegs", "Chains"]) {
+      const chips = screen.getAllByText(label).map((node) => node.parentElement);
+      expect(chips).toHaveLength(2);
+      for (const chip of chips) {
+        expect(chip?.className).toContain("rounded-md");
+        expect(chip?.className).toContain("border");
+        expect(chip?.className).toContain("h-6");
+      }
+    }
   });
 
   it("collapses repeated same-coin same-type events into one cell with a count badge", () => {

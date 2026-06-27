@@ -1,70 +1,92 @@
 import type { HomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
-import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
+import { CHART_SLATE, CHART_ORANGE, CHART_PALETTE, USDT_GREEN, USDC_BLUE } from "@/lib/chart-colors";
 import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
+import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { formatCurrency } from "@shared/lib/format";
+
+// OTHERS cohort dot — violet pulled from the shared chart palette.
+const OTHERS_PURPLE = CHART_PALETTE[1];
 
 export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): React.JSX.Element {
   const latest = snapshot.cohort;
 
   return (
-    <section
-      className="pharos-card-shell grid grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]"
-      aria-label="Stablecoin market cap snapshot"
-    >
-      <div className="flex flex-col gap-6 border-b border-border/50 p-5 sm:p-6 lg:border-b-0 lg:border-r lg:p-7">
-        <div className="space-y-2.5">
-          <p
-            className="pharos-kicker"
-            title="Excludes 2 shadow assets used only for PSI continuity"
-          >
-            Total Stablecoin Market Cap
-          </p>
-          <p
-            className="font-semibold leading-[0.92] tracking-tight tabular-nums text-foreground"
-            style={{
-              fontSize: "clamp(2.5rem, 5.5vw, 4.75rem)",
-              fontFamily: "SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace",
-            }}
-          >
-            {formatCurrency(snapshot.totalUsd, 1)}
-          </p>
-          {snapshot.asOfISO ? (
-            <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Snapshot {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(snapshot.asOfISO))}
+    <section aria-labelledby="market-pulse-title" className="space-y-4">
+      <div className="space-y-1.5">
+        <h2
+          id="market-pulse-title"
+          className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+        >
+          Market Pulse
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Backing, freeze risk, liquidity, and peg stress — all in one place.
+        </p>
+      </div>
+
+      <div
+        className="pharos-card-shell relative grid grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:grid-rows-[auto_1fr]"
+        role="group"
+        aria-label="Stablecoin market cap snapshot"
+      >
+        <CardExpandButton href="/screener/" expandLabel="Open Screener" className="absolute right-3 top-3 z-10" />
+        <div className="border-b border-border/50 p-5 sm:p-6 lg:border-b-0 lg:border-r lg:p-7">
+          <div className="space-y-2.5">
+            <p
+              className="text-sm font-medium text-muted-foreground"
+              title="Excludes 2 shadow assets used only for PSI continuity"
+            >
+              Total Market Cap
             </p>
-          ) : null}
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+              {formatCurrency(snapshot.totalUsd, 1)}
+            </p>
+          </div>
+        </div>
+
+        <div className="border-b border-border/50 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-b-0">
+          <HomeAltHeroChartGate />
         </div>
 
         {/* Cohort breakdown — sits directly under the headline so the column
             reads as one continuous story instead of headline-then-gap-then-list. */}
-        <div className="space-y-2 border-t border-border/50 pt-5">
+        <div className="space-y-2 p-5 sm:p-6 lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7">
           <p className="pharos-kicker">Market Cohorts</p>
           <ul className="flex flex-col gap-1.5 text-xs">
             {latest ? (
               <>
                 <CohortRow color={USDT_GREEN} label="USDT" value={latest.usdt} total={latest.total} />
                 <CohortRow color={USDC_BLUE} label="USDC" value={latest.usdc} total={latest.total} />
-                <CohortRow color={SKY_YELLOW} label="USDS + DAI" value={latest.sky} total={latest.total} />
-                <CohortRow color={CHART_SLATE} label="Others" value={latest.others} total={latest.total} />
-                <li className="flex items-baseline justify-between gap-2 pt-1 text-[11px] text-muted-foreground">
-                  <span className="font-mono uppercase tracking-wider">Non-USD share</span>
-                  <span className="font-mono tabular-nums text-foreground/90">
-                    {snapshot.nonUsdShare !== null
-                      ? `${formatCurrency(snapshot.nonUsdUsd, 1)} · ${(snapshot.nonUsdShare * 100).toFixed(1)}%`
-                      : "—"}
+                <CohortRow color={CHART_ORANGE} label="USDS + DAI" value={latest.sky} total={latest.total} />
+                <CohortRow color={OTHERS_PURPLE} label="Others" value={latest.others} total={latest.total} />
+                <li className="flex items-baseline justify-between gap-3 font-mono">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <span
+                      className="inline-block h-2 w-2 rounded-sm"
+                      style={{ backgroundColor: CHART_SLATE }}
+                      aria-hidden="true"
+                    />
+                    <span className="uppercase tracking-tight">Non-USD share</span>
+                  </span>
+                  <span className="flex items-baseline gap-1.5 tabular-nums text-muted-foreground">
+                    {snapshot.nonUsdShare !== null ? (
+                      <>
+                        <span className="text-foreground">{formatCurrency(snapshot.nonUsdUsd, 1)}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{(snapshot.nonUsdShare * 100).toFixed(1)}%</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
                   </span>
                 </li>
               </>
             ) : (
-              <li className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                Loading cohorts…
-              </li>
+              <li className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Loading cohorts…</li>
             )}
           </ul>
         </div>
       </div>
-
-      <HomeAltHeroChartGate />
     </section>
   );
 }
@@ -83,16 +105,13 @@ function CohortRow({
   return (
     <li className="flex items-baseline justify-between gap-3 font-mono">
       <span className="flex items-center gap-2 text-muted-foreground">
-        <span
-          className="inline-block h-2 w-2 rounded-sm"
-          style={{ backgroundColor: color }}
-          aria-hidden="true"
-        />
+        <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: color }} aria-hidden="true" />
         <span className="uppercase tracking-tight">{label}</span>
       </span>
-      <span className="flex items-baseline gap-2 tabular-nums">
+      <span className="flex items-baseline gap-1.5 tabular-nums text-muted-foreground">
         <span className="text-foreground">{formatCurrency(value, 1)}</span>
-        <span className="w-12 text-right text-muted-foreground">{share.toFixed(1)}%</span>
+        <span aria-hidden="true">·</span>
+        <span>{share.toFixed(1)}%</span>
       </span>
     </li>
   );

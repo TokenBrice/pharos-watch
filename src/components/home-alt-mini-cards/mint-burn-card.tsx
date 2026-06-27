@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
+import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -15,18 +16,14 @@ interface Mover {
   netFlow24hUsd: number;
 }
 
-export function MintBurnCard(): React.JSX.Element {
+export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}): React.JSX.Element {
   const { data, isLoading } = useMintBurnFlows();
   const { data: logos } = useLogos();
   const logoMap = logos ?? {};
 
   const { topMovers, totalNet } = useMemo(() => {
-    const coins = (data?.coins ?? []).filter(
-      (c) => c.has24hActivity !== false && c.netFlow24hUsd !== 0,
-    );
-    const sorted = [...coins].sort(
-      (a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd),
-    );
+    const coins = (data?.coins ?? []).filter((c) => c.has24hActivity !== false && c.netFlow24hUsd !== 0);
+    const sorted = [...coins].sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd));
     const totalNet = coins.reduce((s, c) => s + c.netFlow24hUsd, 0);
     const topMovers: Mover[] = sorted
       .slice(0, 3)
@@ -37,71 +34,62 @@ export function MintBurnCard(): React.JSX.Element {
   const gauge = data?.gauge;
 
   return (
-    <div className="pharos-card-shell flex items-center gap-4 p-4">
-      <div className="min-w-0 shrink-0">
-        <p className="pharos-kicker">Mint / Burn · 24h</p>
-        {isLoading || !gauge ? (
-          <Skeleton className="mt-1.5 h-7 w-32" />
-        ) : (
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="font-mono text-2xl font-semibold uppercase tracking-tight text-foreground">
-              {gauge.band ?? "—"}
-            </span>
-            {gauge.score !== null && (
-              <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                {gauge.score >= 0 ? "+" : ""}
-                {gauge.score.toFixed(0)}
-              </span>
+    <div className={`${embedded ? "h-full min-h-0 gap-3 p-3.5" : "pharos-card-shell gap-4 p-4"} flex flex-col`}>
+      <PulseCardHeader href="/flows/" expandLabel="Open Mint/Burn Flows" label="Mint / Burn" />
+      <div className="flex items-center gap-4">
+        <div className="min-w-0 shrink-0">
+          {isLoading || !gauge ? (
+            <Skeleton className="h-9 w-32" />
+          ) : (
+            <div className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              {gauge.band ? gauge.band.charAt(0) + gauge.band.slice(1).toLowerCase() : "—"}
+            </div>
+          )}
+          <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            {gauge ? (
+              <>
+                {gauge.score !== null && (
+                  <span className="tabular-nums">
+                    {gauge.score >= 0 ? "+" : ""}
+                    {gauge.score.toFixed(0)} ·{" "}
+                  </span>
+                )}
+                Net <span className="tabular-nums text-foreground/85">{formatSignedCompactUsd(totalNet)}</span>
+              </>
+            ) : (
+              "Net flow"
             )}
-          </div>
-        )}
-        <p
-          className={`mt-1 font-mono text-[10px] uppercase tracking-wider ${
-            totalNet >= 0
-              ? "text-green-700 dark:text-green-400"
-              : "text-red-700 dark:text-red-400"
-          }`}
-        >
-          {gauge ? `Net ${formatSignedCompactUsd(totalNet)}` : "Net flow"}
-        </p>
-      </div>
-      <ul
-        className="ml-auto flex flex-1 flex-col justify-center gap-0.5 text-[11px]"
-        aria-label="Top 24h flow movers"
-      >
-        {topMovers.length === 0 ? (
-          <li className="font-mono uppercase tracking-wider text-muted-foreground">
-            No 24h activity
-          </li>
-        ) : (
-          topMovers.map((row) => {
-            const logoSrc = logoMap[row.id];
-            return (
-              <li key={row.id}>
-                <Link
-                  prefetch={false}
-                  href={buildStablecoinUrl(row.id)}
-                  className="pharos-focus-ring -mx-1 grid min-h-6 grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 font-mono tabular-nums transition-colors hover:bg-muted/50"
-                >
-                  <CoinCell logoSrc={logoSrc} size="compact" />
-                  <span className="truncate uppercase tracking-tight text-foreground">
-                    {row.symbol}
-                  </span>
-                  <span
-                    className={
-                      row.netFlow24hUsd >= 0
-                        ? "text-green-700 dark:text-green-400"
-                        : "text-red-700 dark:text-red-400"
-                    }
+          </p>
+        </div>
+        <ul className="ml-auto flex flex-1 flex-col justify-center gap-1 text-xs" aria-label="Top 24h flow movers">
+          {topMovers.length === 0 ? (
+            <li className="font-mono uppercase tracking-wider text-muted-foreground">No 24h activity</li>
+          ) : (
+            topMovers.map((row) => {
+              const logoSrc = logoMap[row.id];
+              return (
+                <li key={row.id}>
+                  <Link
+                    prefetch={false}
+                    href={buildStablecoinUrl(row.id)}
+                    className="pharos-focus-ring -mx-1 grid min-h-6 grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 font-mono tabular-nums transition-colors hover:bg-muted/50"
                   >
-                    {formatSignedCompactUsd(row.netFlow24hUsd)}
-                  </span>
-                </Link>
-              </li>
-            );
-          })
-        )}
-      </ul>
+                    <CoinCell logoSrc={logoSrc} size="compact" />
+                    <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
+                    <span
+                      className={
+                        row.netFlow24hUsd >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                      }
+                    >
+                      {formatSignedCompactUsd(row.netFlow24hUsd)}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      </div>
     </div>
   );
 }
