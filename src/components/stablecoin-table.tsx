@@ -80,6 +80,11 @@ const OVERVIEW_ROW_HEIGHT_ESTIMATE_PX: Record<TableDensity, number> = {
   spacious: 56,
 };
 const OVERVIEW_PAGE_SIZE = 20;
+// Mobile column layout stacks symbol + secondary lines, so its rows need a taller
+// floor than the density config's desktop rowHeight estimate.
+const MOBILE_COLUMNS_MIN_ROW_HEIGHT_PX = 68;
+// The Figma overview uses a tighter logo than the density config's icon size.
+const OVERVIEW_ICON_SIZE_PX = 18;
 // Per-column content minimums. The table runs `table-fixed`; summing these for
 // the visible set yields the inline min-width at every tier, so the viewport
 // scrolls horizontally instead of squeezing cell content into neighbors.
@@ -545,9 +550,9 @@ export function StablecoinTable({
       rowHeight: isFigmaOverview
         ? OVERVIEW_ROW_HEIGHT_ESTIMATE_PX[density]
         : isMobileColumns
-          ? Math.max(densityConfig.rowHeight, 68)
+          ? Math.max(densityConfig.rowHeight, MOBILE_COLUMNS_MIN_ROW_HEIGHT_PX)
           : Math.max(densityConfig.rowHeight, VIRTUAL_ROW_HEIGHT_ESTIMATE_PX[density]),
-      iconSize: isFigmaOverview ? 18 : densityConfig.iconSize,
+      iconSize: isFigmaOverview ? OVERVIEW_ICON_SIZE_PX : densityConfig.iconSize,
     }),
     [density, densityConfig, isFigmaOverview, isMobileColumns],
   );

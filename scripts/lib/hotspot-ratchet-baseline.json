@@ -71,6 +71,18 @@
     },
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
+  "src/components/stablecoin-table.tsx": {
+    "fileLines": 812,
+    "maxFunctionLines": 438,
+    "branchCount": 51,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 830,
+      "maxFunctionLines": 450,
+      "branchCount": 55
+    },
+    "notes": "Stablecoin table still owns filter orchestration, toolbar composition, virtualization, and overview-specific rendering. Keep enrolled after the Figma overview density pass; split table state/view-model concerns before adding more table behavior."
+  },
   "src/app/chains/[chain]/client.tsx": {
     "fileLines": 135,
     "maxFunctionLines": 114,
@@ -336,9 +348,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 1137,
-    "maxFunctionLines": 432,
-    "branchCount": 29,
+    "fileLines": 1047,
+    "maxFunctionLines": 351,
+    "branchCount": 26,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,
@@ -517,7 +529,7 @@
   },
   "worker/src/lib/status-evaluation.ts": {
     "fileLines": 261,
-    "maxFunctionLines": 134,
+    "maxFunctionLines": 133,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {

@@ -13,6 +13,7 @@ export const TARGET_FILES = [
   "worker/src/api/feedback.ts",
   "worker/src/handlers/http/request-dispatch.ts",
   "src/components/contagion-graph.tsx",
+  "src/components/stablecoin-table.tsx",
   "src/app/chains/[chain]/client.tsx",
   "worker/src/cron/sync-stablecoins.ts",
   "src/app/methodology/sections/core/stability-index-section.tsx",

@@ -71,14 +71,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "src/components/yield-detail-section.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Yield detail UI is an existing frontend hotspot (large render function and branch count) surfaced by the expanded merge-gate hotspot scan. It was not touched by the Worker yield structural seam in this remediation tranche; keep queued for a focused frontend decomposition pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-26",
-    "reviewAfter": "2026-09-26",
-    "nextAction": "Split yield detail summary, quality, reserve, and alternate-source rendering into smaller presentational sections before enrolling in the hotspot baseline."
-  },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
     "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass.",
