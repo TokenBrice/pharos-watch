@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe("CoreTopRail", () => {
-  it("renders the events tape on core routes", () => {
+  it("renders the events tape on the homepage", () => {
     pathnameMock.mockReturnValue("/");
 
     render(<CoreTopRail />);
@@ -33,13 +33,12 @@ describe("CoreTopRail", () => {
     expect(tape.parentElement?.className).toContain("contents");
     expect(tape.parentElement?.className).toContain("lg:sticky");
     expect(tape.parentElement?.className).toContain("lg:top-14");
-    // The redundant core-nav pill rail is gone — the Terminal dropdown in the
-    // top nav now carries those destinations.
+    // The redundant core-nav pill rail is gone; the grouped top nav owns IA.
     expect(screen.queryByRole("navigation", { name: "Core pages" })).toBeNull();
   });
 
-  it("renders on non-core desktop routes while staying hidden below lg", () => {
-    pathnameMock.mockReturnValue("/timeline/");
+  it("renders on interior desktop routes while staying hidden below lg", () => {
+    pathnameMock.mockReturnValue("/liquidity/");
 
     render(<CoreTopRail />);
 

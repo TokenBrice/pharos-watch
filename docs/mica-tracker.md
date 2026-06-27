@@ -156,7 +156,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
 
-**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in `NAV_GROUPS.monitor` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The sidebar and command palette auto-index from `NAV_GROUPS`.
+**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The mobile drawer, desktop top nav, legacy sidebar, and command palette auto-index from `NAV_GROUPS`.
 
 **Detail-page surfacing:** `src/components/key-info-card.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/compliance/?regime=mica`. It reuses the established badge styling; no new component is required.
 

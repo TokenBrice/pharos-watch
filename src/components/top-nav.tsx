@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type SVGProps } from "react";
+import { useEffect, useRef, useState, type SVGProps } from "react";
 import { useTheme } from "next-themes";
-import { Activity, Monitor, Moon, Search, Send, Sparkles, Sun } from "lucide-react";
+import { Activity, KeyRound, Monitor, Moon, Search, Send, Sparkles, Sun } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
 import {
   DropdownMenu,
@@ -17,28 +17,14 @@ import { openCommandPalette } from "@/lib/command-palette";
 import {
   NAV_GROUPS,
   normalizeNavPath,
-  PRIMARY_NAV_ITEMS,
   stickyChromeTopOffsetClass,
+  type NavGroup,
   type NavItem,
 } from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
 
-// The Figma top nav collapses the existing IA into six menus. Terminal carries
-// the core product set; the other five are the existing NAV_GROUPS, relabelled.
-type TopMenu = { key: string; label: string; items: NavItem[] };
-
-function groupItems(key: string): NavItem[] {
-  return NAV_GROUPS.find((group) => group.key === key)?.items ?? [];
-}
-
-const TOP_MENUS: TopMenu[] = [
-  { key: "terminal", label: "Terminal", items: PRIMARY_NAV_ITEMS },
-  { key: "track", label: "Track", items: groupItems("data") },
-  { key: "monitor", label: "Monitor", items: groupItems("monitor") },
-  { key: "analyze", label: "Analyze", items: groupItems("tools") },
-  { key: "docs", label: "Docs", items: groupItems("learn") },
-  { key: "resources", label: "Resources", items: groupItems("info") },
-];
+const TOP_MENUS: readonly NavGroup[] = NAV_GROUPS;
+const OVERFLOW_MENU_KEY = "overflow";
 
 function LighthouseIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -67,15 +53,10 @@ function LighthouseIcon(props: SVGProps<SVGSVGElement>) {
 function NavMenuItem({ item }: { item: NavItem }) {
   const Icon = item.icon;
   return (
-    <DropdownMenuItem asChild className="items-start gap-2.5 rounded-lg px-2.5 py-2 focus:bg-muted/60">
+    <DropdownMenuItem asChild className="items-center gap-2.5 rounded-lg px-2.5 py-2 focus:bg-muted/60">
       <Link href={item.href} prefetch={false} {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}>
-        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-sm font-medium text-foreground">{item.label}</span>
-          {item.description ? (
-            <span className="text-xs leading-snug text-muted-foreground">{item.description}</span>
-          ) : null}
-        </span>
+        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="text-sm font-medium text-foreground">{item.label}</span>
       </Link>
     </DropdownMenuItem>
   );
@@ -132,6 +113,41 @@ export function TopNav() {
   const normalizedPath = normalizeNavPath(pathname ?? "/");
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
+  // Desktop-only hover-to-open for the six section menus. Radix DropdownMenu is
+  // click/keyboard-driven; we control `open` per menu and layer hover on top,
+  // gated to hover-capable + fine pointers so touch laptops keep tap-to-open.
+  // `modal={false}` keeps the page interactive (no scroll/pointer lock) while
+  // sweeping across triggers; the focus-guard refs stop hover from stealing
+  // focus while leaving keyboard activation untouched.
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [hoverCapable, setHoverCapable] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverOpenRef = useRef(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHoverCapable(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  const cancelClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const openOnHover = (key: string) => {
+    cancelClose();
+    hoverOpenRef.current = true;
+    setOpenMenu(key);
+  };
+  const closeOnHover = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpenMenu(null), 150);
+  };
+
   return (
     <header
       aria-label="Primary"
@@ -154,11 +170,27 @@ export function TopNav() {
         {TOP_MENUS.map((menu) => {
           const isActive = menu.items.some((item) => normalizeNavPath(item.href) === normalizedPath);
           return (
-            <DropdownMenu key={menu.key}>
+            <DropdownMenu
+              key={menu.key}
+              modal={false}
+              open={openMenu === menu.key}
+              onOpenChange={(next) => {
+                cancelClose();
+                setOpenMenu(next ? menu.key : null);
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   aria-current={isActive ? "true" : undefined}
+                  onPointerDown={() => {
+                    hoverOpenRef.current = false;
+                  }}
+                  onKeyDown={() => {
+                    hoverOpenRef.current = false;
+                  }}
+                  onMouseEnter={hoverCapable ? () => openOnHover(menu.key) : undefined}
+                  onMouseLeave={hoverCapable ? closeOnHover : undefined}
                   className={cn(
                     "pharos-focus-ring inline-flex h-9 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors",
                     isActive
@@ -169,7 +201,16 @@ export function TopNav() {
                   {menu.label}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={8} className="w-72 p-1.5">
+              <DropdownMenuContent
+                align="start"
+                sideOffset={8}
+                className="w-60 p-1.5"
+                onMouseEnter={hoverCapable ? cancelClose : undefined}
+                onMouseLeave={hoverCapable ? closeOnHover : undefined}
+                onCloseAutoFocus={(event) => {
+                  if (hoverOpenRef.current) event.preventDefault();
+                }}
+              >
                 {menu.items.map((item) => (
                   <NavMenuItem key={item.href} item={item} />
                 ))}
@@ -193,17 +234,41 @@ export function TopNav() {
           </kbd>
         </button>
 
-        <DropdownMenu>
+        <DropdownMenu
+          modal={false}
+          open={openMenu === OVERFLOW_MENU_KEY}
+          onOpenChange={(next) => {
+            cancelClose();
+            setOpenMenu(next ? OVERFLOW_MENU_KEY : null);
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               aria-label="More"
+              onPointerDown={() => {
+                hoverOpenRef.current = false;
+              }}
+              onKeyDown={() => {
+                hoverOpenRef.current = false;
+              }}
+              onMouseEnter={hoverCapable ? () => openOnHover(OVERFLOW_MENU_KEY) : undefined}
+              onMouseLeave={hoverCapable ? closeOnHover : undefined}
               className="pharos-focus-ring inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
             >
               <LighthouseIcon className="size-4" aria-hidden />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={8} className="w-56 p-1.5">
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="w-56 p-1.5"
+            onMouseEnter={hoverCapable ? cancelClose : undefined}
+            onMouseLeave={hoverCapable ? closeOnHover : undefined}
+            onCloseAutoFocus={(event) => {
+              if (hoverOpenRef.current) event.preventDefault();
+            }}
+          >
             <DropdownMenuItem asChild className="gap-2.5 rounded-lg px-2.5 py-2">
               <Link href="/pharoswatchbot/" prefetch={false}>
                 <Send className="size-4 text-muted-foreground" aria-hidden />
@@ -214,6 +279,12 @@ export function TopNav() {
               <Link href="/changelog/" prefetch={false}>
                 <Sparkles className="size-4 text-muted-foreground" aria-hidden />
                 <span className="text-sm font-medium">What&apos;s New</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="gap-2.5 rounded-lg px-2.5 py-2">
+              <Link href="/api/" prefetch={false}>
+                <KeyRound className="size-4 text-muted-foreground" aria-hidden />
+                <span className="text-sm font-medium">API Access</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

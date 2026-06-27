@@ -11,7 +11,6 @@ import {
   BOTTOM_NAV_ITEMS,
   COMPANION_NAV_ITEMS,
   NAV_GROUPS,
-  PRIMARY_NAV_ITEMS,
   stickyChromeTopOffsetClass,
 } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
@@ -23,7 +22,7 @@ import { useStartHereNavVisibility } from "@/hooks/use-start-here-nav-visibility
 
 function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) {
   const Icon = item.icon;
-  const className = `pharos-focus-ring flex items-start gap-3 rounded-lg border px-3 py-3 transition-[background-color,border-color,color,box-shadow] duration-200 ${
+  const className = `pharos-focus-ring flex items-center gap-3 rounded-lg border px-3 py-3 transition-[background-color,border-color,color,box-shadow] duration-200 ${
     active
       ? "border-border/70 bg-muted/60 font-medium text-foreground shadow-sm"
       : "border-transparent text-muted-foreground hover:border-border/55 hover:bg-muted/45 hover:text-foreground"
@@ -31,13 +30,10 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
 
   const body = (
     <>
-      <Icon className="h-4 w-4 shrink-0 mt-0.5" />
-      <div className="min-w-0 flex-1">
-        <div className="text-sm flex items-center gap-1.5">
-          {item.label}
-          {item.external && <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />}
-        </div>
-        {item.description && <div className="text-xs text-muted-foreground/70 mt-0.5">{item.description}</div>}
+      <Icon className="h-4 w-4 shrink-0" />
+      <div className="min-w-0 flex-1 text-sm flex items-center gap-1.5">
+        {item.label}
+        {item.external && <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />}
       </div>
     </>
   );
@@ -80,12 +76,8 @@ export function Header() {
   );
   const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start/");
   const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start/");
-  // The drawer is a modal menu with no rail beside it, so unlike the desktop
-  // sidebar it always lists the full core set.
-  const primaryItems = PRIMARY_NAV_ITEMS;
   const groups = NAV_GROUPS;
-  const [dashboardNavItem, ...remainingPrimaryNavItems] = primaryItems;
-  const mobileLeadItemCount = primaryItems.length + priorityBottomNavItems.length;
+  const mobileLeadItemCount = priorityBottomNavItems.length;
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
   // The header renders above the core rail in flow, so it pins directly under
@@ -156,23 +148,9 @@ export function Header() {
 
               {/* Navigation */}
               <nav className="flex-1 overflow-y-auto px-4 py-4" aria-label="Main navigation">
-                {/* Primary pages */}
-                {dashboardNavItem ? (
-                  <div
-                    className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
-                    style={{ animationDelay: "0ms", animationDuration: "200ms" }}
-                  >
-                    <MobileNavLink
-                      item={dashboardNavItem}
-                      active={isRouteActive(pathname, dashboardNavItem.href)}
-                      onNavigate={() => setOpen(false)}
-                    />
-                  </div>
-                ) : null}
-
                 {priorityBottomNavItems.length > 0 ? (
                   <div
-                    className={`mt-2 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
+                    className={`animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
                       priorityBottomNavItems.some((item) => isRouteActive(pathname, item.href))
                         ? "border-l-2 border-l-frost-blue pl-3"
                         : "pl-[14px]"
@@ -189,23 +167,6 @@ export function Header() {
                     ))}
                   </div>
                 ) : null}
-
-                {remainingPrimaryNavItems.map((item, index) => (
-                  <div
-                    key={item.href}
-                    className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
-                    style={{
-                      animationDelay: `${(index + 1 + priorityBottomNavItems.length) * 50}ms`,
-                      animationDuration: "200ms",
-                    }}
-                  >
-                    <MobileNavLink
-                      item={item}
-                      active={isRouteActive(pathname, item.href)}
-                      onNavigate={() => setOpen(false)}
-                    />
-                  </div>
-                ))}
 
                 {/* Grouped sections */}
                 {groups.map((group, groupIndex) => {
@@ -229,7 +190,12 @@ export function Header() {
                         aria-expanded={groupExpanded}
                         aria-controls={`mobile-nav-group-${group.key}`}
                       >
-                        {group.label}
+                        <span className="flex items-center gap-2">
+                          {group.label}
+                          <span className="rounded-full bg-muted px-1.5 font-mono text-[10px] font-semibold tabular-nums tracking-normal text-muted-foreground/70">
+                            {group.items.length}
+                          </span>
+                        </span>
                         <ChevronRight
                           className={`h-3 w-3 transition-transform duration-200 ${groupExpanded ? "rotate-90" : ""}`}
                         />
@@ -252,14 +218,6 @@ export function Header() {
                           </div>
                         </div>
                       </div>
-                      {!groupExpanded && (
-                        <div
-                          className="truncate px-3 py-2 text-xs italic text-muted-foreground/70"
-                          title={group.items.map((item) => item.label).join(" · ")}
-                        >
-                          {group.items.map((item) => item.label).join(" · ")}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -272,7 +230,7 @@ export function Header() {
                         : "pl-[14px]"
                     }`}
                     style={{
-                      animationDelay: `${(primaryItems.length + groups.length) * 50}ms`,
+                      animationDelay: `${(mobileLeadItemCount + groups.length) * 50}ms`,
                       animationDuration: "200ms",
                     }}
                   >
@@ -291,7 +249,7 @@ export function Header() {
                   <div
                     className="mt-4 pl-[14px] animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
                     style={{
-                      animationDelay: `${(primaryItems.length + groups.length + 1) * 50}ms`,
+                      animationDelay: `${(mobileLeadItemCount + groups.length + 1) * 50}ms`,
                       animationDuration: "200ms",
                     }}
                   >

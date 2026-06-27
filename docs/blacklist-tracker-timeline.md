@@ -45,7 +45,7 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 ## v3.993 — FreezeWatch rebrand and primary-nav promotion (2026-05-12)
 
 - **Surface rebrand** — page moved from `/blacklist/` to `/freezewatch/` with a 301 redirect; sitemap priority raised from `0.8` to `0.85` to reflect promotion to a primary navigation hero
-- **Primary navigation** — `FreezeWatch` becomes the 7th `PRIMARY_NAV_ITEMS` entry (between Alt-Pegs and PharosWatchBot), with a custom hexagonal FreezeShield icon
+- **Primary navigation** — `FreezeWatch` became the 7th entry in the then-current `PRIMARY_NAV_ITEMS` model (between Alt-Pegs and PharosWatchBot), with a custom hexagonal FreezeShield icon
 - **Three new hero components** — Freezable Supply Meter (headline + stacked sovereignty bar with freeze-line accent), Intervention Seismograph (quarterly stacked SVG with ice-crack horizon and named-quake annotations), Sovereignty Lattice (2D stablecoin × chain coverage grid with click-through to filtered ledger)
 - **Copy and analytics** — user-facing prose refers to "issuer freezes" and "freeze interventions"; analytics page identifier for filter/sort/search events changed from `blacklist` to `freezewatch`. Underlying data model, table names, cron jobs, API endpoints, and methodology terminology remain `blacklist` to preserve historical continuity with the chain-level event language
 

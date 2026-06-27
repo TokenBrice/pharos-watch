@@ -47,21 +47,21 @@ describe("homepage discovery pool", () => {
           .map((item) => item.groupLabel),
       ),
     ];
-    expect(firstFourGroups).toEqual(["CORE", "TRACK", "ANALYZE", "MONITOR"]);
+    expect(firstFourGroups).toEqual(["Overview", "Markets", "Risk", "Analyze"]);
 
     const selectedGroups = new Set(
       selectHomepageDiscoverySuggestions(HOMEPAGE_DISCOVERY_ROTATION_POOL, 0).map(
         (item) => item.groupLabel,
       ),
     );
-    expect(selectedGroups).toEqual(new Set(["CORE", "TRACK", "ANALYZE", "MONITOR"]));
+    expect(selectedGroups).toEqual(new Set(["Overview", "Markets", "Risk", "Analyze"]));
   });
 
   it("keeps duplicate hrefs from entering an interleaved pool", () => {
     const pool = interleaveDiscoverySuggestions([
-      suggestion("/safety-scores/", "CORE", "Safety"),
-      suggestion("/liquidity/", "TRACK", "Liquidity"),
-      suggestion("/safety-scores/", "REFERENCE", "Report Cards"),
+      suggestion("/safety-scores/", "Risk", "Safety"),
+      suggestion("/liquidity/", "Markets", "Liquidity"),
+      suggestion("/safety-scores/", "Reference", "Report Cards"),
     ]);
 
     expect(pool.map((item) => item.href)).toEqual(["/safety-scores/", "/liquidity/"]);
@@ -69,12 +69,12 @@ describe("homepage discovery pool", () => {
 
   it("selects one spotlight plus the next four suggestions from the chosen cursor", () => {
     const pool = [
-      suggestion("/a/", "CORE"),
-      suggestion("/b/", "TRACK"),
-      suggestion("/c/", "ANALYZE"),
-      suggestion("/d/", "MONITOR"),
-      suggestion("/e/", "LEARN"),
-      suggestion("/f/", "REFERENCE"),
+      suggestion("/a/", "Overview"),
+      suggestion("/b/", "Markets"),
+      suggestion("/c/", "Analyze"),
+      suggestion("/d/", "Risk"),
+      suggestion("/e/", "Learn"),
+      suggestion("/f/", "Reference"),
       suggestion("/g/", "GUIDE"),
     ];
 
@@ -103,9 +103,9 @@ describe("homepage discovery pool", () => {
 
   it("keeps the chosen cursor as the spotlight when fewer than five suggestions exist", () => {
     const pool = [
-      { ...suggestion("/a/", "CORE"), icon: ShieldCheck },
-      { ...suggestion("/b/", "TRACK"), icon: Waves },
-      { ...suggestion("/c/", "REFERENCE"), icon: BookOpen },
+      { ...suggestion("/a/", "Overview"), icon: ShieldCheck },
+      { ...suggestion("/b/", "Markets"), icon: Waves },
+      { ...suggestion("/c/", "Reference"), icon: BookOpen },
     ];
 
     expect(selectHomepageDiscoverySuggestions(pool, 1).map((item) => item.href)).toEqual([

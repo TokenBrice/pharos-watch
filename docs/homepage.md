@@ -33,7 +33,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 The visible top fold is split across four independently composed surfaces:
 
-- `CoreTopRail`, rendered directly under the global header chrome. It now contains only the recent-events tape: the former centered core submenu was retired into the Terminal dropdown. On desktop the tape renders on every standard page and sticks below the fixed top nav (`top: 3.5rem` on `/`, `calc(3px + 3.5rem)` elsewhere). On mobile it remains limited to core routes so non-core pages keep their first viewport focused on local content.
+- `CoreTopRail`, rendered directly under the global header chrome. It now contains only the recent-events tape: the former centered core submenu was retired and wayfinding is owned by the grouped top nav. On desktop the tape renders on every standard page and sticks below the fixed top nav (`top: 3.5rem` on `/`, `calc(3px + 3.5rem)` elsewhere). On mobile it renders only on the homepage so interior pages keep their first viewport focused on local content.
 - `SiteHeader` (the masthead; renders across breakpoints with a mobile layout below `md` and a desktop layout at `md`+)
 - `HomeAltHero`, whose text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
 - `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
@@ -83,7 +83,7 @@ Saved shortcuts are also browser-local:
 Homepage page discovery is deterministic on first render:
 
 - the visible default route set is `Chains`, `Portfolio Audit`, `Upcoming`, `Alt-Pegs`, and `Cemetery`
-- the suggestion pool is still derived from internal navigation config (`PRIMARY_NAV_ITEMS` plus Track/Analyze/Monitor `NAV_GROUPS`), excludes the dashboard itself and Learn/Reference pages, de-duplicates by `href`, and interleaves groups for the manual Refresh action
+- the suggestion pool is derived from the Overview, Markets, Risk, and Analyze `NAV_GROUPS`, excludes the dashboard itself and Learn/Reference pages, de-duplicates by `href`, and interleaves groups for the manual Refresh action
 - the desktop Page Discovery strip is hidden below `md`; the visible row has no pager, keeps a neutral `Spotlight` chip on the first tile, and applies the descriptive tinted treatment to the second tile
 
 ### `SiteHeader`
@@ -97,7 +97,7 @@ Homepage page discovery is deterministic on first render:
 
 ### `HomepageTape`
 
-The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it under the global header chrome and above each page's local content. On desktop the tape renders on every standard page and is sticky below the fixed `TopNav`; on mobile it renders only on the core route set and scrolls away beneath the site header. The tape shell uses an opaque card background: it is sticky on desktop, and a translucent fill without a backdrop blur let scrolled content ghost through the band. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
+The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it under the global header chrome and above each page's local content. On desktop the tape renders on every standard page and is sticky below the fixed `TopNav`; on mobile it renders only on the homepage and scrolls away beneath the site header. The tape shell uses an opaque card background: it is sticky on desktop, and a translucent fill without a backdrop blur let scrolled content ghost through the band. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
 Each item carries the class styling from the homepage tape component. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
 

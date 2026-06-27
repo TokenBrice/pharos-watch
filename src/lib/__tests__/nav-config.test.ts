@@ -1,133 +1,141 @@
 import { describe, expect, it } from "vitest";
 import {
   COMPANION_NAV_ITEMS,
-  CORE_NAV_ITEMS,
-  getSidebarNavForPath,
-  isCoreNavPath,
+  DEFAULT_EXPANDED,
   NAV_GROUPS,
   NAV_ITEMS,
-  PRIMARY_NAV_ITEMS,
+  UTILITY_NAV_ITEMS,
 } from "@/lib/nav-config";
 
 describe("nav-config", () => {
-  it("promotes dashboard and Pharos core features to the primary nav block in the intended order", () => {
-    expect(PRIMARY_NAV_ITEMS.map((item) => item.href)).toEqual([
-      "/",
+  it("uses the grouped IA as the canonical navigation model", () => {
+    expect(NAV_GROUPS.map((group) => group.key)).toEqual([
+      "overview",
+      "markets",
+      "risk",
+      "analyze",
+      "learn",
+      "reference",
+    ]);
+
+    expect(NAV_GROUPS.map((group) => group.label)).toEqual([
+      "Overview",
+      "Markets",
+      "Risk",
+      "Analyze",
+      "Learn",
+      "Reference",
+    ]);
+  });
+
+  it("groups overview, market, and risk routes by user intent", () => {
+    const overviewGroup = NAV_GROUPS.find((group) => group.key === "overview");
+    const marketsGroup = NAV_GROUPS.find((group) => group.key === "markets");
+    const riskGroup = NAV_GROUPS.find((group) => group.key === "risk");
+
+    expect(overviewGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
+      { href: "/", label: "Dashboard" },
+      { href: "/stability-index/", label: "Stability Index" },
+      { href: "/timeline/", label: "Timeline" },
+      { href: "/digest/", label: "Daily Digest" },
+      { href: "/pharoswatchbot/", label: "Alert Bot" },
+    ]);
+
+    expect(marketsGroup?.items.map((item) => item.href)).toEqual([
+      "/liquidity/",
+      "/flows/",
+      "/chains/",
+      "/alt-pegs/",
+      "/yield/",
+      "/upcoming/",
+    ]);
+
+    expect(riskGroup?.items.map((item) => item.href)).toEqual([
       "/safety-scores/",
       "/depeg/",
       "/freezewatch/",
-      "/alt-pegs/",
-      "/yield/",
-      "/stability-index/",
-      "/pharoswatchbot/",
+      "/compliance/",
+      "/cemetery/",
     ]);
-    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs/")?.label).toBe("Alt-Pegs");
-    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/depeg/")?.label).toBe("Depeg/DDR");
-    expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot/", label: "PharosWatchBot" });
-
-    // Depeg/DDR stays in the main route run so active incidents are visible. Digest and Status stay in MONITOR.
-    const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
-    const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
-    expect(dataGroup?.items.some((item) => item.href === "/depeg/")).toBe(false);
-    expect(dataGroup?.items.some((item) => item.href === "/freezewatch/")).toBe(false);
-    expect(dataGroup?.items.some((item) => item.href === "/pharoswatchbot/")).toBe(false);
-    expect(monitorGroup?.items.some((item) => item.href === "/pharoswatchbot/")).toBe(false);
   });
 
-  it("orders the sidebar groups and routes as requested while excluding legacy Risk Lab grouping", () => {
-    expect(NAV_GROUPS.some((group) => group.key === "risk-lab")).toBe(false);
-    expect(NAV_GROUPS.map((group) => group.key)).toEqual(["data", "tools", "monitor", "learn", "info"]);
+  it("keeps Analyze tool-focused and separates Learn from Reference", () => {
+    const analyzeGroup = NAV_GROUPS.find((group) => group.key === "analyze");
+    const learnGroup = NAV_GROUPS.find((group) => group.key === "learn");
+    const referenceGroup = NAV_GROUPS.find((group) => group.key === "reference");
 
-    const trackGroup = NAV_GROUPS.find((group) => group.key === "data");
-    const analyzeGroup = NAV_GROUPS.find((group) => group.key === "tools");
-    const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
-    const infoGroup = NAV_GROUPS.find((group) => group.key === "info");
-
-    expect(trackGroup?.label).toBe("TRACK");
-    expect(trackGroup?.items.map((item) => item.label)).toEqual([
-      "Liquidity",
-      "Mint/Burn Flows",
-      "Chains",
-      "Cemetery",
-    ]);
-
-    expect(analyzeGroup?.label).toBe("ANALYZE");
     expect(analyzeGroup?.items.map((item) => item.href)).toEqual([
       "/screener/",
       "/dependency-map/",
-      "/portfolio/",
       "/compare/",
+      "/portfolio/",
     ]);
 
-    expect(monitorGroup?.label).toBe("MONITOR");
-    expect(monitorGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/timeline/", label: "Timeline" },
-      { href: "/compliance/", label: "Compliance" },
-      { href: "/upcoming/", label: "Upcoming" },
-      { href: "/digest/", label: "Digest" },
-      { href: "/status/", label: "Pharos Status" },
-    ]);
-
-    expect(infoGroup?.label).toBe("REFERENCE");
-    expect(infoGroup?.items.some((item) => item.href === "/digest/")).toBe(false);
-    expect(infoGroup?.items.some((item) => item.href === "/status/")).toBe(false);
-    expect(infoGroup?.items.map((item) => item.href)).toEqual([
-      "/about/",
-      "/funding/",
-      "/methodology/",
-      "/coverage/",
-      "/api/",
-      "/changelog/",
-    ]);
-    expect(infoGroup?.items.find((item) => item.href === "/api/")?.label).toBe("API Access");
-
-    // LEARN groups the educational surfaces (mechanisms moved here from REFERENCE).
-    const learnGroup = NAV_GROUPS.find((group) => group.key === "learn");
-    expect(learnGroup?.label).toBe("LEARN");
     expect(learnGroup?.items.map((item) => item.href)).toEqual([
       "/learn/",
       "/learn/mechanisms/",
       "/learn/case-studies/",
       "/learn/glossary/",
     ]);
+
+    expect(referenceGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
+      { href: "/methodology/", label: "Methodology" },
+      { href: "/coverage/", label: "Coverage" },
+      { href: "/about/", label: "About" },
+      { href: "/funding/", label: "Funding" },
+    ]);
+
+    expect(referenceGroup?.items.some((item) => item.href.startsWith("/learn/"))).toBe(false);
+    expect(referenceGroup?.items.some((item) => item.href === "/api/")).toBe(false);
+    expect(referenceGroup?.items.some((item) => item.href === "/changelog/")).toBe(false);
+    expect(referenceGroup?.items.some((item) => item.href === "/status/")).toBe(false);
   });
 
-  it("mirrors the primary order on the core rail and suppresses duplicate core links beside it", () => {
-    // The rail and the sidebar primary block are the same set in the same
-    // order; two orderings of the same eight pages read as different menus.
-    expect(CORE_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label }))).toEqual(
-      PRIMARY_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label })),
-    );
+  it("keeps overflow utility routes outside the grouped Reference menu", () => {
+    expect(UTILITY_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label }))).toEqual([
+      { href: "/api/", label: "API Access" },
+      { href: "/changelog/", label: "Changelog" },
+      { href: "/status/", label: "System Status" },
+    ]);
 
-    expect(isCoreNavPath("/timeline/")).toBe(false);
-    expect(isCoreNavPath("/learn/")).toBe(false);
-    expect(isCoreNavPath("/status/")).toBe(false);
-    expect(isCoreNavPath("/learn/mechanisms/")).toBe(false);
-
-    // On a core page the horizontal rail lists the full core set, so the
-    // sidebar keeps Dashboard as its only core entry; the groups stay intact.
-    const corePageNav = getSidebarNavForPath("/yield/");
-    expect(corePageNav.primaryItems.map((item) => item.href)).toEqual(["/"]);
-    expect(corePageNav.groups).toBe(NAV_GROUPS);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/timeline/")).toBe(true);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/learn/mechanisms/")).toBe(true);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/status/")).toBe(true);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/screener/")).toBe(true);
-
-    // Off the core set there is no rail, so the sidebar lists everything.
-    const nonCorePageNav = getSidebarNavForPath("/stablecoin/usdt-tether/");
-    expect(nonCorePageNav.primaryItems).toBe(PRIMARY_NAV_ITEMS);
-    expect(nonCorePageNav.groups).toBe(NAV_GROUPS);
+    const referenceGroup = NAV_GROUPS.find((group) => group.key === "reference");
+    const referenceHrefs = new Set(referenceGroup?.items.map((item) => item.href));
+    for (const item of UTILITY_NAV_ITEMS) {
+      expect(referenceHrefs.has(item.href)).toBe(false);
+      expect(NAV_ITEMS.some((navItem) => navItem.href === item.href)).toBe(true);
+    }
   });
 
-  it("exposes PharosVille as an external companion entry, not a primary or group route", () => {
+  it("sets practical default expansion for grouped mobile and legacy sidebar nav", () => {
+    expect(DEFAULT_EXPANDED).toEqual({
+      overview: true,
+      markets: true,
+      risk: true,
+      analyze: false,
+      learn: false,
+      reference: false,
+    });
+  });
+
+  it("exposes every grouped route to shared nav consumers without duplicates", () => {
+    const groupedHrefs = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.href));
+    const navHrefs = NAV_ITEMS.map((item) => item.href);
+
+    for (const href of groupedHrefs) {
+      expect(navHrefs).toContain(href);
+    }
+
+    expect(new Set(groupedHrefs).size).toBe(groupedHrefs.length);
+    expect(new Set(navHrefs).size).toBe(navHrefs.length);
+  });
+
+  it("exposes PharosVille as an external companion entry, not a grouped route", () => {
     expect(COMPANION_NAV_ITEMS).toHaveLength(1);
     const ville = COMPANION_NAV_ITEMS[0];
     expect(ville.label).toBe("PharosVille");
     expect(ville.external).toBe(true);
     expect(ville.href.startsWith("https://")).toBe(true);
-    expect(PRIMARY_NAV_ITEMS.some((item) => item.label === "PharosVille")).toBe(false);
-    expect(NAV_GROUPS.flatMap((g) => g.items).some((item) => item.label === "PharosVille")).toBe(false);
+    expect(NAV_GROUPS.flatMap((group) => group.items).some((item) => item.label === "PharosVille")).toBe(false);
     expect(NAV_ITEMS.some((item) => item.label === "PharosVille")).toBe(true);
   });
 });

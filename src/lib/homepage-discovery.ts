@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 
 import {
   NAV_GROUPS,
-  PRIMARY_NAV_ITEMS,
   type NavItem,
 } from "@/lib/nav-config";
 import { readJsonStorageValue, writeJsonStorageValue } from "@/lib/browser-storage";
@@ -25,15 +24,22 @@ const HOMEPAGE_DISCOVERY_VISIBLE_COUNT = 5;
 export const HOMEPAGE_DISCOVERY_STORAGE_KEY = "pharos.homepageDiscovery.v1";
 
 const DEFAULT_ROTATION_STATE: HomepageDiscoveryRotationState = { cursor: 0 };
-const DISCOVERY_NAV_GROUP_KEYS = new Set(["data", "tools", "monitor"]);
+const DISCOVERY_NAV_GROUP_KEYS = new Set(["overview", "markets", "risk", "analyze"]);
+const HOMEPAGE_DISCOVERY_DEFAULT_HREFS = [
+  "/chains/",
+  "/portfolio/",
+  "/upcoming/",
+  "/alt-pegs/",
+  "/cemetery/",
+] as const;
 
 const GROUP_ACCENTS: Record<string, string> = {
-  CORE: "var(--brand-accent)",
-  TRACK: "var(--p-teal-500)",
-  ANALYZE: "var(--p-purple-500)",
-  MONITOR: "var(--p-amber-500)",
-  LEARN: "var(--p-green-500)",
-  REFERENCE: "var(--p-blue-500)",
+  Overview: "var(--brand-accent)",
+  Markets: "var(--p-teal-500)",
+  Risk: "var(--p-amber-500)",
+  Analyze: "var(--p-purple-500)",
+  Learn: "var(--p-green-500)",
+  Reference: "var(--p-blue-500)",
   GUIDE: "var(--p-pink-500)",
 };
 
@@ -119,18 +125,20 @@ export function interleaveDiscoverySuggestions(
 }
 
 export const HOMEPAGE_DISCOVERY_POOL: readonly HomepageDiscoverySuggestion[] = [
-  ...PRIMARY_NAV_ITEMS
-    .filter((item) => item.href !== "/" && !item.external)
-    .map((item) => toDiscoverySuggestion(item, "CORE")),
   ...NAV_GROUPS.filter((group) => DISCOVERY_NAV_GROUP_KEYS.has(group.key)).flatMap((group) =>
     group.items
-      .filter((item) => !item.external)
+      .filter((item) => item.href !== "/" && !item.external)
       .map((item) => toDiscoverySuggestion(item, group.label)),
   ),
 ];
 
 export const HOMEPAGE_DISCOVERY_ROTATION_POOL: readonly HomepageDiscoverySuggestion[] =
   interleaveDiscoverySuggestions(HOMEPAGE_DISCOVERY_POOL);
+
+export const HOMEPAGE_DISCOVERY_DEFAULT_SUGGESTIONS: readonly HomepageDiscoverySuggestion[] =
+  HOMEPAGE_DISCOVERY_DEFAULT_HREFS.map((href) =>
+    HOMEPAGE_DISCOVERY_POOL.find((suggestion) => suggestion.href === href),
+  ).filter((suggestion): suggestion is HomepageDiscoverySuggestion => Boolean(suggestion));
 
 export function getHomepageDiscoveryCycleLength(poolLength = HOMEPAGE_DISCOVERY_ROTATION_POOL.length): number {
   if (poolLength <= 0) return 1;

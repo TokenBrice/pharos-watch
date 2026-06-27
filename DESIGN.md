@@ -181,7 +181,7 @@ Lead with the character, then specify shape, color assignment, states, and disti
 
 ### Navigation — Top Nav (signature; replaced the sidebar)
 A global top bar at `≥lg`; content runs full-width beneath it. The left "watch column" sidebar is retired.
-- **Contents:** brand mark (Bricolage wordmark) · six dropdown menus (Terminal / Track / Monitor / Analyze / Docs / Resources, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Telegram Bot / What's New / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
+- **Contents:** brand mark (Bricolage wordmark) · six dropdown menus (Overview / Markets / Risk / Analyze / Learn / Reference, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Telegram Bot / What's New / API Access / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
 - **Behavior:** sticky `h-14`, frosted (`bg-background/85 backdrop-blur-md`), hairline bottom border. Active menu = neutral `bg-muted/60 text-foreground` (**not** frost). A `CoreTopRail` tape (registry chips + event ticker) sticks below it.
 - **Mobile:** the `header.tsx` drawer (`<lg`), whose active group keeps a `border-l-frost-blue` accent. The desktop sidebar/`watch-column` lighthouse beam is gone, but the **detail-page `LongformScrollspyNav`** retains the frost-lit active pill (`text-frost-blue` + `pharos-nav-beam`).
 

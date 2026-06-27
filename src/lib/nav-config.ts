@@ -64,55 +64,54 @@ export interface NavGroup {
 
 const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
-// Canonical core order — the top rail and the sidebar primary block must list
-// the same eight destinations in the same sequence, or the two menus read as
-// different products.
-export const PRIMARY_NAV_ITEMS: NavItem[] = [
-  DASHBOARD_NAV_ITEM,
-  { href: "/safety-scores/", label: "Safety Scores", icon: ShieldCheck, description: "Cross-market safety grades and contagion scenarios" },
-  { href: "/depeg/", label: "Depeg/DDR", icon: Activity, description: "Live peg incidents, DEWS early warnings, DDR recovery outlooks, and reviews" },
-  { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer control over your stablecoin balance, surfaced live" },
-  { href: "/alt-pegs/", label: "Alt-Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
-  { href: "/yield/", label: "Yield Intelligence", icon: CircleDollarSign, description: "Yield ranked after adjusting for stablecoin risk" },
-  { href: "/stability-index/", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
-  { href: "/pharoswatchbot/", label: "PharosWatchBot", icon: Send, description: "Push alerts for depegs, DEWS shifts, launches, and the daily digest" },
-];
-
 export const NAV_GROUPS: NavGroup[] = [
   {
-    key: "data",
-    label: "TRACK",
+    key: "overview",
+    label: "Overview",
+    items: [
+      DASHBOARD_NAV_ITEM,
+      { href: "/stability-index/", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
+      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
+      { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
+      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "PharosWatchBot push alerts for depegs, DEWS shifts, launches, and the daily digest" },
+    ],
+  },
+  {
+    key: "markets",
+    label: "Markets",
     items: [
       { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and market support" },
       { href: "/flows/", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
       { href: "/chains/", label: "Chains", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
+      { href: "/alt-pegs/", label: "Alt-Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
+      { href: "/yield/", label: "Yield Intelligence", icon: CircleDollarSign, description: "Yield ranked after adjusting for stablecoin risk" },
+      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
+    ],
+  },
+  {
+    key: "risk",
+    label: "Risk",
+    items: [
+      { href: "/safety-scores/", label: "Safety Scores", icon: ShieldCheck, description: "Cross-market safety grades and contagion scenarios" },
+      { href: "/depeg/", label: "Depeg/DDR", icon: Activity, description: "Live peg incidents, DEWS early warnings, DDR recovery outlooks, and reviews" },
+      { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer control over your stablecoin balance, surfaced live" },
+      { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA authorization and GENIUS implementation status across tracked stablecoins" },
       { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
     ],
   },
   {
-    key: "tools",
-    label: "ANALYZE",
+    key: "analyze",
+    label: "Analyze",
     items: [
       { href: "/screener/", label: "Screener", icon: SlidersHorizontal, description: "Multi-axis filter across every tracked stablecoin" },
       { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
-      { href: "/portfolio/", label: "Portfolio Audit", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
       { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },
-    ],
-  },
-  {
-    key: "monitor",
-    label: "MONITOR",
-    items: [
-      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
-      { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA authorization and GENIUS implementation status across tracked stablecoins" },
-      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
-      { href: "/digest/", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
-      { href: "/status/", label: "Pharos Status", icon: MonitorCheck, description: "Live health of every data pipeline and cron sync" },
+      { href: "/portfolio/", label: "Portfolio Audit", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
     ],
   },
   {
     key: "learn",
-    label: "LEARN",
+    label: "Learn",
     items: [
       { href: "/learn/", label: "Learn", icon: BookOpen, description: "Stablecoin mechanisms, case studies, and glossary definitions" },
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each stablecoin design produces its peg" },
@@ -121,21 +120,22 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    key: "info",
-    label: "REFERENCE",
+    key: "reference",
+    label: "Reference",
     items: [
-      { href: "/about/", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
-      { href: "/funding/", label: "Funding", icon: Heart, description: "Running costs, supporter ledger, and public sustainability path" },
       { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
       { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
-      { href: "/api/", label: "API Access", icon: KeyRound, description: "Request a public API key and open the endpoint reference" },
-      { href: "/changelog/", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
+      { href: "/about/", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
+      { href: "/funding/", label: "Funding", icon: Heart, description: "Running costs, supporter ledger, and public sustainability path" },
     ],
   },
 ];
 
-// The horizontal core rail shows exactly the primary set, in the same order.
-export const CORE_NAV_ITEMS: NavItem[] = PRIMARY_NAV_ITEMS;
+export const UTILITY_NAV_ITEMS: NavItem[] = [
+  { href: "/api/", label: "API Access", icon: KeyRound, description: "Request a public API key and open the endpoint reference" },
+  { href: "/changelog/", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
+  { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline and cron sync" },
+];
 
 export function normalizeNavPath(pathname: string): string {
   if (pathname === "/") return "/";
@@ -152,28 +152,13 @@ export function stickyChromeTopOffsetClass(pathname: string | null | undefined):
   return pathname === "/" ? "top-0" : "top-[3px]";
 }
 
-export function isCoreNavPath(pathname: string | null | undefined): boolean {
-  if (!pathname) return false;
-  const normalizedPath = normalizeNavPath(pathname);
-  return CORE_NAV_ITEMS.some((item) => normalizeNavPath(item.href) === normalizedPath);
-}
-
-export function getSidebarNavForPath(pathname: string | null | undefined): { primaryItems: NavItem[]; groups: NavGroup[] } {
-  // While a core page is active the horizontal rail already lists the full
-  // core set, so the sidebar keeps Dashboard as its only core entry instead of
-  // duplicating all eight shortcuts beside an identical menu.
-  if (isCoreNavPath(pathname)) {
-    return { primaryItems: [DASHBOARD_NAV_ITEM], groups: NAV_GROUPS };
-  }
-  return { primaryItems: PRIMARY_NAV_ITEMS, groups: NAV_GROUPS };
-}
-
 export const DEFAULT_EXPANDED: Record<string, boolean> = {
-  data: true,
-  tools: false,
-  monitor: false,
-  info: false,
+  overview: true,
+  markets: true,
+  risk: true,
+  analyze: false,
   learn: false,
+  reference: false,
 };
 
 /** Bottom items (always shown at sidebar bottom) */
@@ -194,8 +179,8 @@ export const COMPANION_NAV_ITEMS: NavItem[] = [
 
 /** Flat list for use in header and command palette */
 export const NAV_ITEMS: NavItem[] = [
-  ...PRIMARY_NAV_ITEMS,
   ...NAV_GROUPS.flatMap((g) => g.items),
+  ...UTILITY_NAV_ITEMS,
   ...BOTTOM_NAV_ITEMS,
   ...COMPANION_NAV_ITEMS,
 ];

@@ -5,13 +5,14 @@ import { RotateCw } from "lucide-react";
 import { useMemo, useState, type CSSProperties, type JSX } from "react";
 
 import {
+  HOMEPAGE_DISCOVERY_DEFAULT_SUGGESTIONS,
   HOMEPAGE_DISCOVERY_ROTATION_POOL,
   selectHomepageDiscoverySuggestions,
   type HomepageDiscoverySuggestion,
 } from "@/lib/homepage-discovery";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_SUGGESTIONS = selectHomepageDiscoverySuggestions(HOMEPAGE_DISCOVERY_ROTATION_POOL, 9);
+const DEFAULT_SUGGESTIONS = HOMEPAGE_DISCOVERY_DEFAULT_SUGGESTIONS;
 
 function discoveryAccentStyle(suggestion: HomepageDiscoverySuggestion): CSSProperties {
   return { "--discovery-accent": suggestion.accent } as CSSProperties;
