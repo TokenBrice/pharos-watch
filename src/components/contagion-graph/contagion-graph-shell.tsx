@@ -30,8 +30,8 @@ export function ContagionGraphShell({
       <Card
         className={
           fullscreenMode
-            ? "flex h-full min-h-0 flex-col overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none"
-            : "overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none"
+            ? "flex h-full min-h-0 flex-col overflow-hidden rounded-md border-border/70 bg-card shadow-none"
+            : "overflow-hidden rounded-md border-border/70 bg-card shadow-none"
         }
       >
         <CardHeader className="space-y-3 border-b border-border/70 bg-background/25 pb-3">
