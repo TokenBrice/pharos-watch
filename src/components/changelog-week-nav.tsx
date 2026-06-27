@@ -88,7 +88,7 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
                   compact: true,
                 })}
                 {isLatest && (
-                  <span className="inline-flex items-center rounded-full bg-frost-blue/15 px-2 py-0.5 text-[10px] font-sans font-semibold uppercase tracking-wider text-frost-blue">
+                  <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-sans font-semibold uppercase tracking-wider text-foreground">
                     Latest
                   </span>
                 )}

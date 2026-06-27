@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildFaqJsonLd } from "@/lib/faq";
-import { digestDisplay } from "@/lib/fonts/digest";
 import {
   COMPANION_FEATURES,
   COMPUTED_FEATURES,
@@ -283,10 +282,7 @@ export default function AboutPage() {
         <section aria-labelledby="about-lede" className="space-y-3 pb-2">
           <p
             id="about-lede"
-            className={cn(
-              digestDisplay.className,
-              "w-full max-w-none text-[clamp(1.5rem,2.6vw,2.25rem)] font-normal leading-[1.2] tracking-[-0.012em] text-foreground/95 [text-wrap:balance]",
-            )}
+            className="w-full max-w-none text-[clamp(1.35rem,2.35vw,2rem)] font-semibold leading-[1.18] tracking-tight text-foreground/95 [text-wrap:balance]"
           >
             Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
             at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}live tokens and the chains

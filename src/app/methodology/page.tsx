@@ -13,8 +13,6 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } from "./methodology-shared";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
-import { digestDisplay } from "@/lib/fonts/digest";
-import { EDITORIAL_BODY_STYLE } from "@/lib/digest";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Methodology: How Pharos Grades Stablecoins",
@@ -188,24 +186,18 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
-      {/* Editorial preface — pinned long-form, written once, not regenerated. */}
+      {/* Long-form preface — pinned copy, written once, not regenerated. */}
       <section
         aria-label="Editorial preface"
         className="mx-auto w-full max-w-[88ch] border-y border-border/60 py-10 md:py-12"
       >
         <p className="pharos-kicker text-foreground/80">Editorial Preface</p>
         <h2
-          className={cn(
-            digestDisplay.className,
-            "mt-3 text-[clamp(1.8rem,3.6vw,2.6rem)] font-semibold leading-[1.04] tracking-[-0.025em] text-foreground [text-wrap:balance]",
-          )}
+          className="mt-3 text-[clamp(1.65rem,3.2vw,2.35rem)] font-semibold leading-tight tracking-tight text-foreground [text-wrap:balance]"
         >
           How Pharos grades every stablecoin, and what it refuses to grade.
         </h2>
-        <div
-          className="mt-6 space-y-5 text-[1.02rem] leading-[1.85] text-foreground/88 sm:text-[1.06rem]"
-          style={EDITORIAL_BODY_STYLE}
-        >
+        <div className="mt-6 space-y-5 text-[0.97rem] leading-7 text-foreground/88 sm:text-base sm:leading-8">
           <p>
             Every safety grade Pharos publishes is the answer to one question: if this stablecoin started bleeding
             tomorrow, how much of the loss would the holder eat before the system stopped it? Four base dimensions
@@ -248,7 +240,7 @@ export default function MethodologyPage() {
             on the structural dimensions alone.
           </p>
         </div>
-        <p className={cn(digestDisplay.className, "mt-8 text-sm italic text-muted-foreground")}>
+        <p className="mt-8 text-sm italic text-muted-foreground">
           &mdash; Pharos, May 2026
         </p>
       </section>

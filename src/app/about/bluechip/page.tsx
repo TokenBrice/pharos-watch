@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { digestDisplay } from "@/lib/fonts/digest";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
@@ -40,7 +39,7 @@ function BluechipSection({
         <p className="pharos-kicker">{eyebrow}</p>
         <h2
           id={headingId}
-          className={`${digestDisplay.className} text-[1.55rem] font-semibold leading-tight tracking-[-0.01em] text-foreground sm:text-[1.7rem]`}
+          className="text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.65rem]"
         >
           {title}
         </h2>
@@ -81,7 +80,7 @@ export default function AboutBluechipPage() {
           {BLUECHIP_WHAT_IT_MEANS.map((paragraph, index) => (
             <p
               key={index}
-              className={`${digestDisplay.className} text-[1.05rem] leading-relaxed text-foreground/90`}
+              className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]"
             >
               {paragraph}
             </p>
@@ -89,7 +88,7 @@ export default function AboutBluechipPage() {
         </BluechipSection>
 
         <BluechipSection eyebrow="Section 2" title="The gates">
-          <p className={`${digestDisplay.className} text-[1.05rem] leading-relaxed text-foreground/90`}>
+          <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
             Each gate is independent. A coin clears Bluechip only when every gate clears at the same
             moment, and only while it continues to do so.
           </p>
@@ -106,7 +105,7 @@ export default function AboutBluechipPage() {
                   <h3 className="text-sm font-semibold tracking-tight text-foreground">
                     {gate.title}
                   </h3>
-                  <p className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
+                  <p className="text-sm leading-relaxed text-foreground/82 sm:text-[0.95rem]">
                     {gate.body}
                   </p>
                 </div>
@@ -116,7 +115,7 @@ export default function AboutBluechipPage() {
         </BluechipSection>
 
         <BluechipSection eyebrow="Section 3" title="What Bluechip refuses to grant">
-          <p className={`${digestDisplay.className} text-[1.05rem] leading-relaxed text-foreground/90`}>
+          <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
             These are the calls Pharos refuses to make under the Bluechip label, regardless of how the
             other dimensions read. The refusals are part of the rating — they are not gaps waiting to
             be filled.
@@ -130,7 +129,7 @@ export default function AboutBluechipPage() {
                   </span>{" "}
                   {entry.title}
                 </h3>
-                <p className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
+                <p className="text-sm leading-relaxed text-foreground/82 sm:text-[0.95rem]">
                   {entry.body}
                 </p>
               </article>
@@ -139,7 +138,7 @@ export default function AboutBluechipPage() {
         </BluechipSection>
 
         <BluechipSection eyebrow="Section 4" title="Methodology and audit trail">
-          <p className={`${digestDisplay.className} text-[1.05rem] leading-relaxed text-foreground/90`}>
+          <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
             Bluechip rides the Safety Score methodology version. When a floor definition changes, the
             version pin moves with it; the editorial designation is re-derived against the new rules
             before the next refresh, never grandfathered.
@@ -157,7 +156,7 @@ export default function AboutBluechipPage() {
               <dt className="text-sm font-semibold tracking-tight text-foreground">
                 Rules of record
               </dt>
-              <dd className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
+              <dd className="text-sm leading-relaxed text-foreground/82 sm:text-[0.95rem]">
                 <Link
                   href="/methodology/#safety-scores-methodology"
                   className="pharos-prose-link"
@@ -170,7 +169,7 @@ export default function AboutBluechipPage() {
               <dt className="text-sm font-semibold tracking-tight text-foreground">
                 Version history
               </dt>
-              <dd className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
+              <dd className="text-sm leading-relaxed text-foreground/82 sm:text-[0.95rem]">
                 <Link
                   href="/methodology/scoring-changelog/"
                   className="pharos-prose-link"
@@ -183,7 +182,7 @@ export default function AboutBluechipPage() {
               <dt className="text-sm font-semibold tracking-tight text-foreground">
                 Cross-reference
               </dt>
-              <dd className={`${digestDisplay.className} text-[1.02rem] leading-relaxed text-foreground/85`}>
+              <dd className="text-sm leading-relaxed text-foreground/82 sm:text-[0.95rem]">
                 <Link
                   href="/learn/glossary/#bluechip"
                   className="pharos-prose-link"
@@ -196,7 +195,7 @@ export default function AboutBluechipPage() {
         </BluechipSection>
 
         <BluechipSection eyebrow="Section 5" title="Active Bluechip stablecoins">
-          <p className={`${digestDisplay.className} text-[1.05rem] leading-relaxed text-foreground/90`}>
+          <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
             The coins below are the live intersection of external Bluechip A-tier ratings and
             Pharos A-tier report cards. The roster is current-state, not historical: a coin that
             falls below either floor leaves the list in the next refresh.

@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { digestDisplay } from "@/lib/fonts/digest";
 import type { ChangelogEntry } from "@/data/changelogs/types";
 
 function toLocalMidnight(ymd: string): Date {
@@ -113,7 +112,7 @@ export function ChangelogEntryCard({
           </a>
           <span className="flex items-center gap-2">
             {isLatest && (
-              <span className="inline-flex items-center rounded-full bg-frost-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-frost-blue">
+              <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground">
                 Latest
               </span>
             )}
@@ -131,16 +130,11 @@ export function ChangelogEntryCard({
       )}
 
       {fieldNotes && (
-        <aside className="mt-5 border-l-2 border-frost-blue/40 pl-4">
-          <p
-            className={cn(
-              digestDisplay.className,
-              "text-xs font-semibold uppercase tracking-[0.18em] text-frost-blue/80",
-            )}
-          >
+        <aside className="mt-5 border-l border-border/70 pl-4">
+          <p className="pharos-kicker text-muted-foreground">
             {formatFieldNotesKicker(dateRange.from)}
           </p>
-          <p className="mt-2 max-w-[68ch] font-mono text-[0.95rem] leading-relaxed italic text-foreground/85">
+          <p className="mt-2 max-w-[68ch] text-sm leading-relaxed text-foreground/85">
             {fieldNotes}
           </p>
         </aside>

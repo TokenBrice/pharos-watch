@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
@@ -104,14 +103,14 @@ function GlossaryEntryBlock({ entry }: { entry: GlossaryEntry }) {
     <article id={entry.id} className="scroll-mt-32 space-y-3 py-7 first:pt-3">
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2
-          className={`${digestDisplay.className} text-[1.7rem] font-semibold leading-tight tracking-[-0.01em] text-foreground sm:text-[1.85rem]`}
+          className="text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-2xl"
         >
           {entry.term}
         </h2>
         <p className="pharos-kicker">Methodology {entry.methodologyVersion}</p>
       </header>
       <p
-        className={`${digestDisplay.className} text-[1.05rem] leading-relaxed text-foreground/90`}
+        className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]"
       >
         {entry.definition}
       </p>
