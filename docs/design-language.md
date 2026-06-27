@@ -44,7 +44,7 @@ Visible slash-separated breadcrumb trails are retired from page headers. Routes 
 - Body carries four font variables: `geistSans`, `geistMono`, `jetbrainsMono`, `bricolageDisplay` (+ `antialiased`); scoped utilities `pharos-font-sans` / `pharos-font-mono`
 - Sans / UI token: Geist Sans (system-first fallback)
 - Mono / data token: **JetBrains Mono** (Figma redesign), folded into `--font-geist-mono` so every `.pharos-numeric` / table figure inherits it
-- Display token (`--font-display`, `.pharos-display`, `.pharos-page-title`): **Bricolage Grotesque** (ink-trap; ABC Whyte Inktrap substitute) for headings + the top-nav wordmark
+- Display token (`--font-display`, `.pharos-display`, `.pharos-page-title`): **ABC Whyte Inktrap** for headings + the top-nav wordmark when licensed files are installed at `public/fonts/abc-whyte-inktrap/`; **Bricolage Grotesque** remains the tracked fallback for clean builds.
 - Default corner radius token: `--radius: .5rem`
 - Body background adds two subtle radial glow layers via `--page-glow-top` and `--page-glow-bottom`
 
@@ -53,13 +53,24 @@ Visible slash-separated breadcrumb trails are retired from page headers. Routes 
 Public pages use this shell:
 
 ```tsx
-{/* Desktop primary nav (≥lg) — replaces the retired left "watch column" sidebar */}
-<TopNav />; {/* sticky h-14 full-width bar, lg:flex */}
+{
+  /* Desktop primary nav (≥lg) — replaces the retired left "watch column" sidebar */
+}
+<TopNav />;
+{
+  /* sticky h-14 full-width bar, lg:flex */
+}
 <header
   className="lg:hidden sticky top-[3px] z-[56] border-b border-border/80 bg-background"
   style={{ boxShadow: "var(--elevation-rest)" }}
-/>; {/* mobile header */}
-<CoreTopRail />; {/* live tape (registry chips + ticker), sticky below the nav */}
+/>;
+{
+  /* mobile header */
+}
+<CoreTopRail />;
+{
+  /* live tape (registry chips + ticker), sticky below the nav */
+}
 <div className="flex min-h-screen">
   {/* No sidebar / no sidebar spacer — content is full-width */}
   <div className="flex-1 flex flex-col min-w-0">
