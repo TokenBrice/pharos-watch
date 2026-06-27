@@ -16,6 +16,54 @@
 @import "../styles/tokens/primitives.css";
 @import "../styles/tokens/semantic.css";
 
+@font-face {
+  font-family: "ABC Whyte Inktrap";
+  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ABC Whyte Inktrap";
+  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-RegularItalic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ABC Whyte Inktrap";
+  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ABC Whyte Inktrap";
+  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-MediumItalic.woff2") format("woff2");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ABC Whyte Inktrap";
+  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ABC Whyte Inktrap";
+  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-BoldItalic.woff2") format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 .pharos-font-sans {
@@ -33,7 +81,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: Georgia, "Times New Roman", serif;
-  --font-display: var(--font-bricolage), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-pharos-display);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -72,6 +120,8 @@
    ────────────────────────────────────────────────────────────────── */
 :root {
   --radius: 0.5rem;
+  --font-pharos-display:
+    "ABC Whyte Inktrap", var(--font-bricolage), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   /* 2.4.11 Focus Not Obscured (Minimum) — keep focused rows clear of the
      sticky table header and the mobile utility dock. Defaults to 0 on desktop
      where `--table-header-top` is unset; the mobile breakpoint below redefines
@@ -499,17 +549,15 @@
 
   .pharos-page-title {
     @apply min-w-0 text-3xl font-extrabold tracking-tight sm:text-4xl;
-    font-family: var(--font-bricolage);
+    font-family: var(--font-pharos-display);
     line-height: 1.05;
   }
 
-  /* Editorial display face (Bricolage Grotesque ink-trap) for hero/section
-     headings carried over from the Figma redesign. Apply to a heading to lend
-     it the redesign's display character; pairs with font-extrabold/bold.
-     Reference --font-bricolage directly: --font-display lives in @theme inline
-     (it powers the `font-display` utility) and is not emitted as a runtime var. */
+  /* Editorial display face for hero/section headings carried over from the
+     Figma redesign. ABC Whyte Inktrap loads when licensed webfonts are present;
+     Bricolage Grotesque remains the tracked fallback. */
   .pharos-display {
-    font-family: var(--font-bricolage);
+    font-family: var(--font-pharos-display);
     letter-spacing: -0.01em;
   }
 
@@ -1408,8 +1456,7 @@
     box-shadow: var(--table-header-shadow);
   }
 
-  :where(.pharos-density-compact, .pharos-density-spacious)
-    :where([data-slot="table"]).text-sm {
+  :where(.pharos-density-compact, .pharos-density-spacious) :where([data-slot="table"]).text-sm {
     font-size: var(--pharos-table-font-size);
     line-height: var(--pharos-table-line-height);
   }
@@ -1419,13 +1466,11 @@
     padding-inline: var(--pharos-table-cell-padding-x);
   }
 
-  :where(.pharos-density-compact, .pharos-density-spacious)
-    :where([data-slot="table-cell"]).py-2 {
+  :where(.pharos-density-compact, .pharos-density-spacious) :where([data-slot="table-cell"]).py-2 {
     padding-block: var(--pharos-table-cell-padding-y);
   }
 
-  :where(.pharos-density-compact, .pharos-density-spacious)
-    :where([data-slot="table-head"]).h-10 {
+  :where(.pharos-density-compact, .pharos-density-spacious) :where([data-slot="table-head"]).h-10 {
     height: var(--pharos-table-head-height);
   }
 

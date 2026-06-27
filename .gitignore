@@ -35,6 +35,10 @@
 # production
 /build
 
+# Licensed commercial webfonts. Install locally from the Dinamo order zip with:
+#   npm run install:whyte-fonts -- /path/to/order.zip
+/public/fonts/abc-whyte-inktrap/*.woff2
+
 # misc
 .DS_Store
 *.pem

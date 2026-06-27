@@ -133,6 +133,7 @@
     "check:phishing-signatures": "node scripts/ci/check-phishing-signatures.mjs",
     "check:classifier-sensitive-copy": "node scripts/ci/check-classifier-sensitive-copy.mjs",
     "check:safe-browsing": "node scripts/ci/check-safe-browsing.mjs",
+    "install:whyte-fonts": "node scripts/maintenance/install-whyte-fonts.mjs",
     "check:llms-txt": "tsx scripts/maintenance/generate-llms-txt.ts --check",
     "check:reserve-fixture-freshness": "node scripts/ci/check-reserve-fixture-freshness.mjs",
     "check:selector-banned-phrases": "node scripts/ci/check-selector-banned-phrases.mjs",

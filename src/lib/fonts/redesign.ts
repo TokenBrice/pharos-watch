@@ -11,9 +11,11 @@ export const jetbrainsMono = localFont({
   fallback: ["SFMono-Regular", "ui-monospace", "Menlo", "Monaco", "Consolas", "Liberation Mono", "monospace"],
 });
 
-// Bricolage Grotesque — free ink-trap display face standing in for the design's
-// commercial ABC Whyte Inktrap. Self-hosted variable woff2 (OFL). Drives the
-// --font-display token used by editorial/display headings.
+// Bricolage Grotesque — tracked OFL fallback for the licensed ABC Whyte
+// Inktrap webfonts loaded from public/fonts/abc-whyte-inktrap in globals.css.
+// Dinamo's terms prohibit committing the commercial font binaries to public
+// repositories, so this fallback keeps clean builds functional when the ignored
+// licensed files have not been installed.
 export const bricolageDisplay = localFont({
   src: [{ path: "../../assets/fonts/BricolageGrotesque-Variable.woff2", weight: "200 800", style: "normal" }],
   display: "swap",
