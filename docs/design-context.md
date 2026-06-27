@@ -1,6 +1,6 @@
 # Design Context
 
-> Canonical human-facing source. The root [`DESIGN.md`](../DESIGN.md) is the machine-readable mirror (Stitch format, for AI agents generating screens), written to the **Figma redesign target** — neutral/monochrome base · Radix status hues · purple as a minor categorical accent · global top-nav, frost-blue lighthouse retired — with a punch-list tracking where live tokens still diverge. **Note:** parts of this doc and `design-language.md`/`design-tokens.md` still describe the pre-migration frost-blue/sidebar identity and need a corpus refresh to match. Regenerate `DESIGN.md` with `/impeccable document` when the Figma or homepage composition changes.
+> Canonical human-facing source. The root [`DESIGN.md`](../DESIGN.md) is the machine-readable mirror (Stitch format, for AI agents generating screens), kept faithful to the **as-built code**: frost-blue + the drawn lighthouse identity are retained, with the Figma redesign's global top-nav (the left "watch column" sidebar retired). A Figma handoff proposed a neutral/Radix repaint; the owner's final call (2026-06-27) kept frost-blue. Regenerate `DESIGN.md` with `/impeccable document` when tokens or the homepage composition change.
 
 ## Users
 

@@ -71,7 +71,7 @@ Scoped to specific UI components. Optional — use when a component needs tokens
 
 - **Card** — `--card-bg`, `--card-border`, `--card-shadow`, `--card-shadow-hover`, `--card-shell-bg`, `--card-shell-highlight`, `--panel-header-bg`
 - **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`, `--table-header-shadow`, `--table-sticky-column-*`
-- **Sidebar** — `--sidebar-bg`, `--sidebar-border`, `--sidebar-item-hover`, `--sidebar-width-expanded`, `--sidebar-width-collapsed`
+- **Sidebar** (legacy) — `--sidebar-bg`, `--sidebar-border`, `--sidebar-item-hover`, `--sidebar-width-expanded`, `--sidebar-width-collapsed`. The left sidebar was retired for the global `TopNav` in the Figma redesign; these tokens are now inert and pending cleanup.
 
 ## Bridge Layer (`src/app/globals.css`)
 

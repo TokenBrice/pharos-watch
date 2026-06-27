@@ -268,7 +268,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/blacklist-table.tsx` - BlacklistTable
 - `src/components/bluechip-header-badge.tsx` - BluechipHeaderBadge
 - `src/components/breadcrumb-json-ld.tsx` - BreadcrumbItem, BreadcrumbJsonLd
-- `src/components/breadcrumb.tsx` - Breadcrumb, BreadcrumbItem
 - `src/components/callout-banner.tsx` - CalloutBanner
 - `src/components/cemetery-charts.tsx` - CemeteryCharts
 - `src/components/cemetery-client.tsx` - CemeteryClient
@@ -291,7 +290,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 389 more files omitted; use `rg --files src/components` for the full list.
+- `src/components/coin-notice.tsx` - CoinNotices
+- ... 390 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 

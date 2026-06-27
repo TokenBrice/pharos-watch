@@ -1,28 +1,28 @@
 ---
 name: Pharos
-description: Stablecoin intelligence as a quiet, neutral instrument — monochrome by default, color only where it carries signal.
+description: Stablecoin intelligence as a calm, dense instrument — a lighthouse that watches every peg.
 colors:
-  accent-purple: "#8e4ec6"
-  info-blue: "#0090ff"
-  surface-base: "#fcfcfc"
-  surface-raised: "#ffffff"
-  surface-sunken: "#f0f0f0"
-  text-primary: "#202020"
-  text-secondary: "#646464"
-  text-muted: "#8d8d8d"
-  border-default: "#00000014"
-  border-subtle: "#0000000d"
-  status-success: "#30a46c"
-  status-alert: "#ffe629"
-  status-warning: "#f76b15"
-  status-danger: "#e5484d"
+  frost-blue: "#4bc4de"
+  control-ink: "oklch(0.19 0.01 255)"
+  surface-base: "oklch(0.985 0 0)"
+  surface-raised: "oklch(0.97 0 0)"
+  surface-overlay: "oklch(1 0 0)"
+  text-primary: "oklch(0.145 0 0)"
+  text-secondary: "oklch(0.4 0.009 260)"
+  text-tertiary: "oklch(0.52 0.007 260)"
+  border-default: "oklch(0.922 0 0)"
+  border-subtle: "oklch(0.97 0 0)"
+  severity-healthy: "#22c55e"
+  severity-mild: "#b45309"
+  severity-moderate: "#f97316"
+  severity-severe: "#ef4444"
 typography:
   display:
     fontFamily: "Bricolage Grotesque, system-ui, -apple-system, sans-serif"
-    fontSize: "2rem"
+    fontSize: "1.875rem"
     fontWeight: 800
     lineHeight: 1.05
-    letterSpacing: "-0.02em"
+    letterSpacing: "-0.025em"
   headline:
     fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
     fontSize: "1.5rem"
@@ -30,13 +30,13 @@ typography:
     lineHeight: 1.15
     letterSpacing: "-0.01em"
   title:
-    fontFamily: "Geist, system-ui, sans-serif"
+    fontFamily: "Geist Sans, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
-    lineHeight: 1.2
+    lineHeight: 1.18
     letterSpacing: "-0.01em"
   body:
-    fontFamily: "Geist, system-ui, sans-serif"
+    fontFamily: "Geist Sans, system-ui, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
@@ -48,11 +48,11 @@ typography:
     lineHeight: 1.4
     fontFeature: "tabular-nums slashed-zero"
   label:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "Geist Sans, system-ui, sans-serif"
     fontSize: "0.6875rem"
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: "0.08em"
+    letterSpacing: "0.12em"
 rounded:
   sm: "4px"
   md: "6px"
@@ -71,194 +71,180 @@ spacing:
   "10": "40px"
 components:
   card:
-    backgroundColor: "{colors.surface-raised}"
+    backgroundColor: "{colors.surface-overlay}"
     rounded: "{rounded.xl}"
     padding: "20px"
-  metric-primary:
-    textColor: "{colors.info-blue}"
+  hero-metric:
+    textColor: "{colors.frost-blue}"
     typography: "{typography.numeric}"
   numeric-cell:
     textColor: "{colors.text-primary}"
     typography: "{typography.numeric}"
-  pill:
+  control-pill:
     textColor: "{colors.text-secondary}"
     rounded: "{rounded.full}"
     padding: "8px 12px"
     height: "36px"
-  pill-active:
-    backgroundColor: "{colors.text-primary}"
+  control-pill-active:
+    backgroundColor: "{colors.control-ink}"
     textColor: "{colors.surface-base}"
     rounded: "{rounded.full}"
     padding: "8px 12px"
     height: "36px"
-  badge-category:
-    textColor: "{colors.accent-purple}"
-    rounded: "{rounded.sm}"
-    padding: "2px 8px"
 ---
 
 # Design System: Pharos
 
 ## 1. Overview
 
-**Creative North Star: "The Quiet Instrument"**
+**Creative North Star: "The Lighthouse Watch"**
 
-Pharos is a precision instrument for crypto-native practitioners — a Bloomberg Terminal scoped to stablecoins. The interface is **monochrome by default**: a neutral Radix-gray field where the chrome recedes and the data leads. Color is rationed and it always means something — a Radix **status** hue (peg health, risk, trend), the **info-blue** that marks the primary live metrics, or a **quiet purple** categorical tag. Nothing is colored for decoration. The mood is calm authority: composed in the steady state, sharper only when a risk signal fires.
+Pharos is a lighthouse — it watches every peg so the user doesn't have to. The interface is a calm, dense instrument for crypto-native practitioners: a Bloomberg Terminal scoped to stablecoins. It earns trust through completeness and precision, not decoration. Color stays still by default; what moves is the **frost-blue beam** (`#4bc4de`, sampled from the Figma "Market Pulse" frame), which lights live data and the lighthouse metaphor. Everything else is neutral, flat, and tabular.
 
-This system was rebuilt from a professional designer's Figma against a real Radix-based component library (Card / Button / Table / Badge / Form / SegmentedControl / Dropdown). It is **light-default** with a full dark theme. Headings carry an ink-trap display face (Bricolage Grotesque, standing in for the design's commercial ABC Whyte Inktrap) on editorial and section moments; the dense UI runs on Geist; every digit is JetBrains Mono with tabular figures and a slashed zero. Navigation is a **global top-nav with full-width content** — there is no sidebar. Density is a two-mode toggle (spacious default, compact), calibrated further by surface tier: discovery breathes, analytics holds default, power-user tables compress.
+This is the as-built system after the designer's Figma redesign. It is **light-default** with a full dark theme. The redesign delivered a global **top-nav** (the old left "watch column" sidebar is retired), the ink-trap display face (Bricolage Grotesque, standing in for the design's ABC Whyte Inktrap), JetBrains Mono for every figure, flat cards, and a two-mode density (spacious default / compact). **Frost-blue and the drawn lighthouse/nautical identity were deliberately kept** — they are the brand, per PRODUCT.md's "Pharos is a lighthouse — *draw it*." Density is calibrated by surface tier: discovery breathes, the analytics core holds default, power-user tables compress.
 
-It explicitly rejects the Web3-marketing aesthetic (purple *gradients*, glassmorphism, buzzwords), corporate-fintech blandness, and the generic-SaaS dashboard of interchangeable KPI tiles. Cards are flat. Accents are semantic.
+It explicitly rejects the Web3-marketing aesthetic (purple gradients, glassmorphism, buzzwords), corporate-fintech blandness, and the generic-SaaS dashboard of interchangeable KPI tiles. Cards are flat. Accents are semantic. The lighthouse is the only metaphor, and it is drawn, not decorated.
 
-**Source of truth.** This file is faithful to the **Figma redesign + owner decisions (2026-06-27)** — the design source of truth — and is the machine-readable mirror for AI agents generating screens. The canonical human-facing rationale lives in `docs/design-context.md` (canonical), `docs/design-language.md`, and `docs/design-tokens.md`. The Figma inventory and token extraction live in `agents/figma-redesign/` (`README.md`, `frames/`, `refs/`). Regenerate this file (`/impeccable document`) when the Figma or the homepage composition changes.
+**Source of truth.** This file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-context.md` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`. The Figma inventory lives in `agents/figma-redesign/`. Regenerate this file (`/impeccable document`) when tokens or the homepage composition change.
 
-**Known code divergences (migration punch-list — code → Figma).** The live tokens in `src/styles/tokens/*.css` have not finished migrating; this spec describes the target, and the gaps below are the work to close:
-- **Accent token:** code still ships `--brand-accent`/`--chart-primary` = frost-blue `#4bc4de`; Figma retires the frost-blue "lighthouse" identity. Primary metrics should resolve to **info-blue** (`#0090ff` / `#70b8ff` on dark); neutralize the brand accent and reintroduce **purple** (`#8e4ec6`) as the categorical tag.
-- **Status hues:** code uses Tailwind hexes (`#22c55e`/`#f97316`/`#ef4444`); migrate to **Radix** (`#30a46c`/`#f76b15`/`#e5484d`, plus yellow `#ffe629`). Badge fills move to ~16% alpha tints; route Grade/Type recolors through `shared/lib/classification.ts`.
-- **Dead lighthouse CSS:** `pharos-lighthouse-sweep`, `pharos-nav-beam`, `pharos-rail-tab-active`, `pharos-brand-beam`, the "watch column" sidebar rules — the sidebar is removed; these are unrendered and should be trimmed.
+> **History:** a Figma handoff proposed retiring frost-blue for a neutral/Radix palette; the owner's final call (2026-06-27) **kept frost-blue + the lighthouse identity** and neutralized only the global nav (sidebar → top-nav). This doc reflects that decision and the shipped code, not the superseded retirement proposal.
 
 **Key Characteristics:**
-- Monochrome neutral base (Radix gray); color appears only as status, the primary metric, or a categorical tag.
-- Global top-nav, full-width content. No sidebar.
-- Flat cards: fill + hairline border, no resting shadow. Depth is a hover response.
+- Light-default financial dashboard with a parallel dark theme; semantic tokens switch, hues don't.
+- One brand color (frost-blue); it lights live data and the lighthouse/nautical metaphor — not chrome.
+- Flat cards: fill + hairline border, no resting shadow. Depth is a hover response, not a default.
 - Mono + tabular + slashed-zero on every digit-bearing cell.
-- Fixed rem type scale (10/12/14/16/18/20/24/32/36/40/48/56); two-mode density (spacious / compact).
+- Global top-nav, full-width content (no sidebar); fixed rem type scale; two-mode density.
 - Color is reinforced with structure and iconography; never the sole signal.
 
 ## 2. Colors
 
-A near-monochrome Radix-gray field with rationed, always-semantic accents. Three accent jobs: **status** (the risk/health ramp), **info-blue** (primary live metrics), and **purple** (a minor categorical tag).
+A near-monochrome neutral field with semantic accents that only fire on meaning. The single brand color is frost-blue; the rest of the palette is a state vocabulary, not decoration.
 
-### Primary (semantic accents)
-- **Info Blue** (`#0090ff`, on-dark `#70b8ff`): The primary live-metric signal — Total Market Cap and the Stability Index reading/sparkline. Radix info; used where a single headline number must read as "the live pulse." Not a brand fill, not a gradient.
-- **Quiet Purple** (`#8e4ec6`, purple-10 `#8145b5`, on-dark `#d19dff`): A *minor* categorical accent — readiness stages (the "Auditing" horizon cluster), the active Chart-Your-Route entry card, and select category tags. Never global chrome, never a CTA, never a gradient. Badge fills use a ~16% alpha tint.
+### Primary
+- **Frost Blue** (`#4bc4de`): The lighthouse beam. Reserved for the headline market figure, the primary chart stroke (`chart-primary`), the lit detail-page scrollspy, the mobile-drawer active accent, and the drawn nautical/lighthouse surfaces. It is the only color allowed to draw the eye. `--brand-accent` and `--chart-primary` both resolve to it. The global top-nav does **not** use it — desktop nav active state is a neutral `bg-muted/60`.
 
-### Status ramp (Radix)
-The peg-health / risk vocabulary. Each maps to a named band (Severity, PSI, DEWS, Score tiers) and ships an on-dark twin.
-- **Good** (`#30a46c`, on-dark `#3dd68c`) · **Alert** (`#ffe629` / `#f5e147`) · **Warning** (`#f76b15`, on-dark `#ffa057`) · **Danger** (`#e5484d`, on-dark `#ff9592`). The Peg Health bar reads GOOD → ALERT → WARNING → DANGER across these four.
+### Secondary (data sequence)
+- Cohort and multi-series chart colors (USDT green, USDC blue, USDS+DAI orange, Others purple) and the shared `CHART_PALETTE`. Sequence colors, never UI chrome.
+
+### Tertiary (semantic state ramp)
+A single green→amber→orange→red ramp carries every risk vocabulary. The named band families — **Severity** (peg deviation), **PSI** (stability index), **DEWS** (early-warning), and **Score tiers** — all map onto these same hues; document once, reuse everywhere.
+- **Healthy** (`#22c55e`), **Mild** (`#b45309` on light / `#f59e0b` on dark — light darkens to amber-700 for WCAG AA), **Moderate** (`#f97316`), **Severe** (`#ef4444`). Each ships a `-hex` twin for Recharts/canvas where CSS custom properties can't reach.
 
 ### Neutral
-- **Ink** (`#202020`, dark `#ffffff`/`#eeeeee`): Primary text.
-- **Secondary / Muted Ink** (`#646464` / `#8d8d8d`): Labels, captions, metadata. Informational text never goes below the muted floor (WCAG 1.4.3).
-- **Surfaces** — Base (page, `#fcfcfc`; dark `#0f0f0f`/`#111111`), Raised (cards & panels, `#ffffff`; dark `#202020`), Sunken (table headers, control wells, `#f0f0f0`).
-- **Borders** — black @ 5–12% on light (`#0000000d`–`#00000014`); white @ 6–12% on dark. A hairline hierarchy carries most structure in a shadowless system.
+- **Ink** (`oklch(0.145 0 0)`, `text-primary`): Primary text and the near-black `control-ink` active-control fill.
+- **Secondary / Tertiary Ink** (`oklch(0.4 0.009 260)` / `oklch(0.52 0.007 260)`): Labels, captions, muted metadata. Floor for informational text is `text-muted-foreground/70` — never lighter (WCAG 1.4.3).
+- **Surfaces** — Base (`oklch(0.985 0 0)`, page), Raised (`oklch(0.97 0 0)`, table headers / toolbars), Overlay (`oklch(1 0 0)`, cards & modals).
+- **Borders** — Subtle (`oklch(0.97 0 0)`), Default (`oklch(0.922 0 0)`), Strong (`oklch(0.87 0 0)`): a three-step separator hierarchy carrying most of the structure in a shadowless system.
 
 ### Named Rules
-**The Monochrome-Default Rule.** The interface is neutral. A color only appears if it is carrying a status, the primary metric, or a categorical tag. If an element is saturated for any other reason, it's wrong.
+**The One Beam Rule.** Frost-blue lights live data and the drawn lighthouse metaphor — not chrome, not the global nav, never a gradient or background. Its rarity is what makes it read as a signal.
 
-**The Quiet-Purple Rule.** Purple is a categorical accent at the edges (readiness, the active entry card, category tags) — never the page's chrome, never a button fill, never a gradient. Its restraint is the point; a purple-forward Pharos reads as the Web3-marketing template it rejects.
-
-**The Semantic-Status Rule.** The Radix status ramp encodes state only. Inactive states never take a full-saturation hue; badges sit on ~16% alpha tints and route through `shared/lib/classification.ts`.
+**The Semantic-Color Rule.** Color encodes state, never identity or decoration. If a color isn't carrying a risk band, a data series, or the beam, it shouldn't be saturated. Inactive states never take a full-saturation accent.
 
 ## 3. Typography
 
-**Display Font:** Bricolage Grotesque (variable, ink-trap; fallback `system-ui`) — stands in for the Figma's commercial ABC Whyte Inktrap. Editorial and display moments: the wordmark, "Daily Digest," section headers.
-**Body / UI Font:** Geist (medium / semibold; fallback `system-ui` stack) — body, UI, controls, and large numerals.
-**Data Font:** JetBrains Mono (variable; fallback `SFMono-Regular, ui-monospace`) — table figures, data labels, mono captions. Folded into `--font-geist-mono`, so every mono consumer inherits it.
+**Display Font:** Bricolage Grotesque (variable, ink-trap; fallback `system-ui`) — stands in for the Figma's commercial ABC Whyte Inktrap. Drives `--font-display`, `.pharos-display`, `.pharos-page-title`, and the top-nav wordmark.
+**Body / UI Font:** Geist Sans (fallback `system-ui` stack).
+**Data Font:** JetBrains Mono (variable; fallback `SFMono-Regular, ui-monospace`) — folded into `--font-geist-mono`, so every existing mono consumer (tables, `.pharos-numeric`, peg hero) inherits it.
 
-**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for display weight, a neutral grotesque sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia) is a deliberate carve-out (the `/digest/` broadsheet, the Daily Digest card, Cemetery plaques, detail-page AI summaries) — never general analytics.
+**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for editorial display weight, a neutral humanist sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia / Courier) is a deliberate carve-out (the `/digest/` broadsheet, the homepage Daily Digest card, Cemetery obituary plaques, the `/timeline/` wire-service tape, detail-page AI summaries) — never general analytics.
 
 ### Hierarchy
-Fixed rem scale: 10/12/14/16/18/20/24/32/36/40/48/56 with matched line-heights.
-- **Display** (Bricolage, 800, ~2–2.5rem, line-height 1.05, tracking −0.02em): Page/route titles, wordmark.
-- **Headline** (Bricolage, 700, 1.5rem, tracking −0.01em): Section titles — "Market Pulse", "Stablecoin Overview", "On The Horizon".
-- **Title** (Geist, 600, 1.125rem): Card and panel headings.
-- **Body** (Geist, 400, 0.875rem, line-height 1.5): UI text and prose. Cap prose at 65–75ch; dense tables run denser.
-- **Numeric** (JetBrains Mono, 500, `tabular-nums slashed-zero`): Every digit-bearing cell — prices, bps, percentages, market caps, scores.
-- **Label / Kicker** (JetBrains Mono, 500, 0.6875–0.75rem, often UPPERCASE, tracking ~0.08em, muted): Data-group eyebrows (MARKET COHORTS, SUPPLY UP).
+- **Display** (Bricolage, 800, 1.875rem→2.25rem, line-height 1.05, tracking −0.025em): Route/page titles (`.pharos-page-title`).
+- **Headline** (Bricolage, 700, 1.5rem→1.875rem, tracking −0.01em): Section titles — "Market Pulse", "Stablecoin Overview" (`.pharos-display`).
+- **Title** (Geist Sans, 600, 1.125rem): Card and sub-section headings.
+- **Body** (Geist Sans, 400, 0.875rem, line-height 1.5): UI text and prose. Cap prose at 65–75ch; dense tables may run denser.
+- **Numeric** (JetBrains Mono, 500, `tabular-nums slashed-zero`): Every digit-bearing cell — prices, percentages, basis points, market caps, scores (`.pharos-numeric`).
+- **Label / Kicker** (Geist Sans, 600, 0.6875–0.75rem, UPPERCASE, tracking 0.12em, muted): Eyebrows over data groups (`.pharos-kicker`).
 
 ### Named Rules
-**The Tabular-Figure Rule.** Numbers always use the mono face with `tabular-nums slashed-zero`. Proportional digits in a data column are a bug — columns align on the decimal; the zero never reads as an O.
+**The Tabular-Figure Rule.** Numbers always use `.pharos-numeric` (JetBrains Mono + `tabular-nums slashed-zero`). Proportional digits in a data column are a bug — columns must align on the decimal and the zero must never read as an O.
 
-**The Fixed-Scale Rule.** Headings use the fixed rem scale, not fluid `clamp()`. A heading that shrinks inside a panel looks worse, not designed. The viewport changes layout, not type size.
+**The Fixed-Scale Rule.** Headings use the fixed rem scale, not fluid `clamp()` (digest/editorial display is the carve-out). A heading that shrinks inside a panel looks worse, not designed. The viewport changes layout, not type size.
 
 ## 4. Elevation
 
-Flat by default. Cards are a fill plus a 1px hairline with **no resting shadow**; structure is carried by the border hierarchy and tonal surface layering (Base → Raised → Sunken), not drop shadows. The Figma defines a small shadow vocabulary used only on state and frosted chrome.
+Flat by default. Per the Figma redesign, cards are a fill plus a 1px border with **no resting shadow**; structure is carried by the three-step border hierarchy and tonal surface layering (Base → Raised → Overlay), not by drop shadows. Three elevation tokens exist but are responses to state, not defaults.
 
-### Shadow & Effect Vocabulary
-- **Shadow x-small** (`shadow-universal/x-small`): Card hover, paired with a −2px lift.
-- **Shadow medium** (`shadow-universal/medium`): Dropdowns, popovers, the Columns menu.
-- **Background blur** (`background-blur`): Reserved for frosted chrome — the sticky top-nav / overlays. Purposeful, never a decorative glass card.
-- **Device frame** (`shadow-component/device-frame`): Marketing/device mockups only.
+### Shadow Vocabulary
+- **Rest** (`--elevation-rest`: `0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%)`): Applied on card hover only, paired with a −2px lift.
+- **Raised** (`--elevation-raised`): Overlays, popovers, sticky table columns.
+- **Featured** (`--elevation-featured`): The rare promoted/featured surface.
 
 ### Named Rules
-**The Flat-By-Default Rule.** Surfaces are flat at rest. A shadow appears only as a response to state — hover, an overlay, or a deliberately featured block. A card with a drop shadow sitting still is wrong. Nested cards are forbidden.
+**The Flat-By-Default Rule.** Surfaces are flat at rest. A shadow appears only as a response to state — hover, overlay, or a deliberately featured block. If a card has a drop shadow sitting still, it's wrong. Nested cards are forbidden.
 
 ## 5. Components
 
-Lead with character, then spec. Every interactive component ships its full state set (default, hover, focus-visible, active, disabled, loading) and a `prefers-reduced-motion` alternative.
+Lead with the character, then specify shape, color assignment, states, and distinctive behavior. Every interactive component ships its full state set (default, hover, focus-visible, active, disabled, loading) and a `prefers-reduced-motion` alternative.
 
-### Top Navigation (signature — replaces the sidebar)
-A single global top bar; content runs full-width beneath it.
-- **Contents:** brand mark · six dropdown menus (Terminal / Track / Monitor / Analyze / Docs / Resources, sourced from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · theme toggle (dark · light · system) · overflow menu (Telegram Bot / What's New / health status).
-- **Behavior:** sticky, frosted (`background-blur`), hairline bottom border. A secondary **stat rail** sticks below it — Tracked · Active · Pegs · Chains plus recent-event labels.
-- **Mobile:** the `header.tsx` drawer. **No sidebar, no lighthouse beam, no active-route wash** — that identity is retired.
+### Navigation — Top Nav (signature; replaced the sidebar)
+A global top bar at `≥lg`; content runs full-width beneath it. The left "watch column" sidebar is retired.
+- **Contents:** brand mark (Bricolage wordmark) · six dropdown menus (Terminal / Track / Monitor / Analyze / Docs / Resources, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Telegram Bot / What's New / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
+- **Behavior:** sticky `h-14`, frosted (`bg-background/85 backdrop-blur-md`), hairline bottom border. Active menu = neutral `bg-muted/60 text-foreground` (**not** frost). A `CoreTopRail` tape (registry chips + event ticker) sticks below it.
+- **Mobile:** the `header.tsx` drawer (`<lg`), whose active group keeps a `border-l-frost-blue` accent. The desktop sidebar/`watch-column` lighthouse beam is gone, but the **detail-page `LongformScrollspyNav`** retains the frost-lit active pill (`text-frost-blue` + `pharos-nav-beam`).
 
-### Cards
+### Cards (`.pharos-card-shell`)
 - **Corner Style:** Gently curved (`rounded-xl`, 12px).
-- **Background:** Raised white (`surface-raised`); flat `#202020` block in dark.
-- **Border:** 1px hairline (black ~8% / white ~12%).
-- **Shadow Strategy:** None at rest; hover lifts −2px with `shadow-universal/x-small` (gated to `@media (hover: hover)`).
-- **Internal structure:** hairline dividers, not nested cards.
+- **Background:** Overlay white (`--card-bg` → `surface-overlay`); flat charcoal block (`oklch(0.2 0.003 260)`) in dark.
+- **Border:** 1px hairline `--card-border` (`border-default`).
+- **Shadow Strategy:** None at rest. `.pharos-interactive-card` lifts −2px with `--elevation-rest` on hover (gated to `@media (hover: hover)`).
+- **Accent stripe:** retired from card chrome (May 2026 harmonization). `border-l-[3px]` survives only for **data-driven** indicators (depeg row severity, detail hero metric accents, coin notices). Nesting cards is forbidden.
 
-### Controls — Pills, Segmented Control, Dropdowns
-Controls stay neutral; purple and info-blue never enter them.
-- **Pill / chip:** `rounded-full`, 1px border, `px-3 py-2`, min-height 36px, muted text. Hover → primary ink. **Active/selected:** near-black ink fill, inverse text, transparent border — a quiet confident state.
-- **Segmented control:** the density toggle (spacious / compact) and similar two-/three-way switches.
-- **Dropdown / menu:** the Columns selector and nav menus — `shadow-universal/medium`, hairline border. Plus a plain **Export CSV** button.
-
-### Badges
-- **Style:** status or category text on a ~16% alpha tint of its own hue; `rounded-sm`. Grade/Type colors come from `shared/lib/classification.ts`.
-- **Prohibited:** `border-left`/`border-right` accent stripes (retired app-wide) — depth comes from the tint + full hairline.
+### Controls — Pills (`.pharos-control-pill`, `.pharos-toggle-pill`)
+The primary interactive control on data surfaces is the pill, not a heavy CTA. Frost-blue stays out of controls.
+- **Default:** `rounded-full`, 1px border, `px-3 py-2`, min-height 36px, muted text on translucent fill.
+- **Hover:** Text → primary ink; fill warms toward `--interactive-hover`.
+- **Active / On:** Near-black fill (`control-ink`), inverse text, transparent border — a quiet, confident selected state. Density toggle (spacious/compact) and lens/range controls use this language.
 
 ### Tables (the workbench)
-- **Shell:** `rounded-xl`, hairline border, no shadow.
-- **Toolbar:** search · density toggle (spacious/compact) · Columns dropdown · Export CSV, on the sunken header fill.
-- **Rows:** subtle stripe, hover to the interactive-hover tint; sticky first column; right-aligned mono figures. Pagination (Previous / Next, "Showing 1–20 of N"). A **Browse By Peg** facet strip sits beneath.
+- **Shell:** `rounded-xl`, hairline border, no shadow (`.pharos-table-shell`).
+- **Header/Toolbar:** `.pharos-table-toolbar` on the panel-header fill; search · density toggle · Columns · Export CSV. The Stablecoin Overview uses the `figmaOverview` toolbar variant.
+- **Rows:** subtle stripe, hover lift to `--interactive-hover`, sticky first column; right-aligned `.pharos-numeric` figures. Mobile/desktop column boundary is `xl` (1280px). Use the `src/components/table/` primitives, not raw `<table>`.
 
 ### Inputs
-- **Style:** translucent fill on the sunken surface, hairline border, `rounded`. Search is inline in the toolbar — no modal.
-- **Focus:** a 2px ring with a 2px background offset on `focus-visible`, on every interactive element including table rows.
+- **Style:** translucent fill, hairline border, `rounded`. Search is inline in the toolbar / a top-nav command field — no modal.
+- **Focus:** `.pharos-focus-ring` — a 2px `ring/60` with a 2px background offset on `focus-visible`, on every interactive element including table rows.
 
-### Signature Surfaces
-- **Market Pulse hero:** split panel — Total Market Cap as the **info-blue** `metric-primary` + Market-Cohorts list on the left; live cohort area chart on the right (cohort colors: USDT green, USDC blue, USDS+DAI orange, Others purple).
-- **Stability Index card:** standalone PSI reading ("92.48 · Steady") with an info-blue sparkline.
-- **On The Horizon:** readiness clusters (Announced / Testnet / Auditing / Beta / Launching); **Auditing reads purple**.
-- **Chart Your Route:** rotating entry-point cards; the active card takes the **purple** categorical accent.
+### Signature Surfaces & the Drawn Metaphor
+Pharos draws its metaphors rather than naming them (every shape encodes a data field; inline JSX SVG, semantic vars, reduced-motion-gated keyframes):
+- **Market Pulse hero:** split panel — Total Market Cap as the frost-blue `hero-metric` + cohort breakdown + live area chart.
+- **The lighthouse/nautical identity (kept):** Chains "harbor chart" (ships, wakes, depth lines), the `/stability-index/` PSI lighthouse scene, the On-The-Horizon constellation with its brightening beam, the Alt-Peg Atlas starfield, the Cemetery tombstones, the `/depeg/` DDR forecast timeline.
 
 ### Homepage Composition (signature surface — the locked layout)
-The homepage is an ordered workbench. Sections, order, and rhythm are the contract; below-fold bands lazy-mount but the **sequence is fixed**:
-1. **Market Pulse** — info-blue total market cap + cohorts + live chart.
-2. **Pulse band (bento)** — Row 1: Peg Health · (Stability Index + Mint/Burn stacked) · Daily Digest (editorial serif promo); Row 2: Biggest Supply Moves · Recent Freezes (24h/7d) · Total Active Depegs.
-3. **Shortcuts** — saved entry chips + Edit (localStorage, per-device).
+The redesigned homepage is an ordered workbench. Sections, order, and rhythm are the contract; below-fold bands lazy-mount but the **sequence is fixed**:
+1. **Market Pulse hero** — frost-blue total market cap + cohorts + live chart.
+2. **Pulse band (bento)** — Row 1: Peg Health · (Stability Index + Mint/Burn stacked) · Daily Digest editorial promo; Row 2: Biggest Supply Moves · Recent Freezes · Total Active Depegs.
+3. **Saved Shortcuts** (localStorage, per-device).
 4. **Stablecoin Overview** — the directory table + Browse By Peg.
-5. **On The Horizon** — readiness constellation.
-6. **Chart Your Route** — rotating discovery cards.
+5. **On The Horizon** — upcoming-stablecoins constellation.
+6. **Chart Your Route** — discovery module (desktop).
 
-Vertical rhythm: `space-y-5`/`6` within bands, `mt-5`/`6`/`8`/`10` between them; bento gaps `gap-3` (12px); panels pad 20–28px.
+Vertical rhythm: `space-y-5`/`6` within bands, `mt-5`/`6`/`8`/`10` between them; bento gaps `gap-3` (12px); panels pad `p-5`–`p-7` (20–28px).
 
 ### Motion
-Fast/State `160ms`, base `220ms`; standard easing `cubic-bezier(0.22, 1, 0.36, 1)` (decelerating; no bounce/elastic). Motion conveys state — hover lift, selection, menu open, chip enter/exit — never page-load choreography. Every keyframe has a `prefers-reduced-motion: reduce` alternative.
+Fast/State `160ms`, base `220ms`; standard easing `cubic-bezier(0.22, 1, 0.36, 1)` (decelerating; no bounce/elastic). Motion conveys state — hover lift, selection, the detail-scrollspy beam sweep, chip enter/exit — never page-load choreography. Every keyframe has a `prefers-reduced-motion: reduce` alternative.
 
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** keep the interface monochrome (Radix gray); spend color only on status, the primary metric (info-blue), or a categorical purple tag.
-- **Do** use the Radix status ramp — Good `#30a46c` · Alert `#ffe629` · Warning `#f76b15` · Danger `#e5484d` (+ on-dark twins) — with badges on ~16% alpha tints, routed through `shared/lib/classification.ts`.
-- **Do** keep purple minor and categorical (readiness, active entry card, category tags), flat, never a CTA.
-- **Do** render every digit with JetBrains Mono + `tabular-nums slashed-zero`.
-- **Do** keep cards flat: `surface-raised` fill + 1px hairline, no resting shadow; lift only on hover.
-- **Do** use the global top-nav with full-width content; keep the fixed rem type scale and the two-mode density (spacious / compact).
+- **Do** reserve frost-blue (`#4bc4de`) for live data and the drawn lighthouse metaphor — the One Beam Rule.
+- **Do** render every digit with `.pharos-numeric` (JetBrains Mono, `tabular-nums slashed-zero`).
+- **Do** keep cards flat: `surface-overlay` fill + 1px `border-default`, `shadow: none` at rest; lift only on hover.
+- **Do** encode state with the semantic ramp (severity / PSI / DEWS / score) and reinforce it with structure or an icon — never color alone.
+- **Do** draw new metaphors (every shape encodes a data field; inline SVG, semantic vars, reduced-motion-gated) — and keep the underlying data table as the workbench beneath the hero.
+- **Do** use the fixed rem type scale for headings; keep informational text at or above `text-muted-foreground/70` for WCAG AA.
 - **Do** gate every animation behind `prefers-reduced-motion`.
 
 ### Don't:
-- **Don't** reintroduce frost-blue `#4bc4de` as a brand accent, or the lighthouse beam / "watch column" sidebar — that identity is retired.
-- **Don't** use `border-left`/`border-right` greater than 1px as a colored accent stripe (retired app-wide).
-- **Don't** ship Web3-marketing tropes: purple **gradients**, glassmorphism cards, gradient text, or buzzwords. (Purple as a flat categorical tag is fine; purple as chrome or gradient is not.)
-- **Don't** fall into corporate-fintech blandness or the generic-SaaS grid of interchangeable KPI tiles.
+- **Don't** reintroduce the left "watch column" sidebar — the global desktop nav is the full-width top-nav.
+- **Don't** use `border-left`/`border-right` greater than 1px as a colored accent stripe on card chrome — it's reserved for data-driven indicators (depeg severity, detail hero accents).
+- **Don't** ship Web3-marketing tropes: purple gradients, glassmorphism, gradient text, or buzzwords.
+- **Don't** fall into corporate-fintech blandness or the generic-SaaS grid of interchangeable KPI tiles and big empty cards.
 - **Don't** reskin DefiLlama or a generic trading-terminal clone.
-- **Don't** soften data surfaces with mascots or chunky illustrations.
-- **Don't** give info-blue or purple to controls, inactive states, or decoration.
+- **Don't** soften data surfaces with mascots or chunky illustrations; keep the practitioner register inside the data.
+- **Don't** give frost-blue (or any full-saturation accent) to controls, inactive states, the top-nav, or decoration.
 - **Don't** put a resting drop shadow on a card, or nest a card inside a card.
-- **Don't** use fluid `clamp()` headings or proportional figures in a data column.
-- **Don't** reorder the homepage bands, or introduce a new serif outside the authored editorial carve-out.
+- **Don't** use fluid `clamp()` headings (outside digest/editorial) or proportional figures in a data column.
+- **Don't** reorder the homepage bands or introduce a new serif outside the authored editorial carve-out.

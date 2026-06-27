@@ -41,9 +41,10 @@ Visible slash-separated breadcrumb trails are retired from page headers. Routes 
 
 ### Root + Fonts
 
-- Body classes: `pharos-font-sans pharos-font-mono antialiased`
-- Sans font token: system-first Geist-style stack
-- Mono font token: system-first Geist Mono-style stack
+- Body carries four font variables: `geistSans`, `geistMono`, `jetbrainsMono`, `bricolageDisplay` (+ `antialiased`); scoped utilities `pharos-font-sans` / `pharos-font-mono`
+- Sans / UI token: Geist Sans (system-first fallback)
+- Mono / data token: **JetBrains Mono** (Figma redesign), folded into `--font-geist-mono` so every `.pharos-numeric` / table figure inherits it
+- Display token (`--font-display`, `.pharos-display`, `.pharos-page-title`): **Bricolage Grotesque** (ink-trap; ABC Whyte Inktrap substitute) for headings + the top-nav wordmark
 - Default corner radius token: `--radius: .5rem`
 - Body background adds two subtle radial glow layers via `--page-glow-top` and `--page-glow-bottom`
 
@@ -52,17 +53,15 @@ Visible slash-separated breadcrumb trails are retired from page headers. Routes 
 Public pages use this shell:
 
 ```tsx
+{/* Desktop primary nav (≥lg) — replaces the retired left "watch column" sidebar */}
+<TopNav />; {/* sticky h-14 full-width bar, lg:flex */}
 <header
   className="lg:hidden sticky top-[3px] z-[56] border-b border-border/80 bg-background"
   style={{ boxShadow: "var(--elevation-rest)" }}
-/>;
-{
-  /* CoreTopRail (desktop-wide tape) follows the header chrome in flow */
-}
+/>; {/* mobile header */}
+<CoreTopRail />; {/* live tape (registry chips + ticker), sticky below the nav */}
 <div className="flex min-h-screen">
-  <aside className="hidden lg:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] z-[55] transition-all duration-200" />
-  <div className="hidden lg:block shrink-0 transition-all duration-200 w-[var(--sidebar-width-expanded)]" />
-
+  {/* No sidebar / no sidebar spacer — content is full-width */}
   <div className="flex-1 flex flex-col min-w-0">
     <main id="main-content" className="pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">
       {/* route content */}
@@ -75,7 +74,7 @@ Public pages use this shell:
 
 ### Chrome Patterns
 
-- Desktop sidebar widths: `--sidebar-width-expanded` and `--sidebar-width-collapsed`
+- Desktop nav: sticky full-width `TopNav` (`h-14`, `lg:flex`); the left sidebar is retired, so the `--sidebar-width-*` tokens and `SidebarSpacer` are now legacy/inert
 - Mobile header height: `h-14`
 - Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement; the dock stays hidden until the first scroll so it does not cover top-fold content and is suppressed on `/` so the homepage footer can match the compact Figma frame
 - Main content and footer reserve bottom safe space via `pharos-mobile-utility-safe` + `--mobile-utility-safe-offset`
@@ -392,7 +391,7 @@ The decorative per-card colored left stripe (`border-l-[3px] border-l-*-500`) ha
 - internal admin status sections (`StatusSection` still accepts an optional `accentClassName`)
 - stablecoin-detail per-coin notices (`coin-notice.tsx`): the danger/warning/info alert stripe is severity-keyed data, deliberately kept through the June 2026 mythos review and normalized to the same 3px weight
 
-The **desktop sidebar** navigation active state no longer uses a left stripe (June 2026 "watch column" pass). It is now a frost lit-tab — a frost wash falling from the icon side, a hairline frost inset ring, a soft halo, and a frost-lit icon — defined by `.pharos-nav-active` in `globals.css`. See `### Navigation Active vs Inactive` below. The **mobile drawer** (`header.tsx`) still uses `border-l-2 border-l-frost-blue` on the active route group as its own treatment.
+The desktop **top-nav** (`top-nav.tsx`) active state is a neutral `bg-muted/60` fill, not a stripe — the old left "watch column" sidebar was retired in the Figma redesign. The frost lit-tab survives on the **detail-page scrollspy** (`LongformScrollspyNav`: `.pharos-rail-tab-active` + `.pharos-nav-beam` + lit `text-frost-blue`); the **mobile drawer** (`header.tsx`) keeps `border-l-2 border-l-frost-blue` on the active route group. See `### Navigation Active vs Inactive` below.
 
 ### Interactive Card Pattern
 
@@ -483,7 +482,7 @@ When adding a new freshness stamp:
 
 - Toolbar becomes a vertical stack on mobile instead of a cramped inline row
 - `Columns` and `Export CSV` keep large tap targets on mobile; density and range controls also stay pill-based instead of collapsing into tiny tabs
-- Density controls now include a true `List` mode for ticker-first scanning; in that mode the stablecoin table suppresses the expanded coin name and keeps only the ticker lockup
+- Density controls collapsed to two modes in the Figma redesign — **spacious** (default for the main overview table) and **compact**; legacy `list` / `comfortable` prefs migrate to the nearest of these on read
 - Table keeps a deliberate horizontal-scroll affordance via helper copy and a dynamic inline min-width: the sum of per-column content minimums (`COLUMN_MIN_WIDTH_PX`) for the visible column set, with a 420px floor. The viewport's `overflow-x-auto` self-degrades — no scrollbar when the columns fit, horizontal scroll when they don't — so fixed-layout cells never squeeze below content width. The mobile/desktop column boundary is `xl` (1280px); the 7d sparkline renders from `2xl` up. Below `xl` the price column is pinned to its content width (`w-[88px]`) so fixed-layout leftover sharing cannot inflate it past the 390px first viewport and clip the fourth peg-price decimal at rest
 - Bottom spacing is preserved so the mobile utility dock never sits on the last visible rows
 
@@ -545,14 +544,18 @@ Common chart skeletons:
 
 ### Navigation Active vs Inactive
 
-The desktop sidebar (`src/components/sidebar.tsx`) frames navigation as a lighthouse "watch column": the active route reads as **lit by the beam** rather than flagged by a left stripe.
+The global desktop nav is the **top-nav** (`src/components/top-nav.tsx`, ≥`lg`) — the left "watch column" sidebar was retired in the Figma redesign. Active state is **neutral, not frost**:
 
-- Active sidebar item: `pharos-nav-active` — a frost wash falling from the icon side, a hairline frost inset ring + soft halo (no border stripe), `text-foreground`, and the Lucide icon lit `text-frost-blue`. The row also mounts a one-shot `pharos-nav-beam` light sweep on activation (gated on `prefers-reduced-motion: no-preference`).
-- Inactive sidebar item: `text-muted-foreground hover:bg-muted/50 hover:text-foreground` (no left border at any state).
-- When a live signal supplies an `accentClass` (the `/stability-index/` PSI band tint), the band background composes _beneath_ `pharos-nav-active`, so an active item shows frost light on the icon side with the regime band persisting to the right.
-- The brand lockup casts a thin frost shaft (`pharos-brand-beam`) along the header divider; the Search row is a bordered inset command field, not a nav link, and brightens its border toward frost on hover.
+- Active menu trigger: `bg-muted/60 text-foreground` (`aria-current`).
+- Inactive trigger: `text-muted-foreground hover:bg-muted/40 hover:text-foreground`.
+- The bar is sticky `h-14`, frosted (`bg-background/85 backdrop-blur-md`) with a hairline bottom border; the brand wordmark uses `.pharos-display`; global Search (`⌘K`, `openCommandPalette()`) and an overflow menu (Telegram / What's New / status + dark·light·system theme) sit on the right, the overflow triggered by a lighthouse glyph — the one brand-metaphor touch in the chrome.
 
-The **core top rail** (`src/components/core-top-rail.tsx`) is the horizontal echo of the watch column. Each destination is a `.pharos-rail-tab` ghost chip; the active item gains `.pharos-rail-tab-active`, which reuses the exact frost `color-mix` recipe from `.pharos-nav-active` — frost wash + hairline frost inset ring + soft halo — scaled for a small inline pill rather than a full-width sidebar row. The active pill also mounts the `.pharos-nav-beam` one-shot frost sweep on activation (reduced-motion gated), and the nav bar sits on a very faint frost-tinted `.pharos-rail-ground` to distinguish it visually from the neutral-card live ticker tape directly above it. There is no left-edge accent stripe, consistent with the May 2026 harmonization and the June 2026 watch-column pass.
+The frost lit-tab survives where a **reading position** is tracked, not on the global nav:
+
+- **Detail-page scrollspy** (`LongformScrollspyNav`): the active section pill reuses the frost recipe — `.pharos-rail-tab-active` + the `.pharos-nav-beam` activation sweep + a lit `text-frost-blue` icon (reduced-motion gated).
+- **Mobile drawer** (`header.tsx`, `<lg`): the active route group keeps a `border-l-2 border-l-frost-blue` accent.
+
+The `CoreTopRail` (`src/components/core-top-rail.tsx`) below the nav is now a live tape (registry chips + event ticker), not a nav pill strip — the horizontal core-nav pills were retired and folded into the Terminal menu.
 
 The mobile drawer (`header.tsx`) keeps its own active treatment (`border-border/70 bg-muted/60` links, `border-l-2 border-l-frost-blue` group accents) and was intentionally left unchanged in this pass.
 
@@ -599,8 +602,8 @@ The current pattern is a titled trust banner with dataset-specific copy, for exa
   - Masthead tagline becomes visible as a single `whitespace-nowrap` line.
   - Snapshot KPI grid expands; other dense-data grids transition between mobile and desktop layouts
 - `lg`:
-  - Sidebar becomes active (`lg:flex`); mobile header / drawer hides (`lg:hidden`)
-  - Tablet portrait (sub-`lg`) intentionally falls back to the mobile drawer because the desktop nav has too many groups to remain legible at that width
+  - `TopNav` becomes active (`lg:flex`); mobile header / drawer hides (`lg:hidden`)
+  - Tablet portrait (sub-`lg`) intentionally falls back to the mobile drawer because the top-nav has too many groups to remain legible at that width
   - Main horizontal padding increases (`lg:px-6`)
   - Larger grid splits and extra table columns
 - `xl`:
