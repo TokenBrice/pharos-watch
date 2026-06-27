@@ -115,7 +115,7 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
       </div>
 
       {activeTab === "quality" ? (
-        <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
+        <div className="rounded-xl border border-border/60 bg-background/35 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <h3 className="text-base font-semibold tracking-tight text-foreground">Quality threshold board</h3>

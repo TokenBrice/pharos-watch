@@ -45,7 +45,7 @@ export function CronsSection({
             emptyLabel="No unhealthy cron lanes."
           />
         ) : (
-          <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4 text-sm leading-relaxed text-muted-foreground">
+          <div className="rounded-xl border border-border/60 bg-background/35 p-4 text-sm leading-relaxed text-muted-foreground">
             No unhealthy cron lanes. Healthy groups are collapsed below.
           </div>
         )}
@@ -53,7 +53,7 @@ export function CronsSection({
           <details
             open={isHealthyCronGroupsOpen}
             onToggle={(event) => setIsHealthyCronGroupsOpen(event.currentTarget.open)}
-            className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
+            className="rounded-xl border border-border/60 bg-background/30 p-4"
           >
             <summary className="cursor-pointer text-sm font-medium text-foreground">
               Healthy lanes ({healthyCronGroups.length})

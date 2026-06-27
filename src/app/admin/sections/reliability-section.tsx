@@ -68,7 +68,7 @@ export function ReliabilitySection({
       <details
         open={isReliabilityOpen}
         onToggle={(event) => setIsReliabilityOpen(event.currentTarget.open)}
-        className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
+        className="rounded-xl border border-border/60 bg-background/30 p-4"
       >
         <summary className="cursor-pointer text-sm font-medium text-foreground">
           Endpoint probes, circuit breakers, and cache freshness
