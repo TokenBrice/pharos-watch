@@ -73,6 +73,10 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `tradedContracts?: ContractDeployment[]` — traded contract addresses separate from `contracts`
 - `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
+- `status?: "pre-launch" | "active" | "frozen"` — lifecycle state; omitted rows are active
+- `frozenAt?: string` / `obituary?: StablecoinObituary` — freeze date and cemetery/detail-page obituary content required for frozen tracked coins
+- `launchDate?`, `announcedDate?`, `expectedLaunchDate?`, `launchPhase?`, `launchPhaseDetail?`, `featuredContent?`, `milestones?`, `dateHistory?` — launch/upcoming timeline metadata for pre-launch and newly launched assets
+- `mintAuthority?: MintAuthorityProfile` — reviewed mint/burn authority posture used by the Mint Authority Score and detail-page authority summaries
 - `tags?: string[]` — freeform tag array for filtering and categorization
 
 ### Mint Authority Taxonomy
