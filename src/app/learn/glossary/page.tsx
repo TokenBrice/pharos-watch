@@ -65,7 +65,7 @@ function GlossaryJumpRail({
   return (
     <nav
       aria-label="Glossary jump rail"
-      className="sticky top-16 z-10 -mx-1 rounded-2xl border border-border/60 bg-background/80 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className="sticky top-16 z-10 -mx-1 rounded-xl border border-border/60 bg-background/80 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60"
     >
       <ol className="flex flex-wrap gap-1 font-mono text-xs uppercase tracking-[0.06em]">
         {JUMP_RAIL_ALPHABET.map((letter) => {
@@ -75,7 +75,7 @@ function GlossaryJumpRail({
               {isPresent ? (
                 <a
                   href={`#letter-${letter}`}
-                  className="pharos-focus-ring inline-flex h-7 min-w-7 items-center justify-center rounded-sm border border-border/60 bg-background/80 px-1.5 text-foreground hover:bg-card/80"
+                  className="pharos-focus-ring inline-flex h-7 min-w-7 items-center justify-center rounded-sm border border-border/60 bg-background/80 px-1.5 text-foreground hover:bg-muted/50"
                 >
                   {letter}
                 </a>

@@ -32,7 +32,7 @@ export default function PrivacyPage() {
       leadParagraphs={["Last updated: June 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
-        <div className="rounded-[1.35rem] border border-border/60 bg-card/70 px-5 py-4 shadow-[0_14px_32px_oklch(0_0_0_/0.1)]">
+        <div className="pharos-card-shell px-5 py-4">
           <p className="pharos-kicker">Policy Summary</p>
           <p className="mt-2 text-sm text-foreground">
             Pharos does not ask for accounts or wallet connections. Portfolio data is stored locally by default, share

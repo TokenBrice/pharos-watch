@@ -308,7 +308,7 @@ export default async function DepegEventPage(
         </article>
       ) : null}
 
-      <section className="pharos-card-shell space-y-4 rounded-[1.25rem] px-5 py-5">
+      <section className="pharos-card-shell space-y-4 px-5 py-5">
         <p className="pharos-kicker">Event summary</p>
         <RecoveryPanel event={event} />
       </section>
@@ -321,7 +321,7 @@ export default async function DepegEventPage(
       />
 
       {coin ? (
-        <section className="pharos-card-shell space-y-2 rounded-[1.25rem] px-5 py-5">
+        <section className="pharos-card-shell space-y-2 px-5 py-5">
           <p className="pharos-kicker">Stablecoin</p>
           <Link
             href={buildStablecoinUrl(coin.id)}
@@ -336,7 +336,7 @@ export default async function DepegEventPage(
       ) : null}
 
       {CASE_STUDY_BY_DEPEG_SLUG[event.slug] ? (
-        <section className="pharos-card-shell space-y-2 rounded-[1.25rem] px-5 py-5">
+        <section className="pharos-card-shell space-y-2 px-5 py-5">
           <p className="pharos-kicker">Deep dive</p>
           <Link
             href={`/learn/case-studies/${CASE_STUDY_BY_DEPEG_SLUG[event.slug].slug}/`}
@@ -348,7 +348,7 @@ export default async function DepegEventPage(
       ) : null}
 
       {curated?.href ? (
-        <section className="pharos-card-shell space-y-2 rounded-[1.25rem] px-5 py-5">
+        <section className="pharos-card-shell space-y-2 px-5 py-5">
           <p className="pharos-kicker">Primary source</p>
           <a
             href={curated.href}

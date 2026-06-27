@@ -71,11 +71,11 @@ export default function NotFound() {
       </div>
       <p className="max-w-xl font-mono text-sm italic leading-relaxed text-muted-foreground">
         The page you asked for is missing, moved, or no longer tracked. Use one of the
-        recovery paths below — or press <kbd className="rounded border border-border/60 bg-card/60 px-1.5 py-0.5 not-italic text-[0.65rem] font-mono">Cmd K</kbd> to search the dashboard.
+        recovery paths below — or press <kbd className="rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 not-italic text-[0.65rem] font-mono">Cmd K</kbd> to search the dashboard.
       </p>
 
       {topSuggestion && (
-        <div className="w-full max-w-xl rounded-2xl border border-frost-blue/40 bg-frost-blue/5 px-4 py-3 text-left">
+        <div className="w-full max-w-xl rounded-xl border border-frost-blue/40 bg-frost-blue/5 px-4 py-3 text-left">
           <p className="text-xs font-mono uppercase tracking-wider text-frost-blue/80">
             Did you mean?
           </p>
@@ -98,7 +98,7 @@ export default function NotFound() {
       <button
         type="button"
         onClick={openCommandPalette}
-        className="pharos-focus-ring inline-flex w-full max-w-xl items-center gap-2 rounded-2xl border border-border/60 bg-card/70 px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="pharos-focus-ring inline-flex w-full max-w-xl items-center gap-2 rounded-xl border border-border/60 bg-card/55 px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <Search className="h-4 w-4" aria-hidden />
         <span>Search the dashboard…</span>
@@ -132,7 +132,7 @@ export default function NotFound() {
           <Link
             key={entry.href}
             href={entry.href}
-            className="pharos-focus-ring rounded-2xl border border-border/60 bg-card/70 px-4 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="pharos-focus-ring rounded-xl border border-border/60 bg-card/55 px-4 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             {entry.label}
           </Link>

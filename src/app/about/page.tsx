@@ -41,10 +41,10 @@ import {
 const INLINE_EXTERNAL_LINK_CLASS =
   "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
 const CTA_BUTTON_CLASS =
-  "min-h-11 w-full justify-between rounded-2xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
+  "min-h-11 w-full justify-between rounded-xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
 const TELEGRAM_CTA_BUTTON_CLASS = cn(
   CTA_BUTTON_CLASS,
-  "border-transparent bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 dark:hover:text-background",
+  "border-transparent bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 dark:hover:text-background",
 );
 const ABOUT_METADATA_TITLE = "About Pharos: Shining a Light on Every Peg";
 const ABOUT_METADATA_DESCRIPTION =

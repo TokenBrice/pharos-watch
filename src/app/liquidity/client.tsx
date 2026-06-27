@@ -152,7 +152,7 @@ export function LiquidityClient() {
               <li key={row.meta.id}>
                 <Link
                   href={buildStablecoinUrl(row.meta.id)}
-                  className="pharos-focus-ring flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 transition hover:border-border hover:bg-card/80"
+                  className="pharos-focus-ring flex items-center gap-2 rounded-xl border border-border/60 bg-background/60 px-3 py-2 transition hover:border-border hover:bg-muted/40"
                 >
                   <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={28} />
                   <span className="min-w-0">
