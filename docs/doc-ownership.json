@@ -134,7 +134,7 @@
       "checks": ["npm run check:agent-doc-sync when AGENTS.md or CLAUDE.md changes", "npm run check:agent-skill-symlinks when skill symlinks change", "focused hook/script tests"],
       "hardRules": ["Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync.", "Temporary agent output belongs in ignored scratch locations, not committed docs."],
       "prefixes": [".claude/", ".codex/"],
-      "exactPaths": ["AGENTS.md", "CLAUDE.md", "docs/agent-task-router.md", "docs/process/agent-artifacts.md", "scripts/ci/pharos-change-contract.mjs", "scripts/lib/agent-skill-symlink-waivers.json"]
+      "exactPaths": ["AGENTS.md", "CLAUDE.md", "docs/agent-task-router.md", "docs/process/agent-artifacts.md", "scripts/ci/pharos-change-contract.mjs", "scripts/ci/check-agent-doc-sync.mjs", "scripts/ci/check-agent-skill-symlinks.mjs", "scripts/lib/agent-skill-symlink-waivers.json"]
     },
     {
       "id": "documentation",
