@@ -147,8 +147,8 @@ export function RecentFreezesCard(): React.JSX.Element {
               aria-pressed={windowKey === "24h"}
               className={
                 windowKey === "24h"
-                  ? "bg-muted px-2 py-1 text-foreground"
-                  : "px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+                  ? "inline-flex min-h-6 items-center bg-muted px-2 py-1 text-foreground"
+                  : "inline-flex min-h-6 items-center px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
               }
             >
               24h
@@ -159,8 +159,8 @@ export function RecentFreezesCard(): React.JSX.Element {
               aria-pressed={windowKey === "7d"}
               className={
                 windowKey === "7d"
-                  ? "border-l border-border/60 bg-muted px-2 py-1 text-foreground"
-                  : "border-l border-border/60 px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+                  ? "inline-flex min-h-6 items-center border-l border-border/60 bg-muted px-2 py-1 text-foreground"
+                  : "inline-flex min-h-6 items-center border-l border-border/60 px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
               }
             >
               7d

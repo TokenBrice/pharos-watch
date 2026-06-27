@@ -6,7 +6,7 @@ const SOCIAL_LINK_CLASS =
 
 // Compact footer chips matching the small square Figma controls.
 const PILL_CLASS =
-  "pharos-focus-ring inline-flex h-[22px] items-center gap-1 rounded-[5px] border border-border/65 bg-muted/55 px-2 text-[11px] leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
+  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-[5px] border border-border/65 bg-muted/55 px-2 text-[11px] leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
 
 // Lean footer per the Figma redesign: a disclaimer line, three reference links,
 // a compact about/legal row, and the monochrome social cluster. The previous
