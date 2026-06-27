@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { SquareArrowRight } from "lucide-react";
 
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { LaunchPhase } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import { logosById } from "@/lib/logos";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -123,7 +125,11 @@ function dotLinkClass(): string {
 const DOT_CLASS =
   "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-[9px] font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-muted";
 
-type PreLaunchCoin = (typeof PRE_LAUNCH_STABLECOINS)[number];
+type PreLaunchCoin = StablecoinClientMeta & { launchPhase: LaunchPhase };
+
+const PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
+  (coin): coin is PreLaunchCoin => isPreLaunchStablecoinMeta(coin) && Boolean(coin.launchPhase),
+);
 
 function HorizonLogoDot({ coin }: { coin: PreLaunchCoin }): React.JSX.Element {
   const logoSrc = resolveCompactLogoSrc(logosById[coin.id], LOGO_INNER);

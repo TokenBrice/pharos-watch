@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Rss, SquareArrowOutUpRight } from "lucide-react";
 
 const SOCIAL_LINK_CLASS =
-  "pharos-focus-ring grid h-4 w-4 place-items-center rounded-[3px] border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:border-border hover:bg-muted/55 hover:text-foreground";
+  "pharos-focus-ring grid h-6 w-6 place-items-center rounded-[5px] border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:border-border hover:bg-muted/55 hover:text-foreground";
 
 // Compact footer chips matching the small square Figma controls.
 const PILL_CLASS =
@@ -16,6 +16,7 @@ const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/changelog/", label: "Changelog" },
   { href: "/methodology/", label: "Methodology" },
   { href: "/api/", label: "API" },
+  { href: "/sitemap-tree/", label: "Sitemap" },
 ];
 
 const FOOTER_META: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [

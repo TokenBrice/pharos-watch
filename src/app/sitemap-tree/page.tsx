@@ -15,6 +15,7 @@ import {
   type NavItem,
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_EXTRA_PAGES } from "@/components/command-palette-model";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 // WHY: human-readable sitemap-as-content companion to `/sitemap.xml`.
 // Single source of truth for IA: `NAV_GROUPS` + `COMMAND_PALETTE_EXTRA_PAGES`.
@@ -188,7 +189,19 @@ const DISCOVERY_PRIMARY: readonly RouteRow[] = PRIMARY_NAV_ITEMS.map(navToRow);
 const TRACK_GROUP = NAV_GROUPS.find((g) => g.key === "data");
 const ANALYZE_GROUP = NAV_GROUPS.find((g) => g.key === "tools");
 const MONITOR_GROUP = NAV_GROUPS.find((g) => g.key === "monitor");
+const LEARN_GROUP = NAV_GROUPS.find((g) => g.key === "learn");
 const REFERENCE_GROUP = NAV_GROUPS.find((g) => g.key === "info");
+
+const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = TRACKED_STABLECOINS.map((coin) => ({
+  href: `/stablecoin/${coin.id}/`,
+  label: `${coin.name} (${coin.symbol})`,
+  description:
+    coin.status === "pre-launch"
+      ? "Pre-launch stablecoin profile"
+      : coin.status === "frozen"
+        ? "Frozen stablecoin archive"
+        : "Stablecoin risk, peg, liquidity, and dependency profile",
+}));
 
 const TIERS: readonly TierColumn[] = [
   {
@@ -204,6 +217,10 @@ const TIERS: readonly TierColumn[] = [
       {
         title: "Browse by taxonomy",
         rows: TAXONOMY_ROUTES,
+      },
+      {
+        title: "Stablecoin profiles",
+        rows: STABLECOIN_PROFILE_ROWS,
       },
     ],
   },
@@ -231,6 +248,10 @@ const TIERS: readonly TierColumn[] = [
       {
         title: "About Pharos",
         rows: ABOUT_ROUTES,
+      },
+      {
+        title: "Learn",
+        rows: LEARN_GROUP?.items.map(navToRow) ?? [],
       },
       {
         title: "Methodology changelogs",

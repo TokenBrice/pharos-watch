@@ -86,4 +86,3 @@ export const SIGNAL_CHART_COLORS: Record<string, string> = {
 /** Brand-specific colors for market-cap charts. */
 export const USDT_GREEN = "#3bcc87";
 export const USDC_BLUE = "#4bc4de";
-export const SKY_YELLOW = "#f5a623";

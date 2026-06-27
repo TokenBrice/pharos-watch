@@ -142,6 +142,16 @@ export function normalizeNavPath(pathname: string): string {
   return pathname.replace(/\/+$/, "");
 }
 
+/**
+ * Sticky top offset for the global chrome headers. Interior routes nudge down
+ * 3px to clear the persistent PSI strip's seam; the homepage has no strip above
+ * the chrome, so it pins flush. Shared so the desktop top-nav and the mobile
+ * header stay in lockstep. Returns a static Tailwind class for the JIT scanner.
+ */
+export function stickyChromeTopOffsetClass(pathname: string | null | undefined): string {
+  return pathname === "/" ? "top-0" : "top-[3px]";
+}
+
 export function isCoreNavPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   const normalizedPath = normalizeNavPath(pathname);

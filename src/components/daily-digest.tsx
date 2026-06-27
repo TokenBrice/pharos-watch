@@ -94,7 +94,7 @@ function DigestParagraphList({ paragraphs, getParagraphClassName }: DigestParagr
   );
 }
 
-export function DigestFullDisplay({
+function DigestFullDisplay({
   label,
   dateString,
   title,

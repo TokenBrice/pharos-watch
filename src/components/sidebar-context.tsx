@@ -60,14 +60,3 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const value = useExpanded();
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;
 }
-
-export function SidebarSpacer() {
-  const { pinned } = useSidebar();
-  return (
-    <div
-      className={`hidden lg:block shrink-0 transition-all duration-200 ${
-        pinned ? "w-[var(--sidebar-width-expanded)]" : "w-[var(--sidebar-width-collapsed)]"
-      }`}
-    />
-  );
-}

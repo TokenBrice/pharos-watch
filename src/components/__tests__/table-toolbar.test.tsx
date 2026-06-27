@@ -4,15 +4,17 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { TableToolbar } from "@/components/table-toolbar";
+import type { ColumnId } from "@/hooks/use-preferences";
 
 describe("TableToolbar", () => {
+  const defaultColumns: ColumnId[] = ["name", "price"];
   const defaultProps = {
     density: "spacious" as const,
     onDensityChange: vi.fn(),
-    visibleColumns: ["name", "price"],
+    visibleColumns: defaultColumns,
     onVisibleColumnsChange: vi.fn(),
     onResetColumns: vi.fn(),
-    defaultColumns: ["name", "price"],
+    defaultColumns,
     onExport: vi.fn(),
   };
 

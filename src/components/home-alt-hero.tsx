@@ -13,12 +13,12 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
   return (
     <section aria-labelledby="market-pulse-title" className="space-y-4">
       <div className="space-y-1.5">
-        <h2
+        <h1
           id="market-pulse-title"
           className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
         >
           Market Pulse
-        </h2>
+        </h1>
         <p className="text-sm text-muted-foreground">
           Backing, freeze risk, liquidity, and peg stress — all in one place.
         </p>
