@@ -140,7 +140,7 @@ function SelectorQuestionCardInner<TValue extends string>(
   return (
     <section
       aria-labelledby={`${groupName}-legend`}
-      className="pharos-card-shell pharos-stagger-entrance space-y-4 rounded-2xl border border-border/65 bg-card/55 p-4 sm:p-6"
+      className="pharos-card-shell pharos-stagger-entrance space-y-4 p-4 sm:p-6"
     >
       <fieldset className="space-y-4">
         <legend

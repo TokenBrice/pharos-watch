@@ -172,7 +172,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         </div>
       ) : null}
 
-      <div className="pharos-subtle-band space-y-3 rounded-2xl border border-border/55 p-4 sm:p-5">
+      <div className="pharos-subtle-band space-y-3 border border-border/55 p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <span
             aria-hidden="true"

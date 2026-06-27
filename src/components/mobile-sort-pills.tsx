@@ -21,10 +21,10 @@ export function MobileMetricPill({
 }
 
 /** Card shell wrapping mobile sort controls. Keeps the repeated
- *  rounded-xl border border-border/70 bg-card/80 px-3 py-3 in one place. */
+ *  rounded-xl border border-border/70 bg-background/70 px-3 py-3 in one place. */
 export function MobileSortPanel({ kicker, children }: { kicker: string; children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
+    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-3">
       <p className="pharos-kicker mb-2">{kicker}</p>
       {children}
     </div>

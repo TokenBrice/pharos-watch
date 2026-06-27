@@ -180,7 +180,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
   const headlineId = `selector-shortlist-${rec.id}`;
 
   return (
-    <li className="pharos-card-shell pharos-interactive-card relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-4 focus-within:border-foreground/55 focus-within:ring-2 focus-within:ring-ring/35 sm:p-5">
+    <li className="pharos-card-shell pharos-interactive-card relative overflow-hidden p-4 focus-within:border-foreground/55 focus-within:ring-2 focus-within:ring-ring/35 sm:p-5">
       <div className="flex items-start gap-3">
         <span aria-hidden="true" className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/65 font-mono text-xs font-semibold tabular-nums text-foreground">
           {rank}

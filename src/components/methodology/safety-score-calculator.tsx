@@ -38,7 +38,7 @@ export function SafetyScoreCalculator() {
   }, [values]);
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border/60 bg-background/45 p-4">
+    <div className="space-y-4 rounded-xl border border-border/60 bg-background/45 p-4">
       <div className="flex items-center justify-between">
         <p className="pharos-kicker">Interactive: Try your own inputs</p>
         <button type="button"

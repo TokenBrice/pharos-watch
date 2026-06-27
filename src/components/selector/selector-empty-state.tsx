@@ -50,7 +50,7 @@ export function SelectorEmptyState({
   return (
     <section
       aria-labelledby="selector-empty-state"
-      className="pharos-empty-note space-y-4 rounded-2xl border border-dashed border-border/55 bg-card/40 p-4 sm:p-5"
+      className="pharos-empty-note space-y-4 border border-dashed border-border/55 p-4 sm:p-5"
     >
       <div className="space-y-2">
         <h2 id="selector-empty-state" className="text-base font-semibold tracking-tight text-foreground sm:text-lg">

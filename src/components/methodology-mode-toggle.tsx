@@ -38,7 +38,7 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
       role="group"
       aria-label="Methodology view mode"
       className={cn(
-        "inline-flex flex-wrap items-center gap-1.5 rounded-[1.1rem] border border-border/60 bg-background/85 p-1.5 text-xs shadow-sm md:gap-2 md:rounded-full md:px-2 md:py-1",
+        "inline-flex flex-wrap items-center gap-1.5 rounded-xl border border-border/60 bg-background/85 p-1.5 text-xs md:gap-2 md:rounded-full md:px-2 md:py-1",
         className,
       )}
     >
