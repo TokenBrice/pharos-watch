@@ -155,7 +155,7 @@ function IdentityRow({ meta, chainName }: { meta: ChainMeta; chainName: string }
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
-        <div className="shrink-0 rounded-2xl border border-border/60 bg-background/80 p-2.5 shadow-sm">
+        <div className="shrink-0 rounded-xl border border-border/60 bg-background/80 p-2.5">
           <Image
             src={meta.logoPath}
             alt=""
@@ -244,7 +244,7 @@ function HealthZone({
 
       {chain == null ? (
         <div className="flex items-center gap-4">
-          <Skeleton className="h-16 w-16 rounded-2xl" />
+          <Skeleton className="h-16 w-16 rounded-xl" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-48" />
@@ -255,7 +255,7 @@ function HealthZone({
           <ScoreBadgeWrapper topic="chainHealth" variant="tooltip-only">
             <span
               className={cn(
-                "flex h-16 w-16 items-center justify-center rounded-2xl font-mono text-2xl font-bold tabular-nums shadow-sm",
+                "flex h-16 w-16 items-center justify-center rounded-xl font-mono text-2xl font-bold tabular-nums",
                 HEALTH_BADGE_CLASSES[healthBand],
               )}
             >

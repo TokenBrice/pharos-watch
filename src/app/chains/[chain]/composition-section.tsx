@@ -29,7 +29,7 @@ function CompositionBlock({
       className={cn(
         "pharos-focus-ring group relative flex flex-col items-center justify-center rounded-xl border p-3 text-center transition-all duration-200",
         "bg-gradient-to-b from-muted/40 to-muted/20 hover:from-muted/60 hover:to-muted/40",
-        "hover:border-primary/40 hover:shadow-md hover:shadow-primary/5",
+        "hover:border-primary/40",
         "hover:-translate-y-0.5",
         shouldSpan && "min-h-[100px]",
       )}

@@ -74,24 +74,24 @@ function AltPegSnapshotHero({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+            <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
               <p className="pharos-kicker">1Y Share Change</p>
               <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">
                 {formatPctPointDelta(yearlyShareDeltaPctPoints)}
               </p>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+            <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
               <p className="pharos-kicker">Tracked Coins</p>
               <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">{altCoinCount}</p>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+            <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
               <p className="pharos-kicker">Active Peg Cohorts</p>
               <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">{altPegCount}</p>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4 rounded-[1.35rem] border border-border/60 bg-muted/12 p-4">
+        <div className="space-y-4 rounded-xl border border-border/60 bg-muted/12 p-4">
           <div className="space-y-1">
             <p className="pharos-kicker">All Alt-Peg Mix</p>
             <p className="text-sm text-muted-foreground">Commodities vs. all other non-USD pegs.</p>
