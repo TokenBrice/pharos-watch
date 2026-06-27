@@ -131,6 +131,21 @@ const PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
   (coin): coin is PreLaunchCoin => isPreLaunchStablecoinMeta(coin) && Boolean(coin.launchPhase),
 );
 
+// The pre-launch set is static at module scope, so derive the per-phase buckets
+// and their dot layouts once at import rather than on every render.
+//
+// Coins per phase, soonest-expected first so each band reads by readiness.
+const coinsByPhase = PHASE_ORDER.map((phase) =>
+  PRE_LAUNCH_STABLECOINS.filter((c) => c.launchPhase === phase).sort(
+    (a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate),
+  ),
+);
+
+// Lay each stage out, then size the field from its total count so high-volume
+// phases read larger even when their visible dot links are capped behind a
+// "+N" tracker link.
+const layouts = coinsByPhase.map((c) => layoutPhase(c.length));
+
 function HorizonLogoDot({ coin }: { coin: PreLaunchCoin }): React.JSX.Element {
   const logoSrc = resolveCompactLogoSrc(logosById[coin.id], LOGO_INNER);
   const fallback = (coin.symbol || coin.name).trim().charAt(0).toUpperCase();
@@ -157,18 +172,6 @@ function HorizonLogoDot({ coin }: { coin: PreLaunchCoin }): React.JSX.Element {
 export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null {
   const total = PRE_LAUNCH_STABLECOINS.length;
   if (total === 0) return null;
-
-  // Coins per phase, soonest-expected first so each band reads by readiness.
-  const coinsByPhase = PHASE_ORDER.map((phase) =>
-    PRE_LAUNCH_STABLECOINS.filter((c) => c.launchPhase === phase).sort(
-      (a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate),
-    ),
-  );
-
-  // Lay each stage out, then size the field from its total count so high-volume
-  // phases read larger even when their visible dot links are capped behind a
-  // "+N" tracker link.
-  const layouts = coinsByPhase.map((c) => layoutPhase(c.length));
 
   return (
     <section aria-labelledby="upcoming-horizon-constellation-title" className="space-y-3 sm:space-y-4">
