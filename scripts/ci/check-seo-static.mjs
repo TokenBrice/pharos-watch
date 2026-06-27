@@ -356,6 +356,32 @@ function parseStaticHeadersFile(text) {
   return blocks;
 }
 
+function redirectSourceKey(source) {
+  if (!source.startsWith("/")) return null;
+  if (source.includes("*") || source.includes(":")) return null;
+
+  const pathname = source.split(/[?#]/)[0];
+  if (!pathname || !pathname.startsWith("/")) return null;
+  if (pathname === "/") return "/";
+  return pathname.replace(/\/+$/, "");
+}
+
+function collectRedirectSources(outDir) {
+  const redirectsPath = path.join(outDir, "_redirects");
+  if (!fs.existsSync(redirectsPath)) return [];
+
+  const sources = [];
+  for (const line of fs.readFileSync(redirectsPath, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const source = trimmed.split(/\s+/)[0];
+    const key = redirectSourceKey(source);
+    if (key) sources.push({ key, source });
+  }
+  return sources;
+}
+
 function validateStaticHeaders(outDir, errors) {
   const headersPath = path.join(outDir, "_headers");
   if (!fs.existsSync(headersPath)) {
@@ -918,6 +944,18 @@ export function collectSeoStaticCheckResult({
       }
       if (!routeSet.has(sitemapRoute.route)) {
         errors.push(`sitemap.xml URL has no local static HTML artifact: ${loc} (expected ${sitemapRoute.route})`);
+      }
+    }
+
+    const redirectSourceByKey = new Map(collectRedirectSources(outDir).map((source) => [source.key, source.source]));
+    if (redirectSourceByKey.size > 0) {
+      for (const loc of locs) {
+        const sitemapRoute = sitemapRouteFromPharosUrl(loc);
+        if (!sitemapRoute || sitemapRoute.error) continue;
+        const source = redirectSourceByKey.get(redirectSourceKey(sitemapRoute.route));
+        if (source) {
+          errors.push(`sitemap.xml URL ${loc} conflicts with _redirects source ${source}; drop one of the two signals`);
+        }
       }
     }
 

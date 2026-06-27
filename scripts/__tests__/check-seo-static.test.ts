@@ -544,6 +544,23 @@ describe("check-seo-static", () => {
     ).toBe(false);
   });
 
+  it("fails sitemap URLs that conflict with _redirects sources", async () => {
+    const root = await makeOutDir();
+    await writeFile(path.join(root, "_redirects"), "/redirected /target/ 301\n/wildcard/* /target/:splat 301\n");
+    await writeBaselinePages(root, ["/redirected/"]);
+    await writePage(root, "/redirected/", { h1: "Redirected" });
+    await writeSitemap(root, ["/", "/stability-index/", "/redirected/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "sitemap.xml URL https://pharos.watch/redirected/ conflicts with _redirects source /redirected; drop one of the two signals",
+      ]),
+    );
+    expect(result.errors.some((error) => error.includes("/wildcard/") && error.includes("_redirects"))).toBe(false);
+  });
+
   it("fails slashless internal anchor hrefs that map to static routes", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", { h1: "Home", links: ["/stability-index", "https://pharos.watch/about#sources"] });
