@@ -117,7 +117,7 @@ export function HomepageDiscoveryModule({
 
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="space-y-1 sm:space-y-1.5">
-          <p className="pharos-display text-base font-bold text-foreground sm:text-3xl">Chart Your Route</p>
+          <p className="font-display text-base font-bold text-foreground sm:text-3xl">Chart Your Route</p>
           <p className="max-w-[13rem] text-[10px] leading-snug text-muted-foreground sm:max-w-none sm:text-sm">
             Different ways into Pharos — refreshed every time you visit.
           </p>

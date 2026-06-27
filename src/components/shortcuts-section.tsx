@@ -11,25 +11,26 @@ import { cn } from "@/lib/utils";
 
 const NAV_BY_HREF = new Map<string, NavItem>(NAV_ITEMS.map((item) => [item.href, item]));
 
-// Per-destination icon hue, keyed by nav href. Mirrors the Figma "Shortcuts"
+// Per-destination icon tone, keyed by nav href. Mirrors the Figma "Shortcuts"
 // band where each chip carries a colored category glyph. Static class strings
-// only — the chip stays flat (neutral tile), just the icon takes the tint. Any
-// destination not listed falls back to a calm accent hue.
-const SHORTCUT_ICON_COLOR: Record<string, string> = {
-  "/chains/": "text-emerald-500",
-  "/portfolio/": "text-purple-500",
-  "/upcoming/": "text-amber-500",
-  "/alt-pegs/": "text-blue-500",
-  "/cemetery/": "text-red-500",
-  "https://pharosville.pharos.watch/": "text-teal-500",
-  "/yield/": "text-lime-500",
-  "/liquidity/": "text-cyan-500",
-  "/screener/": "text-indigo-500",
-  "/compare/": "text-orange-500",
-  "/dependency-map/": "text-violet-500",
-  "/timeline/": "text-rose-500",
+// only — color stays confined to the icon tile so the unified shortcut panel
+// remains calm while the twelve default routes are individually recognizable.
+const SHORTCUT_ICON_TONE: Record<string, string> = {
+  "/chains/": "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300",
+  "/upcoming/": "border-amber-500/25 bg-amber-500/12 text-amber-600 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300",
+  "/portfolio/": "border-purple-500/20 bg-purple-500/10 text-purple-600 dark:border-purple-400/20 dark:bg-purple-400/10 dark:text-purple-300",
+  "/alt-pegs/": "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-300",
+  "/cemetery/": "border-red-500/20 bg-red-500/10 text-red-600 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300",
+  "https://pharosville.pharos.watch/": "border-teal-500/20 bg-teal-500/10 text-teal-600 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-300",
+  "/yield/": "border-lime-500/25 bg-lime-500/12 text-lime-700 dark:border-lime-400/20 dark:bg-lime-400/10 dark:text-lime-300",
+  "/liquidity/": "border-cyan-500/20 bg-cyan-500/10 text-cyan-600 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300",
+  "/screener/": "border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300",
+  "/compare/": "border-orange-500/25 bg-orange-500/12 text-orange-600 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-300",
+  "/dependency-map/": "border-violet-500/20 bg-violet-500/10 text-violet-600 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-300",
+  "/timeline/": "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300",
 };
-const FALLBACK_SHORTCUT_ICON_COLOR = "text-sky-500";
+const FALLBACK_SHORTCUT_ICON_TONE =
+  "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300";
 
 function externalLinkProps(item: NavItem): { target?: string; rel?: string } {
   return item.external ? { target: "_blank", rel: "noopener noreferrer" } : {};
@@ -40,12 +41,12 @@ function externalLinkProps(item: NavItem): { target?: string; rel?: string } {
 // categories while the chips themselves remain calm.
 function ShortcutIcon({ item }: { item: NavItem }): JSX.Element {
   const Icon = item.icon;
-  const iconColor = SHORTCUT_ICON_COLOR[item.href] ?? FALLBACK_SHORTCUT_ICON_COLOR;
+  const iconTone = SHORTCUT_ICON_TONE[item.href] ?? FALLBACK_SHORTCUT_ICON_TONE;
   return (
     <span
       className={cn(
-        "grid size-9 shrink-0 place-items-center rounded-lg border border-border/60 bg-muted/40",
-        iconColor,
+        "grid size-9 shrink-0 place-items-center rounded-lg border",
+        iconTone,
       )}
     >
       <Icon aria-hidden="true" className="size-[18px]" strokeWidth={1.85} />

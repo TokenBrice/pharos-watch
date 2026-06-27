@@ -23,6 +23,7 @@ function compactDigestText(value: string | null | undefined): string | null {
 export function DailyDigestCard(): React.JSX.Element {
   const { data } = useDailyDigest();
   const title = compactDigestText(data?.digestTitle) ?? FALLBACK_DIGEST_PREVIEW.title;
+  const editionPrefix = data?.editionNumber ? `#${data.editionNumber}` : null;
   const text =
     compactDigestText(data?.digest) ??
     compactDigestText(splitDigestParagraphs(data?.digestExtended)[0]) ??
@@ -65,8 +66,14 @@ export function DailyDigestCard(): React.JSX.Element {
         />
         <div className="absolute inset-x-4 bottom-[-3.25rem] top-10 overflow-hidden rounded-xl border border-border/65 bg-card/95 p-4">
           <h4 className={`${digestDisplay.className} text-sm font-semibold uppercase leading-snug tracking-wide`}>
-            <span className="text-teal-700 dark:text-teal-400">Pharos Watch</span>
-            {` — ${title}`}
+            {editionPrefix ? (
+              <>
+                <span className="text-teal-700 dark:text-teal-400">{editionPrefix}</span>
+                {` — ${title}`}
+              </>
+            ) : (
+              title
+            )}
           </h4>
           <p className={`${digestDisplay.className} mt-2 text-xs leading-relaxed text-muted-foreground`}>
             {text}

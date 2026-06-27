@@ -29,7 +29,7 @@ export function PegHealthCard(): React.JSX.Element {
           <Skeleton className="h-24 w-full" />
         </>
       ) : (
-        <>
+        <div className="flex flex-1 flex-col">
           <div>
             <div className="flex items-baseline font-mono text-4xl font-bold tabular-nums tracking-tight">
               <span className="text-foreground">{summary.coinsAtPeg}</span>
@@ -41,12 +41,12 @@ export function PegHealthCard(): React.JSX.Element {
             </p>
           </div>
 
-          <div className="space-y-3 border-t border-border/50 pt-5">
+          <div className="mt-4 flex flex-1 flex-col border-t border-border/50 pt-5">
             {total === 0 ? (
               <Skeleton className="h-8 w-full rounded-md" />
             ) : (
               <div
-                className="flex h-8 w-full gap-0.5 overflow-hidden rounded-md bg-background/70"
+                className="flex h-10 w-full gap-0.5 overflow-hidden rounded-md bg-background/70"
                 role="img"
                 aria-label="Peg deviation distribution by band"
               >
@@ -65,7 +65,7 @@ export function PegHealthCard(): React.JSX.Element {
                 })}
               </div>
             )}
-            <ul className="flex flex-col gap-1.5 font-mono text-xs">
+            <ul className="mt-4 grid flex-1 content-between font-mono text-xs">
               {SEGMENTS.map((seg) => (
                 <li key={seg.key} className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2 uppercase tracking-tight text-muted-foreground">
@@ -77,7 +77,7 @@ export function PegHealthCard(): React.JSX.Element {
               ))}
             </ul>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

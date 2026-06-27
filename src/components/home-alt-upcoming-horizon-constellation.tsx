@@ -12,10 +12,13 @@ import { LAUNCH_PHASE_LABELS, PHASE_DOT, dateScore } from "@/lib/pre-launch";
 // left (announced) to right (launching = the live-market threshold).
 const PHASE_ORDER: readonly LaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
-const DOT = 18;
-const DOT_SPACING = 22;
-const PAD = 8;
+const DOT = 22;
+const DOT_SPACING = 30;
+const PAD = 12;
 const LOGO_INNER = DOT - 4;
+const MIN_FIELD_R = 58;
+const COUNT_FIELD_SCALE = 7;
+const MAX_FIELD_R = 92;
 
 // Dots are uniform neutral markers — past this many a ring caps the visible dots
 // and stands in the remainder as a "+N" pill (the Figma's overflow indicator).
@@ -107,6 +110,12 @@ function layoutPhase(count: number): PhaseLayout {
   return { pts, fieldR: r + DOT / 2 + PAD, hidden: count - OVERFLOW_RING };
 }
 
+function phaseFieldRadius(count: number, layout: PhaseLayout): number {
+  if (count <= 0) return Math.max(layout.fieldR, MIN_FIELD_R);
+  const countRadius = MIN_FIELD_R + Math.sqrt(count) * COUNT_FIELD_SCALE;
+  return Math.min(MAX_FIELD_R, Math.max(layout.fieldR, countRadius));
+}
+
 function dotLinkClass(): string {
   return "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-10 hover:scale-125 focus-visible:z-20 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
 }
@@ -150,11 +159,10 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
     ),
   );
 
-  // Lay each stage out, then size every ring to the widest cluster so the five
-  // readiness rings share one diameter (the redesign's uniform circles); sparse
-  // stages simply sit centered in their ring.
+  // Lay each stage out, then size the field from its total count so high-volume
+  // phases read larger even when their visible dot links are capped behind a
+  // "+N" tracker link.
   const layouts = coinsByPhase.map((c) => layoutPhase(c.length));
-  const ringSize = 2 * Math.max(...layouts.map((p) => p.fieldR));
 
   return (
     <section aria-labelledby="upcoming-horizon-constellation-title" className="space-y-3 sm:space-y-4">
@@ -165,7 +173,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
       {/* ── Section header (sits above the panel, editorial display) ───────── */}
       <div className="space-y-1 sm:space-y-1.5">
         <div className="flex items-center justify-between gap-3">
-          <p className="pharos-display text-base font-bold text-foreground sm:text-3xl">On The Horizon</p>
+          <p className="font-display text-base font-bold text-foreground sm:text-3xl">On The Horizon</p>
           <div className="flex shrink-0 items-center gap-3 sm:pt-0">
             <span className="hidden text-sm text-muted-foreground sm:inline">
               <span className="pharos-numeric font-semibold text-foreground">{total}</span> Tokens
@@ -192,61 +200,64 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
 
       {/* ── Readiness panel ──────────────────────────────────────────────── */}
       <div className="pharos-card-shell overflow-hidden">
-        {/* Wide layout (lg+): one uniform tinted ring per readiness stage, the
-            packed dot cluster centered inside, columns split by hairlines. */}
+        {/* Wide layout (lg+): one count-scaled tinted ring per readiness stage,
+            the packed dot cluster centered inside, columns split by hairlines. */}
         <div className="hidden grid-cols-5 divide-x divide-border/50 lg:grid">
           {PHASE_ORDER.map((phase, i) => {
             const coins = coinsByPhase[i];
             const count = coins.length;
             const { pts, hidden } = layouts[i];
+            const ringSize = phaseFieldRadius(count, layouts[i]) * 2;
             return (
-              <div key={phase} className="flex flex-col items-center gap-4 px-3 py-7">
-                <div className="relative" style={{ width: ringSize, height: ringSize }}>
-                  <span className="sr-only">
-                    {LAUNCH_PHASE_LABELS[phase]}: {count} {count === 1 ? "coin" : "coins"}
-                  </span>
+              <div key={phase} className="flex flex-col items-center gap-4 px-3 py-5">
+                <div className="flex h-[184px] w-full items-center justify-center">
+                  <div className="relative" style={{ width: ringSize, height: ringSize }}>
+                    <span className="sr-only">
+                      {LAUNCH_PHASE_LABELS[phase]}: {count} {count === 1 ? "coin" : "coins"}
+                    </span>
 
-                  {/* Thin tinted ring — the only per-stage hue. */}
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none absolute inset-0 rounded-full border ${PHASE_FIELD[phase]}`}
-                  />
-
-                  {count === 0 ? (
+                    {/* Thin tinted ring — the only per-stage hue. */}
                     <span
                       aria-hidden="true"
-                      className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-muted/50 opacity-50"
+                      className={`pointer-events-none absolute inset-0 rounded-full border ${PHASE_FIELD[phase]}`}
                     />
-                  ) : (
-                    coins.slice(0, pts.length).map((coin, idx) => (
-                      <Link
-                        key={coin.id}
-                        href={buildStablecoinUrl(coin.id)}
-                        title={coin.name}
-                        aria-label={`${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[phase]}`}
-                        style={{
-                          left: ringSize / 2 + pts[idx].x,
-                          top: ringSize / 2 + pts[idx].y,
-                        }}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 ${dotLinkClass()}`}
-                      >
-                        <HorizonLogoDot coin={coin} />
-                      </Link>
-                    ))
-                  )}
 
-                  {/* Overflow: the remainder beyond the capped dots, kept reachable
-                      via the tracker rather than silently dropped. */}
-                  {hidden > 0 && (
-                    <Link
-                      href="/upcoming/"
-                      aria-label={`${hidden} more ${PHASE_SHORT_LABEL[phase].toLowerCase()} stablecoins`}
-                      style={{ left: ringSize / 2, top: ringSize / 2 }}
-                      className="pharos-focus-ring pharos-numeric absolute -translate-x-1/2 -translate-y-1/2 rounded-md border border-border/60 bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-                    >
-                      +{hidden}
-                    </Link>
-                  )}
+                    {count === 0 ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-muted/50 opacity-50"
+                      />
+                    ) : (
+                      coins.slice(0, pts.length).map((coin, idx) => (
+                        <Link
+                          key={coin.id}
+                          href={buildStablecoinUrl(coin.id)}
+                          title={coin.name}
+                          aria-label={`${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[phase]}`}
+                          style={{
+                            left: ringSize / 2 + pts[idx].x,
+                            top: ringSize / 2 + pts[idx].y,
+                          }}
+                          className={`absolute -translate-x-1/2 -translate-y-1/2 ${dotLinkClass()}`}
+                        >
+                          <HorizonLogoDot coin={coin} />
+                        </Link>
+                      ))
+                    )}
+
+                    {/* Overflow: the remainder beyond the capped dots, kept reachable
+                        via the tracker rather than silently dropped. */}
+                    {hidden > 0 && (
+                      <Link
+                        href="/upcoming/"
+                        aria-label={`${hidden} more ${PHASE_SHORT_LABEL[phase].toLowerCase()} stablecoins`}
+                        style={{ left: ringSize / 2, top: ringSize / 2 }}
+                        className="pharos-focus-ring pharos-numeric absolute -translate-x-1/2 -translate-y-1/2 rounded-md border border-border/60 bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+                      >
+                        +{hidden}
+                      </Link>
+                    )}
+                  </div>
                 </div>
                 <span className="flex w-full items-center gap-1.5">
                   <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-[3px] ${PHASE_DOT[phase]}`} />

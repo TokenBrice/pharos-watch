@@ -29,14 +29,17 @@ describe("DailyDigestCard", () => {
         digest:
           "$1.14B of USDT's $1.24B weekly outflow landed in the last 24 hours. If Tether prints another $1B tomorrow, the drift becomes rotation.",
         digestExtended: null,
+        editionNumber: 407,
       },
     });
 
     render(<DailyDigestCard />);
 
     expect(screen.getByText("Daily Digest")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /#407 — USDT's Quiet Billion-Dollar Exit/i })).toBeTruthy();
     expect(screen.getByText(/USDT's Quiet Billion-Dollar Exit/i)).toBeTruthy();
     expect(screen.getByText(/\$1\.14B of USDT's \$1\.24B weekly outflow/i)).toBeTruthy();
+    expect(screen.queryByText(/Pharos Watch/i)).toBeNull();
     expect(screen.queryByText(/Best stablecoin watcher/i)).toBeNull();
     expect(screen.getByRole("link", { name: /View Digest/i }).getAttribute("href")).toBe("/digest");
     expect(screen.getByRole("link", { name: /Read on Telegram/i }).getAttribute("href")).toBe(

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Maximize2 } from "lucide-react";
 
-// Small square ghost button that links a pulse card to its detail route — the
+// Small square button that links a pulse card to its detail route — the
 // "expand" affordance in the top-right corner of every Market Pulse card.
 export function CardExpandButton({
   href,
@@ -17,9 +17,9 @@ export function CardExpandButton({
       prefetch={false}
       href={href}
       aria-label={expandLabel}
-      className={`pharos-focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground ${className ?? ""}`}
+      className={`pharos-focus-ring flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border border-border/70 bg-muted/55 text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.55)] transition-colors hover:border-border hover:bg-muted hover:text-foreground dark:border-white/8 dark:bg-white/10 dark:text-muted-foreground dark:shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)] dark:hover:bg-white/14 dark:hover:text-foreground ${className ?? ""}`}
     >
-      <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+      <Maximize2 className="h-3 w-3" aria-hidden="true" />
     </Link>
   );
 }

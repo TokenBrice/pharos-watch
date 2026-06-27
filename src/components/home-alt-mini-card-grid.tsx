@@ -42,7 +42,7 @@ export function HomeAltMiniCardGrid(): React.JSX.Element {
             <DailyDigestCard />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:auto-rows-[252px] @4xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:auto-rows-[232px] @4xl:grid-cols-3">
           <SupplyMovesCard />
           <RecentFreezesCard />
           <ActiveDepegsCard />
