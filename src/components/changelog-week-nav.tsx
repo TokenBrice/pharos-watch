@@ -79,7 +79,7 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
                   className={cn(
                     "size-1.5 shrink-0 rounded-full transition-colors",
                     isActive
-                      ? "bg-frost-blue shadow-[0_0_0_3px_oklch(0.72_0.14_248/0.10)]"
+                      ? "bg-foreground"
                       : "border border-border/80 bg-transparent",
                   )}
                   aria-hidden

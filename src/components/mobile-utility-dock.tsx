@@ -44,8 +44,6 @@ export function MobileUtilityDock() {
         <div
           className={cn(
             "pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background p-1",
-            "shadow-[0_-4px_20px_oklch(0_0_0_/0.08),0_14px_38px_oklch(0_0_0_/0.28)]",
-            "dark:shadow-[0_-4px_20px_oklch(0_0_0_/0.15),0_14px_38px_oklch(0_0_0_/0.35)]",
           )}
         >
           <button
@@ -53,7 +51,7 @@ export function MobileUtilityDock() {
             onClick={() => setFeedbackOpen(true)}
             aria-label="Send feedback"
             tabIndex={showFeedback ? undefined : -1}
-            className="pharos-focus-ring flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_18px_oklch(0_0_0_/0.22)]"
+            className="pharos-focus-ring flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <MessageSquarePlus className="h-4 w-4" />
           </button>

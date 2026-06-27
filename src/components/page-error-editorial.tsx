@@ -53,7 +53,7 @@ export function PageErrorEditorial({ kicker, title, body, error, reset }: PageEr
         <button
           type="button"
           onClick={handleRetry}
-          className="pharos-focus-ring rounded-lg border border-border/70 bg-card/70 px-5 py-2 text-sm font-medium text-foreground/90 transition-colors hover:bg-accent"
+          className="pharos-focus-ring rounded-lg border border-border/70 bg-background/70 px-5 py-2 text-sm font-medium text-foreground/90 transition-colors hover:bg-accent"
         >
           {retryLabel}
         </button>

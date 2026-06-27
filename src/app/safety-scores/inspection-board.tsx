@@ -175,7 +175,7 @@ export function SafetyInspectionBoard({
                     {row.worstFindings.map((finding) => (
                       <span
                         key={finding.id}
-                        className="rounded-full border border-border/60 bg-card/70 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
+                        className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
                         title={`${finding.name}: ${finding.grade}`}
                       >
                         {finding.symbol} {finding.grade}

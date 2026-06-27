@@ -120,7 +120,7 @@ export default function ChangelogPage() {
                 <div
                   className={`absolute -left-[5px] top-[7px] size-2.5 rounded-full ${
                     i === 0
-                      ? "bg-frost-blue shadow-[0_0_0_4px_oklch(0.72_0.14_248/0.12)]"
+                      ? "border-2 border-foreground bg-foreground"
                       : "border-2 border-border bg-background"
                   }`}
                   aria-hidden

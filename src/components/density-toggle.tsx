@@ -19,7 +19,7 @@ export function DensityToggle({ value, onChange, className }: DensityToggleProps
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-1 rounded-2xl border border-border/60 p-1 sm:grid-cols-2",
+        "grid grid-cols-1 gap-1 rounded-xl border border-border/60 p-1 sm:grid-cols-2",
         className
       )}
       role="radiogroup"

@@ -149,7 +149,7 @@ export function SelectorCallout() {
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       className={cn(
-        "pharos-picker-callout group relative isolate overflow-hidden rounded-xl border border-border/65 bg-card/60",
+        "pharos-picker-callout group relative isolate overflow-hidden rounded-xl border border-border/65 bg-background/60",
       )}
     >
       <div className="pharos-picker-callout__grid pointer-events-none absolute inset-0" aria-hidden="true" />
