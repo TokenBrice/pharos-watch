@@ -1,10 +1,20 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.19` (2026-02-01 -> 2026-06-24).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.191` (2026-02-01 -> 2026-06-27).
 
 ---
 
 > Older entries are archived in [pricing-pipeline-timeline-archive.md](./pricing-pipeline-timeline-archive.md); this file keeps the 10 most recent.
+
+## v6.191 - Missing-price recovery for audited low-volume and NAV assets (June 27, 2026)
+
+- `autoUSD` and `sYUSD` now use authoritative ERC-4626 `convertToAssets(1 share)` NAV pricing against their trusted parent assets
+- ERC-4626 NAV overrides run before lower-priority RPC-backed override families so missing wrapper prices are less likely to be skipped by the shared live override budget
+- `Noble USDN` now inherits fresh replay-safe tracked `M` pricing as an M0-backed rebasing Noble unit
+- `USDK` and `XO` can inherit a fresh replay-safe single-source `wM` parent while still rejecting cached, stale, fallback, and untrusted parents
+- `usdn-smardex` and `cadm-mento` join the scoped `coingecko-low-volume` fallback allowlist for near-peg quotes inside the relaxed low-volume freshness window
+
+---
 
 ## v6.19 - Authoritative override budget prioritization (June 24, 2026)
 

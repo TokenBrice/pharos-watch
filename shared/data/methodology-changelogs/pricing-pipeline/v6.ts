@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.191",
+      title: "Missing-price recovery for audited low-volume and NAV assets",
+      date: "2026-06-27",
+      effectiveAt: 1782518400,
+      summary:
+        "Expanded targeted missing-price recovery without relaxing global freshness or depeg guardrails.",
+      impact: [
+        "`autoUSD` and `sYUSD` now use authoritative ERC-4626 `convertToAssets(1 share)` NAV pricing against their trusted parent assets",
+        "ERC-4626 NAV overrides run before lower-priority RPC-backed override families so missing wrapper prices are less likely to be skipped by the shared live override budget",
+        "`usdn-noble` now inherits fresh replay-safe tracked `m-m0` pricing as an M0-backed rebasing Noble unit",
+        "`usdk-kast` and `xo-exodus` can inherit a fresh replay-safe single-source `wm-m0` parent price while still rejecting cached, stale, fallback, and untrusted parents",
+        "`usdn-smardex` and `cadm-mento` join the scoped `coingecko-low-volume` fallback allowlist when CoinGecko has a near-peg quote inside the relaxed low-volume freshness window",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.19",
       title: "Authoritative override budget prioritization",
       date: "2026-06-24",

@@ -23,7 +23,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.19`
+- **Current methodology version:** `v6.191`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -226,6 +226,7 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `m-m0`                   | inherits tracked `wm-m0` pricing as the underlying M0 unit                      |
 | `usdk-kast`              | inherits fresh tracked `wm-m0` pricing as a Solana M0 extension unit            |
 | `xo-exodus`              | inherits fresh tracked `wm-m0` pricing as a Solana M0 extension unit            |
+| `usdn-noble`             | inherits fresh tracked `m-m0` pricing as an M0-backed rebasing Noble unit       |
 | `usdnr-nerona`           | inherits tracked `wm-m0` pricing as an M0 extension unit                        |
 | `weusd-picwe`            | inherits tracked `usdc-circle` pricing with PicWe's documented 1% redemption-fee haircut |
 | `sofid-sofi`             | direct USD redemption-par reference for observable on-chain supply              |
@@ -245,10 +246,12 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `gtusdc-gauntlet`        | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `gtusdcp-gauntlet`       | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `yvusdc-yearn`           | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `autousd-auto-finance`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `savusd-avant`           | ERC-4626 `convertToAssets(1 share)` × tracked `avusd-avant` price               |
 | `susn-noon`              | ERC-4626 `convertToAssets(1 share)` × tracked `usn-noon` price                  |
 | `syzusd-yuzu`            | ERC-4626 `convertToAssets(1 share)` × tracked `yzusd-yuzu` price                |
 | `stkgho-umbrella-aave`   | ERC-4626 `convertToAssets(1 share)` × tracked `gho-aave` price                  |
+| `syusd-aegis`            | ERC-4626 `convertToAssets(1 share)` × tracked `yusd-aegis` price                |
 | `sbold-k3-capital`       | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price              |
 | `ybold-yearn`            | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price              |
 | `sgho-aave`              | Aave legacy savings `previewRedeem(1 share)` × tracked `gho-aave` price         |
@@ -262,7 +265,8 @@ When a live override validates successfully, the cached asset is written with:
 For tracked-base inheritance paths, the authoritative layer does not query a bespoke contract path; it inherits the tracked parent asset's live price and historical replay because Pharos models the child as an instantly redeemable wrapper or extension of that parent rail.
 
 Live tracked-base and NAV-wrapper inheritance only promotes parent prices that are replay-safe and either
-high-confidence or explicitly authoritative themselves. Low-confidence, fallback, cached, stale-sync, single-source stale,
+high-confidence or explicitly authoritative themselves. For scoped M0 extension assets, a fresh replay-safe single-source
+M0 parent is also admissible. Low-confidence, fallback, cached, stale-sync, single-source stale,
 or provenance-less parent prices are skipped instead of being upgraded into `protocol-redeem` high-confidence child
 prices. For high-confidence composite parents, a fresh same-run `priceSyncedAt` can satisfy the live inheritance
 freshness check when the composite's single displayed `observedAt` is older than one short-window component source; this
@@ -278,6 +282,7 @@ Current tracked-base inheritance paths are:
 - `m-m0 -> wm-m0`
 - `usdk-kast -> wm-m0`
 - `xo-exodus -> wm-m0`
+- `usdn-noble -> m-m0`
 - `usdnr-nerona -> wm-m0`
 - `weusd-picwe -> usdc-circle` with a 1% redemption-fee haircut
 
@@ -296,7 +301,7 @@ Scoped redemption-par references cover active assets with observable runtime sup
 
 These authoritative overrides are pre-applied before fallback enrichment and then applied again after the GeckoTerminal single-source probe. The early pass keeps known redeemable wrappers and extension assets out of unnecessary fallback-source probes, while the final pass preserves the existing rule that a later market cross-check cannot overwrite a validated redemption price.
 
-Live parent-derived overrides normally require a replay-safe parent source. A narrow audited exception lets `sbold-k3-capital`, `ybold-yearn`, `usdk-kast`, and `xo-exodus` use a fresh high-confidence same-run parent consensus even when that parent composite includes address-derived providers; cached parents are still rejected, and historical replay still uses only replay-safe provider paths.
+Live parent-derived overrides normally require a replay-safe parent source. A narrow audited exception lets `sbold-k3-capital`, `ybold-yearn`, `syusd-aegis`, `usdk-kast`, and `xo-exodus` use a fresh high-confidence same-run parent consensus even when that parent composite includes address-derived providers; `usdk-kast`, `xo-exodus`, and `usdn-noble` may also inherit a fresh replay-safe single-source M0 parent. Cached parents are still rejected, and historical replay still uses only replay-safe provider paths.
 
 The same registry also supports historical replay for backfills where a provider can replay the same source safely, so admin rebuilds do not silently downgrade back to weaker market sources.
 
@@ -313,13 +318,13 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 3. **Pass 2:** CoinMarketCap stablecoins category batch (`v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Each accepted quote preserves `quote.USD.last_updated` as upstream provenance and must be fresh; schema-invalid OK responses, malformed JSON, non-OK responses, and apparent category truncation record CMC breaker failures. Rate-limited to 1 call/hour via D1 cache, including 429 responses after the provider `Retry-After` delay is honored (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — calls the official V3 gateway with `JUPITER_API_KEY` when configured, accepts documented sparse no-quote rows as healthy empty coverage, accepts quoted payloads without `liquidity`, checks `blockId` freshness against Solana current slot when a quote exists, applies optional liquidity gating only when liquidity is present, and remains subject to peg-aware validation. In addition to missing-price recovery, the pass can append `jupiter` as a bounded soft candidate for low-depth Solana assets when the Jupiter quote agrees with the current primary price; it does not replace the selected price or add Jupiter to `agreeSources`.
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Exact-address recoveries publish `dexscreener-exact`. The older last-resort symbol-search path is retired, so addressless assets no longer call `/latest/dex/search` and remain explicitly missing unless another fallback resolves them. The pass walks the full sorted missing set and stops after 10 actual DexScreener exact-address requests. The legacy `dexscreener-search` breaker can still appear in health payloads while stale production state ages out, but new sync runs recover it through the no-candidates path instead of probing the search endpoint.
-6. **Pass 5:** CoinGecko low-volume allowlisted fallback for selected DefiLlama-listed assets whose DL row supplies circulation but no price. It currently targets `mnee-mnee`, `veur-vnx`, `usp-pareto-credit`, and `tryb-bilira`, runs after DefiLlama contract, CMC, Jupiter, and DexScreener recovery fail, and only fills still-missing price fields with `priceConfidence: "fallback"`.
+6. **Pass 5:** CoinGecko low-volume allowlisted fallback for selected DefiLlama-listed assets whose DL row supplies circulation but no price. It currently targets `mnee-mnee`, `veur-vnx`, `usdn-smardex`, `cadm-mento`, `usp-pareto-credit`, and `tryb-bilira`, runs after DefiLlama contract, CMC, Jupiter, and DexScreener recovery fail, and only fills still-missing price fields with `priceConfidence: "fallback"`.
 
 The DefiLlama `/coins` contract-address fallback, supplemental CoinGecko-id mirror fetches, and the DexScreener lookups used outside primary consensus (the `dex-liquidity` and `dex-discovery` crawls) now gate on and record against their own circuit breakers. `CIRCUIT_SOURCE.DL_COINS` wraps the `coins.llama.fi/prices/current/...` path so a DL regional outage opens the breaker instead of hammering the host, `CIRCUIT_SOURCE.DL_PROTOCOLS` wraps supplemental gold protocol mcap/TVL fetches as well as DEX protocol reads, `dexscreener-prices` wraps only the exact-address stablecoin pricing lane, and `dexscreener-liquidity` wraps optional DEX liquidity/discovery pool lookups. Discovery and liquidity fallback record aggregate DexScreener outcomes, so a handful of optional token-target failures inside a partially successful crawl do not count as multiple source-wide failures or poison stablecoin price fallback availability.
 
 Tracked DefiLlama rows that collapse to zero supply are repaired before pricing when the row has no usable chart-history repair or its chart-history value is below the tracked repair floor. The repair remains scoped to source-reviewed deployments for CADD and the Mento JPY/ZAR/XOF stables, reads every configured chain successfully before publishing, converts total supply through the current fresh/static FX reference, and tags the result `supplySource = "onchain-total-supply"`.
 
-Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes and self-stops once its clipped 90-second budget is exhausted. Protocol overrides run under a 10-second wall-clock budget, and external live RPC-backed `protocol-redeem` providers share a grouped breaker. Local par and inherited tracked-base overrides are attempted before RPC-backed providers, and missing-price candidates are prioritized within each provider tier so budget exhaustion repairs coverage before refreshing already-priced wrappers.
+Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes and self-stops once its clipped 90-second budget is exhausted. Protocol overrides run under a 10-second wall-clock budget, and external live RPC-backed `protocol-redeem` providers share a grouped breaker. Local par and inherited tracked-base overrides are attempted before RPC-backed providers; ERC-4626 NAV wrappers run before lower-priority RPC-backed override families; and missing-price candidates are prioritized within each provider tier so budget exhaustion repairs coverage before refreshing already-priced wrappers.
 
 Provider attempt diagnostics for fallback providers are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, parse or rejection reason counts, and short non-OK snippets so operators can distinguish provider transport failures from schema drift, rejected quotes, and successful responses that simply carry no usable tracked prices.
 
@@ -343,7 +348,7 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
 2. If there is no `geckoId` but the asset has one unambiguous supported supply contract, try the same DefiLlama coins endpoint with an exact `chain:contract` key. Accepted quotes must include a matching DefiLlama symbol, confidence of at least `0.8`, a fresh upstream timestamp, and pass the shared peg-aware reasonableness bounds before publishing as `source: "defillama-contract"` or normalizing the same on-chain total-supply fallback.
 3. If that returns null but `cgData[geckoId].usd` is a positive finite number, build a resolution with `source: "coingecko-low-volume"`, `priceConfidence: "fallback"`, and `priceObservedAtMode: "upstream"` when CG returned `last_updated_at` (otherwise `"local_fetch"`).
 
-The fallback enrichment pipeline also has a narrow `coingecko-low-volume` pass for selected DefiLlama-listed assets whose DL row supplies circulation but no price. That pass runs only after DefiLlama contract, CMC, Jupiter, and DexScreener fallback recovery fail. It is explicitly allowlisted for audited low-volume gaps (`mnee-mnee`, `veur-vnx`, `usp-pareto-credit`, and `tryb-bilira`), keeps the DefiLlama supply row intact, and can only fill missing price fields; it cannot overwrite a price that primary consensus or an earlier fallback already accepted.
+The fallback enrichment pipeline also has a narrow `coingecko-low-volume` pass for selected DefiLlama-listed assets whose DL row supplies circulation but no price. That pass runs only after DefiLlama contract, CMC, Jupiter, and DexScreener fallback recovery fail. It is explicitly allowlisted for audited low-volume gaps (`mnee-mnee`, `veur-vnx`, `usdn-smardex`, `cadm-mento`, `usp-pareto-credit`, and `tryb-bilira`), keeps the DefiLlama supply row intact, and can only fill missing price fields; it cannot overwrite a price that primary consensus or an earlier fallback already accepted.
 
 The lane is registered in `shared/lib/pricing-source-registry-aggregators.ts` with a 7-day `maxTrustedAgeSec` and `defaultWeight: 0.5`. Downstream treatment is intentionally weaker than primary `coingecko`:
 
