@@ -20,6 +20,7 @@ const M_M0_ID = "m-m0";
 const USDK_KAST_ID = "usdk-kast";
 const XO_EXODUS_ID = "xo-exodus";
 const USDNR_NERONA_ID = "usdnr-nerona";
+const USDN_NOBLE_ID = "usdn-noble";
 const WM_M0_ID = "wm-m0";
 const AUSD_AGORA_ID = "ausd-agora";
 const WEUSD_PICWE_ID = "weusd-picwe";
@@ -28,6 +29,7 @@ interface InheritedTrackedPriceConfig {
   parentId: string;
   multiplier?: number;
   allowFreshNonReplaySafeParent?: boolean;
+  allowFreshReplaySafeSingleSourceParent?: boolean;
 }
 
 const INHERITED_TRACKED_PRICE_CONFIGS = {
@@ -35,8 +37,20 @@ const INHERITED_TRACKED_PRICE_CONFIGS = {
   "iusd-initia": { parentId: AUSD_AGORA_ID },
   "usdcx-movement": { parentId: USDC_CIRCLE_ID },
   [M_M0_ID]: { parentId: WM_M0_ID },
-  [USDK_KAST_ID]: { parentId: WM_M0_ID, allowFreshNonReplaySafeParent: true },
-  [XO_EXODUS_ID]: { parentId: WM_M0_ID, allowFreshNonReplaySafeParent: true },
+  [USDK_KAST_ID]: {
+    parentId: WM_M0_ID,
+    allowFreshNonReplaySafeParent: true,
+    allowFreshReplaySafeSingleSourceParent: true,
+  },
+  [XO_EXODUS_ID]: {
+    parentId: WM_M0_ID,
+    allowFreshNonReplaySafeParent: true,
+    allowFreshReplaySafeSingleSourceParent: true,
+  },
+  [USDN_NOBLE_ID]: {
+    parentId: M_M0_ID,
+    allowFreshReplaySafeSingleSourceParent: true,
+  },
   [USDNR_NERONA_ID]: { parentId: WM_M0_ID },
   // 0.99 multiplier: WEUSD redeems at 1% below USDC parity per PicWe's documented redemption fee
   // (Phase 1 mint/redeem at 1:1 USDC minus 1% fee). Note: secondary-market price is ~$0.91 —
@@ -88,7 +102,10 @@ export const inheritedTrackedPriceProvider: PriceSourceProvider = {
       config.parentId,
       () =>
         `[authoritative-price-sources] ${asset.id}: skipped inherited ${config.parentId} price because parent provenance is not trusted`,
-      { allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent },
+      {
+        allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent,
+        allowFreshReplaySafeSingleSourceParent: config.allowFreshReplaySafeSingleSourceParent,
+      },
     );
     if (!parent) return null;
 

@@ -201,6 +201,7 @@ function normalizeFreshSyncedAt(value: number | null | undefined, nowSec: number
 
 interface LiveParentTrustOptions {
   allowFreshNonReplaySafeParent?: boolean;
+  allowFreshReplaySafeSingleSourceParent?: boolean;
 }
 
 function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, options?: LiveParentTrustOptions): {
@@ -216,12 +217,21 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, optio
   const parentConfidence = asset.priceConfidence ?? null;
   if (!parentSource) return null;
 
-  const confidenceTrusted = parentConfidence === "high" || isExplicitAuthoritativeParent(asset);
+  const sourceParts = splitCompositePriceSource(parentSource);
+  const replaySafe = isReplaySafePriceSource(parentSource);
+  const confidenceTrusted =
+    parentConfidence === "high" ||
+    isExplicitAuthoritativeParent(asset) ||
+    (
+      options?.allowFreshReplaySafeSingleSourceParent === true &&
+      parentConfidence === "single-source" &&
+      replaySafe &&
+      sourceParts.length === 1 &&
+      !sourceParts.includes("cached")
+    );
   if (!confidenceTrusted) return null;
 
-  const replaySafe = isReplaySafePriceSource(parentSource);
   if (!replaySafe) {
-    const sourceParts = splitCompositePriceSource(parentSource);
     if (!options?.allowFreshNonReplaySafeParent || sourceParts.includes("cached")) {
       return null;
     }

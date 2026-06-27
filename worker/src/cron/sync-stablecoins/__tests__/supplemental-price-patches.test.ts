@@ -101,6 +101,53 @@ describe("runCoingeckoLowVolumePass", () => {
     });
   });
 
+  it("includes audited near-peg SMARDEX USDN and CADm gaps in the relaxed fallback allowlist", async () => {
+    const observedAt = Math.floor(Date.now() / 1000) - 3 * 24 * 3600;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "smardex-usdn": { usd: 1.006, last_updated_at: observedAt },
+          "celo-canadian-dollar": { usd: 0.697285, last_updated_at: observedAt },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const usdn = asset({
+      id: "usdn-smardex",
+      symbol: "USDN",
+      price: null,
+      priceSource: "defillama",
+      supplySource: "defillama",
+      circulating: { peggedUSD: 676_000 },
+    });
+    const cadm = asset({
+      id: "cadm-mento",
+      symbol: "CADm",
+      pegType: "peggedCAD",
+      price: null,
+      priceSource: "defillama",
+      supplySource: "defillama",
+      circulating: { peggedCAD: 0 },
+    });
+
+    const result = await runCoingeckoLowVolumePass([usdn, cadm], null, { peggedCAD: 0.70511 });
+
+    expect(result).toEqual({ resolved: 2, failures: [] });
+    expect(usdn).toMatchObject({
+      price: 1.006,
+      priceSource: "coingecko-low-volume",
+      priceConfidence: "fallback",
+      supplySource: "defillama",
+    });
+    expect(cadm).toMatchObject({
+      price: 0.697285,
+      priceSource: "coingecko-low-volume",
+      priceConfidence: "fallback",
+      supplySource: "defillama",
+    });
+  });
+
   it("does not overwrite prices that are already present", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(JSON.stringify({

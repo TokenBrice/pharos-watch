@@ -22,6 +22,8 @@ const COINGECKO_LOW_VOLUME_SOURCE = "coingecko-low-volume";
 export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "mnee-mnee",
   "veur-vnx",
+  "usdn-smardex",
+  "cadm-mento",
   "usp-pareto-credit",
   "tryb-bilira",
 ]);

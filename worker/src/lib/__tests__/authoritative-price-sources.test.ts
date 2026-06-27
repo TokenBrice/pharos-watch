@@ -56,6 +56,13 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
         contracts: [{ chain: "ethereum", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 }],
       },
     ],
+    [
+      "yusd-aegis",
+      {
+        id: "yusd-aegis",
+        geckoId: "aegis-yusd",
+      },
+    ],
   ]),
 }));
 
@@ -1502,6 +1509,91 @@ describe("authoritative-price-sources", () => {
     expect(overrides.has("m-m0")).toBe(false);
   });
 
+  it("allows scoped M0 wrappers to inherit a fresh replay-safe single-source parent", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "usdk-kast",
+        name: "KAST Dollar",
+        symbol: "USDK",
+        circulating: { peggedUSD: 24_000_000 },
+      },
+      {
+        id: "xo-exodus",
+        name: "XO Cash",
+        symbol: "XO",
+        circulating: { peggedUSD: 2_400_000 },
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.999674,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(overrides.get("usdk-kast")).toMatchObject({
+      price: 0.999674,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentSource: "coingecko",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
+    expect(overrides.get("xo-exodus")).toMatchObject({
+      price: 0.999674,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentSource: "coingecko",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
+  });
+
+  it("allows Noble USDN to inherit a fresh replay-safe M parent", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "usdn-noble",
+        name: "Noble Dollar",
+        symbol: "USDN",
+        circulating: { peggedUSD: 4_000_000 },
+      },
+      {
+        id: "m-m0",
+        name: "M",
+        symbol: "M",
+        price: 0.999766,
+        priceSource: "defillama-contract",
+        priceConfidence: "single-source",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(overrides.get("usdn-noble")).toMatchObject({
+      price: 0.999766,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "m-m0",
+        parentSource: "defillama-contract",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
+  });
+
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {
     const overrides = await fetchAuthoritativeLivePriceOverrides([
       {
@@ -1660,6 +1752,24 @@ describe("authoritative-price-sources", () => {
         chain: "ethereum",
         outputRaw: 1_020_871_205_300_000_000n,
         expectedRatio: 1.0208712,
+      },
+      {
+        id: "autousd-auto-finance",
+        parentId: "usdc-circle",
+        parentSymbol: "USDC",
+        vault: "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
+        chain: "ethereum",
+        outputRaw: 1_089_794n,
+        expectedRatio: 1.089794,
+      },
+      {
+        id: "syusd-aegis",
+        parentId: "yusd-aegis",
+        parentSymbol: "YUSD",
+        vault: "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        chain: "ethereum",
+        outputRaw: 1_041_919_601_032_091_731n,
+        expectedRatio: 1.0419196,
       },
       {
         id: "sbold-k3-capital",

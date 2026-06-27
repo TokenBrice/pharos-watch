@@ -21,6 +21,7 @@ const AVUSD_AVANT_ID = "avusd-avant";
 const GHO_AAVE_ID = "gho-aave";
 const USN_NOON_ID = "usn-noon";
 const YZUSD_YUZU_ID = "yzusd-yuzu";
+const YUSD_AEGIS_ID = "yusd-aegis";
 
 // ERC-4626 vaults that should be priced from `convertToAssets(1 share)` * parent.price.
 // Each entry must have a single tracked parent that already prices through normal consensus.
@@ -98,6 +99,14 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     assetDecimals: 6,
   },
   {
+    id: "autousd-auto-finance",
+    parentId: USDC_CIRCLE_ID,
+    chain: ETHEREUM_CHAIN,
+    vault: "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
+    vaultDecimals: 18,
+    assetDecimals: 6,
+  },
+  {
     id: "savusd-avant",
     parentId: AVUSD_AVANT_ID,
     chain: "avalanche",
@@ -129,6 +138,15 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     vault: "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
     vaultDecimals: 18,
     assetDecimals: 18,
+  },
+  {
+    id: "syusd-aegis",
+    parentId: YUSD_AEGIS_ID,
+    chain: ETHEREUM_CHAIN,
+    vault: "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+    vaultDecimals: 18,
+    assetDecimals: 18,
+    allowFreshNonReplaySafeParent: true,
   },
   {
     id: "sbold-k3-capital",
@@ -172,6 +190,7 @@ async function fetchErc4626AssetsPerShare(
 export const erc4626NavProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
   liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+  livePriority: 1,
   matches(stablecoinId: string): boolean {
     return ERC4626_NAV_VAULTS_BY_ID.has(stablecoinId);
   },
