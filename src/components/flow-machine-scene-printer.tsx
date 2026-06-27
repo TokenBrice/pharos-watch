@@ -37,7 +37,7 @@ export function FlowMachinePrinter({
         }}
       />
       <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-2xl border border-slate-600/80 bg-slate-900/85 shadow-[inset_0_-14px_24px_rgba(0,0,0,0.35)]"
+        className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-xl border border-slate-600/80 bg-slate-900/85"
         style={{ top: `${model.dims.bodyTop}px`, width: `${model.dims.bodyW}px`, height: `${model.dims.bodyH}px` }}
       />
       <div

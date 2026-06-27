@@ -91,7 +91,7 @@ export function FlowReceiptBand({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-lg border border-dashed border-border/80 bg-card/85",
+        "relative overflow-hidden rounded-xl border border-dashed border-border/80 bg-background/70",
         className,
       )}
       aria-labelledby="flow-receipt-band-heading"

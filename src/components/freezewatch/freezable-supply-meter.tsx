@@ -344,9 +344,9 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
           className="pointer-events-none absolute -top-4 h-[calc(3rem+1rem)]"
           style={{ left: `${freezableEnd}%` }}
         >
-          <div className="absolute left-0 h-full w-[2px] -translate-x-1/2 bg-frost-blue shadow-[0_0_10px_oklch(0.74_0.16_240_/_0.75)]" />
+          <div className="absolute left-0 h-full w-[2px] -translate-x-1/2 bg-frost-blue" />
           <span
-            className="absolute -top-0.5 whitespace-nowrap rounded-sm border border-frost-blue/60 bg-background/95 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-frost-blue shadow-[0_2px_10px_oklch(0_0_0_/0.45)]"
+            className="absolute -top-0.5 whitespace-nowrap rounded-sm border border-frost-blue/60 bg-background/95 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-frost-blue"
             style={{ left: 0, transform: labelTransform }}
           >
             Freeze line

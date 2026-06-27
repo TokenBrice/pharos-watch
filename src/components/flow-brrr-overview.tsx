@@ -99,7 +99,7 @@ function buildSnapshot(
 function LoadingState() {
   return (
     <div className="space-y-4">
-      <div className="animate-pulse rounded-2xl border bg-card p-4 sm:p-6">
+      <div className="pharos-card-shell animate-pulse p-4 sm:p-6">
         <div className="h-4 w-44 rounded bg-muted/60" />
         <div className="mt-4 h-9 w-full max-w-[620px] rounded bg-muted/60" />
         <div className="mt-4 h-4 w-full max-w-[760px] rounded bg-muted/60" />
@@ -150,7 +150,7 @@ export function FlowBrrrOverview({
     <div className={cn("h-full space-y-4", className)}>
       <article
         className={cn(
-          "relative overflow-hidden rounded-2xl border bg-card",
+          "pharos-card-shell relative overflow-hidden",
           isCompact ? "p-4 sm:p-5" : "p-4 sm:p-6",
         )}
       >
@@ -242,7 +242,7 @@ export function FlowBrrrOverview({
                   />
                   {snapshot.leverPct !== null && (
                     <div
-                      className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-[0_0_0_3px_rgba(15,23,42,0.45)] transition-all"
+                      className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-foreground ring-2 ring-foreground/30 transition-all"
                       style={{ left: `calc(${snapshot.leverPct}% - 10px)` }}
                       role="img"
                       aria-label={`Bank Run Gauge at ${Math.round(snapshot.leverPct)}%`}
