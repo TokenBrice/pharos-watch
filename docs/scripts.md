@@ -151,7 +151,7 @@ The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, a
 
 ## CI-Critical Scripts
 
-These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/safe-browsing-monitor.yml`, `.github/workflows/pharos-change-contract.yml`, and `.github/workflows/telegram-load.yml`) directly, or indirectly through `npm run build`:
+These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/critical-coverage-ratchet.yml`, `.github/workflows/og-refresh.yml`, `.github/workflows/safe-browsing-monitor.yml`, `.github/workflows/pharos-change-contract.yml`, and `.github/workflows/telegram-load.yml`) directly, or indirectly through `npm run build`:
 
 - `sync-digests.ts` in the consolidated Pages release job before the build artifact is created
 - `sync-depeg-events.ts` in the same Pages release path so `/depeg/<event>/` static params and feed/static exports use current confirmed events
@@ -178,6 +178,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `check-classifier-sensitive-copy.mjs` via `npm run check:classifier-sensitive-copy` after Pages builds
 - `report-build-size.mjs --check` via `npm run check:build-size` after Pages builds; this includes the Cloudflare Pages 20,000-file direct-upload cap so oversized exports fail before the Pages publish step
 - `check-safe-browsing.mjs` via the daily/manual `Safe Browsing Monitor` workflow
+- `coverage:critical` via the weekly/manual Critical Coverage Ratchet workflow
+- `screenshot-og.mjs` via `npm run og:capture` in the weekly/manual OG refresh workflow
 - `classify-deploy-changes.mjs` via the `detect-changes` jobs in `.github/workflows/deploy-cloudflare.yml` and `.github/workflows/pull-request-checks.yml`
 - `pharos-change-contract.mjs` via `.github/workflows/pharos-change-contract.yml` for same-repo PR comments and `.claude/settings.json` for local Claude hooks; Codex hook configs stay user-local/untracked
 - `upsert-github-pr-comment.mjs` via `.github/workflows/pharos-change-contract.yml` to keep the PR comment sticky instead of creating duplicates

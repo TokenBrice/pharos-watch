@@ -35,7 +35,7 @@ export const ENV_BINDINGS = [
   {
     key: "DB",
     valueType: "D1Database",
-    description: "Primary D1 binding for worker reads/writes; Pages uses it for site-data attribution telemetry and atomic selector-snapshot write quotas.",
+    description: "Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas.",
     docs: { includeInOperatorOriginAccess: true },
     runtimes: {
       worker: { order: 50, status: "required" },

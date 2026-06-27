@@ -286,6 +286,8 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/telegram-pending`
 - `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
+- `POST /api/api-key-requests-admin/:requestId/reject`
+- `POST /api/api-key-requests-admin/:requestId/release-claim`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
 
@@ -4953,7 +4955,7 @@ Bulk-dismisses discovery candidates. Requires either `?all=true` or `?ids=<csv>`
 
 ### `POST /api/telegram-pending`
 
-Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered requests. Operators must supply exactly one of `?chat_id=<id>` (drop all pending alerts for a specific subscriber) or `?older_than_sec=<positive-integer>` (drop alerts older than the supplied window). Add `?dry_run=1` or `?dryRun=true` to preview the matching row count without dead-lettering or deleting rows. Live clears return the count of rows deleted; dry-runs return the count matched. Both paths are recorded in `admin_action_audit`.
+Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered requests. Operators must supply exactly one of `?chat_id=<id>` (drop all pending alerts for a specific subscriber) or `?older_than_sec=<positive-integer>` (drop alerts older than the supplied window). Add `?dry_run=1`, `?dryRun=true`, or `?dry-run=true` to preview the matching row count without dead-lettering or deleting rows. Live clears return the count of rows deleted; dry-runs return the count matched. Both paths are recorded in `admin_action_audit`.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required for mutations).
 
@@ -5103,7 +5105,8 @@ Returns `404` with `{ "error": "Not found", "chatId": "<id>" }` when no `telegra
       "alert_launch": 0,
       "dews_min_band": "WARNING",
       "safety_mode": null,
-      "depeg_worsening_bps_step": 250
+      "depeg_worsening_bps_step": 250,
+      "alert_snooze_until_ts": null
     }
   ],
   "presets": [
@@ -5202,6 +5205,19 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
   "targetChatCount": 1247,
   "chunkCount": 1,
   "targetMessageCount": 1247,
+  "pendingCapacity": {
+    "total": 0,
+    "active": 0,
+    "due": 0,
+    "deferred": 0,
+    "expired": 0,
+    "nearTtl": 0,
+    "oldestPendingAgeSec": null,
+    "oldestDuePendingAgeSec": null,
+    "estimatedDrainTimeSec": 0,
+    "drainBudgetPerRun": 900,
+    "dispatchIntervalSec": 300
+  },
   "deliveryEstimate": {
     "currentPendingActive": 0,
     "projectedPendingMessages": 1247,
@@ -5216,6 +5232,7 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
       "60": true
     }
   },
+  "htmlPreflight": "ok",
   "sample": ["100", "200", "300", "400", "500"]
 }
 ```
@@ -5237,4 +5254,4 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 
 `enqueued` reports the number of target chat/chunk messages submitted to the pending queue (`targetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
-**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `422` for malformed or unsupported Telegram HTML, with the response body carrying the offending character position. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set.
+**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `422` for malformed or unsupported Telegram HTML, with the response body carrying the offending character position. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set; the response includes `targetChatCount`, `chunkCount`, `targetMessageCount`, `pendingCapacity`, and `deliveryEstimate` so operators can rerun as a dry-run or explicitly acknowledge the backlog risk.

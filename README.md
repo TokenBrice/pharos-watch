@@ -135,7 +135,7 @@ Use one of these paths:
 - `next dev` allows `ops.pharos.watch` as a development origin so the ops host can point at a local dev server during Access/proxy debugging.
 
 **Worker-only (`cd worker && npx wrangler dev`)**
-Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys, including optional provider credentials such as `BANXICO_TOKEN` and operational telemetry kill switches.
+Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys, including required provider credentials such as `BANXICO_TOKEN` for the official MXN CETES benchmark plus optional provider credentials and operational telemetry kill switches.
 
 **Full-stack local**
 Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separate terminals. `DEV_PROXY_UPSTREAM` and `DEV_PROXY_PORT` override the local site-data proxy target/port when debugging the `npm run dev` proxy path.
