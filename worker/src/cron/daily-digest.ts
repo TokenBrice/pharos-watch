@@ -1,4 +1,5 @@
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
+import { throwIfAborted } from "../lib/abort";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
@@ -256,16 +257,20 @@ export async function generateDailyDigest(
     digestTitle: digestCopy.digestTitle || null,
     inputData: storedInputData,
     digestExtended: digestCopy.digestExtended || null,
-    digestMeta: digestCopy.digestMeta, signal,
+    digestMeta: digestCopy.digestMeta,
+    signal,
   });
+  throwIfAborted(signal);
   // SAFETY: NON_WEEKLY_DIGEST_SQL_FILTER is a hardcoded SQL fragment, not derived from user input.
   const countResult = await db
     .prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}`)
     .all<{ cnt: number }>();
+  throwIfAborted(signal);
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
 
   const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
 
+  throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "twitter-delivery",
     message: "Delivering daily digest to Twitter/X",
@@ -317,6 +322,7 @@ export async function generateDailyDigest(
     throw new Error("Twitter daily digest marker write failed");
   }
 
+  throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "telegram-delivery",
     message: "Delivering daily digest to Telegram",

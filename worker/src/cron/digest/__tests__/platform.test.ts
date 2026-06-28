@@ -113,4 +113,22 @@ describe("insertDigestRecord", () => {
     await expect(insertDigestRecord(makeOptions(db, controller.signal))).rejects.toThrow("stop-digest");
     expect(prepare).not.toHaveBeenCalled();
   });
+
+  it("honors an abort that fires while the D1 insert is in flight", async () => {
+    const controller = new AbortController();
+    const prepare = vi.fn(() => ({
+      bind: () => ({
+        run: async () => {
+          controller.abort(new Error("stop-after-insert"));
+          return { success: true, meta: { changes: 1 } };
+        },
+      }),
+    }));
+    const db = {
+      prepare,
+    } as unknown as D1Database;
+
+    await expect(insertDigestRecord(makeOptions(db, controller.signal))).rejects.toThrow("stop-after-insert");
+    expect(prepare).toHaveBeenCalledTimes(1);
+  });
 });

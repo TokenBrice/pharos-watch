@@ -4,6 +4,7 @@ import type {
   DigestValidationProfile,
 } from "../daily-digest/response";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { throwIfAborted } from "../../lib/abort";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { readResponseTextBoundedWithSignal } from "../../lib/response-body";
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
@@ -231,6 +232,7 @@ export async function requestDigestCopy(
 }
 
 export async function insertDigestRecord(options: InsertDigestRecordOptions): Promise<void> {
+  throwIfAborted(options.signal);
   const inputDataJson = JSON.stringify(options.inputData);
 
   await runWithOverloadRetry(() =>
@@ -267,6 +269,7 @@ export async function insertDigestRecord(options: InsertDigestRecordOptions): Pr
     3,
     options.signal,
   );
+  throwIfAborted(options.signal);
 }
 
 export function didDigestChannelDeliver(status: string): boolean {

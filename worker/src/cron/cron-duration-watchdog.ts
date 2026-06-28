@@ -138,13 +138,14 @@ function isRecent(timestampSec: number | null, nowSec: number, windowSec: number
 }
 
 function isRuntimeBreaching(stats: JobDurationStats, nowSec: number): boolean {
-  if (stats.runs < MIN_RUNS_FOR_TREND) return false;
   const hasRecentCapHits = stats.capHits >= DURATION_ALERT_CAP_HITS
     && isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
   const hasRecentBudgetTruncations = stats.budgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS
     && isRecent(stats.latestBudgetTruncationAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
+  const hasAverageTrend = stats.runs >= MIN_RUNS_FOR_TREND
+    && stats.avgRatio >= DURATION_ALERT_AVG_RATIO;
   return (
-    stats.avgRatio >= DURATION_ALERT_AVG_RATIO ||
+    hasAverageTrend ||
     hasRecentCapHits ||
     hasRecentBudgetTruncations
   );

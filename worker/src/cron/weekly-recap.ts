@@ -1,5 +1,6 @@
 import { formatIsoDate } from "@shared/lib/format";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { throwIfAborted } from "../lib/abort";
 import { createNeutralSkippedCronResult } from "../lib/cron-result";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
@@ -478,9 +479,11 @@ export async function generateWeeklyRecap(
     digestMeta: initialDigestMeta,
     signal,
   });
+  throwIfAborted(signal);
 
   // Post to Telegram
   const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
+  throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "telegram-delivery",
     message: "Delivering weekly recap to Telegram",

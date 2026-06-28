@@ -153,6 +153,47 @@ describe("runCronDurationWatchdog", () => {
     expect(JSON.parse(String(result.metadata))).toMatchObject({ breaching: ["sync-stablecoins"] });
   });
 
+  it("alerts on repeated at-cap runs for low-cadence jobs below the trend sample floor", async () => {
+    const db = mockD1([
+      statsMatcher({
+        n: 3,
+        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
+        max_ms: SYNC_TIMEOUT_MS,
+        cap_hits: 3,
+        latest_cap_hit_at: NOW_SEC - 60,
+      }),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      runtimeBreaching: ["sync-stablecoins"],
+      breaching: ["sync-stablecoins"],
+    });
+  });
+
+  it("alerts on repeated budget truncations below the trend sample floor", async () => {
+    const db = mockD1([
+      statsMatcher({
+        n: 3,
+        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
+        max_ms: SYNC_TIMEOUT_MS - 1,
+        cap_hits: 0,
+        budget_truncations: 3,
+        latest_budget_truncation_at: NOW_SEC - 60,
+      }),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      runtimeBreaching: ["sync-stablecoins"],
+      breaching: ["sync-stablecoins"],
+    });
+  });
+
   it("keeps recovered at-cap history visible without degrading", async () => {
     const db = mockD1([
       statsMatcher({
