@@ -9264,6 +9264,9 @@
         "url": "https://data.chain.link/feeds/ethereum/mainnet/buidl-nav",
         "label": "Chainlink BUIDL NAV"
       },
+      "scoring": {
+        "maxSourceAgeSec": 345600
+      },
       "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
@@ -9278,7 +9281,7 @@
         "assetLabel": "U.S. Treasury Bills (BUIDL)",
         "assetRisk": "very-low",
         "oracleMethod": "latestRoundData",
-        "maxOracleAgeSec": 345600
+        "maxOracleAgeSec": 604800
       }
     },
     "yieldConfig": {

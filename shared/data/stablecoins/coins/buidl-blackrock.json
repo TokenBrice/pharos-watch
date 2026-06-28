@@ -209,7 +209,10 @@
       "assetLabel": "U.S. Treasury Bills (BUIDL)",
       "assetRisk": "very-low",
       "oracleMethod": "latestRoundData",
-      "maxOracleAgeSec": 345600
+      "maxOracleAgeSec": 604800
+    },
+    "scoring": {
+      "maxSourceAgeSec": 345600
     }
   },
   "yieldConfig": {
