@@ -51,7 +51,7 @@ const PROVIDER_URL_HOST_PATTERNS = [
 ];
 
 const SECRET_QUERY_PARAM_PATTERN =
-  /([?&](?:api[_-]?key|apikey|key|token|access[_-]?token|auth|authorization|secret)=)[^&#\s]+/gi;
+  /([?&](?:api[_-]?key|apikey|app[_-]?id|key|token|access[_-]?token|auth|authorization|secret)=)[^&#\s]+/gi;
 
 function isKnownProviderHost(hostname: string): boolean {
   return PROVIDER_URL_HOST_PATTERNS.some((pattern) => pattern.test(hostname));

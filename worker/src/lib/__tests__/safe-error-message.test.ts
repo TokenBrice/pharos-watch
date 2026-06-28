@@ -71,6 +71,9 @@ describe("safeErrorMessage", () => {
     expect(
       redactProviderUrls("generic https://example.com/v1/path?token=secret&ok=1 failed"),
     ).toBe("generic https://example.com/v1/path?token=[redacted]&ok=1 failed");
+    expect(
+      redactProviderUrls("oxr https://openexchangerates.org/api/latest.json?app_id=secret&symbols=EUR&base=USD failed"),
+    ).toBe("oxr https://openexchangerates.org/api/latest.json?app_id=[redacted]&symbols=EUR&base=USD failed");
   });
 
   it("truncates messages longer than maxLength", () => {
