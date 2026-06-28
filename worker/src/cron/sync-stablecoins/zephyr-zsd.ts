@@ -5,9 +5,8 @@ import {
   ZEPHYR_ZYS_ASSET_ID,
 } from "@shared/lib/onchain-supply-probe";
 import { USER_AGENT } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { isReasonablePrice } from "../../lib/price-validation";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 import { pegTypeKey, getSupplementalChainLabels, toPositiveFiniteNumber } from "./supplemental-assets/shared";
 
@@ -209,7 +208,7 @@ export function buildZephyrProtocolPeggedAsset(
 }
 
 export async function fetchZephyrProtocolStats(signal?: AbortSignal): Promise<ZephyrProtocolStats | null> {
-  const res = await fetchWithRetry(
+  const result = await fetchTextWithRetry(
     ZEPHYR_LIVESTATS_URL,
     {
       headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -219,20 +218,18 @@ export async function fetchZephyrProtocolStats(signal?: AbortSignal): Promise<Ze
     { timeoutMs: 5_000 },
   );
 
-  if (!res?.ok) {
-    await cancelResponseBodyQuietly(res);
-    console.warn(`[zephyr-scanner] Live stats fetch failed (${res?.status ?? "no response"})`);
+  if (!result?.response.ok) {
+    console.warn(`[zephyr-scanner] Live stats fetch failed (${result?.response.status ?? "no response"})`);
     return null;
   }
 
   try {
-    const payload = await res.json();
+    const payload = JSON.parse(result.body);
     const stats = parseZephyrProtocolStats(payload);
     if (!stats) console.warn("[zephyr-scanner] Live stats payload missing positive ZSD circulation");
     if (stats && !stats.zys) console.warn("[zephyr-scanner] Live stats payload missing positive ZYS circulation or price");
     return stats;
   } catch (err) {
-    await cancelResponseBodyQuietly(res);
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[zephyr-scanner] Live stats payload parse failed:", err);
     return null;

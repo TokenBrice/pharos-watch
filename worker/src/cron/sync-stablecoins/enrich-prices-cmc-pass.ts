@@ -2,7 +2,7 @@ import {
   CIRCUIT_SOURCE,
   USER_AGENT,
 } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import {
   applyJsonParseFailureDiagnostic,
   applyNonOkProviderDiagnostic,
@@ -12,7 +12,6 @@ import {
   recordProviderOutcomeSafe,
 } from "../../lib/pricing-provider-lifecycle";
 import { getCache, setCache } from "../../lib/db-cache";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { CmcCategoryResponseSchema } from "../../lib/schemas";
 import {
   endpointLabel,
@@ -125,7 +124,7 @@ export async function runCmcPass(
       const url = `https://${CMC_CATEGORY_ENDPOINT}?id=${CMC_STABLECOIN_CATEGORY_ID}&limit=${CMC_CATEGORY_LIMIT}&convert=USD`;
       const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
       const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
-      const cmcRes = await fetchWithRetry(
+      const cmcResult = await fetchTextWithRetry(
         url,
         {
           headers: {
@@ -139,6 +138,7 @@ export async function runCmcPass(
         {
           timeoutMs: CMC_REQUEST_TIMEOUT_MS,
           passthroughStatuses: CMC_PASSTHROUGH_STATUSES,
+          returnFinalResponse: true,
         },
       );
       const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic({
@@ -147,16 +147,15 @@ export async function runCmcPass(
         endpoint: endpointLabel(url),
         candidateCount: missingAfterPass1b.length,
       }, {
-        status: cmcRes?.status ?? null,
-        ok: cmcRes?.ok === true,
+        status: cmcResult?.response.status ?? null,
+        ok: cmcResult?.response.ok === true,
       });
 
-      if (cmcRes?.ok) {
+      if (cmcResult?.response.ok) {
         let cmcJson: unknown;
         try {
-          cmcJson = await cmcRes.json();
+          cmcJson = JSON.parse(cmcResult.body);
         } catch (error) {
-          await cancelResponseBodyQuietly(cmcRes);
           diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, error));
           return recordFailureAndReturn();
         }
@@ -253,9 +252,12 @@ export async function runCmcPass(
           });
         }
       } else {
-        diagnostics.push(await applyNonOkProviderDiagnostic(diagnostic, cmcRes));
-        console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
-        if (cmcRes?.status === 429) {
+        diagnostics.push(await applyNonOkProviderDiagnostic(
+          diagnostic,
+          cmcResult ? responseFromBufferedBody(cmcResult) : null,
+        ));
+        console.warn(`[enrich] CMC API returned ${cmcResult?.response.status ?? "no response"}`);
+        if (cmcResult?.response.status === 429) {
           await markCmcFetchCooldown(db, "429");
         }
         await recordProviderOutcomeSafe({
@@ -271,4 +273,12 @@ export async function runCmcPass(
   }
 
   return { resolved, failures: [], diagnostics };
+}
+
+function responseFromBufferedBody(result: { response: Response; body: string }): Response {
+  return new Response(result.body, {
+    status: result.response.status,
+    statusText: result.response.statusText,
+    headers: result.response.headers,
+  });
 }

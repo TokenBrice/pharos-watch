@@ -9,12 +9,9 @@ const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
-  "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts::const cmcRes = await fetchWithRetry(::cmcJson = await cmcRes.json();",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/silver.ts::const cgMarketsRes = await fetchWithRetry(::cgMarketsRaw = await cgMarketsRes.json();",
   "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts::const response = await fetchWithRetry(::return (await response.json()) as Record<string, CoinGeckoCurrentMcapRow>;",
   "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts::const response = await fetchWithRetry(::const payload = (await response.json()) as CoinGeckoRecentMarketChart;",
   "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts::const response = await fetchWithRetry(::const payload = await response.json();",
-  "worker/src/cron/sync-stablecoins/zephyr-zsd.ts::const res = await fetchWithRetry(::const payload = await res.json();",
   "worker/src/cron/tbill-sources/shared.ts::const res = await fetchWithRetry(url, {::return parse(await res.text());",
   "worker/src/cron/tbill-sources/six.ts::const res = await fetchWithRetry(SIX_OAUTH_TOKEN_URL, {::return parseSixOauthToken(await res.text());",
   "worker/src/cron/tbill-sources/six.ts::const res = await fetchWithRetry(SIX_OAUTH_TOKEN_URL, {::const body = await res.text();",

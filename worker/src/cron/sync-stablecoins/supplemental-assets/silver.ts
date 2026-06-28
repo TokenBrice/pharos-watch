@@ -1,7 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
-import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../../../lib/response-body";
+import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { USER_AGENT } from "../../../lib/constants";
 import { cgHeaders, cgUrl } from "../../../lib/coingecko";
 import { resolveMarketCap } from "../../../lib/resolve-market-cap";
@@ -25,7 +24,7 @@ async function fetchCoinGeckoCirculatingSupplyMap(
   const cgIds = metas.map((token) => token.geckoId).filter(Boolean).join(",");
   if (!cgIds) return new Map();
 
-  const cgMarketsRes = await fetchWithRetry(
+  const cgMarketsResult = await fetchTextWithRetry(
     cgUrl(`/coins/markets?vs_currency=usd&ids=${cgIds}`, coingeckoApiKey ?? null),
     {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
@@ -33,19 +32,17 @@ async function fetchCoinGeckoCirculatingSupplyMap(
     },
   );
 
-  if (!cgMarketsRes?.ok) {
-    await cancelResponseBodyQuietly(cgMarketsRes);
+  if (!cgMarketsResult?.response.ok) {
     console.warn(
-      `[${logPrefix}] CG markets fetch failed (${cgMarketsRes?.status ?? "no response"}), falling back to cgData mcap`,
+      `[${logPrefix}] CG markets fetch failed (${cgMarketsResult?.response.status ?? "no response"}), falling back to cgData mcap`,
     );
     return new Map();
   }
 
   let cgMarketsRaw: unknown;
   try {
-    cgMarketsRaw = await cgMarketsRes.json();
+    cgMarketsRaw = JSON.parse(cgMarketsResult.body);
   } catch (err) {
-    await cancelResponseBodyQuietly(cgMarketsRes);
     console.warn(`[${logPrefix}] CG markets payload parse failed:`, err);
     return new Map();
   }
