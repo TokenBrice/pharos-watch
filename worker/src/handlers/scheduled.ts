@@ -123,7 +123,10 @@ export async function handleScheduledEvent(
   const slotResult = await runScheduledSlotWithFence(
     env.DB,
     scheduleKey,
-    () => Promise.resolve(runner(runtime)),
+    (slotSignal) => {
+      runtime.slotSignal = slotSignal;
+      return Promise.resolve(runner(runtime));
+    },
     {
       slotStartedAt,
       ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),

@@ -179,11 +179,13 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     await runTelegramReconciliation("reconcile-commands", () =>
       reconcileTelegramCommandRegistration(runtime.db, {
         botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+        signal: runtime.slotSignal,
       }),
     ),
     await runTelegramReconciliation("reconcile-profile", () =>
       reconcileTelegramProfileRegistration(runtime.db, {
         botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+        signal: runtime.slotSignal,
       }),
     ),
     await runTelegramReconciliation(
@@ -191,6 +193,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       () =>
         reconcileTelegramMenuButton(runtime.db, {
           botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          signal: runtime.slotSignal,
         }),
       (menuResult) => ({ miniAppUrl: menuResult.miniAppUrl }),
     ),
@@ -201,6 +204,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
           botToken: runtime.env.TELEGRAM_BOT_TOKEN,
           webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
           selfUrl: runtime.env.SELF_URL,
+          signal: runtime.slotSignal,
         }),
       (result) => ({ expectedUrl: result.expectedUrl }),
     ),

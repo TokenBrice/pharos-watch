@@ -213,12 +213,13 @@ async function applyProfileField(
   botToken: string,
   method: "setMyName" | "setMyDescription" | "setMyShortDescription",
   payload: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<{ throttled: boolean }> {
   if (await isRateLimited(db, method)) {
     return { throttled: true };
   }
 
-  const response = await postTelegramBotApi(botToken, method, payload);
+  const response = await postTelegramBotApi(botToken, method, payload, { signal });
 
   const responseText = await response.text();
   let parsed: TelegramApiResponse | null = null;
@@ -243,8 +244,8 @@ async function applyProfileField(
   throw new Error(`Telegram ${method} rejected registration: ${(parsed?.description ?? responseText).slice(0, 300)}`);
 }
 
-async function fetchTelegramMenuButton(botToken: string): Promise<unknown | null> {
-  const response = await postTelegramBotApi(botToken, "getChatMenuButton", {});
+async function fetchTelegramMenuButton(botToken: string, signal?: AbortSignal): Promise<unknown | null> {
+  const response = await postTelegramBotApi(botToken, "getChatMenuButton", {}, { signal });
   const responseText = await response.text();
   let parsed: TelegramChatMenuButtonResponse | null = null;
   try {
@@ -272,6 +273,7 @@ export async function reconcileTelegramWebhookRegistration(
     botToken?: string | null;
     webhookSecret?: string | null;
     selfUrl?: string | null;
+    signal?: AbortSignal;
   },
 ): Promise<ReconcileTelegramWebhookResult> {
   const botToken = options.botToken?.trim();
@@ -297,7 +299,7 @@ export async function reconcileTelegramWebhookRegistration(
     url: expectedUrl,
     secret_token: webhookSecret,
     allowed_updates: [...TELEGRAM_ALLOWED_UPDATES],
-  });
+  }, { signal: options.signal });
 
   const responseText = await response.text();
   let parsed: TelegramApiResponse | null = null;
@@ -330,13 +332,14 @@ async function setMyCommandsForScope(
   botToken: string,
   commands: ReadonlyArray<{ command: string; description: string }>,
   scope: { type: string },
+  signal?: AbortSignal,
 ): Promise<{ throttled: boolean }> {
   const endpoint = `setMyCommands:${scope.type}`;
   if (await isRateLimited(db, endpoint)) {
     return { throttled: true };
   }
 
-  const response = await postTelegramBotApi(botToken, "setMyCommands", { commands, scope });
+  const response = await postTelegramBotApi(botToken, "setMyCommands", { commands, scope }, { signal });
 
   const responseText = await response.text();
   let parsed: TelegramApiResponse | null = null;
@@ -370,6 +373,7 @@ export async function reconcileTelegramCommandRegistration(
   db: D1Database,
   options: {
     botToken?: string | null;
+    signal?: AbortSignal;
   },
 ): Promise<ReconcileTelegramCommandResult> {
   const botToken = options.botToken?.trim();
@@ -387,12 +391,14 @@ export async function reconcileTelegramCommandRegistration(
     botToken,
     TELEGRAM_BOT_COMMANDS,
     TELEGRAM_PRIVATE_COMMAND_SCOPE,
+    options.signal,
   );
   const groupResult = await setMyCommandsForScope(
     db,
     botToken,
     TELEGRAM_BOT_GROUP_COMMANDS,
     TELEGRAM_GROUP_COMMAND_SCOPE,
+    options.signal,
   );
 
   if (privateResult.throttled || groupResult.throttled) {
@@ -407,6 +413,7 @@ export async function reconcileTelegramProfileRegistration(
   db: D1Database,
   options: {
     botToken?: string | null;
+    signal?: AbortSignal;
   },
 ): Promise<ReconcileTelegramProfileResult> {
   const botToken = options.botToken?.trim();
@@ -419,13 +426,13 @@ export async function reconcileTelegramProfileRegistration(
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
 
-  const nameResult = await applyProfileField(db, botToken, "setMyName", { name: TELEGRAM_BOT_NAME });
+  const nameResult = await applyProfileField(db, botToken, "setMyName", { name: TELEGRAM_BOT_NAME }, options.signal);
   const shortResult = await applyProfileField(db, botToken, "setMyShortDescription", {
     short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
-  });
+  }, options.signal);
   const descResult = await applyProfileField(db, botToken, "setMyDescription", {
     description: TELEGRAM_BOT_DESCRIPTION,
-  });
+  }, options.signal);
 
   if (nameResult.throttled || shortResult.throttled || descResult.throttled) {
     return { attempted: false, skipped: true, reason: "rate-limited" };
@@ -440,6 +447,7 @@ export async function reconcileTelegramMenuButton(
   options: {
     botToken?: string | null;
     miniAppUrl?: string | null;
+    signal?: AbortSignal;
   },
 ): Promise<ReconcileTelegramMenuButtonResult> {
   const botToken = options.botToken?.trim();
@@ -453,7 +461,7 @@ export async function reconcileTelegramMenuButton(
     return { attempted: false, skipped: true, reason: "fresh-cache", miniAppUrl };
   }
 
-  const current = await fetchTelegramMenuButton(botToken);
+  const current = await fetchTelegramMenuButton(botToken, options.signal);
   if (menuButtonMatches(current, miniAppUrl)) {
     await setCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY, expectedCacheValue);
     return { attempted: false, skipped: true, reason: "already-current", miniAppUrl };
@@ -465,7 +473,7 @@ export async function reconcileTelegramMenuButton(
 
   const response = await postTelegramBotApi(botToken, "setChatMenuButton", {
     menu_button: buildTelegramMenuButton(miniAppUrl),
-  });
+  }, { signal: options.signal });
   const responseText = await response.text();
   let parsed: TelegramApiResponse | null = null;
   try {

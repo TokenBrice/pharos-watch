@@ -618,6 +618,40 @@ describe("reconcileTelegramCommandRegistration", () => {
     expect(typeof writes[0]?.binds[2]).toBe("number");
   });
 
+  it("passes an already-aborted signal into Telegram command registration fetches", async () => {
+    const db = mockD1(
+      [
+        {
+          match: CACHE_SELECT_MATCH,
+          matchBinds: ["telegram:commands-reconciled"],
+          rows: [],
+          first: null,
+        },
+        {
+          match: CACHE_SELECT_MATCH,
+          rows: [],
+          first: null,
+        },
+      ],
+      { requireMatch: true },
+    );
+    const controller = new AbortController();
+    controller.abort(new Error("registration aborted"));
+    fetchSpy.mockImplementationOnce(async (_input, init) => {
+      const signal = init?.signal as AbortSignal | undefined;
+      expect(signal?.aborted).toBe(true);
+      throw signal?.reason;
+    });
+
+    await expect(
+      reconcileTelegramCommandRegistration(db, {
+        botToken: "bot-token",
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow("registration aborted");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps group commands to group-safe commands only", () => {
     const groupCommands = TELEGRAM_BOT_GROUP_COMMANDS.map((entry) => entry.command);
     for (const command of groupCommands) {

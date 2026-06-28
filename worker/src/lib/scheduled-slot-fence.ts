@@ -692,7 +692,7 @@ function attachSlotRuntimeMetadata<T>(
 export async function runScheduledSlotWithFence(
   db: D1Database,
   slotKey: string,
-  fn: () => Promise<ScheduledSlotFenceMetadata | void>,
+  fn: (signal: AbortSignal) => Promise<ScheduledSlotFenceMetadata | void>,
   opts: ScheduledSlotExecutionOptions,
 ): Promise<ScheduledSlotExecutionResult> {
   const owner = opts.owner ?? createLeaseOwner(slotKey);
@@ -736,6 +736,7 @@ export async function runScheduledSlotWithFence(
   }
   const staleSlotTakeover = "staleSlotTakeover" in claimResult ? claimResult.staleSlotTakeover : undefined;
 
+  const slotController = new AbortController();
   let heartbeatFailures = 0;
   const timer = setInterval(() => {
     void touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner).catch((err) => {
@@ -745,7 +746,7 @@ export async function runScheduledSlotWithFence(
   }, heartbeatSec * 1000);
 
   try {
-    const metadata = await fn();
+    const metadata = await fn(slotController.signal);
     const slotMetadata = attachSlotRuntimeMetadata(
       metadata,
       heartbeatFailures,
@@ -792,6 +793,7 @@ export async function runScheduledSlotWithFence(
     });
     throw err;
   } finally {
+    slotController.abort(new Error(`scheduled slot ${slotKey}@${opts.slotStartedAt} finished`));
     clearInterval(timer);
   }
 }

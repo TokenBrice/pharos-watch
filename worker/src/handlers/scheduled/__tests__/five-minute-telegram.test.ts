@@ -127,6 +127,8 @@ describe("runFiveMinuteTelegramSlot", () => {
       TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
       SELF_URL: "https://api.pharos.watch",
     } as ScheduledRuntimeContext["env"];
+    const controller = new AbortController();
+    runtime.slotSignal = controller.signal;
     runtime.runLeasedCron = vi.fn(async (_job, fn) =>
       fn(new AbortController().signal, vi.fn()),
     );
@@ -149,6 +151,22 @@ describe("runFiveMinuteTelegramSlot", () => {
       "telegram-disambiguation-cleanup",
       "telegram-pulse-snapshot",
     ]);
+    expect(reconcileTelegramCommandRegistration).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      botToken: "bot-token",
+      signal: controller.signal,
+    }));
+    expect(reconcileTelegramProfileRegistration).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      botToken: "bot-token",
+      signal: controller.signal,
+    }));
+    expect(reconcileTelegramMenuButton).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      botToken: "bot-token",
+      signal: controller.signal,
+    }));
+    expect(reconcileTelegramWebhookRegistration).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      botToken: "bot-token",
+      signal: controller.signal,
+    }));
     expect(summary.jobs.map((job) => job.job)).toEqual([
       "dispatch-telegram-alerts",
       "telegram-degradation-watchdog",

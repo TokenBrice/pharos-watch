@@ -68,6 +68,7 @@ export interface ScheduledRuntimeContext {
   scheduleKey: CronScheduleKey;
   scheduledTimeMs: number | null;
   slotStartedAt: number;
+  slotSignal?: AbortSignal;
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
   mintBurnFreshnessConfig: MintBurnFreshnessConfig;
