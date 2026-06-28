@@ -58,6 +58,24 @@ describe("fetch body timeout guardrail", () => {
     expect(violations.map((violation) => violation.method)).toEqual(["text", "json"]);
   });
 
+  it("detects later same-line body reads after unrelated json/text calls", () => {
+    const violations = findFetchBodyTimeoutViolations(`
+      import { fetchWithRetry } from "../lib/fetch-retry";
+      export async function run(cache) {
+        const res = await fetchWithRetry("https://example.test");
+        return cache.json(await res.text());
+      }
+    `);
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({
+      variable: "res",
+      method: "text",
+      fetchLine: 4,
+      bodyLine: 5,
+    });
+  });
+
   it("detects body reads from destructured Promise.all fetchWithRetry responses", () => {
     const violations = findFetchBodyTimeoutViolations(`
       import { fetchWithRetry } from "../lib/fetch-retry";
