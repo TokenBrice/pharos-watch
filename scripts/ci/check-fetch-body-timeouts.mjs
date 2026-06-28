@@ -15,9 +15,6 @@ const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
   "worker/src/lib/backfill-fx.ts::res = await fetchWithRetry(::const raw = await res.json();",
   "worker/src/lib/coingecko-onchain.ts::const res = await fetchWithRetry(url, {::const json = (await res.json()) as { data?: unknown };",
   "worker/src/lib/dexscreener.ts::const res = await fetchWithRetry(url, {::const raw = await res.text();",
-  "worker/src/lib/evm-logs.ts::const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, {::return res.json() as Promise<{ status: string; message: string; result: EtherscanLogEntry[] }>;",
-  "worker/src/lib/evm-rpc.ts::const res = await fetchWithRetry(::const body = (await res.json()) as JsonRpcEnvelope<unknown>;",
-  "worker/src/lib/evm-rpc.ts::const res = await fetchWithRetry(::const body = (await res.json()) as JsonRpcEnvelope<string>;",
   "worker/src/lib/geckoterminal-price-probe.ts::const res = await fetchWithRetry(::const json = (await res.json()) as { data?: GtPool[] };",
   "worker/src/lib/native-peg-quotes.ts::const response = await fetchWithRetry(::const payload = await response.json();",
 ]);

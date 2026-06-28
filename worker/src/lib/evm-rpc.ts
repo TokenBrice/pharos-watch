@@ -1,7 +1,7 @@
 import { getChainRpc, type ChainRpcConfig } from "./chain-registry";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
-import { fetchWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import { rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "./error-utils";
 
@@ -219,7 +219,7 @@ async function fetchJsonRpcResult<T>(
 
   for (const rpcUrl of urls) {
     try {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<JsonRpcEnvelope<unknown>>(
         rpcUrl,
         {
           method: "POST",
@@ -236,12 +236,12 @@ async function fetchJsonRpcResult<T>(
         { timeoutMs },
       );
 
-      if (!res?.ok) {
-        failures.push(`${rpcUrl}: HTTP ${res?.status ?? "no-response"}`);
+      if (!result?.response.ok) {
+        failures.push(`${rpcUrl}: HTTP ${result?.response.status ?? "no-response"}`);
         continue;
       }
 
-      const body = (await res.json()) as JsonRpcEnvelope<unknown>;
+      const body = result.body;
       if (body.error) {
         failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
         continue;
@@ -404,15 +404,15 @@ export async function fetchEtherscanProxyHex(request: EtherscanProxyRequest): Pr
     params.set("tag", blockTag);
   }
 
-  const res = await fetchWithRetry(
+  const result = await fetchJsonWithRetry<JsonRpcEnvelope<string>>(
     `${ETHERSCAN_V2_BASE}?${params.toString()}`,
     request.signal ? { signal: request.signal } : undefined,
     1,
     { timeoutMs: request.timeoutMs ?? 10_000 },
   );
-  if (!res?.ok) return null;
+  if (!result?.response.ok) return null;
 
-  const body = (await res.json()) as JsonRpcEnvelope<string>;
+  const body = result.body;
   if (body.error) return null;
   if (!isHexResult(body.result ?? undefined) || body.result === "0x") return null;
   return body.result as `0x${string}`;

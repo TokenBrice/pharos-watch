@@ -1,6 +1,6 @@
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { decimalNumberFromBigInt } from "./bigint";
-import { fetchWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 
 const MAX_RECURSION_DEPTH = 8;
@@ -284,17 +284,16 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
   budget.count++;
   const timeout = AbortSignal.timeout(timeoutMs);
   const json = await rateLimit(async () => {
-    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, {
+    const result = await fetchJsonWithRetry<{ status: string; message: string; result: EtherscanLogEntry[] }>(`${ETHERSCAN_V2_BASE}?${params}`, {
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     }, 1);
-    if (!res || !res.ok) {
-      if (res) {
-        console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${res.status}`);
-        await cancelResponseBodyQuietly(res);
+    if (!result?.response.ok) {
+      if (result) {
+        console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${result.response.status}`);
       }
       return null;
     }
-    return res.json() as Promise<{ status: string; message: string; result: EtherscanLogEntry[] }>;
+    return result.body;
   });
 
   if (!json || json.status !== "1" || !Array.isArray(json.result)) {

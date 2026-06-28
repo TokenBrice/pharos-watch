@@ -3,7 +3,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const fetchWithRetryMock = vi.fn();
 
 vi.mock("../fetch-retry", () => ({
-  fetchWithRetry: fetchWithRetryMock,
+  fetchJsonWithRetry: async (...args: unknown[]) => {
+    const result = await fetchWithRetryMock(...args);
+    if (result instanceof Response) {
+      return { response: result, body: await result.clone().json() };
+    }
+    return result;
+  },
 }));
 
 vi.mock("../chain-registry", () => ({
