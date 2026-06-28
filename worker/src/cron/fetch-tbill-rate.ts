@@ -224,7 +224,6 @@ async function updateGbpRetainedFallbackMonitor(params: {
         && streak.lastAlertedAt != null
         && fetchedAt - streak.lastAlertedAt < GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC;
       let webhookAlerted = false;
-      let cronEventLogged = false;
       if (thresholdReached && !suppressedByCooldown) {
         webhookAlerted = webhookUrl
           ? await sendAlert(
@@ -254,8 +253,9 @@ async function updateGbpRetainedFallbackMonitor(params: {
             webhookAlerted,
           },
         });
-        cronEventLogged = true;
-        streak.lastAlertedAt = fetchedAt;
+        if (webhookAlerted) {
+          streak.lastAlertedAt = fetchedAt;
+        }
       }
 
       await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(streak), signal);
@@ -264,7 +264,7 @@ async function updateGbpRetainedFallbackMonitor(params: {
         gbpRetainedFallbackStreak: consecutiveRetainedRuns,
         gbpRetainedFallbackAlertThreshold: GBP_RETAINED_FALLBACK_ALERT_THRESHOLD,
         gbpRetainedFallbackAlertCooldownSec: GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC,
-        gbpRetainedFallbackAlerted: webhookAlerted || cronEventLogged,
+        gbpRetainedFallbackAlerted: webhookAlerted,
         gbpRetainedFallbackWebhookAlerted: webhookAlerted,
         gbpRetainedFallbackSuppressedByCooldown: suppressedByCooldown,
         gbpRetainedFallbackWebhookConfigured: webhookUrl != null,
