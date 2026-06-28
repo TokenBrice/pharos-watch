@@ -49,7 +49,8 @@ The current policy copy covers:
 10. the Mini App auth note: `initData` is never persisted — it is validated request-locally (HMAC signature + freshness window); mutations use a 5-minute auth window plus a per-user mutation cooldown, and session reads use a 24-hour read-only window
 11. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
 12. homepage page discovery does not store browser-local route history or a visit-rotation cursor
-13. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; API key issuance records stay in private operator storage and structured Worker logs rather than public GitHub Issues
+13. homepage saved shortcuts store only the ordered navigation href list in the browser-local `pharos-shortcuts` key; the values are site-scoped, allowlisted before render, and persist until reset or site-data clearing
+14. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; API key issuance records stay in private operator storage and structured Worker logs rather than public GitHub Issues
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
 
@@ -57,7 +58,9 @@ Portfolio holdings are explicitly described as browser-local only, which matches
 
 The homepage page discovery module is deterministic on first render and does not write localStorage. Its manual Refresh
 button rotates suggestions in memory only, so it does not store an IP address, account identifier, wallet address, route
-history, or browser fingerprint.
+history, or browser fingerprint. Homepage saved shortcuts use the browser-local `pharos-shortcuts` localStorage key to
+remember only the ordered list of navigation hrefs the user keeps. The values are scoped to this site, allowlisted before
+render, and remain until the user resets shortcuts or clears browser site data.
 
 ### Stablecoin Picker storage
 

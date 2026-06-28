@@ -37,8 +37,9 @@ export default function PrivacyPage() {
           <p className="mt-2 text-sm text-foreground">
             Pharos does not ask for accounts or wallet connections. Portfolio data is stored locally by default, share
             links encode holdings in the URL, analytics are anonymized when enabled, and support or API-access requests
-            route through the feedback/contact channels listed below. The homepage discovery module and Stablecoin
-            Picker use functional browser storage, and Picker share snapshots are described below.
+            route through the feedback/contact channels listed below. Homepage saved shortcuts and the Stablecoin
+            Picker use functional browser storage, while homepage discovery rotates in memory only. Picker share
+            snapshots are described below.
           </p>
         </div>
 
@@ -55,9 +56,10 @@ export default function PrivacyPage() {
             access, Pharos stores the email address you verify plus any name, organization, project URL, use-case,
             intended-endpoint, cadence, and volume details you submit; request throttling stores salted hashes of IP
             address and user-agent data. The homepage page discovery module does not store route history or a
-            visit-rotation cursor. The Stablecoin Picker stores local browser state for callout dismissal and
-            tab-scoped result recovery, and share links can store a content-addressed snapshot of the generated selector
-            output in Cloudflare KV.
+            visit-rotation cursor. Homepage saved shortcuts store only the ordered route hrefs you keep in the
+            browser-local pharos-shortcuts key. The Stablecoin Picker stores local browser state for callout dismissal
+            and tab-scoped result recovery, and share links can store a content-addressed snapshot of the generated
+            selector output in Cloudflare KV.
           </p>
         </section>
 
@@ -66,7 +68,11 @@ export default function PrivacyPage() {
           <p>
             The homepage page discovery module is deterministic on first render. Its manual Refresh button rotates
             route suggestions in memory only, so it does not store route history, account identifiers, wallet addresses,
-            IP addresses, or a browser fingerprint.
+            IP addresses, or a browser fingerprint. Homepage saved shortcuts use the browser-local{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos-shortcuts</code> key to remember your
+            ordered list of navigation hrefs. That key is scoped to this site, is allowlisted before shortcuts render,
+            does not contain account identifiers, wallet addresses, IP addresses, or a browser fingerprint, and remains
+            until you reset shortcuts or clear browser site data.
           </p>
         </section>
 
