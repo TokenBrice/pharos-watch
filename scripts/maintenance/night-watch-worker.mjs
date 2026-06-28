@@ -415,7 +415,8 @@ function summarizeFindings(snapshots, statusPayload, coverage, args) {
     findings.push({
       severity: "Medium",
       title: `${dependencyGroups.length} dependency root-cause group(s) reported by status`,
-      evidence: dependencyGroups.slice(0, 6).map((group) => `${group.dependencyId ?? group.rootCauseId ?? "dependency"}: ${group.status ?? "unknown"}`),
+      evidence: dependencyGroups.slice(0, 6).map((group) =>
+        `${group.dependencyId ?? group.rootDependencyId ?? group.rootCauseId ?? "dependency"}: ${group.status ?? group.rootStatus ?? "unknown"}`),
     });
   }
 
@@ -444,12 +445,22 @@ function summarizeAnalysis(evidence) {
   const statusPayload = findLatestStatusPayload(evidence.snapshots);
   const coverage = buildCoverage(evidence.scheduleMatrix, evidence.snapshots);
   const probeGaps = [];
+  const artifactGaps = [];
   for (const snapshot of evidence.snapshots) {
     if (snapshot.mode === "d1-error") {
       probeGaps.push(`${snapshot.collectedAt}: D1 snapshot failed (${snapshot.error ?? "unknown error"})`);
     }
-    for (const [artifact, error] of Object.entries(snapshot.artifactErrors ?? {})) {
-      probeGaps.push(`${snapshot.collectedAt}: ${artifact} unavailable (${error})`);
+    if (Array.isArray(snapshot.artifactGaps)) {
+      for (const gap of snapshot.artifactGaps) {
+        const label = gap.optional && gap.code === "missing_table" ? "optional artifact gap" : "artifact gap";
+        artifactGaps.push(
+          `${snapshot.collectedAt}: ${gap.artifact ?? "artifact"} ${label} (${gap.code ?? "unknown"}: ${gap.message ?? "no details"})`,
+        );
+      }
+    } else {
+      for (const [artifact, error] of Object.entries(snapshot.artifactErrors ?? {})) {
+        probeGaps.push(`${snapshot.collectedAt}: ${artifact} unavailable (${error})`);
+      }
     }
     for (const [name, probe] of Object.entries(snapshot.probes ?? {})) {
       const gap = accessGapForProbe(name, probe);
@@ -474,6 +485,7 @@ function summarizeAnalysis(evidence) {
     canaries: statusPayload?.canaries ?? null,
     repairDebt: statusPayload?.dataQuality?.repairDebt ?? null,
     findings,
+    artifactGaps: [...new Set(artifactGaps)],
     accessGaps: [...new Set(probeGaps)],
   };
 }
@@ -521,6 +533,8 @@ export function renderNightWatchMarkdown(evidence) {
   const confirmedJobs = analysis.coverage.jobs.filter((job) => job.evidenceGrade === "confirmed").length;
   const observedJobs = analysis.coverage.jobs.filter((job) => job.observed).length;
   const totalJobs = analysis.coverage.jobs.length;
+  const accessGaps = analysis.accessGaps ?? [];
+  const artifactGaps = analysis.artifactGaps ?? [];
 
   return [
     "# Worker Night Watch Report",
@@ -592,7 +606,11 @@ export function renderNightWatchMarkdown(evidence) {
     "",
     "## Open Questions And Access Gaps",
     "",
-    analysis.accessGaps.length === 0 ? "_None._" : analysis.accessGaps.map((gap) => `- ${gap}`).join("\n"),
+    accessGaps.length === 0 ? "_None._" : accessGaps.map((gap) => `- ${gap}`).join("\n"),
+    "",
+    "## Artifact Gaps",
+    "",
+    artifactGaps.length === 0 ? "_None._" : artifactGaps.map((gap) => `- ${gap}`).join("\n"),
     "",
     "## Verification Appendix",
     "",

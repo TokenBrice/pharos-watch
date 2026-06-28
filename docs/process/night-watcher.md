@@ -25,8 +25,9 @@ A complete 4-hour cycle means observing, or explicitly accounting for, every sch
 - `11 */4 * * *`: reserve / redemption / Kinesis
 - `25 */4 * * *`: yield supplemental
 
-Extend into a second cycle only if:
+Extend into a second cycle if:
 
+- the watch is a recurring hardening soak or post-incident confidence pass,
 - either 4-hour lane was missed or unresolved,
 - a run remains in-flight/stale/ambiguous,
 - status, D1, logs, and code disagree materially,
@@ -48,6 +49,7 @@ Watch protocol:
 - Sample at least every 15 minutes, plus shortly after expected slot boundaries.
 - Inspect D1 telemetry where available: `cron_runs`, `cron_slot_executions`, `cron_run_progress`, `cron_leases`, status/probe history.
 - Prefer `npm run ops:night-watch-worker -- --cycles 1 --include-status --include-status-history --include-d1` for the standard collector/report pass. It writes `agents/night-watch-report.md` and `agents/night-watch-evidence.json`, loads the canonical cron registries, calls the lower-level watcher for bounded D1 snapshots, and marks admin/D1/tail access gaps explicitly.
+- Use `npm run ops:night-watch-worker:two-cycle` for the recurring hardening/post-incident variant. It runs the same collector with `--cycles 2 --include-status --include-status-history --include-d1`.
 - Use `node scripts/maintenance/watch-worker-cron.mjs --include-status --include-status-history` for narrow follow-up reads or incident spot checks. Use `--include-full-metadata` only for targeted follow-up reads, and pass Cloudflare Access service-token headers via `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` when the admin probes are behind Access.
 - Inspect Worker logs / Cloudflare observability where available.
 

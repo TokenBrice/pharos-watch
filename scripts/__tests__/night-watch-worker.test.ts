@@ -184,6 +184,55 @@ describe("night-watch-worker", () => {
     expect(markdown).toContain("D1 snapshot failed (wrangler auth failed)");
   });
 
+  it("renders optional artifact gaps separately from access gaps", () => {
+    const artifactEvidence = evidence() as TestEvidence;
+    artifactEvidence.snapshots[0]!["artifactGaps"] = [
+      {
+        artifact: "surfacePublicationGenerations",
+        table: "surface_publication_generations",
+        code: "missing_table",
+        severity: "info",
+        optional: true,
+        message: "Optional D1 artifact table surface_publication_generations is not present.",
+      },
+    ];
+
+    const markdown = renderNightWatchMarkdown(artifactEvidence);
+
+    expect(markdown).toContain("## Artifact Gaps");
+    expect(markdown).toContain("surfacePublicationGenerations optional artifact gap");
+    expect(markdown).not.toContain("surfacePublicationGenerations unavailable");
+  });
+
+  it("renders dependency root-cause group keys from status payloads", () => {
+    const dependencyEvidence = evidence() as TestEvidence;
+    const firstSnapshot = dependencyEvidence.snapshots[0] as {
+      probes?: {
+        status?: {
+          payload?: Record<string, unknown>;
+        };
+      };
+    };
+    const status = firstSnapshot.probes?.status;
+    if (!status) throw new Error("fixture status probe is missing");
+    status.payload = {
+      ...(status.payload ?? {}),
+      dependencyHealth: {
+        rootCauseGroups: [
+          {
+            rootDependencyId: "dex-liquidity",
+            rootStatus: "degraded",
+          },
+        ],
+      },
+    };
+
+    const markdown = renderNightWatchMarkdown(dependencyEvidence);
+
+    expect(markdown).toContain("dependency root-cause group");
+    expect(markdown).toContain("dex-liquidity: degraded");
+  });
+
   it("writes dry-run report and evidence without collecting production data", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-"));
     const write = vi.fn(() => true);

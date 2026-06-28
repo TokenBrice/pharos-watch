@@ -10,6 +10,7 @@ import { getResponseReadyCacheKey } from "./api-cache-read";
 import { getCacheUpdatedAt } from "./db-cache";
 import { isMissingTableError } from "./db";
 import { parseObjectMetadata } from "./json-metadata";
+import { loadReportCardCache } from "./report-card-cache";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 
 interface PublicationGenerationRow {
@@ -53,6 +54,39 @@ const STABLECOINS_SURFACE: PublicationSurfaceDefinition = {
 const STABLECOINS_CACHE_SURFACE: PublicationSurfaceDefinition = {
   ...STABLECOINS_SURFACE,
   sourceOfTruth: "cache[stablecoins]",
+};
+
+const DEWS_SURFACE: PublicationSurfaceDefinition = {
+  surface: "dews",
+  label: "DEWS risk signals",
+  sourceOfTruth: "surface_publication_generations",
+};
+
+const DEWS_LATEST_SURFACE: PublicationSurfaceDefinition = {
+  ...DEWS_SURFACE,
+  sourceOfTruth: "stress_signals_latest",
+};
+
+const PSI_SURFACE: PublicationSurfaceDefinition = {
+  surface: "psi",
+  label: "PSI samples",
+  sourceOfTruth: "surface_publication_generations",
+};
+
+const PSI_SAMPLE_SURFACE: PublicationSurfaceDefinition = {
+  ...PSI_SURFACE,
+  sourceOfTruth: "stability_index_samples",
+};
+
+const REPORT_CARD_CACHE_SURFACE: PublicationSurfaceDefinition = {
+  surface: "report-card-cache",
+  label: "Report-card cache",
+  sourceOfTruth: "surface_publication_generations",
+};
+
+const REPORT_CARD_CACHE_FALLBACK_SURFACE: PublicationSurfaceDefinition = {
+  ...REPORT_CARD_CACHE_SURFACE,
+  sourceOfTruth: "cache[report_card_cache]",
 };
 
 function mapSourceState(state: string): PublicationGenerationState {
@@ -343,6 +377,48 @@ function stablecoinsCacheFailureRow(
   };
 }
 
+function publishedFallbackRow(
+  generationId: string,
+  publishedAt: number,
+  rowCount: number | null,
+  metadata: Record<string, unknown>,
+): PublicationGenerationRow {
+  return {
+    generation_id: generationId,
+    source_state: "published",
+    started_at: publishedAt,
+    validated_at: publishedAt,
+    published_at: publishedAt,
+    failed_at: null,
+    candidate_rows: rowCount,
+    published_rows: rowCount,
+    expected_rows: null,
+    failure_reason: null,
+    metadata_json: JSON.stringify(metadata),
+  };
+}
+
+function failedFallbackRow(
+  generationId: string,
+  reason: string,
+  attemptedAt: number,
+  metadata: Record<string, unknown>,
+): PublicationGenerationRow {
+  return {
+    generation_id: generationId,
+    source_state: "failed",
+    started_at: attemptedAt,
+    validated_at: null,
+    published_at: null,
+    failed_at: attemptedAt,
+    candidate_rows: null,
+    published_rows: null,
+    expected_rows: null,
+    failure_reason: reason,
+    metadata_json: JSON.stringify(metadata),
+  };
+}
+
 async function loadStablecoinsPublicationSurface(
   db: D1Database,
   now: number,
@@ -399,11 +475,188 @@ async function loadStablecoinsPublicationSurface(
   return buildSurfaceHealth(STABLECOINS_CACHE_SURFACE, now, failedRow, null, failedRow);
 }
 
+async function loadDewsFallbackPublicationSurface(
+  db: D1Database,
+  now: number,
+): Promise<PublicationSurfaceHealth> {
+  const sentinelUpdatedAt = await getCacheUpdatedAt(db, "dews").catch(() => null);
+  let row: { computed_at: number | null; row_count: number | null } | null = null;
+  try {
+    row = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT computed_at, COUNT(*) AS row_count
+             FROM stress_signals_latest
+            GROUP BY computed_at
+            ORDER BY computed_at DESC
+            LIMIT 1`,
+        )
+        .first<{ computed_at: number | null; row_count: number | null }>(),
+    2);
+  } catch (error) {
+    if (!isMissingTableError(error)) throw error;
+  }
+
+  if (row?.computed_at != null) {
+    const publishedRow = publishedFallbackRow(
+      `dews:${row.computed_at}`,
+      row.computed_at,
+      row.row_count,
+      {
+        inputWatermarks: {
+          stressSignalsLatest: row.computed_at,
+          freshnessSentinel: sentinelUpdatedAt,
+        },
+        cacheKey: "dews",
+      },
+    );
+    return buildSurfaceHealth(DEWS_LATEST_SURFACE, now, publishedRow, publishedRow, null);
+  }
+
+  if (sentinelUpdatedAt != null) {
+    const sentinelRow = publishedFallbackRow(
+      `dews-sentinel:${sentinelUpdatedAt}`,
+      sentinelUpdatedAt,
+      null,
+      {
+        inputWatermarks: {
+          freshnessSentinel: sentinelUpdatedAt,
+        },
+        cacheKey: "dews",
+        fallbackMode: "freshness-sentinel",
+      },
+    );
+    return buildSurfaceHealth(DEWS_LATEST_SURFACE, now, sentinelRow, sentinelRow, null);
+  }
+
+  const failedRow = failedFallbackRow(
+    "dews:missing",
+    "missing-stress-signals-latest",
+    now,
+    { cacheKey: "dews" },
+  );
+  return buildSurfaceHealth(DEWS_LATEST_SURFACE, now, failedRow, null, failedRow);
+}
+
+async function loadDewsPublicationSurface(
+  db: D1Database,
+  now: number,
+): Promise<PublicationSurfaceHealth> {
+  const genericSurface = await loadGenericPublicationSurface(db, now, DEWS_SURFACE);
+  return genericSurface ?? loadDewsFallbackPublicationSurface(db, now);
+}
+
+async function loadPsiFallbackPublicationSurface(
+  db: D1Database,
+  now: number,
+): Promise<PublicationSurfaceHealth> {
+  let row: {
+    stored_at: number | null;
+    score: number | null;
+    band: string | null;
+    methodology_version: string | null;
+  } | null = null;
+  try {
+    row = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT stored_at, score, band, methodology_version
+             FROM stability_index_samples
+            ORDER BY stored_at DESC
+            LIMIT 1`,
+        )
+        .first<{
+          stored_at: number | null;
+          score: number | null;
+          band: string | null;
+          methodology_version: string | null;
+        }>(),
+    2);
+  } catch (error) {
+    if (!isMissingTableError(error)) throw error;
+  }
+
+  if (row?.stored_at != null) {
+    const publishedRow = publishedFallbackRow(
+      `psi:${row.stored_at}`,
+      row.stored_at,
+      1,
+      {
+        inputWatermarks: {
+          stabilityIndexSample: row.stored_at,
+        },
+        score: row.score,
+        band: row.band,
+        methodologyVersion: row.methodology_version,
+      },
+    );
+    return buildSurfaceHealth(PSI_SAMPLE_SURFACE, now, publishedRow, publishedRow, null);
+  }
+
+  const failedRow = failedFallbackRow(
+    "psi:missing",
+    "missing-stability-index-sample",
+    now,
+    {},
+  );
+  return buildSurfaceHealth(PSI_SAMPLE_SURFACE, now, failedRow, null, failedRow);
+}
+
+async function loadPsiPublicationSurface(
+  db: D1Database,
+  now: number,
+): Promise<PublicationSurfaceHealth> {
+  const genericSurface = await loadGenericPublicationSurface(db, now, PSI_SURFACE);
+  return genericSurface ?? loadPsiFallbackPublicationSurface(db, now);
+}
+
+async function loadReportCardCachePublicationSurface(
+  db: D1Database,
+  now: number,
+): Promise<PublicationSurfaceHealth> {
+  const genericSurface = await loadGenericPublicationSurface(db, now, REPORT_CARD_CACHE_SURFACE);
+  if (genericSurface) return genericSurface;
+
+  const result = await loadReportCardCache(db);
+  if (result.kind === "ok") {
+    const publishedRow = publishedFallbackRow(
+      `report-card-cache:${result.updatedAt}`,
+      result.updatedAt,
+      Object.keys(result.payload.scores).length,
+      {
+        inputWatermarks: {
+          reportCardCache: result.updatedAt,
+        },
+        cacheKey: "report_card_cache",
+        methodologyVersion: result.payload.methodologyVersion,
+        degradedInputs: result.payload.degradedInputs ?? null,
+      },
+    );
+    return buildSurfaceHealth(REPORT_CARD_CACHE_FALLBACK_SURFACE, now, publishedRow, publishedRow, null);
+  }
+
+  const attemptedAt = result.updatedAt ?? now;
+  const failedRow = failedFallbackRow(
+    result.updatedAt == null
+      ? "report-card-cache:missing"
+      : `report-card-cache:${result.updatedAt}:invalid`,
+    result.reason,
+    attemptedAt,
+    {
+      cacheKey: "report_card_cache",
+    },
+  );
+  return buildSurfaceHealth(REPORT_CARD_CACHE_FALLBACK_SURFACE, now, failedRow, null, failedRow);
+}
+
 export async function loadPublicationHealth(db: D1Database, now: number): Promise<PublicationHealth> {
-  const [dexLiquidity, yieldRankings, stablecoins] = await Promise.all([
+  const [dexLiquidity, yieldRankings, stablecoins, dews, psi, reportCardCache] = await Promise.all([
     loadDexLiquidityPublicationSurface(db, now),
     loadYieldRankingsPublicationSurface(db, now),
     loadStablecoinsPublicationSurface(db, now),
+    loadDewsPublicationSurface(db, now),
+    loadPsiPublicationSurface(db, now),
+    loadReportCardCachePublicationSurface(db, now),
   ]);
   return {
     checkedAt: now,
@@ -411,6 +664,9 @@ export async function loadPublicationHealth(db: D1Database, now: number): Promis
       "dex-liquidity": dexLiquidity,
       "yield-rankings": yieldRankings,
       stablecoins,
+      dews,
+      psi,
+      "report-card-cache": reportCardCache,
     },
   };
 }

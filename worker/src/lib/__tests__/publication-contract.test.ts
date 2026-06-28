@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadPublicationHealth } from "../publication-contract";
 
@@ -298,6 +299,126 @@ describe("loadPublicationHealth", () => {
     expect(health.surfaces.stablecoins?.lastPublishedGeneration?.metadata).toMatchObject({
       cacheKey: "stablecoins",
       responseReadyMatchesCanonical: true,
+    });
+  });
+
+  it("falls back to the canonical stablecoins cache when the generic surface table is absent", async () => {
+    const updatedAt = NOW - 180;
+    const db = mockD1([
+      {
+        match: "FROM surface_publication_generations",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: surface_publication_generations"),
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: stablecoinPayload(2),
+            updated_at: updatedAt,
+          },
+          {
+            key: "stablecoins:response-ready:v2",
+            value: "{}",
+            updated_at: updatedAt,
+          },
+        ],
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces["dex-liquidity"]).toBeDefined();
+    expect(health.surfaces["yield-rankings"]).toBeDefined();
+    expect(health.surfaces.stablecoins).toMatchObject({
+      sourceOfTruth: "cache[stablecoins]",
+      lastFailureReason: null,
+      dependencyWatermarks: {
+        stablecoinsCache: updatedAt,
+        responseReadyCache: updatedAt,
+      },
+      lastPublishedGeneration: {
+        generationId: `stablecoins-cache:${updatedAt}`,
+        state: "published",
+        publishedRows: 2,
+      },
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM surface_publication_generations"))).toBe(true);
+  });
+
+  it("derives DEWS, PSI, and report-card publication health from current fallback sources", async () => {
+    const dewsAt = NOW - 300;
+    const psiAt = NOW - 240;
+    const reportCardsAt = NOW - 180;
+    const db = mockD1([
+      {
+        match: "FROM stress_signals_latest",
+        rows: [],
+        first: {
+          computed_at: dewsAt,
+          row_count: 407,
+        },
+      },
+      {
+        match: "FROM stability_index_samples",
+        rows: [],
+        first: {
+          stored_at: psiAt,
+          score: 82,
+          band: "Calm",
+          methodology_version: "psi-v1",
+        },
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "dews",
+            value: "{}",
+            updated_at: dewsAt,
+          },
+          {
+            key: "report_card_cache",
+            value: JSON.stringify({
+              scores: {
+                "usdt-tether": { score: 92, grade: "A" },
+                "usdc-circle": { score: 91, grade: "A" },
+              },
+              updatedAt: reportCardsAt,
+              methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            }),
+            updated_at: reportCardsAt,
+          },
+        ],
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces.dews).toMatchObject({
+      sourceOfTruth: "stress_signals_latest",
+      lastPublishedGeneration: {
+        generationId: `dews:${dewsAt}`,
+        state: "published",
+        publishedRows: 407,
+      },
+    });
+    expect(health.surfaces.psi).toMatchObject({
+      sourceOfTruth: "stability_index_samples",
+      lastPublishedGeneration: {
+        generationId: `psi:${psiAt}`,
+        state: "published",
+        publishedRows: 1,
+      },
+    });
+    expect(health.surfaces["report-card-cache"]).toMatchObject({
+      sourceOfTruth: "cache[report_card_cache]",
+      lastPublishedGeneration: {
+        generationId: `report-card-cache:${reportCardsAt}`,
+        state: "published",
+        publishedRows: 2,
+      },
     });
   });
 

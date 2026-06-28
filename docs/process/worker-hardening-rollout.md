@@ -31,6 +31,10 @@ Use `WORKER_JOB_LEDGER_ALLOWLIST` as a CSV of job names for first activation.
 Leave it unset only after targeted jobs show expected attempt, heartbeat,
 terminal-state, status, and prune behavior.
 
+Current checked-in Worker config starts the shadow soak with:
+`WORKER_JOB_LEDGER_MODE=shadow` and
+`WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,sync-dex-liquidity,sync-stablecoins,sync-yield-data`.
+
 ## Verification
 
 For a rollout slice that touches this path, run:
@@ -70,6 +74,8 @@ Activation sequence:
    are additive and can remain in D1.
 
 `prune-cron-history` owns canary retention and deletes rows older than 90 days.
+The checked-in Worker config is currently at step 2 (`shadow`) so the next
+action is observation, not promotion.
 
 ## Repair Task Ledger
 
@@ -85,6 +91,9 @@ promotion requires:
 If repair writes fail, the existing cache-backed repair-debt/status paths must
 remain readable.
 
+The checked-in Worker config sets `WORKER_REPAIR_RUNNER_MODE=shadow` so the
+daily runner reports due/stale backlog telemetry without claiming tasks.
+
 ## Status Supplements
 
 `publicationHealth`, `dependencyHealth`, `providerCircuitHealth`, and
@@ -94,17 +103,24 @@ matching `sectionErrors.*` entry and `null` supplement value, not a failed
 contract so a newer frontend can read an older Worker during rollback.
 
 The current `publicationHealth` slice covers DEX-liquidity and yield-ranking
-publication generations, plus the stablecoins cache through a published-cache
-fallback until generic surface rows are written. Do not treat missing DEWS, PSI,
-or report-card publication rows as rollout failures until those surfaces get
-their own generation contracts.
+publication generations, plus stablecoins, DEWS, PSI, and report-card cache
+through existing cache/table fallbacks until generic surface rows are written.
+Do not treat missing generic rows for those fallback-backed surfaces as rollout
+failures; treat missing fallback data itself as a data-publication issue.
 
 ## Night Watch
 
 For staged activation, collect an operator window with:
 
 ```bash
-node scripts/maintenance/night-watch-worker.mjs --cycles 1 --include-status --include-status-history --include-d1
+npm run ops:night-watch-worker -- --cycles 1 --include-status --include-status-history --include-d1
+```
+
+For recurring hardening soaks or follow-up after a production incident, collect
+two complete four-hour cycles with:
+
+```bash
+npm run ops:night-watch-worker:two-cycle
 ```
 
 When operator origins are behind Cloudflare Access, pass the service token via
@@ -112,6 +128,6 @@ When operator origins are behind Cloudflare Access, pass the service token via
 collector records D1/status access failures as access gaps in the evidence
 rather than aborting the report.
 
-Use the generated coverage matrix plus `artifactErrors`, `jobAttempts`,
-`repairTasks`, `canaryRuns`, and `publicationGenerations` evidence to decide
-whether the slice can promote beyond shadow/status mode.
+Use the generated coverage matrix plus `artifactGaps`, legacy `artifactErrors`,
+`jobAttempts`, `repairTasks`, `canaryRuns`, and `publicationGenerations`
+evidence to decide whether the slice can promote beyond shadow/status mode.

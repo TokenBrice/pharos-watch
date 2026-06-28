@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const DEFAULT_DATABASE = "stablecoin-db";
 const DEFAULT_API_URL = "https://api.pharos.watch";
@@ -171,11 +172,76 @@ function errorMessage(error) {
   return String(error).slice(0, 1000);
 }
 
-function optionalD1Select(args, sql) {
+function escapeSqlLiteral(value) {
+  return String(value).replaceAll("'", "''");
+}
+
+function isMissingTableMessage(message, table) {
+  const normalized = String(message).toLowerCase();
+  return normalized.includes("no such table") && normalized.includes(String(table).toLowerCase());
+}
+
+export function missingOptionalArtifactGap(descriptor) {
+  return {
+    artifact: descriptor.artifact,
+    table: descriptor.table,
+    code: "missing_table",
+    severity: "info",
+    optional: true,
+    message: `Optional D1 artifact table ${descriptor.table} is not present. Deploy the rollout migration, or ignore until this telemetry surface is enabled.`,
+  };
+}
+
+export function classifyArtifactFailure(descriptor, message) {
+  const missingTable = descriptor.table ? isMissingTableMessage(message, descriptor.table) : false;
+  return {
+    artifact: descriptor.artifact,
+    table: descriptor.table ?? null,
+    code: missingTable ? "missing_table" : "query_failed",
+    severity: missingTable && descriptor.optionalMissing ? "info" : "warning",
+    optional: Boolean(descriptor.optionalMissing),
+    message: String(message).slice(0, 1000),
+  };
+}
+
+function loadExistingTables(args, tables) {
+  if (tables.length === 0) return { tables: new Set(), error: null };
+  const tableList = tables.map((table) => `'${escapeSqlLiteral(table)}'`).join(", ");
   try {
-    return { rows: d1Select(args, sql), error: null };
+    const rows = d1Select(
+      args,
+      `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${tableList})`,
+    );
+    return {
+      tables: new Set(rows.map((row) => row.name).filter((name) => typeof name === "string")),
+      error: null,
+    };
   } catch (error) {
-    return { rows: [], error: errorMessage(error) };
+    return { tables: null, error: errorMessage(error) };
+  }
+}
+
+function optionalD1Select(args, descriptor, existingTables = null) {
+  if (descriptor.optionalMissing && descriptor.table && existingTables?.tables) {
+    if (!existingTables.tables.has(descriptor.table)) {
+      return { rows: [], error: null, gap: missingOptionalArtifactGap(descriptor) };
+    }
+  }
+  if (descriptor.optionalMissing && descriptor.table && existingTables?.error) {
+    const gap = classifyArtifactFailure(descriptor, existingTables.error);
+    return { rows: [], error: existingTables.error, gap };
+  }
+
+  try {
+    return { rows: d1Select(args, descriptor.sql), error: null, gap: null };
+  } catch (error) {
+    const message = errorMessage(error);
+    const gap = classifyArtifactFailure(descriptor, message);
+    return {
+      rows: [],
+      error: gap.code === "missing_table" && gap.optional ? null : message,
+      gap,
+    };
   }
 }
 
@@ -289,6 +355,15 @@ function printHuman(report) {
     }
   }
 
+  if (report.artifactGaps?.length > 0) {
+    console.log("");
+    console.log("Artifact gaps:");
+    for (const gap of report.artifactGaps) {
+      const label = gap.optional && gap.code === "missing_table" ? "optional artifact gap" : "artifact gap";
+      console.log(`- ${gap.artifact}: ${label} ${gap.code} (${gap.message})`);
+    }
+  }
+
   const expiredLeases = report.leases.filter((lease) => typeof lease.lease_until === "number" && lease.lease_until < nowSec);
   if (expiredLeases.length > 0) {
     console.log("");
@@ -337,43 +412,79 @@ async function main() {
       FROM cron_run_progress
      ORDER BY updated_at DESC
   `);
-  const jobAttempts = optionalD1Select(args, `
+  const optionalArtifactTables = [
+    "worker_job_attempts",
+    "worker_repair_tasks",
+    "worker_canary_runs",
+    "surface_publication_generations",
+  ];
+  const existingOptionalTables = loadExistingTables(args, optionalArtifactTables);
+  const jobAttempts = optionalD1Select(args, {
+    artifact: "jobAttempts",
+    table: "worker_job_attempts",
+    optionalMissing: true,
+    sql: `
     SELECT attempt_id, schedule_key, job, slot_started_at, state, status_class, attempt_no, owner, lease_until,
            queued_at, claimed_at, started_at, last_heartbeat_at, finished_at, updated_at, duration_ms, item_count,
            error, ${metadataSelect(args, "result_metadata_json")}
       FROM worker_job_attempts
      ORDER BY updated_at DESC
      LIMIT ${Math.min(limit, 80)}
-  `);
-  const repairTasks = optionalD1Select(args, `
+  `,
+  }, existingOptionalTables);
+  const repairTasks = optionalD1Select(args, {
+    artifact: "repairTasks",
+    table: "worker_repair_tasks",
+    optionalMissing: true,
+    sql: `
     SELECT task_id, kind, subject_id, priority, state, attempt_count, next_attempt_at, last_attempt_at,
            locked_by, locked_until, created_at, updated_at, closed_at, last_error,
            ${metadataSelect(args, "payload_json")}
       FROM worker_repair_tasks
      ORDER BY updated_at DESC
      LIMIT 80
-  `);
-  const canaryRuns = optionalD1Select(args, `
+  `,
+  }, existingOptionalTables);
+  const canaryRuns = optionalD1Select(args, {
+    artifact: "canaryRuns",
+    table: "worker_canary_runs",
+    optionalMissing: true,
+    sql: `
     SELECT check_id, status, severity, observed_at, duration_ms, error, ${metadataSelect(args, "metadata_json")}
       FROM worker_canary_runs
      ORDER BY observed_at DESC
      LIMIT 80
-  `);
-  const dexPublicationGenerations = optionalD1Select(args, `
+  `,
+  }, existingOptionalTables);
+  const dexPublicationGenerations = optionalD1Select(args, {
+    artifact: "dexPublicationGenerations",
+    table: "dex_liquidity_publication_generations",
+    optionalMissing: false,
+    sql: `
     SELECT generation_id, started_at, state, expected_row_count, written_row_count, current_row_count,
            published_at, failed_at, failure_reason, ${metadataSelect(args, "metadata_json")}
       FROM dex_liquidity_publication_generations
      ORDER BY started_at DESC
      LIMIT 20
-  `);
-  const yieldPublicationGenerations = optionalD1Select(args, `
+  `,
+  });
+  const yieldPublicationGenerations = optionalD1Select(args, {
+    artifact: "yieldPublicationGenerations",
+    table: "yield_publication_generations",
+    optionalMissing: false,
+    sql: `
     SELECT generation_id, started_at, state, cache_key, ranking_updated_at, ranking_count, source_row_count,
            best_row_count, decision_count, published_at, failed_at, failure_reason, ${metadataSelect(args, "metadata_json")}
       FROM yield_publication_generations
      ORDER BY started_at DESC
      LIMIT 20
-  `);
-  const surfacePublicationGenerations = optionalD1Select(args, `
+  `,
+  });
+  const surfacePublicationGenerations = optionalD1Select(args, {
+    artifact: "surfacePublicationGenerations",
+    table: "surface_publication_generations",
+    optionalMissing: true,
+    sql: `
     SELECT surface, generation_id, state, started_at, validated_at, published_at, failed_at,
            candidate_rows, published_rows, expected_rows, failure_reason,
            artifact_cache_key, previous_generation_id,
@@ -383,17 +494,24 @@ async function main() {
       FROM surface_publication_generations
      ORDER BY started_at DESC
      LIMIT 40
-  `);
+  `,
+  }, existingOptionalTables);
   const probes = await fetchProbes(args);
+  const optionalResults = {
+    jobAttempts,
+    repairTasks,
+    canaryRuns,
+    dexPublicationGenerations,
+    yieldPublicationGenerations,
+    surfacePublicationGenerations,
+  };
+  const artifactGaps = Object.values(optionalResults)
+    .map((result) => result.gap)
+    .filter(Boolean);
   const artifactErrors = Object.fromEntries(
-    Object.entries({
-      jobAttempts: jobAttempts.error,
-      repairTasks: repairTasks.error,
-      canaryRuns: canaryRuns.error,
-      dexPublicationGenerations: dexPublicationGenerations.error,
-      yieldPublicationGenerations: yieldPublicationGenerations.error,
-      surfacePublicationGenerations: surfacePublicationGenerations.error,
-    }).filter(([, error]) => error),
+    Object.entries(optionalResults)
+      .filter(([, result]) => result.error)
+      .map(([artifact, result]) => [artifact, result.error]),
   );
 
   const report = {
@@ -416,6 +534,7 @@ async function main() {
       yieldRankings: yieldPublicationGenerations.rows,
       surface: surfacePublicationGenerations.rows,
     },
+    artifactGaps,
     artifactErrors,
   };
 
@@ -426,7 +545,10 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isCliEntrypoint) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}

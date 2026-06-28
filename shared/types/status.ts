@@ -888,7 +888,13 @@ export interface CoinGeckoPriceDiff {
   rows: CoinGeckoPriceDiffRow[];
 }
 
-export type PublicationSurfaceId = "dex-liquidity" | "yield-rankings" | "stablecoins";
+export type PublicationSurfaceId =
+  | "dex-liquidity"
+  | "yield-rankings"
+  | "stablecoins"
+  | "dews"
+  | "psi"
+  | "report-card-cache";
 export type PublicationGenerationState =
   | "candidate"
   | "validated"

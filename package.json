@@ -57,6 +57,7 @@
     "ops:d1-insights": "node scripts/maintenance/capture-d1-insights.mjs",
     "ops:watch-worker-cron": "node scripts/maintenance/watch-worker-cron.mjs",
     "ops:night-watch-worker": "node scripts/maintenance/night-watch-worker.mjs",
+    "ops:night-watch-worker:two-cycle": "node scripts/maintenance/night-watch-worker.mjs --cycles 2 --include-status --include-status-history --include-d1",
     "calibrate:yield-pys-v8": "tsx scripts/maintenance/yield-pys-v8-calibration.ts",
     "calibrate:oracle-risk-score": "tsx scripts/maintenance/calibrate-oracle-risk-score.ts",
     "freeze-stablecoin": "tsx scripts/maintenance/freeze-stablecoin.ts",
