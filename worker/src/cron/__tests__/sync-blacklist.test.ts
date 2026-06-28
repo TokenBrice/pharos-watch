@@ -906,7 +906,12 @@ describe("syncBlacklist", () => {
       }),
     ]);
     expect(meta.zeroCursorConfigs).toContain("base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
-    expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 12345);
+    expect(setLastBlock).toHaveBeenCalledWith(
+      db,
+      "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      12345,
+      undefined,
+    );
   });
 
   it("does not advance a shared Etherscan cursor when one configured topic fails", async () => {
@@ -1084,7 +1089,12 @@ describe("syncBlacklist", () => {
       const baseCall = baseCalls[baseCalls.length - 1];
       expect(baseCall?.[3]).toBe(1_000_000);
       expect(baseCall?.[4]).toBe(1_049_999);
-      expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 1_049_999);
+      expect(setLastBlock).toHaveBeenCalledWith(
+        db,
+        "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        1_049_999,
+        undefined,
+      );
     } finally {
       baseConfig.startBlock = previousStartBlock;
     }

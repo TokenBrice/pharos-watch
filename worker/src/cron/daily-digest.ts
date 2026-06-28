@@ -256,8 +256,7 @@ export async function generateDailyDigest(
     digestTitle: digestCopy.digestTitle || null,
     inputData: storedInputData,
     digestExtended: digestCopy.digestExtended || null,
-    digestMeta: digestCopy.digestMeta,
-    signal,
+    digestMeta: digestCopy.digestMeta, signal,
   });
   // SAFETY: NON_WEEKLY_DIGEST_SQL_FILTER is a hardcoded SQL fragment, not derived from user input.
   const countResult = await db

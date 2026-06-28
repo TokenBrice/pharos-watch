@@ -466,11 +466,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       }
 
       if (result.nextCursor != null) {
-        if (signal) {
-          await setLastBlock(db, configKey, result.nextCursor, signal);
-        } else {
-          await setLastBlock(db, configKey, result.nextCursor);
-        }
+        await setLastBlock(db, configKey, result.nextCursor, signal);
       }
 
       totalFetchedEvents += result.rows.length;
