@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/mint-authority-review-audit.test.ts`
 - `scripts/__tests__/night-watch-worker.test.ts`
 - `scripts/__tests__/oracle-risk-coverage.test.ts`
-- ... 218 more files omitted; use `rg --files scripts` for the full list.
+- ... 219 more files omitted; use `rg --files scripts` for the full list.
