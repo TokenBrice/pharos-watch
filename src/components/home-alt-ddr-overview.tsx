@@ -6,7 +6,9 @@ import { ShieldCheck, SquareArrowRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
+import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { DDR_RESOLUTION_TIER_VALUES, type DdrResolutionTier } from "@shared/types/depeg-resolver";
@@ -41,6 +43,15 @@ const TIER_SHORT: Record<DdrResolutionTier, string> = {
   at_risk: "At Risk",
   recovery_unlikely: "Unlikely",
   insufficient_signal: "No Signal",
+};
+
+// Tier-colored ring around each coin logo — keeps terminality readable at the
+// identity slot. Complete static strings for the Tailwind scanner.
+const RING_TONE: Record<DdrResolutionTier, string> = {
+  recovery_likely: "ring-emerald-500/70",
+  at_risk: "ring-amber-500/70",
+  recovery_unlikely: "ring-red-500/70",
+  insufficient_signal: "ring-muted-foreground/40",
 };
 
 interface ForecastItem {
@@ -99,8 +110,38 @@ function DurationCell({ item }: { item: ForecastItem }) {
   return <span className="font-mono text-[11px] text-muted-foreground/50">—</span>;
 }
 
+/** Coin logo with a tier-colored ring; falls back to the symbol initial. */
+function CoinLogo({ item, logoSrc }: { item: ForecastItem; logoSrc: string | undefined }) {
+  const src = resolveCompactLogoSrc(logoSrc, 20);
+  const fallback = (item.symbol || item.name).trim().charAt(0).toUpperCase();
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-background ring-2",
+        RING_TONE[item.tier],
+      )}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          width={20}
+          height={20}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          className="h-full w-full rounded-full object-contain"
+        />
+      ) : (
+        <span className="font-mono text-[8px] font-bold text-muted-foreground">{fallback}</span>
+      )}
+    </span>
+  );
+}
+
 /** One ongoing depeg: identity + deviation, then terminality verdict + duration. */
-function ForecastRow({ item }: { item: ForecastItem }) {
+function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | undefined }) {
   return (
     <Link
       href={buildStablecoinUrl(item.id)}
@@ -109,7 +150,7 @@ function ForecastRow({ item }: { item: ForecastItem }) {
       className="pharos-focus-ring group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-1.5 py-1.5 hover:bg-muted/50"
     >
       <span className="flex min-w-0 items-center gap-2">
-        <span aria-hidden="true" className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[item.tier])} />
+        <CoinLogo item={item} logoSrc={logoSrc} />
         <span className="truncate font-mono text-[13px] font-semibold text-foreground group-hover:underline">
           {item.symbol}
         </span>
@@ -200,7 +241,13 @@ function VerdictDistribution({ items }: { items: ForecastItem[] }) {
   );
 }
 
-function ForecastZone({ items }: { items: ForecastItem[] }) {
+function ForecastZone({
+  items,
+  logoMap,
+}: {
+  items: ForecastItem[];
+  logoMap: Record<string, string | undefined>;
+}) {
   if (items.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 py-8 text-center">
@@ -226,7 +273,7 @@ function ForecastZone({ items }: { items: ForecastItem[] }) {
         {columns.map((column, index) => (
           <div key={index} className="-mx-1.5 divide-y divide-border/30">
             {column.map((item) => (
-              <ForecastRow key={item.id} item={item} />
+              <ForecastRow key={item.id} item={item} logoSrc={logoMap[item.id]} />
             ))}
           </div>
         ))}
@@ -328,6 +375,9 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
     [resolverData],
   );
 
+  const { data: logos } = useLogos();
+  const logoMap = logos ?? {};
+
   if (!resolverEnabled && !resolverReviewerEnabled) return null;
 
   const ddrDegraded = resolverData?._meta.degraded === true;
@@ -374,7 +424,7 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
         <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-5 lg:divide-x lg:divide-y-0">
           {ddrUsable ? (
             <div className={cn("p-4 sm:p-5", forecastSpan)}>
-              <ForecastZone items={items} />
+              <ForecastZone items={items} logoMap={logoMap} />
             </div>
           ) : null}
           {ddrrUsable && headline ? (
