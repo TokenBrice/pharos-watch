@@ -72,6 +72,7 @@ describe("circuit-breaker", () => {
     it("maps degraded and skipped statuses to neutral", () => {
       expect(mapCronStatusToCircuitOutcome("degraded")).toBe("neutral");
       expect(mapCronStatusToCircuitOutcome("skipped_locked")).toBe("neutral");
+      expect(mapCronStatusToCircuitOutcome("skipped_neutral")).toBe("neutral");
     });
 
     it("maps error to failure", () => {

@@ -252,7 +252,7 @@ Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error
 
 **File:** `worker/src/cron/weekly-recap.ts`
 **Schedule:** Mondays only, chained after `daily-digest` on the same `"5 8 * * *"` trigger
-**Dedup guard:** skips if a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` unless its delivery status is `skipped: quality-gate`
+**Dedup guard:** returns `skipped_neutral` outside Monday UTC or when a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` unless its delivery status is `skipped: quality-gate`
 **Period semantics:** trailing daily editions ending with the Monday daily digest, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 
 ### Data collection

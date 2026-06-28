@@ -58,7 +58,7 @@ describe("logCronRun", () => {
     });
   });
 
-  it("persists custom status such as skipped_locked", async () => {
+  it.each(["skipped_locked", "skipped_neutral"] as const)("persists custom status %s", async (status) => {
     let insertedStatus: string | null = null;
     const dbWithCapture = {
       prepare: (sql: string) => ({
@@ -82,11 +82,11 @@ describe("logCronRun", () => {
     } as unknown as D1Database;
 
     await logCronRun(dbWithCapture, "test-job", async () => ({
-      status: "skipped_locked",
-      metadata: "{\"reason\":\"lease-locked\"}",
+      status,
+      metadata: JSON.stringify({ reason: status }),
     }));
 
-    expect(insertedStatus).toBe("skipped_locked");
+    expect(insertedStatus).toBe(status);
   });
 
   it("writes and clears cron_run_progress when the job reports progress", async () => {

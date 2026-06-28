@@ -87,7 +87,7 @@ function CronRunDots({ runs }: { runs: RecentRun[] }) {
               ? "bg-green-500"
               : run.status === "degraded"
                 ? "bg-amber-500"
-                : run.status === "skipped_locked"
+                : run.status === "skipped_locked" || run.status === "skipped_neutral"
                   ? "bg-zinc-500"
                   : "bg-red-500",
           )}

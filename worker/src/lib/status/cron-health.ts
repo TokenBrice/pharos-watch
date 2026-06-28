@@ -539,6 +539,7 @@ export async function loadCronHealth(
       lastRun != null &&
       (lastRun.status === "ok" ||
         lastRun.status === "degraded" ||
+        lastRun.status === "skipped_neutral" ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
     const latestAttempt = jobAttemptHealth.latestByJob.get(job);

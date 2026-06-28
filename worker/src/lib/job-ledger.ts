@@ -37,7 +37,7 @@ export interface FinishWorkerJobAttemptInput {
 export interface WorkerJobAttemptCronResult {
   itemCount?: number;
   metadata?: string;
-  status?: "ok" | "degraded" | "error" | "skipped_locked";
+  status?: "ok" | "degraded" | "error" | "skipped_locked" | "skipped_neutral";
   error?: string;
 }
 
@@ -215,6 +215,9 @@ function classifyCronResult(result: WorkerJobAttemptCronResult | void): {
   const metadata = cronResultMetadata(result);
   if (result?.status === "skipped_locked") {
     return { state: "skipped_locked", statusClass: "skipped_locked" };
+  }
+  if (result?.status === "skipped_neutral") {
+    return { state: "completed", statusClass: "ok" };
   }
   if (hasDeferredMetadata(metadata)) {
     return { state: "deferred", statusClass: "deferred" };

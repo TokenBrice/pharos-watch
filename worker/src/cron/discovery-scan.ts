@@ -6,6 +6,7 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { CronResult } from "../lib/cron-logger";
+import { createNeutralSkippedCronResult } from "../lib/cron-result";
 const DISMISSED_CLEANUP_DAYS = 90;
 
 export interface DiscoveryCandidateRow {
@@ -140,8 +141,12 @@ export async function runDiscoveryScan(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
 ): Promise<CronResult> {
-  if (new Date().getUTCDay() !== 1) {
-    return { itemCount: 0, metadata: JSON.stringify({ reason: "skipped_not_monday" }) };
+  const utcDay = new Date().getUTCDay();
+  if (utcDay !== 1) {
+    return createNeutralSkippedCronResult("not-monday", {
+      skipped: "not-monday",
+      utcDay,
+    });
   }
 
   const trackedGeckoIds = new Set(

@@ -29,6 +29,31 @@ function truncateSummaryText(value: unknown): string {
   return String(value).slice(0, 300);
 }
 
+function readMetadataObject(metadata: string | undefined): Record<string, unknown> | null {
+  if (!metadata) return null;
+  try {
+    const parsed = JSON.parse(metadata) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function extractNeutralSkipReason(result: CronResult | null | void): string {
+  const metadata = readMetadataObject(result?.metadata);
+  const reason = metadata?.reason ?? metadata?.skipped;
+  if (typeof reason === "string" && reason.trim()) {
+    return truncateSummaryText(reason);
+  }
+  if (typeof result?.metadata === "string" && result.metadata.startsWith("skipped:")) {
+    return truncateSummaryText(result.metadata.slice("skipped:".length).trim());
+  }
+  return "neutral-skip";
+}
+
 export function summarizeCronResult(job: string, result: CronResult | null | void): ScheduledSlotJobSummary {
   const status = result?.status ?? "ok";
   if (status === "skipped_locked") {
@@ -38,6 +63,16 @@ export function summarizeCronResult(job: string, result: CronResult | null | voi
       status,
       itemCount: result?.itemCount,
       reason: "lease-locked",
+    };
+  }
+  if (status === "skipped_neutral") {
+    return {
+      job,
+      outcome: "skipped",
+      status,
+      itemCount: result?.itemCount,
+      reason: extractNeutralSkipReason(result),
+      neutral: true,
     };
   }
   if (status === "degraded") {

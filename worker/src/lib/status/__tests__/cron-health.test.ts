@@ -5,7 +5,7 @@ import { loadCronHealth } from "../cron-health";
 
 interface SeedRun {
   job: string;
-  status: "ok" | "error" | "degraded";
+  status: "ok" | "error" | "degraded" | "skipped_neutral";
   ageSec: number;
 }
 
@@ -108,6 +108,16 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
     // Most recent 2 runs are error/ok → streak is 0
     expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(0);
+  });
+
+  it("treats a fresh neutral skipped run as healthy without degraded impact", async () => {
+    const rows = seedWithOverrides(NOW, [
+      { job: "discovery-scan", status: "skipped_neutral", ageSec: 30 },
+    ]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons["discovery-scan"]?.healthy).toBe(true);
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+    expect(snapshot.degradedCronRuns).toBe(0);
   });
 
   it("chunks cron history queries below D1's compound SELECT term limit", async () => {

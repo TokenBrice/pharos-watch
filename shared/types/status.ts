@@ -45,6 +45,7 @@ export const CRON_RUN_STATUS_VALUES = [
   "degraded",
   "error",
   "skipped_locked",
+  "skipped_neutral",
   "skipped_duplicate",
   "skipped_running",
 ] as const;

@@ -1,5 +1,6 @@
 import { formatIsoDate } from "@shared/lib/format";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { createNeutralSkippedCronResult } from "../lib/cron-result";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -181,7 +182,10 @@ export async function generateWeeklyRecap(
         utcDay: now.getUTCDay(),
       },
     });
-    return { metadata: "skipped: not Monday" };
+    return createNeutralSkippedCronResult("not-monday", {
+      skipped: "not-monday",
+      utcDay: now.getUTCDay(),
+    });
   }
 
   // Check if weekly recap already exists for this week. Rows that were
@@ -212,7 +216,10 @@ export async function generateWeeklyRecap(
           existingGeneratedAt: existing.generated_at,
         },
       });
-      return { metadata: "skipped: weekly recap already exists" };
+      return createNeutralSkippedCronResult("weekly-recap-exists", {
+        skipped: "weekly-recap-exists",
+        existingGeneratedAt: existing.generated_at,
+      });
     }
     await reportDigestProgress(reportProgress, {
       stage: "telegram-delivery-retry",

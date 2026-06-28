@@ -29,3 +29,17 @@ export function createCronResult<TMetadata extends CronMetadataRecord>(
     metadata: serializeCronMetadata(result.metadata),
   };
 }
+
+export function createNeutralSkippedCronResult(
+  reason: string,
+  metadata: CronMetadataRecord = {},
+): CronResult {
+  return createCronResult({
+    itemCount: 0,
+    status: "skipped_neutral",
+    metadata: {
+      ...metadata,
+      reason,
+    },
+  });
+}

@@ -132,6 +132,22 @@ describe("runDiscoveryScan", () => {
     vi.restoreAllMocks();
   });
 
+  it("returns a neutral skipped result outside Monday UTC", async () => {
+    vi.setSystemTime(new Date("2026-03-24T12:00:00Z")); // Tuesday
+    const db = mockD1();
+
+    const result = await runDiscoveryScan(db);
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "not-monday",
+      skipped: "not-monday",
+      utcDay: 2,
+    });
+    expect(shouldAttemptFetch).not.toHaveBeenCalled();
+  });
+
   it("returns degraded when the discovery circuit is open and no scan is attempted", async () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     const db = mockD1();

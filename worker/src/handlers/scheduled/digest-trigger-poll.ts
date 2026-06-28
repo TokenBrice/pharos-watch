@@ -126,6 +126,8 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     const status = result?.status;
     if (status === "degraded" || status === "error") {
       outcome = status;
+    } else if (status === "skipped_neutral") {
+      outcome = "skipped";
     } else if (status === "skipped_locked") {
       outcome = "skipped_locked";
     } else if (typeof result?.metadata === "string"

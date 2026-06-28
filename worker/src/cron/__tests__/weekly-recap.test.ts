@@ -248,6 +248,69 @@ describe("generateWeeklyRecap", () => {
     });
   });
 
+  it("returns a neutral skipped result outside Monday UTC", async () => {
+    vi.setSystemTime(new Date("2026-03-31T12:00:00.000Z"));
+    const db = mockD1([]);
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, undefined, reportProgress);
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "not-monday",
+      skipped: "not-monday",
+      utcDay: 2,
+    });
+    expect(progressUpdates.find((update) => update.stage === "skipped")).toMatchObject({
+      metadata: {
+        providerFamily: "digest",
+        phase: "skipped",
+        skipped: "not-monday",
+        utcDay: 2,
+      },
+    });
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(postDigestToTelegram).not.toHaveBeenCalled();
+  });
+
+  it("returns a neutral skipped result when this week's recap already exists", async () => {
+    const existingGeneratedAt = Math.floor(Date.UTC(2026, 2, 30, 12, 0, 0) / 1000);
+    const existing = {
+      generated_at: existingGeneratedAt,
+      digest_title: "Weekly Calm",
+      digest_text: "A stored weekly digest.",
+      digest_extended: VALID_WEEKLY_EXTENDED,
+      digest_meta: JSON.stringify({
+        type: "weekly",
+        telegramDelivered: true,
+        telegramDeliveryStatus: "ok",
+      }),
+    };
+    const db = mockD1([
+      {
+        match: "SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta",
+        rows: [existing],
+        first: existing,
+      },
+    ], { requireMatch: true });
+
+    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "weekly-recap-exists",
+      skipped: "weekly-recap-exists",
+      existingGeneratedAt,
+    });
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(postDigestToTelegram).not.toHaveBeenCalled();
+  });
+
   it("stores failed Telegram delivery state so the weekly row can be retried", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());

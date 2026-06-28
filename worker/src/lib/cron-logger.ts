@@ -209,7 +209,7 @@ export async function logCronEvent(db: D1Database, event: CronEventInput): Promi
 export interface CronResult {
   itemCount?: number;
   metadata?: string;
-  status?: "ok" | "degraded" | "error" | "skipped_locked";
+  status?: "ok" | "degraded" | "error" | "skipped_locked" | "skipped_neutral";
   /** Human-readable failure summary persisted to cron_runs.error when present; preferred over metadata in the alert body for "error" statuses. */
   error?: string;
   /**

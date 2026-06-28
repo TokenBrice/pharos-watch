@@ -77,10 +77,14 @@ export function getDewsRiskLevel(bands: ThreatBand[]): DewsRiskLevel {
 // ---------------------------------------------------------------------------
 
 /** Badge class strings keyed by cron run status. */
-export const CRON_STATUS_COLORS: Record<"ok" | "degraded" | "skipped_locked" | "error", string> = {
+export const CRON_STATUS_COLORS: Record<
+  "ok" | "degraded" | "skipped_locked" | "skipped_neutral" | "error",
+  string
+> = {
   ok: "bg-green-500/15 text-green-700 dark:text-green-400",
   degraded: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   skipped_locked: "bg-muted text-muted-foreground",
+  skipped_neutral: "bg-muted text-muted-foreground",
   error: "bg-red-500/15 text-red-700 dark:text-red-400",
 };
 
