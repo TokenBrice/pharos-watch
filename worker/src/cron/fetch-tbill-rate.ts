@@ -6,7 +6,7 @@ import {
   FRED_EFFR_CSV_URL,
   FRED_TBILL_CSV_URL,
 } from "../lib/constants";
-import { logCronEvent, type CronResult } from "../lib/cron-logger";
+import { logCronEvent, recordCronFailure, type CronResult } from "../lib/cron-logger";
 import {
   buildRiskFreeRateCachePayload,
   buildRiskFreeRatesCachePayload,
@@ -331,10 +331,12 @@ async function updateGbpRetainedFallbackMonitor(params: {
   } catch (error) {
     if (signal?.aborted) throw error;
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    console.warn(
-      "[fetch-tbill-rate] Failed to update GBP retained fallback monitor:",
-      retainedFallbackMonitorErrorMessage(error).slice(0, 200),
-    );
+    recordCronFailure("fetch-tbill-rate", error, {
+      metadata: {
+        stage: "gbp-retained-fallback-monitor",
+        message: retainedFallbackMonitorErrorMessage(error).slice(0, 200),
+      },
+    });
     return {};
   }
 }

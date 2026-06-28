@@ -27,6 +27,7 @@ vi.mock("../../lib/cron-logger", () => ({
     recordedAt: 1774479600,
     ...event,
   })),
+  recordCronFailure: vi.fn(),
 }));
 
 vi.mock("../../lib/circuit-breaker", () => ({
