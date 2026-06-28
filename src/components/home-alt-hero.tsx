@@ -1,5 +1,5 @@
 import type { HomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
-import { CHART_SLATE, CHART_ORANGE, CHART_PALETTE, USDT_GREEN, USDC_BLUE } from "@/lib/chart-colors";
+import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE_STRONG, USDT_GREEN, USDC_BLUE } from "@/lib/chart-colors";
 import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
 import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { formatCurrency } from "@shared/lib/format";
@@ -63,11 +63,9 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
                 <CohortRow color={OTHERS_PURPLE} label="Others" value={latest.others} total={latest.total} />
                 <li className="flex items-baseline justify-between gap-3 font-mono">
                   <span className="flex items-center gap-2 text-muted-foreground">
-                    <span
-                      className="inline-block h-2 w-2 rounded-sm"
-                      style={{ backgroundColor: CHART_SLATE }}
-                      aria-hidden="true"
-                    />
+                    <span className="inline-flex h-2 w-2 items-center" aria-hidden="true">
+                      <span className="w-2 border-t border-dashed" style={{ borderColor: CHART_SLATE_STRONG }} />
+                    </span>
                     <span className="uppercase tracking-tight">Non-USD share</span>
                   </span>
                   <span className="flex items-baseline gap-1.5 tabular-nums text-muted-foreground">

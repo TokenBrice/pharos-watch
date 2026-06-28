@@ -3,12 +3,19 @@
 import { useMemo } from "react";
 import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
-import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE, USDC_BLUE, USDT_GREEN } from "@/lib/chart-colors";
+import {
+  CHART_ORANGE,
+  CHART_PALETTE,
+  CHART_SLATE_SOFT,
+  CHART_SLATE_STRONG,
+  USDC_BLUE,
+  USDT_GREEN,
+} from "@/lib/chart-colors";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
 import { formatCurrency } from "@shared/lib/format";
 
-const HOME_ALT_CHART_MARGIN = { top: 12, right: 16, bottom: 12, left: 0 } as const;
+const HOME_ALT_CHART_MARGIN = { top: 24, right: 32, bottom: 12, left: 0 } as const;
 const HOME_ALT_Y_AXIS_WIDTH = 68;
 const HOME_ALT_X_AXIS_HEIGHT = 30;
 const HOME_ALT_TICK_FONT_SIZE = 12;
@@ -54,9 +61,9 @@ const CHART_LAYERS: readonly ChartLayer[] = [
   {
     key: "total",
     label: "Total market cap",
-    color: CHART_SLATE,
+    color: CHART_SLATE_SOFT,
     gradientId: "homeAltTotalGrad",
-    topOpacity: 0.5,
+    topOpacity: 0.65,
     bottomOpacity: 0.06,
   },
   {
@@ -73,7 +80,7 @@ const COHORT_LINES: readonly CohortLine[] = [
   { key: "usdc", label: "USDC", color: USDC_BLUE },
   { key: "sky", label: "USDS + DAI", color: CHART_ORANGE },
   { key: "others", label: "Others", color: CHART_PALETTE[1] },
-  { key: "nonUsd", label: "Non-USD share", color: CHART_SLATE, dashArray: "4 4" },
+  { key: "nonUsd", label: "Non-USD share", color: CHART_SLATE_STRONG, dashArray: "4 4" },
 ];
 
 function buildEvenTicks(count: number): number[] {

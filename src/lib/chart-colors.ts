@@ -36,6 +36,8 @@ export const CHART_GREEN  = TOKEN.green;
 export const CHART_ORANGE = TOKEN.orange;
 export const CHART_RED    = TOKEN.red;
 export const CHART_SLATE  = TOKEN.slate;
+export const CHART_SLATE_SOFT = "#cbd5e1";
+export const CHART_SLATE_STRONG = "#64748b";
 export const CHART_AMBER  = TOKEN.amber;
 export const CHART_TEAL   = TOKEN.teal;
 

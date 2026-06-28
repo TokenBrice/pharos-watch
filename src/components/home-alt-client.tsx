@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { ShortcutsSection } from "@/components/shortcuts-section";
 import { LazySection } from "@/components/lazy-section";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,6 +112,57 @@ const HomeAltRankingsSection = dynamic(
   },
 );
 
+/* Below-fold overview modules (after On The Horizon) are code-split and SSR-off:
+ * each owns a live hook, so deferring the chunk keeps them off the homepage's
+ * critical path. This generic skeleton reserves the header+panel rhythm for the
+ * brief chunk-download window; each module then renders its own loading state. */
+function ModuleFallback(): React.JSX.Element {
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton className="h-7 w-44" />
+        <Skeleton className="h-7 w-24 rounded-md" />
+      </div>
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
+}
+
+/* The status strip is a single slim row, so it reserves a much shorter band
+ * than the header+panel modules above it. */
+function StatusStripFallback(): React.JSX.Element {
+  return (
+    <div className="pharos-card-shell flex flex-col gap-x-4 gap-y-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <Skeleton className="h-5 w-60" />
+      <Skeleton className="h-5 w-44" />
+    </div>
+  );
+}
+
+const HomeAltDdrOverview = dynamic(
+  () => import("@/components/home-alt-ddr-overview").then((mod) => mod.HomeAltDdrOverview),
+  {
+    ssr: false,
+    loading: ModuleFallback,
+  },
+);
+
+const HomeAltYieldOverview = dynamic(
+  () => import("@/components/home-alt-yield-overview").then((mod) => mod.HomeAltYieldOverview),
+  {
+    ssr: false,
+    loading: ModuleFallback,
+  },
+);
+
+const HomeAltStatusTelegram = dynamic(
+  () => import("@/components/home-alt-status-telegram").then((mod) => mod.HomeAltStatusTelegram),
+  {
+    ssr: false,
+    loading: StatusStripFallback,
+  },
+);
+
 /**
  * M14 — force-mount below-fold panels when the URL carries an anchor so the
  * browser can resolve the scroll target. Hash changes during the session
@@ -189,6 +241,30 @@ export function HomeAltClient() {
       <BelowFold forced={hashTargetForcesMount} minHeight={520}>
         <div className="mt-8 sm:mt-10">
           <HomeAltUpcomingHorizonConstellation />
+        </div>
+      </BelowFold>
+
+      <BelowFold forced={hashTargetForcesMount} minHeight={360}>
+        <div className="mt-8 sm:mt-10">
+          <SectionErrorBoundary name="depeg forecasting overview">
+            <HomeAltDdrOverview />
+          </SectionErrorBoundary>
+        </div>
+      </BelowFold>
+
+      <BelowFold forced={hashTargetForcesMount} minHeight={420}>
+        <div className="mt-8 sm:mt-10">
+          <SectionErrorBoundary name="yield intelligence overview">
+            <HomeAltYieldOverview />
+          </SectionErrorBoundary>
+        </div>
+      </BelowFold>
+
+      <BelowFold forced={hashTargetForcesMount} minHeight={120}>
+        <div className="mt-8 sm:mt-10">
+          <SectionErrorBoundary name="status and telegram overview">
+            <HomeAltStatusTelegram />
+          </SectionErrorBoundary>
         </div>
       </BelowFold>
     </div>
