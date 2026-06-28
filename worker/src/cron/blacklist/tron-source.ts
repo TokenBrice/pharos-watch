@@ -1,11 +1,10 @@
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { TronEventsResponseSchema } from "../../lib/external-api-schemas";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { getBlacklistEventBySignature } from "../../lib/blacklist-contracts";
 import {
   type RateLimitedFetch,
 } from "../../lib/evm-logs";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { decimalNumberFromBigInt } from "../../lib/bigint";
 import { throwIfAborted } from "../../lib/abort";
 import { buildBlacklistRow, type BlacklistRow } from "./shared";
@@ -113,15 +112,13 @@ export async function fetchTronEventsIncremental(
 
       runBudget.subrequestBudget.count++;
       const json: TronEventsResponse | null = await rateLimit(async () => {
-        const res = await fetchWithRetry(url!, { headers, signal });
-        if (!res) return null;
-        if (!res.ok) {
-          await cancelResponseBodyQuietly(res);
+        const result = await fetchJsonWithRetry<unknown>(url!, { headers, signal });
+        if (!result) return null;
+        if (!result.response.ok) {
           apiError = true;
           return null;
         }
-        const raw = await res.json();
-        const parsed = TronEventsResponseSchema.safeParse(raw);
+        const parsed = TronEventsResponseSchema.safeParse(result.body);
         if (!parsed.success) {
           console.warn("[blacklist] TronGrid response validation failed:", parsed.error.message);
           apiError = true;

@@ -9,10 +9,6 @@ const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
-  "worker/src/cron/blacklist/amount-recovery.ts::const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, signal ? { signal } : undefined);::return res.json() as Promise<{ result?: { logs?: EtherscanLogEntry[] } }>;",
-  "worker/src/cron/blacklist/balance-providers.ts::const res = await fetchWithRetry(::return res.json() as Promise<{ result?: string }>;",
-  "worker/src/cron/blacklist/balance-providers.ts::const res = await fetchWithRetry(::return res.json() as Promise<TronAccountResponse>;",
-  "worker/src/cron/blacklist/tron-source.ts::const res = await fetchWithRetry(url!, { headers, signal });::const raw = await res.json();",
   "worker/src/cron/digest/platform.ts::const response = await fetchWithRetry(::const errorText = response ? await response.text() : \"no response after retries\";",
   "worker/src/cron/discovery-scan.ts::const res = await fetchWithRetry(::const coins = (await res.json()) as CgMarketCoin[];",
   "worker/src/cron/pending-depeg-confirmation-evidence.ts::const offchainRes = await fetchWithRetry(::const parsed = DefiLlamaCoinsPriceSchema.safeParse(await offchainRes.json());",

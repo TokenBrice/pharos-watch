@@ -27,7 +27,7 @@ import {
 } from "../../lib/evm-logs";
 import { ETHERSCAN_V2_BASE } from "../../lib/constants";
 import { toErrorMessage } from "../../lib/error-utils";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { fetchEvmTokenBalance } from "../blacklist/balance-providers";
 import type { BlacklistRow } from "../blacklist/shared";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -297,9 +297,12 @@ async function fetchDestroyAmountFromLog(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, signal ? { signal } : undefined);
-      if (!res) return null;
-      return res.json() as Promise<{ result?: { logs?: EtherscanLogEntry[] } }>;
+      const result = await fetchJsonWithRetry<{ result?: { logs?: EtherscanLogEntry[] } }>(
+        `${ETHERSCAN_V2_BASE}?${params}`,
+        signal ? { signal } : undefined,
+      );
+      if (!result?.response.ok) return null;
+      return result.body;
     });
 
     if (!json?.result?.logs) return null;

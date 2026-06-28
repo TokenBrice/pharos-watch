@@ -8,7 +8,7 @@ import {
 } from "../../lib/evm-logs";
 import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl } from "../../lib/evm-rpc";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import {
   normalizeTronAddress,
@@ -285,7 +285,7 @@ async function fetchTronTokenCurrentBalanceViaJsonRpc(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<{ result?: string }>(
         "https://api.trongrid.io/jsonrpc",
         {
           method: "POST",
@@ -299,8 +299,8 @@ async function fetchTronTokenCurrentBalanceViaJsonRpc(
           }),
         },
       );
-      if (!res) return null;
-      return res.json() as Promise<{ result?: string }>;
+      if (!result?.response.ok) return null;
+      return result.body;
     });
 
     if (!json?.result || !json.result.startsWith("0x")) return null;
@@ -341,12 +341,12 @@ export async function fetchTronTokenCurrentBalance(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<TronAccountResponse>(
         `https://api.trongrid.io/v1/accounts/${accountAddress}`,
         { headers, signal },
       );
-      if (!res) return null;
-      return res.json() as Promise<TronAccountResponse>;
+      if (!result?.response.ok) return null;
+      return result.body;
     });
 
     const balances = json?.data?.[0]?.trc20;
