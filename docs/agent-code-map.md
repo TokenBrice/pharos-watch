@@ -420,7 +420,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl-b3.json` - 23 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
-- `shared/data/stablecoins/coins/brla-brla-digital.json` - 27 keys
+- `shared/data/stablecoins/coins/brla-brla-digital.json` - 26 keys
 - ... 382 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing

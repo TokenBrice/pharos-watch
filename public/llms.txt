@@ -247,7 +247,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [xDAI (xDAI)](https://pharos.watch/stablecoin/xdai-gnosis/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Lista USD (LISUSD)](https://pharos.watch/stablecoin/lisusd-lista/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ondo U.S. Dollar Token (USDon)](https://pharos.watch/stablecoin/usdon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [OpenDollar USDO (USDO)](https://pharos.watch/stablecoin/usdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [OpenEden OpenDollar (USDO)](https://pharos.watch/stablecoin/usdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Compounding OpenDollar (cUSDO)](https://pharos.watch/stablecoin/cusdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Cygnus Finance Global USD (cgUSD)](https://pharos.watch/stablecoin/cgusd-cygnus-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [EUR CoinVertible (EURCV)](https://pharos.watch/stablecoin/eurcv-societe-generale-forge/): centralized stablecoin backed by real-world assets pegged to Euro.
@@ -341,7 +341,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [USDU Finance (USDU)](https://pharos.watch/stablecoin/usdu-usdu-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [dTRINITY dUSD (dUSD)](https://pharos.watch/stablecoin/dusd-dtrinity/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [dTRINITY Staked dUSD (sdUSD)](https://pharos.watch/stablecoin/sdusd-dtrinity/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Alto DUSD (DUSD)](https://pharos.watch/stablecoin/dusd-alto/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Alto DUSD (DUSD)](https://pharos.watch/stablecoin/dusd-alto/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Invesco Short Duration US Government Securities Fund (USTB)](https://pharos.watch/stablecoin/ustb-superstate/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ondo OUSG (OUSG)](https://pharos.watch/stablecoin/ousg-ondo-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [iShares Silver Trust (Ondo Tokenized) (SLVon)](https://pharos.watch/stablecoin/slvon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -467,7 +467,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Cod3x USD (cdxUSD)](https://pharos.watch/stablecoin/cdxusd-cod3x/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Enosys Loans CDP (CDP)](https://pharos.watch/stablecoin/cdp-enosys/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [vCred (vCRED)](https://pharos.watch/stablecoin/vcred-vcred/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Staked USD Coin (SUSD)](https://pharos.watch/stablecoin/susd-hedgecore/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Staked USD Coin (sUSD)](https://pharos.watch/stablecoin/susd-hedgecore/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Indigo iUSD (iUSD)](https://pharos.watch/stablecoin/iusd-indigo-protocol/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Lumi Finance LUAUSD (LUAUSD)](https://pharos.watch/stablecoin/luausd-lumi-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [XTUSD (XTUSD)](https://pharos.watch/stablecoin/xtusd-xt/): centralized stablecoin backed by real-world assets pegged to US Dollar.
