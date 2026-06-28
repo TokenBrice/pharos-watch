@@ -107,6 +107,28 @@ describe("pruneStatusProbeRuns", () => {
     await expect(runPruneStatusProbeRuns(createStubDb(), controller.signal)).rejects.toThrow("probe prune aborted");
   });
 
+  it("threads an aborted signal into the direct D1 prune helper", async () => {
+    const db = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffSec = now - 90 * 86_400;
+    await seedProbeRuns(db, {
+      count: 1,
+      createdAt: now - 91 * 86_400,
+      statusRotation: ["healthy"],
+    });
+
+    const controller = new AbortController();
+    controller.abort(new Error("probe prune helper aborted"));
+
+    await expect(pruneStatusProbeRuns(db, { cutoffSec, batchSize: 100, signal: controller.signal })).rejects.toThrow(
+      "probe prune helper aborted",
+    );
+    const remaining = await db
+      .prepare("SELECT COUNT(*) AS cnt FROM status_probe_runs")
+      .first<{ cnt: number }>();
+    expect(remaining?.cnt).toBe(1);
+  });
+
   it("deletes rows older than cutoffSec and stops at batchSize", async () => {
     const db = createStubDb();
     const now = Math.floor(Date.now() / 1000);

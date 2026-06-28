@@ -16,8 +16,7 @@ async function textResult(response: Response | null) {
   return { response, body: await response.text() };
 }
 
-function makeDb() {
-  const runFn = vi.fn().mockResolvedValue({ meta: { changes: 1 } });
+function makeDb(runFn = vi.fn().mockResolvedValue({ meta: { changes: 1 } })) {
   const bindFn = vi.fn().mockReturnValue({ run: runFn });
   const prepareFn = vi.fn().mockReturnValue({ bind: bindFn });
   return {
@@ -174,6 +173,27 @@ describe("syncKinesisSupply", () => {
     expect(vi.mocked(recordOutcome).mock.calls[1]).toEqual(
       expect.arrayContaining([expect.anything(), "kinesis-kag-horizon", true]),
     );
+  });
+
+  it("retries D1 overloads when upserting onchain supply", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(kauResponse()));
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "kinesis-kag-horizon");
+    const runFn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long."))
+      .mockResolvedValue({ meta: { changes: 1 } });
+
+    const { db, bindFn } = makeDb(runFn);
+    const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata!).skipped).toBe(1);
+    expect(bindFn).toHaveBeenCalledWith("kau-kinesis", "kinesis-kau", 2_586_388, 1_700_000_000);
+    expect(runFn).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(recordOutcome).mock.calls[0]![2]).toBe(true);
   });
 
   it("handles array response format", async () => {

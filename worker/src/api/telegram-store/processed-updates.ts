@@ -1,3 +1,4 @@
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC, TELEGRAM_PROCESSING_STALE_SEC } from "../../lib/telegram-constants";
 import { d1ChangeCount } from "./_internals";
 import { unixNow } from "./subscribers";
@@ -129,23 +130,28 @@ export async function markTelegramProcessedUpdateFailed(
 
 export async function pruneTelegramProcessedUpdates(
   db: D1Database,
-  input: { nowSec?: number; retentionSec?: number } = {},
+  input: { nowSec?: number; retentionSec?: number; signal?: AbortSignal } = {},
 ): Promise<number> {
   const nowSec = input.nowSec ?? unixNow();
   const retentionSec = input.retentionSec ?? TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC;
-  const result = await db
-    .prepare(
-      `DELETE FROM telegram_processed_updates
-        WHERE update_id IN (
-          SELECT update_id
-            FROM telegram_processed_updates
-           WHERE received_at < ?
-           ORDER BY received_at ASC, update_id ASC
-           LIMIT ${TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT}
-        )`,
-    )
-    .bind(nowSec - retentionSec)
-    .run();
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `DELETE FROM telegram_processed_updates
+            WHERE update_id IN (
+              SELECT update_id
+                FROM telegram_processed_updates
+               WHERE received_at < ?
+               ORDER BY received_at ASC, update_id ASC
+               LIMIT ${TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT}
+            )`,
+        )
+        .bind(nowSec - retentionSec)
+        .run(),
+    3,
+    input.signal,
+  );
   return d1ChangeCount(result);
 }
 

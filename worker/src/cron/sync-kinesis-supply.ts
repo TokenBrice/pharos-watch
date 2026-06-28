@@ -8,6 +8,7 @@ import {
 } from "../lib/constants";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
 import type { CronResult } from "../lib/cron-logger";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 
 interface KinesisChainConfig {
   stablecoinId: string;
@@ -110,12 +111,17 @@ export async function syncKinesisSupply(
 
       // Write to onchain_supply for independent supply verification
       const nowSec = Math.floor(Date.now() / 1000);
-      await db
-        .prepare(
-          "INSERT OR REPLACE INTO onchain_supply (stablecoin_id, chain, supply, updated_at) VALUES (?, ?, ?, ?)",
-        )
-        .bind(config.stablecoinId, config.chain, parsed.circulation, nowSec)
-        .run();
+      await runWithOverloadRetry(
+        () =>
+          db
+            .prepare(
+              "INSERT OR REPLACE INTO onchain_supply (stablecoin_id, chain, supply, updated_at) VALUES (?, ?, ?, ?)",
+            )
+            .bind(config.stablecoinId, config.chain, parsed.circulation, nowSec)
+            .run(),
+        3,
+        signal,
+      );
 
       await recordOutcome(db, config.circuitSource, true);
       synced++;

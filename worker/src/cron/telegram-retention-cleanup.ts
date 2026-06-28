@@ -1,6 +1,7 @@
 import { throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 import { TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT, pruneTelegramProcessedUpdates } from "../api/telegram-webhook-store";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
 
@@ -22,7 +23,7 @@ async function pruneAllTelegramProcessedUpdates(
 
   do {
     throwIfAborted(signal);
-    lastBatch = await pruneTelegramProcessedUpdates(db, { nowSec });
+    lastBatch = await pruneTelegramProcessedUpdates(db, { nowSec, signal });
     pruned += lastBatch;
   } while (lastBatch >= TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT);
 
@@ -41,8 +42,13 @@ async function deleteOlderThanCapped(
   db: D1Database,
   sql: string,
   cutoff: number | string,
+  signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
-  const result = await db.prepare(sql).bind(cutoff, cutoff, RETENTION_DELETE_BATCH_LIMIT).run();
+  const result = await runWithOverloadRetry(
+    () => db.prepare(sql).bind(cutoff, cutoff, RETENTION_DELETE_BATCH_LIMIT).run(),
+    3,
+    signal,
+  );
   const pruned = Number(result.meta?.changes ?? 0);
   return {
     pruned,
@@ -54,21 +60,27 @@ async function deleteCachePrefixOlderThanCapped(
   db: D1Database,
   prefix: string,
   cutoff: number,
+  signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
-  const result = await db
-    .prepare(
-      `DELETE FROM cache
-        WHERE key IN (
-          SELECT key
-            FROM cache
-           WHERE key LIKE ?
-             AND updated_at < ?
-           ORDER BY updated_at ASC, key ASC
-           LIMIT ?
-        )`,
-    )
-    .bind(`${prefix}%`, cutoff, RETENTION_DELETE_BATCH_LIMIT)
-    .run();
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `DELETE FROM cache
+            WHERE key IN (
+              SELECT key
+                FROM cache
+               WHERE key LIKE ?
+                 AND updated_at < ?
+               ORDER BY updated_at ASC, key ASC
+               LIMIT ?
+            )`,
+        )
+        .bind(`${prefix}%`, cutoff, RETENTION_DELETE_BATCH_LIMIT)
+        .run(),
+    3,
+    signal,
+  );
   const pruned = Number(result.meta?.changes ?? 0);
   return {
     pruned,
@@ -79,7 +91,7 @@ async function deleteCachePrefixOlderThanCapped(
 export async function runTelegramRetentionCleanup(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
-  const expiredTargetsReconciled = await reconcileExpiredTelegramAlertJobTargets(db, nowSec);
+  const expiredTargetsReconciled = await reconcileExpiredTelegramAlertJobTargets(db, nowSec, signal);
   throwIfAborted(signal);
 
   const processedUpdates = await pruneAllTelegramProcessedUpdates(db, nowSec, signal);
@@ -89,6 +101,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "DELETE FROM telegram_alert_dead_letters WHERE expired_at < ? AND id IN (SELECT id FROM telegram_alert_dead_letters WHERE expired_at < ? ORDER BY expired_at ASC, id ASC LIMIT ?)",
     nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -96,6 +109,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "DELETE FROM telegram_alert_job_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
     nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -103,6 +117,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "DELETE FROM telegram_alert_jobs WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_jobs WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
     nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -115,6 +130,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "DELETE FROM telegram_usage_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_usage_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
     cutoffDayString,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -122,6 +138,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "DELETE FROM telegram_watcher_lifecycle_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_watcher_lifecycle_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
     cutoffDayString,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -129,6 +146,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
     nowSec - CHAT_DIAGNOSTICS_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -136,6 +154,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "telegram:command-cooldown:",
     nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -143,6 +162,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "telegram:command-flood:",
     nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -150,6 +170,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "telegram:chat-member:",
     nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -157,6 +178,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "telegram:chat-admins:",
     nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -164,6 +186,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "telegram:group-welcome:",
     nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -171,6 +194,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     db,
     "telegram:re-engagement-warned:",
     nowSec - RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC,
+    signal,
   );
 
   const totalPruned =

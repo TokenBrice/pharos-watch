@@ -1,4 +1,5 @@
 import { batchExecute, buildInClause, chunkArray } from "../lib/db";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { toErrorMessage } from "../lib/error-utils";
@@ -55,18 +56,24 @@ export async function recordTelegramAlertTargetStatuses(
 export async function reconcileExpiredTelegramAlertJobTargets(
   db: D1Database,
   nowSec: number,
+  signal?: AbortSignal,
 ): Promise<number> {
-  const result = await db
-    .prepare(
-      `UPDATE telegram_alert_job_targets
-          SET status = 'expired',
-              failed_at = COALESCE(failed_at, ?),
-              error_class = COALESCE(error_class, 'ttl_expired')
-        WHERE status IN ('planned', 'queued')
-          AND created_at < ?`,
-    )
-    .bind(nowSec, nowSec - Math.max(...Object.values(TELEGRAM_ALERT_TTL_SEC)))
-    .run();
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `UPDATE telegram_alert_job_targets
+              SET status = 'expired',
+                  failed_at = COALESCE(failed_at, ?),
+                  error_class = COALESCE(error_class, 'ttl_expired')
+            WHERE status IN ('planned', 'queued')
+              AND created_at < ?`,
+        )
+        .bind(nowSec, nowSec - Math.max(...Object.values(TELEGRAM_ALERT_TTL_SEC)))
+        .run(),
+    3,
+    signal,
+  );
   return Number(result.meta?.changes ?? 0);
 }
 
