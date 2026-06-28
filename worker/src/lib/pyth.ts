@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { fetchWithRetry } from "./fetch-retry";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
 import { toErrorMessage } from "./error-utils";
 
@@ -56,23 +55,22 @@ export async function fetchPythPrices(
 
   try {
     const ids = [...feedIds.values()].map((id) => `ids[]=${id}`).join("&");
-    const res = await fetchWithRetry(
+    const result = await fetchJsonWithRetry<unknown>(
       `${HERMES_BASE}/v2/updates/price/latest?${ids}`,
       { signal, headers: { Accept: "application/json" } },
       1,
       { timeoutMs: PYTH_REQUEST_TIMEOUT_MS },
     );
-    if (!res?.ok) {
-      await cancelResponseBodyQuietly(res);
-      console.warn(`[pyth] Hermes API returned ${res?.status ?? "no response"}`);
+    if (!result?.response.ok) {
+      console.warn(`[pyth] Hermes API returned ${result?.response.status ?? "no response"}`);
       return {
         kind: "upstream-error",
         value: results,
-        reason: `Hermes API returned ${res?.status ?? "no response"}`,
+        reason: `Hermes API returned ${result?.response.status ?? "no response"}`,
       };
     }
 
-    const data = PythPriceFeedSchema.parse(await res.json());
+    const data = PythPriceFeedSchema.parse(result.body);
 
     for (const feed of data.parsed) {
       const coinId = reverseMap.get(normalizeFeedId(feed.id));

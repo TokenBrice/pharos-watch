@@ -11,7 +11,7 @@
 
 import { cgUrl, cgHeaders } from "./coingecko";
 import { USER_AGENT } from "./constants";
-import { fetchWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry } from "./fetch-retry";
 
 export interface CgTickerConfig {
   stablecoinId: string;
@@ -91,7 +91,7 @@ export async function fetchCgTickerPricesDetailed(
         `/coins/${config.geckoId}/tickers?depth=false${exchangeFilter}`,
         apiKey,
       );
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<CgTickerResponse>(
         url,
         {
           headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, apiKey),
@@ -101,13 +101,13 @@ export async function fetchCgTickerPricesDetailed(
         { timeoutMs: 10_000 },
       );
 
-      if (!res?.ok) {
-        console.warn(`[cg-ticker] ${config.geckoId} returned ${res?.status ?? "null"}`);
+      if (!result?.response.ok) {
+        console.warn(`[cg-ticker] ${config.geckoId} returned ${result?.response.status ?? "null"}`);
         continue;
       }
 
       successfulResponses++;
-      const data = (await res.json()) as CgTickerResponse;
+      const data = result.body;
       const tickers = data.tickers;
       if (!Array.isArray(tickers) || tickers.length === 0) {
         console.warn(`[cg-ticker] ${config.geckoId}: no tickers returned`);

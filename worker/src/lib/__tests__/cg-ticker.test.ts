@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
+  fetchJsonWithRetry: vi.fn(),
 }));
 
-import { fetchWithRetry } from "../fetch-retry";
+import { fetchJsonWithRetry } from "../fetch-retry";
 import {
   fetchCgTickerPrices,
   fetchCgTickerPricesDetailed,
@@ -41,8 +41,11 @@ function makeTicker(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeTickerResponse(tickers: unknown[]) {
-  return new Response(JSON.stringify({ tickers }), { status: 200 });
+function makeTickerResult(tickers: unknown[]) {
+  return {
+    response: new Response(JSON.stringify({ tickers }), { status: 200 }),
+    body: { tickers },
+  };
 }
 
 describe("pickBestTicker", () => {
@@ -106,12 +109,12 @@ describe("fetchCgTickerPrices", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("fetches both coins on happy path", async () => {
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
       if (url.includes("kinesis-gold")) {
-        return makeTickerResponse([makeTicker({ last: 136.76 })]);
+        return makeTickerResult([makeTicker({ last: 136.76 })]);
       }
       if (url.includes("kinesis-silver")) {
-        return makeTickerResponse([makeTicker({ base: "KAG", last: 62.42, converted_volume: { usd: 143_000 } })]);
+        return makeTickerResult([makeTicker({ base: "KAG", last: 62.42, converted_volume: { usd: 143_000 } })]);
       }
       return null;
     });
@@ -121,25 +124,25 @@ describe("fetchCgTickerPrices", () => {
     expect(results.size).toBe(2);
     expect(results.get("kau-kinesis")).toBe(136.76);
     expect(results.get("kag-kinesis")).toBe(62.42);
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(2);
   });
 
   it("passes API key through to the fetch call", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValue(makeTickerResponse([makeTicker()]));
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(makeTickerResult([makeTicker()]));
 
     await fetchCgTickerPrices([KAU_CONFIG], "my-key");
 
     // Verify fetch was called — API key plumbing is tested via coingecko.ts unit
-    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    const [url] = vi.mocked(fetchWithRetry).mock.calls[0]!;
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
+    const [url] = vi.mocked(fetchJsonWithRetry).mock.calls[0]!;
     expect(url).toContain("/coins/kinesis-gold/tickers");
   });
 
   it("continues when one coin fails", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
       if (url.includes("kinesis-gold")) return null; // failure
-      return makeTickerResponse([makeTicker({ base: "KAG", last: 62.42, converted_volume: { usd: 143_000 } })]);
+      return makeTickerResult([makeTicker({ base: "KAG", last: 62.42, converted_volume: { usd: 143_000 } })]);
     });
 
     const results = await fetchCgTickerPrices([KAU_CONFIG, KAG_CONFIG], null);
@@ -151,8 +154,8 @@ describe("fetchCgTickerPrices", () => {
 
   it("skips coins with no valid USD ticker", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      makeTickerResponse([makeTicker({ target: "EUR", last: 118.71 })]),
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(
+      makeTickerResult([makeTicker({ target: "EUR", last: 118.71 })]),
     );
 
     const results = await fetchCgTickerPrices([KAU_CONFIG], null);
@@ -160,18 +163,18 @@ describe("fetchCgTickerPrices", () => {
   });
 
   it("includes exchange_ids filter in URL", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValue(makeTickerResponse([makeTicker()]));
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(makeTickerResult([makeTicker()]));
 
     await fetchCgTickerPrices([KAU_CONFIG], null);
 
-    const [url] = vi.mocked(fetchWithRetry).mock.calls[0]!;
+    const [url] = vi.mocked(fetchJsonWithRetry).mock.calls[0]!;
     expect(url).toContain("exchange_ids=kinesis_money");
   });
 
   it("rethrows on abort", async () => {
     const controller = new AbortController();
     controller.abort(new Error("cancelled"));
-    vi.mocked(fetchWithRetry).mockRejectedValue(new Error("aborted"));
+    vi.mocked(fetchJsonWithRetry).mockRejectedValue(new Error("aborted"));
 
     await expect(
       fetchCgTickerPrices([KAU_CONFIG], null, controller.signal),
@@ -184,8 +187,8 @@ describe("fetchCgTickerPricesDetailed", () => {
 
   it("counts successful responses even when no fresh ticker is usable", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      makeTickerResponse([makeTicker({ is_stale: true })]),
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(
+      makeTickerResult([makeTicker({ is_stale: true })]),
     );
 
     const result = await fetchCgTickerPricesDetailed([KAU_CONFIG], null);

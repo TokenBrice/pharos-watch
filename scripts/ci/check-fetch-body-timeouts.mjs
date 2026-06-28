@@ -13,18 +13,13 @@ const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
   "worker/src/lib/backfill-fx.ts::const res = await fetchWithRetry(::const raw = await res.json();",
   "worker/src/lib/backfill-fx.ts::let res = await fetchWithRetry(::const raw = await res.json();",
   "worker/src/lib/backfill-fx.ts::res = await fetchWithRetry(::const raw = await res.json();",
-  "worker/src/lib/cg-ticker.ts::const res = await fetchWithRetry(::const data = (await res.json()) as CgTickerResponse;",
   "worker/src/lib/coingecko-onchain.ts::const res = await fetchWithRetry(url, {::const json = (await res.json()) as { data?: unknown };",
-  "worker/src/lib/coingecko-simple-price.ts::const res = await fetchWithRetry(::const parsed = CoinGeckoSimplePriceSchema.safeParse(await res.json());",
   "worker/src/lib/dexscreener.ts::const res = await fetchWithRetry(url, {::const raw = await res.text();",
   "worker/src/lib/evm-logs.ts::const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, {::return res.json() as Promise<{ status: string; message: string; result: EtherscanLogEntry[] }>;",
   "worker/src/lib/evm-rpc.ts::const res = await fetchWithRetry(::const body = (await res.json()) as JsonRpcEnvelope<unknown>;",
   "worker/src/lib/evm-rpc.ts::const res = await fetchWithRetry(::const body = (await res.json()) as JsonRpcEnvelope<string>;",
-  "worker/src/lib/fx-realtime.ts::const res = await fetchWithRetry(::const data = OpenExchangeRatesSchema.parse(await res.json());",
   "worker/src/lib/geckoterminal-price-probe.ts::const res = await fetchWithRetry(::const json = (await res.json()) as { data?: GtPool[] };",
   "worker/src/lib/native-peg-quotes.ts::const response = await fetchWithRetry(::const payload = await response.json();",
-  "worker/src/lib/pyth.ts::const res = await fetchWithRetry(::const data = PythPriceFeedSchema.parse(await res.json());",
-  "worker/src/lib/redstone.ts::const res = await fetchWithRetry(::const data = (await res.json()) as Record<string, RedstoneEntry | RedstoneEntry[]>;",
 ]);
 
 function normalizeRelPath(path) {

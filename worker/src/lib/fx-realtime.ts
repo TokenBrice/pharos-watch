@@ -3,8 +3,7 @@ import {
   isValidFxRate,
   REALTIME_FX_CURRENCY_TO_PEG,
 } from "./fx-config";
-import { fetchWithRetry } from "./fetch-retry";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { fetchJsonWithRetry } from "./fetch-retry";
 
 /**
  * Real-time FX rate provider using Open Exchange Rates.
@@ -39,22 +38,21 @@ export async function fetchRealtimeFxRates(
 
   try {
     const symbols = Object.keys(REALTIME_FX_CURRENCY_TO_PEG).join(",");
-    const res = await fetchWithRetry(
+    const fetchResult = await fetchJsonWithRetry<unknown>(
       `https://openexchangerates.org/api/latest.json?app_id=${apiKey}&symbols=${symbols}&base=USD`,
       { signal, headers: { Accept: "application/json" } },
       OPEN_EXCHANGE_RATES_MAX_RETRIES,
       { timeoutMs: OPEN_EXCHANGE_RATES_REQUEST_TIMEOUT_MS },
     );
-    if (!res) {
+    if (!fetchResult) {
       console.warn("[fx-realtime] Open Exchange Rates returned no response");
       return { rates: result, completed: false };
     }
-    if (!res.ok) {
-      console.warn(`[fx-realtime] Open Exchange Rates returned ${res.status}`);
-      await cancelResponseBodyQuietly(res);
+    if (!fetchResult.response.ok) {
+      console.warn(`[fx-realtime] Open Exchange Rates returned ${fetchResult.response.status}`);
       return { rates: result, completed: true };
     }
-    const data = OpenExchangeRatesSchema.parse(await res.json());
+    const data = OpenExchangeRatesSchema.parse(fetchResult.body);
 
     for (const [currency, unitsPerUsd] of Object.entries(data.rates)) {
       const pegKey = REALTIME_FX_CURRENCY_TO_PEG[currency];

@@ -3,7 +3,7 @@ import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-regist
 import type { FetcherOutcome } from "./fetcher-result";
 import { cgUrl, cgHeaders } from "./coingecko";
 import { USER_AGENT } from "./constants";
-import { fetchWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
 import { CoinGeckoSimplePriceSchema } from "./upstream-schemas";
 import { toErrorMessage } from "./error-utils";
@@ -34,20 +34,20 @@ export async function fetchCoingeckoSimplePrices(
       throwIfAborted(signal);
       const batch = geckoIds.slice(i, i + PRIMARY_CG_BATCH_SIZE);
       const ids = batch.join(",");
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<unknown>(
         cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey),
         {
           headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
           signal,
         },
       );
-      if (!res?.ok) {
+      if (!result?.response.ok) {
         hadBatchFailure = true;
-        console.warn(`[primary-prices] CG price API returned ${res?.status ?? "no response"}`);
+        console.warn(`[primary-prices] CG price API returned ${result?.response.status ?? "no response"}`);
         continue;
       }
 
-      const parsed = CoinGeckoSimplePriceSchema.safeParse(await res.json());
+      const parsed = CoinGeckoSimplePriceSchema.safeParse(result.body);
       if (!parsed.success) {
         hadBatchFailure = true;
         console.warn(`[primary-prices] CG price API payload invalid: ${parsed.error.message}`);

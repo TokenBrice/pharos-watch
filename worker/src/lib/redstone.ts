@@ -5,7 +5,7 @@ import {
 import { median } from "@shared/lib/stats";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { toErrorMessage } from "./error-utils";
-import { fetchWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
 
 export interface RedstoneResult {
@@ -98,18 +98,18 @@ async function fetchRedstoneBatch(
   }
 
   const symbolsParam = apiSymbols.join(",");
-  const res = await fetchWithRetry(
+  const result = await fetchJsonWithRetry<Record<string, RedstoneEntry | RedstoneEntry[]>>(
     `${REDSTONE_PROVIDER_AUDIT_CONFIG.metadataUrl}?symbols=${encodeURIComponent(symbolsParam)}&provider=redstone-primary-prod`,
     { signal, headers: { Accept: "application/json" } },
     0,
     { timeoutMs: REDSTONE_REQUEST_TIMEOUT_MS },
   );
-  if (!res?.ok) {
-    console.warn(`[redstone] API returned ${res?.status ?? "no response"} for batch: ${symbolsParam}`);
+  if (!result?.response.ok) {
+    console.warn(`[redstone] API returned ${result?.response.status ?? "no response"} for batch: ${symbolsParam}`);
     return { results, transportOk: false };
   }
 
-  const data = (await res.json()) as Record<string, RedstoneEntry | RedstoneEntry[]>;
+  const data = result.body;
   for (const apiSym of apiSymbols) {
     const configEntry = apiToEntry.get(apiSym);
     if (!configEntry) continue;
