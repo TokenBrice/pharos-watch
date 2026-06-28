@@ -1,5 +1,6 @@
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
+import { throwIfAborted } from "../../lib/abort";
 import type { DexPriceObs } from "./types";
 
 export type SubgraphPriceObservation = { stablecoinId: string; obs: DexPriceObs };
@@ -42,6 +43,7 @@ export async function fetchSubgraphEntities<TEntity>(
 
   try {
     for (let page = 0; page < maxPages; page++) {
+      throwIfAborted(config.signal);
       const skip = pageSize > 0 ? page * pageSize : 0;
       const result = await fetchJsonWithRetry<{
         data?: unknown;

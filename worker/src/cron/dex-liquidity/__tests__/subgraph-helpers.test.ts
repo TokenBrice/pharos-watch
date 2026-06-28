@@ -76,4 +76,36 @@ describe("subgraph helpers", () => {
     expect(result.shouldLogIndex).toBe(true);
     expect(result.observations.get("usdc-circle")).toHaveLength(1);
   });
+
+  it("checks for aborts between paginated subgraph fetches", async () => {
+    const controller = new AbortController();
+    fetchJsonWithRetryMock.mockImplementationOnce(async () => {
+      controller.abort(new Error("stop paging"));
+      return {
+        response: new Response("", { status: 200 }),
+        body: {
+          data: {
+            rows: [{ id: "pool-a" }],
+          },
+        },
+      };
+    });
+
+    await expect(fetchSubgraphEntities<{ id: string }>({
+      subgraphUrl: "https://subgraph.example",
+      sourceLabel: "test subgraph",
+      chain: "ethereum",
+      pageSize: 1,
+      maxPages: 2,
+      signal: controller.signal,
+      buildQuery: (skip) => `{ rows(skip: ${skip}) { id } }`,
+      extractEntities: (data) => (data as { rows?: Array<{ id: string }> } | undefined)?.rows,
+      mapEntity: () => [{
+        stablecoinId: "usdc-circle",
+        obs: { price: 1, tvl: 100_000, chain: "ethereum", protocol: "test" },
+      }],
+    })).rejects.toThrow("stop paging");
+
+    expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(1);
+  });
 });
