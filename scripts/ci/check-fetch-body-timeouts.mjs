@@ -9,7 +9,6 @@ const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
-  "worker/src/cron/reserve-adapters/defillama.ts::const res = await fetchWithRetry(::const body = (await res.json()) as {",
   "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts::const cmcRes = await fetchWithRetry(::cmcJson = await cmcRes.json();",
   "worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts::const res = await fetchWithRetry(::const prices = parseDefiLlamaPriceMap(await res.json());",
   "worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts::const res = await fetchWithRetry(::const parsed = JupiterPriceResponseSchema.safeParse(await res.json());",

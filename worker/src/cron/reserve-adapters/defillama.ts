@@ -1,6 +1,5 @@
 import { DEFILLAMA_COINS } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { getCachedRequest } from "./request";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
@@ -25,21 +24,20 @@ export async function fetchDefiLlamaPrices(
   return getCachedRequest(
     `defillama-prices:${assetKeys.join(",")}`,
     async () => runAdapterIo(ctx, `defillama-prices:${assetKeys.length}`, async () => {
-      const res = await fetchWithRetry(
+      const result = await fetchTextWithRetry(
         `${DEFILLAMA_COINS}/prices/current/${assetKeys.join(",")}`,
         { signal },
         2,
-        { timeoutMs: 10_000 },
+        { timeoutMs: 10_000, returnFinalResponse: true },
       );
-      if (!res) {
+      if (!result) {
         throw new Error("DefiLlama price fetch failed (no-response)");
       }
-      if (!res.ok) {
-        await cancelResponseBodyQuietly(res);
-        throw new Error(`DefiLlama price fetch failed (${res.status})`);
+      if (!result.response.ok) {
+        throw new Error(`DefiLlama price fetch failed (${result.response.status})`);
       }
 
-      const body = (await res.json()) as {
+      const body = JSON.parse(result.body) as {
         coins?: Record<string, { price?: number }>;
       };
       const priceMap = new Map<string, number>();
