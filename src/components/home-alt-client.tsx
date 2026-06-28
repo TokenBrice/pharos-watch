@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { HomepageDiscoveryModule } from "@/components/homepage-discovery-module";
 import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
 import { ShortcutsSection } from "@/components/shortcuts-section";
 import { LazySection } from "@/components/lazy-section";
@@ -187,14 +186,9 @@ export function HomeAltClient() {
         </BelowFold>
       </section>
 
-      {/* Discovery band — On The Horizon, then Chart Your Route. */}
-      <BelowFold forced={hashTargetForcesMount} minHeight={820}>
+      <BelowFold forced={hashTargetForcesMount} minHeight={520}>
         <div className="mt-8 sm:mt-10">
           <HomeAltUpcomingHorizonConstellation />
-        </div>
-
-        <div className="mt-6 hidden md:block">
-          <HomepageDiscoveryModule />
         </div>
       </BelowFold>
     </div>

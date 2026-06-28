@@ -46,10 +46,6 @@ vi.mock("@/components/lazy-section", () => ({
   LazySection: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/homepage-discovery-module", () => ({
-  HomepageDiscoveryModule: () => <div data-testid="homepage-discovery-module" />,
-}));
-
 describe("HomeAltClient", () => {
   beforeEach(() => {
     homeAltRankingsPropsMock.mockClear();
@@ -64,7 +60,6 @@ describe("HomeAltClient", () => {
     render(<HomeAltClient />);
 
     expect(screen.getByTestId("home-alt-mini-card-grid")).toBeTruthy();
-    expect(screen.getByTestId("homepage-discovery-module")).toBeTruthy();
     expect(screen.getByTestId("home-alt-rankings-section")).toBeTruthy();
     expect(document.getElementById("home-alt-rankings")).toBeTruthy();
     expect(homeAltRankingsPropsMock).toHaveBeenCalledWith({

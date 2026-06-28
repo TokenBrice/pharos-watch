@@ -241,7 +241,6 @@ The redesigned homepage is an ordered workbench. Sections, order, and rhythm are
 3. **Saved Shortcuts** (localStorage, per-device).
 4. **Stablecoin Overview** — the directory table + Browse By Peg.
 5. **On The Horizon** — upcoming-stablecoins constellation.
-6. **Chart Your Route** — discovery module (desktop).
 
 Vertical rhythm: `space-y-5`/`6` within bands, `mt-5`/`6`/`8`/`10` between them; bento gaps `gap-3` (12px); panels pad `p-5`–`p-7` (20–28px).
 

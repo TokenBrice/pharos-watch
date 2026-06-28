@@ -10,7 +10,6 @@ Route contract for `/`, the main Pharos dashboard.
 - **Desktop masthead:** `src/components/site-header.tsx`
 - **Core top rail:** `src/components/core-top-rail.tsx` + `src/components/homepage-tape.tsx`
 - **Main dashboard client:** `src/components/home-alt-client.tsx`
-- **Page discovery module:** `src/components/homepage-discovery-module.tsx` + `src/hooks/use-homepage-discovery.ts` + `src/lib/homepage-discovery.ts`
 - **Upcoming horizon module:** `src/components/home-alt-upcoming-horizon-constellation.tsx`
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
@@ -65,7 +64,6 @@ Derived helpers:
 - `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegRates`, `pegScores`, and `filteredRowCount`; the optional builder derives `reportCardMap` and `dewsRiskLevel`)
 - `selectVisibleMcap(...)` and mini-card aggregate helpers in `src/lib/home-alt-aggregates.ts`
 - `useHomeAltFilters()` for URL-backed peg cohort filtering
-- `useHomepageDiscoverySuggestions()` for the under-fold page discovery module
 
 Starred stablecoin state is local to the browser:
 
@@ -79,12 +77,6 @@ Saved shortcuts are also browser-local:
 - value: ordered nav href array
 - legacy six-item default sets hydrate to the expanded twelve-item default
 - the non-editing desktop panel backfills from the default set to keep twelve visible route shortcuts; edit mode still shows only the user's saved hrefs
-
-Homepage page discovery is deterministic on first render:
-
-- the visible default route set is `Chains`, `Portfolio Audit`, `Upcoming`, `Alt-Pegs`, and `Cemetery`
-- the suggestion pool is derived from the Overview, Markets, Risk, and Analyze `NAV_GROUPS`, excludes the dashboard itself and Learn/Reference pages, de-duplicates by `href`, and interleaves groups for the manual Refresh action
-- the desktop Page Discovery strip is hidden below `md`; the visible row has no pager, keeps a neutral `Spotlight` chip on the first tile, and applies the descriptive tinted treatment to the second tile
 
 ### `SiteHeader`
 
@@ -137,11 +129,9 @@ Under the fold (`HomeAltClient`):
 3. `PegBrowseStrip`
 4. `StablecoinTable`
 5. `DailyDigest` in `preview` mode
-6. `HomepageDiscoveryModule`
+6. `HomeAltUpcomingHorizonConstellation`
 
-After `HomeAltClient`: `HomeAltUpcomingHorizonConstellation`, rendered as a page-level sibling in `src/app/page.tsx`.
-
-The directory table is the product's workbench, so it sits directly under the KPI band (June 2026 mythos pass); the editorial band (digest + discovery) follows it.
+The directory table is the product's workbench, so it sits directly under the KPI band (June 2026 mythos pass); the editorial digest and Horizon panel follow it.
 
 ### Key Stablecoin Data
 

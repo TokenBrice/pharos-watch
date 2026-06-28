@@ -172,7 +172,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-events.ts` - TAPE_FILTER_SEVERITY_VALUES, UseEventsFilter, UseEventsOptions, UseLatestEventsOptions, useEvents, useLatestEvents
 - `src/hooks/use-flash-on-change.ts` - useFlashOnChange
 - `src/hooks/use-home-alt-filters.ts` - HomeAltPegFilter, UseHomeAltFiltersReturn, useHomeAltFilters
-- `src/hooks/use-homepage-discovery.ts` - useHomepageDiscoverySuggestions
 - `src/hooks/use-hydrated.ts` - useHydrated
 - `src/hooks/use-is-mobile.ts` - useIsMobile
 - `src/hooks/use-joined-key.ts` - useJoinedKey
@@ -193,7 +192,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
 - `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
-- ... 30 more files omitted; use `rg --files src/hooks` for the full list.
+- `src/hooks/use-row-cursor.ts` - UseRowCursorOptions, UseRowCursorResult, useRowCursor
+- ... 29 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-pages.ts` - ComparisonFaqItem, ComparisonSnippetAnswer, STATIC_COMPARE_PAIRS, STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows
 - `src/lib/compare-selection-insights.ts` - CompareSelectionInsights, buildCompareSelectionInsights
 - `src/lib/compare-share-image.ts` - ShareCoinData, ShareRadarData, canvasToBlob, loadImage, renderCompareShareImage
-- ... 143 more files omitted; use `rg --files src/lib` for the full list.
+- ... 142 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 389 more files omitted; use `rg --files src/components` for the full list.
+- ... 388 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
