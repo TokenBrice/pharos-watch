@@ -42,26 +42,58 @@ function reportCardPayload(updatedAt = NOW - 60) {
   });
 }
 
-function healthyD1() {
+function healthyD1(
+  dex: {
+    rowCount?: number;
+    latestPublishedRows?: number;
+    latestGenerationPublishedRows?: number;
+    retainedLegacyRows?: number;
+    retainedOlderPublishedRows?: number;
+    unpublishedRows?: number;
+    generationCount?: number;
+  } = {},
+) {
+  const rowCount = dex.rowCount ?? 408;
+  const latestPublishedRows = dex.latestPublishedRows ?? rowCount;
+  const latestGenerationPublishedRows = dex.latestGenerationPublishedRows ?? latestPublishedRows;
+  const retainedLegacyRows = dex.retainedLegacyRows ?? 0;
+  const retainedOlderPublishedRows = dex.retainedOlderPublishedRows ?? 0;
+  const unpublishedRows = dex.unpublishedRows ?? 0;
+  const generationCount = dex.generationCount ?? 1;
   return mockD1([
     {
       match: "FROM dex_liquidity_publication_generations",
       first: {
         generation_id: "dex-gen-1",
-        current_row_count: 408,
-        expected_row_count: 408,
+        current_row_count: latestPublishedRows,
+        expected_row_count: latestPublishedRows,
         published_at: NOW - 30,
       },
       rows: [],
     },
     {
+      match: "latest_generation_rows",
+      matchBinds: ["dex-gen-1", "dex-gen-1"],
+      first: {
+        latest_generation_rows: latestGenerationPublishedRows,
+        retained_legacy_rows: retainedLegacyRows,
+        retained_older_published_rows: retainedOlderPublishedRows,
+      },
+      rows: [],
+    },
+    {
       match: "stablecoin_id = '__global__'",
-      first: { current_rows: 408, global_rows: 1 },
+      first: { current_rows: rowCount, global_rows: 1 },
       rows: [],
     },
     {
       match: "unpublished_rows",
-      first: { row_count: 408, unpublished_rows: 0, generation_count: 1, latest_updated_at: NOW - 30 },
+      first: {
+        row_count: rowCount,
+        unpublished_rows: unpublishedRows,
+        generation_count: generationCount,
+        latest_updated_at: NOW - 30,
+      },
       rows: [],
     },
     {
@@ -116,6 +148,87 @@ describe("worker data invariant canaries", () => {
       skippedCount: 0,
       worstStatus: "ok",
       worstSeverity: "info",
+    });
+  });
+
+  it("accepts retained DEX rows outside the latest published generation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(
+      healthyD1({
+        rowCount: 377,
+        latestPublishedRows: 368,
+        latestGenerationPublishedRows: 368,
+        retainedLegacyRows: 4,
+        retainedOlderPublishedRows: 5,
+        generationCount: 2,
+      }),
+      { observedAt: NOW, mode: "status" },
+    );
+
+    const dexResult = summary.results.find((result) => result.checkId === "dex-liquidity-current-publication");
+
+    expect(dexResult).toMatchObject({
+      status: "ok",
+      severity: "info",
+      metadata: expect.objectContaining({
+        rowCount: 377,
+        latestPublishedRows: 368,
+        latestGenerationPublishedRows: 368,
+        retainedLegacyRows: 4,
+        retainedOlderPublishedRows: 5,
+      }),
+    });
+    expect(summary.worstStatus).toBe("ok");
+  });
+
+  it("errors when DEX rows in any generation are not published", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(
+      healthyD1({
+        rowCount: 377,
+        latestPublishedRows: 368,
+        latestGenerationPublishedRows: 368,
+        retainedLegacyRows: 4,
+        retainedOlderPublishedRows: 5,
+        unpublishedRows: 1,
+        generationCount: 2,
+      }),
+      { observedAt: NOW, mode: "status" },
+    );
+
+    expect(summary.results.find((result) => result.checkId === "dex-liquidity-current-publication")).toMatchObject({
+      status: "error",
+      severity: "error",
+      error: "1 current DEX liquidity rows are not published",
+    });
+  });
+
+  it("errors when the latest DEX generation row count drifts from publication metadata", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(
+      healthyD1({
+        rowCount: 377,
+        latestPublishedRows: 368,
+        latestGenerationPublishedRows: 367,
+        retainedLegacyRows: 4,
+        retainedOlderPublishedRows: 6,
+        generationCount: 2,
+      }),
+      { observedAt: NOW, mode: "status" },
+    );
+
+    expect(summary.results.find((result) => result.checkId === "dex-liquidity-current-publication")).toMatchObject({
+      status: "error",
+      severity: "error",
+      error: "DEX latest-generation rows 367 differ from latest published generation 368",
+      metadata: expect.objectContaining({
+        rowCount: 377,
+        latestPublishedRows: 368,
+        latestGenerationPublishedRows: 367,
+      }),
     });
   });
 

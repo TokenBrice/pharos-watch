@@ -48,6 +48,12 @@ interface DexCurrentSummaryRow {
   latest_updated_at: number | null;
 }
 
+interface DexLatestGenerationSummaryRow {
+  latest_generation_rows: number | null;
+  retained_legacy_rows: number | null;
+  retained_older_published_rows: number | null;
+}
+
 interface DexPublishedGenerationRow {
   generation_id: string;
   current_row_count: number | null;
@@ -238,6 +244,24 @@ async function loadLatestPublishedDexGeneration(db: D1Database): Promise<DexPubl
   );
 }
 
+async function loadDexLatestGenerationCurrentSummary(
+  db: D1Database,
+  generationId: string,
+): Promise<DexLatestGenerationSummaryRow> {
+  return (await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT
+           SUM(CASE WHEN publication_generation_id = ? AND publication_state = 'published' THEN 1 ELSE 0 END) AS latest_generation_rows,
+           SUM(CASE WHEN publication_generation_id IS NULL THEN 1 ELSE 0 END) AS retained_legacy_rows,
+           SUM(CASE WHEN publication_generation_id IS NOT NULL AND publication_generation_id != ? AND publication_state = 'published' THEN 1 ELSE 0 END) AS retained_older_published_rows
+         FROM dex_liquidity`,
+      )
+      .bind(generationId, generationId)
+      .first<DexLatestGenerationSummaryRow>(),
+  )) ?? { latest_generation_rows: 0, retained_legacy_rows: 0, retained_older_published_rows: 0 };
+}
+
 async function checkDexCurrentPublication(db: D1Database) {
   try {
     const summary = await loadDexCurrentSummary(db);
@@ -253,6 +277,9 @@ async function checkDexCurrentPublication(db: D1Database) {
       latestPublishedRows: latestPublished?.current_row_count ?? null,
       latestPublishedExpectedRows: latestPublished?.expected_row_count ?? null,
       latestPublishedAt: latestPublished?.published_at ?? null,
+      latestGenerationPublishedRows: null as number | null,
+      retainedLegacyRows: null as number | null,
+      retainedOlderPublishedRows: null as number | null,
     };
 
     if (rowCount === 0) {
@@ -269,11 +296,22 @@ async function checkDexCurrentPublication(db: D1Database) {
     if (!latestPublished) {
       return skippedResult("no DEX liquidity published generation found", metadata);
     }
-    if (latestPublished.current_row_count != null && rowCount !== latestPublished.current_row_count) {
+    const latestGenerationSummary = await loadDexLatestGenerationCurrentSummary(db, latestPublished.generation_id);
+    const latestGenerationPublishedRows = Number(latestGenerationSummary.latest_generation_rows ?? 0);
+    const retainedLegacyRows = Number(latestGenerationSummary.retained_legacy_rows ?? 0);
+    const retainedOlderPublishedRows = Number(latestGenerationSummary.retained_older_published_rows ?? 0);
+    metadata.latestGenerationPublishedRows = latestGenerationPublishedRows;
+    metadata.retainedLegacyRows = retainedLegacyRows;
+    metadata.retainedOlderPublishedRows = retainedOlderPublishedRows;
+
+    if (
+      latestPublished.current_row_count != null &&
+      latestGenerationPublishedRows !== latestPublished.current_row_count
+    ) {
       return {
         status: "error" as const,
         severity: "error" as const,
-        error: `DEX current rows ${rowCount} differ from latest published generation ${latestPublished.current_row_count}`,
+        error: `DEX latest-generation rows ${latestGenerationPublishedRows} differ from latest published generation ${latestPublished.current_row_count}`,
         metadata,
       };
     }
