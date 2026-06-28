@@ -41,6 +41,7 @@ const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
 type SlotExecutionRow = {
   state: string;
   execution_owner: string;
+  started_at: number;
   updated_at: number;
 };
 
@@ -79,6 +80,19 @@ interface StaleSlotReconciliationSummary {
     leaseUntil: number | null;
   }>;
 }
+
+interface StaleSlotTakeoverSummary {
+  previousOwner: string;
+  previousStartedAt: number;
+  previousUpdatedAt: number;
+  staleBefore: number;
+  takenOverAt: number;
+  reconciliation: StaleSlotReconciliationSummary;
+}
+
+type ScheduledSlotClaimResult =
+  | { status: "claimed"; staleSlotTakeover?: StaleSlotTakeoverSummary }
+  | { status: "duplicate" | "running" };
 
 export interface ScheduledSlotSweepOptions {
   staleAfterSec?: number;
@@ -126,7 +140,7 @@ async function getScheduledSlotExecution(
   return runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT state, execution_owner, updated_at
+        `SELECT state, execution_owner, started_at, updated_at
            FROM cron_slot_executions
            WHERE slot_key = ? AND slot_started_at = ?`,
       )
@@ -521,7 +535,7 @@ async function claimScheduledSlotExecution(
   slotStartedAt: number,
   owner: string,
   staleAfterSec: number,
-): Promise<"claimed" | "duplicate" | "running"> {
+): Promise<ScheduledSlotClaimResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const staleBefore = nowSec - staleAfterSec;
   const inserted = await runWithOverloadRetry(() =>
@@ -535,21 +549,38 @@ async function claimScheduledSlotExecution(
       .run(),
   );
   if ((inserted.meta.changes ?? 0) > 0) {
-    return "claimed";
+    return { status: "claimed" };
   }
 
   const existing = await getScheduledSlotExecution(db, slotKey, slotStartedAt);
   if (!existing) {
-    return "running";
+    return { status: "running" };
   }
   if (existing.state === "finished") {
-    return "duplicate";
+    return { status: "duplicate" };
   }
   if (existing.execution_owner === owner) {
-    return "claimed";
+    return { status: "claimed" };
   }
 
   if (existing.updated_at < staleBefore) {
+    const staleSlot: StaleSlotExecutionRow = {
+      slot_key: slotKey,
+      slot_started_at: slotStartedAt,
+      execution_owner: existing.execution_owner,
+      started_at: existing.started_at,
+      updated_at: existing.updated_at,
+    };
+    const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
+    await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
+    const staleSlotTakeover: StaleSlotTakeoverSummary = {
+      previousOwner: existing.execution_owner,
+      previousStartedAt: existing.started_at,
+      previousUpdatedAt: existing.updated_at,
+      staleBefore,
+      takenOverAt: nowSec,
+      reconciliation,
+    };
     const takeover = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -559,21 +590,21 @@ async function claimScheduledSlotExecution(
                updated_at = ?,
                finished_at = NULL,
                result_status = NULL,
-               metadata = NULL
+               metadata = ?
            WHERE slot_key = ?
              AND slot_started_at = ?
              AND state = 'running'
              AND updated_at < ?`,
         )
-        .bind(owner, nowSec, nowSec, slotKey, slotStartedAt, staleBefore)
+        .bind(owner, nowSec, nowSec, JSON.stringify({ staleSlotTakeover }), slotKey, slotStartedAt, staleBefore)
         .run(),
     );
     if ((takeover.meta.changes ?? 0) > 0) {
-      return "claimed";
+      return { status: "claimed", staleSlotTakeover };
     }
   }
 
-  return "running";
+  return { status: "running" };
 }
 
 async function touchScheduledSlotExecution(
@@ -629,18 +660,22 @@ function attachSlotRuntimeMetadata<T>(
   metadata: T,
   heartbeatFailures: number,
   staleSlotPreSweep?: ScheduledSlotSweepSummary | { error: string },
+  staleSlotTakeover?: StaleSlotTakeoverSummary,
 ): T | {
   slotHeartbeatFailures?: number;
   staleSlotPreSweep?: ScheduledSlotSweepSummary | { error: string };
+  staleSlotTakeover?: StaleSlotTakeoverSummary;
 } | {
   metadata: T;
   slotHeartbeatFailures?: number;
   staleSlotPreSweep?: ScheduledSlotSweepSummary | { error: string };
+  staleSlotTakeover?: StaleSlotTakeoverSummary;
 } {
-  if (heartbeatFailures <= 0 && !staleSlotPreSweep) return metadata;
+  if (heartbeatFailures <= 0 && !staleSlotPreSweep && !staleSlotTakeover) return metadata;
   const additions = {
     ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
     ...(staleSlotPreSweep ? { staleSlotPreSweep } : {}),
+    ...(staleSlotTakeover ? { staleSlotTakeover } : {}),
   };
   if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
     return {
@@ -683,7 +718,7 @@ export async function runScheduledSlotWithFence(
   }
   const claimResult = await claimScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, staleAfterSec);
 
-  if (claimResult === "duplicate") {
+  if (claimResult.status === "duplicate") {
     return {
       status: "skipped_duplicate",
       slotKey,
@@ -691,7 +726,7 @@ export async function runScheduledSlotWithFence(
       owner,
     };
   }
-  if (claimResult === "running") {
+  if (claimResult.status === "running") {
     return {
       status: "skipped_running",
       slotKey,
@@ -699,6 +734,7 @@ export async function runScheduledSlotWithFence(
       owner,
     };
   }
+  const staleSlotTakeover = "staleSlotTakeover" in claimResult ? claimResult.staleSlotTakeover : undefined;
 
   let heartbeatFailures = 0;
   const timer = setInterval(() => {
@@ -710,7 +746,12 @@ export async function runScheduledSlotWithFence(
 
   try {
     const metadata = await fn();
-    const slotMetadata = attachSlotRuntimeMetadata(metadata, heartbeatFailures, staleSlotPreSweep);
+    const slotMetadata = attachSlotRuntimeMetadata(
+      metadata,
+      heartbeatFailures,
+      staleSlotPreSweep,
+      staleSlotTakeover,
+    );
     const resultStatus =
       metadata && metadata.jobsErrored > 0
         ? "error"
@@ -744,6 +785,7 @@ export async function runScheduledSlotWithFence(
         error: toErrorMessage(err),
         ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
         ...(staleSlotPreSweep ? { staleSlotPreSweep } : {}),
+        ...(staleSlotTakeover ? { staleSlotTakeover } : {}),
       }),
     ).catch((finishErr) => {
       console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);
