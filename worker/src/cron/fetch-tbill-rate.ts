@@ -189,6 +189,7 @@ function buildRetainedBenchmark(
     previous.lastMarketSource &&
     previous.lastMarketSource !== "hardcoded-fallback"
   ) {
+    const retainedSource = previous.source ?? previous.lastMarketSource;
     const retained = withYieldBenchmarkStaticMeta(previous.key ?? "USD", {
       rate: previous.lastMarketRate,
       recordDate: previous.lastMarketRecordDate,
@@ -196,7 +197,7 @@ function buildRetainedBenchmark(
       ageSeconds: previous.lastMarketFetchedAt != null
         ? Math.max(0, Math.floor(Date.now() / 1000) - previous.lastMarketFetchedAt)
         : null,
-      source: previous.lastMarketSource,
+      source: retainedSource,
       isFallback: true,
       fallbackMode: `${fallbackMode}-retained`,
     });
