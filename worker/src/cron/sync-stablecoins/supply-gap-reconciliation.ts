@@ -6,9 +6,8 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
@@ -158,7 +157,7 @@ async function fetchCurrentCoinGeckoMarketCaps(
 ): Promise<Record<string, CoinGeckoCurrentMcapRow>> {
   if (geckoIds.length === 0) return {};
 
-  const response = await fetchWithRetry(
+  const result = await fetchTextWithRetry(
     cgUrl(
       `/simple/price?ids=${encodeURIComponent(geckoIds.join(","))}&vs_currencies=usd&include_market_cap=true`,
       coingeckoApiKey ?? null,
@@ -169,23 +168,21 @@ async function fetchCurrentCoinGeckoMarketCaps(
     },
   );
 
-  if (!response?.ok) {
+  if (!result?.response.ok) {
     logWorkerEvent({
       scope: "lib",
       level: "warn",
       event: "sync-stablecoins.coingecko-current-market-cap-failed",
       job: "sync-stablecoins",
       message: "CoinGecko current market-cap fetch failed for supply gap reconciliation",
-      metadata: { status: response?.status ?? "no response" },
+      metadata: { status: result?.response.status ?? "no response" },
     });
-    await cancelResponseBodyQuietly(response);
     return {};
   }
 
   try {
-    return (await response.json()) as Record<string, CoinGeckoCurrentMcapRow>;
+    return JSON.parse(result.body) as Record<string, CoinGeckoCurrentMcapRow>;
   } catch (error) {
-    await cancelResponseBodyQuietly(response);
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -203,7 +200,7 @@ async function fetchRecentCoinGeckoMarketCaps(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
 ): Promise<[number, number][]> {
-  const response = await fetchWithRetry(
+  const result = await fetchTextWithRetry(
     cgUrl(
       `/coins/${geckoId}/market_chart?vs_currency=usd&days=${COINGECKO_GAP_HISTORY_DAYS}`,
       coingeckoApiKey ?? null,
@@ -214,24 +211,22 @@ async function fetchRecentCoinGeckoMarketCaps(
     },
   );
 
-  if (!response?.ok) {
+  if (!result?.response.ok) {
     logWorkerEvent({
       scope: "lib",
       level: "warn",
       event: "sync-stablecoins.coingecko-market-chart-failed",
       job: "sync-stablecoins",
       message: "CoinGecko market-chart fetch failed for candidate",
-      metadata: { geckoId, status: response?.status ?? "no response" },
+      metadata: { geckoId, status: result?.response.status ?? "no response" },
     });
-    await cancelResponseBodyQuietly(response);
     return [];
   }
 
   try {
-    const payload = (await response.json()) as CoinGeckoRecentMarketChart;
+    const payload = JSON.parse(result.body) as CoinGeckoRecentMarketChart;
     return Array.isArray(payload.market_caps) ? payload.market_caps : [];
   } catch (error) {
-    await cancelResponseBodyQuietly(response);
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -250,7 +245,7 @@ async function fetchRecentDefiLlamaMarketCaps(
   pegKey: string,
   signal?: AbortSignal,
 ): Promise<[number, number][]> {
-  const response = await fetchWithRetry(
+  const result = await fetchTextWithRetry(
     `${DEFILLAMA_BASE}/stablecoincharts/all?stablecoin=${encodeURIComponent(llamaId)}`,
     {
       headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -258,21 +253,20 @@ async function fetchRecentDefiLlamaMarketCaps(
     },
   );
 
-  if (!response?.ok) {
+  if (!result?.response.ok) {
     logWorkerEvent({
       scope: "lib",
       level: "warn",
       event: "sync-stablecoins.defillama-chart-failed",
       job: "sync-stablecoins",
       message: "DefiLlama chart fetch failed for candidate",
-      metadata: { llamaId, status: response?.status ?? "no response" },
+      metadata: { llamaId, status: result?.response.status ?? "no response" },
     });
-    await cancelResponseBodyQuietly(response);
     return [];
   }
 
   try {
-    const payload = await response.json();
+    const payload = JSON.parse(result.body);
     if (!Array.isArray(payload)) return [];
 
     return payload.flatMap((entry) => {
@@ -282,7 +276,6 @@ async function fetchRecentDefiLlamaMarketCaps(
       return timestampMs != null && marketCap != null ? [[timestampMs, marketCap] as [number, number]] : [];
     });
   } catch (error) {
-    await cancelResponseBodyQuietly(response);
     logWorkerEvent({
       scope: "lib",
       level: "warn",
