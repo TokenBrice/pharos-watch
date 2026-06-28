@@ -3,7 +3,9 @@ import type {
   DigestValidationIssue,
   DigestValidationProfile,
 } from "../daily-digest/response";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { readResponseTextBoundedWithSignal } from "../../lib/response-body";
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
 import { recordCronFailure } from "../../lib/cron-logger";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
@@ -76,6 +78,21 @@ const DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS = 11 * 60_000;
  * retries only stack 529 backoff delays inside that budget.
  */
 const DIGEST_FETCH_MAX_RETRIES = 2;
+const DIGEST_ERROR_BODY_TIMEOUT_MS = 15_000;
+const DIGEST_ERROR_BODY_MAX_BYTES = 2_000;
+
+async function readDigestErrorText(response: Response, signal?: AbortSignal): Promise<string> {
+  const timeout = createTimeoutSignal({
+    timeoutMs: DIGEST_ERROR_BODY_TIMEOUT_MS,
+    timeoutReason: new DOMException(`digest error body read timed out after ${DIGEST_ERROR_BODY_TIMEOUT_MS}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return await readResponseTextBoundedWithSignal(response, DIGEST_ERROR_BODY_MAX_BYTES, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
 
 export async function requestDigestCopy(
   options: RequestDigestCopyOptions,
@@ -139,7 +156,7 @@ export async function requestDigestCopy(
 
     if (!response || !response.ok) {
       await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
-      const errorText = response ? await response.text() : "no response after retries";
+      const errorText = response ? await readDigestErrorText(response, options.signal) : "no response after retries";
       throw new Error(
         `Claude API error ${response?.status ?? "null"}: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`,
       );

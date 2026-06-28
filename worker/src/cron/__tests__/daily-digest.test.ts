@@ -153,7 +153,7 @@ import {
   validateDigestModelOutput,
   type ParsedDigestResponse,
 } from "../daily-digest/response";
-import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
 import {
   collectPsiContributors,
   collectYieldAnomalies,
@@ -172,7 +172,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
 import { postDigestToTelegram } from "../../lib/telegram";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
-import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
@@ -644,6 +644,17 @@ describe("generateDailyDigest", () => {
     expect(fetchWithRetry).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("skipping corrective retry"));
     warnSpy.mockRestore();
+  });
+
+  it("includes bounded Anthropic error body text when generation fails before streaming", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("anthropic overloaded", { status: 529 }));
+    const db = mockD1(makeBaseTables());
+
+    await expect(generateDailyDigest(db, "anthropic-key")).rejects.toThrow(
+      "Claude API error 529: anthropic overloaded",
+    );
+
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.ANTHROPIC, false);
   });
 
   it("skips generation when a recent valid digest already exists", async () => {
