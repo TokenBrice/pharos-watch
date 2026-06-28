@@ -1,5 +1,6 @@
 import { batchExecute } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
@@ -143,37 +144,51 @@ export async function updateDiscoveryMeta(
 ): Promise<void> {
   throwIfAborted(signal);
   if (poolsFound > 0) {
-    await db
-      .prepare(
-        `INSERT INTO dex_discovery_meta (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at)
-         VALUES (?, 0, ?, ?)
-         ON CONFLICT(stablecoin_id) DO UPDATE SET
-           consecutive_misses = 0,
-           last_crawl_at = excluded.last_crawl_at,
-           last_hit_at = excluded.last_hit_at`,
-      )
-      .bind(stablecoinId, nowSec, nowSec)
-      .run();
+    await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `INSERT INTO dex_discovery_meta (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at)
+           VALUES (?, 0, ?, ?)
+           ON CONFLICT(stablecoin_id) DO UPDATE SET
+             consecutive_misses = 0,
+             last_crawl_at = excluded.last_crawl_at,
+             last_hit_at = excluded.last_hit_at`,
+        )
+        .bind(stablecoinId, nowSec, nowSec)
+        .run(),
+      3,
+      signal,
+    );
+    throwIfAborted(signal);
     return;
   }
 
   throwIfAborted(signal);
-  const result = await db
-    .prepare(
-      "UPDATE dex_discovery_meta SET consecutive_misses = consecutive_misses + 1, last_crawl_at = ? WHERE stablecoin_id = ?",
-    )
-    .bind(nowSec, stablecoinId)
-    .run();
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        "UPDATE dex_discovery_meta SET consecutive_misses = consecutive_misses + 1, last_crawl_at = ? WHERE stablecoin_id = ?",
+      )
+      .bind(nowSec, stablecoinId)
+      .run(),
+    3,
+    signal,
+  );
 
   if ((result.meta.changes ?? 0) === 0) {
     throwIfAborted(signal);
-    await db
-      .prepare(
-        "INSERT INTO dex_discovery_meta (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at) VALUES (?, 1, ?, NULL)",
-      )
-      .bind(stablecoinId, nowSec)
-      .run();
+    await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          "INSERT INTO dex_discovery_meta (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at) VALUES (?, 1, ?, NULL)",
+        )
+        .bind(stablecoinId, nowSec)
+        .run(),
+      3,
+      signal,
+    );
   }
+  throwIfAborted(signal);
 }
 
 /**
@@ -183,28 +198,35 @@ export async function updateDiscoveryMeta(
  */
 export async function cleanupStaging(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {
   throwIfAborted(signal);
-  await db.batch([
+  await batchExecute(db, [
     db
       .prepare("DELETE FROM dex_pool_staging WHERE refreshed_at < ?")
       .bind(nowSec - STAGING_DELETE_TTL_SEC),
     db
       .prepare("UPDATE dex_pool_staging SET raw_json = NULL WHERE raw_json IS NOT NULL AND refreshed_at < ?")
       .bind(nowSec - STAGING_RAW_JSON_TTL_SEC),
-  ]);
+  ], { chunkSize: 2, signal });
+  throwIfAborted(signal);
 }
 
 /**
  * Read current discovery meta for all stablecoins.
  */
-export async function readDiscoveryMeta(db: D1Database): Promise<Map<string, DiscoveryMeta>> {
-  const rows = await db
-    .prepare("SELECT stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at FROM dex_discovery_meta")
-    .all<{
-      stablecoin_id: string;
-      consecutive_misses: number;
-      last_crawl_at: number;
-      last_hit_at: number | null;
-    }>();
+export async function readDiscoveryMeta(db: D1Database, signal?: AbortSignal): Promise<Map<string, DiscoveryMeta>> {
+  throwIfAborted(signal);
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare("SELECT stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at FROM dex_discovery_meta")
+      .all<{
+        stablecoin_id: string;
+        consecutive_misses: number;
+        last_crawl_at: number;
+        last_hit_at: number | null;
+      }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
 
   const metaById = new Map<string, DiscoveryMeta>();
   for (const row of rows.results ?? []) {
@@ -224,19 +246,25 @@ export async function readDiscoveryMeta(db: D1Database): Promise<Map<string, Dis
  * Creates the row if it does not exist (starting at 1).
  * Returns the new sequence number.
  */
-export async function incrementRunSeq(db: D1Database): Promise<number> {
-  const [, readResult] = await db.batch([
-    db
-      .prepare(
-        `INSERT INTO kv_config (key, value)
-         VALUES (?, '1')
-         ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(kv_config.value AS INTEGER) + 1 AS TEXT)`,
-      )
-      .bind(RUN_SEQ_KEY),
-    db
-      .prepare("SELECT value FROM kv_config WHERE key = ?")
-      .bind(RUN_SEQ_KEY),
-  ]);
+export async function incrementRunSeq(db: D1Database, signal?: AbortSignal): Promise<number> {
+  throwIfAborted(signal);
+  const [, readResult] = await runWithOverloadRetry(() =>
+    db.batch([
+      db
+        .prepare(
+          `INSERT INTO kv_config (key, value)
+           VALUES (?, '1')
+           ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(kv_config.value AS INTEGER) + 1 AS TEXT)`,
+        )
+        .bind(RUN_SEQ_KEY),
+      db
+        .prepare("SELECT value FROM kv_config WHERE key = ?")
+        .bind(RUN_SEQ_KEY),
+    ]),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
 
   const value = (readResult.results?.[0] as { value?: string } | undefined)?.value;
   const parsed = Number.parseInt(value ?? "", 10);

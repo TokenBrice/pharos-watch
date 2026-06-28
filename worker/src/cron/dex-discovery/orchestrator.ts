@@ -186,8 +186,8 @@ export async function syncDexDiscovery(
     const validationReferences = await loadPriceValidationReferences(db);
 
     const liquidityCoverage = await readLiquidityCoverage(db);
-    const metaById = await readDiscoveryMeta(db);
-    runSeq = await incrementRunSeq(db);
+    const metaById = await readDiscoveryMeta(db, signal);
+    runSeq = await incrementRunSeq(db, signal);
 
     const eligibleCoins: DiscoveryCandidate[] = [];
     for (const coin of ACTIVE_STABLECOINS) {

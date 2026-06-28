@@ -1,5 +1,13 @@
-import { describe, it, expect } from "vitest";
-import { hasValidStagedPoolTvl, isValidStagedPoolId, upsertStagedPools } from "../persistence";
+import { describe, it, expect, vi } from "vitest";
+import {
+  cleanupStaging,
+  hasValidStagedPoolTvl,
+  incrementRunSeq,
+  isValidStagedPoolId,
+  readDiscoveryMeta,
+  updateDiscoveryMeta,
+  upsertStagedPools,
+} from "../persistence";
 import { STAGED_POOL_MAX_TVL_USD, type StagedPool } from "../types";
 
 describe("isValidStagedPoolId", () => {
@@ -95,5 +103,90 @@ describe("upsertStagedPools", () => {
     expect(boundValues[0]).toEqual(["usdc-circle", "orderbook:kinesis"]);
     expect(preparedSql[1]).toContain("INSERT INTO dex_pool_staging");
     expect(boundValues[1]?.[0]).toBe("orderbook:kinesis:usdc-circle");
+  });
+});
+
+describe("discovery persistence D1 retry coverage", () => {
+  it("retries discovery meta writes on transient D1 overload", async () => {
+    let attempts = 0;
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          run: async () => {
+            attempts++;
+            if (attempts === 1) throw new Error("D1 DB is overloaded");
+            return { success: true, meta: { changes: 1 } };
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    await updateDiscoveryMeta(db, "usdc-circle", 2, 1_710_000_000);
+
+    expect(attempts).toBe(2);
+  });
+
+  it("retries staging cleanup batches on transient D1 overload", async () => {
+    let attempts = 0;
+    const db = {
+      prepare: () => ({
+        bind: () => ({}),
+      }),
+      batch: async () => {
+        attempts++;
+        if (attempts === 1) throw new Error("Requests queued for too long");
+        return [
+          { success: true, meta: { changes: 1 } },
+          { success: true, meta: { changes: 1 } },
+        ];
+      },
+    } as unknown as D1Database;
+
+    await cleanupStaging(db, 1_710_000_000);
+
+    expect(attempts).toBe(2);
+  });
+
+  it("retries discovery meta reads and maps rows", async () => {
+    let attempts = 0;
+    const db = {
+      prepare: () => ({
+        all: async () => {
+          attempts++;
+          if (attempts === 1) throw new Error("D1 DB storage operation exceeded timeout");
+          return {
+            results: [{
+              stablecoin_id: "usdc-circle",
+              consecutive_misses: 3,
+              last_crawl_at: 1_710_000_000,
+              last_hit_at: 1_709_900_000,
+            }],
+          };
+        },
+      }),
+    } as unknown as D1Database;
+
+    const rows = await readDiscoveryMeta(db);
+
+    expect(attempts).toBe(2);
+    expect(rows.get("usdc-circle")).toEqual({
+      stablecoinId: "usdc-circle",
+      consecutiveMisses: 3,
+      lastCrawlAt: 1_710_000_000,
+      lastHitAt: 1_709_900_000,
+    });
+  });
+
+  it("honors abort signals before incrementing the run sequence", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("stop-discovery"));
+    const prepare = vi.fn();
+    const db = {
+      prepare,
+      batch: async () => [],
+    } as unknown as D1Database;
+
+    await expect(incrementRunSeq(db, controller.signal)).rejects.toThrow("stop-discovery");
+    expect(prepare).not.toHaveBeenCalled();
   });
 });
