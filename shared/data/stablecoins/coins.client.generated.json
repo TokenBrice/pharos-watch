@@ -2401,8 +2401,8 @@
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
     "announcedDate": "2025-12",
-    "expectedLaunchDate": "2026-H2",
-    "launchPhase": "announced",
+    "expectedLaunchDate": "2026-H1",
+    "launchPhase": "launching-soon",
     "milestones": [
       {
         "date": "2025-12-17",
@@ -2417,12 +2417,23 @@
         "title": "B3 Tokenization Day: B3RL stablecoin and tokenized share registry confirmed for H2 2026",
         "description": "B3 confirmed its tokenized share registry and B3RL settlement stablecoin target H2 2026 (slipped from H1 2026); stablecoin to be backed by cash and government bonds.",
         "sourceUrl": "https://cryptonews.net/news/finance/32952205/"
+      },
+      {
+        "date": "2026-05-27",
+        "type": "milestone",
+        "title": "B3 clarifies B3RL settlement stablecoin targets H1 2026 on Polygon; tokenization platform follows in H2",
+        "description": "At Tokenization Day, B3 OTC and digital-assets director Humberto Costa said the B3RL settlement stablecoin — backed by cash and government bonds, built on Polygon — is expected in the first half of 2026, while the tokenized-share registry/tokenizer advances in the second half, disentangling the two timelines that earlier coverage had merged.",
+        "sourceUrl": "https://investnews.com.br/investimentos/b3-lancara-stablecoin-em-reais-ainda-neste-semestre/"
       }
     ],
     "dateHistory": [
       {
         "date": "2026-H1",
         "setOn": "2026-06-07"
+      },
+      {
+        "date": "2026-H2",
+        "setOn": "2026-06-28"
       }
     ],
     "collateralQuality": "rwa",
@@ -3582,7 +3593,7 @@
       {
         "name": "CELO",
         "pct": 15.9,
-        "risk": "medium"
+        "risk": "high"
       },
       {
         "name": "USDC",
@@ -3610,7 +3621,7 @@
       {
         "name": "stETH",
         "pct": 2,
-        "risk": "medium"
+        "risk": "low"
       },
       {
         "name": "Other small reserve assets (axlUSDC, USDT0, WETH)",
@@ -11486,7 +11497,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "announced",
+    "launchPhase": "launching-soon",
     "milestones": [
       {
         "date": "2026-02-05",
@@ -11522,6 +11533,13 @@
         "title": "Japan FSA activates rules for foreign stablecoins as electronic payment instruments",
         "description": "Japan's regulated framework for qualified foreign stablecoins took effect, advancing the regime JPYSC will launch under.",
         "sourceUrl": "https://en.spaziocrypto.com/stablecoins/japan-foreign-stablecoins-yen-on-chain-2026/"
+      },
+      {
+        "date": "2026-06-24",
+        "type": "milestone",
+        "title": "JPYSC goes live (closed-loop) — issued by Shinsei Trust & Banking, distributed via SBI VC Trade",
+        "description": "Japan's first trust-bank-backed yen stablecoin launches with first issuance the same day; ~$63M of cash plus up to 50% JGB reserves held in segregated trust accounts under the Type III electronic payment instrument framework. Initial phase is closed-loop — SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet.",
+        "sourceUrl": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/"
       }
     ],
     "blacklistStatus": true
@@ -12184,7 +12202,7 @@
         "type": "milestone",
         "title": "KRW1 proof-of-concept goes live on Avalanche with Woori Bank",
         "description": "Successful PoC validates fiat deposits, on-chain issuance, and real-time banking-API reserve attestation; not yet in public circulation.",
-        "sourceUrl": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html"
+        "sourceUrl": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/"
       },
       {
         "date": "2025-10-29",
@@ -16420,6 +16438,13 @@
         "title": "House of Lords committee urges BoE to drop individual holding limits and reconsider 40% reserve floor",
         "description": "The Financial Services Regulation Committee called on the Bank of England to scrap per-person stablecoin holding limits entirely and reconsider the 40% unremunerated-reserve requirement, warning it would harm issuer viability.",
         "sourceUrl": "https://www.coindesk.com/policy/2026/06/02/uk-house-of-lords-committee-calls-on-bank-of-england-to-reconsider-proposed-stablecoin-restrictions"
+      },
+      {
+        "date": "2026-06-22",
+        "type": "regulatory",
+        "title": "Bank of England publishes final policy statement and draft rules on systemic stablecoins",
+        "description": "The BoE scrapped individual holding limits in favour of a temporary per-coin issuance cap (initially ~£40bn / $50bn), raised the maximum short-dated-UK-T-bill reserve share from 60% to 70% (remainder held at the BoE, no yield to holders), and required par redemption within 24 hours. A Code of Practice consultation runs to September 22 2026, with rules finalised by end-2026 and regulated sterling stablecoins operating from 2027.",
+        "sourceUrl": "https://www.bankofengland.co.uk/news/2026/june/boe-launches-policy-statement-and-draft-rules-on-regulating-systemic-stablecoins"
       }
     ],
     "blacklistStatus": true
@@ -16912,6 +16937,13 @@
         "title": "Revolut receives full UK banking licence from the PRA",
         "description": "Revolut exits mobilisation; 13M UK customers gain FSCS protection. A GBP stablecoin would be issued from Revolut's e-money entity, not the UK bank.",
         "sourceUrl": "https://www.coindesk.com/policy/2026/03/11/crypto-friendly-fintech-revolut-gains-full-uk-banking-license"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "announcement",
+        "title": "Revolut confirms its planned US national bank will offer stablecoin services alongside FDIC-insured accounts",
+        "description": "Reuters reports Revolut Bank US, N.A. (OCC charter applicant) will offer stablecoin services alongside FDIC-insured products from day one, though own-issuance of a Revolut USD token remains unconfirmed; the USD path continues to run through the Lithuanian EMI / MiCA EMT route.",
+        "sourceUrl": "https://www.theblock.co/post/403541/revoluts-us-bank-offer-stablecoin-services-fdic-insured-products-reuters"
       }
     ],
     "blacklistStatus": true
@@ -28256,7 +28288,8 @@
       {
         "name": "USDC held in the WEMIX3.0 Treasury",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdc-circle"
       }
     ],
     "blacklistStatus": true,

@@ -129,8 +129,12 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Metronome reports this as a mixed Vesper vault-token bucket spanning USDC and ETH-family vaults, so a single USDC coinId would overstate the reserve dependency.",
   ],
   [
-    "wemix-dollar-wemix::USDC and fiat reserve assets::USDC",
-    "WEMIX$ describes a mixed USDC plus fiat reserve base without a current source split, so a 100% USDC dependency would overstate the relationship.",
+    "ceur-celo::Other small reserve assets (axlUSDC, USDT0, WETH)::USDC",
+    "EURm reports this as one tiny mixed residual bucket across axlUSDC, USDT0, and WETH, so no single stablecoin coinId is representative.",
+  ],
+  [
+    "ceur-celo::Other small reserve assets (axlUSDC, USDT0, WETH)::USDT",
+    "EURm reports this as one tiny mixed residual bucket across axlUSDC, USDT0, and WETH, so no single stablecoin coinId is representative.",
   ],
   [
     "silk-shade-protocol::Stablecoin redemption pools (USDC, other stables)::USDC",

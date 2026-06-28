@@ -11227,7 +11227,7 @@
       {
         "name": "CELO",
         "pct": 15.9,
-        "risk": "medium"
+        "risk": "high"
       },
       {
         "name": "USDC",
@@ -11255,7 +11255,7 @@
       {
         "name": "stETH",
         "pct": 2,
-        "risk": "medium"
+        "risk": "low"
       },
       {
         "name": "Other small reserve assets (axlUSDC, USDT0, WETH)",
@@ -82351,7 +82351,8 @@
       {
         "name": "USDC held in the WEMIX3.0 Treasury",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdc-circle"
       }
     ],
     "notices": [
