@@ -20,7 +20,7 @@ Primary audience:
 - **Route:** `/upcoming/`
 - **Server shell:** `src/app/upcoming/page.tsx`
 - **Client implementation:** `src/components/upcoming-client.tsx`
-- **Hero metaphor:** `src/components/upcoming-horizon-hero.tsx` — a hero-scale readiness constellation (adapted from the homepage `home-alt-upcoming-horizon-constellation.tsx`; the homepage component is left untouched), rendered in the right slot of the shared `FeatureHeroSplit` split hero
+- **Hero metaphor:** `src/components/upcoming-horizon-hero.tsx` — a hero-scale readiness constellation (adapted from the homepage `home-alt-upcoming-horizon-constellation.tsx`; the homepage component is left untouched), rendered **full-width** beneath a compact header that carries the frost launch-count "One Beam" + the soonest launch (a flat `pharos-card-shell`, not the split `FeatureHeroSplit`, so the phase circles get full width)
 - **Shared helpers:** `src/lib/pre-launch.ts`
 - **Primary dataset:** the client card/filter universe is derived in `src/components/upcoming-client.tsx` from `CLIENT_TRACKED_STABLECOINS` (`@shared/lib/stablecoins/client-registry`) filtered on `status: "pre-launch"`; the registry-exported `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`) is consumed only by the server shell (`page.tsx`) for JSON-LD and the crawlable `sr-only` nav. Both derive from the catalog backed by `shared/data/stablecoins/coins/*.json`
 
@@ -60,7 +60,7 @@ The route does not call the Worker API directly. It is a metadata-driven surface
 
 `src/components/upcoming-client.tsx` exposes:
 
-- the `FeatureHeroSplit` hero: a frost-blue tracked-launch count "One Beam" on the left with a `Launch Pipeline` sub-block (soonest launch + per-phase counts in `.pharos-numeric`), and the `UpcomingHorizonHero` constellation in the right slot. This replaced the former soft `pharos-subtle-band` phase-coverage overview band.
+- the full-width constellation hero: a flat `pharos-card-shell` whose header carries the frost-blue tracked-launch count "One Beam" + the soonest launch, with the full-width `UpcomingHorizonHero` constellation below. This replaced the former soft `pharos-subtle-band` phase-coverage band; the redundant per-phase count list was dropped on the design follow-up since each constellation circle already labels its own count.
 - multi-select `Phase` filters over `announced`, `testnet`, `auditing`, `beta`, and `launching-soon`
 - multi-select `Backing` filters, shown only when the current pre-launch set contains more than one backing class
 - multi-select `Peg` filters, shown only when the current pre-launch set contains more than one peg currency

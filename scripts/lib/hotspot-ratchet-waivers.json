@@ -39,14 +39,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
   },
-  "src/app/yield/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Yield client combines URL filter normalization, ranking view-model wiring, source-board/reference-rate composition, and route rendering. It surfaced after the current complexity tranche; keep it explicitly owned for a focused yield route-shell decomposition pass rather than widening this release gate.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-22",
-    "reviewAfter": "2026-09-22",
-    "nextAction": "Split yield route state and cross-section composition from the presentation shell while preserving URL parameter behavior."
-  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
@@ -62,6 +54,14 @@
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
     "nextAction": "Reassess after the owning surface stabilizes."
+  },
+  "src/components/stablecoin-table-row.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Stablecoin table row now appears in the hotspot candidate set because it owns row rendering, hover/prefetch behavior, classification chips, and responsive metric cells for the main stablecoin table. This markets hero release does not touch that table surface, so keep it explicitly owned for a focused table-row decomposition pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-28",
+    "reviewAfter": "2026-09-28",
+    "nextAction": "Split stablecoin row metric cells, classification badge composition, and interaction handling into focused helpers while preserving table virtualization behavior."
   },
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",

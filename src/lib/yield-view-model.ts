@@ -207,10 +207,6 @@ export {
   YIELD_RISK_BUDGET_SPECS,
 } from "@/lib/yield-view-config";
 
-function formatCountLabel(label: string, count: number): string {
-  return `${label} (${count})`;
-}
-
 function formatTvlOption(value: number): string {
   if (value >= 1_000_000_000) return `$${value / 1_000_000_000}B+`;
   if (value >= 1_000_000) return `$${value / 1_000_000}M+`;
@@ -1011,10 +1007,6 @@ export function buildYieldViewModel(
     matchingPreset,
     riskBudget,
   };
-}
-
-export function labelYieldFilterOption(option: YieldFilterOption): string {
-  return formatCountLabel(option.label, option.count);
 }
 
 export interface YieldActiveFilterSummary {
