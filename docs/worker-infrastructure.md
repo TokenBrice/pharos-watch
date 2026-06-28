@@ -581,7 +581,7 @@ Forced digest runs inherit the `daily-digest` progress stream, including preflig
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
 
-**Connection budget:** snapshot jobs are D1-only (0 external connections). `snapshot-supply` and `snapshot-public-dataset` receive the scheduled slot start as a stablecoins-cache freshness floor, so the 08:00 fallback cannot write from the previous 07:45 quarter-hourly cache while the fresh 08:00 `sync-stablecoins` run is still publishing. `snapshot-public-dataset` runs after the safety-grade and PSI daily snapshots, waits and reloads the stablecoins cache up to four times over an 8-minute retry window when it only sees a pre-slot cache row, and then freshness-gates its report-card and PSI inputs before writing the immutable dated public snapshot row; if DEWS or DEX section reads fail, the run returns `degraded` with explicit `missingSections` metadata and does not insert a partial public snapshot. Its app-level cron timeout is 10 minutes to leave D1/compression tail room after the cache wait. `fetch-tbill-rate` (NY Fed, ECB, FRED, Treasury, SIX, and central-bank benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
+**Connection budget:** snapshot jobs are D1-only (0 external connections). `snapshot-supply` and `snapshot-public-dataset` receive the scheduled slot start as a stablecoins-cache freshness floor, so the 08:00 fallback cannot write from the previous 07:45 quarter-hourly cache while the fresh 08:00 `sync-stablecoins` run is still publishing. `snapshot-public-dataset` runs after the safety-grade and PSI daily snapshots, waits and reloads the stablecoins cache up to four times over an 8-minute retry window when it only sees a pre-slot cache row, and then freshness-gates its report-card and PSI inputs before writing the immutable dated public snapshot row; if DEWS or DEX section reads fail, the run returns `degraded` with explicit `missingSections` metadata and does not insert a partial public snapshot. Its app-level cron timeout is 10 minutes to leave D1/compression tail room after the cache wait. `fetch-tbill-rate` (NY Fed, ECB, FRED, Treasury, SIX, and central-bank benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection. `fetch-tbill-rate` also tracks the GBP SONIA retained-fallback streak in `cache["fetch-tbill-rate:gbp-retained-fallback-streak"]`; after 2 consecutive daily `gbp-sonia-compounded-index-failed-retained` runs it emits the shared webhook alert and a `cron:event:fetch-tbill-rate:gbp-retained-fallback-repeated` event, with a 24-hour re-alert cooldown.
 
 ### Trigger 16: `5 8 * * *` (daily at 08:05 UTC — digest and Bluechip fetchers)
 
@@ -873,6 +873,8 @@ Auto-detects webhook format from URL:
 
 `sendAlert()` returns `true` only when the webhook responds with `2xx`. Non-2xx responses and fetch errors are logged with status/context, and failures never propagate to caller control flow.
 
+`fetch-tbill-rate` uses the shared alert helper for repeated GBP SONIA retained benchmark fallback. The first retained run only writes streak metadata; the second consecutive daily retained run sends `GBP SONIA retained benchmark fallback`, records a cron event, and stores `lastAlertedAt` so repeat notifications are suppressed for 24 hours. A fresh GBP market observation resets the streak and records `gbp-retained-fallback-recovered`.
+
 ---
 
 ## Shared Database Helpers
@@ -904,7 +906,9 @@ CREATE TABLE IF NOT EXISTS cache (
 | `peg-analytics`            | `publishReportCardCache` | Producer-published peg-analytics snapshot (`pegData` + daily depeg counters); `/api/peg-summary` accepts it for up to 30 min (2x producer cadence) and falls back to direct compute on miss/stale |
 | `detail-write-failure:<id>` | stablecoin detail API   | Marker written when a `detail:<id>` cache write fails or is oversized; the staleness watchdog alerts on markers fresher than 24h and prunes them after 7-day retention |
 | `yield-rankings`           | `syncYieldData`          | Pre-computed yield rankings + PYS scores                                               |
+| `risk_free_rates`          | `fetchTbillRate`         | Structured benchmark registry used by yield benchmark selection and provenance         |
 | `risk_free_rate`           | `fetchTbillRate`         | Current T-bill rate for PYS computation                                                |
+| `fetch-tbill-rate:gbp-retained-fallback-streak` | `fetchTbillRate` | GBP SONIA retained-fallback streak, last alert timestamp, and recovery metadata |
 
 **Cache access helpers:**
 

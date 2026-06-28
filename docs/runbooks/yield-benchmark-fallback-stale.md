@@ -4,6 +4,7 @@ Triggered by:
 - `sync-yield-data` metadata `fallbackMode` containing `risk-free-rate:*`
 - `/api/yield-rankings` provenance showing retained benchmark fallback
 - `/admin/` -> Crons showing failing or stale `fetch-tbill-rate`
+- `ALERT_WEBHOOK_URL` receiving `GBP SONIA retained benchmark fallback`, emitted after 2 consecutive daily GBP SONIA retained-fallback runs with a 24-hour re-alert cooldown
 
 ## Symptom
 
@@ -24,7 +25,7 @@ Rankings are usually available, but benchmark-relative interpretation is degrade
 ```sql
 SELECT key, updated_at, value
 FROM cache
-WHERE key IN ('risk_free_rates', 'risk_free_rate')
+WHERE key IN ('risk_free_rates', 'risk_free_rate', 'fetch-tbill-rate:gbp-retained-fallback-streak')
 ORDER BY key;
 ```
 
@@ -45,6 +46,7 @@ WHERE key = 'yield-rankings';
 ## Common Causes
 
 - FRED, Treasury.gov, ECB, SIX, or central-bank benchmark fetches failed during the daily `0 8 * * *` lane.
+- The GBP SONIA source family (FRED graph CSV, ALFRED graph CSV, and BoE IADB `IUDZOS2`) failed on consecutive daily runs, so `fetch-tbill-rate` retained the last GBP market benchmark and fired the repeated-fallback alert.
 - `fetch-tbill-rate` retained the last market-derived rate after an upstream outage.
 - The benchmark cache exists but is malformed or missing one of the structured benchmark entries.
 - `sync-yield-data` is healthy but continues to mark rankings degraded because the retained USD benchmark is too old.
@@ -52,6 +54,7 @@ WHERE key = 'yield-rankings';
 ## Remediation
 
 - If the benchmark fetch failed once and the retained rate is recent, monitor until the next daily benchmark lane or manually trigger the established cron path if available to operators.
+- If the GBP SONIA retained-fallback alert fired, inspect `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` for `consecutiveRetainedRuns`, `lastMarketSource`, `lastMarketRecordDate`, and `lastAlertedAt`; treat FRED/ALFRED/BoE source recovery as the normal fix.
 - If a provider-specific outage is visible, wait for upstream recovery rather than replacing rates manually.
 - If `fetch-tbill-rate` is stale because of a lease issue, confirm no active run exists before clearing the stale lease through the standard admin reset-lease flow for `fetch-tbill-rate`.
 - If only non-USD benchmarks are missing while USD is healthy, document the affected peg currencies in incident notes; USD rankings remain the primary availability path.
@@ -66,6 +69,7 @@ WHERE key = 'yield-rankings';
 
 - `fetch-tbill-rate` has a recent `ok` or expected `degraded` run.
 - `cache['risk_free_rates']` parses as JSON with a current USD benchmark and any available non-USD benchmark entries.
+- If GBP SONIA sources recovered, `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` shows `consecutiveRetainedRuns: 0` and a `recoveredSource`.
 - New `yield-rankings` rows expose benchmark fields, and `fallbackMode` is null unless an upstream outage is still active.
 - `/yield/` scatter and table benchmark labels agree with the API payload.
 

@@ -1,4 +1,5 @@
 import { getCache, setCache } from "../lib/db-cache";
+import { normalizeWebhookUrl, sendAlert } from "../lib/alerts";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   CIRCUIT_SOURCE,
@@ -61,7 +62,9 @@ export { parseCbrKeyRateXml } from "./tbill-sources/cbr";
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
+const GBP_RETAINED_FALLBACK_MODE = "gbp-sonia-compounded-index-failed-retained";
 const GBP_RETAINED_FALLBACK_ALERT_THRESHOLD = 2;
+const GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC = 24 * 60 * 60;
 
 function buildMetadata(fields: Record<string, unknown>): string {
   return JSON.stringify(fields);
@@ -110,6 +113,7 @@ interface GbpRetainedFallbackStreak {
   consecutiveRetainedRuns: number;
   firstRetainedAt: number | null;
   lastRetainedAt: number | null;
+  lastAlertedAt?: number | null;
   lastFallbackMode: string | null;
   lastMarketSource: string | null;
   lastMarketRecordDate: string | null;
@@ -136,6 +140,7 @@ function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRe
       consecutiveRetainedRuns: 0,
       firstRetainedAt: null,
       lastRetainedAt: null,
+      lastAlertedAt: null,
       lastFallbackMode: null,
       lastMarketSource: null,
       lastMarketRecordDate: null,
@@ -150,6 +155,7 @@ function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRe
       consecutiveRetainedRuns: Math.max(0, Math.floor(consecutiveRetainedRuns)),
       firstRetainedAt: numberOrNull(parsed.firstRetainedAt),
       lastRetainedAt: numberOrNull(parsed.lastRetainedAt),
+      lastAlertedAt: numberOrNull(parsed.lastAlertedAt),
       lastFallbackMode: stringOrNull(parsed.lastFallbackMode),
       lastMarketSource: stringOrNull(parsed.lastMarketSource),
       lastMarketRecordDate: stringOrNull(parsed.lastMarketRecordDate),
@@ -162,6 +168,7 @@ function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRe
       consecutiveRetainedRuns: 0,
       firstRetainedAt: null,
       lastRetainedAt: null,
+      lastAlertedAt: null,
       lastFallbackMode: null,
       lastMarketSource: null,
       lastMarketRecordDate: null,
@@ -173,8 +180,11 @@ function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRe
 function isRetainedGbpFallback(benchmark: ParsedYieldBenchmarkMeta | null): boolean {
   return benchmark?.key === "GBP" &&
     benchmark.isFallback === true &&
-    typeof benchmark.fallbackMode === "string" &&
-    benchmark.fallbackMode.endsWith("-retained");
+    benchmark.fallbackMode === GBP_RETAINED_FALLBACK_MODE;
+}
+
+function isFreshGbpBenchmark(benchmark: ParsedYieldBenchmarkMeta | null): boolean {
+  return benchmark?.key === "GBP" && benchmark.isFallback !== true;
 }
 
 function retainedFallbackMonitorErrorMessage(error: unknown): string {
@@ -184,10 +194,12 @@ function retainedFallbackMonitorErrorMessage(error: unknown): string {
 async function updateGbpRetainedFallbackMonitor(params: {
   db: D1Database;
   benchmark: ParsedYieldBenchmarkMeta | null;
+  alertWebhookUrl: string | null | undefined;
   fetchedAt: number;
   signal?: AbortSignal;
-}): Promise<void> {
-  const { db, benchmark, fetchedAt, signal } = params;
+}): Promise<Record<string, unknown>> {
+  const { db, benchmark, alertWebhookUrl, fetchedAt, signal } = params;
+  const webhookUrl = normalizeWebhookUrl(alertWebhookUrl ?? undefined);
   try {
     const cached = await getCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY);
     throwIfAborted(signal);
@@ -199,14 +211,33 @@ async function updateGbpRetainedFallbackMonitor(params: {
         consecutiveRetainedRuns,
         firstRetainedAt: previous.firstRetainedAt ?? fetchedAt,
         lastRetainedAt: fetchedAt,
+        lastAlertedAt: previous.lastAlertedAt ?? null,
         lastFallbackMode: benchmark.fallbackMode,
         lastMarketSource: benchmark.lastMarketSource ?? benchmark.source ?? null,
         lastMarketRecordDate: benchmark.lastMarketRecordDate ?? benchmark.recordDate ?? null,
         lastMarketFetchedAt: benchmark.lastMarketFetchedAt ?? benchmark.fetchedAt ?? null,
       };
-      await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(streak), signal);
 
-      if (consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_ALERT_THRESHOLD) {
+      const thresholdReached = consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_ALERT_THRESHOLD;
+      const suppressedByCooldown =
+        thresholdReached
+        && streak.lastAlertedAt != null
+        && fetchedAt - streak.lastAlertedAt < GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC;
+      let webhookAlerted = false;
+      let cronEventLogged = false;
+      if (thresholdReached && !suppressedByCooldown) {
+        webhookAlerted = webhookUrl
+          ? await sendAlert(
+              webhookUrl,
+              "GBP SONIA retained benchmark fallback",
+              [
+                `GBP SONIA benchmark retained the previous market rate for ${consecutiveRetainedRuns} consecutive fetch-tbill-rate runs.`,
+                `fallbackMode=${benchmark.fallbackMode}; retainedSource=${benchmark.source ?? "unknown"}.`,
+                `lastMarketSource=${benchmark.lastMarketSource ?? "unknown"}; lastMarketRecordDate=${benchmark.lastMarketRecordDate ?? "unknown"}.`,
+                "Runbook: docs/runbooks/yield-benchmark-fallback-stale.md",
+              ].join("\n"),
+            )
+          : false;
         await logCronEvent(db, {
           job: "fetch-tbill-rate",
           eventType: "gbp-retained-fallback-repeated",
@@ -220,18 +251,47 @@ async function updateGbpRetainedFallbackMonitor(params: {
             lastMarketSource: benchmark.lastMarketSource,
             lastMarketRecordDate: benchmark.lastMarketRecordDate,
             lastMarketFetchedAt: benchmark.lastMarketFetchedAt,
+            webhookAlerted,
           },
         });
+        cronEventLogged = true;
+        streak.lastAlertedAt = fetchedAt;
       }
-      return;
+
+      await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(streak), signal);
+      return {
+        gbpRetainedFallbackActive: true,
+        gbpRetainedFallbackStreak: consecutiveRetainedRuns,
+        gbpRetainedFallbackAlertThreshold: GBP_RETAINED_FALLBACK_ALERT_THRESHOLD,
+        gbpRetainedFallbackAlertCooldownSec: GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC,
+        gbpRetainedFallbackAlerted: webhookAlerted || cronEventLogged,
+        gbpRetainedFallbackWebhookAlerted: webhookAlerted,
+        gbpRetainedFallbackSuppressedByCooldown: suppressedByCooldown,
+        gbpRetainedFallbackWebhookConfigured: webhookUrl != null,
+        gbpRetainedFallbackLastAlertedAt: streak.lastAlertedAt ?? null,
+      };
     }
 
-    if (previous.consecutiveRetainedRuns <= 0) return;
+    if (previous.consecutiveRetainedRuns <= 0) return {};
+    if (!isFreshGbpBenchmark(benchmark)) {
+      return {
+        gbpRetainedFallbackActive: false,
+        gbpRetainedFallbackStreak: previous.consecutiveRetainedRuns,
+        gbpRetainedFallbackAlertThreshold: GBP_RETAINED_FALLBACK_ALERT_THRESHOLD,
+        gbpRetainedFallbackAlertCooldownSec: GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC,
+        gbpRetainedFallbackAlerted: false,
+        gbpRetainedFallbackWebhookAlerted: false,
+        gbpRetainedFallbackSuppressedByCooldown: false,
+        gbpRetainedFallbackWebhookConfigured: webhookUrl != null,
+        gbpRetainedFallbackLastAlertedAt: previous.lastAlertedAt ?? null,
+      };
+    }
 
     const recovered: GbpRetainedFallbackStreak = {
       consecutiveRetainedRuns: 0,
       firstRetainedAt: null,
       lastRetainedAt: null,
+      lastAlertedAt: previous.lastAlertedAt ?? null,
       lastFallbackMode: previous.lastFallbackMode,
       lastMarketSource: previous.lastMarketSource,
       lastMarketRecordDate: previous.lastMarketRecordDate,
@@ -256,12 +316,26 @@ async function updateGbpRetainedFallbackMonitor(params: {
         },
       });
     }
+    return {
+      gbpRetainedFallbackActive: false,
+      gbpRetainedFallbackStreak: 0,
+      gbpRetainedFallbackAlertThreshold: GBP_RETAINED_FALLBACK_ALERT_THRESHOLD,
+      gbpRetainedFallbackAlertCooldownSec: GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC,
+      gbpRetainedFallbackAlerted: false,
+      gbpRetainedFallbackWebhookAlerted: false,
+      gbpRetainedFallbackSuppressedByCooldown: false,
+      gbpRetainedFallbackWebhookConfigured: webhookUrl != null,
+      gbpRetainedFallbackLastAlertedAt: recovered.lastAlertedAt ?? null,
+      gbpRetainedFallbackRecoveredAt: recovered.recoveredAt ?? null,
+    };
   } catch (error) {
+    if (signal?.aborted) throw error;
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     console.warn(
       "[fetch-tbill-rate] Failed to update GBP retained fallback monitor:",
       retainedFallbackMonitorErrorMessage(error).slice(0, 200),
     );
+    return {};
   }
 }
 
@@ -269,6 +343,7 @@ function buildBenchmarkRunMetadata(params: {
   fallbackMode: string | null;
   benchmarks: ParsedYieldBenchmarkRegistry;
   includeDetails?: boolean;
+  extraFields?: Record<string, unknown>;
 }): string {
   const fields: Record<string, unknown> = { fallbackMode: params.fallbackMode };
   const fallbackBenchmarks = buildFallbackBenchmarkMetadata(params.benchmarks);
@@ -286,6 +361,7 @@ function buildBenchmarkRunMetadata(params: {
       fields[`${prefix}RecordDate`] = benchmark?.recordDate ?? null;
     }
   }
+  Object.assign(fields, params.extraFields);
   return buildMetadata(fields);
 }
 
@@ -572,7 +648,7 @@ async function resolveBenchmarkProvider(params: {
 async function resolveMxnBenchmarkProvider(params: {
   previous: ParsedYieldBenchmarkRegistry;
   fetchedAt: number;
-  env?: Pick<Env, "BANXICO_TOKEN">;
+  env?: Pick<Env, "BANXICO_TOKEN" | "ALERT_WEBHOOK_URL">;
   signal?: AbortSignal;
 }): Promise<ResolvedBenchmarkProvider> {
   const { previous, fetchedAt, env, signal } = params;
@@ -606,7 +682,7 @@ async function resolveMxnBenchmarkProvider(params: {
 export async function fetchTbillRate(
   db: D1Database,
   signal?: AbortSignal,
-  env?: Pick<Env, "BANXICO_TOKEN">,
+  env?: Pick<Env, "BANXICO_TOKEN" | "ALERT_WEBHOOK_URL">,
 ): Promise<CronResult> {
   const previous = await loadRiskFreeRateRegistry(db);
   throwIfAborted(signal);
@@ -625,13 +701,20 @@ export async function fetchTbillRate(
       ...uniformBenchmarks,
       SGD: null,
     };
-    await updateGbpRetainedFallbackMonitor({ db, benchmark: benchmarks.GBP, fetchedAt, signal });
+    const gbpRetainedFallbackMonitor = await updateGbpRetainedFallbackMonitor({
+      db,
+      benchmark: benchmarks.GBP,
+      alertWebhookUrl: env?.ALERT_WEBHOOK_URL,
+      fetchedAt,
+      signal,
+    });
     await writeStructuredBenchmarks(db, benchmarks);
     return {
       status: "degraded",
       metadata: buildBenchmarkRunMetadata({
         fallbackMode: "circuit-open",
         benchmarks,
+        extraFields: gbpRetainedFallbackMonitor,
       }),
     };
   }
@@ -692,7 +775,13 @@ export async function fetchTbillRate(
     SGD: null,
   };
 
-  await updateGbpRetainedFallbackMonitor({ db, benchmark: benchmarks.GBP, fetchedAt, signal });
+  const gbpRetainedFallbackMonitor = await updateGbpRetainedFallbackMonitor({
+    db,
+    benchmark: benchmarks.GBP,
+    alertWebhookUrl: env?.ALERT_WEBHOOK_URL,
+    fetchedAt,
+    signal,
+  });
   await writeStructuredBenchmarks(db, benchmarks);
 
   const degradationReasons: string[] = [];
@@ -709,6 +798,7 @@ export async function fetchTbillRate(
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       benchmarks,
       includeDetails: true,
+      extraFields: gbpRetainedFallbackMonitor,
     }),
   };
 }
