@@ -2,6 +2,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { YieldMarketStatus, YieldSourceRisk, YieldTrancheSide } from "@shared/types/yield";
+import { throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
@@ -235,11 +236,12 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
   const budget = createOptionalSourceBudget("Royco Dawn sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const trackedByAddress = buildTrackedAssetByChainAddress();
   const observedAt = Math.floor(Date.now() / 1000);
-  const results: ResolvedYieldCandidate[] = [];
+    const results: ResolvedYieldCandidate[] = [];
 
   try {
     let pageIndex = 0;
     while (!budget.budgetController.signal.aborted) {
+      throwIfAborted(budget.budgetController.signal);
       const result = await fetchJsonWithRetry<RoycoExploreResponse>(
         ROYCO_DAWN_EXPLORE_URL,
         {

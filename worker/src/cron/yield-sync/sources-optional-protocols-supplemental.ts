@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { throwIfAborted } from "../../lib/abort";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
@@ -126,6 +127,7 @@ export async function fetchMorphoVaultSources(
     const results: ResolvedYieldCandidate[] = [];
     let skip = 0;
     while (!budget.budgetController.signal.aborted) {
+      throwIfAborted(budget.budgetController.signal);
       const result = await fetchJsonWithRetry<{ data?: { vaults?: { items?: MorphoVaultItem[] } } }>(
         "https://api.morpho.org/graphql",
         {
@@ -219,6 +221,7 @@ export async function fetchPendleMarketSources(
         let skip = 0;
         const limit = 100;
         while (!budget.budgetController.signal.aborted) {
+          throwIfAborted(budget.budgetController.signal);
           const url = `https://api-v2.pendle.finance/core/v1/${chainId}/markets?limit=${limit}&skip=${skip}&is_active=true`;
           const result = await fetchJsonWithRetry<{ total?: number; results?: PendleMarket[] }>(url, {
             headers: { Accept: "application/json", "User-Agent": USER_AGENT },
