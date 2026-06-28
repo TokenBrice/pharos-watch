@@ -10,7 +10,6 @@ const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
   "worker/src/cron/digest/platform.ts::const response = await fetchWithRetry(::const errorText = response ? await response.text() : \"no response after retries\";",
-  "worker/src/cron/discovery-scan.ts::const res = await fetchWithRetry(::const coins = (await res.json()) as CgMarketCoin[];",
   "worker/src/cron/pending-depeg-confirmation-evidence.ts::const offchainRes = await fetchWithRetry(::const parsed = DefiLlamaCoinsPriceSchema.safeParse(await offchainRes.json());",
   "worker/src/cron/pending-depeg-confirmation-evidence.ts::const offchainRes = await fetchWithRetry(::const parsed = CoinGeckoSimplePriceSchema.safeParse(await offchainRes.json());",
   "worker/src/cron/reserve-adapters/defillama.ts::const res = await fetchWithRetry(::const body = (await res.json()) as {",

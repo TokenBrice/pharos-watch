@@ -1,8 +1,7 @@
 import { CIRCUIT_SOURCE, D1_BATCH_SIZE, USER_AGENT } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../lib/response-body";
+import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
@@ -155,21 +154,19 @@ export async function runDiscoveryScan(
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_DISCOVERY);
   if (cgAllowed) {
     try {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<CgMarketCoin[]>(
         cgUrl("/coins/markets?category=stablecoins&vs_currency=usd&per_page=250&order=market_cap_desc", coingeckoApiKey ?? null),
         {
           headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
           signal,
         },
       );
-      if (res?.ok) {
-        const coins = (await res.json()) as CgMarketCoin[];
-        cgCandidates = filterDiscoveryCandidates(coins, trackedGeckoIds, DISCOVERY_MIN_MCAP);
+      if (result?.response.ok) {
+        cgCandidates = filterDiscoveryCandidates(result.body, trackedGeckoIds, DISCOVERY_MIN_MCAP);
         cgFetched = true;
         await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, true);
       } else {
-        await cancelResponseBodyQuietly(res);
-        console.warn(`[discovery] CG category fetch returned ${res?.status ?? "no response"}`);
+        console.warn(`[discovery] CG category fetch returned ${result?.response.status ?? "no response"}`);
         await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, false);
       }
     } catch (err) {
