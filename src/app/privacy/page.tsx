@@ -35,10 +35,10 @@ export default function PrivacyPage() {
         <div className="pharos-card-shell px-5 py-4">
           <p className="pharos-kicker">Policy Summary</p>
           <p className="mt-2 text-sm text-foreground">
-            Pharos does not ask for accounts or wallet connections. Portfolio data is stored locally by default, share
-            links encode holdings in the URL, analytics are anonymized when enabled, and support or API-access requests
-            route through the feedback/contact channels listed below. Stablecoin Picker functional browser storage and
-            share snapshots are described below.
+            Pharos does not ask for accounts or wallet connections. Portfolio data and homepage shortcut preferences
+            are stored locally by default, share links encode holdings in the URL, analytics are anonymized when
+            enabled, and support or API-access requests route through the feedback/contact channels listed below.
+            Stablecoin Picker functional browser storage and share snapshots are described below.
           </p>
         </div>
 
@@ -54,9 +54,10 @@ export default function PrivacyPage() {
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
             access, Pharos stores the email address you verify plus any name, organization, project URL, use-case,
             intended-endpoint, cadence, and volume details you submit; request throttling stores salted hashes of IP
-            address and user-agent data. The Stablecoin Picker stores local browser state for callout dismissal and
-            tab-scoped result recovery, and share links can store a content-addressed snapshot of the generated selector
-            output in Cloudflare KV.
+            address and user-agent data. Homepage saved shortcuts store only an ordered list of route hrefs in
+            browser-local storage and are not sent to the API. The Stablecoin Picker stores local browser state for
+            callout dismissal and tab-scoped result recovery, and share links can store a content-addressed snapshot of
+            the generated selector output in Cloudflare KV.
           </p>
         </section>
 
@@ -161,9 +162,10 @@ export default function PrivacyPage() {
             stores rate-limit metadata for feedback abuse prevention. A legacy `feedback_submissions` table exists in
             the D1 schema, but the current submission path does not write to it. Self-serve API key requests are stored
             for operator review and duplicate-claim enforcement; verification tokens are stored only as hashes and
-            expire after 30 minutes. Issued self-serve API keys expire after 60 days by default. Picker localStorage
-            remains until browser site data is cleared. Picker KV snapshots are retained for five years because they are
-            content-addressed analytical records rather than user-account records.
+            expire after 30 minutes. Issued self-serve API keys expire after 60 days by default. Homepage shortcut
+            preferences remain until reset or browser site data is cleared. Picker localStorage remains until browser
+            site data is cleared. Picker KV snapshots are retained for five years because they are content-addressed
+            analytical records rather than user-account records.
           </p>
         </section>
 
