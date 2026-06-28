@@ -23,8 +23,7 @@ import {
   type DepegSignal,
 } from "../lib/depeg-signals";
 import type { PendingDepegState } from "../lib/depeg-pending";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../lib/response-body";
+import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { CoinGeckoSimplePriceSchema, DefiLlamaCoinsPriceSchema } from "../lib/upstream-schemas";
 import {
   addSource,
@@ -110,7 +109,7 @@ async function evaluateOffchainConfirmer(args: {
   }
 
   try {
-    const offchainRes = await fetchWithRetry(
+    const offchainResult = await fetchJsonWithRetry<unknown>(
       useDefiLlamaSecondary
         ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
         : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey ?? null),
@@ -122,8 +121,7 @@ async function evaluateOffchainConfirmer(args: {
           },
       1,
     );
-    if (!offchainRes?.ok) {
-      await cancelResponseBodyQuietly(offchainRes);
+    if (!offchainResult?.response.ok) {
       await recordOutcomeSafe(db, circuitKey, false);
       return { kind: "unavailable", sourceKey: confirmerKey, reason: "non-ok" };
     }
@@ -131,12 +129,12 @@ async function evaluateOffchainConfirmer(args: {
     let offchainPrice: number | undefined;
     let observedAt: number | undefined;
     if (useDefiLlamaSecondary) {
-      const parsed = DefiLlamaCoinsPriceSchema.safeParse(await offchainRes.json());
+      const parsed = DefiLlamaCoinsPriceSchema.safeParse(offchainResult.body);
       const coin = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`] : undefined;
       offchainPrice = coin?.price;
       observedAt = coin?.timestamp;
     } else {
-      const parsed = CoinGeckoSimplePriceSchema.safeParse(await offchainRes.json());
+      const parsed = CoinGeckoSimplePriceSchema.safeParse(offchainResult.body);
       const coin = parsed.success ? parsed.data[geckoId] : undefined;
       offchainPrice = coin?.usd;
       observedAt = coin?.last_updated_at;

@@ -7,9 +7,22 @@ vi.mock("../../lib/db", () => ({
   isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
 }));
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
-}));
+vi.mock("../../lib/fetch-retry", () => {
+  const fetchWithRetry = vi.fn();
+  return {
+    fetchWithRetry,
+    fetchJsonWithRetry: vi.fn(async (...args: unknown[]) => {
+      const response = await fetchWithRetry(...args);
+      if (!response) return null;
+      if (!(response instanceof Response)) return response;
+      if (!response.ok) {
+        await response.body?.cancel();
+        return null;
+      }
+      return { response, body: await response.json() };
+    }),
+  };
+});
 
 vi.mock("../../lib/cex-tickers", () => ({
   fetchBinancePricesDetailed: vi.fn(async () => ({
