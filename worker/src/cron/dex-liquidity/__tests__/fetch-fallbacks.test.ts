@@ -21,7 +21,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
 }));
 
 vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
+  fetchJsonWithRetry: vi.fn(),
 }));
 
 vi.mock("../../../lib/cron-logger", () => ({
@@ -46,7 +46,7 @@ import {
 import { fetchCgTickersFallback, getCgTickersFallbackTargets } from "../fetch-fallbacks";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import type { CgTicker, DexPriceObs, LiquidityMetrics } from "../types";
-import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 
 function createMockDb(): D1Database {
   return {
@@ -119,7 +119,7 @@ function makeObservation(overrides: Partial<DexPriceObs> = {}): DexPriceObs {
 }
 
 beforeEach(() => {
-  vi.mocked(fetchWithRetry).mockReset();
+  vi.mocked(fetchJsonWithRetry).mockReset();
 });
 
 describe("CoinGecko tickers shared helpers", () => {
@@ -320,15 +320,18 @@ describe("fetchCgTickersFallback", () => {
   });
 
   it("emits distinct synthetic orderbook pool ids for different stablecoins on the same exchange", async () => {
-    vi.mocked(fetchWithRetry).mockImplementation(async () => new Response(JSON.stringify({
-      tickers: [makeTicker({
-        market: { name: "Kinesis", identifier: "kinesis" },
-        converted_last: { usd: 1 },
-        converted_volume: { usd: 20_000 },
-        cost_to_move_down_usd: 40_000,
-        cost_to_move_up_usd: 45_000,
-      })],
-    }), { status: 200 }));
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async () => ({
+      response: new Response("", { status: 200 }),
+      body: {
+        tickers: [makeTicker({
+          market: { name: "Kinesis", identifier: "kinesis" },
+          converted_last: { usd: 1 },
+          converted_volume: { usd: 20_000 },
+          cost_to_move_down_usd: 40_000,
+          cost_to_move_up_usd: 45_000,
+        })],
+      },
+    }));
 
     const result = await fetchCgTickersFallback(
       createMockDb(),
@@ -342,6 +345,6 @@ describe("fetchCgTickersFallback", () => {
 
     expect(poolIdsFor("usdc-circle")).toEqual(["orderbook:kinesis:usdc-circle"]);
     expect(poolIdsFor("usdt-tether")).toEqual(["orderbook:kinesis:usdt-tether"]);
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(2);
   });
 });

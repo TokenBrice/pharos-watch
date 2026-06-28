@@ -1,6 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD, CIRCUIT_SOURCE } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -431,16 +431,16 @@ export async function fetchCgTickersFallback(
     try {
       const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&depth=true`, coingeckoApiKey ?? null);
       const timeout = AbortSignal.timeout(10_000);
-      const res = await fetchWithRetry(url, {
+      const result = await fetchJsonWithRetry<{ tickers?: CgTicker[] }>(url, {
         headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
-      if (!res?.ok) {
+      if (!result?.response.ok) {
         await sleepWithSignal(CG_TICKERS_RATE_MS, signal);
         continue;
       }
 
-      const data = (await res.json()) as { tickers?: CgTicker[] };
+      const data = result.body;
       const valid = filterValidCgTickers(data?.tickers ?? []);
 
       if (valid.length === 0) {

@@ -9,7 +9,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeAddress } from "../../lib/evm-selectors";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { rethrowIfAborted } from "../../lib/abort";
 
@@ -170,7 +170,7 @@ export async function fetchFluidPools(
   for (const [chain, chainId] of Object.entries(FLUID_CHAINS) as Array<[keyof typeof FLUID_CHAINS, number]>) {
     const url = `${FLUID_API_BASE}/${chainId}/dexes/stats/tickers`;
     try {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<unknown>(
         url,
         {
           headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
@@ -179,13 +179,13 @@ export async function fetchFluidPools(
         2,
         { timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS, maxRetryDelayMs: FLUID_RETRY_DELAY_CAP_MS },
       );
-      if (!res) {
+      if (!result) {
         throw new Error(`${chain} request failed after retries`);
       }
-      if (!res.ok) {
-        throw new Error(`${chain} returned ${res.status}`);
+      if (!result.response.ok) {
+        throw new Error(`${chain} returned ${result.response.status}`);
       }
-      const tickers = await res.json() as unknown;
+      const tickers = result.body;
       if (!Array.isArray(tickers)) {
         throw new Error(`${chain} returned non-array body`);
       }

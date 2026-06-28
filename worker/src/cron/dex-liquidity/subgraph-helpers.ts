@@ -1,4 +1,4 @@
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import type { DexPriceObs } from "./types";
 
@@ -43,23 +43,23 @@ export async function fetchSubgraphEntities<TEntity>(
   try {
     for (let page = 0; page < maxPages; page++) {
       const skip = pageSize > 0 ? page * pageSize : 0;
-      const res = await fetchWithRetry(config.subgraphUrl, {
+      const result = await fetchJsonWithRetry<{
+        data?: unknown;
+        errors?: { message: string }[];
+      }>(config.subgraphUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
         body: JSON.stringify({ query: config.buildQuery(skip) }),
         signal: config.signal,
       });
-      if (!res?.ok) {
+      if (!result?.response.ok) {
         if (warnOnFetchFailure) {
-          console.warn(`[dex-liquidity] ${config.sourceLabel} failed for ${config.chain}: ${res?.status}`);
+          console.warn(`[dex-liquidity] ${config.sourceLabel} failed for ${config.chain}: ${result?.response.status}`);
         }
         break;
       }
 
-      const json = (await res.json()) as {
-        data?: unknown;
-        errors?: { message: string }[];
-      };
+      const json = result.body;
       const entities = config.extractEntities(json.data) ?? [];
       shouldLogIndex = true;
 

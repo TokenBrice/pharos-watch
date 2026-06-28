@@ -1,4 +1,4 @@
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
@@ -99,15 +99,15 @@ function summarizeBodySnippet(body: string): string {
 }
 
 async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetchWithRetry(subgraphUrl, {
+  const result = await fetchTextWithRetry(subgraphUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
     body: JSON.stringify({ query }),
     signal: buildDirectApiRequestSignal(signal, SUBGRAPH_TIMEOUT_MS),
   });
-  if (!res?.ok) throw new Error(`returned ${res?.status ?? "unknown"}`);
+  if (!result?.response.ok) throw new Error(`returned ${result?.response.status ?? "unknown"}`);
 
-  const rawBody = await res.text();
+  const rawBody = result.body;
   let json: { data?: T; errors?: Array<{ message?: string }> };
   try {
     json = JSON.parse(rawBody) as { data?: T; errors?: Array<{ message?: string }> };

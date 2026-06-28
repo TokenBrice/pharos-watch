@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const fetchWithRetryMock = vi.hoisted(() => vi.fn());
+const fetchJsonWithRetryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: fetchWithRetryMock,
+  fetchJsonWithRetry: fetchJsonWithRetryMock,
 }));
 
 import { fetchSubgraphEntities } from "../subgraph-helpers";
@@ -11,7 +11,7 @@ import { mergeDexPriceObservationMap } from "../orchestrator-phases/price-obs";
 
 describe("subgraph helpers", () => {
   beforeEach(() => {
-    fetchWithRetryMock.mockReset();
+    fetchJsonWithRetryMock.mockReset();
   });
 
   it("merges price observations without replacing existing rows", () => {
@@ -24,7 +24,10 @@ describe("subgraph helpers", () => {
   });
 
   it("returns an empty result on non-OK subgraph responses", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(new Response("down", { status: 500 }));
+    fetchJsonWithRetryMock.mockResolvedValueOnce({
+      response: new Response("down", { status: 500 }),
+      body: {},
+    });
 
     const result = await fetchSubgraphEntities({
       subgraphUrl: "https://subgraph.example",
@@ -45,11 +48,14 @@ describe("subgraph helpers", () => {
   });
 
   it("maps entities into observations and stops on short final page", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(new Response(JSON.stringify({
-      data: {
-        rows: [{ id: "pool-a" }],
+    fetchJsonWithRetryMock.mockResolvedValueOnce({
+      response: new Response("", { status: 200 }),
+      body: {
+        data: {
+          rows: [{ id: "pool-a" }],
+        },
       },
-    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    });
 
     const result = await fetchSubgraphEntities<{ id: string }>({
       subgraphUrl: "https://subgraph.example",

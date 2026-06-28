@@ -1,6 +1,6 @@
 import { USER_AGENT } from "../../lib/constants";
 import { GT_API_BASE } from "../../lib/dex-cron-constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { fetchPagedTokenPools } from "../../lib/paged-token-pools";
 import type { ParsedPool } from "./crawl-helpers";
 import type { GtPool } from "./types";
@@ -20,7 +20,7 @@ export function fetchGtTokenPools(
     pageSize: GT_TOKEN_POOLS_PAGE_SIZE,
     fetchPage: async (page) => {
       const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=${page}`;
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<{ data?: unknown }>(
         url,
         {
           headers: {
@@ -32,8 +32,8 @@ export function fetchGtTokenPools(
         maxRetries,
         { timeoutMs },
       );
-      if (!res?.ok) return [];
-      const json = (await res.json()) as { data?: unknown };
+      if (!result?.response.ok) return [];
+      const json = result.body;
       return Array.isArray(json.data) ? (json.data as GtPool[]) : [];
     },
   });
