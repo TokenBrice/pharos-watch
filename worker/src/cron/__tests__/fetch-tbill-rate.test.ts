@@ -399,6 +399,84 @@ describe("fetchTbillRate", () => {
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
   });
 
+  it("surfaces a retained GBP SONIA fallback as structured metadata", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
+      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
+      "bankofengland.co.uk": null,
+    });
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rates") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            benchmarks: {
+              USD: {
+                key: "USD",
+                label: "USD 3M T-Bill",
+                currency: "USD",
+                rate: 3.72,
+                recordDate: "2026-03-02",
+                fetchedAt: 1773100800,
+                source: "fred-dgs3mo",
+                isFallback: false,
+                fallbackMode: null,
+                isProxy: false,
+                lastMarketRate: 3.72,
+                lastMarketRecordDate: "2026-03-02",
+                lastMarketFetchedAt: 1773100800,
+                lastMarketSource: "fred-dgs3mo",
+              },
+              GBP: {
+                key: "GBP",
+                label: "GBP 3M compounded SONIA",
+                currency: "GBP",
+                rate: 4.05,
+                recordDate: "2026-03-25",
+                fetchedAt: 1774479600,
+                source: "fred-sonia-compounded-index",
+                isFallback: false,
+                fallbackMode: null,
+                isProxy: false,
+                lastMarketRate: 4.05,
+                lastMarketRecordDate: "2026-03-25",
+                lastMarketFetchedAt: 1774479600,
+                lastMarketSource: "fred-sonia-compounded-index",
+              },
+            },
+          }),
+          updatedAt: 1774479600,
+        } as never;
+      }
+      return null as never;
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode).toBe("gbp:gbp-sonia-compounded-index-failed-retained");
+    expect(metadata.gbpSource).toBe("fred-sonia-compounded-index");
+    expect(metadata.gbpRate).toBe(4.05);
+    expect(metadata.fallbackBenchmarkCount).toBe(1);
+    expect(metadata.retainedFallbackBenchmarkCount).toBe(1);
+    expect(metadata.retainedFallbackBenchmarks).toEqual([
+      expect.objectContaining({
+        key: "GBP",
+        currency: "GBP",
+        source: "fred-sonia-compounded-index",
+        fallbackMode: "gbp-sonia-compounded-index-failed-retained",
+        lastMarketSource: "fred-sonia-compounded-index",
+        retained: true,
+      }),
+    ]);
+  });
+
   it("falls back to Treasury XML when FRED fails", async () => {
     mockByUrl({
       "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),

@@ -37,6 +37,24 @@ function buildStablecoinsCacheBeforeSlotResult(
   };
 }
 
+function buildAlreadyWrittenBeforeFreshnessGateResult(params: {
+  snapshotDate: number;
+  cacheUpdatedAt: number;
+  requiredUpdatedAt: number;
+  freshnessGateLabel?: string;
+}): CronResult {
+  return {
+    itemCount: 0,
+    metadata: JSON.stringify({
+      reason: "already_written_today_before_freshness_gate",
+      snapshotDate: params.snapshotDate,
+      cacheUpdatedAt: params.cacheUpdatedAt,
+      requiredUpdatedAt: params.requiredUpdatedAt,
+      freshnessGateLabel: params.freshnessGateLabel,
+    }),
+  };
+}
+
 export async function snapshotSupply(
   db: D1Database,
   signal?: AbortSignal,
@@ -54,10 +72,25 @@ export async function snapshotSupply(
       metadata: JSON.stringify({ reason: stablecoinsCache.reason }),
     };
   }
+  // One snapshot per UTC day, keyed on the marker's stored snapshotDate. The
+  // previous 20h wall-clock cooldown drifted the write time through the whole
+  // UTC day (consecutive rows spanned 20-28h), skewing day-over-day deltas;
+  // date-keying pins the write to the first healthy run after UTC midnight.
+  const snapshotDate = startOfUtcDaySec();
+  const lastWrite = await getCompletedSupplySnapshot(db);
+  throwIfAborted(signal);
   if (
     options.minStablecoinsCacheUpdatedAtSec != null
     && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
   ) {
+    if (lastWrite?.snapshotDate === snapshotDate) {
+      return buildAlreadyWrittenBeforeFreshnessGateResult({
+        snapshotDate,
+        cacheUpdatedAt: stablecoinsCache.updatedAt,
+        requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
+        freshnessGateLabel: options.freshnessGateLabel,
+      });
+    }
     return buildStablecoinsCacheBeforeSlotResult(
       stablecoinsCache.updatedAt,
       options.minStablecoinsCacheUpdatedAtSec,
@@ -79,13 +112,6 @@ export async function snapshotSupply(
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }
 
-  // One snapshot per UTC day, keyed on the marker's stored snapshotDate. The
-  // previous 20h wall-clock cooldown drifted the write time through the whole
-  // UTC day (consecutive rows spanned 20-28h), skewing day-over-day deltas;
-  // date-keying pins the write to the first healthy run after UTC midnight.
-  const snapshotDate = startOfUtcDaySec();
-  const lastWrite = await getCompletedSupplySnapshot(db);
-  throwIfAborted(signal);
   if (lastWrite?.snapshotDate === snapshotDate) {
     return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
   }

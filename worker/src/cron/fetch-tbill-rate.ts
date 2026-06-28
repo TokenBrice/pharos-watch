@@ -84,12 +84,38 @@ const BENCHMARK_METADATA_PREFIXES: Record<MetadataBenchmarkKey, string> = {
 
 const BENCHMARK_METADATA_KEYS = Object.keys(BENCHMARK_METADATA_PREFIXES) as MetadataBenchmarkKey[];
 
+function buildFallbackBenchmarkMetadata(benchmarks: ParsedYieldBenchmarkRegistry): Array<Record<string, unknown>> {
+  return BENCHMARK_METADATA_KEYS.flatMap((key) => {
+    const benchmark = benchmarks[key];
+    if (!benchmark?.isFallback) return [];
+    return [{
+      key,
+      currency: benchmark.currency,
+      source: benchmark.source,
+      fallbackMode: benchmark.fallbackMode,
+      rate: benchmark.rate,
+      recordDate: benchmark.recordDate,
+      fetchedAt: benchmark.fetchedAt,
+      lastMarketSource: benchmark.lastMarketSource,
+      lastMarketRecordDate: benchmark.lastMarketRecordDate,
+      lastMarketFetchedAt: benchmark.lastMarketFetchedAt,
+      retained: typeof benchmark.fallbackMode === "string" && benchmark.fallbackMode.endsWith("-retained"),
+    }];
+  });
+}
+
 function buildBenchmarkRunMetadata(params: {
   fallbackMode: string | null;
   benchmarks: ParsedYieldBenchmarkRegistry;
   includeDetails?: boolean;
 }): string {
   const fields: Record<string, unknown> = { fallbackMode: params.fallbackMode };
+  const fallbackBenchmarks = buildFallbackBenchmarkMetadata(params.benchmarks);
+  const retainedFallbackBenchmarks = fallbackBenchmarks.filter((entry) => entry.retained === true);
+  fields.fallbackBenchmarkCount = fallbackBenchmarks.length;
+  fields.retainedFallbackBenchmarkCount = retainedFallbackBenchmarks.length;
+  fields.fallbackBenchmarks = fallbackBenchmarks;
+  fields.retainedFallbackBenchmarks = retainedFallbackBenchmarks;
   for (const key of BENCHMARK_METADATA_KEYS) {
     const prefix = BENCHMARK_METADATA_PREFIXES[key];
     const benchmark = params.benchmarks[key];

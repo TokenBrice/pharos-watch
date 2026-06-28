@@ -89,7 +89,56 @@ describe("snapshotSupply", () => {
       freshnessGateLabel: "daily0800Utc",
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
-    expect(db.getHistory().some((entry) => entry.sql.includes("snapshot-supply:last-write"))).toBe(false);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds.includes("snapshot-supply:last-write")
+    )).toBe(false);
+  });
+
+  it("treats a completed daily snapshot as neutral when the daily freshness gate sees an older cache", async () => {
+    const slotStartedAt = Math.floor(Date.parse("2025-06-15T08:00:00Z") / 1000);
+    const todaySnapshotDate = Math.floor(Date.UTC(2025, 5, 15) / 1000);
+    vi.setSystemTime(new Date(slotStartedAt * 1000));
+    const cacheUpdatedAt = slotStartedAt - 15 * 60;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: cacheValue, updated_at: cacheUpdatedAt },
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [],
+        first: {
+          key: "snapshot-supply:last-write",
+          value: JSON.stringify({ snapshotDate: todaySnapshotDate }),
+          updated_at: slotStartedAt - 60,
+        },
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      minStablecoinsCacheUpdatedAtSec: slotStartedAt,
+      freshnessGateLabel: "daily0800Utc",
+    });
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "already_written_today_before_freshness_gate",
+      snapshotDate: todaySnapshotDate,
+      cacheUpdatedAt,
+      requiredUpdatedAt: slotStartedAt,
+      freshnessGateLabel: "daily0800Utc",
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
   });
 
   it("inserts rows for tracked assets with valid supply", async () => {
