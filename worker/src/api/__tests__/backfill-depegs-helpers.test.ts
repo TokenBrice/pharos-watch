@@ -145,11 +145,9 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("@2025-06-15/v1/currencies/usd.min.json");
   });
 
-  it("cancels non-OK secondary FX fallback responses", async () => {
+  it("drains non-OK secondary FX fallback responses", async () => {
     const primary = new Response(JSON.stringify({ error: "missing" }), { status: 404 });
     const fallback = new Response(JSON.stringify({ error: "missing" }), { status: 404 });
-    const primaryCancel = vi.spyOn(primary.body!, "cancel");
-    const fallbackCancel = vi.spyOn(fallback.body!, "cancel");
     vi.stubGlobal("fetch", vi.fn(async (input: string | Request) => {
       const url = typeof input === "string" ? input : input.url;
       return url.includes("cdn.jsdelivr.net") ? primary : fallback;
@@ -167,8 +165,8 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
 
     expect(series.CNH).toEqual([]);
-    expect(primaryCancel).toHaveBeenCalledOnce();
-    expect(fallbackCancel).toHaveBeenCalledOnce();
+    expect(primary.bodyUsed).toBe(true);
+    expect(fallback.bodyUsed).toBe(true);
   });
 
   it("rejects a malformed secondary FX day payload instead of caching bad rates", async () => {
