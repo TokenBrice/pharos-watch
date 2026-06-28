@@ -771,7 +771,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it("backfills eEARN from historical Ethereum totalSupply and CoinGecko price", async () => {
+  it("backfills eEARN from historical Ethereum totalSupply", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
     const day1 = Math.floor(Date.UTC(2026, 5, 9) / 1000);
     const day2 = Math.floor(Date.UTC(2026, 5, 10) / 1000);
@@ -854,8 +854,6 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.rowsInserted).toBe(2);
     expect(body.errors).toBeUndefined();
     expect(body.skipped).toBeUndefined();
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining("/coins/ember-earn/market_chart/range"), expect.any(Object));
-
     const inserts = capturedStatements.filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
@@ -863,14 +861,14 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts[0].args).toEqual([
       "eearn-ember",
       day1,
-      4_080_000,
-      1.02,
+      4_000_000,
+      null,
     ]);
     expect(inserts[1].args).toEqual([
       "eearn-ember",
       day2,
-      4_223_000,
-      1.03,
+      4_100_000,
+      null,
     ]);
   });
 

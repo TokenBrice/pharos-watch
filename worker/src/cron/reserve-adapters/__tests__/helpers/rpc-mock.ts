@@ -14,6 +14,11 @@ vi.mock("../../../../lib/chain-registry", () => ({
 
 vi.mock("../../../../lib/fetch-retry", () => ({
   fetchWithRetry: fetchWithRetryMock,
+  fetchTextWithRetry: async (...args: unknown[]) => {
+    const response = await fetchWithRetryMock(...args);
+    if (!response) return null;
+    return { response, body: await response.text() };
+  },
 }));
 
 export const testChainRpcs = new Map<string, ChainRpcConfig>([

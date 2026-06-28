@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 
+const fetchWithRetryMock = vi.hoisted(() => vi.fn());
+
 vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
+  fetchWithRetry: fetchWithRetryMock,
+  fetchTextWithRetry: async (...args: unknown[]) => {
+    const response = await fetchWithRetryMock(...args);
+    if (!response) return null;
+    return { response, body: await response.text() };
+  },
 }));
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
@@ -528,7 +535,7 @@ describe("fetchJsonWithRetry", () => {
         },
       },
       2,
-      { timeoutMs: 1234 },
+      { timeoutMs: 1234, returnFinalResponse: true },
     );
   });
 
@@ -580,7 +587,7 @@ describe("fetchJsonWithRetry", () => {
         },
       },
       2,
-      { timeoutMs: 1234 },
+      { timeoutMs: 1234, returnFinalResponse: true },
     );
   });
 
@@ -618,21 +625,21 @@ describe("fetchJsonWithRetry", () => {
       "https://api.mainnet-beta.solana.com",
       expect.objectContaining({ method: "POST", signal }),
       2,
-      { timeoutMs: 10_000 },
+      { timeoutMs: 10_000, returnFinalResponse: true },
     );
     expect(fetchWithRetry).toHaveBeenNthCalledWith(
       2,
       "https://api.mainnet.solana.com",
       expect.objectContaining({ method: "POST", signal }),
       2,
-      { timeoutMs: 10_000 },
+      { timeoutMs: 10_000, returnFinalResponse: true },
     );
     expect(fetchWithRetry).toHaveBeenNthCalledWith(
       3,
       "https://solana-rpc.publicnode.com",
       expect.objectContaining({ method: "POST", signal }),
       2,
-      { timeoutMs: 10_000 },
+      { timeoutMs: 10_000, returnFinalResponse: true },
     );
   });
 });
