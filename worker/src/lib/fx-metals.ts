@@ -2,7 +2,7 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "./api-utils";
 import { USER_AGENT } from "./constants";
-import { fetchWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "./stablecoins-cache";
 import { z } from "zod";
 
@@ -154,11 +154,11 @@ export async function resolveMetalReferenceRates(
 
   try {
     const [goldRes, silverRes] = await Promise.all([
-      fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }),
-      fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT }, signal }),
+      fetchJsonWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }, 2, { returnFinalResponse: true }),
+      fetchJsonWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT }, signal }, 2, { returnFinalResponse: true }),
     ]);
-    const goldPayload = goldRes?.ok ? await goldRes.json() : null;
-    const silverPayload = silverRes?.ok ? await silverRes.json() : null;
+    const goldPayload = goldRes?.response.ok ? goldRes.body : null;
+    const silverPayload = silverRes?.response.ok ? silverRes.body : null;
     const goldValidation = goldPayload == null
       ? { ok: false as const, issues: "missing gold payload" }
       : validatePayloadWithSchema(MetalPriceSchema, goldPayload, "sync-fx-rates:gold");

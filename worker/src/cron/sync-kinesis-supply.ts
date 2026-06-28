@@ -6,7 +6,7 @@ import {
   KINESIS_KAU_HORIZON,
   KINESIS_KAG_HORIZON,
 } from "../lib/constants";
-import { fetchWithRetry } from "../lib/fetch-retry";
+import { fetchTextWithRetry } from "../lib/fetch-retry";
 import type { CronResult } from "../lib/cron-logger";
 
 interface KinesisChainConfig {
@@ -92,19 +92,18 @@ export async function syncKinesisSupply(
     }
 
     try {
-      const res = await fetchWithRetry(
+      const result = await fetchTextWithRetry(
         `${config.baseUrl}/coin_in_circulation`,
         { headers: { "User-Agent": USER_AGENT }, signal },
         2,
-        { timeoutMs: 10_000 },
+        { timeoutMs: 10_000, returnFinalResponse: true },
       );
 
-      if (!res?.ok) {
-        throw new Error(`HTTP ${res?.status ?? "null"}`);
+      if (!result?.response.ok) {
+        throw new Error(`HTTP ${result?.response.status ?? "null"}`);
       }
 
-      const data = await res.json();
-      const parsed = parseKinesisResponse(data);
+      const parsed = parseKinesisResponse(JSON.parse(result.body));
       if (!parsed) {
         throw new Error("Invalid response: could not extract circulation data");
       }

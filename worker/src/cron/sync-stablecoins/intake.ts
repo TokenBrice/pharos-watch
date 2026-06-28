@@ -1,9 +1,8 @@
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -82,34 +81,32 @@ async function fetchDefillamaStablecoinsPayload(
   for (let attempt = 0; attempt < DL_PARSE_MAX_ATTEMPTS; attempt++) {
     throwIfAborted(signal);
     attempts = attempt + 1;
-    const res = await fetchWithRetry(
+    const result = await fetchTextWithRetry(
       DEFILLAMA_STABLECOINS_URL,
       signal ? { signal } : undefined,
+      2,
+      { returnFinalResponse: true },
     );
-    if (!res?.ok) {
-      await cancelResponseBodyQuietly(res);
+    if (!result?.response.ok) {
       lastError = "fetch-failed";
-      lastHttpStatus = res?.status ?? null;
+      lastHttpStatus = result?.response.status ?? null;
       break;
     }
     try {
-      const payload = (await res.json()) as DefillamaStablecoinsPayload;
+      const payload = JSON.parse(result.body) as DefillamaStablecoinsPayload;
       return {
         payload,
         attempts,
         lastError: null,
-        lastHttpStatus: res.status,
+        lastHttpStatus: result.response.status,
       };
     } catch (parseErr) {
       lastError = "parse-failed";
-      lastHttpStatus = res.status;
+      lastHttpStatus = result.response.status;
       console.warn(
         `[sync-stablecoins] DL response body parse failed on attempt ${attempts}/${DL_PARSE_MAX_ATTEMPTS}:`,
         parseErr,
       );
-      // Release the partially-consumed response before retrying so we don't
-      // hold a socket against the 6-connection pool during the backoff.
-      await cancelResponseBodyQuietly(res);
       if (attempts < DL_PARSE_MAX_ATTEMPTS) {
         await sleepWithSignal(DL_PARSE_RETRY_BASE_DELAY_MS * attempts, signal);
       }

@@ -1,6 +1,6 @@
 import { getCache, setCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
-import { fetchWithRetry } from "../lib/fetch-retry";
+import { fetchTextWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-state";
 import { buildInClause } from "../lib/db";
@@ -90,20 +90,26 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: syncStartSec - lastWrite.updatedAt }) };
   }
 
-  const res = await fetchWithRetry(`${DEFILLAMA_BASE}/stablecoincharts/all`, signal ? { signal } : undefined);
+  const chartResult = await fetchTextWithRetry(
+    `${DEFILLAMA_BASE}/stablecoincharts/all`,
+    signal ? { signal } : undefined,
+    2,
+    { returnFinalResponse: true },
+  );
 
-  if (!res || !res.ok) {
-    console.error(`[sync-charts] DefiLlama API error: ${res?.status ?? "no response"}`);
+  if (!chartResult?.response.ok) {
+    console.error(`[sync-charts] DefiLlama API error: ${chartResult?.response.status ?? "no response"}`);
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "DL API unavailable", apiStatus: res?.status ?? null }),
+      metadata: JSON.stringify({ reason: "DL API unavailable", apiStatus: chartResult?.response.status ?? null }),
     };
   }
+  const res = chartResult.response;
 
   let raw: RawChartPoint[];
   try {
-    raw = (await res.json()) as RawChartPoint[];
+    raw = JSON.parse(chartResult.body) as RawChartPoint[];
   } catch {
     /* non-blocking: DL charts API returned non-JSON; degrade gracefully so other cron jobs continue */
     console.error(`[sync-charts] Failed to parse JSON from DefiLlama charts API: ${res.status}`);

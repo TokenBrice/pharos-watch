@@ -1,5 +1,4 @@
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { fetchTextWithRetry as fetchTextBodyWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { requireHtmlInput, requireJsonInputFromConfig } from "./input-guards";
@@ -91,7 +90,7 @@ export async function fetchJsonWithRetry<T>(
   return getCachedRequest(
     `json-get:${url}:${timeoutMs}:${JSON.stringify(options?.headers ?? null)}`,
     async () => runAdapterIo(ctx, `json-get:${url}`, async () => {
-      const res = await fetchWithRetry(
+      const result = await fetchTextBodyWithRetry(
         url,
         {
           signal,
@@ -102,20 +101,19 @@ export async function fetchJsonWithRetry<T>(
           },
         },
         2,
-        { timeoutMs },
+        { timeoutMs, returnFinalResponse: true },
       );
-      if (!res) {
+      if (!result) {
         throw new Error(`Fetch failed for ${url}`);
       }
-      if (!res.ok) {
-        await cancelResponseBodyQuietly(res);
-        throw new Error(`HTTP ${res.status} for ${url}`);
+      if (!result.response.ok) {
+        throw new Error(`HTTP ${result.response.status} for ${url}`);
       }
-      const raw = await res.text();
+      const raw = result.body;
       try {
         return JSON.parse(raw) as T;
       } catch (error) {
-        throw buildJsonParseError(url, res, raw, error);
+        throw buildJsonParseError(url, result.response, raw, error);
       }
     }),
     ctx,
@@ -134,7 +132,7 @@ export async function fetchJsonPostWithRetry<T>(
   return getCachedRequest(
     `json-post:${url}:${timeoutMs}:${serializedBody}:${JSON.stringify(options?.headers ?? null)}`,
     async () => runAdapterIo(ctx, `json-post:${url}`, async () => {
-      const res = await fetchWithRetry(
+      const result = await fetchTextBodyWithRetry(
         url,
         {
           method: "POST",
@@ -147,16 +145,19 @@ export async function fetchJsonPostWithRetry<T>(
           signal,
         },
         2,
-        { timeoutMs },
+        { timeoutMs, returnFinalResponse: true },
       );
-      if (!res) {
+      if (!result) {
         throw new Error(`POST fetch failed for ${url}`);
       }
-      if (!res.ok) {
-        await cancelResponseBodyQuietly(res);
-        throw new Error(`HTTP ${res.status} for POST ${url}`);
+      if (!result.response.ok) {
+        throw new Error(`HTTP ${result.response.status} for POST ${url}`);
       }
-      return res.json() as Promise<T>;
+      try {
+        return JSON.parse(result.body) as T;
+      } catch (error) {
+        throw buildJsonParseError(url, result.response, result.body, error);
+      }
     }),
     ctx,
   );
@@ -184,7 +185,7 @@ export async function fetchTextWithRetry(
   return getCachedRequest(
     `text-get:${url}:${timeoutMs}:${JSON.stringify(options?.headers ?? null)}`,
     async () => runAdapterIo(ctx, `text-get:${url}`, async () => {
-      const res = await fetchWithRetry(
+      const result = await fetchTextBodyWithRetry(
         url,
         {
           signal,
@@ -194,16 +195,15 @@ export async function fetchTextWithRetry(
           },
         },
         2,
-        { timeoutMs },
+        { timeoutMs, returnFinalResponse: true },
       );
-      if (!res) {
+      if (!result) {
         throw new Error(`Fetch failed for ${url}`);
       }
-      if (!res.ok) {
-        await cancelResponseBodyQuietly(res);
-        throw new Error(`HTTP ${res.status} for ${url}`);
+      if (!result.response.ok) {
+        throw new Error(`HTTP ${result.response.status} for ${url}`);
       }
-      return res.text();
+      return result.body;
     }),
     ctx,
   );

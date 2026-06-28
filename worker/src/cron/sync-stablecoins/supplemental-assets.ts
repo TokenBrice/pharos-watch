@@ -1,6 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../../lib/constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { throwIfAborted } from "../../lib/abort";
@@ -49,27 +48,27 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
     return {};
   }
 
-  const res = await fetchWithRetry(
+  const result = await fetchTextWithRetry(
     cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true&include_last_updated_at=true`, coingeckoApiKey ?? null),
     {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
       signal,
     },
+    2,
+    { returnFinalResponse: true },
   );
 
-  if (!res || !res.ok) {
-    await cancelResponseBodyQuietly(res);
-    console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${res?.status ?? "no response"}`);
+  if (!result?.response.ok) {
+    console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${result?.response.status ?? "no response"}`);
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);
     return {};
   }
 
   try {
-    const data = (await res.json()) as CoinGeckoMcapData;
+    const data = JSON.parse(result.body) as CoinGeckoMcapData;
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, true);
     return data;
   } catch (err) {
-    await cancelResponseBodyQuietly(res);
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.error("[sync-stablecoins] CoinGecko batch mcap payload parse failed:", err);
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);

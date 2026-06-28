@@ -4,12 +4,17 @@ import { mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
+  fetchTextWithRetry: vi.fn(),
 }));
 
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { syncKinesisSupply, parseKinesisResponse } from "../sync-kinesis-supply";
+
+async function textResult(response: Response | null) {
+  if (!response) return null;
+  return { response, body: await response.text() };
+}
 
 function makeDb() {
   const runFn = vi.fn().mockResolvedValue({ meta: { changes: 1 } });
@@ -102,9 +107,9 @@ describe("syncKinesisSupply", () => {
 
   it("syncs both chains on happy path", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
-      if (url.includes("kau-mainnet")) return kauResponse();
-      if (url.includes("kag-mainnet")) return kagResponse();
+    vi.mocked(fetchTextWithRetry).mockImplementation(async (url: string) => {
+      if (url.includes("kau-mainnet")) return await textResult(kauResponse());
+      if (url.includes("kag-mainnet")) return await textResult(kagResponse());
       return null;
     });
 
@@ -113,7 +118,7 @@ describe("syncKinesisSupply", () => {
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(fetchTextWithRetry).toHaveBeenCalledTimes(2);
     expect(recordOutcome).toHaveBeenCalledTimes(2);
     expect(vi.mocked(recordOutcome).mock.calls.every((c) => c[2] === true)).toBe(true);
 
@@ -124,14 +129,14 @@ describe("syncKinesisSupply", () => {
 
   it("skips a chain when its circuit breaker is open", async () => {
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "kinesis-kau-horizon");
-    vi.mocked(fetchWithRetry).mockResolvedValue(kagResponse());
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(kagResponse()));
 
     const { db } = makeDb();
     const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(1);
-    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
     const meta = JSON.parse(result.metadata!);
     expect(meta.skipped).toBe(1);
     expect(meta.synced).toBe(1);
@@ -145,15 +150,15 @@ describe("syncKinesisSupply", () => {
 
     expect(result.status).toBe("error");
     expect(result.itemCount).toBe(0);
-    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(fetchTextWithRetry).not.toHaveBeenCalled();
   });
 
   it("records failure and continues when one chain fetch fails", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+    vi.mocked(fetchTextWithRetry).mockImplementation(async (url: string) => {
       if (url.includes("kau-mainnet")) return null; // fetch failure
-      if (url.includes("kag-mainnet")) return kagResponse();
+      if (url.includes("kag-mainnet")) return await textResult(kagResponse());
       return null;
     });
 
@@ -180,7 +185,7 @@ describe("syncKinesisSupply", () => {
       ]),
       { status: 200 },
     );
-    vi.mocked(fetchWithRetry).mockResolvedValue(arrayResponse);
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(arrayResponse));
 
     const { db, bindFn } = makeDb();
     // Only test KAU by making KAG circuit open
@@ -192,8 +197,8 @@ describe("syncKinesisSupply", () => {
   });
 
   it("treats invalid circulation as failure", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      new Response(JSON.stringify({ circulation: -5, mint: 0, redemption: 0 }), { status: 200 }),
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(
+      await textResult(new Response(JSON.stringify({ circulation: -5, mint: 0, redemption: 0 }), { status: 200 })),
     );
 
     const { db } = makeDb();

@@ -7,7 +7,18 @@ import { vi } from "vitest";
  * and outbound requests are controlled through the global fetch/mockFetch layer.
  */
 export function mockFetchRetry() {
+  const fetchWithRetry = vi.fn(async (url: string, init?: RequestInit) => fetch(url, init));
   return {
-    fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
+    fetchWithRetry,
+    fetchJsonWithRetry: vi.fn(async (url: string, init?: RequestInit) => {
+      const response = await fetchWithRetry(url, init);
+      if (!response) return null;
+      return { response, body: await response.json() };
+    }),
+    fetchTextWithRetry: vi.fn(async (url: string, init?: RequestInit) => {
+      const response = await fetchWithRetry(url, init);
+      if (!response) return null;
+      return { response, body: await response.text() };
+    }),
   };
 }

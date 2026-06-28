@@ -1,0 +1,70 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+import {
+  findFetchBodyTimeoutViolations,
+  makeViolationKey,
+  scanFetchBodyTimeouts,
+} from "../ci/check-fetch-body-timeouts.mjs";
+
+function withTempRepo(files: Record<string, string>, run: (dir: string) => void): void {
+  const dir = mkdtempSync(join(tmpdir(), "pharos-fetch-body-timeouts-"));
+  try {
+    for (const [relPath, content] of Object.entries(files)) {
+      const filePath = join(dir, relPath);
+      mkdirSync(dirname(filePath), { recursive: true });
+      writeFileSync(filePath, content);
+    }
+    run(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+describe("fetch body timeout guardrail", () => {
+  it("detects direct body reads after raw fetchWithRetry responses", () => {
+    const violations = findFetchBodyTimeoutViolations(`
+      import { fetchWithRetry } from "../lib/fetch-retry";
+      export async function run() {
+        const res = await fetchWithRetry("https://example.test");
+        if (!res?.ok) return null;
+        return await res.json();
+      }
+    `);
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({
+      variable: "res",
+      method: "json",
+      fetchLine: 4,
+      bodyLine: 6,
+    });
+  });
+
+  it("allows explicitly baselined debt and reports stale baseline entries", () => {
+    withTempRepo({
+      "worker/src/cron/provider.ts": `
+        import { fetchWithRetry } from "../lib/fetch-retry";
+        export async function run() {
+          const res = await fetchWithRetry("https://example.test");
+          if (!res?.ok) return null;
+          return await res.text();
+        }
+      `,
+    }, (cwd) => {
+      const initial = scanFetchBodyTimeouts({ cwd, knownDebt: new Set() });
+      expect(initial.unexpected).toHaveLength(1);
+
+      const knownDebt = new Set([makeViolationKey(initial.unexpected[0]!)]);
+      const accepted = scanFetchBodyTimeouts({ cwd, knownDebt });
+      expect(accepted.unexpected).toEqual([]);
+      expect(accepted.staleDebt).toEqual([]);
+
+      const stale = scanFetchBodyTimeouts({ cwd, knownDebt: new Set(["missing::baseline::entry"]) });
+      expect(stale.unexpected).toHaveLength(1);
+      expect(stale.staleDebt).toEqual(["missing::baseline::entry"]);
+    });
+  });
+});

@@ -27,6 +27,12 @@ export const VALIDATION_COMMAND_DESCRIPTORS = [
     paths: ["scripts/ci/check-provider-resilience.mjs", "scripts/lib/provider-resilience-registry.mjs"],
   },
   {
+    command: "npm run check:fetch-body-timeouts",
+    tier: "surface",
+    deployImpact: "worker",
+    paths: ["scripts/ci/check-fetch-body-timeouts.mjs"],
+  },
+  {
     command: "npm run lint",
     tier: "blocking",
     deployImpact: "validation-only",

@@ -213,6 +213,7 @@ describe("validate-ci parity", () => {
       "npm run audit:deps",
       "npm run audit:pricing-providers",
       "npm run check:provider-resilience",
+      "npm run check:fetch-body-timeouts",
       "npm run lint",
       "npm run lint:typed",
       "npm run typecheck",

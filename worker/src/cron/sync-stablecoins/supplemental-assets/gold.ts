@@ -1,10 +1,9 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";
 import { throwIfAborted } from "../../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
-import { cancelResponseBodyQuietly } from "../../../lib/response-body";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   buildPricedSupplementalAsset,
@@ -59,17 +58,21 @@ export async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortS
         await Promise.all(batch.map(async (token) => {
           protocolFetchAttempts += 1;
           try {
-            const res = await fetchWithRetry(`${DEFILLAMA_API}/protocol/${token.protocolSlug}`, {
-              headers: { "User-Agent": USER_AGENT },
-              signal,
-            });
-            if (!res || !res.ok) {
-              await cancelResponseBodyQuietly(res);
-              console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}: ${res?.status ?? "no response"}`);
+            const result = await fetchTextWithRetry(
+              `${DEFILLAMA_API}/protocol/${token.protocolSlug}`,
+              {
+                headers: { "User-Agent": USER_AGENT },
+                signal,
+              },
+              2,
+              { returnFinalResponse: true },
+            );
+            if (!result?.response.ok) {
+              console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}: ${result?.response.status ?? "no response"}`);
               return;
             }
 
-            const data = (await res.json()) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
+            const data = JSON.parse(result.body) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
             protocolFetchSuccesses += 1;
             if (data.mcap) {
               mcapMap[token.id] = data.mcap;
