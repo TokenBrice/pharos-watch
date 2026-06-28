@@ -169,7 +169,6 @@ export async function generateDailyDigest(
       leadRequirementCount: leadRequirements?.length ?? 0,
     },
   });
-
   logDailyDigestLlmCall({
     activeDepegCount: llmSignals.activeDepegCount,
     topDepegs: llmSignals.topDepegs,
@@ -267,9 +266,7 @@ export async function generateDailyDigest(
     .all<{ cnt: number }>();
   throwIfAborted(signal);
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
-
   const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
-
   throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "twitter-delivery",
@@ -321,7 +318,6 @@ export async function generateDailyDigest(
   if (degradedReasons.includes("twitter-send-marker-write")) {
     throw new Error("Twitter daily digest marker write failed");
   }
-
   throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "telegram-delivery",
@@ -407,9 +403,7 @@ export async function generateDailyDigest(
   if (degradedReasons.includes("telegram-send-marker-write")) {
     throw new Error("Telegram daily digest marker write failed");
   }
-
   const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
-
   await reportDigestProgress(reportProgress, {
     stage: "complete",
     message: "Completed daily digest generation",

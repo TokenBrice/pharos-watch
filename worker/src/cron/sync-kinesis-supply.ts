@@ -7,7 +7,7 @@ import {
   KINESIS_KAG_HORIZON,
 } from "../lib/constants";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
-import type { CronResult } from "../lib/cron-logger";
+import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 
 interface KinesisChainConfig {
@@ -115,10 +115,9 @@ export async function syncKinesisSupply(
       await recordOutcomeSafe(db, config.circuitSource, false);
       failed++;
       chainResults.push({ chain: config.chain, status: "error" });
-      console.warn(
-        `[sync-kinesis-supply] ${config.chain} failed:`,
-        err instanceof Error ? err.message : err,
-      );
+      recordCronFailure("sync-kinesis-supply", err, {
+        metadata: { chain: config.chain, stage: "fetch" },
+      });
       continue;
     }
 
@@ -142,19 +141,14 @@ export async function syncKinesisSupply(
       if (signal.aborted) throw err instanceof Error ? err : new Error(String(err));
       failed++;
       chainResults.push({ chain: config.chain, status: "d1_error", circulation: parsed.circulation });
-      console.warn(
-        `[sync-kinesis-supply] ${config.chain} persistence failed:`,
-        err instanceof Error ? err.message : err,
-      );
+      recordCronFailure("sync-kinesis-supply", err, {
+        metadata: { chain: config.chain, stage: "persist" },
+      });
       continue;
     }
 
     synced++;
     chainResults.push({ chain: config.chain, status: "ok", circulation: parsed.circulation });
-    console.log(
-      `[sync-kinesis-supply] ${config.chain}: circulation=${parsed.circulation.toLocaleString()}, ` +
-        `mint=${parsed.mint.toLocaleString()}, redemption=${parsed.redemption.toLocaleString()}`,
-    );
   }
 
   const total = synced + failed + skipped;
