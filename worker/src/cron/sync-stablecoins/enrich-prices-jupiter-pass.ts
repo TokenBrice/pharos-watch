@@ -2,10 +2,9 @@ import {
   CIRCUIT_SOURCE,
   USER_AGENT,
 } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { throwIfAborted } from "../../lib/abort";
 import {
   applyJsonParseFailureDiagnostic,
@@ -260,7 +259,7 @@ async function fetchJupiterPrices(
     candidateCount: ids.length,
   };
 
-  const res = await fetchWithRetry(
+  const result = await fetchTextWithRetry(
     url,
     {
       headers: {
@@ -274,9 +273,10 @@ async function fetchJupiterPrices(
     {
       timeoutMs: JUPITER_REQUEST_TIMEOUT_MS,
       passthroughStatuses: JUPITER_PASSTHROUGH_STATUSES,
+      returnFinalResponse: true,
     },
   );
-  if (!res) {
+  if (!result) {
     return {
       data: null,
       diagnostic: buildPricingProviderDiagnostic(baseDiagnostic, { errorClass: "no-response" }),
@@ -284,16 +284,16 @@ async function fetchJupiterPrices(
   }
 
   const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
-    status: res.status,
-    ok: res.ok,
+    status: result.response.status,
+    ok: result.response.ok,
   });
 
-  if (!res.ok) {
-    return { data: null, diagnostic: await applyNonOkProviderDiagnostic(diagnostic, res) };
+  if (!result.response.ok) {
+    return { data: null, diagnostic: await applyNonOkProviderDiagnostic(diagnostic, responseFromBufferedBody(result)) };
   }
 
   try {
-    const parsed = JupiterPriceResponseSchema.safeParse(await res.json());
+    const parsed = JupiterPriceResponseSchema.safeParse(JSON.parse(result.body));
     if (!parsed.success) {
       diagnostic.errorClass = "invalid-shape";
       diagnostic.errorMessage = "Expected Jupiter V3 price payload with usdPrice, decimals, and blockId";
@@ -311,7 +311,6 @@ async function fetchJupiterPrices(
     diagnostic.success = true;
     return { data, diagnostic };
   } catch (err) {
-    await cancelResponseBodyQuietly(res);
     return { data: null, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, err) };
   }
 }
@@ -334,7 +333,7 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
     candidateCount: 1,
   };
 
-  const res = await fetchWithRetry(
+  const result = await fetchTextWithRetry(
     SOLANA_SLOT_RPC_URL,
     {
       method: "POST",
@@ -354,10 +353,11 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
     {
       timeoutMs: SOLANA_SLOT_REQUEST_TIMEOUT_MS,
       passthroughStatuses: JUPITER_PASSTHROUGH_STATUSES,
+      returnFinalResponse: true,
     },
   );
 
-  if (!res) {
+  if (!result) {
     return {
       slot: null,
       diagnostic: buildPricingProviderDiagnostic(baseDiagnostic, {
@@ -368,12 +368,12 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
   }
 
   const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
-    status: res.status,
-    ok: res.ok,
+    status: result.response.status,
+    ok: result.response.ok,
   });
 
-  if (!res.ok) {
-    const nonOkDiagnostic = await applyNonOkProviderDiagnostic(diagnostic, res);
+  if (!result.response.ok) {
+    const nonOkDiagnostic = await applyNonOkProviderDiagnostic(diagnostic, responseFromBufferedBody(result));
     return {
       slot: null,
       diagnostic: {
@@ -385,7 +385,7 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
   }
 
   try {
-    const parsed = SolanaSlotResponseSchema.safeParse(await res.json());
+    const parsed = SolanaSlotResponseSchema.safeParse(JSON.parse(result.body));
     if (!parsed.success) {
       diagnostic.errorClass = "invalid-shape";
       diagnostic.errorMessage = "Expected Solana getSlot JSON-RPC result";
@@ -394,7 +394,14 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
     }
     return { slot: parsed.data.result };
   } catch (err) {
-    await cancelResponseBodyQuietly(res);
     return { slot: null, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, err) };
   }
+}
+
+function responseFromBufferedBody(result: { response: Response; body: string }): Response {
+  return new Response(result.body, {
+    status: result.response.status,
+    statusText: result.response.statusText,
+    headers: result.response.headers,
+  });
 }

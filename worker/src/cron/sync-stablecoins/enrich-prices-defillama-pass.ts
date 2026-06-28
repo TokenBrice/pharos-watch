@@ -1,10 +1,9 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { DLPriceResponseSchema } from "../../lib/schemas";
 import {
   applyResolvedPrice,
@@ -100,12 +99,11 @@ async function fetchPriceMapByIds(
     return new Map();
   }
 
-  const res = await fetchWithRetry(
+  const result = await fetchJsonWithRetry<unknown>(
     `${DEFILLAMA_COINS}/prices/current/${ids.join(",")}`,
     signal ? { signal } : undefined,
   );
-  if (!res?.ok) {
-    await cancelResponseBodyQuietly(res);
+  if (!result?.response.ok) {
     if (db) {
       await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
     }
@@ -113,14 +111,13 @@ async function fetchPriceMapByIds(
   }
 
   try {
-    const prices = parseDefiLlamaPriceMap(await res.json());
+    const prices = parseDefiLlamaPriceMap(result.body);
     if (db) {
       await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, true);
     }
     return prices;
   } catch {
-    await cancelResponseBodyQuietly(res);
-    console.error(`[enrich-prices] Failed to parse JSON from ${source}: ${res.status}`);
+    console.error(`[enrich-prices] Failed to parse JSON from ${source}: ${result.response.status}`);
     if (db) {
       await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
     }
