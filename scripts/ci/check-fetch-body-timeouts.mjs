@@ -230,22 +230,24 @@ export function findFetchBodyTimeoutViolations(source, file = "<source>") {
       });
     }
 
-    const bodyReadMatch = trimmed.match(/\b([A-Za-z_$][\w$]*)\s*\.\s*(json|text)\s*\(/);
-    if (!bodyReadMatch) continue;
+    const bodyReadMatches = [...trimmed.matchAll(/\b([A-Za-z_$][\w$]*)\s*\.\s*(json|text)\s*\(/g)];
+    if (bodyReadMatches.length === 0) continue;
 
     for (const candidate of tracked) {
       if (index + 1 <= candidate.line) continue;
       if (index + 1 - candidate.line > 80) continue;
-      if (bodyReadMatch[1] !== candidate.name) continue;
-      violations.push({
-        file,
-        fetchLine: candidate.line,
-        bodyLine: index + 1,
-        variable: candidate.name,
-        method: bodyReadMatch[2],
-        assignmentText: candidate.assignmentText,
-        bodyReadText: trimmed,
-      });
+      for (const bodyReadMatch of bodyReadMatches) {
+        if (bodyReadMatch[1] !== candidate.name) continue;
+        violations.push({
+          file,
+          fetchLine: candidate.line,
+          bodyLine: index + 1,
+          variable: candidate.name,
+          method: bodyReadMatch[2],
+          assignmentText: candidate.assignmentText,
+          bodyReadText: trimmed,
+        });
+      }
     }
   }
 
