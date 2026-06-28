@@ -14,6 +14,8 @@ import {
   TRACKED_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
+const HOMEPAGE_OG_IMAGE = `${SITE_URL}/og-card.png?v=market-pulse-2026-06-28`;
+
 export const metadata: Metadata = {
   title: {
     absolute: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
@@ -30,7 +32,14 @@ export const metadata: Metadata = {
       "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
     url: "/",
     type: "website",
-    images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+    images: [{ url: HOMEPAGE_OG_IMAGE, width: 1200, height: 628 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
+    description:
+      "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
+    images: [{ url: HOMEPAGE_OG_IMAGE, width: 1200, height: 628 }],
   },
 };
 
