@@ -66,7 +66,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
+  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "syrupUSDT moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard: each chain (Ethereum canonical plus Plasma, BNB Chain, Arbitrum, Base, Solana) hosts a native syrupUSDT token paired with a BurnMintTokenPool, so circulating supply is burned on the source and minted on the destination over CCIP's validated DON messaging with the Risk Management Network backstop. Maple adopted CCT for its Syrup tokens and a dedicated CCIP directory entry exists for syrupUSDT, explaining the different per-chain addresses (no lockbox/wrapped model).",
@@ -79,7 +79,11 @@
         "name": "Chainlink CCIP - syrupUSDT Cross-Chain Token directory entry",
         "slug": "chainlink-ccip",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT",
-        "bridgeTypes": ["external-validated-network", "burn-mint", "CCT"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint",
+          "CCT"
+        ],
         "note": "Dedicated CCIP mainnet directory page lists syrupUSDT as a Cross-Chain Token across 5 networks using the CCT (burn-and-mint) standard."
       },
       {
@@ -87,7 +91,11 @@
         "name": "Chainlink CCIP - syrupUSDC Cross-Chain Token directory entry (sibling, shared infra)",
         "slug": "chainlink-ccip",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC",
-        "bridgeTypes": ["external-validated-network", "burn-mint", "CCT"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint",
+          "CCT"
+        ],
         "note": "Sibling Syrup token on the same Maple CCIP/CCT infrastructure; 7 networks."
       },
       {
@@ -95,7 +103,10 @@
         "name": "Maple Finance - syrupUSDC/syrupUSDT Built for Scale + Solana CCT expansion",
         "slug": "maple-finance",
         "url": "https://maple.finance/insights/syrupusdc-expands-to-solana",
-        "bridgeTypes": ["external-validated-network", "CCT"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "CCT"
+        ],
         "note": "Maple states syrupUSDC/syrupUSDT became natively interoperable via the CCT standard powered by Chainlink CCIP, not traditional bridges; deployments on Ethereum, Solana, Plasma, Arbitrum, Base."
       },
       {
@@ -103,7 +114,11 @@
         "name": "TID Research syrupUSDC risk assessment",
         "slug": "tid-research",
         "url": "https://tidresearch.com/reports/syrupusdc/",
-        "bridgeTypes": ["external-validated-network", "burn-mint", "CCT"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint",
+          "CCT"
+        ],
         "note": "Independent assessment: multi-chain bridging uses Chainlink CCIP with the CCT standard, burn-and-mint native deployments per chain, not a wrapped/lockbox model."
       }
     ],

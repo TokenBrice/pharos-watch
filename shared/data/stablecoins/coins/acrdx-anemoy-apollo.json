@@ -66,6 +66,11 @@
       "chain": "monad",
       "address": "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": true,

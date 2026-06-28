@@ -74,7 +74,7 @@
     "archetypeOverride": true,
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
-    "launchDate": "2025-06-18",
+    "launchDate": "2025-07-10",
     "yieldConfig": {
       "yieldSource": "Pareto FalconX Credit Vault",
       "yieldType": "lending-vault"
@@ -1627,7 +1627,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "axcnh",
-    "launchDate": "2025-09-17",
+    "launchDate": "2025-08-14",
     "reserves": [
       {
         "name": "CNH cash reserves at regulated financial institutions",
@@ -2876,6 +2876,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "bucket-protocol-buck-stablecoin",
+    "launchDate": "2023-06-28",
     "reserves": [
       {
         "name": "SUI (native token CDPs)",
@@ -3553,7 +3554,7 @@
     "launchDate": "2021-04-22",
     "mica": {
       "status": "non-compliant",
-      "tokenType": "EMT",
+      "tokenType": "ART",
       "references": [
         {
           "label": "ESMA Interim MiCA Register — EMT Issuers (EMTWP.csv, Dec 2024)",
@@ -3567,49 +3568,54 @@
     },
     "reserves": [
       {
-        "name": "sUSDS (Sky savings USDS)",
-        "pct": 56,
+        "name": "sUSDS",
+        "pct": 23.6,
         "risk": "low",
         "coinId": "susds-sky"
       },
       {
-        "name": "EURC (Circle euro stablecoin)",
-        "pct": 22,
+        "name": "AUSD",
+        "pct": 22.9,
         "risk": "low",
-        "coinId": "eurc-circle"
+        "coinId": "ausd-agora"
       },
       {
         "name": "CELO",
-        "pct": 12,
-        "risk": "high"
-      },
-      {
-        "name": "USDGLO (Glo Dollar)",
-        "pct": 4,
-        "risk": "low",
-        "coinId": "usdglo-glo"
-      },
-      {
-        "name": "stETH (Lido staked ETH)",
-        "pct": 2,
-        "risk": "low"
+        "pct": 15.9,
+        "risk": "medium"
       },
       {
         "name": "USDC",
-        "pct": 2,
+        "pct": 10.6,
         "risk": "low",
         "coinId": "usdc-circle"
       },
       {
+        "name": "EURC",
+        "pct": 9.8,
+        "risk": "low",
+        "coinId": "eurc-circle"
+      },
+      {
         "name": "USDT",
-        "pct": 1,
+        "pct": 9.7,
         "risk": "low",
         "coinId": "usdt-tether"
       },
       {
-        "name": "ETH",
-        "pct": 1,
-        "risk": "very-low"
+        "name": "axlEUROC",
+        "pct": 5.2,
+        "risk": "medium"
+      },
+      {
+        "name": "stETH",
+        "pct": 2,
+        "risk": "medium"
+      },
+      {
+        "name": "Other small reserve assets (axlUSDC, USDT0, WETH)",
+        "pct": 0.3,
+        "risk": "medium"
       }
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -3926,7 +3932,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "cchf",
-    "launchDate": "2025-03-22",
+    "launchDate": "2025-06-06",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -4347,7 +4353,7 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "cap-usd",
     "launchDate": "2025-08-19",
     "genius": {
@@ -4644,7 +4650,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "mechanismArchetype": "tbill",
@@ -5171,7 +5177,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -5594,7 +5600,6 @@
       "rwa": false,
       "navToken": true
     },
-    "geckoId": "ember-earn",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
     "yieldConfig": {
@@ -6928,8 +6933,8 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "threshold": 2,
-          "signerCount": 2,
+          "threshold": 1,
+          "signerCount": 3,
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
@@ -6954,7 +6959,7 @@
     "id": "eurs-stasis",
     "name": "Stasis Euro",
     "symbol": "EURS",
-    "oneLiner": "EURS is STASIS Malta's MiCA-regulated euro stablecoin, redeemable 1:1 against euro deposits at licensed EU institutions including central-bank accounts.",
+    "oneLiner": "EURS is STASIS Malta's euro stablecoin, redeemable 1:1 against euro deposits at licensed EU institutions including central-bank accounts.",
     "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
@@ -8255,7 +8260,7 @@
     "id": "ftusd-flying-tulip",
     "name": "Flying Tulip USD",
     "symbol": "ftUSD",
-    "oneLiner": "ftUSD is Flying Tulip's stablecoin minted 1:1 against USDC or USDT, with deposits routed to Aave and native assets borrowed against them to fund staking carry.",
+    "oneLiner": "ftUSD is Flying Tulip's stablecoin minted 1:1 against USDC or USDT, with deposits supplied to Aave for low-risk carry; a delta-neutral leg is planned.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -12743,7 +12748,7 @@
     "id": "mai-qidao",
     "name": "MAI",
     "symbol": "MAI",
-    "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across 15 chains; currently in a sustained soft depeg below $0.99.",
+    "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across 15 chains and has traded persistently below its $1 target.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -14338,7 +14343,7 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "nest-basis-vault",
     "protocolSlug": "nest-credit",
-    "launchDate": "2025-09-25",
+    "launchDate": "2025-05-14",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Nest Basis Vault NAV (basis-trade strategy)",
@@ -17026,7 +17031,7 @@
     "id": "rwausdi-multipli",
     "name": "rwaUSDi",
     "symbol": "rwaUSDi",
-    "oneLiner": "rwaUSDi is Multipli's KYB-gated RWA wrapper of Treasury-backed stablecoins, tokenized gold, and market-neutral fund units with Lloyd's depeg insurance.",
+    "oneLiner": "rwaUSDi is Multipli's KYB-gated credit class backed by private credit, structured finance, project finance, asset-backed loans, and market-neutral funds.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -17430,7 +17435,7 @@
     "geckoId": "sbold-by-k3-capital",
     "variantOf": "bold-liquity",
     "variantKind": "risk-absorption",
-    "launchDate": "2025-06-05",
+    "launchDate": "2025-06-09",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
@@ -18386,7 +18391,7 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "staked-cap-usd",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault",
@@ -18730,7 +18735,7 @@
   {
     "id": "susd-hedgecore",
     "name": "Staked USD Coin",
-    "symbol": "SUSD",
+    "symbol": "sUSD",
     "oneLiner": "HedgeCore sUSD is a soul-bound BSC yield wrapper minted from USDC and routed through Venus lending; early redemption is operator-controlled, not a backstop.",
     "flags": {
       "backing": "crypto-backed",
@@ -18906,7 +18911,7 @@
   {
     "id": "susd-synthetix",
     "name": "sUSD",
-    "symbol": "SUSD",
+    "symbol": "sUSD",
     "oneLiner": "sUSD was Synthetix's SNX-backed synthetic dollar; SIP-420 removed the peg defense and, after a year-long depeg, it was frozen and retired via SIP-423.",
     "flags": {
       "backing": "crypto-backed",
@@ -19107,6 +19112,7 @@
     },
     "mechanismArchetype": "cdp",
     "archetypeOverride": true,
+    "geckoId": "spark-savings-usdc",
     "variantOf": "usdc-circle",
     "variantKind": "savings-passthrough",
     "launchDate": "2025-11-12",
@@ -19906,7 +19912,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "theo-short-duration-us-treasury-fund",
-    "launchDate": "2025-07-22",
+    "launchDate": "2025-07-24",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "tULTRA (Standard Chartered Libeara tokenized T-bills)",
@@ -19957,7 +19963,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -20576,7 +20582,7 @@
     "id": "usd0-usual",
     "name": "Usual USD",
     "symbol": "USD0",
-    "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M, USTBL, and USDC.",
+    "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M by M0, USDtb by Ethena, and USDC.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -21289,10 +21295,10 @@
       "enforcementStatus": "no-public-action-found",
       "daspOfferSaleStatus": "not-yet-restricted",
       "reserveDisclosurePresent": true,
-      "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/proof-of-reserves",
+      "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": false,
-      "notes": "USDai supports whitelisted direct mint/redeem flows, but no public GENIUS approval, application, or foreign registration was located. The USD.AI Foundation is a Cayman Islands entity serving as off-chain steward of the USD.AI DAO (developed by Permian Labs). The GENIUS Act FPSI registration pathway does not open until July 18, 2028 per statutory text; no foreign issuer registration framework exists yet.",
+      "notes": "USD.AI publishes reserve data through its Proof of Reserves documentation and M0/Usual/Gauntlet vault disclosures, but no U.S. federal GENIUS issuer approval exists. Treat as prospective-pathway-only until a permitted payment stablecoin issuer is identified.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -21311,7 +21317,7 @@
         },
         {
           "label": "USD.AI proof of reserves",
-          "url": "https://docs.usd.ai/app-guide/proof-of-reserves",
+          "url": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
           "sourceKind": "issuer-disclosure"
         },
         {
@@ -21573,7 +21579,7 @@
         "sourceUrl": "https://investor.payoneer.com/news-releases/news-release-details/payoneer-launch-stablecoin-capabilities-powered-bridge-bringing"
       },
       {
-        "date": "2026-02-20",
+        "date": "2025-05-07",
         "type": "milestone",
         "title": "USDB launches powering Stripe's Stablecoin Financial Accounts in 101 countries",
         "sourceUrl": "https://www.ledgerinsights.com/stripe-rolls-out-stablecoin-accounts-in-101-countries-as-bridge-launches-usdb/"
@@ -23939,9 +23945,9 @@
   },
   {
     "id": "usdo-openeden",
-    "name": "OpenDollar USDO",
+    "name": "OpenEden OpenDollar",
     "symbol": "USDO",
-    "oneLiner": "USDO is OpenEden's rebasing dollar token backed by tokenized U.S. Treasuries (TBILL, BUIDL, BENJI) and a USDC buffer, issued under a Bermuda DABA license.",
+    "oneLiner": "USDO is OpenEden's rebasing dollar token backed by tokenized U.S. Treasuries (TBILL, BUIDL, VBILL), RLUSD, and USDC, issued under a Bermuda DABA license.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -24595,7 +24601,7 @@
     "id": "usdq-quantoz",
     "name": "Quantoz USDQ",
     "symbol": "USDQ",
-    "oneLiner": "USDQ is Quantoz's MiCAR-licensed dollar e-money token redeemable 1:1, backed by EU government bonds and tier-1 bank deposits under DNB EMI supervision.",
+    "oneLiner": "USDQ is Quantoz Payments' MiCA-authorized dollar e-money token, backed by cash, deposits, and EU and U.S. government bonds.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -25086,7 +25092,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "usds",
-    "launchDate": "2024-09-02",
+    "launchDate": "2024-09-18",
     "canBeBlacklisted": "possible",
     "genius": {
       "applicability": "unclear",
@@ -25447,7 +25453,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "tether",
-    "launchDate": "2017-11-28",
+    "launchDate": "2014-10-06",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -26674,8 +26680,8 @@
     "launchDate": "2025-09-23",
     "canBeBlacklisted": true,
     "yieldConfig": {
-      "yieldSource": "PikuDAO lending vault",
-      "yieldType": "lending-vault"
+      "yieldSource": "Turkey-FX delta-neutral arbitrage (BMMF) plus DeFi protocol allocations",
+      "yieldType": "nav-appreciation"
     },
     "reserves": [
       {
@@ -26947,7 +26953,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
-    "launchDate": "2023-12-06",
+    "launchDate": "2024-05-15",
     "genius": {
       "applicability": "excluded-security",
       "applicabilityBasis": {
@@ -27908,6 +27914,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "virtue-usd",
+    "launchDate": "2025-07-14",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -28182,7 +28189,7 @@
     "id": "wemix-dollar-wemix",
     "name": "WEMIX Dollar",
     "symbol": "WEMIX$",
-    "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed by USDC and fiat reserve assets on the non-EVM-indexed WEMIX chain.",
+    "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed 100% by USDC held in the WEMIX3.0 Treasury on the non-EVM-indexed WEMIX chain.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -28247,7 +28254,7 @@
     },
     "reserves": [
       {
-        "name": "USDC and fiat reserve assets",
+        "name": "USDC held in the WEMIX3.0 Treasury",
         "pct": 100,
         "risk": "low"
       }
@@ -29965,6 +29972,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "ylds",
+    "launchDate": "2025-02-20",
     "genius": {
       "applicability": "excluded-security",
       "applicabilityBasis": {

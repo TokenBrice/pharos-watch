@@ -136,7 +136,7 @@
     {
       "type": "info",
       "title": "No public audit yet",
-      "message": "Issuer commits to monthly third-party attestations starting 2025 but has not named an auditor or published a report. Proof-of-reserves is currently a self-reported on-chain dashboard."
+      "message": "Chainlink Proof of Reserve was integrated on June 16, 2026 and now provides automated on-chain reserve verification for KRWQ. No traditional CPA-style monthly attestation report has yet been named or published."
     }
   ],
   "tags": [

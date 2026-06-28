@@ -12,7 +12,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
+  "collateral": "Mento Reserve holding sUSDS, AUSD, CELO, USDC, EURC, USDT, axlEUROC, and stETH; overcollateralized with a stable-asset backing mandate.",
   "pegMechanism": "Mento V3 reserve-backed FX model: EURm is minted and redeemed against the shared Mento Reserve through Fixed-Price Market Maker (FPMM) pools that quote a Chainlink EUR oracle rate rather than deriving price from pool reserves, with on-chain trading limits and circuit breakers halting trade when the oracle is stale or off-peg.",
   "llamaId": "52",
   "detailProvider": "defillama",
@@ -155,49 +155,54 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "sUSDS (Sky savings USDS)",
-      "pct": 56,
+      "name": "sUSDS",
+      "pct": 23.6,
       "risk": "low",
       "coinId": "susds-sky"
     },
     {
-      "name": "EURC (Circle euro stablecoin)",
-      "pct": 22,
+      "name": "AUSD",
+      "pct": 22.9,
       "risk": "low",
-      "coinId": "eurc-circle"
+      "coinId": "ausd-agora"
     },
     {
       "name": "CELO",
-      "pct": 12,
-      "risk": "high"
-    },
-    {
-      "name": "USDGLO (Glo Dollar)",
-      "pct": 4,
-      "risk": "low",
-      "coinId": "usdglo-glo"
-    },
-    {
-      "name": "stETH (Lido staked ETH)",
-      "pct": 2,
-      "risk": "low"
+      "pct": 15.9,
+      "risk": "medium"
     },
     {
       "name": "USDC",
-      "pct": 2,
+      "pct": 10.6,
       "risk": "low",
       "coinId": "usdc-circle"
     },
     {
+      "name": "EURC",
+      "pct": 9.8,
+      "risk": "low",
+      "coinId": "eurc-circle"
+    },
+    {
       "name": "USDT",
-      "pct": 1,
+      "pct": 9.7,
       "risk": "low",
       "coinId": "usdt-tether"
     },
     {
-      "name": "ETH",
-      "pct": 1,
-      "risk": "very-low"
+      "name": "axlEUROC",
+      "pct": 5.2,
+      "risk": "medium"
+    },
+    {
+      "name": "stETH",
+      "pct": 2,
+      "risk": "medium"
+    },
+    {
+      "name": "Other small reserve assets (axlUSDC, USDT0, WETH)",
+      "pct": 0.3,
+      "risk": "medium"
     }
   ],
   "liveReservesConfig": {
@@ -221,7 +226,7 @@
   },
   "mica": {
     "status": "non-compliant",
-    "tokenType": "EMT",
+    "tokenType": "ART",
     "references": [
       {
         "label": "ESMA Interim MiCA Register — EMT Issuers (EMTWP.csv, Dec 2024)",

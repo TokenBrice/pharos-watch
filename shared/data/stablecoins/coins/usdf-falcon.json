@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
+  "collateral": "Crypto assets backing USDf and the USDf Earn strategy, including BTC and stablecoins, with delta-neutral hedging on centralized exchanges; tokenized real-world assets (USTB, JAAA, JTRSY, plus tokenized gold/equities/CETES) accepted with dynamic overcollateralization ratios",
   "pegMechanism": "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "246",

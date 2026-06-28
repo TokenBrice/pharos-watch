@@ -2,7 +2,7 @@
   "id": "usdq-quantoz",
   "name": "Quantoz USDQ",
   "symbol": "USDQ",
-  "oneLiner": "USDQ is Quantoz's MiCAR-licensed dollar e-money token redeemable 1:1, backed by EU government bonds and tier-1 bank deposits under DNB EMI supervision.",
+  "oneLiner": "USDQ is Quantoz Payments' MiCA-authorized dollar e-money token, backed by cash, deposits, and EU and U.S. government bonds.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

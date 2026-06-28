@@ -93,7 +93,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "EURR is issuer-minted by StablR. Ethereum: 2/2 multisig owner, 1/1 multisig proxy admin (both confirmed). Solana: mintAuthority and freezeAuthority are issuer-operated wallet accounts (system-program owned, non-executable). All addressable surfaces confirmed.",
+    "summary": "EURe issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
     "mintIncidents": [
       {
         "date": "2026-05-24",
@@ -122,8 +122,8 @@
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
-        "threshold": 2,
-        "signerCount": 2,
+        "threshold": 1,
+        "signerCount": 3,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -136,7 +136,7 @@
             "url": "https://docs.stablr.com/docs/smart-contract"
           }
         ],
-        "evidence": "owner() returned this address in a 2026-05-25 Ethereum RPC read. required() returned 2 and getOwners() returned 2 owners."
+        "evidence": "Contract owner is the StablR 1-of-3 safe at 0xbC0bD4dDe5BFc9C490C025caCaDA7b14e529F0D0, with owners 0xC42DAE8545022ba73Ec22c4634C42226B64BcE4B, 0xD30d1C5f02D37AA6161E3aBF14eF96EBb6327040, and 0x324F403916ab80a56B3A61D7d71553262ef56759."
       },
       {
         "chain": "ethereum",

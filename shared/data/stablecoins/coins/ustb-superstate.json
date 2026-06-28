@@ -12,7 +12,7 @@
     "navToken": true
   },
   "mechanismArchetype": "tbill",
-  "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
+  "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; managed by Invesco Advisers Inc. (Global Liquidity team)",
   "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
   "detailProvider": "coingecko",
   "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
@@ -238,5 +238,5 @@
     "yieldSource": "Superstate T-bill fund",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2023-12-06"
+  "launchDate": "2024-05-15"
 }

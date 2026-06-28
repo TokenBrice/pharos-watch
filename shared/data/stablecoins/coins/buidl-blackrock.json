@@ -18,11 +18,11 @@
   "detailProvider": "defillama",
   "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://securitize.io/blackrock/buidl",
-    "provider": "BlackRock / Securitize",
-    "attestorTier": "self",
-    "cadence": "daily-nav",
+    "type": "real-time",
+    "url": "https://chroniclelabs.org/dashboard/proofofassets",
+    "provider": "Chronicle Proof of Asset",
+    "attestorTier": "niche",
+    "cadence": "real-time",
     "attestorJurisdiction": "United States"
   },
   "links": [

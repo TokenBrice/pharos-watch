@@ -52,10 +52,10 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/proof-of-reserves",
+    "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDai supports whitelisted direct mint/redeem flows, but no public GENIUS approval, application, or foreign registration was located. The USD.AI Foundation is a Cayman Islands entity serving as off-chain steward of the USD.AI DAO (developed by Permian Labs). The GENIUS Act FPSI registration pathway does not open until July 18, 2028 per statutory text; no foreign issuer registration framework exists yet.",
+    "notes": "USD.AI publishes reserve data through its Proof of Reserves documentation and M0/Usual/Gauntlet vault disclosures, but no U.S. federal GENIUS issuer approval exists. Treat as prospective-pathway-only until a permitted payment stablecoin issuer is identified.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -74,7 +74,7 @@
       },
       {
         "label": "USD.AI proof of reserves",
-        "url": "https://docs.usd.ai/app-guide/proof-of-reserves",
+        "url": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
         "sourceKind": "issuer-disclosure"
       },
       {
@@ -158,7 +158,6 @@
       }
     ]
   },
-  "custodyModel": "institutional-regulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

@@ -12,7 +12,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
+  "collateral": "WFPS (Wrapped Frankencoin Pool Shares, about 63%), WBTC/cbBTC/kBTC (about 37%), plus DEPS, ZCHF, WETH/LsETH and tokenized equities, in oracle-free overcollateralized positions; WFPS/ZCHF/DEPS create cross-protocol Frankencoin-ecosystem and reflexive-governance exposure.",
   "pegMechanism": "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",

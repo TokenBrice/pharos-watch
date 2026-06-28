@@ -201,7 +201,7 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

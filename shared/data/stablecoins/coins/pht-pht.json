@@ -169,7 +169,7 @@
     }
   },
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "institutional-unregulated",
   "reserves": [
     {
       "name": "apcxUSDT custodial wrapper collateral",

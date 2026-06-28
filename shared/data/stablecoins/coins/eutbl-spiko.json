@@ -243,6 +243,11 @@
       "type": "info",
       "title": "Multi-chain EU-regulated MMF",
       "message": "EUTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
+    },
+    {
+      "type": "info",
+      "title": "Share-class currency mismatch",
+      "message": "EUTBL is a EUR-denominated share class of Spiko U.S. T-Bills Money Market Fund, so its NAV reflects both short-term U.S. Treasury exposure and EUR/USD foreign-exchange movement."
     }
   ],
   "launchDate": "2024-04-19"

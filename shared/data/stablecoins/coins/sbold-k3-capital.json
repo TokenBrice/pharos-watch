@@ -180,7 +180,9 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "reserves": [
     {
       "name": "BOLD deployed into Liquity V2 Stability Pools",
@@ -220,5 +222,5 @@
       }
     }
   },
-  "launchDate": "2025-06-05"
+  "launchDate": "2025-06-09"
 }

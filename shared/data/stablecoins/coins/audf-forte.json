@@ -171,7 +171,7 @@
   },
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.forteaud.com/reserves",
+    "url": "https://www.forteaud.com/transparency",
     "provider": "MVAB Audit Pty Ltd (MVA Bennett), Chartered Accountants",
     "attestorTier": "niche",
     "cadence": "monthly",
@@ -192,7 +192,7 @@
     },
     {
       "label": "Proof of Reserve",
-      "url": "https://www.forteaud.com/reserves"
+      "url": "https://www.forteaud.com/transparency"
     },
     {
       "label": "Legal",

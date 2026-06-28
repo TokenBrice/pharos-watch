@@ -79,7 +79,7 @@
     "semantics": "single-asset",
     "breakerScope": "brl1-brl1",
     "display": {
-      "url": "https://fact.finance/en/reserves/brl1",
+      "url": "https://brl1.io/en/como_funciona",
       "label": "BRL1 Reserve Report"
     },
     "inputs": {

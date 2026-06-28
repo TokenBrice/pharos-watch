@@ -1,8 +1,8 @@
 {
   "id": "usdo-openeden",
-  "name": "OpenDollar USDO",
+  "name": "OpenEden OpenDollar",
   "symbol": "USDO",
-  "oneLiner": "USDO is OpenEden's rebasing dollar token backed by tokenized U.S. Treasuries (TBILL, BUIDL, BENJI) and a USDC buffer, issued under a Bermuda DABA license.",
+  "oneLiner": "USDO is OpenEden's rebasing dollar token backed by tokenized U.S. Treasuries (TBILL, BUIDL, VBILL), RLUSD, and USDC, issued under a Bermuda DABA license.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

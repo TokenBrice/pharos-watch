@@ -19,13 +19,12 @@
   "geckoId": "glo-dollar",
   "cmcSlug": "glo-dollar",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://brale.xyz/stablecoins/USDGLO",
-    "provider": "Michael Coglianese, CPA, P.C.",
-    "attestorTier": "niche",
+    "type": "self-reported",
+    "url": "https://www.usdglo.com/reserves",
+    "provider": "Brale Inc. management self-assertion",
+    "attestorTier": "self",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States",
-    "attestorLicense": "AICPA attestation standards"
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

@@ -21,7 +21,7 @@
     "type": "self-reported",
     "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
     "provider": "Zephyr Scanner",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "chainTier": "unproven",

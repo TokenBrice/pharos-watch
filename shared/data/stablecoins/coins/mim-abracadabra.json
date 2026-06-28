@@ -253,7 +253,10 @@
         "name": "LayerZero",
         "slug": "layerzero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": ["lockAndMint", "burnAndMint"]
+        "bridgeTypes": [
+          "lockAndMint",
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -351,6 +354,11 @@
       "type": "warning",
       "title": "Recurring cauldron exploit history",
       "message": "Abracadabra/MIM has suffered three material cauldron-related incidents since January 2024: a January 2024 borrow-logic exploit, a March 2025 gmCauldron collateral-accounting exploit, and an October 2025 deprecated CauldronV4 sequencing exploit. Treat cauldron implementation and deprecation risk as recurring protocol risk."
+    },
+    {
+      "type": "warning",
+      "title": "Severe ongoing depeg",
+      "message": "As of June 28, 2026, MIM trades near $0.28 after a severe June 2026 depeg. Abracadabra has emergency measures active, including cauldron interest-rate hikes and paused Curve incentives; the issue is tied to thin and imbalanced Curve liquidity rather than a new contract exploit, and no peg-restoration timeline is confirmed."
     }
   ]
 }

@@ -18,7 +18,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-    "provider": "Ondo Global Markets collateral attestations",
+    "provider": "Ankura Trust Company",
     "attestorTier": "niche",
     "cadence": "daily-nav"
   },

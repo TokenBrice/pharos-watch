@@ -142,7 +142,7 @@
     }
   },
   "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "apyUSD has tracked Ethereum and Base contracts but no source-verified user bridge route or third-party bridge controls were resolved. The row is reviewed as native/direct deployments rather than a material bridge route.",

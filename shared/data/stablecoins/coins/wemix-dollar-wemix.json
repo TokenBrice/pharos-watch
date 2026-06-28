@@ -2,7 +2,7 @@
   "id": "wemix-dollar-wemix",
   "name": "WEMIX Dollar",
   "symbol": "WEMIX$",
-  "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed by USDC and fiat reserve assets on the non-EVM-indexed WEMIX chain.",
+  "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed 100% by USDC held in the WEMIX3.0 Treasury on the non-EVM-indexed WEMIX chain.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC and fiat reserve assets held for WEMIX Dollar on WEMIX3.0; issuer materials describe full collateralization by secure on-chain and off-chain assets.",
-  "pegMechanism": "Issuer-managed mint and redemption system using WEMIX$ treasury collateral, DIOS stabilization, and USDC/fiat reserve management to keep WEMIX$ near one U.S. dollar.",
+  "collateral": "100% USDC backing held in the WEMIX3.0 Treasury; the DIOS stabilizer (Treasury-In/Treasury-Out protocols) maintains the 1:1 USDC peg.",
+  "pegMechanism": "Issuer-managed mint and redemption system using WEMIX$ Treasury USDC collateral and DIOS stabilization to keep WEMIX$ near one U.S. dollar.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "wemix-dollar",
@@ -96,7 +96,7 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "USDC and fiat reserve assets",
+      "name": "USDC held in the WEMIX3.0 Treasury",
       "pct": 100,
       "risk": "low"
     }

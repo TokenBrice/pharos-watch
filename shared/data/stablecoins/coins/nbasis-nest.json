@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Basis-trade strategy book combining Superstate USCC (CME futures-based crypto carry), Superstate USTB (short-duration U.S. Treasuries), and Midas mBASIS (crypto basis strategy); trades executed through CFTC-approved CME venues rather than perpetual swaps; risk-managed and rebalanced by Nest",
+  "collateral": "Basis-trade strategy book combining Superstate USCC (CME-futures crypto carry) and Superstate USTB (short-duration U.S. Treasuries), plus Midas mBASIS (delta-neutral basis trade using CEX perpetuals); USCC trades through CFTC-approved CME venues while the mBASIS sleeve uses CEX perpetuals.",
   "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
@@ -223,5 +223,5 @@
       ]
     }
   },
-  "launchDate": "2025-09-25"
+  "launchDate": "2025-05-14"
 }

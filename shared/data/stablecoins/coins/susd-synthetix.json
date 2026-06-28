@@ -1,7 +1,7 @@
 {
   "id": "susd-synthetix",
   "name": "sUSD",
-  "symbol": "SUSD",
+  "symbol": "sUSD",
   "oneLiner": "sUSD was Synthetix's SNX-backed synthetic dollar; SIP-420 removed the peg defense and, after a year-long depeg, it was frozen and retired via SIP-423.",
   "status": "frozen",
   "frozenAt": "2026-06-26",

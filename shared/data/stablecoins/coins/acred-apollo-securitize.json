@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
-  "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
+  "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at fund NAV through Securitize Markets, with quarterly repurchase offers of at least 5% of shares plus on-demand liquidity-pool or secondary-market sales for intra-quarter exits; RedStone publishes the NAV oracle used by integrations",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "apollo-diversified-credit-securitize-fund",
@@ -227,7 +227,7 @@
     {
       "type": "warning",
       "title": "Private credit, not Treasuries",
-      "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. Pharos tracks the Ethereum, Aptos, Avalanche, Ink, Polygon, and Solana deployments; the Sei issuance via Wormhole is not yet integrated."
+      "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned; fund exits are anchored by quarterly repurchase offers of at least 5% of shares, with an on-demand pool or secondary-market sales for intra-quarter liquidity. Pharos tracks the Ethereum, Aptos, Avalanche, Ink, Polygon, and Solana deployments; the Sei issuance via Wormhole is not yet integrated."
     }
   ],
   "launchDate": "2025-01-29"

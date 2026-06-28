@@ -82,7 +82,6 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
-  "custodyModel": "institutional-unregulated",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
   "reserves": [

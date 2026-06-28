@@ -17,7 +17,6 @@
   "llamaId": "283",
   "detailProvider": "defillama",
   "geckoId": "usdu",
-  "cmcSlug": "unitas-protocol",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://accountable.unitas.so/",

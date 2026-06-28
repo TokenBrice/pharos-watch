@@ -198,5 +198,6 @@
     }
   },
   "launchDate": "2025-11-12",
-  "archetypeOverride": true
+  "archetypeOverride": true,
+  "geckoId": "spark-savings-usdc"
 }

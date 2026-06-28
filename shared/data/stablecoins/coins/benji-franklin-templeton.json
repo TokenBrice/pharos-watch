@@ -76,7 +76,7 @@
   "contracts": [
     {
       "chain": "aptos",
-      "address": "0x4705f33d665762a5371d3b8786e63749814e749295ea73269b379c84b756d83a",
+      "address": "0x7b5e9cac3433e9202f28527f707c89e1e47b19de2c33e4db9521a63ad219b739",
       "decimals": 9
     },
     {

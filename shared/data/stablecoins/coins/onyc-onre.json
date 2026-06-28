@@ -76,7 +76,6 @@
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "reserves": [
     {
@@ -106,7 +105,7 @@
   },
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://docs.onre.finance/introduction/transparency-dashboard",
+    "url": "https://docs.onre.finance/security-and-verification/independent-attestations",
     "provider": "Apex Group",
     "attestorTier": "niche",
     "cadence": "monthly"

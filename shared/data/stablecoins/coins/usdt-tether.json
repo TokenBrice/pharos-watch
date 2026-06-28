@@ -406,7 +406,7 @@
       }
     }
   },
-  "launchDate": "2017-11-28",
+  "launchDate": "2014-10-06",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDT has many issuer-native deployments, but the reviewed A5 route set also includes USDT0, which locks canonical USDT in an Ethereum OFT adapter and mints equivalent USDT0 on destination chains. Pharos scores the reviewed cross-chain route conservatively as external lock/mint because the weakest durable route depends on OFT lock/mint infrastructure.",

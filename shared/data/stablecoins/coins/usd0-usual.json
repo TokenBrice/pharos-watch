@@ -2,7 +2,7 @@
   "id": "usd0-usual",
   "name": "Usual USD",
   "symbol": "USD0",
-  "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M, USTBL, and USDC.",
+  "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M by M0, USDtb by Ethena, and USDC.",
   "mechanismArchetype": "tbill",
   "flags": {
     "backing": "rwa-backed",
@@ -155,7 +155,7 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",
+  "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena (via UsualUSDtb wrapper), and indirect USDC gateway liquidity",
   "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
   "llamaId": "195",
   "detailProvider": "defillama",

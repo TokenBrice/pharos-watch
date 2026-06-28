@@ -73,11 +73,10 @@
   "collateral": "USDC deposited into Ember Earn's Ethereum vault token; Royco Dawn wraps eEARN into senior and junior tranche vaults for structured yield exposure",
   "pegMechanism": "ERC-4626-style shares redeem against the vault's USDC asset at the current share price; the token is a NAV wrapper over USDC rather than a fiat-issuer stablecoin",
   "detailProvider": "coingecko",
-  "geckoId": "ember-earn",
   "links": [
     {
       "label": "Website",
-      "url": "https://trade.bluefin.io/ember/eEARN"
+      "url": "https://ember.so/earn/eEARN"
     },
     {
       "label": "Royco Dawn",
@@ -136,7 +135,7 @@
     "semantics": "single-asset",
     "breakerScope": "eearn-ember",
     "display": {
-      "url": "https://trade.bluefin.io/ember/eEARN",
+      "url": "https://ember.so/earn/eEARN",
       "label": "Ember Earn eEARN"
     },
     "inputs": {

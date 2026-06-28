@@ -42,9 +42,8 @@
     }
   ],
   "jurisdiction": {
-    "country": "Germany",
-    "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
-    "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
+    "country": "Luxembourg",
+    "license": "Luxembourg securitisation note issued by Aureum Securitisation Fund (Compartment mGLOBAL) under Luxembourg securitisation law; NAV calculated monthly by independent administrator JTC Luxembourg; EEA-restricted, not available to U.S. retail persons."
   },
   "contracts": [
     {
