@@ -83,7 +83,7 @@ Cluster selection breaks ties by size, then total cluster weight, then strongest
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (`defillama`, `coingecko-fallback`, `onchain-total-supply`, or `onchain-circulating-supply`). The `onchain-total-supply` path is used for supplemental assets whose circulating supply is derived from an on-chain total-supply probe instead of an upstream market-cap field, and for the curated DefiLlama zero-supply repairs that would otherwise publish an active asset with no market cap; `onchain-circulating-supply` uses the same live probe but subtracts configured protocol inventory balances before USD normalization. Preview-only fiat CoinGecko assets can use those paths with the existing FX reference for USD normalization while still keeping `price = null`. Solana total-supply fallback now reuses the same shared multi-endpoint probe used by the reserve-adapter path, so supplemental Solana assets do not depend on a narrower RPC list than the rest of the worker.
 
 #### Consensus source provenance
-After N-source consensus, each asset receives a `consensusSources: string[]` field listing all source names that returned a valid price for that coin during the sync cycle. For enrichment-pass fallbacks, this is a single-element array. Protocol-redeem overrides replace it with `["protocol-redeem"]`.
+After N-source consensus, each asset receives a `consensusSources: string[]` field listing all source names that returned a valid price for that coin during the sync cycle. For enrichment-pass fallbacks, this is a single-element array. Direct protocol-redeem overrides and high-confidence inherited overrides replace it with `["protocol-redeem"]`; scoped inheritance from a fresh replay-safe single-source parent instead keeps the parent's single source so publication guardrails retain the soft upstream provenance.
 
 ### Provider-Specific Normalization
 
@@ -119,7 +119,7 @@ The registry lives under `worker/src/lib/authoritative-price-sources/` and suppo
   - Direct-redeem rows such as SOFID, USBD, USDQ, CHFAU, CADD, JPYm, ZARm, and XOFm can publish `protocol-redeem` parity when active supply is observable; non-USD live parity requires a fresh/static FX reference and falls back to normal market/native-peg history until historical FX replay exists
   - ERC-4626, Aave savings, and Idle CDO wrappers read the contract's asset-per-share value and multiply it by a trusted tracked parent price; ERC-4626 NAV wrappers are prioritized ahead of lower-priority RPC-backed override families inside the live override budget
 - **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption or by an instantly redeemable base asset
-- **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
+- **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when a direct protocol/NAV quote or high-confidence inherited parent validates against peg bounds. Scoped inherited prices from fresh replay-safe single-source parents keep the parent source and `single-source` confidence so they do not bypass weak-source publication guardrails.
 
 ### Enrichment Pipeline
 
