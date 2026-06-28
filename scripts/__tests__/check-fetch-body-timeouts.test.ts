@@ -43,6 +43,40 @@ describe("fetch body timeout guardrail", () => {
     });
   });
 
+  it("detects qualified and aliased fetchWithRetry calls", () => {
+    const violations = findFetchBodyTimeoutViolations(`
+      export async function run(dependencies) {
+        const retryFetch = fetchWithRetry;
+        const first = await dependencies.fetchWithRetry("https://example.test/first");
+        const second = await retryFetch("https://example.test/second");
+        await first.text();
+        return await second.json();
+      }
+    `);
+
+    expect(violations.map((violation) => violation.variable)).toEqual(["first", "second"]);
+    expect(violations.map((violation) => violation.method)).toEqual(["text", "json"]);
+  });
+
+  it("detects body reads from destructured Promise.all fetchWithRetry responses", () => {
+    const violations = findFetchBodyTimeoutViolations(`
+      import { fetchWithRetry } from "../lib/fetch-retry";
+      export async function run() {
+        const [marketChartRes, coinRes] = await Promise.all([
+          fetchWithRetry("https://example.test/market"),
+          dependencies.fetchWithRetry("https://example.test/coin"),
+        ]);
+        if (!marketChartRes?.ok) return null;
+        await marketChartRes.json();
+        return coinRes ? await coinRes.text() : null;
+      }
+    `);
+
+    expect(violations).toHaveLength(2);
+    expect(violations.map((violation) => violation.variable)).toEqual(["marketChartRes", "coinRes"]);
+    expect(violations.map((violation) => violation.method)).toEqual(["json", "text"]);
+  });
+
   it("allows explicitly baselined debt and reports stale baseline entries", () => {
     withTempRepo({
       "worker/src/cron/provider.ts": `

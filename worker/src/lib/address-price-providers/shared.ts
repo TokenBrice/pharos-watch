@@ -1,5 +1,6 @@
 export { isRecord } from "@shared/lib/type-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { rethrowIfAborted } from "../abort";
 import { chunkArray } from "../collections";
 import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
@@ -12,7 +13,6 @@ import {
 } from "../pricing-provider-diagnostics";
 import {
   applyJsonParseFailureDiagnostic,
-  applyNonOkProviderDiagnostic,
   buildPricingProviderDiagnostic,
 } from "../pricing-provider-lifecycle";
 import type {
@@ -21,22 +21,15 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
-import { readResponseTextWithSignal } from "../response-body";
+import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from "../response-body";
 
 export const ADDRESS_PROVIDER_MIN_LIQUIDITY_USD = 50_000;
 export const ADDRESS_PROVIDER_RUN_BUDGET_MS = 90_000;
 
 const ADDRESS_PROVIDER_TIMEOUT_MS = 5_000;
+const ADDRESS_PROVIDER_ERROR_BODY_MAX_BYTES = 2_000;
 const ADDRESS_PROVIDER_MAX_RETRIES = 0;
 const PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
-
-function responseFromBufferedBody(response: Response, body: string): Response {
-  return new Response(body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
-}
 
 async function readProviderResponseText(response: Response, signal?: AbortSignal): Promise<string> {
   const timeout = createTimeoutSignal({
@@ -46,6 +39,29 @@ async function readProviderResponseText(response: Response, signal?: AbortSignal
   });
   try {
     return await readResponseTextWithSignal(response, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
+
+function sanitizeProviderSnippet(value: string): string | undefined {
+  const snippet = value.replace(/\s+/g, " ").trim().slice(0, 240);
+  return snippet.length > 0 ? snippet : undefined;
+}
+
+async function readProviderResponseSnippet(response: Response, signal?: AbortSignal): Promise<string | undefined> {
+  const timeout = createTimeoutSignal({
+    timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
+    timeoutReason: new DOMException(`response body timed out after ${ADDRESS_PROVIDER_TIMEOUT_MS}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return sanitizeProviderSnippet(
+      await readResponseTextBoundedWithSignal(response, ADDRESS_PROVIDER_ERROR_BODY_MAX_BYTES, timeout.signal),
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return undefined;
   } finally {
     timeout.dispose();
   }
@@ -167,10 +183,17 @@ export async function fetchProviderJson(params: {
   });
 
   if (!response.ok) {
-    const body = await readProviderResponseText(response, params.signal);
+    const snippet = await readProviderResponseSnippet(response, params.signal);
     return {
       json: null,
-      diagnostic: await applyNonOkProviderDiagnostic(diagnostic, responseFromBufferedBody(response, body)),
+      diagnostic: {
+        ...diagnostic,
+        status: response.status,
+        ok: false,
+        success: false,
+        ...(snippet ? { snippet } : {}),
+        rejectionReasonCounts: { "non-ok": 1 },
+      },
     };
   }
 

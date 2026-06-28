@@ -26,7 +26,7 @@ vi.mock("../../../lib/coingecko-onchain", async () => {
 });
 
 vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
+  fetchJsonWithRetry: vi.fn(),
 }));
 
 vi.mock("../../../lib/dexscreener", () => ({
@@ -47,7 +47,7 @@ import { crawlCoin } from "../crawl-sources";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
-import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
@@ -76,7 +76,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(crawlTokenPools).mockResolvedValue({ stoppedEarly: false });
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
     vi.mocked(fetchCgTokenPoolsWithStatus).mockReset();
-    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(fetchJsonWithRetry).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset();
     vi.mocked(recordOutcome).mockReset();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
@@ -258,7 +258,7 @@ describe("crawlCoin DexScreener hardening", () => {
     );
     expect(crawlTokenPools).not.toHaveBeenCalled();
     expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
-    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(fetchJsonWithRetry).not.toHaveBeenCalled();
   });
 
   it("rejects CoinGecko onchain pools whose tracked token price is implausible", async () => {
@@ -353,9 +353,9 @@ describe("crawlCoin DexScreener hardening", () => {
       events.push(`ds:${chain}`);
       return { ok: true, pairs: [] };
     });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async () => {
       events.push("tickers");
-      return new Response(JSON.stringify({ tickers: [] }), { status: 200 });
+      return { response: new Response(null, { status: 200 }), body: { tickers: [] } };
     });
 
     const result = await crawlCoin(
@@ -390,7 +390,10 @@ describe("crawlCoin DexScreener hardening", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({ ok: true, pools: [] });
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify({ tickers: [] }), { status: 200 }));
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
+      response: new Response(null, { status: 200 }),
+      body: { tickers: [] },
+    });
 
     const result = await crawlCoin(
       createMockDb(),
@@ -408,8 +411,9 @@ describe("crawlCoin DexScreener hardening", () => {
 
   it("keeps CoinGecko tickers staging output aligned with current orderbook rows", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify({
-      tickers: [{
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
+      response: new Response(null, { status: 200 }),
+      body: { tickers: [{
         base: "USDC",
         target: "USD",
         market: { name: "Kinesis", identifier: "kinesis" },
@@ -434,7 +438,7 @@ describe("crawlCoin DexScreener hardening", () => {
         is_stale: false,
         trust_score: null,
       }],
-    }), { status: 200 }));
+    } });
 
     const result = await crawlCoin(
       createMockDb(),
@@ -479,13 +483,14 @@ describe("crawlCoin DexScreener hardening", () => {
       chain: "orderbook",
       protocol: "cg-ticker-kinesis",
     }]);
-    expect(vi.mocked(fetchWithRetry).mock.calls[0]?.[0]).toContain("depth=true");
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[0]).toContain("depth=true");
   });
 
   it("keeps same-exchange CoinGecko tickers pools distinct across stablecoins", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => new Response(JSON.stringify({
-      tickers: [{
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async () => ({
+      response: new Response(null, { status: 200 }),
+      body: { tickers: [{
         base: "USD",
         target: "USD",
         market: { name: "Kinesis", identifier: "kinesis" },
@@ -498,7 +503,7 @@ describe("crawlCoin DexScreener hardening", () => {
         is_stale: false,
         trust_score: null,
       }],
-    }), { status: 200 }));
+    } }));
 
     const knownPoolIds = new Set<string>();
     const usdcResult = await crawlCoin(

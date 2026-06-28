@@ -2,7 +2,7 @@ import { sleepWithSignal } from "../../lib/abort";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { CG_TICKERS_RATE_MS } from "../dex-liquidity/constants";
 import {
   aggregateCgTickersByExchange,
@@ -19,12 +19,12 @@ import {
 } from "./staged-pool";
 
 export interface CoinGeckoTickersStageDependencies {
-  fetchWithRetry: typeof fetchWithRetry;
+  fetchJsonWithRetry: typeof fetchJsonWithRetry;
   sleepWithSignal: typeof sleepWithSignal;
 }
 
 const defaultCoinGeckoTickersStageDependencies: CoinGeckoTickersStageDependencies = {
-  fetchWithRetry,
+  fetchJsonWithRetry,
   sleepWithSignal,
 };
 
@@ -51,12 +51,12 @@ export async function crawlCoinGeckoTickersStage({
 
   try {
     const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&depth=true`, cgApiKey);
-    const res = await dependencies.fetchWithRetry(url, {
+    const result = await dependencies.fetchJsonWithRetry<{ tickers?: CgTicker[] }>(url, {
       headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
       signal: context.buildStageSignal(DISCOVERY_STAGE_TIMEOUT_MS.cgTickers),
     }, 0, { timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgTickers });
-    if (res?.ok) {
-      const data = (await res.json()) as { tickers?: CgTicker[] };
+    if (result?.response.ok) {
+      const data = result.body;
       const exchangeSummaries = buildCgTickerExchangeSummaries(
         aggregateCgTickersByExchange(filterValidCgTickers(data.tickers ?? [])),
       );

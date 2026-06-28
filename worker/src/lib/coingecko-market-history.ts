@@ -1,12 +1,20 @@
 import { USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
-import { fetchWithRetry } from "./fetch-retry";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { fetchJsonWithRetry } from "./fetch-retry";
 
 export interface CoinGeckoMarketHistorySnapshot {
   marketCaps: [number, number][];
   prices: [number, number][];
   circulatingSupply?: number;
+}
+
+interface CoinGeckoMarketChartPayload {
+  market_caps?: [number, number][];
+  prices?: [number, number][];
+}
+
+interface CoinGeckoCoinDetailPayload {
+  market_data?: { circulating_supply?: number };
 }
 
 interface FetchCoinGeckoMarketHistoryOptions {
@@ -34,14 +42,14 @@ export async function fetchCoinGeckoMarketHistory(
     ? `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${rangeStart ?? 0}&to=${rangeEnd}`
     : `/coins/${geckoId}/market_chart?vs_currency=usd&days=max`;
 
-  const [marketChartRes, coinRes] = await Promise.all([
-    fetchWithRetry(
+  const [marketChartResult, coinResult] = await Promise.all([
+    fetchJsonWithRetry<CoinGeckoMarketChartPayload>(
       cgUrl(marketChartPath, apiKey),
       { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey), signal: options.signal },
       retryCount,
       retryOptions,
     ),
-    fetchWithRetry(
+    fetchJsonWithRetry<CoinGeckoCoinDetailPayload>(
       cgUrl(
         `/coins/${geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`,
         apiKey,
@@ -52,25 +60,18 @@ export async function fetchCoinGeckoMarketHistory(
     ),
   ]);
 
-  if (!marketChartRes?.ok) {
-    await cancelResponseBodyQuietly(coinRes);
+  if (!marketChartResult?.response.ok) {
     return null;
   }
 
-  const marketChart = (await marketChartRes.json()) as {
-    market_caps?: [number, number][];
-    prices?: [number, number][];
-  };
+  const marketChart = marketChartResult.body;
 
   let circulatingSupply: number | undefined;
-  if (coinRes?.ok) {
-    const coinData = (await coinRes.json()) as {
-      market_data?: { circulating_supply?: number };
-    };
+  if (coinResult?.response.ok) {
+    const coinData = coinResult.body;
     circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
   } else {
-    options.onCoinDetailFailure?.(coinRes?.status ?? "no-response");
-    await cancelResponseBodyQuietly(coinRes);
+    options.onCoinDetailFailure?.(coinResult?.response.status ?? "no-response");
   }
 
   return {

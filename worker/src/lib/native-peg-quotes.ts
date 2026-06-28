@@ -1,5 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { rethrowIfAborted } from "./abort";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
@@ -7,22 +8,14 @@ import {
   endpointLabel,
   errorClassFor,
   errorMessageFor,
-  readResponseSnippet,
   type PricingProviderAttemptDiagnostic,
 } from "./pricing-provider-diagnostics";
-import { readResponseTextWithSignal } from "./response-body";
+import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from "./response-body";
 
 const COINGECKO_NATIVE_PEG_BATCH_SIZE = 50;
 const COINGECKO_NATIVE_PEG_TIMEOUT_MS = 10_000;
+const COINGECKO_NATIVE_PEG_ERROR_BODY_MAX_BYTES = 2_000;
 const COINGECKO_NATIVE_PEG_FUTURE_SKEW_SEC = 5 * 60;
-
-function responseFromBufferedBody(response: Response, body: string): Response {
-  return new Response(body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
-}
 
 async function readNativePegResponseText(response: Response, signal?: AbortSignal): Promise<string> {
   const timeout = createTimeoutSignal({
@@ -35,6 +28,32 @@ async function readNativePegResponseText(response: Response, signal?: AbortSigna
   });
   try {
     return await readResponseTextWithSignal(response, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
+
+function sanitizeNativePegSnippet(value: string): string | undefined {
+  const snippet = value.replace(/\s+/g, " ").trim().slice(0, 240);
+  return snippet.length > 0 ? snippet : undefined;
+}
+
+async function readNativePegResponseSnippet(response: Response, signal?: AbortSignal): Promise<string | undefined> {
+  const timeout = createTimeoutSignal({
+    timeoutMs: COINGECKO_NATIVE_PEG_TIMEOUT_MS,
+    timeoutReason: new DOMException(
+      `response body timed out after ${COINGECKO_NATIVE_PEG_TIMEOUT_MS}ms`,
+      "TimeoutError",
+    ),
+    parentSignal: signal,
+  });
+  try {
+    return sanitizeNativePegSnippet(
+      await readResponseTextBoundedWithSignal(response, COINGECKO_NATIVE_PEG_ERROR_BODY_MAX_BYTES, timeout.signal),
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return undefined;
   } finally {
     timeout.dispose();
   }
@@ -191,11 +210,7 @@ export async function fetchCurrentNativePegQuotes(
           diagnostic.status = response?.status ?? null;
           diagnostic.ok = response?.ok === true;
           if (!response?.ok) {
-            diagnostic.snippet = response
-              ? await readResponseSnippet(
-                responseFromBufferedBody(response, await readNativePegResponseText(response, signal)),
-              )
-              : undefined;
+            diagnostic.snippet = response ? await readNativePegResponseSnippet(response, signal) : undefined;
             diagnostic.rejectionReasonCounts = { "non-ok": 1 };
             options?.diagnostics?.push(diagnostic);
             continue;

@@ -32,9 +32,182 @@ export function makeViolationKey(violation) {
   return `${violation.file}::${violation.assignmentText}::${violation.bodyReadText}`;
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function collectFetchWithRetryCallees(lines) {
+  const callees = new Set(["fetchWithRetry"]);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+
+    const directAlias = trimmed.match(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*fetchWithRetry\s*;/);
+    if (directAlias) {
+      callees.add(directAlias[1]);
+      continue;
+    }
+
+    const destructuredAlias = trimmed.match(/\b(?:const|let|var)\s*\{[^}]*\bfetchWithRetry\s*:\s*([A-Za-z_$][\w$]*)[^}]*\}/);
+    if (destructuredAlias) {
+      callees.add(destructuredAlias[1]);
+    }
+  }
+  return callees;
+}
+
+function fetchWithRetryCalleePattern(callees) {
+  const names = [...callees].map(escapeRegExp).join("|");
+  return new RegExp(`(?:^|[^\\w$])(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
+}
+
+function assignmentPattern(callees, declaration) {
+  const names = [...callees].map(escapeRegExp).join("|");
+  const prefix = declaration
+    ? "\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+"
+    : "^([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+";
+  return new RegExp(`${prefix}(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
+}
+
+function lineForOffset(lineStarts, offset) {
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    if (lineStarts[mid] <= offset) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return high + 1;
+}
+
+function computeLineStarts(source) {
+  const starts = [0];
+  for (let index = 0; index < source.length; index++) {
+    if (source[index] === "\n") starts.push(index + 1);
+  }
+  return starts;
+}
+
+function findMatchingBracket(source, openIndex) {
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  for (let index = openIndex; index < source.length; index++) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "[") depth++;
+    if (char === "]") {
+      depth--;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+function splitTopLevelArrayItems(source, openIndex, closeIndex) {
+  const items = [];
+  let itemStart = openIndex + 1;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+  let quote = null;
+  let escaped = false;
+
+  for (let index = openIndex + 1; index < closeIndex; index++) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "(") parenDepth++;
+    if (char === ")") parenDepth--;
+    if (char === "[") bracketDepth++;
+    if (char === "]") bracketDepth--;
+    if (char === "{") braceDepth++;
+    if (char === "}") braceDepth--;
+
+    if (char === "," && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      items.push({ text: source.slice(itemStart, index), start: itemStart });
+      itemStart = index + 1;
+    }
+  }
+
+  items.push({ text: source.slice(itemStart, closeIndex), start: itemStart });
+  return items;
+}
+
+function trackDestructuredPromiseAllAssignments(source, lineStarts, callees) {
+  const tracked = [];
+  const fetchCallPattern = fetchWithRetryCalleePattern(callees);
+  const promiseAllPattern = /\b(?:const|let|var)\s*\[([^\]]+)]\s*=\s*await\s+Promise\.all\s*\(\s*\[/g;
+  let match;
+
+  while ((match = promiseAllPattern.exec(source)) !== null) {
+    const fullMatch = match[0];
+    const declarationLine = lineForOffset(lineStarts, match.index);
+    const declarationText = source
+      .slice(lineStarts[declarationLine - 1], source.indexOf("\n", lineStarts[declarationLine - 1]) === -1
+        ? source.length
+        : source.indexOf("\n", lineStarts[declarationLine - 1]))
+      .trim();
+    const names = match[1]
+      .split(",")
+      .map((name) => name.trim())
+      .filter((name) => /^[A-Za-z_$][\w$]*$/.test(name));
+    const arrayOpenIndex = match.index + fullMatch.lastIndexOf("[");
+    const arrayCloseIndex = findMatchingBracket(source, arrayOpenIndex);
+    if (arrayCloseIndex === -1) continue;
+
+    const items = splitTopLevelArrayItems(source, arrayOpenIndex, arrayCloseIndex);
+    for (let itemIndex = 0; itemIndex < Math.min(items.length, names.length); itemIndex++) {
+      const item = items[itemIndex];
+      if (!fetchCallPattern.test(item.text)) continue;
+      tracked.push({
+        name: names[itemIndex],
+        line: lineForOffset(lineStarts, item.start),
+        assignmentText: declarationText,
+      });
+    }
+    promiseAllPattern.lastIndex = arrayCloseIndex + 1;
+  }
+
+  return tracked;
+}
+
 export function findFetchBodyTimeoutViolations(source, file = "<source>") {
   const lines = source.split(/\r?\n/g);
-  const tracked = [];
+  const lineStarts = computeLineStarts(source);
+  const callees = collectFetchWithRetryCallees(lines);
+  const declarationPattern = assignmentPattern(callees, true);
+  const reassignmentPattern = assignmentPattern(callees, false);
+  const tracked = trackDestructuredPromiseAllAssignments(source, lineStarts, callees);
   const violations = [];
 
   for (let index = 0; index < lines.length; index++) {
@@ -42,10 +215,10 @@ export function findFetchBodyTimeoutViolations(source, file = "<source>") {
     const trimmed = line.trim();
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
 
-    const declarationMatch = trimmed.match(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+fetchWithRetry\s*\(/);
+    const declarationMatch = trimmed.match(declarationPattern);
     const assignmentMatch = declarationMatch
       ? null
-      : trimmed.match(/^([A-Za-z_$][\w$]*)\s*=\s*await\s+fetchWithRetry\s*\(/);
+      : trimmed.match(reassignmentPattern);
     const assignedName = declarationMatch?.[1] ?? assignmentMatch?.[1] ?? null;
     if (assignedName) {
       tracked.push({
