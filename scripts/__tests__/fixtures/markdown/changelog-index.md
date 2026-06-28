@@ -6,6 +6,17 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-06-22 to 2026-06-28
+
+A redesigned homepage and global top-nav with a new Whyte typeface, plus a worker-hardening rollout and reserve work.
+
+- **Homepage & nav redesign**: A global top-nav replaces the retired sidebar and the homepage is rebuilt around a dashboard workbench with compact tables and a tighter Market Pulse, set in a new Whyte display typeface with flat, unified card shells.
+- **Worker hardening rollout**: A structural worker-hardening rollout adds a job-attempt ledger and gated repair runner, per-provider execution budgets, tighter cron-lease observability, and a status page exposing canary counts and dependency health.
+- **Reserve feed integrity**: The usdo-openeden live feed is suspended after its issuer gateway blocked Worker egress, falling back to curated data; a stale AZND source is removed and live-reserve finalization is bounded under the cron cap.
+- **Exit liquidity & redemption**: Tier 1+2 redemption-backstop confidence upgrades land, Morpho and Yearn V3 vaults gain exit-capacity telemetry, and inactive DEX pools are excluded from global liquidity scoring so depth reflects only live venues.
+- **Benchmark & price resilience**: The GBP SONIA benchmark fails over to the FRED IUDZOS2 mirror with an ALFRED fallback, USD EFFR source order is hardened, and backfill and mint-burn heal stale commodity prices and null amounts from history.
+- **Methodology & data corrections**: A scoring-weighted doc-vs-code audit corrects drift across the corpus, sUSD is frozen for SIP-423, AUSD and msUSD reserve summaries are fixed, and the pre-launch board refreshes with trUSD's live mainnet contracts.
+
 ## 2026-06-15 to 2026-06-21
 
 Yield gains a Yearn-style venue-risk rubric (61 venues), Telegram adds reserve-drift alerts, and case studies reach 24.

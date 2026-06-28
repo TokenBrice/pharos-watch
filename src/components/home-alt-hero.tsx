@@ -29,15 +29,17 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
         role="group"
         aria-label="Stablecoin market cap snapshot"
       >
-        <CardExpandButton href="/screener/" expandLabel="Open Screener" className="absolute right-3 top-3 z-10" />
         <div className="border-b border-border/50 p-5 sm:p-6 lg:border-b-0 lg:border-r lg:p-7">
           <div className="space-y-2.5">
-            <p
-              className="text-sm font-medium text-muted-foreground"
-              title="Excludes 2 shadow assets used only for PSI continuity"
-            >
-              Total Market Cap
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <p
+                className="text-sm font-medium text-muted-foreground"
+                title="Excludes 2 shadow assets used only for PSI continuity"
+              >
+                Total Market Cap
+              </p>
+              <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
+            </div>
             <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
               {formatCurrency(snapshot.totalUsd, 1)}
             </p>
