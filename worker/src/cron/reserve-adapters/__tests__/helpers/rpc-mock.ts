@@ -14,6 +14,11 @@ vi.mock("../../../../lib/chain-registry", () => ({
 
 vi.mock("../../../../lib/fetch-retry", () => ({
   fetchWithRetry: fetchWithRetryMock,
+  fetchJsonWithRetry: async (...args: unknown[]) => {
+    const response = await fetchWithRetryMock(...args);
+    if (!response) return null;
+    return { response, body: await response.json() };
+  },
   fetchTextWithRetry: async (...args: unknown[]) => {
     const response = await fetchWithRetryMock(...args);
     if (!response) return null;

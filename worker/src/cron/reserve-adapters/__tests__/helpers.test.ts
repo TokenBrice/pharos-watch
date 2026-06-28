@@ -676,7 +676,7 @@ describe("fetchDefiLlamaPrices", () => {
       "https://coins.llama.fi/prices/current/hyperliquid:0x5555555555555555555555555555555555555555",
       { signal },
       2,
-      { timeoutMs: 10_000 },
+      { timeoutMs: 10_000, returnFinalResponse: true },
     );
   });
 });
