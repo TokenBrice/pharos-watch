@@ -1,7 +1,9 @@
 import { batchExecute } from "../../lib/db";
+import { throwIfAborted } from "../../lib/abort";
 import type { BlacklistRow } from "./shared";
 
-export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[]): Promise<number> {
+export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], signal?: AbortSignal): Promise<number> {
+  throwIfAborted(signal);
   if (rows.length === 0) return 0;
 
   // `amount` is a legacy column kept in lockstep with amount_native for pre-v3.2 compat.
@@ -42,5 +44,5 @@ export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[]):
         row.explorer_address_url,
       ),
   );
-  return batchExecute(db, stmts);
+  return batchExecute(db, stmts, { signal });
 }

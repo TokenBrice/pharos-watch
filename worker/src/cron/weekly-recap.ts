@@ -469,6 +469,7 @@ export async function generateWeeklyRecap(
     inputData: weeklyData,
     digestExtended: digestCopy.digestExtended || null,
     digestMeta: initialDigestMeta,
+    signal,
   });
 
   // Post to Telegram

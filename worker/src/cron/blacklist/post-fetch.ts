@@ -197,7 +197,7 @@ export async function processFetchedBlacklistRows(
     `[sync-blacklist] enrichRowBalances (${options.chainLabel}): attempted=${enrichCounters.attempted} succeeded=${enrichCounters.succeeded} failed=${enrichCounters.failed}`,
   );
 
-  const insertedRows = await insertBlacklistRows(options.db, newRows);
+  const insertedRows = await insertBlacklistRows(options.db, newRows, options.signal);
   const ledgerRows = newRows.filter((row) => row.suppression_reason == null);
   const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
   const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows);

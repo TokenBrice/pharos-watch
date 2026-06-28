@@ -6,6 +6,7 @@ import type {
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
 import { recordCronFailure } from "../../lib/cron-logger";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   formatDigestValidationIssues,
@@ -48,6 +49,7 @@ interface InsertDigestRecordOptions {
   inputData: unknown;
   digestExtended: string | null;
   digestMeta: string | null;
+  signal?: AbortSignal;
 }
 
 interface RunDigestChannelDeliveryOptions<TCreds> {
@@ -212,19 +214,23 @@ export async function requestDigestCopy(
 }
 
 export async function insertDigestRecord(options: InsertDigestRecordOptions): Promise<void> {
-  await options.db
-    .prepare(
-      "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta) VALUES (?, ?, ?, ?, ?, ?)",
-    )
-    .bind(
-      options.generatedAt,
-      options.digestText,
-      options.digestTitle,
-      JSON.stringify(options.inputData),
-      options.digestExtended,
-      options.digestMeta,
-    )
-    .run();
+  await runWithOverloadRetry(() =>
+    options.db
+      .prepare(
+        "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .bind(
+        options.generatedAt,
+        options.digestText,
+        options.digestTitle,
+        JSON.stringify(options.inputData),
+        options.digestExtended,
+        options.digestMeta,
+      )
+      .run(),
+    3,
+    options.signal,
+  );
 }
 
 export function didDigestChannelDeliver(status: string): boolean {
