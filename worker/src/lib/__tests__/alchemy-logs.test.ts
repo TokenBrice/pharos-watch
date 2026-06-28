@@ -121,6 +121,35 @@ describe("getAlchemyBlockNumber", () => {
   });
 });
 
+describe("fetchAlchemyLogs runtime deadline", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it("does not start eth_getLogs when the run deadline is already exhausted", async () => {
+    const budget = createBudget(10);
+    const result = await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      [{ index: 0, value: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" }],
+      22_000_000,
+      22_000_100,
+      budget,
+      undefined,
+      { deadlineMs: Date.now() - 1 },
+    );
+
+    expect(result).toMatchObject({
+      logs: [],
+      complete: false,
+      scannedToBlock: 21_999_999,
+      calls: 0,
+    });
+    expect(budget.count).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 // --- getAlchemyTransactionContextBatchMany ---
 
 describe("getAlchemyTransactionContextBatchMany", () => {

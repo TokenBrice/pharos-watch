@@ -213,6 +213,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       scanTo,
       configBudget,
       signal,
+      deadlineMs != null ? { deadlineMs } : undefined,
     );
 
     if (!fetched) {

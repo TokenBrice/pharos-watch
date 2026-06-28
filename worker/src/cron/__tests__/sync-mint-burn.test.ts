@@ -719,6 +719,9 @@ describe("syncMintBurn", () => {
     expect(meta.runtimeBudgetHit).toBe(true);
     expect(usdc?.attempted).toBe(false);
     expect(usdc?.skippedReason).toBe("runtime-budget-exhausted");
+    expect(vi.mocked(fetchAlchemyLogs).mock.calls[0]?.[7]).toMatchObject({
+      deadlineMs: expect.any(Number),
+    });
   });
 
   it("allows bridge-aware critical configs to use the larger tx-context budget", async () => {

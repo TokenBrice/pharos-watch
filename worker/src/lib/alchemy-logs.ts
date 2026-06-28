@@ -91,8 +91,9 @@ async function jsonRpcCall<T>(
   method: string,
   params: unknown[],
   signal?: AbortSignal,
+  timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
 ): Promise<JsonRpcCallResult<T>> {
-  const timeout = AbortSignal.timeout(ALCHEMY_RPC_TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)));
   let res: Response;
   try {
     res = await fetch(alchemyUrl, {
@@ -286,6 +287,7 @@ export async function fetchAlchemyLogs(
   toBlock: number,
   budget: SubrequestBudget,
   signal?: AbortSignal,
+  options?: { deadlineMs?: number },
 ): Promise<AlchemyLogsFetchResult | null> {
   return fetchAlchemyLogsRange(
     alchemyUrl,
@@ -296,6 +298,7 @@ export async function fetchAlchemyLogs(
     budget,
     signal,
     0,
+    options,
   );
 }
 
@@ -328,9 +331,14 @@ async function fetchAlchemyLogsRange(
   budget: SubrequestBudget,
   signal: AbortSignal | undefined,
   depth: number,
+  options?: { deadlineMs?: number },
 ): Promise<FetchLogsRangeResult> {
   if (fromBlock > toBlock) {
     return { logs: [], complete: true, scannedToBlock: toBlock, calls: 0, maxDepth: depth };
+  }
+
+  if (options?.deadlineMs != null && Date.now() >= options.deadlineMs) {
+    return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: depth };
   }
 
   if (budgetExhausted(budget)) {
@@ -352,7 +360,10 @@ async function fetchAlchemyLogsRange(
   }];
 
   try {
-    const rpc = await jsonRpcCall<AlchemyLogEntry[]>(alchemyUrl, "eth_getLogs", params, signal);
+    const timeoutMs = options?.deadlineMs != null
+      ? Math.max(1, options.deadlineMs - Date.now())
+      : ALCHEMY_RPC_TIMEOUT_MS;
+    const rpc = await jsonRpcCall<AlchemyLogEntry[]>(alchemyUrl, "eth_getLogs", params, signal, timeoutMs);
     if (Array.isArray(rpc.result)) {
       return { logs: rpc.result, complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
     }
@@ -386,6 +397,7 @@ async function fetchAlchemyLogsRange(
       budget,
       signal,
       depth + 1,
+      options,
     );
     if (!left.complete) {
       return {
@@ -406,6 +418,7 @@ async function fetchAlchemyLogsRange(
       budget,
       signal,
       depth + 1,
+      options,
     );
 
     return {
