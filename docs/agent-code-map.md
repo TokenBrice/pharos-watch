@@ -705,6 +705,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-cron-schedule-sync.test.ts`
 - `scripts/__tests__/check-duplicate-exports.test.ts`
 - `scripts/__tests__/check-env-contract.test.ts` - After, Env
+- `scripts/__tests__/check-fetch-body-timeouts.test.ts` - run
 - `scripts/__tests__/check-glossary-coverage.test.ts`
 - `scripts/__tests__/check-phishing-signatures.test.ts`
 - `scripts/__tests__/check-provider-resilience.test.ts` - run
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/merge-gate-parallel-mode.test.ts`
 - `scripts/__tests__/mint-authority-review-audit.test.ts`
 - `scripts/__tests__/night-watch-worker.test.ts`
-- `scripts/__tests__/oracle-risk-coverage.test.ts`
-- ... 219 more files omitted; use `rg --files scripts` for the full list.
+- ... 221 more files omitted; use `rg --files scripts` for the full list.

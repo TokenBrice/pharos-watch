@@ -72,10 +72,6 @@ function normalizeRelPath(path) {
   return path.replaceAll("\\", "/");
 }
 
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function collectScanFiles(cwd, roots) {
   const files = [];
   for (const root of roots) {
@@ -116,18 +112,19 @@ export function findFetchBodyTimeoutViolations(source, file = "<source>") {
       });
     }
 
+    const bodyReadMatch = trimmed.match(/\b([A-Za-z_$][\w$]*)\s*\.\s*(json|text)\s*\(/);
+    if (!bodyReadMatch) continue;
+
     for (const candidate of tracked) {
       if (index + 1 <= candidate.line) continue;
       if (index + 1 - candidate.line > 80) continue;
-      const bodyReadPattern = new RegExp(`\\b${escapeRegex(candidate.name)}\\s*\\.\\s*(json|text)\\s*\\(`);
-      const bodyReadMatch = trimmed.match(bodyReadPattern);
-      if (!bodyReadMatch) continue;
+      if (bodyReadMatch[1] !== candidate.name) continue;
       violations.push({
         file,
         fetchLine: candidate.line,
         bodyLine: index + 1,
         variable: candidate.name,
-        method: bodyReadMatch[1],
+        method: bodyReadMatch[2],
         assignmentText: candidate.assignmentText,
         bodyReadText: trimmed,
       });
