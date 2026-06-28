@@ -291,7 +291,7 @@ function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoard
               className="pharos-focus-ring inline-flex cursor-help items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200"
             >
               <span>{driver.label}</span>
-              <span className="font-mono text-[10px] tabular-nums opacity-75">{driver.count}</span>
+              <span className="pharos-numeric text-[10px] opacity-75">{driver.count}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-[260px] text-xs">
@@ -339,7 +339,7 @@ function SourceLaneRow({ group }: { group: YieldSourceBoardGroup }) {
           </Tooltip>
         ) : null}
         <span className="text-sm font-medium text-foreground">{group.dataSourceLabel}</span>
-        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+        <span className="pharos-numeric text-xs text-muted-foreground">
           {pluralize(group.representedSourceCount, "observation")}
         </span>
       </div>
@@ -477,7 +477,7 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
         aria-labelledby="yield-source-board-heading"
         className="pharos-card-shell overflow-hidden"
       >
-        <div className="pharos-panel-header space-y-3">
+        <div className="pharos-panel-header space-y-5">
           <div className="space-y-1">
             <p className="pharos-kicker">Yield Sources</p>
             <h2
@@ -492,53 +492,58 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
           </div>
 
           <SourceQualityBars model={model} />
-          <SourceRiskDriverChips drivers={model.topSourceRiskDrivers} />
+
+          <div className="border-t border-border/50 pt-5">
+            <SourceRiskDriverChips drivers={model.topSourceRiskDrivers} />
+          </div>
 
           {hasDisclosureBadges ? (
-            <div className="flex flex-wrap gap-2">
-              {model.sourceSwitchCount > 0 ? (
-                <DisclosureToggle
-                  label={pluralize(model.sourceSwitchCount, "source changed", "sources changed")}
-                  description="A source changed when the selected source differs from the prior published snapshot. Click for the audit list."
-                  open={openDisclosure === "switches"}
-                  controls={disclosureId}
-                  toneClass="border-sky-500/25 bg-sky-500/10 text-sky-700 hover:bg-sky-500/15 dark:text-sky-300"
-                  onClick={() => toggleDisclosure("switches")}
-                />
-              ) : null}
-              {model.anomalyCount > 0 ? (
-                <DisclosureToggle
-                  label={`${pluralize(model.anomalyCount, "chosen source")} with anomalies`}
-                  description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Click for the audit list."
-                  open={openDisclosure === "anomalies"}
-                  controls={disclosureId}
-                  toneClass="border-amber-500/25 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
-                  onClick={() => toggleDisclosure("anomalies")}
-                />
-              ) : null}
-            </div>
-          ) : null}
-
-          <div
-            id={disclosureId}
-            aria-hidden={openDisclosure === null}
-            inert={openDisclosure === null}
-            className={cn(
-              "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
-              openDisclosure ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-            )}
-          >
-            <div className="overflow-hidden">
-              <div className="rounded-md border border-border/60 bg-muted/10 px-3 py-2">
-                {openDisclosure === "switches" ? (
-                  <SourceSwitchDisclosure details={model.sourceSwitchDetails} />
+            <div className="space-y-3 border-t border-border/50 pt-5">
+              <div className="flex flex-wrap gap-2">
+                {model.sourceSwitchCount > 0 ? (
+                  <DisclosureToggle
+                    label={pluralize(model.sourceSwitchCount, "source changed", "sources changed")}
+                    description="A source changed when the selected source differs from the prior published snapshot. Click for the audit list."
+                    open={openDisclosure === "switches"}
+                    controls={disclosureId}
+                    toneClass="border-sky-500/25 bg-sky-500/10 text-sky-700 hover:bg-sky-500/15 dark:text-sky-300"
+                    onClick={() => toggleDisclosure("switches")}
+                  />
                 ) : null}
-                {openDisclosure === "anomalies" ? (
-                  <AnomalyDisclosure details={model.anomalyDetails} />
+                {model.anomalyCount > 0 ? (
+                  <DisclosureToggle
+                    label={`${pluralize(model.anomalyCount, "chosen source")} with anomalies`}
+                    description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Click for the audit list."
+                    open={openDisclosure === "anomalies"}
+                    controls={disclosureId}
+                    toneClass="border-amber-500/25 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+                    onClick={() => toggleDisclosure("anomalies")}
+                  />
                 ) : null}
               </div>
+
+              <div
+                id={disclosureId}
+                aria-hidden={openDisclosure === null}
+                inert={openDisclosure === null}
+                className={cn(
+                  "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+                  openDisclosure ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="rounded-md border border-border/60 bg-muted/10 px-3 py-2">
+                    {openDisclosure === "switches" ? (
+                      <SourceSwitchDisclosure details={model.sourceSwitchDetails} />
+                    ) : null}
+                    {openDisclosure === "anomalies" ? (
+                      <AnomalyDisclosure details={model.anomalyDetails} />
+                    ) : null}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <ul className="divide-y divide-border/60" aria-label="Yield source lanes">

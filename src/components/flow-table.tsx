@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
   TableCell,
+  TableToolbarFrame,
 } from "@/components/table";
 import {
   DataTableEmptyRow,
@@ -107,6 +108,14 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const { data: logos } = useLogos();
   const prefetch = usePrefetchStablecoin();
 
+  const toolbar = (
+    <TableToolbarFrame
+      eyebrow="Per-Coin Flows"
+      titleId="table-heading"
+      description="Minting and redemption per coin on each configured issuance chain, ranked by net 24h flow."
+    />
+  );
+
   if (isLoading) {
     return (
       <DataTableShell
@@ -114,6 +123,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
         testId="mint-burn-flow-table"
         columns={FLOW_TABLE_COLUMNS}
         striped
+        topSlot={toolbar}
       >
         <DataTableLoadingRows columns={FLOW_TABLE_COLUMNS} rowCount={5} />
       </DataTableShell>
@@ -127,6 +137,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
       columns={FLOW_TABLE_COLUMNS}
       striped
       tableClassName="min-w-[364px] table-fixed"
+      topSlot={toolbar}
       sort={{
         sortKey,
         sortDirection,
@@ -179,7 +190,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="text-right">
                   <span
                     className={cn(
-                      "font-mono tabular-nums text-sm font-semibold",
+                      "pharos-numeric text-sm font-semibold",
                       PRESSURE_VALUE_CLASS[pressureState],
                     )}
                   >
@@ -200,7 +211,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="text-right">
                   <span
                     className={cn(
-                      "font-mono tabular-nums text-sm font-semibold",
+                      "pharos-numeric text-sm font-semibold",
                       getNetColor(coin.netFlow24hUsd),
                     )}
                   >
@@ -208,13 +219,13 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     {formatCurrency(coin.netFlow24hUsd)}
                   </span>
                 </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">
+                <TableCell className="hidden text-right pharos-numeric sm:table-cell">
                   {formatCurrency(coin.mintVolume24hUsd)}
                 </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">
+                <TableCell className="hidden text-right pharos-numeric sm:table-cell">
                   {formatCurrency(coin.burnVolume24hUsd)}
                 </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums md:table-cell">
+                <TableCell className="hidden text-right pharos-numeric md:table-cell">
                   <span className={getNetColor(coin.netFlow7dUsd)}>
                     {getNetPrefix(coin.netFlow7dUsd)}
                     {formatCurrency(coin.netFlow7dUsd)}
@@ -223,16 +234,16 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <FlowNetCell
                   value={coin.netFlow30dUsd}
                   hasWindow={coin.coverage?.has30dWindow}
-                  cellClassName="hidden text-right font-mono tabular-nums lg:table-cell"
+                  cellClassName="hidden text-right pharos-numeric lg:table-cell"
                   windowLabel="30-day"
                 />
                 <FlowNetCell
                   value={coin.netFlow90dUsd}
                   hasWindow={coin.coverage?.has90dWindow}
-                  cellClassName="hidden text-right font-mono tabular-nums xl:table-cell"
+                  cellClassName="hidden text-right pharos-numeric xl:table-cell"
                   windowLabel="90-day"
                 />
-                <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
+                <TableCell className="hidden text-right pharos-numeric xl:table-cell">
                   {coin.largestEvent24h ? (
                     <span
                       className={

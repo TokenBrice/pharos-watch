@@ -74,7 +74,7 @@ export function FlowReceiptBand({
               </span>
               <span
                 className={cn(
-                  "font-mono text-sm font-semibold tabular-nums",
+                  "pharos-numeric text-sm font-semibold",
                   valueClass(row),
                 )}
               >
@@ -134,7 +134,7 @@ export function FlowReceiptBand({
                 </span>
                 <span
                   className={cn(
-                    "font-mono text-sm font-semibold tabular-nums",
+                    "pharos-numeric text-sm font-semibold",
                     valueClass(row),
                   )}
                 >
@@ -158,13 +158,13 @@ export function FlowReceiptBand({
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span className="text-muted-foreground text-xs">Top minter</span>
-              <span className="font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              <span className="pharos-numeric text-sm font-semibold text-emerald-700 dark:text-emerald-300">
                 {model.topMint
                   ? `${model.topMint.symbol} ${formatSignedCurrency(model.topMint.valueUsd)}`
                   : "None"}
               </span>
               <span className="text-muted-foreground text-xs">Top burner</span>
-              <span className="font-mono text-sm font-semibold text-red-700 dark:text-red-300">
+              <span className="pharos-numeric text-sm font-semibold text-red-700 dark:text-red-300">
                 {model.topBurn
                   ? `${model.topBurn.symbol} ${formatSignedCurrency(model.topBurn.valueUsd)}`
                   : "None"}

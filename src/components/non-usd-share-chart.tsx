@@ -115,7 +115,7 @@ export function NonUsdShareChart({
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl">
+      <Card className="pharos-card-shell">
         <CardHeader>
           <CardTitle as="h2">Non-USD Market Share</CardTitle>
         </CardHeader>
@@ -127,7 +127,7 @@ export function NonUsdShareChart({
   }
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
+    <Card className="pharos-card-shell animate-in fade-in duration-300">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <CardTitle as="h2">Share Of Total Stablecoin Market Outside USD</CardTitle>
@@ -178,14 +178,15 @@ export function NonUsdShareChart({
       <CardContent>
         {filteredData.length > 0 ? (
           <>
-            <div
-              ref={chartContainerRef}
-              className={chartHeightClass}
-              role="figure"
-              aria-label={`Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} current share`}
-            >
-              {isChartReady ? (
-                <AreaChart
+            <div className="pharos-chart-stage">
+              <div
+                ref={chartContainerRef}
+                className={chartHeightClass}
+                role="figure"
+                aria-label={`Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} current share`}
+              >
+                {isChartReady ? (
+                  <AreaChart
                   width={width}
                   height={height}
                   data={filteredData}
@@ -225,6 +226,7 @@ export function NonUsdShareChart({
               ) : (
                 <Skeleton className="h-full w-full" />
               )}
+              </div>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">

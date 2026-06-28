@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Image from "next/image";
 import { TableCell } from "@/components/table";
 import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
@@ -24,6 +25,8 @@ interface LiquidityTableProps {
   logos: Record<string, string> | undefined;
   searchQuery: string;
   onRowClick: (id: string) => void;
+  /** Workbench toolbar (filters + search) rendered inside the table shell header. */
+  toolbar?: ReactNode;
 }
 
 const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
@@ -49,7 +52,7 @@ const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
   { id: "durability", label: "Durability", sortKey: "durability", className: "hidden xl:table-cell text-right" },
 ] as const;
 
-export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: LiquidityTableProps) {
+export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }: LiquidityTableProps) {
   const {
     sortKey,
     sortDirection,
@@ -83,6 +86,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
         tableId="liquidity-leaderboard"
         testId="liquidity-leaderboard-table"
         columns={LIQUIDITY_COLUMNS}
+        topSlot={toolbar ? <div className="pharos-table-toolbar">{toolbar}</div> : undefined}
         striped
         sort={{
           sortKey,
@@ -120,7 +124,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
               ariaLabel={`Open ${row.meta.symbol} liquidity detail`}
               className="h-11 sm:h-auto"
             >
-              <TableCell className="px-2 text-right text-muted-foreground text-xs font-mono tabular-nums sm:px-3">
+              <TableCell className="px-2 text-right text-muted-foreground text-xs pharos-numeric sm:px-3">
                 {pageStartIndex + index + 1}
               </TableCell>
               <TableCell className="w-[122px] max-w-[122px] overflow-hidden sm:w-[150px] sm:max-w-[150px] xl:w-[200px] xl:max-w-none">
@@ -145,15 +149,15 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                   nameClassName="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline"
                 />
               </TableCell>
-              <TableCell className="text-right font-mono tabular-nums">
+              <TableCell className="text-right pharos-numeric">
                 {liq.liquidityScore != null ? (
                   <span className={getScoreColor(liq.liquidityScore)}>{liq.liquidityScore}</span>
                 ) : (
                   <span className="text-muted-foreground">NR</span>
                 )}
               </TableCell>
-              <TableCell className="text-right font-mono tabular-nums">{formatCurrency(liq.totalTvlUsd)}</TableCell>
-              <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
+              <TableCell className="text-right pharos-numeric">{formatCurrency(liq.totalTvlUsd)}</TableCell>
+              <TableCell className="hidden lg:table-cell text-right pharos-numeric text-sm">
                 {liq.tvlChange7d != null ? (
                   <span className={getNetColor(liq.tvlChange7d, { positiveInclusiveZero: true })}>
                     {liq.tvlChange7d >= 0 ? "\u2191" : "\u2193"}
@@ -163,17 +167,17 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                   <span className="text-muted-foreground">—</span>
                 )}
               </TableCell>
-              <TableCell className="text-right font-mono tabular-nums">
+              <TableCell className="text-right pharos-numeric">
                 {formatCurrency(liq.totalVolume24hUsd)}
               </TableCell>
-              <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">
+              <TableCell className="hidden lg:table-cell text-right pharos-numeric">
                 {formatCurrency(liq.totalVolume7dUsd)}
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
+              <TableCell className="hidden sm:table-cell text-right pharos-numeric text-sm">
                 {formatPercent(vtRatio * 100, 1)}
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">{liq.poolCount}</TableCell>
-              <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">{liq.chainCount}</TableCell>
+              <TableCell className="hidden sm:table-cell text-right pharos-numeric">{liq.poolCount}</TableCell>
+              <TableCell className="hidden sm:table-cell text-right pharos-numeric">{liq.chainCount}</TableCell>
               <TableCell className="hidden md:table-cell text-left text-sm text-muted-foreground">
                 {topProtocol ? (
                   <span className="flex items-center gap-1.5">
@@ -200,12 +204,12 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                   <span className="text-muted-foreground">—</span>
                 )}
               </TableCell>
-              <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
+              <TableCell className="hidden xl:table-cell text-right pharos-numeric">
                 {liq.organicFraction != null ? `${Math.round(liq.organicFraction * 100)}%` : "—"}
               </TableCell>
               <TableCell className="hidden xl:table-cell text-right">
                 {liq.durabilityScore != null ? (
-                  <span className={`font-mono tabular-nums ${getDurabilityColor(liq.durabilityScore)}`}>
+                  <span className={`pharos-numeric ${getDurabilityColor(liq.durabilityScore)}`}>
                     {liq.durabilityScore}
                   </span>
                 ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, type CSSProperties } from "react";
+import { useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { HomepageSectionBand } from "@/components/homepage-sections";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,10 +34,6 @@ const ALL_NON_USD_COIN_COUNT = ACTIVE_STABLECOINS.filter(
 ).length;
 
 const EMPTY_FILTERS: readonly never[] = [];
-
-function withAlpha(hex: string, alpha: string): string {
-  return hex.startsWith("#") && hex.length === 7 ? `${hex}${alpha}` : hex;
-}
 
 interface AltPegStablecoinTableProps {
   data: StablecoinData[] | undefined;
@@ -90,7 +86,7 @@ export function AltPegStablecoinTable({
   }, [data, trackedIds]);
 
   return (
-    <section aria-label="Alt-peg stablecoin browser" className="space-y-4">
+    <section id="alt-peg-table" aria-label="Alt-peg stablecoin browser" className="scroll-mt-24 space-y-4">
       <HomepageSectionBand
         eyebrow="Cohort Details"
         title="Drill Into Each Alt-Peg Cohort"
@@ -186,27 +182,20 @@ interface AltPegChipButtonProps {
 }
 
 function AltPegChipButton({ label, count, colorHex, isSelected, onClick }: AltPegChipButtonProps) {
-  const style: CSSProperties = isSelected
-    ? {
-        borderColor: withAlpha(colorHex, "80"),
-        backgroundColor: withAlpha(colorHex, "1f"),
-        color: "var(--foreground)",
-      }
-    : {
-        borderColor: withAlpha(colorHex, "26"),
-        backgroundColor: withAlpha(colorHex, "0d"),
-      };
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={isSelected}
-      style={style}
-      className="pharos-focus-ring inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-[background-color,border-color,color] hover:text-foreground aria-pressed:text-foreground"
+      className={
+        isSelected
+          ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active gap-2"
+          : "pharos-focus-ring pharos-control-pill gap-2"
+      }
     >
-      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorHex }} />
+      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorHex }} aria-hidden="true" />
       <span>{label}</span>
-      <span className="font-mono text-[11px] tabular-nums text-muted-foreground/80">{count}</span>
+      <span className="pharos-numeric text-[11px] text-muted-foreground/80">{count}</span>
     </button>
   );
 }

@@ -24,7 +24,7 @@ export function SelectedHarborPanel({ entry }: { entry: ChainHarborEntry | null 
   const topCargos = entry.cargos.slice(0, 3);
 
   return (
-    <section className="rounded-xl border border-border/70 bg-card p-4" aria-labelledby="selected-harbor-heading">
+    <section className="pharos-card-shell p-4" aria-labelledby="selected-harbor-heading">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <Image

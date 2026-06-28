@@ -28,100 +28,54 @@ type FocusedChart = "share" | "cohorts";
 
 const DEFAULT_HISTORY_RANGE: TimeRangeOption = "1y";
 
-function formatPctPointDelta(value: number | null): string {
-  if (value == null) return "—";
-  return `${value > 0 ? "+" : ""}${value.toFixed(2)} pts`;
-}
-
 function isFocusedChart(value: string | null): value is FocusedChart {
   return value === "share" || value === "cohorts";
 }
 
-function AltPegSnapshotHero({
+// Commodities vs. all other non-USD pegs — demoted out of the hero into a flat
+// band below the workbench table.
+function AltPegMixBand({
   marketCap,
-  sharePct,
   fiatNonUsdMarketCap,
   commodityMarketCap,
-  altCoinCount,
-  altPegCount,
-  yearlyShareDeltaPctPoints,
 }: {
   marketCap: number;
-  sharePct: number;
   fiatNonUsdMarketCap: number;
   commodityMarketCap: number;
-  altCoinCount: number;
-  altPegCount: number;
-  yearlyShareDeltaPctPoints: number | null;
 }) {
   const commodityShare = marketCap > 0 ? (commodityMarketCap / marketCap) * 100 : 0;
   const nonCommodityShare = marketCap > 0 ? (fiatNonUsdMarketCap / marketCap) * 100 : 0;
 
   return (
-    <section className="pharos-card-shell overflow-hidden">
-      <div className="grid gap-6 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-stretch">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <p className="pharos-kicker">Current Structure</p>
-            <div className="space-y-1">
-              <h2 className="text-[clamp(2rem,4vw,3.4rem)] font-black tracking-[-0.04em] text-foreground">
-                {formatCurrency(marketCap, 1)}
-              </h2>
-              <p className="text-base font-medium text-foreground">
-                {formatPercent(sharePct)} of tracked stablecoin market cap is non-USD.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
-              <p className="pharos-kicker">1Y Share Change</p>
-              <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">
-                {formatPctPointDelta(yearlyShareDeltaPctPoints)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
-              <p className="pharos-kicker">Tracked Coins</p>
-              <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">{altCoinCount}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
-              <p className="pharos-kicker">Active Peg Cohorts</p>
-              <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">{altPegCount}</p>
-            </div>
-          </div>
+    <section aria-label="All alt-peg mix" className="pharos-card-shell space-y-4 p-5 sm:p-6">
+      <div className="space-y-1">
+        <p className="pharos-kicker">All Alt-Peg Mix</p>
+        <p className="pharos-meta">Commodities vs. all other non-USD pegs across the tracked alt-peg market.</p>
+      </div>
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/35">
+        <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare}%` }} />
+        <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare}%` }} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="pharos-kicker flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[color:var(--chart-5)]" aria-hidden="true" />
+            Commodities
+          </p>
+          <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
+            {formatCurrency(commodityMarketCap, 1)}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{formatPercent(commodityShare)} of alt-peg market</p>
         </div>
-
-        <div className="space-y-4 rounded-xl border border-border/60 bg-muted/12 p-4">
-          <div className="space-y-1">
-            <p className="pharos-kicker">All Alt-Peg Mix</p>
-            <p className="text-sm text-muted-foreground">Commodities vs. all other non-USD pegs.</p>
-          </div>
-          <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/35">
-            <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare}%` }} />
-            <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare}%` }} />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
-              <p className="pharos-kicker flex items-center gap-2 text-[color:var(--chart-5)]">
-                <span className="size-2 rounded-full bg-[color:var(--chart-5)]" aria-hidden="true" />
-                Commodities
-              </p>
-              <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
-                {formatCurrency(commodityMarketCap, 1)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">{formatPercent(commodityShare)} of alt-peg market</p>
-            </div>
-            <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
-              <p className="pharos-kicker flex items-center gap-2 text-[color:var(--brand-accent)]">
-                <span className="size-2 rounded-full bg-[color:var(--brand-accent)]" aria-hidden="true" />
-                Non-commodity Non-USD
-              </p>
-              <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
-                {formatCurrency(fiatNonUsdMarketCap, 1)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">{formatPercent(nonCommodityShare)} of alt-peg market</p>
-            </div>
-          </div>
+        <div>
+          <p className="pharos-kicker flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[color:var(--brand-accent)]" aria-hidden="true" />
+            Non-commodity non-USD
+          </p>
+          <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
+            {formatCurrency(fiatNonUsdMarketCap, 1)}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{formatPercent(nonCommodityShare)} of alt-peg market</p>
         </div>
       </div>
     </section>
@@ -146,7 +100,7 @@ function AltPegDistributionCard({
             reshaped by EU MiCA rules — see the{" "}
             <Link
               href="/compliance/?regime=mica"
-              className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+              className="pharos-focus-ring rounded-sm font-medium text-foreground underline-offset-2 hover:underline"
             >
               Compliance Tracker
             </Link>
@@ -347,16 +301,7 @@ export function AltPegsClient() {
         ]}
       />
 
-      <AltPegSnapshotHero
-        marketCap={snapshot.altMarketCap}
-        sharePct={snapshot.altSharePct}
-        fiatNonUsdMarketCap={snapshot.fiatNonUsdMarketCap}
-        commodityMarketCap={snapshot.commodityMarketCap}
-        altCoinCount={snapshot.altCoinCount}
-        altPegCount={snapshot.altPegCount}
-        yearlyShareDeltaPctPoints={trendStats?.yearlyShareDeltaPctPoints ?? null}
-      />
-
+      {/* The celestial atlas is the sole page hero — full-width, its own chrome. */}
       <FiatWorldAtlas />
 
       <SectionErrorBoundary name="alt-peg-stablecoin-table">
@@ -370,6 +315,12 @@ export function AltPegsClient() {
           reportCards={tableInputs.reportCards}
         />
       </SectionErrorBoundary>
+
+      <AltPegMixBand
+        marketCap={snapshot.altMarketCap}
+        fiatNonUsdMarketCap={snapshot.fiatNonUsdMarketCap}
+        commodityMarketCap={snapshot.commodityMarketCap}
+      />
 
       <SectionErrorBoundary name="non-usd-share">
         <section id="alt-peg-history-share" className="space-y-3">

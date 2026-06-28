@@ -21,7 +21,7 @@ export function CompassPlate({
         {icon}
         <span className="text-[11px] uppercase tracking-wide">{label}</span>
       </div>
-      <p className="mt-1 break-words font-mono text-lg font-bold tabular-nums">{value}</p>
+      <p className="pharos-numeric mt-1 break-words text-lg font-bold">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
   );

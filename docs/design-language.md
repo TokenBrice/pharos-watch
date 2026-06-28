@@ -110,6 +110,19 @@ Most routes use:
 - Title row outer layer: `flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3`
 - Title row inner text/action layer: `flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2`
 
+### Markets-Tab Feature Hero (`FeatureHeroSplit`)
+
+The Markets-tab routes import the redesigned-homepage hero composition through a shared shell, `src/components/feature-hero-split.tsx` (`FeatureHeroSplit`), modeled on the locked `HomeAltHero` recipe (the homepage component itself is unchanged). It renders a single flat `pharos-card-shell` split `lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]`: a frost-blue "One Beam" headline figure (`.pharos-numeric text-frost-blue`) plus a `pharos-kicker` sub-metric block on the left, a drawn metaphor or staged chart in the right slot, hairline `border-border/50` dividers, and a corner `CardExpandButton` module-jump. The route `h1` still comes from `FeaturePageShell`; the hero is rendered as its first child, not a title replacement.
+
+Adoption and per-page One Beam calls (owner-settled 2026-06-28):
+
+- **`/liquidity/`** — `FeatureHeroSplit`; beam = aggregate DEX depth; right slot = the promoted exit-route-map metaphor (`exit-route-map.tsx`, framed in `pharos-chart-stage`). The two intro education cards plus the FAQ (and its `FAQPage` JSON-LD) were removed.
+- **`/alt-pegs/`** — `FeatureHeroSplit`; beam = total alt-peg market cap; right slot = `FiatWorldAtlas embedded`. The atlas title and a reference link were de-frosted, so frost is reserved for the beam and the drawn metaphor.
+- **`/yield/`** — `FeatureHeroSplit`; beam = highest risk-adjusted (PYS) APY; right slot = the risk×yield scatter. The risk-budget control stays a re-skinned slider (the sanctioned non-pill control); other filters use `pharos-control-pill`.
+- **`/upcoming/`** — `FeatureHeroSplit`; beam = tracked-launch count; right slot = `UpcomingHorizonHero` (a hero-scale constellation adapted from the untouched homepage constellation). The soft phase-coverage band was retired; Sort moved to `pharos-control-pill`.
+- **`/flows/`** — deliberately **opts out** of the One Beam: the hero stays a flat `pharos-card-shell` whose net-flow headline and Bank Run Gauge keep the semantic green→red ramp (net flow is a directional state, never recolored frost). The radial cyan/emerald hero gradient was removed, the gauges moved to a workbench band below the hero, and the `FlowMachineScene` metaphor is preserved.
+- **`/chains/`** — keeps its existing sequential bands (no `FeatureHeroSplit`); only the Total Stablecoin Supply metric was recolored to the frost beam, and its "Top N chains hold X%" frost badge is intentionally retained as an owner override.
+
 ### Longform Pages
 
 - Privacy: `mx-auto w-full space-y-6 max-w-2xl`

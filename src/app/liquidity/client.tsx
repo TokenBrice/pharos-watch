@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/api-hooks";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
@@ -60,6 +59,39 @@ export function LiquidityClient() {
   }, [refetch]);
   const showDataHealthBanner = !meta?.warning;
 
+  const leaderboardToolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <h2 className="pharos-kicker">Liquidity Leaderboard</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <div role="group" aria-label="Filter by peg currency" className="flex flex-wrap gap-1.5">
+          {PEG_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setPegFilter(f.value)}
+              aria-pressed={pegFilter === f.value}
+              className={
+                pegFilter === f.value
+                  ? "pharos-control-pill pharos-control-pill-active min-h-[44px] md:min-h-0"
+                  : "pharos-control-pill min-h-[44px] md:min-h-0"
+              }
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <FilterSearchInput
+          value={searchInput}
+          onValueChange={setSearchInput}
+          placeholder="Search..."
+          className="relative w-full sm:w-44"
+          inputClassName="pl-8 h-11 md:h-8 text-xs"
+          ariaLabel="Search stablecoins by name or symbol"
+        />
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -100,42 +132,15 @@ export function LiquidityClient() {
 
       {summaryStats && liquidityMap && <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />}
 
-      {/* Filters + Leaderboard */}
-      <section id="data" aria-label="Data table" tabIndex={-1} className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="pharos-kicker">Liquidity Leaderboard</h2>
-          <div className="flex items-center gap-3">
-            <ToggleGroup
-              type="single"
-              value={pegFilter}
-              onValueChange={(v) => v && setPegFilter(v as PegCurrency | "all")}
-              className="flex gap-1"
-              aria-label="Filter by peg currency"
-            >
-              {PEG_FILTERS.map((f) => (
-                <ToggleGroupItem
-                  key={f.value}
-                  value={f.value}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs min-h-[44px] md:min-h-0"
-                >
-                  {f.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-            <FilterSearchInput
-              value={searchInput}
-              onValueChange={setSearchInput}
-              placeholder="Search..."
-              className="relative w-full sm:w-44"
-              inputClassName="pl-8 h-11 md:h-8 text-xs"
-              ariaLabel="Search stablecoins by name or symbol"
-            />
-          </div>
-        </div>
-
-        <LiquidityTable rows={scoredRows} logos={logos} searchQuery={deferredSearch} onRowClick={handleRowClick} />
+      {/* Leaderboard workbench: filters live in the table toolbar */}
+      <section id="data" aria-label="Data table" tabIndex={-1}>
+        <LiquidityTable
+          rows={scoredRows}
+          logos={logos}
+          searchQuery={deferredSearch}
+          onRowClick={handleRowClick}
+          toolbar={leaderboardToolbar}
+        />
       </section>
 
       {unratedRows.length > 0 && (

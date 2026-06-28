@@ -74,16 +74,16 @@ Important contract:
 `AltPegsClient` then renders, in order:
 
 1. `StaleDataBanner`
-2. `AltPegSnapshotHero` for the current non-USD segment
-3. `FiatWorldAtlas`
-4. `AltPegStablecoinTable`
+2. `AltPegMarketHero` — the homepage-canon split hero (`src/components/feature-hero-split.tsx` `FeatureHeroSplit`): a frost-blue total alt-peg market-cap "One Beam" figure on the left with a `Current Structure` sub-block (1Y share delta / tracked coins / active cohorts in `.pharos-numeric`), and `<FiatWorldAtlas embedded />` filling the right slot. The atlas is now the hero metaphor rather than a standalone section; the `embedded` prop drops the atlas's own card chrome so it does not nest a card.
+3. `AltPegStablecoinTable` (the workbench, directly beneath the hero)
+4. `AltPegMixBand` — the commodity / non-commodity mix bar, demoted out of the old hero into its own flat band
 5. `NonUsdShareChart`
 6. `AltPegCohortHistoryChart`
 7. `AltPegDistributionCard`
 
 At every breakpoint, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, while the top-cohort market-cap summary sits outside the plotted sky layer so it does not cover CPI-linked markers. The map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry (`public/maps/world-countries.svg`), wired through `src/app/alt-pegs/fiat-world-atlas/world-map.tsx`; Antarctica is omitted before projection fitting so the populated atlas uses the vertical space instead of preserving an unused South Pole band. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Narrow screens keep the same atlas in a responsive viewport that fits the card first, with smaller mobile labels and scaled visual markers to avoid horizontal panning as the default interaction. The asset-level stablecoin table appears immediately after the current-structure snapshot and atlas so individual non-USD assets follow the visual map before the historical chart modules. The atlas card header exposes an Expand atlas affordance that opens a viewport-sized inspection overlay built on Radix Dialog; when `document.fullscreenEnabled` is true the overlay also requests browser fullscreen as a progressive enhancement. The overlay reuses the same `PegDiversityHeroLive` composition with a `--fullscreen` CSS variant and does not alter route query-state or section order.
 
-The route intentionally shows the live snapshot first, then the visible atlas, then the shared asset table before historical trend cards and the current distribution module so the analysis reads from current segment context into geography, the asset roster, and then market-share history.
+The route intentionally leads with the combined hero (frost market-cap beam + atlas), then the shared asset table, then the demoted mix band before historical trend cards and the current distribution module, so the analysis reads from current segment context and geography into the asset roster and then market-share history.
 
 Current Release 1 behavior:
 

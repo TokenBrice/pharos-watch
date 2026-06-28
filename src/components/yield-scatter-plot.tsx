@@ -46,6 +46,13 @@ interface YieldScatterPlotProps {
   logos?: Record<string, string>;
   onDotClick: (id: string) => void;
   compact?: boolean;
+  /**
+   * "stage" (default) wraps the chart in its own `pharos-chart-stage` frame.
+   * "bare" drops the frame + padding so the chart fills its container
+   * edge-to-edge — used when the plot is promoted into the hero's right slot,
+   * which already supplies the card surface (avoids a nested card).
+   */
+  frame?: "stage" | "bare";
 }
 
 const SCATTER_Y_VISUAL_PADDING = 0.4;
@@ -252,6 +259,7 @@ export function YieldScatterPlot({
   logos,
   onDotClick,
   compact = false,
+  frame = "stage",
 }: YieldScatterPlotProps) {
   const isMobile = useIsMobile();
   const compactMarker = compact || isMobile;
@@ -363,9 +371,13 @@ export function YieldScatterPlot({
     <div className="space-y-3">
       <div
         className={
-          compact
-            ? "pharos-chart-stage h-[420px] overflow-hidden p-2"
-            : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
+          frame === "bare"
+            ? compact
+              ? "h-[420px] overflow-hidden"
+              : "h-[600px] overflow-hidden sm:h-[850px]"
+            : compact
+              ? "pharos-chart-stage h-[420px] overflow-hidden p-2"
+              : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
         aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Click a logo to open its detail page.`}

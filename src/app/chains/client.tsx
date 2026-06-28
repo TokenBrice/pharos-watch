@@ -223,7 +223,7 @@ export function DominanceBreakdown({
               style={{ width: 14, height: 14 }}
             />
             <span>{chain.name}</span>
-            <span className="font-mono tabular-nums">{(chain.dominanceShare * 100).toFixed(1)}%</span>
+            <span className="pharos-numeric">{(chain.dominanceShare * 100).toFixed(1)}%</span>
           </span>
         ))}
         {otherChainsShare > 0.005 && (
@@ -233,7 +233,7 @@ export function DominanceBreakdown({
               style={{ backgroundColor: OTHER_CHAINS_COLOR }}
             />
             <span>Other chains</span>
-            <span className="font-mono tabular-nums">{(otherChainsShare * 100).toFixed(1)}%</span>
+            <span className="pharos-numeric">{(otherChainsShare * 100).toFixed(1)}%</span>
           </span>
         )}
         {unattributedShare > 0.005 && (
@@ -247,7 +247,7 @@ export function DominanceBreakdown({
               }}
             />
             <span>Unattributed</span>
-            <span className="font-mono tabular-nums">{(unattributedShare * 100).toFixed(1)}%</span>
+            <span className="pharos-numeric">{(unattributedShare * 100).toFixed(1)}%</span>
           </span>
         )}
       </div>
@@ -374,7 +374,7 @@ export function ChainsLeaderboardClient() {
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
             <div>
               <p className="pharos-kicker">Total Stablecoin Supply</p>
-              <p className="mt-1 text-3xl font-extrabold font-mono tabular-nums tracking-tight">
+              <p className="pharos-numeric mt-1 text-3xl font-extrabold tracking-tight text-frost-blue">
                 {formatCompactUsd(data.globalTotalUsd)}
               </p>
             </div>
@@ -382,14 +382,14 @@ export function ChainsLeaderboardClient() {
               {show7dTrend && (
                 <span>
                   <span className="pharos-kicker mr-1.5">7d</span>
-                  <span className={cn("font-mono font-semibold tabular-nums", getNetColor(change7dPct))}>
+                  <span className={cn("pharos-numeric font-semibold", getNetColor(change7dPct))}>
                     {formatSignedPercent(change7dPct, 1)}
                   </span>
                 </span>
               )}
               <span>
                 <span className="pharos-kicker mr-1.5">Chains</span>
-                <span className="font-mono font-semibold tabular-nums">{data.chains.length}</span>
+                <span className="pharos-numeric font-semibold">{data.chains.length}</span>
               </span>
             </div>
           </div>
@@ -466,8 +466,8 @@ export function ChainsLeaderboardClient() {
                 <TableCell>
                   <HealthBadge score={chain.healthScore} band={chain.healthBand} />
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">{formatCompactUsd(chain.totalUsd)}</TableCell>
-                <TableCell className={cn("text-right font-mono tabular-nums", trendColor(chain.change7dPct))}>
+                <TableCell className="text-right pharos-numeric">{formatCompactUsd(chain.totalUsd)}</TableCell>
+                <TableCell className={cn("text-right pharos-numeric", trendColor(chain.change7dPct))}>
                   {formatSignedPercent(chain.change7dPct * 100, 2)}
                 </TableCell>
                 <TableCell className="text-right">
@@ -478,12 +478,12 @@ export function ChainsLeaderboardClient() {
                         style={{ width: `${Math.min(100, chain.dominanceShare * 100)}%` }}
                       />
                     </div>
-                    <span className="text-xs font-mono tabular-nums text-muted-foreground w-10 text-right">
+                    <span className="text-xs pharos-numeric text-muted-foreground w-10 text-right">
                       {(chain.dominanceShare * 100).toFixed(1)}%
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">{chain.stablecoinCount}</TableCell>
+                <TableCell className="text-right pharos-numeric">{chain.stablecoinCount}</TableCell>
                 <TableCell className="hidden lg:table-cell">
                   <div className="flex items-center gap-2">
                     <StablecoinLogo

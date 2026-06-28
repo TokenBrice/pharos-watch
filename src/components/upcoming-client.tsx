@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import {
   BACKING_LABELS_SHORT,
@@ -11,6 +10,7 @@ import {
 } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { UpcomingHorizonHero } from "@/components/upcoming-horizon-hero";
 import {
   LAUNCH_PHASE_LABELS,
   PHASE_BADGE,
@@ -20,19 +20,18 @@ import {
   dateScore,
   formatFuzzyDate,
 } from "@/lib/pre-launch";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { stripTermMarkup } from "@/lib/term-markup";
 import type { LaunchPhase } from "@shared/types";
 import { logosById } from "@/lib/logos";
 
 const PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter((coin) => coin.status === "pre-launch");
 const typedLogos = logosById;
+
+// Soonest-expected launch with a known date — surfaced in the hero sub-metrics.
+const NEAREST_LAUNCH =
+  PRE_LAUNCH_STABLECOINS.filter((c) => c.expectedLaunchDate).sort(
+    (a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate),
+  )[0] ?? null;
 
 // ---------------------------------------------------------------------------
 // Filter types
@@ -128,42 +127,38 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
     return coins;
   }, [phaseFilter, pegFilter, backingFilter, sortKey]);
 
-  // KPI counts
-  const phaseCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const c of PRE_LAUNCH_STABLECOINS) {
-      if (c.launchPhase) counts[c.launchPhase] = (counts[c.launchPhase] ?? 0) + 1;
-    }
-    return counts;
-  }, []);
-
   const hasActiveFilters = phaseFilter.size > 0 || pegFilter.size > 0 || backingFilter.size > 0;
 
   return (
     <div className="space-y-6">
-      {/* ── KPI bar ──────────────────────────────────────────────── */}
-      <div className="pharos-subtle-band">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p className="pharos-kicker">Pre-launch Universe</p>
-            <p className="pharos-meta">Track announced, testing, and launch-approaching stablecoins without mixing them into the live market table.</p>
+      {/* ── Hero: full-width pre-launch readiness constellation ───────────
+          Header carries the frost launch-count "One Beam" + the soonest launch;
+          the constellation spans the full card width below it (its per-circle
+          count labels are the legend, so the old left-column count list is gone). */}
+      <section aria-label="Pre-launch stablecoin readiness" className="pharos-card-shell overflow-hidden">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-border/50 p-5 sm:p-6">
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-muted-foreground">Tracked Launches</p>
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+              {PRE_LAUNCH_STABLECOINS.length}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="pharos-control-pill">{PRE_LAUNCH_STABLECOINS.length} tracked</span>
-            {ALL_PHASES.map(
-              (phase) =>
-                phaseCounts[phase] ? (
-                  <span
-                    key={phase}
-                    className={`inline-flex items-center rounded-full border px-3 py-2 text-xs font-medium ${PHASE_BADGE[phase]}`}
-                  >
-                    {phaseCounts[phase]} {LAUNCH_PHASE_LABELS[phase].toLowerCase()}
-                  </span>
-                ) : null,
-            )}
-          </div>
+          {NEAREST_LAUNCH?.expectedLaunchDate ? (
+            <div className="flex items-baseline gap-2 font-mono text-xs">
+              <span className="text-muted-foreground">Soonest</span>
+              <Link
+                href={buildStablecoinUrl(NEAREST_LAUNCH.id)}
+                className="pharos-focus-ring flex min-w-0 items-baseline gap-1.5 text-foreground hover:text-foreground/80"
+              >
+                <span className="truncate">{NEAREST_LAUNCH.name}</span>
+                <span aria-hidden="true" className="text-muted-foreground/50">·</span>
+                <span className="pharos-numeric shrink-0">{formatFuzzyDate(NEAREST_LAUNCH.expectedLaunchDate)}</span>
+              </Link>
+            </div>
+          ) : null}
         </div>
-      </div>
+        <UpcomingHorizonHero />
+      </section>
 
       {/* ── Filters ──────────────────────────────────────────────── */}
       <div className="pharos-card-shell overflow-hidden">
@@ -186,8 +181,8 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
           ) : null}
         </div>
 
-        <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,2.5fr)_minmax(0,0.725fr)] xl:items-start">
-          <div className="min-w-0 space-y-4">
+        <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,2.5fr)_minmax(0,0.725fr)] xl:gap-0 xl:divide-x xl:divide-border/50">
+          <div className="min-w-0 space-y-4 xl:pr-5">
             <div className="space-y-2">
               <p className="pharos-kicker">Phase</p>
               <div className="flex flex-wrap gap-2">
@@ -224,7 +219,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
           </div>
 
           {ALL_PEGS.length > 1 && (
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 space-y-2 xl:px-5">
               <p className="pharos-kicker">Peg</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_PEGS.map((peg) => (
@@ -241,25 +236,20 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
             </div>
           )}
 
-          <div className="min-w-0 space-y-2">
+          <div className="min-w-0 space-y-2 xl:pl-5">
             <p className="pharos-kicker">Sort By</p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" className="pharos-focus-ring pharos-toggle-pill inline-flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 sm:min-h-9">
-                  <span className="truncate">{SORT_OPTIONS.find((opt) => opt.key === sortKey)?.label}</span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <div className="flex flex-wrap gap-2">
+              {SORT_OPTIONS.map((opt) => (
+                <button type="button"
+                  key={opt.key}
+                  aria-pressed={sortKey === opt.key}
+                  onClick={() => setSortKey(opt.key)}
+                  className={neutralToggleClass(sortKey === opt.key)}
+                >
+                  {opt.label}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[14rem]">
-                <DropdownMenuRadioGroup value={sortKey} onValueChange={(value) => setSortKey(value as SortKey)}>
-                  {SORT_OPTIONS.map((opt) => (
-                    <DropdownMenuRadioItem key={opt.key} value={opt.key}>
-                      {opt.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -280,7 +270,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((coin) => {
             const teaserText = teasers[coin.id];
             const teaser = teaserText ? stripTermMarkup(teaserText) : null;
@@ -333,7 +323,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
                 {/* Footer: date + drift + milestones */}
                 <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
                   {coin.expectedLaunchDate && (
-                    <span className="font-mono text-[10px] text-muted-foreground/70">
+                    <span className="pharos-numeric text-[10px] text-muted-foreground/70">
                       Expected {formatFuzzyDate(coin.expectedLaunchDate)}
                     </span>
                   )}
@@ -346,7 +336,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
                   )}
                   {coin.milestones && coin.milestones.length > 0 && (
                     <span className="text-[10px] text-muted-foreground/70">
-                      {coin.milestones.length} milestone{coin.milestones.length !== 1 ? "s" : ""}
+                      <span className="pharos-numeric">{coin.milestones.length}</span> milestone{coin.milestones.length !== 1 ? "s" : ""}
                     </span>
                   )}
                 </div>

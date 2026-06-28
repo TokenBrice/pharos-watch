@@ -9,7 +9,7 @@ import { FlowTable } from "@/components/flow-table";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import type { FaqItem } from "@/lib/faq";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
@@ -154,12 +154,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         </section>
 
         <section id="data" tabIndex={-1} aria-labelledby="table-heading" className="order-3 md:order-2">
-          <h2 id="table-heading" className="pharos-kicker">
-            Per-Coin Flows
-          </h2>
-          <div className="mt-3">
-            <FlowTable coins={coins} isLoading={isSummaryLoading} />
-          </div>
+          <FlowTable coins={coins} isLoading={isSummaryLoading} />
         </section>
 
         <section aria-labelledby="chart-heading" className="order-2 md:order-3">
@@ -167,24 +162,27 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
             <h2 id="chart-heading" className="pharos-kicker">
               Aggregate Flows
             </h2>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              value={String(hours)}
-              onValueChange={(value) => {
-                if (value) setHours(Number(value));
-              }}
-              aria-label="Time range"
-            >
-              {TIME_RANGES.map((range) => (
-                <ToggleGroupItem key={range.value} value={range.value} className="min-h-11 md:min-h-0">
-                  {range.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            <div className="flex gap-1" role="group" aria-label="Time range">
+              {TIME_RANGES.map((range) => {
+                const isActive = hours === range.hours;
+                return (
+                  <button
+                    type="button"
+                    key={range.value}
+                    onClick={() => setHours(range.hours)}
+                    aria-pressed={isActive}
+                    className={cn(
+                      "pharos-focus-ring pharos-control-pill min-h-11 px-3.5 md:min-h-9",
+                      isActive && "pharos-control-pill-active",
+                    )}
+                  >
+                    {range.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 pharos-chart-stage">
             <FlowChart hourly={hourly} isLoading={isChartLoading} />
           </div>
         </section>

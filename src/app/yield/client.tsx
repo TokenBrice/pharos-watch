@@ -14,6 +14,7 @@ import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
 import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
+import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
@@ -26,12 +27,12 @@ import {
   type YieldPresetKey,
   type YieldRiskBudgetKey,
   type YieldViewModel,
+  type YieldViewModelRow,
 } from "@/lib/yield-view-model";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
-import { formatYieldWarningSignal } from "@/lib/yield-constants";
 
 interface YieldFreshnessBannerProps {
   dataUpdatedAt: number;
@@ -67,6 +68,44 @@ function YieldFreshnessBanner({
         },
       ]}
     />
+  );
+}
+
+interface HeroHighlightRowProps {
+  label: string;
+  logoSrc: string | undefined;
+  name: string;
+  symbol: string;
+  value: string;
+  unit: string;
+  onClick: () => void;
+}
+
+// A folded KPI tile: the standalone interchangeable-tile grid is retired in
+// favour of these compact, click-to-scroll metric rows in the hero sub-slot.
+function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, onClick }: HeroHighlightRowProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="pharos-focus-ring group flex w-full items-center justify-between gap-3 rounded-md py-2 text-left transition-colors"
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <StablecoinLogo src={logoSrc} name={name} size={18} />
+        <span className="min-w-0">
+          <span className="block truncate text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+            {label}
+          </span>
+          <span className="block truncate text-sm font-semibold text-foreground">{symbol}</span>
+        </span>
+      </span>
+      <span className="shrink-0 text-right">
+        <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
+        <span className="ml-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+          {unit}
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -108,6 +147,20 @@ export function YieldClient() {
   );
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
+
+  // The hero beam ("One Beam" frost figure) is the headline APY of the best
+  // risk-adjusted opportunity in the current view — the row with the highest
+  // Pharos Yield Score, not the highest raw APY.
+  const topPysRow = useMemo<YieldViewModelRow | null>(() => {
+    let best: YieldViewModelRow | null = null;
+    for (const row of visibleRows) {
+      if (row.pharosYieldScore == null) continue;
+      if (best === null || row.pharosYieldScore > (best.pharosYieldScore ?? Number.NEGATIVE_INFINITY)) {
+        best = row;
+      }
+    }
+    return best;
+  }, [visibleRows]);
 
   const handleScrollToRow = useCallback((id: string) => {
     const el = document.getElementById(`yield-row-${id}`);
@@ -261,106 +314,68 @@ export function YieldClient() {
       ) : null}
 
       <div className="flex flex-col gap-6">
-        <section aria-label="Yield view highlights" className="order-1 space-y-4">
-          {exhibitTiles === null ? (
-            <div className="pharos-empty-note px-4 py-5 text-center text-sm">
-              No rows match your filters
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {exhibitTiles.topYield ? (
-                <button
-                  type="button"
-                  onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
-                  className="pharos-card-shell pharos-focus-ring group px-4 py-4 text-left transition-colors hover:border-border"
-                >
-                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Top yield this week</h3>
-                  <div className="flex items-center gap-2">
-                    <StablecoinLogo
-                      src={logos?.[exhibitTiles.topYield.id]}
-                      name={exhibitTiles.topYield.name}
-                      size={20}
-                    />
-                    <span className="font-semibold text-foreground">{exhibitTiles.topYield.symbol}</span>
-                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">
-                      {exhibitTiles.topYield.name}
-                    </span>
-                  </div>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatPercent(exhibitTiles.topYield.apy30d)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {exhibitTiles.topYield.warningSignals.length > 0
-                      ? formatYieldWarningSignal(exhibitTiles.topYield.warningSignals[0]!)
-                      : exhibitTiles.topYield.yieldStability !== null && exhibitTiles.topYield.yieldStability >= 80
-                        ? "Stable 30d range"
-                        : "30d avg APY"}
-                  </p>
-                </button>
-              ) : null}
-              {exhibitTiles.mostStable ? (
-                <button
-                  type="button"
-                  onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
-                  className="pharos-card-shell pharos-focus-ring group px-4 py-4 text-left transition-colors hover:border-border"
-                >
-                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Most stable A+ yield</h3>
-                  <div className="flex items-center gap-2">
-                    <StablecoinLogo
-                      src={logos?.[exhibitTiles.mostStable.id]}
-                      name={exhibitTiles.mostStable.name}
-                      size={20}
-                    />
-                    <span className="font-semibold text-foreground">{exhibitTiles.mostStable.symbol}</span>
-                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                      {exhibitTiles.mostStable.safetyGrade}
-                    </span>
-                  </div>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatPercent(exhibitTiles.mostStable.apy30d)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {exhibitTiles.mostStable.yieldStability !== null
-                      ? `${Math.round(exhibitTiles.mostStable.yieldStability * 100)}% consistency`
-                      : "Yield stability unscored"}
-                  </p>
-                </button>
-              ) : null}
-              {exhibitTiles.largestMarket ? (
-                <button
-                  type="button"
-                  onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
-                  className="pharos-card-shell pharos-focus-ring group px-4 py-4 text-left transition-colors hover:border-border"
-                >
-                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Largest market</h3>
-                  <div className="flex items-center gap-2">
-                    <StablecoinLogo
-                      src={logos?.[exhibitTiles.largestMarket.id]}
-                      name={exhibitTiles.largestMarket.name}
-                      size={20}
-                    />
-                    <span className="font-semibold text-foreground">{exhibitTiles.largestMarket.symbol}</span>
-                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">
-                      {exhibitTiles.largestMarket.name}
-                    </span>
-                  </div>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)} TVL
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatPercent(exhibitTiles.largestMarket.apy30d)} APY
-                  </p>
-                </button>
-              ) : null}
-            </div>
-          )}
-        </section>
-
-        <section aria-label="Yield vs Safety landscape" className="order-2 space-y-3">
-          <YieldRiskBudgetSlider
-            stops={viewModel.riskBudget.stops}
-            onSelect={handleApplyRiskBudget}
-          />
+        <FeatureHeroSplit
+          ariaLabel="Yield landscape overview"
+          beamLabel={
+            topPysRow ? (
+              <>
+                Top risk-adjusted yield{" "}
+                <span className="text-foreground/70">· {topPysRow.symbol}</span>
+              </>
+            ) : (
+              "Top risk-adjusted yield"
+            )
+          }
+          beamValue={topPysRow ? formatPercent(topPysRow.apy30d) : "—"}
+          beamTitle={
+            topPysRow && topPysRow.pharosYieldScore != null
+              ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)}`
+              : undefined
+          }
+          expand={{ href: "#data", label: "Jump to the full yield leaderboard" }}
+          subKicker="This week's leaders"
+          sub={
+            exhibitTiles ? (
+              <div className="divide-y divide-border/50">
+                {exhibitTiles.topYield ? (
+                  <HeroHighlightRow
+                    label="Top yield"
+                    logoSrc={logos?.[exhibitTiles.topYield.id]}
+                    name={exhibitTiles.topYield.name}
+                    symbol={exhibitTiles.topYield.symbol}
+                    value={formatPercent(exhibitTiles.topYield.apy30d)}
+                    unit="APY"
+                    onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
+                  />
+                ) : null}
+                {exhibitTiles.mostStable ? (
+                  <HeroHighlightRow
+                    label="Most stable A+"
+                    logoSrc={logos?.[exhibitTiles.mostStable.id]}
+                    name={exhibitTiles.mostStable.name}
+                    symbol={exhibitTiles.mostStable.symbol}
+                    value={formatPercent(exhibitTiles.mostStable.apy30d)}
+                    unit="APY"
+                    onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
+                  />
+                ) : null}
+                {exhibitTiles.largestMarket ? (
+                  <HeroHighlightRow
+                    label="Largest market"
+                    logoSrc={logos?.[exhibitTiles.largestMarket.id]}
+                    name={exhibitTiles.largestMarket.name}
+                    symbol={exhibitTiles.largestMarket.symbol}
+                    value={formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)}
+                    unit="TVL"
+                    onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
+                  />
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No rows match your filters.</p>
+            )
+          }
+        >
           {visibleRows.length > 0 ? (
             <YieldScatterPlot
               rankings={visibleRows}
@@ -372,8 +387,20 @@ export function YieldClient() {
               logos={logos}
               onDotClick={handleNavigate}
               compact
+              frame="bare"
             />
-          ) : null}
+          ) : (
+            <div className="flex h-[420px] items-center justify-center p-6 text-center text-sm text-muted-foreground">
+              No rows match your filters
+            </div>
+          )}
+        </FeatureHeroSplit>
+
+        <section aria-label="Risk tolerance" className="order-2">
+          <YieldRiskBudgetSlider
+            stops={viewModel.riskBudget.stops}
+            onSelect={handleApplyRiskBudget}
+          />
         </section>
 
         <section className="order-3" aria-label="Yield filters">

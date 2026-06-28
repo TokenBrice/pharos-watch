@@ -112,7 +112,7 @@ export function YieldCoinIndex() {
                   {group.label}
                 </Badge>
               )}
-              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+              <span className="pharos-numeric text-xs text-muted-foreground">
                 {group.coins.length}
               </span>
             </dt>

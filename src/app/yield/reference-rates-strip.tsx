@@ -192,23 +192,23 @@ export function ReferenceRatesStrip({
                         </span>
                       </TableCell>
                       {showCountColumn ? (
-                        <TableCell className="px-3 py-2 text-right font-mono tabular-nums text-xs text-muted-foreground">
+                        <TableCell className="px-3 py-2 text-right pharos-numeric text-xs text-muted-foreground">
                           {currencyCounts[row.currency] ?? 0}
                         </TableCell>
                       ) : null}
-                      <TableCell className="px-3 py-2 text-right font-mono tabular-nums text-base font-semibold text-foreground">
+                      <TableCell className="px-3 py-2 text-right pharos-numeric text-base font-semibold text-foreground">
                         {formatPercent(row.rate)}
                       </TableCell>
                       <TableCell
                         className={cn(
-                          "px-3 py-2 text-right font-mono tabular-nums text-xs",
+                          "px-3 py-2 text-right pharos-numeric text-xs",
                           isUsd || spreadBps === null ? "text-muted-foreground/70" : "text-muted-foreground",
                         )}
                       >
                         {isUsd || spreadBps === null ? "—" : formatSpread(spreadBps)}
                       </TableCell>
                       <TableCell className="px-3 py-2 text-xs text-muted-foreground">{row.benchmarkLabel}</TableCell>
-                      <TableCell className="py-2 pl-3 text-right font-mono text-xs tabular-nums text-muted-foreground/80">
+                      <TableCell className="py-2 pl-3 text-right pharos-numeric text-xs text-muted-foreground/80">
                         {row.recordDate ?? "—"}
                       </TableCell>
                     </TableRow>
@@ -257,7 +257,7 @@ export function ReferenceRatesStrip({
                       tabIndex={0}
                       className="pharos-focus-ring inline-flex min-h-6 items-center cursor-help rounded-sm"
                     >
-                      <span className="font-mono tabular-nums text-foreground">{safetyPct}%</span> scored
+                      <span className="pharos-numeric text-foreground">{safetyPct}%</span> scored
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[260px] text-xs">

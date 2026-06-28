@@ -77,7 +77,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
       role="group"
       aria-label="Risk tolerance"
       className={cn(
-        "flex flex-col gap-3 rounded-xl border border-border/70 bg-background/40 px-3.5 py-3.5",
+        "flex flex-col gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3.5",
         className,
       )}
     >

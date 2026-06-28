@@ -28,11 +28,6 @@ vi.mock("@/components/query-error-notice", () => ({
   QueryErrorNotice: () => null,
 }));
 
-vi.mock("@/components/ui/toggle-group", () => ({
-  ToggleGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  ToggleGroupItem: ({ children }: { children: ReactNode }) => <button type="button">{children}</button>,
-}));
-
 const mockUseMintBurnFlows = vi.mocked(useMintBurnFlows);
 
 function makeQueryResult(overrides: Record<string, unknown> = {}) {

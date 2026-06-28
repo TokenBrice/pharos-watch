@@ -14,7 +14,7 @@ import { computeChartYDomain } from "@/lib/chart-utils";
 import { CHART_HEIGHT } from "@/lib/chart-colors";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
-import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
+import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 
 const OTHER_KEY = "peggedOther";
 const OTHER_THRESHOLD = 5_000_000;
@@ -66,15 +66,20 @@ function CohortTooltip({ active, payload, label, pegKeys }: ChartTooltipProps) {
     <PharosChartTooltip active={active}>
       <TooltipLabel>{formatChartDate(label, "long")}</TooltipLabel>
       {rows.map((row) => (
-        <TooltipRow
-          key={row.key}
-          color={row.color}
-          label={pegKeyToLabel(row.key)}
-          value={formatCurrency(row.value)}
-        />
+        <div key={row.key} className="flex items-center justify-between gap-4 text-xs">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <span
+              className="inline-block size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: row.color }}
+            />
+            {pegKeyToLabel(row.key)}
+          </span>
+          <span className="pharos-numeric text-foreground">{formatCurrency(row.value)}</span>
+        </div>
       ))}
-      <div className="mt-1.5 border-t border-border/50 pt-1.5">
-        <TooltipRow label="Total" value={formatCurrency(total)} bold />
+      <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-border/50 pt-1.5 text-xs">
+        <span className="text-muted-foreground">Total</span>
+        <span className="pharos-numeric font-semibold text-foreground">{formatCurrency(total)}</span>
       </div>
     </PharosChartTooltip>
   );
@@ -250,14 +255,15 @@ export function AltPegCohortHistoryChart({
       <CardContent className="space-y-4">
         {filteredData.length > 0 ? (
           <>
-            <div
-              ref={chartContainerRef}
-              className={chartHeightClass}
-              role="figure"
-              aria-label={`Alt-peg market-cap-by-cohort chart covering ${pegCount} peg currencies`}
-            >
-              {isChartReady ? (
-                <AreaChart
+            <div className="pharos-chart-stage">
+              <div
+                ref={chartContainerRef}
+                className={chartHeightClass}
+                role="figure"
+                aria-label={`Alt-peg market-cap-by-cohort chart covering ${pegCount} peg currencies`}
+              >
+                {isChartReady ? (
+                  <AreaChart
                   width={width}
                   height={height}
                   data={filteredData}
@@ -305,6 +311,7 @@ export function AltPegCohortHistoryChart({
               ) : (
                 <Skeleton className="h-full w-full" />
               )}
+              </div>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
               {legendKeys.map((key) => (
