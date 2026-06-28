@@ -14,6 +14,8 @@ export interface ScheduledSlotJobSummary {
 }
 
 export interface ScheduledSlotSummary {
+  jobsAttempted: number;
+  jobsSucceeded: number;
   jobsRun: number;
   jobsSkipped: number;
   jobsNeutralSkipped: number;
@@ -89,8 +91,14 @@ export function buildScheduledSlotSummary(
   options: { budgetOnlyJobs?: number } = {},
 ): ScheduledSlotSummary {
   const neutralSkippedJobs = jobs.filter((job) => job.outcome === "skipped" && job.neutral === true);
+  const jobsSucceeded = jobs.filter((job) => job.outcome === "ok").length;
+  const jobsAttempted = jobs.filter((job) =>
+    job.outcome === "ok" || job.outcome === "degraded" || job.outcome === "error"
+  ).length;
   return {
-    jobsRun: jobs.filter((job) => job.outcome === "ok").length,
+    jobsAttempted,
+    jobsSucceeded,
+    jobsRun: jobsSucceeded,
     jobsSkipped: jobs.filter((job) => job.outcome === "skipped" && job.neutral !== true).length,
     jobsNeutralSkipped: neutralSkippedJobs.length,
     jobsDegraded: jobs.filter((job) => job.outcome === "degraded").length,

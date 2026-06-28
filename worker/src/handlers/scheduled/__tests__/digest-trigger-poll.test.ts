@@ -78,6 +78,8 @@ describe("runDigestTriggerPollSlot", () => {
       skippedReason: "no-pending-request",
     }));
     expect(summary).toMatchObject({
+      jobsAttempted: 0,
+      jobsSucceeded: 0,
       jobsSkipped: 0,
       jobsNeutralSkipped: 1,
       jobsDegraded: 0,

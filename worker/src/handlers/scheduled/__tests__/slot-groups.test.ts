@@ -69,6 +69,8 @@ describe("scheduled slot groups", () => {
     expect(order.indexOf("end:a")).toBeLessThan(order.indexOf("start:b"));
     expect(order.indexOf("start:c")).toBeLessThan(order.indexOf("start:b"));
     expect(summary).toMatchObject({
+      jobsAttempted: 3,
+      jobsSucceeded: 3,
       jobsRun: 3,
       jobsSkipped: 0,
       jobsDegraded: 0,
@@ -99,6 +101,8 @@ describe("scheduled slot groups", () => {
     ]);
 
     expect(summary).toMatchObject({
+      jobsAttempted: 3,
+      jobsSucceeded: 1,
       jobsRun: 1,
       jobsSkipped: 0,
       jobsDegraded: 1,
@@ -134,6 +138,8 @@ describe("scheduled slot groups", () => {
 
     expect(runLeasedCron).toHaveBeenCalledTimes(2);
     expect(summary).toMatchObject({
+      jobsAttempted: 2,
+      jobsSucceeded: 1,
       jobsRun: 1,
       jobsSkipped: 1,
       jobsDegraded: 0,

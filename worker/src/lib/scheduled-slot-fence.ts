@@ -26,6 +26,15 @@ export interface ScheduledSlotExecutionResult {
   metadata?: unknown;
 }
 
+interface ScheduledSlotFenceMetadata {
+  jobsAttempted?: number;
+  jobsSucceeded?: number;
+  jobsRun?: number;
+  jobsErrored: number;
+  jobsDegraded: number;
+  jobsSkipped: number;
+}
+
 const SLOT_EXECUTION_RUNNING_STALE_SEC = 35 * 60;
 const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
 
@@ -648,7 +657,7 @@ function attachSlotRuntimeMetadata<T>(
 export async function runScheduledSlotWithFence(
   db: D1Database,
   slotKey: string,
-  fn: () => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
+  fn: () => Promise<ScheduledSlotFenceMetadata | void>,
   opts: ScheduledSlotExecutionOptions,
 ): Promise<ScheduledSlotExecutionResult> {
   const owner = opts.owner ?? createLeaseOwner(slotKey);
