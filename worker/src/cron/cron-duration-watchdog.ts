@@ -22,6 +22,7 @@ const DURATION_ALERT_BUDGET_TRUNCATIONS = 3;
 const SLOT_ABANDONMENT_ALERT_COUNT = 3;
 const SLOT_ABANDONMENT_ALERT_RATIO = 0.1;
 const SLOT_ABANDONMENT_RECENT_WINDOW_SEC = 24 * 3600;
+const RUNTIME_CAP_RECENT_WINDOW_SEC = 24 * 3600;
 const LOOKBACK_SEC = 7 * 86400;
 // Skip jobs with too few recent runs (fresh deploys, paused lanes) — a 7d
 // average over a handful of runs is noise, not a trend.
@@ -40,6 +41,8 @@ interface JobDurationStats {
   maxMs: number;
   capHits: number;
   budgetTruncations: number;
+  latestCapHitAt: number | null;
+  latestBudgetTruncationAt: number | null;
   timeoutMs: number;
   avgRatio: number;
 }
@@ -83,6 +86,8 @@ interface StatsRow {
   max_ms: number | null;
   cap_hits: number | null;
   budget_truncations: number | null;
+  latest_cap_hit_at: number | null;
+  latest_budget_truncation_at: number | null;
 }
 
 interface SlotStatsRow {
@@ -128,12 +133,20 @@ const DURATION_DIAGNOSTIC_METADATA_KEYS = [
   "failureCategory",
 ] as const;
 
-function isRuntimeBreaching(stats: JobDurationStats): boolean {
+function isRecent(timestampSec: number | null, nowSec: number, windowSec: number): boolean {
+  return timestampSec != null && timestampSec >= nowSec - windowSec;
+}
+
+function isRuntimeBreaching(stats: JobDurationStats, nowSec: number): boolean {
   if (stats.runs < MIN_RUNS_FOR_TREND) return false;
+  const hasRecentCapHits = stats.capHits >= DURATION_ALERT_CAP_HITS
+    && isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
+  const hasRecentBudgetTruncations = stats.budgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS
+    && isRecent(stats.latestBudgetTruncationAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
   return (
     stats.avgRatio >= DURATION_ALERT_AVG_RATIO ||
-    stats.capHits >= DURATION_ALERT_CAP_HITS ||
-    stats.budgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS
+    hasRecentCapHits ||
+    hasRecentBudgetTruncations
   );
 }
 
@@ -314,13 +327,21 @@ export async function runCronDurationWatchdog(
            CAST(AVG(duration_ms) AS INT) AS avg_ms,
            MAX(duration_ms) AS max_ms,
            SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits,
+           MAX(CASE WHEN duration_ms >= ? THEN started_at ELSE NULL END) AS latest_cap_hit_at,
            SUM(
              CASE
                WHEN json_valid(metadata) THEN
                  CASE WHEN json_extract(metadata, '$.runBudgetTruncated') = 1 THEN 1 ELSE 0 END
                ELSE 0
              END
-           ) AS budget_truncations
+           ) AS budget_truncations,
+           MAX(
+             CASE
+               WHEN json_valid(metadata) AND json_extract(metadata, '$.runBudgetTruncated') = 1
+                 THEN started_at
+               ELSE NULL
+             END
+           ) AS latest_budget_truncation_at
          FROM cron_runs
          WHERE job = ?
            AND started_at > ?
@@ -333,7 +354,7 @@ export async function runCronDurationWatchdog(
              END
            )`,
       )
-      .bind(timeoutMs, job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON),
+      .bind(timeoutMs, timeoutMs, job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON),
   );
   const results = await db.batch<StatsRow>(statements);
   throwIfAborted(signal);
@@ -348,6 +369,8 @@ export async function runCronDurationWatchdog(
       maxMs: row?.max_ms ?? 0,
       capHits: row?.cap_hits ?? 0,
       budgetTruncations: row?.budget_truncations ?? 0,
+      latestCapHitAt: row?.latest_cap_hit_at ?? null,
+      latestBudgetTruncationAt: row?.latest_budget_truncation_at ?? null,
       timeoutMs,
       avgRatio: timeoutMs > 0 ? avgMs / timeoutMs : 0,
     };
@@ -395,7 +418,7 @@ export async function runCronDurationWatchdog(
     };
   });
 
-  const runtimeBreaching = stats.filter(isRuntimeBreaching);
+  const runtimeBreaching = stats.filter((entry) => isRuntimeBreaching(entry, nowSec));
   const slotAbandonmentBreaching = slotStats.filter((entry) => isSlotAbandonmentBreaching(entry, nowSec));
   const durationDiagnostics = await loadDurationDiagnostics(db, runtimeBreaching, sinceSec, signal);
 
@@ -406,6 +429,7 @@ export async function runCronDurationWatchdog(
         stats,
         slotStats,
         slotAbandonmentRecentWindowSec: SLOT_ABANDONMENT_RECENT_WINDOW_SEC,
+        runtimeCapRecentWindowSec: RUNTIME_CAP_RECENT_WINDOW_SEC,
         runtimeBreaching: [],
         durationDiagnostics,
         slotAbandonmentBreaching: [],
@@ -463,6 +487,7 @@ export async function runCronDurationWatchdog(
       durationDiagnostics,
       slotStats,
       slotAbandonmentRecentWindowSec: SLOT_ABANDONMENT_RECENT_WINDOW_SEC,
+      runtimeCapRecentWindowSec: RUNTIME_CAP_RECENT_WINDOW_SEC,
       runtimeBreaching: runtimeBreaching.map((entry) => entry.job),
       slotAbandonmentBreaching: slotAbandonmentBreaching.map((entry) => entry.scheduleKey),
       breaching: [

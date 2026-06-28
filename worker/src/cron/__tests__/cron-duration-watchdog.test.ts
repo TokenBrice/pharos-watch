@@ -19,18 +19,21 @@ function statsMatcher(stats: {
   max_ms: number;
   cap_hits: number;
   budget_truncations?: number;
+  latest_cap_hit_at?: number | null;
+  latest_budget_truncation_at?: number | null;
 }): MockTableConfig {
   return {
     match: "FROM cron_runs",
     matchBinds: [
+      SYNC_TIMEOUT_MS,
       SYNC_TIMEOUT_MS,
       "sync-stablecoins",
       SINCE_SEC,
       STALE_SLOT_CHILD_ERROR,
       STALE_SLOT_METADATA_REASON,
     ],
-    rows: [{ budget_truncations: 0, ...stats }],
-    first: { budget_truncations: 0, ...stats },
+    rows: [{ budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats }],
+    first: { budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats },
   };
 }
 
@@ -40,18 +43,21 @@ function liveReservesStatsMatcher(stats: {
   max_ms: number;
   cap_hits: number;
   budget_truncations?: number;
+  latest_cap_hit_at?: number | null;
+  latest_budget_truncation_at?: number | null;
 }): MockTableConfig {
   return {
     match: "FROM cron_runs",
     matchBinds: [
+      LIVE_RESERVES_TIMEOUT_MS,
       LIVE_RESERVES_TIMEOUT_MS,
       "sync-live-reserves",
       SINCE_SEC,
       STALE_SLOT_CHILD_ERROR,
       STALE_SLOT_METADATA_REASON,
     ],
-    rows: [{ budget_truncations: 0, ...stats }],
-    first: { budget_truncations: 0, ...stats },
+    rows: [{ budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats }],
+    first: { budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats },
   };
 }
 
@@ -132,7 +138,13 @@ describe("runCronDurationWatchdog", () => {
 
   it("alerts on repeated at-cap runs even with a healthy average", async () => {
     const db = mockD1([
-      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5), max_ms: SYNC_TIMEOUT_MS, cap_hits: 3 }),
+      statsMatcher({
+        n: 660,
+        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
+        max_ms: SYNC_TIMEOUT_MS,
+        cap_hits: 3,
+        latest_cap_hit_at: NOW_SEC - 60,
+      }),
     ]);
 
     const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
@@ -141,9 +153,44 @@ describe("runCronDurationWatchdog", () => {
     expect(JSON.parse(String(result.metadata))).toMatchObject({ breaching: ["sync-stablecoins"] });
   });
 
+  it("keeps recovered at-cap history visible without degrading", async () => {
+    const db = mockD1([
+      statsMatcher({
+        n: 660,
+        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
+        max_ms: SYNC_TIMEOUT_MS,
+        cap_hits: 3,
+        latest_cap_hit_at: NOW_SEC - 3 * 86400,
+      }),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const metadata = JSON.parse(String(result.metadata));
+
+    expect(result.status).toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(metadata.runtimeCapRecentWindowSec).toBe(86400);
+    expect(metadata.runtimeBreaching).toEqual([]);
+    expect(metadata.stats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          job: "sync-stablecoins",
+          capHits: 3,
+          latestCapHitAt: NOW_SEC - 3 * 86400,
+        }),
+      ]),
+    );
+  });
+
   it("includes stage diagnostics for cap-hit runtime breaches", async () => {
     const db = mockD1([
-      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5), max_ms: SYNC_TIMEOUT_MS, cap_hits: 3 }),
+      statsMatcher({
+        n: 660,
+        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
+        max_ms: SYNC_TIMEOUT_MS,
+        cap_hits: 3,
+        latest_cap_hit_at: NOW_SEC - 60,
+      }),
       durationStageBreakdownMatcher([
         {
           stage_label: "publication",
@@ -271,6 +318,7 @@ describe("runCronDurationWatchdog", () => {
         max_ms: LIVE_RESERVES_TIMEOUT_MS - 1,
         cap_hits: 0,
         budget_truncations: 3,
+        latest_budget_truncation_at: NOW_SEC - 60,
       }),
     ]);
 
