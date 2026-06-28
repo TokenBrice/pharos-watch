@@ -5,10 +5,9 @@ import {
   KRAKEN_MARKETS,
 } from "@shared/lib/pricing-provider-config";
 import { USER_AGENT } from "./constants";
-import { fetchWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
 import { parsePositiveNumber } from "./number-utils";
-import { cancelResponseBodyQuietly } from "./response-body";
 
 const CEX_ORDERBOOK_TIMEOUT_MS = 7_500;
 const CEX_ORDERBOOK_RETRIES = 0;
@@ -101,7 +100,7 @@ export function computeOrderbookDepth(args: {
 }
 
 async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown | null> {
-  const response = await fetchWithRetry(
+  const result = await fetchJsonWithRetry<unknown>(
     url,
     {
       signal,
@@ -110,11 +109,7 @@ async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown | n
     CEX_ORDERBOOK_RETRIES,
     { timeoutMs: CEX_ORDERBOOK_TIMEOUT_MS },
   );
-  if (!response?.ok) {
-    await cancelResponseBodyQuietly(response);
-    return null;
-  }
-  return response.json();
+  return result?.response.ok ? result.body : null;
 }
 
 export async function fetchBinanceOrderbookDepths(signal?: AbortSignal): Promise<CexOrderbookDepth[]> {

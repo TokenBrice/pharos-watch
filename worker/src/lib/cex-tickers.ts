@@ -11,8 +11,7 @@ import {
   KRAKEN_MARKETS,
 } from "@shared/lib/pricing-provider-config";
 import { USER_AGENT } from "./constants";
-import { fetchWithRetry } from "./fetch-retry";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { fetchJsonWithRetry } from "./fetch-retry";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { mapWithConcurrency } from "./concurrency";
 import {
@@ -170,7 +169,7 @@ async function fetchCexJson<T>(
   url: string,
   signal?: AbortSignal,
 ): Promise<{ payload: T | null; transportOk: boolean }> {
-  const response = await fetchWithRetry(
+  const result = await fetchJsonWithRetry<T>(
     url,
     {
       signal,
@@ -179,11 +178,10 @@ async function fetchCexJson<T>(
     CEX_REQUEST_RETRIES,
     { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
   );
-  if (!response?.ok) {
-    await cancelResponseBodyQuietly(response);
+  if (!result?.response.ok) {
     return { payload: null, transportOk: false };
   }
-  return { payload: (await response.json()) as T, transportOk: true };
+  return { payload: result.body, transportOk: true };
 }
 
 async function fetchBinanceTickerUrl(
@@ -416,7 +414,7 @@ export async function fetchCoinbasePrices(
     async (product) => {
       transportAttempts++;
       try {
-        const response = await fetchWithRetry(
+        const result = await fetchJsonWithRetry<{ bid?: string; ask?: string; price?: string; time?: string }>(
           `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/ticker`,
           {
             signal,
@@ -425,13 +423,12 @@ export async function fetchCoinbasePrices(
           CEX_REQUEST_RETRIES,
           { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
         );
-        if (!response?.ok) {
-          await cancelResponseBodyQuietly(response);
+        if (!result?.response.ok) {
           transportFailures++;
           return;
         }
 
-        const payload = (await response.json()) as { bid?: string; ask?: string; price?: string; time?: string };
+        const payload = result.body;
         const midpoint = midpointFromBidAsk(payload.bid, payload.ask);
         const lastTrade = parseCexPrice(payload.price);
         const price = midpoint ?? lastTrade;
