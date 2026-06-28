@@ -6,22 +6,39 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
+const fetchWithRetryMock = vi.fn(
+  async (url: string, init?: RequestInit, _maxRetries?: number, options?: { passthrough404?: boolean }) => {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok) return res;
+      if (res.status === 404 && options?.passthrough404) return res;
+      await res.body?.cancel();
+      return null;
+    } catch {
+      return null;
+    }
+  },
+);
+const fetchJsonWithRetryMock = vi.fn(
+  async <T>(
+    url: string,
+    init?: RequestInit,
+    maxRetries?: number,
+    options?: { passthrough404?: boolean },
+  ): Promise<{ response: Response; body: T } | null> => {
+    const response = await fetchWithRetryMock(url, init, maxRetries, options);
+    if (!response) return null;
+    const cloned = response.clone();
+    const body = (await cloned.json()) as T;
+    return { response, body };
+  },
+);
+
 // Keep detail tests deterministic and fast: we validate handler behavior,
 // not fetch-retry backoff timing.
 vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(
-    async (url: string, init?: RequestInit, _maxRetries?: number, options?: { passthrough404?: boolean }) => {
-      try {
-        const res = await fetch(url, init);
-        if (res.ok) return res;
-        if (res.status === 404 && options?.passthrough404) return res;
-        await res.body?.cancel();
-        return null;
-      } catch {
-        return null;
-      }
-    },
-  ),
+  fetchWithRetry: fetchWithRetryMock,
+  fetchJsonWithRetry: fetchJsonWithRetryMock,
 }));
 
 const { handleStablecoinDetail } = await import("../stablecoin-detail");
@@ -59,6 +76,24 @@ function makeDLDetailBody(overrides: Partial<{ tokens: unknown[]; price: number 
 describe("handleStablecoinDetail", () => {
   beforeEach(() => {
     fetchSpy.mockReset();
+    fetchWithRetryMock.mockReset().mockImplementation(async (url, init, _maxRetries, options) => {
+      try {
+        const res = await fetch(url, init);
+        if (res.ok) return res;
+        if (res.status === 404 && options?.passthrough404) return res;
+        await res.body?.cancel();
+        return null;
+      } catch {
+        return null;
+      }
+    });
+    fetchJsonWithRetryMock.mockReset().mockImplementation(async (url, init, maxRetries, options) => {
+      const response = await fetchWithRetryMock(url, init, maxRetries, options);
+      if (!response) return null;
+      const cloned = response.clone();
+      const body = (await cloned.json()) as unknown;
+      return { response, body };
+    });
   });
 
   it("returns 200 with JSON from DefiLlama for a regular stablecoin", async () => {

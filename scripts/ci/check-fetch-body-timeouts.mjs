@@ -58,6 +58,7 @@ function collectFetchWithRetryCallees(lines) {
 
 function fetchWithRetryCalleePattern(callees) {
   const names = [...callees].map(escapeRegExp).join("|");
+  // eslint-disable-next-line security/detect-non-literal-regexp
   return new RegExp(`(?:^|[^\\w$])(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
 }
 
@@ -66,6 +67,7 @@ function assignmentPattern(callees, declaration) {
   const prefix = declaration
     ? "\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+"
     : "^([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+";
+  // eslint-disable-next-line security/detect-non-literal-regexp
   return new RegExp(`${prefix}(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
 }
 
