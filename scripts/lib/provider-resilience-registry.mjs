@@ -101,12 +101,12 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     tests: ["worker/src/cron/__tests__/supplemental-assets.test.ts"],
     allowBareFetch: false,
     resilience: {
-      transport: "fetchWithRetry",
-      timeout: "Uses fetchWithRetry default timeout plus cron AbortSignal.",
-      body: "Cancels failed CoinGecko response bodies and validates parsed array shape.",
+      transport: "fetchTextWithRetry",
+      timeout: "Uses fetchTextWithRetry default timeout plus cron AbortSignal.",
+      body: "Reads CoinGecko response bodies inside the request timeout and validates parsed array shape.",
       circuitSources: [],
     },
-    requiredMarkers: ["fetchWithRetry", "cancelResponseBodyQuietly", "signal", "Array.isArray"],
+    requiredMarkers: ["fetchTextWithRetry", "signal", "Array.isArray"],
   },
   {
     id: "authoritative-live-overrides",
@@ -425,7 +425,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       body: "Reads bounded snippets for rejected responses and parses JSON for OK payloads.",
       circuitSources: ["CIRCUIT_SOURCE.BINANCE_PRICES"],
     },
-    requiredMarkers: ["CEX_REQUEST_TIMEOUT_MS", "AbortSignal.timeout", "readResponseSnippet", "fetchWithRetry"],
+    requiredMarkers: ["CEX_REQUEST_TIMEOUT_MS", "AbortSignal.timeout", "readResponseSnippet", "fetch(url", "sleepWithSignal"],
   },
   {
     id: "alchemy-log-rpc",
