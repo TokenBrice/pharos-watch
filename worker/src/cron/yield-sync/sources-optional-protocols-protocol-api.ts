@@ -3,7 +3,7 @@ import { type ChainRpcConfig, getChainRpc } from "../../lib/chain-registry";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS, getFiniteNumber } from "./optional-source-runtime";
 import {
   ETHERFUSE_CETES_SOURCE_KEY,
@@ -75,7 +75,7 @@ function parseUnixSecondsHeader(res: Response, headerName: string): number | nul
 
 export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
   try {
-    const res = await fetchWithRetry(
+    const result = await fetchJsonWithRetry<{ success?: boolean; data?: unknown }>(
       BIMA_EARN_POOLS_URL,
       {
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -84,9 +84,9 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
       0,
       { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
     );
-    if (!res?.ok) return null;
+    if (!result?.response.ok) return null;
 
-    const body = (await res.json()) as { success?: boolean; data?: unknown };
+    const body = result.body;
     if (!body.success || !Array.isArray(body.data) || body.data.length === 0) return null;
 
     const pool = (body.data as BimaEarnPool[]).find((entry) => {
@@ -156,7 +156,7 @@ export async function fetchEtherfuseCetesSource(signal?: AbortSignal): Promise<R
 
 export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
   try {
-    const res = await fetchWithRetry(
+    const result = await fetchJsonWithRetry<{ entity?: string; data?: HashnoteReport[] }>(
       HASHNOTE_PRICE_REPORTS_URL,
       {
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -165,9 +165,9 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
       0,
       { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
     );
-    if (!res?.ok) return null;
+    if (!result?.response.ok) return null;
 
-    const body = (await res.json()) as { entity?: string; data?: HashnoteReport[] };
+    const body = result.body;
     const reports = body.data;
     if (!Array.isArray(reports) || reports.length < 2) return null;
 
@@ -271,7 +271,7 @@ export async function fetchOndoUsdyOracleSource(
 
 export async function fetchZephyrZysSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
   try {
-    const res = await fetchWithRetry(
+    const result = await fetchJsonWithRetry<ZephyrHistoricalReturns>(
       ZEPHYR_HISTORICAL_RETURNS_URL,
       {
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -280,9 +280,9 @@ export async function fetchZephyrZysSource(signal?: AbortSignal): Promise<Resolv
       0,
       { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
     );
-    if (!res?.ok) return null;
+    if (!result?.response.ok) return null;
 
-    const body = (await res.json()) as ZephyrHistoricalReturns;
+    const body = result.body;
     const oneDayApy = getFiniteNumber(body.oneDay?.effectiveApy);
     if (
       oneDayApy == null ||
@@ -304,8 +304,8 @@ export async function fetchZephyrZysSource(signal?: AbortSignal): Promise<Resolv
       yieldSource: ZEPHYR_ZYS_SOURCE_LABEL,
       yieldType: ZEPHYR_ZYS_SOURCE_TYPE,
       sourceObservedAt:
-        parseUnixSecondsHeader(res, "x-last-success-at") ??
-        parseUnixSecondsHeader(res, "x-fetched-at") ??
+        parseUnixSecondsHeader(result.response, "x-last-success-at") ??
+        parseUnixSecondsHeader(result.response, "x-fetched-at") ??
         Math.floor(Date.now() / 1000),
       comparisonAnchorObservedAt: null,
     };

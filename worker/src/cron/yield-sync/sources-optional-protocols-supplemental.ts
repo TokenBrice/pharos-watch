@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
@@ -126,7 +126,7 @@ export async function fetchMorphoVaultSources(
     const results: ResolvedYieldCandidate[] = [];
     let skip = 0;
     while (!budget.budgetController.signal.aborted) {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<{ data?: { vaults?: { items?: MorphoVaultItem[] } } }>(
         "https://api.morpho.org/graphql",
         {
           method: "POST",
@@ -149,9 +149,9 @@ export async function fetchMorphoVaultSources(
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       );
-      if (!res?.ok) return results;
+      if (!result?.response.ok) return results;
 
-      const body = (await res.json()) as { data?: { vaults?: { items?: MorphoVaultItem[] } } };
+      const body = result.body;
       const items = body.data?.vaults?.items;
       if (!Array.isArray(items) || items.length === 0) break;
 
@@ -220,13 +220,13 @@ export async function fetchPendleMarketSources(
         const limit = 100;
         while (!budget.budgetController.signal.aborted) {
           const url = `https://api-v2.pendle.finance/core/v1/${chainId}/markets?limit=${limit}&skip=${skip}&is_active=true`;
-          const res = await fetchWithRetry(url, {
+          const result = await fetchJsonWithRetry<{ total?: number; results?: PendleMarket[] }>(url, {
             headers: { Accept: "application/json", "User-Agent": USER_AGENT },
             signal: budget.signal,
           }, 0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS });
-          if (!res?.ok) break;
+          if (!result?.response.ok) break;
 
-          const body = (await res.json()) as { total?: number; results?: PendleMarket[] };
+          const body = result.body;
           if (!Array.isArray(body.results) || body.results.length === 0) break;
 
           for (const market of body.results) {
@@ -303,7 +303,7 @@ export async function fetchYearnKongSources(
     for (const chainId of [1, 10, 137, 8453, 42161]) {
       if (budget.budgetController.signal.aborted) break;
       try {
-        const res = await fetchWithRetry(
+        const result = await fetchJsonWithRetry<{ data?: { vaults?: KongVault[] } }>(
           "https://kong.yearn.fi/api/gql",
           {
             method: "POST",
@@ -325,9 +325,9 @@ export async function fetchYearnKongSources(
           0,
           { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
         );
-        if (!res?.ok) continue;
+        if (!result?.response.ok) continue;
 
-        const body = (await res.json()) as { data?: { vaults?: KongVault[] } };
+        const body = result.body;
         const vaults = body.data?.vaults;
         if (!Array.isArray(vaults)) continue;
 
@@ -402,30 +402,30 @@ export async function fetchBeefySources(
   const budget = createOptionalSourceBudget("Beefy sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   try {
     const [apyRes, vaultsRes, tvlRes] = await Promise.all([
-      fetchWithRetry(
+      fetchJsonWithRetry<Record<string, number | null>>(
         "https://api.beefy.finance/apy",
         { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       ),
-      fetchWithRetry(
+      fetchJsonWithRetry<BeefyVault[]>(
         "https://api.beefy.finance/vaults",
         { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       ),
-      fetchWithRetry(
+      fetchJsonWithRetry<Record<string, number | null>>(
         "https://api.beefy.finance/tvl",
         { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       ),
     ]);
-    if (!apyRes?.ok || !vaultsRes?.ok || !tvlRes?.ok) return [];
+    if (!apyRes?.response.ok || !vaultsRes?.response.ok || !tvlRes?.response.ok) return [];
 
-    const apyMap = (await apyRes.json()) as Record<string, number | null>;
-    const vaults = (await vaultsRes.json()) as BeefyVault[];
-    const tvlMap = (await tvlRes.json()) as Record<string, number | null>;
+    const apyMap = apyRes.body;
+    const vaults = vaultsRes.body;
+    const tvlMap = tvlRes.body;
     if (!Array.isArray(vaults)) return [];
 
     const results: ResolvedYieldCandidate[] = [];

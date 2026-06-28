@@ -4,7 +4,7 @@ import { resolveRpcUrls } from "./sources-helpers";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { buildOnChainSourceKey } from "../yield-helpers";
 import type { ResolvedYield } from "./types";
@@ -57,7 +57,7 @@ async function fetchCoinGeckoUsdPrice(
   coingeckoApiKey?: string | null,
 ): Promise<number | null> {
   try {
-    const res = await fetchWithRetry(
+    const result = await fetchJsonWithRetry<Record<string, { usd?: number }>>(
       cgUrl(`/simple/price?ids=${encodeURIComponent(geckoId)}&vs_currencies=usd`, coingeckoApiKey ?? null),
       {
         headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
@@ -65,9 +65,9 @@ async function fetchCoinGeckoUsdPrice(
       },
       1,
     );
-    if (!res?.ok) return null;
+    if (!result?.response.ok) return null;
 
-    const body = (await res.json()) as Record<string, { usd?: number }>;
+    const body = result.body;
     const price = body[geckoId]?.usd;
     return typeof price === "number" && price > 0 ? price : null;
   } catch (error) {

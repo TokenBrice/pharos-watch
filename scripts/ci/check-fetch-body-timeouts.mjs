@@ -9,13 +9,6 @@ const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
-  "worker/src/cron/yield-sync/sources-optional-protocols-onchain.ts::const res = await fetchWithRetry(::const body = (await res.json()) as Record<string, { usd?: number }>;",
-  "worker/src/cron/yield-sync/sources-optional-protocols-protocol-api.ts::const res = await fetchWithRetry(::const body = (await res.json()) as { success?: boolean; data?: unknown };",
-  "worker/src/cron/yield-sync/sources-optional-protocols-protocol-api.ts::const res = await fetchWithRetry(::const body = (await res.json()) as { entity?: string; data?: HashnoteReport[] };",
-  "worker/src/cron/yield-sync/sources-optional-protocols-protocol-api.ts::const res = await fetchWithRetry(::const body = (await res.json()) as ZephyrHistoricalReturns;",
-  "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts::const res = await fetchWithRetry(::const body = (await res.json()) as { data?: { vaults?: { items?: MorphoVaultItem[] } } };",
-  "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts::const res = await fetchWithRetry(url, {::const body = (await res.json()) as { total?: number; results?: PendleMarket[] };",
-  "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts::const res = await fetchWithRetry(::const body = (await res.json()) as { data?: { vaults?: KongVault[] } };",
   "worker/src/lib/address-price-providers/shared.ts::const response = await fetchWithRetry(::return { json: await response.json(), diagnostic };",
   "worker/src/lib/backfill-fx.ts::const res = await fetchWithRetry(::const raw = await res.json();",
   "worker/src/lib/backfill-fx.ts::let res = await fetchWithRetry(::const raw = await res.json();",
