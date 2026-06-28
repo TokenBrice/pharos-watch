@@ -63,6 +63,35 @@ function slotStatsMatcher(rows: Record<string, unknown>[]): MockTableConfig {
   };
 }
 
+function durationStageBreakdownMatcher(rows: Record<string, unknown>[]): MockTableConfig {
+  return {
+    match: "GROUP BY stage_label",
+    matchBinds: [
+      SYNC_TIMEOUT_MS,
+      "sync-stablecoins",
+      SINCE_SEC,
+      STALE_SLOT_CHILD_ERROR,
+      STALE_SLOT_METADATA_REASON,
+      SYNC_TIMEOUT_MS,
+    ],
+    rows,
+  };
+}
+
+function durationSamplesMatcher(rows: Record<string, unknown>[]): MockTableConfig {
+  return {
+    match: "SELECT started_at, duration_ms, status, error, metadata",
+    matchBinds: [
+      "sync-stablecoins",
+      SINCE_SEC,
+      STALE_SLOT_CHILD_ERROR,
+      STALE_SLOT_METADATA_REASON,
+      SYNC_TIMEOUT_MS,
+    ],
+    rows,
+  };
+}
+
 describe("runCronDurationWatchdog", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -110,6 +139,80 @@ describe("runCronDurationWatchdog", () => {
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({ breaching: ["sync-stablecoins"] });
+  });
+
+  it("includes stage diagnostics for cap-hit runtime breaches", async () => {
+    const db = mockD1([
+      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5), max_ms: SYNC_TIMEOUT_MS, cap_hits: 3 }),
+      durationStageBreakdownMatcher([
+        {
+          stage_label: "publication",
+          runs: 2,
+          avg_ms: SYNC_TIMEOUT_MS + 100,
+          max_ms: SYNC_TIMEOUT_MS + 500,
+          cap_hits: 2,
+          budget_truncations: 0,
+        },
+        {
+          stage_label: "run-budget-truncated",
+          runs: 1,
+          avg_ms: SYNC_TIMEOUT_MS - 100,
+          max_ms: SYNC_TIMEOUT_MS - 100,
+          cap_hits: 0,
+          budget_truncations: 1,
+        },
+      ]),
+      durationSamplesMatcher([
+        {
+          started_at: NOW_SEC - 60,
+          duration_ms: SYNC_TIMEOUT_MS + 500,
+          status: "error",
+          error: "timeout",
+          metadata: JSON.stringify({
+            stage: "publication",
+            runBudgetTruncated: true,
+            deferredCoins: 7,
+            ignoredVerboseKey: "not surfaced",
+          }),
+        },
+      ]),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      durationDiagnostics: [
+        {
+          job: "sync-stablecoins",
+          timeoutMs: SYNC_TIMEOUT_MS,
+          stageBreakdown: [
+            {
+              stage: "publication",
+              runs: 2,
+              capHits: 2,
+            },
+            {
+              stage: "run-budget-truncated",
+              runs: 1,
+              budgetTruncations: 1,
+            },
+          ],
+          samples: [
+            {
+              startedAt: NOW_SEC - 60,
+              durationMs: SYNC_TIMEOUT_MS + 500,
+              metadata: {
+                stage: "publication",
+                runBudgetTruncated: true,
+                deferredCoins: 7,
+                metadataKeys: expect.arrayContaining(["deferredCoins", "ignoredVerboseKey", "stage"]),
+              },
+            },
+          ],
+        },
+      ],
+    });
   });
 
   it("ignores jobs with too few runs for a trend", async () => {

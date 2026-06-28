@@ -1,6 +1,6 @@
 import { sendAlert } from "../lib/alerts";
 import type { CronResult } from "../lib/cron-logger";
-import { CRON_TIMEOUT_MS } from "../lib/cron-lease";
+import { CRON_TIMEOUT_MS, runWithOverloadRetry } from "../lib/cron-lease";
 import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
@@ -44,6 +44,30 @@ interface JobDurationStats {
   avgRatio: number;
 }
 
+interface DurationStageBreakdown {
+  stage: string;
+  runs: number;
+  avgMs: number;
+  maxMs: number;
+  capHits: number;
+  budgetTruncations: number;
+}
+
+interface DurationCapHitSample {
+  startedAt: number;
+  durationMs: number;
+  status: string | null;
+  error: string | null;
+  metadata: Record<string, unknown>;
+}
+
+interface DurationDiagnostic {
+  job: string;
+  timeoutMs: number;
+  stageBreakdown: DurationStageBreakdown[];
+  samples: DurationCapHitSample[];
+}
+
 interface SlotAbandonmentStats {
   scheduleKey: string;
   slots: number;
@@ -68,6 +92,41 @@ interface SlotStatsRow {
   abandoned_slots: number | null;
   latest_abandoned_at: number | null;
 }
+
+interface DurationStageBreakdownRow {
+  stage_label: string | null;
+  runs: number;
+  avg_ms: number | null;
+  max_ms: number | null;
+  cap_hits: number | null;
+  budget_truncations: number | null;
+}
+
+interface DurationSampleRow {
+  started_at: number;
+  duration_ms: number;
+  status: string | null;
+  error: string | null;
+  metadata: string | null;
+}
+
+const DURATION_DIAGNOSTIC_METADATA_KEYS = [
+  "stage",
+  "phase",
+  "runBudgetTruncated",
+  "runBudgetTruncationCount",
+  "runtimeBudgetHit",
+  "deferredCoins",
+  "nextCursorStablecoinId",
+  "cursorStablecoinId",
+  "budgetMs",
+  "d1FinalizeTimeoutMs",
+  "d1TailBudgetExhausted",
+  "provider",
+  "source",
+  "breakerKey",
+  "failureCategory",
+] as const;
 
 function isRuntimeBreaching(stats: JobDurationStats): boolean {
   if (stats.runs < MIN_RUNS_FOR_TREND) return false;
@@ -97,6 +156,144 @@ function readLastAlertedAt(value: string | null | undefined): number {
   } catch {
     return 0;
   }
+}
+
+function readDiagnosticMetadata(value: string | null): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const picked: Record<string, unknown> = {};
+    for (const key of DURATION_DIAGNOSTIC_METADATA_KEYS) {
+      if (parsed[key] !== undefined) picked[key] = parsed[key];
+    }
+    const keys = Object.keys(parsed).sort();
+    if (keys.length > 0) picked.metadataKeys = keys.slice(0, 40);
+    return picked;
+  } catch {
+    return {};
+  }
+}
+
+async function loadDurationDiagnostics(
+  db: D1Database,
+  breachingStats: readonly JobDurationStats[],
+  sinceSec: number,
+  signal?: AbortSignal,
+): Promise<DurationDiagnostic[]> {
+  const diagnostics: DurationDiagnostic[] = [];
+  for (const stats of breachingStats) {
+    throwIfAborted(signal);
+    const stageRows = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT
+             CASE
+               WHEN json_valid(metadata) AND json_extract(metadata, '$.stage') IS NOT NULL
+                 THEN CAST(json_extract(metadata, '$.stage') AS TEXT)
+               WHEN json_valid(metadata) AND json_extract(metadata, '$.phase') IS NOT NULL
+                 THEN CAST(json_extract(metadata, '$.phase') AS TEXT)
+               WHEN json_valid(metadata) AND json_extract(metadata, '$.runBudgetTruncated') = 1
+                 THEN 'run-budget-truncated'
+               ELSE 'unknown'
+             END AS stage_label,
+             COUNT(*) AS runs,
+             CAST(AVG(duration_ms) AS INT) AS avg_ms,
+             MAX(duration_ms) AS max_ms,
+             SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits,
+             SUM(
+               CASE
+                 WHEN json_valid(metadata) THEN
+                   CASE WHEN json_extract(metadata, '$.runBudgetTruncated') = 1 THEN 1 ELSE 0 END
+                 ELSE 0
+               END
+             ) AS budget_truncations
+           FROM cron_runs
+           WHERE job = ?
+             AND started_at > ?
+             AND (error IS NULL OR error <> ?)
+             AND (
+               metadata IS NULL
+               OR CASE
+                 WHEN json_valid(metadata) THEN COALESCE(json_extract(metadata, '$.reason') <> ?, 1)
+                 ELSE 1
+               END
+             )
+             AND (
+               duration_ms >= ?
+               OR (
+                 json_valid(metadata)
+                 AND json_extract(metadata, '$.runBudgetTruncated') = 1
+               )
+             )
+           GROUP BY stage_label
+           ORDER BY cap_hits DESC, budget_truncations DESC, max_ms DESC
+           LIMIT 8`,
+        )
+        .bind(
+          stats.timeoutMs,
+          stats.job,
+          sinceSec,
+          STALE_SLOT_CHILD_ERROR,
+          STALE_SLOT_METADATA_REASON,
+          stats.timeoutMs,
+        )
+        .all<DurationStageBreakdownRow>(),
+      3,
+      signal,
+    );
+    throwIfAborted(signal);
+    const sampleRows = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT started_at, duration_ms, status, error, metadata
+             FROM cron_runs
+            WHERE job = ?
+              AND started_at > ?
+              AND (error IS NULL OR error <> ?)
+              AND (
+                metadata IS NULL
+                OR CASE
+                  WHEN json_valid(metadata) THEN COALESCE(json_extract(metadata, '$.reason') <> ?, 1)
+                  ELSE 1
+                END
+              )
+              AND (
+                duration_ms >= ?
+                OR (
+                  json_valid(metadata)
+                  AND json_extract(metadata, '$.runBudgetTruncated') = 1
+                )
+              )
+            ORDER BY started_at DESC
+            LIMIT 5`,
+        )
+        .bind(stats.job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON, stats.timeoutMs)
+        .all<DurationSampleRow>(),
+      3,
+      signal,
+    );
+    diagnostics.push({
+      job: stats.job,
+      timeoutMs: stats.timeoutMs,
+      stageBreakdown: (stageRows.results ?? []).map((row) => ({
+        stage: row.stage_label ?? "unknown",
+        runs: row.runs,
+        avgMs: row.avg_ms ?? 0,
+        maxMs: row.max_ms ?? 0,
+        capHits: row.cap_hits ?? 0,
+        budgetTruncations: row.budget_truncations ?? 0,
+      })),
+      samples: (sampleRows.results ?? []).map((row) => ({
+        startedAt: row.started_at,
+        durationMs: row.duration_ms,
+        status: row.status,
+        error: row.error,
+        metadata: readDiagnosticMetadata(row.metadata),
+      })),
+    });
+  }
+  return diagnostics;
 }
 
 export async function runCronDurationWatchdog(
@@ -200,6 +397,7 @@ export async function runCronDurationWatchdog(
 
   const runtimeBreaching = stats.filter(isRuntimeBreaching);
   const slotAbandonmentBreaching = slotStats.filter((entry) => isSlotAbandonmentBreaching(entry, nowSec));
+  const durationDiagnostics = await loadDurationDiagnostics(db, runtimeBreaching, sinceSec, signal);
 
   if (runtimeBreaching.length === 0 && slotAbandonmentBreaching.length === 0) {
     return {
@@ -209,6 +407,7 @@ export async function runCronDurationWatchdog(
         slotStats,
         slotAbandonmentRecentWindowSec: SLOT_ABANDONMENT_RECENT_WINDOW_SEC,
         runtimeBreaching: [],
+        durationDiagnostics,
         slotAbandonmentBreaching: [],
         breaching: [],
       }),
@@ -220,10 +419,18 @@ export async function runCronDurationWatchdog(
   const dueForAlert = nowSec - readLastAlertedAt(marker?.value) >= ALERT_COOLDOWN_SEC;
   let alerted = false;
   if (dueForAlert) {
+    const diagnosticsByJob = new Map(durationDiagnostics.map((entry) => [entry.job, entry]));
     const runtimeLines = runtimeBreaching.map((entry) =>
       `- ${entry.job}: 7d avg ${Math.round(entry.avgMs / 1000)}s of ${Math.round(entry.timeoutMs / 1000)}s ceiling ` +
       `(${Math.round(entry.avgRatio * 100)}%), ${entry.capHits} run(s) at cap, ` +
-      `${entry.budgetTruncations} budget truncation(s), ${entry.runs} runs`,
+      `${entry.budgetTruncations} budget truncation(s), ${entry.runs} runs` +
+      (() => {
+        const stages = diagnosticsByJob.get(entry.job)?.stageBreakdown ?? [];
+        if (stages.length === 0) return "";
+        return `; cap/trunc stages: ${stages.map((stage) =>
+          `${stage.stage} (${stage.capHits} cap, ${stage.budgetTruncations} trunc)`
+        ).join(", ")}`;
+      })(),
     );
     const slotLines = slotAbandonmentBreaching.map((entry) =>
       `- ${entry.scheduleKey}: ${entry.abandonedSlots}/${entry.slots} slot(s) abandoned ` +
@@ -253,6 +460,7 @@ export async function runCronDurationWatchdog(
     itemCount: stats.length + slotStats.length,
     metadata: JSON.stringify({
       stats,
+      durationDiagnostics,
       slotStats,
       slotAbandonmentRecentWindowSec: SLOT_ABANDONMENT_RECENT_WINDOW_SEC,
       runtimeBreaching: runtimeBreaching.map((entry) => entry.job),
