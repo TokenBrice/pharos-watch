@@ -257,18 +257,22 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `sgho-aave`              | Aave legacy savings `previewRedeem(1 share)` × tracked `gho-aave` price         |
 | `aa-falconx-mev-capital` | Idle CDO `virtualPrice(address tranche)` × tracked `usdc-circle` price          |
 
-When a live override validates successfully, the cached asset is written with:
+When a live override validates successfully, direct protocol/NAV quotes and high-confidence tracked-base inheritance are written with:
 
 - `priceSource = "protocol-redeem"`
 - `priceConfidence = "high"`
+
+Scoped tracked-base inheritance from a fresh replay-safe single-source parent keeps the parent `priceSource` and
+`priceConfidence = "single-source"` so downstream publication guardrails continue to see the inherited quote's soft
+upstream provenance instead of treating it as depeg-authoritative protocol redemption.
 
 For tracked-base inheritance paths, the authoritative layer does not query a bespoke contract path; it inherits the tracked parent asset's live price and historical replay because Pharos models the child as an instantly redeemable wrapper or extension of that parent rail.
 
 Live tracked-base and NAV-wrapper inheritance only promotes parent prices that are replay-safe and either
 high-confidence or explicitly authoritative themselves. For scoped M0 extension assets, a fresh replay-safe single-source
-M0 parent is also admissible. Low-confidence, fallback, cached, stale-sync, single-source stale,
-or provenance-less parent prices are skipped instead of being upgraded into `protocol-redeem` high-confidence child
-prices. For high-confidence composite parents, a fresh same-run `priceSyncedAt` can satisfy the live inheritance
+M0 parent is also admissible, but it is preserved as a single-source child price with the parent source instead of
+being upgraded into `protocol-redeem` high-confidence provenance. Low-confidence, fallback, cached, stale-sync,
+single-source stale, or provenance-less parent prices are skipped. For high-confidence composite parents, a fresh same-run `priceSyncedAt` can satisfy the live inheritance
 freshness check when the composite's single displayed `observedAt` is older than one short-window component source; this
 preserves source-specific admission from the parent run without falsely rejecting mixed-cadence composites such as
 USDC. When inheritance is accepted, the override carries the parent source, confidence, observed-at timestamp,

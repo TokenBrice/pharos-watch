@@ -1509,7 +1509,7 @@ describe("authoritative-price-sources", () => {
     expect(overrides.has("m-m0")).toBe(false);
   });
 
-  it("allows scoped M0 wrappers to inherit a fresh replay-safe single-source parent", async () => {
+  it("keeps scoped M0 wrapper overrides single-source when inheriting a fresh replay-safe single-source parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const overrides = await fetchAuthoritativeLivePriceOverrides([
       {
@@ -1538,8 +1538,8 @@ describe("authoritative-price-sources", () => {
 
     expect(overrides.get("usdk-kast")).toMatchObject({
       price: 0.999674,
-      source: "protocol-redeem",
-      confidence: "high",
+      source: "coingecko",
+      confidence: "single-source",
       metadata: {
         inheritedFrom: "wm-m0",
         parentSource: "coingecko",
@@ -1549,8 +1549,8 @@ describe("authoritative-price-sources", () => {
     });
     expect(overrides.get("xo-exodus")).toMatchObject({
       price: 0.999674,
-      source: "protocol-redeem",
-      confidence: "high",
+      source: "coingecko",
+      confidence: "single-source",
       metadata: {
         inheritedFrom: "wm-m0",
         parentSource: "coingecko",
@@ -1583,8 +1583,8 @@ describe("authoritative-price-sources", () => {
 
     expect(overrides.get("usdn-noble")).toMatchObject({
       price: 0.999766,
-      source: "protocol-redeem",
-      confidence: "high",
+      source: "defillama-contract",
+      confidence: "single-source",
       metadata: {
         inheritedFrom: "m-m0",
         parentSource: "defillama-contract",

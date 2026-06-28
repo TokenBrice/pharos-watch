@@ -209,6 +209,8 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, optio
   observedAt: number;
   observedAtMode: PriceObservedAtMode | null;
   replaySafe: boolean;
+  source: string;
+  confidence: PriceConfidence;
 } | null {
   const price = getFinitePositivePrice(asset);
   if (price == null) return null;
@@ -229,7 +231,8 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, optio
       sourceParts.length === 1 &&
       !sourceParts.includes("cached")
     );
-  if (!confidenceTrusted) return null;
+  if (!confidenceTrusted || parentConfidence == null) return null;
+  const trustedConfidence = parentConfidence;
 
   if (!replaySafe) {
     if (!options?.allowFreshNonReplaySafeParent || sourceParts.includes("cached")) {
@@ -259,6 +262,8 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, optio
         observedAt: syncedAt,
         observedAtMode: "local_fetch",
         replaySafe,
+        source: parentSource,
+        confidence: trustedConfidence,
       };
     }
     return null;
@@ -269,6 +274,8 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, optio
     observedAt: freshness.observedAt,
     observedAtMode: freshness.observedAtMode,
     replaySafe,
+    source: parentSource,
+    confidence: trustedConfidence,
   };
 }
 
@@ -280,6 +287,8 @@ export interface TrustedOverrideParent {
     observedAt: number;
     observedAtMode: PriceObservedAtMode | null;
     replaySafe: boolean;
+    source: string;
+    confidence: PriceConfidence;
   };
 }
 
@@ -313,10 +322,13 @@ export function buildParentDerivedLiveOverride(
   if (!Number.isFinite(price) || price <= 0) return null;
 
   const parentObservedAt = parent.parentAsset.priceObservedAt ?? parent.parentAsset.priceUpdatedAt ?? null;
+  const inheritsSingleSourceSoftParent = parent.trustedParent.confidence === "single-source" &&
+    parent.trustedParent.source !== PROTOCOL_REDEEM_SOURCE;
+
   return {
     price,
-    source: PROTOCOL_REDEEM_SOURCE,
-    confidence: "high",
+    source: inheritsSingleSourceSoftParent ? parent.trustedParent.source : PROTOCOL_REDEEM_SOURCE,
+    confidence: inheritsSingleSourceSoftParent ? "single-source" : "high",
     observedAt: parent.trustedParent.observedAt,
     observedAtMode: parent.trustedParent.observedAtMode,
     metadata: {
