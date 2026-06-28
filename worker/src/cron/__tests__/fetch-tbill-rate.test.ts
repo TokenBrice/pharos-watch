@@ -20,6 +20,15 @@ vi.mock("../../lib/db-cache", () => ({
   setCache: vi.fn(),
 }));
 
+vi.mock("../../lib/cron-logger", () => ({
+  logCronEvent: vi.fn(async (_db: D1Database, event: Record<string, unknown>) => ({
+    event: "cron_event",
+    severity: "info",
+    recordedAt: 1774479600,
+    ...event,
+  })),
+}));
+
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(),
   recordOutcome: vi.fn(),
@@ -50,6 +59,7 @@ import {
 } from "../yield-sync/benchmarks";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { getCache, setCache } from "../../lib/db-cache";
+import { logCronEvent } from "../../lib/cron-logger";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
 const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
@@ -197,6 +207,7 @@ function okExtendedBenchmarkMocks(): Record<string, Response> {
 
 /** Banxico requires a token; pass via env. */
 const BANXICO_TEST_ENV = { BANXICO_TOKEN: "test-token" } as const;
+const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 
 describe("fetchTbillRate", () => {
   const db = {} as D1Database;
@@ -230,10 +241,60 @@ describe("fetchTbillRate", () => {
     };
   }
 
+  function previousRiskFreeRatesCacheWithGbp() {
+    return {
+      value: JSON.stringify({
+        version: 1,
+        benchmarks: {
+          USD: {
+            key: "USD",
+            label: "USD 3M T-Bill",
+            currency: "USD",
+            rate: 3.72,
+            recordDate: "2026-03-02",
+            fetchedAt: 1773100800,
+            source: "fred-dgs3mo",
+            isFallback: false,
+            fallbackMode: null,
+            isProxy: false,
+            lastMarketRate: 3.72,
+            lastMarketRecordDate: "2026-03-02",
+            lastMarketFetchedAt: 1773100800,
+            lastMarketSource: "fred-dgs3mo",
+          },
+          GBP: {
+            key: "GBP",
+            label: "GBP 3M compounded SONIA",
+            currency: "GBP",
+            rate: 4.05,
+            recordDate: "2026-03-25",
+            fetchedAt: 1774479600,
+            source: "fred-sonia-compounded-index",
+            isFallback: false,
+            fallbackMode: null,
+            isProxy: false,
+            lastMarketRate: 4.05,
+            lastMarketRecordDate: "2026-03-25",
+            lastMarketFetchedAt: 1774479600,
+            lastMarketSource: "fred-sonia-compounded-index",
+          },
+        },
+      }),
+      updatedAt: 1774479600,
+    } as never;
+  }
+
+  function cacheWritePayload(key: string) {
+    const call = vi.mocked(setCache).mock.calls.find((entry) => entry[1] === key);
+    expect(call).toBeDefined();
+    return JSON.parse(String(call?.[2])) as Record<string, unknown>;
+  }
+
   beforeEach(() => {
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
+    vi.mocked(logCronEvent).mockClear();
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
   });
@@ -421,46 +482,7 @@ describe("fetchTbillRate", () => {
     });
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "risk_free_rates") {
-        return {
-          value: JSON.stringify({
-            version: 1,
-            benchmarks: {
-              USD: {
-                key: "USD",
-                label: "USD 3M T-Bill",
-                currency: "USD",
-                rate: 3.72,
-                recordDate: "2026-03-02",
-                fetchedAt: 1773100800,
-                source: "fred-dgs3mo",
-                isFallback: false,
-                fallbackMode: null,
-                isProxy: false,
-                lastMarketRate: 3.72,
-                lastMarketRecordDate: "2026-03-02",
-                lastMarketFetchedAt: 1773100800,
-                lastMarketSource: "fred-dgs3mo",
-              },
-              GBP: {
-                key: "GBP",
-                label: "GBP 3M compounded SONIA",
-                currency: "GBP",
-                rate: 4.05,
-                recordDate: "2026-03-25",
-                fetchedAt: 1774479600,
-                source: "fred-sonia-compounded-index",
-                isFallback: false,
-                fallbackMode: null,
-                isProxy: false,
-                lastMarketRate: 4.05,
-                lastMarketRecordDate: "2026-03-25",
-                lastMarketFetchedAt: 1774479600,
-                lastMarketSource: "fred-sonia-compounded-index",
-              },
-            },
-          }),
-          updatedAt: 1774479600,
-        } as never;
+        return previousRiskFreeRatesCacheWithGbp();
       }
       return null as never;
     });
@@ -484,6 +506,117 @@ describe("fetchTbillRate", () => {
         retained: true,
       }),
     ]);
+    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+      consecutiveRetainedRuns: 1,
+      lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
+      lastMarketSource: "fred-sonia-compounded-index",
+      lastMarketRecordDate: "2026-03-25",
+    });
+    expect(logCronEvent).not.toHaveBeenCalled();
+  });
+
+  it("logs a warning when the retained GBP SONIA fallback repeats", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
+      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
+      "bankofengland.co.uk": null,
+    });
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rates") return previousRiskFreeRatesCacheWithGbp();
+      if (key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY) {
+        return {
+          value: JSON.stringify({
+            consecutiveRetainedRuns: 1,
+            firstRetainedAt: 1774479600,
+            lastRetainedAt: 1774479600,
+            lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
+            lastMarketSource: "fred-sonia-compounded-index",
+            lastMarketRecordDate: "2026-03-25",
+            lastMarketFetchedAt: 1774479600,
+          }),
+          updatedAt: 1774479600,
+        } as never;
+      }
+      return null as never;
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+
+    expect(result.status).toBe("degraded");
+    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+      consecutiveRetainedRuns: 2,
+      firstRetainedAt: 1774479600,
+      lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
+      lastMarketSource: "fred-sonia-compounded-index",
+    });
+    expect(logCronEvent).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        job: "fetch-tbill-rate",
+        eventType: "gbp-retained-fallback-repeated",
+        severity: "warning",
+        metadata: expect.objectContaining({
+          consecutiveRetainedRuns: 2,
+          threshold: 2,
+          fallbackMode: "gbp-sonia-compounded-index-failed-retained",
+          lastMarketSource: "fred-sonia-compounded-index",
+          lastMarketRecordDate: "2026-03-25",
+        }),
+      }),
+    );
+  });
+
+  it("resets the retained GBP SONIA fallback monitor after source recovery", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+    });
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY) {
+        return {
+          value: JSON.stringify({
+            consecutiveRetainedRuns: 2,
+            firstRetainedAt: 1774479600,
+            lastRetainedAt: 1774566000,
+            lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
+            lastMarketSource: "fred-sonia-compounded-index",
+            lastMarketRecordDate: "2026-03-25",
+            lastMarketFetchedAt: 1774479600,
+          }),
+          updatedAt: 1774566000,
+        } as never;
+      }
+      return null as never;
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+
+    expect(result.status).toBe("ok");
+    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+      consecutiveRetainedRuns: 0,
+      recoveredSource: "fred-sonia-compounded-index",
+    });
+    expect(logCronEvent).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        job: "fetch-tbill-rate",
+        eventType: "gbp-retained-fallback-recovered",
+        severity: "info",
+        metadata: expect.objectContaining({
+          previousConsecutiveRetainedRuns: 2,
+          recoveredSource: "fred-sonia-compounded-index",
+          lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
+        }),
+      }),
+    );
   });
 
   it("falls back to Treasury XML when FRED fails", async () => {

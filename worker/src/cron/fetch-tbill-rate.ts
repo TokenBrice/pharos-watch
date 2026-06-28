@@ -1,11 +1,11 @@
-import { setCache } from "../lib/db-cache";
+import { getCache, setCache } from "../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   CIRCUIT_SOURCE,
   FRED_EFFR_CSV_URL,
   FRED_TBILL_CSV_URL,
 } from "../lib/constants";
-import type { CronResult } from "../lib/cron-logger";
+import { logCronEvent, type CronResult } from "../lib/cron-logger";
 import {
   buildRiskFreeRateCachePayload,
   buildRiskFreeRatesCachePayload,
@@ -60,6 +60,8 @@ export { parseCbrKeyRateXml } from "./tbill-sources/cbr";
 
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
+const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
+const GBP_RETAINED_FALLBACK_ALERT_THRESHOLD = 2;
 
 function buildMetadata(fields: Record<string, unknown>): string {
   return JSON.stringify(fields);
@@ -102,6 +104,165 @@ function buildFallbackBenchmarkMetadata(benchmarks: ParsedYieldBenchmarkRegistry
       retained: typeof benchmark.fallbackMode === "string" && benchmark.fallbackMode.endsWith("-retained"),
     }];
   });
+}
+
+interface GbpRetainedFallbackStreak {
+  consecutiveRetainedRuns: number;
+  firstRetainedAt: number | null;
+  lastRetainedAt: number | null;
+  lastFallbackMode: string | null;
+  lastMarketSource: string | null;
+  lastMarketRecordDate: string | null;
+  lastMarketFetchedAt: number | null;
+  recoveredAt?: number | null;
+  recoveredSource?: string | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRetainedFallbackStreak {
+  if (!value) {
+    return {
+      consecutiveRetainedRuns: 0,
+      firstRetainedAt: null,
+      lastRetainedAt: null,
+      lastFallbackMode: null,
+      lastMarketSource: null,
+      lastMarketRecordDate: null,
+      lastMarketFetchedAt: null,
+    };
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (!isRecord(parsed)) throw new Error("not an object");
+    const consecutiveRetainedRuns = numberOrNull(parsed.consecutiveRetainedRuns) ?? 0;
+    return {
+      consecutiveRetainedRuns: Math.max(0, Math.floor(consecutiveRetainedRuns)),
+      firstRetainedAt: numberOrNull(parsed.firstRetainedAt),
+      lastRetainedAt: numberOrNull(parsed.lastRetainedAt),
+      lastFallbackMode: stringOrNull(parsed.lastFallbackMode),
+      lastMarketSource: stringOrNull(parsed.lastMarketSource),
+      lastMarketRecordDate: stringOrNull(parsed.lastMarketRecordDate),
+      lastMarketFetchedAt: numberOrNull(parsed.lastMarketFetchedAt),
+      recoveredAt: numberOrNull(parsed.recoveredAt),
+      recoveredSource: stringOrNull(parsed.recoveredSource),
+    };
+  } catch {
+    return {
+      consecutiveRetainedRuns: 0,
+      firstRetainedAt: null,
+      lastRetainedAt: null,
+      lastFallbackMode: null,
+      lastMarketSource: null,
+      lastMarketRecordDate: null,
+      lastMarketFetchedAt: null,
+    };
+  }
+}
+
+function isRetainedGbpFallback(benchmark: ParsedYieldBenchmarkMeta | null): boolean {
+  return benchmark?.key === "GBP" &&
+    benchmark.isFallback === true &&
+    typeof benchmark.fallbackMode === "string" &&
+    benchmark.fallbackMode.endsWith("-retained");
+}
+
+function retainedFallbackMonitorErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function updateGbpRetainedFallbackMonitor(params: {
+  db: D1Database;
+  benchmark: ParsedYieldBenchmarkMeta | null;
+  fetchedAt: number;
+  signal?: AbortSignal;
+}): Promise<void> {
+  const { db, benchmark, fetchedAt, signal } = params;
+  try {
+    const cached = await getCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY);
+    throwIfAborted(signal);
+    const previous = parseGbpRetainedFallbackStreak(cached?.value);
+
+    if (benchmark && isRetainedGbpFallback(benchmark)) {
+      const consecutiveRetainedRuns = previous.consecutiveRetainedRuns + 1;
+      const streak: GbpRetainedFallbackStreak = {
+        consecutiveRetainedRuns,
+        firstRetainedAt: previous.firstRetainedAt ?? fetchedAt,
+        lastRetainedAt: fetchedAt,
+        lastFallbackMode: benchmark.fallbackMode,
+        lastMarketSource: benchmark.lastMarketSource ?? benchmark.source ?? null,
+        lastMarketRecordDate: benchmark.lastMarketRecordDate ?? benchmark.recordDate ?? null,
+        lastMarketFetchedAt: benchmark.lastMarketFetchedAt ?? benchmark.fetchedAt ?? null,
+      };
+      await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(streak), signal);
+
+      if (consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_ALERT_THRESHOLD) {
+        await logCronEvent(db, {
+          job: "fetch-tbill-rate",
+          eventType: "gbp-retained-fallback-repeated",
+          severity: "warning",
+          message: "GBP SONIA benchmark retained the previous market rate for consecutive fetch-tbill-rate runs.",
+          metadata: {
+            consecutiveRetainedRuns,
+            threshold: GBP_RETAINED_FALLBACK_ALERT_THRESHOLD,
+            fallbackMode: benchmark.fallbackMode,
+            retainedSource: benchmark.source,
+            lastMarketSource: benchmark.lastMarketSource,
+            lastMarketRecordDate: benchmark.lastMarketRecordDate,
+            lastMarketFetchedAt: benchmark.lastMarketFetchedAt,
+          },
+        });
+      }
+      return;
+    }
+
+    if (previous.consecutiveRetainedRuns <= 0) return;
+
+    const recovered: GbpRetainedFallbackStreak = {
+      consecutiveRetainedRuns: 0,
+      firstRetainedAt: null,
+      lastRetainedAt: null,
+      lastFallbackMode: previous.lastFallbackMode,
+      lastMarketSource: previous.lastMarketSource,
+      lastMarketRecordDate: previous.lastMarketRecordDate,
+      lastMarketFetchedAt: previous.lastMarketFetchedAt,
+      recoveredAt: fetchedAt,
+      recoveredSource: benchmark?.source ?? null,
+    };
+    await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(recovered), signal);
+
+    if (previous.consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_ALERT_THRESHOLD) {
+      await logCronEvent(db, {
+        job: "fetch-tbill-rate",
+        eventType: "gbp-retained-fallback-recovered",
+        severity: "info",
+        message: "GBP SONIA benchmark recovered from repeated retained fallback.",
+        metadata: {
+          previousConsecutiveRetainedRuns: previous.consecutiveRetainedRuns,
+          recoveredSource: benchmark?.source ?? null,
+          recoveredRecordDate: benchmark?.recordDate ?? null,
+          lastFallbackMode: previous.lastFallbackMode,
+          lastMarketSource: previous.lastMarketSource,
+        },
+      });
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    console.warn(
+      "[fetch-tbill-rate] Failed to update GBP retained fallback monitor:",
+      retainedFallbackMonitorErrorMessage(error).slice(0, 200),
+    );
+  }
 }
 
 function buildBenchmarkRunMetadata(params: {
@@ -449,6 +610,7 @@ export async function fetchTbillRate(
 ): Promise<CronResult> {
   const previous = await loadRiskFreeRateRegistry(db);
   throwIfAborted(signal);
+  const fetchedAt = Math.floor(Date.now() / 1000);
 
   if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
     throwIfAborted(signal);
@@ -463,6 +625,7 @@ export async function fetchTbillRate(
       ...uniformBenchmarks,
       SGD: null,
     };
+    await updateGbpRetainedFallbackMonitor({ db, benchmark: benchmarks.GBP, fetchedAt, signal });
     await writeStructuredBenchmarks(db, benchmarks);
     return {
       status: "degraded",
@@ -473,7 +636,6 @@ export async function fetchTbillRate(
     };
   }
 
-  const fetchedAt = Math.floor(Date.now() / 1000);
   throwIfAborted(signal);
 
   const usdFred = await tryFredCsv(FRED_TBILL_CSV_URL, signal);
@@ -530,6 +692,7 @@ export async function fetchTbillRate(
     SGD: null,
   };
 
+  await updateGbpRetainedFallbackMonitor({ db, benchmark: benchmarks.GBP, fetchedAt, signal });
   await writeStructuredBenchmarks(db, benchmarks);
 
   const degradationReasons: string[] = [];
