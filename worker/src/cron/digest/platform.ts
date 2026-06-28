@@ -231,16 +231,35 @@ export async function requestDigestCopy(
 }
 
 export async function insertDigestRecord(options: InsertDigestRecordOptions): Promise<void> {
+  const inputDataJson = JSON.stringify(options.inputData);
+
   await runWithOverloadRetry(() =>
     options.db
       .prepare(
-        "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta) VALUES (?, ?, ?, ?, ?, ?)",
+        `INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta)
+         SELECT ?, ?, ?, ?, ?, ?
+          WHERE NOT EXISTS (
+            SELECT 1
+              FROM daily_digest
+             WHERE generated_at = ?
+               AND digest_text = ?
+               AND digest_title IS ?
+               AND input_data = ?
+               AND digest_extended IS ?
+               AND digest_meta IS ?
+          )`,
       )
       .bind(
         options.generatedAt,
         options.digestText,
         options.digestTitle,
-        JSON.stringify(options.inputData),
+        inputDataJson,
+        options.digestExtended,
+        options.digestMeta,
+        options.generatedAt,
+        options.digestText,
+        options.digestTitle,
+        inputDataJson,
         options.digestExtended,
         options.digestMeta,
       )

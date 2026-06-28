@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
 import { insertDigestRecord } from "../platform";
 
@@ -12,6 +13,50 @@ describe("insertDigestRecord", () => {
       digestExtended: "Extended body",
       digestMeta: JSON.stringify({ type: "daily" }),
       signal,
+    };
+  }
+
+  function setupDigestSqlite(): DatabaseSync {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(`
+      CREATE TABLE daily_digest (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        generated_at INTEGER NOT NULL,
+        digest_text TEXT NOT NULL,
+        input_data TEXT NOT NULL,
+        digest_title TEXT,
+        digest_extended TEXT,
+        digest_meta TEXT
+      );
+    `);
+    return sqlite;
+  }
+
+  function sqliteD1(
+    sqlite: DatabaseSync,
+    throwAfterRun?: (runCount: number) => Error | null,
+  ): D1Database & { getRunCount: () => number; getHistory: () => Array<{ sql: string; binds: unknown[] }> } {
+    let runCount = 0;
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+
+    return {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          run: async () => {
+            runCount++;
+            history.push({ sql, binds: [...binds] });
+            const result = sqlite.prepare(sql).run(...(binds as never[]));
+            const error = throwAfterRun?.(runCount);
+            if (error) throw error;
+            return { success: true, meta: { changes: Number(result.changes) } };
+          },
+        }),
+      }),
+      getRunCount: () => runCount,
+      getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
+    } as D1Database & {
+      getRunCount: () => number;
+      getHistory: () => Array<{ sql: string; binds: unknown[] }>;
     };
   }
 
@@ -32,6 +77,29 @@ describe("insertDigestRecord", () => {
     await insertDigestRecord(makeOptions(db));
 
     expect(attempts).toBe(2);
+  });
+
+  it("does not duplicate the digest row when a retried D1 write already committed", async () => {
+    const sqlite = setupDigestSqlite();
+    const db = sqliteD1(sqlite, (runCount) =>
+      runCount === 1 ? new Error("D1 DB storage operation exceeded timeout") : null,
+    );
+
+    try {
+      await insertDigestRecord(makeOptions(db));
+
+      const rows = sqlite
+        .prepare("SELECT generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta FROM daily_digest")
+        .all();
+      const history = db.getHistory();
+
+      expect(db.getRunCount()).toBe(2);
+      expect(rows).toHaveLength(1);
+      expect(history[0]?.sql).toContain("WHERE NOT EXISTS");
+      expect(history[0]?.binds.slice(0, 6)).toEqual(history[0]?.binds.slice(6));
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("honors an already-aborted signal before preparing the insert", async () => {
