@@ -1,5 +1,5 @@
 import { throwIfAborted } from "../lib/abort";
-import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import {
   USER_AGENT,
   CIRCUIT_SOURCE,
@@ -92,6 +92,7 @@ export async function syncKinesisSupply(
       continue;
     }
 
+    let parsed: KinesisCirculationData;
     try {
       const result = await fetchTextWithRetry(
         `${config.baseUrl}/coin_in_circulation`,
@@ -104,11 +105,26 @@ export async function syncKinesisSupply(
         throw new Error(`HTTP ${result?.response.status ?? "null"}`);
       }
 
-      const parsed = parseKinesisResponse(JSON.parse(result.body));
-      if (!parsed) {
+      const fetched = parseKinesisResponse(JSON.parse(result.body));
+      if (!fetched) {
         throw new Error("Invalid response: could not extract circulation data");
       }
+      parsed = fetched;
+    } catch (err) {
+      if (signal.aborted) throw err instanceof Error ? err : new Error(String(err));
+      await recordOutcomeSafe(db, config.circuitSource, false);
+      failed++;
+      chainResults.push({ chain: config.chain, status: "error" });
+      console.warn(
+        `[sync-kinesis-supply] ${config.chain} failed:`,
+        err instanceof Error ? err.message : err,
+      );
+      continue;
+    }
 
+    await recordOutcomeSafe(db, config.circuitSource, true);
+
+    try {
       // Write to onchain_supply for independent supply verification
       const nowSec = Math.floor(Date.now() / 1000);
       await runWithOverloadRetry(
@@ -122,24 +138,23 @@ export async function syncKinesisSupply(
         3,
         signal,
       );
-
-      await recordOutcome(db, config.circuitSource, true);
-      synced++;
-      chainResults.push({ chain: config.chain, status: "ok", circulation: parsed.circulation });
-      console.log(
-        `[sync-kinesis-supply] ${config.chain}: circulation=${parsed.circulation.toLocaleString()}, ` +
-          `mint=${parsed.mint.toLocaleString()}, redemption=${parsed.redemption.toLocaleString()}`,
-      );
     } catch (err) {
       if (signal.aborted) throw err instanceof Error ? err : new Error(String(err));
-      await recordOutcome(db, config.circuitSource, false);
       failed++;
-      chainResults.push({ chain: config.chain, status: "error" });
+      chainResults.push({ chain: config.chain, status: "d1_error", circulation: parsed.circulation });
       console.warn(
-        `[sync-kinesis-supply] ${config.chain} failed:`,
+        `[sync-kinesis-supply] ${config.chain} persistence failed:`,
         err instanceof Error ? err.message : err,
       );
+      continue;
     }
+
+    synced++;
+    chainResults.push({ chain: config.chain, status: "ok", circulation: parsed.circulation });
+    console.log(
+      `[sync-kinesis-supply] ${config.chain}: circulation=${parsed.circulation.toLocaleString()}, ` +
+        `mint=${parsed.mint.toLocaleString()}, redemption=${parsed.redemption.toLocaleString()}`,
+    );
   }
 
   const total = synced + failed + skipped;

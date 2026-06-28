@@ -164,29 +164,24 @@ export async function updateDiscoveryMeta(
   }
 
   throwIfAborted(signal);
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        "UPDATE dex_discovery_meta SET consecutive_misses = consecutive_misses + 1, last_crawl_at = ? WHERE stablecoin_id = ?",
-      )
-      .bind(nowSec, stablecoinId)
-      .run(),
-    3,
-    signal,
-  );
+  // This arithmetic update is intentionally not retried: after an ambiguous D1
+  // timeout the first attempt may already have committed, and retrying would
+  // double-count the miss for the same crawl.
+  const result = await db
+    .prepare(
+      "UPDATE dex_discovery_meta SET consecutive_misses = consecutive_misses + 1, last_crawl_at = ? WHERE stablecoin_id = ?",
+    )
+    .bind(nowSec, stablecoinId)
+    .run();
 
   if ((result.meta.changes ?? 0) === 0) {
     throwIfAborted(signal);
-    await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          "INSERT INTO dex_discovery_meta (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at) VALUES (?, 1, ?, NULL)",
-        )
-        .bind(stablecoinId, nowSec)
-        .run(),
-      3,
-      signal,
-    );
+    await db
+      .prepare(
+        "INSERT OR IGNORE INTO dex_discovery_meta (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at) VALUES (?, 1, ?, NULL)",
+      )
+      .bind(stablecoinId, nowSec)
+      .run();
   }
   throwIfAborted(signal);
 }
@@ -248,22 +243,20 @@ export async function readDiscoveryMeta(db: D1Database, signal?: AbortSignal): P
  */
 export async function incrementRunSeq(db: D1Database, signal?: AbortSignal): Promise<number> {
   throwIfAborted(signal);
-  const [, readResult] = await runWithOverloadRetry(() =>
-    db.batch([
-      db
-        .prepare(
-          `INSERT INTO kv_config (key, value)
-           VALUES (?, '1')
-           ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(kv_config.value AS INTEGER) + 1 AS TEXT)`,
-        )
-        .bind(RUN_SEQ_KEY),
-      db
-        .prepare("SELECT value FROM kv_config WHERE key = ?")
-        .bind(RUN_SEQ_KEY),
-    ]),
-    3,
-    signal,
-  );
+  // Do not retry this sequence increment after an ambiguous D1 timeout. A
+  // committed first attempt plus retry would skip a discovery cohort.
+  const [, readResult] = await db.batch([
+    db
+      .prepare(
+        `INSERT INTO kv_config (key, value)
+         VALUES (?, '1')
+         ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(kv_config.value AS INTEGER) + 1 AS TEXT)`,
+      )
+      .bind(RUN_SEQ_KEY),
+    db
+      .prepare("SELECT value FROM kv_config WHERE key = ?")
+      .bind(RUN_SEQ_KEY),
+  ]);
   throwIfAborted(signal);
 
   const value = (readResult.results?.[0] as { value?: string } | undefined)?.value;

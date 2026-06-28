@@ -126,6 +126,26 @@ describe("discovery persistence D1 retry coverage", () => {
     expect(attempts).toBe(2);
   });
 
+  it("does not retry miss-counter arithmetic after an ambiguous D1 overload", async () => {
+    let attempts = 0;
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          run: async () => {
+            attempts++;
+            throw new Error("D1 DB storage operation exceeded timeout");
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    await expect(updateDiscoveryMeta(db, "usdc-circle", 0, 1_710_000_000)).rejects.toThrow(
+      "D1 DB storage operation exceeded timeout",
+    );
+
+    expect(attempts).toBe(1);
+  });
+
   it("retries staging cleanup batches on transient D1 overload", async () => {
     let attempts = 0;
     const db = {
@@ -188,5 +208,21 @@ describe("discovery persistence D1 retry coverage", () => {
 
     await expect(incrementRunSeq(db, controller.signal)).rejects.toThrow("stop-discovery");
     expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("does not retry the discovery run sequence increment after an ambiguous D1 overload", async () => {
+    let attempts = 0;
+    const db = {
+      prepare: () => ({
+        bind: () => ({}),
+      }),
+      batch: async () => {
+        attempts++;
+        throw new Error("Requests queued for too long");
+      },
+    } as unknown as D1Database;
+
+    await expect(incrementRunSeq(db)).rejects.toThrow("Requests queued for too long");
+    expect(attempts).toBe(1);
   });
 });

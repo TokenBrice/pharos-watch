@@ -7,7 +7,7 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchTextWithRetry: vi.fn(),
 }));
 
-import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { syncKinesisSupply, parseKinesisResponse } from "../sync-kinesis-supply";
 
@@ -96,7 +96,7 @@ describe("parseKinesisResponse", () => {
 describe("syncKinesisSupply", () => {
   beforeEach(() => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockResolvedValue(mockCircuitOutcomeRecord());
+    vi.mocked(recordOutcomeSafe).mockResolvedValue(mockCircuitOutcomeRecord());
   });
 
   afterEach(() => {
@@ -118,8 +118,8 @@ describe("syncKinesisSupply", () => {
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
     expect(fetchTextWithRetry).toHaveBeenCalledTimes(2);
-    expect(recordOutcome).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(recordOutcome).mock.calls.every((c) => c[2] === true)).toBe(true);
+    expect(recordOutcomeSafe).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(recordOutcomeSafe).mock.calls.every((c) => c[2] === true)).toBe(true);
 
     // Verify DB upserts
     expect(bindFn).toHaveBeenCalledWith("kau-kinesis", "kinesis-kau", 2_586_388, 1_700_000_000);
@@ -167,10 +167,10 @@ describe("syncKinesisSupply", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(1);
-    expect(vi.mocked(recordOutcome).mock.calls[0]).toEqual(
+    expect(vi.mocked(recordOutcomeSafe).mock.calls[0]).toEqual(
       expect.arrayContaining([expect.anything(), "kinesis-kau-horizon", false]),
     );
-    expect(vi.mocked(recordOutcome).mock.calls[1]).toEqual(
+    expect(vi.mocked(recordOutcomeSafe).mock.calls[1]).toEqual(
       expect.arrayContaining([expect.anything(), "kinesis-kag-horizon", true]),
     );
   });
@@ -193,7 +193,7 @@ describe("syncKinesisSupply", () => {
     expect(JSON.parse(result.metadata!).skipped).toBe(1);
     expect(bindFn).toHaveBeenCalledWith("kau-kinesis", "kinesis-kau", 2_586_388, 1_700_000_000);
     expect(runFn).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(recordOutcome).mock.calls[0]![2]).toBe(true);
+    expect(vi.mocked(recordOutcomeSafe).mock.calls[0]![2]).toBe(true);
   });
 
   it("handles array response format", async () => {
@@ -227,6 +227,34 @@ describe("syncKinesisSupply", () => {
     const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
 
     expect(result.itemCount).toBe(0);
-    expect(vi.mocked(recordOutcome).mock.calls[0]![2]).toBe(false);
+    expect(vi.mocked(recordOutcomeSafe).mock.calls[0]![2]).toBe(false);
+  });
+
+  it("does not record provider failure when D1 persistence fails after a successful fetch", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(kauResponse()));
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "kinesis-kag-horizon");
+    const runFn = vi.fn().mockRejectedValue(new Error("D1 DB storage operation exceeded timeout"));
+
+    const { db } = makeDb(runFn);
+    const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
+
+    expect(result.status).toBe("error");
+    expect(result.itemCount).toBe(0);
+    expect(runFn).toHaveBeenCalledTimes(4);
+    expect(vi.mocked(recordOutcomeSafe)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(recordOutcomeSafe).mock.calls[0]).toEqual(
+      expect.arrayContaining([expect.anything(), "kinesis-kau-horizon", true]),
+    );
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      failed: 1,
+      skipped: 1,
+      chains: [
+        { chain: "kinesis-kau", status: "d1_error", circulation: 2_586_388 },
+        { chain: "kinesis-kag", status: "circuit_open" },
+      ],
+    });
   });
 });
