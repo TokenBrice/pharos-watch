@@ -74,7 +74,7 @@ Public pages use this shell:
 <div className="flex min-h-screen">
   {/* No sidebar / no sidebar spacer — content is full-width */}
   <div className="flex-1 flex flex-col min-w-0">
-    <main id="main-content" className="pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">
+    <main id="main-content" className="pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9">
       {/* route content */}
     </main>
 
@@ -89,10 +89,11 @@ Public pages use this shell:
 - Mobile header height: `h-14`
 - Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement; the dock stays hidden until the first scroll so it does not cover top-fold content and is suppressed on `/` so the homepage footer can match the compact Figma frame
 - Main content and footer reserve bottom safe space via `pharos-mobile-utility-safe` + `--mobile-utility-safe-offset`
+- Main content width: non-home routes are full-bleed like the homepage (`w-full` + horizontal padding) rather than the old breakpoint-capped `container`, so data-dense tables and grids use the available viewport. A `max-w-[120rem]` ceiling with `mx-auto` keeps content centered and sane on ultrawide displays. Prose that previously relied on the `container` cap for its measure now keeps a readable line length at width: editorial blocks like the `AiSummary` body flow into newspaper columns (`lg:columns-2 2xl:columns-3`, with a `max-w-[72ch]` single-column cap below `lg`) so the text fills the full-width card instead of leaving an empty half. Longform shells (methodology/privacy/digest) already carry their own measure and are unaffected.
 - Main container padding:
   - Mobile: `px-4`
   - Vertical rhythm: `py-6` (`md:py-7`)
-  - Desktop (`lg`): `px-6`
+  - Desktop: `lg:px-5`, `xl:px-9` (matches the homepage shell)
 - Footer is a compact two-row chip surface: a short one-line legal copy plus `Changelog`, `Methodology`, and `API` on the first row; `Independent`, `Funding`, `MIT`, `Privacy Policy`, and the monochrome social icons on the second row. Footer chips use small square rounded controls with muted fill, not tiny outline labels.
 - The homepage footer uses an edge-aligned container and suppresses floating feedback/scroll controls so the footer reads as the final visible band beneath the Horizon panel.
 
@@ -143,6 +144,8 @@ Behavioral contract: [Homepage](./homepage.md)
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup
 - Market Pulse Daily Digest promo: desktop-only compact editorial card in the equal-height first-row trio with Peg Health and the PSI/Mint-Burn block. Peg Health uses a full-height metric/distribution stack so the status bar and four health rows occupy the available card height instead of collapsing into the top half. The digest card uses a Newsreader masthead, grey icon+text CTA pills, a teal bottom glow, and a clipped layered article preview using the current daily digest title plus short text. Placeholder/funny promo copy is not allowed.
+- Market Pulse hero chart: the custom SVG reserves enough top and right-side gutter for edge labels to stay optically framed inside the card shell.
+- Market Pulse hero chart neutrals: the total-market envelope uses a soft slate fill/line, while `Non-USD share` uses a darker dashed grey stroke and matching dashed legend marker so the 2-3% non-USD series cannot be mistaken for the large envelope.
 - Market Pulse expand affordance: card headers use a compact module-jump button (`CardExpandButton`) rather than a bare glyph. The control keeps a rounded outer square with muted fill, a hairline border, and an inset rounded tile carrying a small right-arrow icon so the action reads as "open the associated module" without competing with card data.
 - Market Pulse lower event trio: desktop uses a compact 232px equal-height row for Biggest Supply Moves, Recent Freezes, and Total Active Depegs. These cards surface only the top homepage rows (three supply up/down rows, four recent freezes, four active depegs) so the second band stays aligned with the Figma workbench without a dead bottom band; mobile keeps the stack content-height, with the active-depegs list suppressed below `sm`.
 - Digest preview: broadsheet split with a mono masthead, hairline `Executive Summary` label, newspaper-style `Newsreader` title on the left, and the lead paragraph plus CTA rail on the right at desktop. The lazy boundary may reserve space before mount, but the loaded preview itself stays content-height so the page-discovery board follows without a dead desktop band.

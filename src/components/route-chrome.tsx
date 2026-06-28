@@ -44,7 +44,7 @@ export function MainContent({ children }: { children: ReactNode }) {
     ? "flex-1 min-w-0"
     : pathname === "/"
       ? "flex-1 w-full px-4 pt-6 pb-2 md:pt-7 md:pb-3 lg:px-5 xl:px-9"
-      : "pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6";
+      : "pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9";
 
   return (
     <main id="main-content" className={className}>

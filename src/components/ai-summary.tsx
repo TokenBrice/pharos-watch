@@ -40,7 +40,7 @@ export function AiSummary({
         />
       </CardHeader>
       <CardContent>
-        <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic">
+        <p className="max-w-[72ch] font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic lg:max-w-none lg:columns-2 lg:gap-x-10 2xl:columns-3">
           <TermText text={text} />
         </p>
       </CardContent>

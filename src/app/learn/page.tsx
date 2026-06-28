@@ -43,6 +43,105 @@ const MARQUEE_STUDIES = [usdcSvb2023, terraUst2022, usd0ppUsual2025] as const;
 // data surfaces make sense.
 const FEATURED_GLOSSARY_IDS = ["psi", "dews", "pegscore"] as const;
 
+// Outcome vocabulary for the verdict ledger. Bar fills match the existing
+// segmented bar; figure colors reuse the case-study outcome-chip palette so the
+// ledger, the chips, and the rows all speak one color. `note` follows the
+// CaseStudyOutcome contract (survived = recovered, wounded = scarred-but-live,
+// died = decommissioned).
+const LEDGER_OUTCOMES = [
+  {
+    key: "survived",
+    label: "Survived",
+    note: "clawed back to the dollar",
+    fill: "bg-emerald-500",
+    figure: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    key: "wounded",
+    label: "Wounded",
+    note: "still trading, structurally scarred",
+    fill: "bg-amber-500",
+    figure: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    key: "died",
+    label: "Died",
+    note: "delisted, never recovered",
+    fill: "bg-rose-500",
+    figure: "text-rose-600 dark:text-rose-400",
+  },
+] as const satisfies ReadonlyArray<{
+  key: CaseStudyOutcome;
+  label: string;
+  note: string;
+  fill: string;
+  figure: string;
+}>;
+
+// The verdict band: the page's focal point. Leads with the body count, then the
+// full breakdown as big figures over a proportional bar. Every number is derived
+// from CASE_STUDY_LIST, so the copy can never drift from the archive.
+function OutcomeLedger({
+  total,
+  counts,
+}: {
+  total: number;
+  counts: Record<CaseStudyOutcome, number>;
+}) {
+  return (
+    <section
+      aria-labelledby="learn-verdict"
+      className="space-y-7 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:[animation-timing-function:var(--motion-ease-standard)]"
+    >
+      <div className="space-y-3">
+        <p className="pharos-kicker">The verdict so far</p>
+        <p
+          id="learn-verdict"
+          className="pharos-display max-w-[34rem] text-balance text-[clamp(1.6rem,3.4vw,2.4rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-foreground"
+        >
+          {total} depegs, reconstructed in full.{" "}
+          <span className="text-rose-600 dark:text-rose-400">
+            {counts.died} of these coins never came back.
+          </span>
+        </p>
+      </div>
+
+      <dl className="grid grid-cols-3 gap-x-6 gap-y-1">
+        {LEDGER_OUTCOMES.map((outcome) => (
+          <div key={outcome.key} className="space-y-1.5">
+            <dd
+              className={cn(
+                "pharos-numeric text-[clamp(2rem,5vw,3rem)] font-semibold leading-none tabular-nums",
+                outcome.figure,
+              )}
+            >
+              {counts[outcome.key]}
+            </dd>
+            <dt className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground">
+              {outcome.label}
+            </dt>
+            <p className="text-xs leading-snug text-muted-foreground">{outcome.note}</p>
+          </div>
+        ))}
+      </dl>
+
+      <div
+        className="flex h-2 w-full overflow-hidden rounded-full bg-border/40"
+        role="img"
+        aria-label={`Across ${total} case studies: ${counts.survived} survived, ${counts.wounded} wounded, ${counts.died} died.`}
+      >
+        {LEDGER_OUTCOMES.map((outcome) => (
+          <div
+            key={outcome.key}
+            className={outcome.fill}
+            style={{ flexGrow: counts[outcome.key] }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ModuleHeader({
   index,
   headingId,
@@ -95,6 +194,10 @@ function ModuleHeader({
 
 export default function LearnIndexPage() {
   const mechanismCounts = countActiveByArchetype();
+  const mechanismTotal = MECHANISM_ARCHETYPE_VALUES.reduce(
+    (sum, archetype) => sum + mechanismCounts[archetype],
+    0,
+  );
 
   const outcomeCounts = CASE_STUDY_LIST.reduce(
     (acc, study) => {
@@ -119,21 +222,88 @@ export default function LearnIndexPage() {
       ]}
       title="How Stables Work & Break"
       subtitle="How stablecoins hold a dollar, why they break it, and the vocabulary Pharos uses to name the risk."
-      leadParagraphs={[
-        "Three ways in, meant to be read in order: how a peg is produced, how it breaks, and the words for both.",
-      ]}
     >
-      {/* 01 — Mechanisms: the taxonomy */}
+      <OutcomeLedger total={totalStudies} counts={outcomeCounts} />
+
+      {/* 01 — Case Studies: the evidence */}
+      <section
+        aria-labelledby="learn-case-studies"
+        className="space-y-6 border-t border-border/60 pt-12 sm:pt-14"
+      >
+        <ModuleHeader
+          index="01"
+          headingId="learn-case-studies"
+          title="Case Studies"
+          href="/learn/case-studies/"
+          blurb="How a peg breaks. Long-form retrospectives of real depegs: what happened, why the design produced it, and how far the price fell."
+          cta={`Read all ${totalStudies}`}
+        />
+        <ol className="divide-y divide-border/50 border-t border-border/50">
+          {MARQUEE_STUDIES.map((study) => {
+            const low = study.eventWindow.lowPrice;
+            return (
+              <li key={study.slug}>
+                <Link
+                  href={`/learn/case-studies/${study.slug}/`}
+                  className="pharos-focus-ring group grid gap-x-6 gap-y-2.5 py-5 hover:bg-muted/30 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] sm:items-baseline"
+                >
+                  <div className="space-y-0.5">
+                    {low != null ? (
+                      <>
+                        <p className="pharos-numeric text-[1.7rem] font-semibold leading-none tabular-nums text-foreground">
+                          ${low.toFixed(2)}
+                        </p>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                          peg low
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 space-y-1.5">
+                    <p
+                      className={cn(
+                        "pharos-kicker",
+                        ARCHETYPE_VISUALS[study.archetype].kickerClass,
+                      )}
+                    >
+                      {study.eyebrow}
+                    </p>
+                    <p className="font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
+                      {study.title}
+                    </p>
+                    <p className="line-clamp-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                      {study.subtitle}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground sm:flex-col sm:items-end sm:gap-1.5">
+                    <span>{study.eventDateLabel}</span>
+                    <span
+                      className={cn(
+                        CASE_STUDY_OUTCOME_CHIP_BASE,
+                        CASE_STUDY_OUTCOME_CHIPS[study.outcome],
+                      )}
+                    >
+                      {CASE_STUDY_OUTCOME_LABELS[study.outcome]}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
+      {/* 02 — Mechanisms: the taxonomy */}
       <section
         aria-labelledby="learn-mechanisms"
         className="space-y-6 border-t border-border/60 pt-12 sm:pt-14"
       >
         <ModuleHeader
-          index="01"
+          index="02"
           headingId="learn-mechanisms"
           title="Mechanisms"
           href="/learn/mechanisms/"
-          blurb="How a peg is produced. Every tracked stablecoin runs on one of six designs; each defends the dollar differently, and each fails differently under stress."
+          blurb={`How a peg is produced. Every active stablecoin runs one of six designs — ${mechanismTotal} coins in total, each defending the dollar differently and failing differently under stress.`}
           cta="Explore all six"
         />
         <ul className="grid gap-x-10 sm:grid-cols-2">
@@ -141,7 +311,7 @@ export default function LearnIndexPage() {
             <li key={archetype}>
               <Link
                 href={getMechanismExplainerPath(archetype)}
-                className="pharos-focus-ring group block border-t border-border/40 py-3.5"
+                className="pharos-focus-ring group block border-t border-border/40 py-3.5 hover:bg-muted/30"
               >
                 <div className="flex items-baseline justify-between gap-4">
                   <p className="font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
@@ -158,82 +328,6 @@ export default function LearnIndexPage() {
             </li>
           ))}
         </ul>
-      </section>
-
-      {/* 02 — Case Studies: the evidence */}
-      <section
-        aria-labelledby="learn-case-studies"
-        className="space-y-6 border-t border-border/60 pt-12 sm:pt-14"
-      >
-        <ModuleHeader
-          index="02"
-          headingId="learn-case-studies"
-          title="Case Studies"
-          href="/learn/case-studies/"
-          blurb="How a peg breaks. Long-form retrospectives of real depegs: what happened, why the design produced it, and whether the coin lived."
-          cta={`Read all ${totalStudies}`}
-        />
-        <div className="space-y-2.5">
-          <div
-            className="flex h-1.5 w-full overflow-hidden rounded-full bg-border/40"
-            role="img"
-            aria-label={`Across ${totalStudies} case studies: ${outcomeCounts.survived} survived, ${outcomeCounts.wounded} wounded, ${outcomeCounts.died} died.`}
-          >
-            <div className="bg-emerald-500" style={{ flexGrow: outcomeCounts.survived }} />
-            <div className="bg-amber-500" style={{ flexGrow: outcomeCounts.wounded }} />
-            <div className="bg-rose-500" style={{ flexGrow: outcomeCounts.died }} />
-          </div>
-          <div
-            className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground"
-            aria-hidden="true"
-          >
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {outcomeCounts.survived} survived
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
-              {outcomeCounts.wounded} wounded
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-rose-500" />
-              {outcomeCounts.died} died
-            </span>
-          </div>
-        </div>
-        <ol className="divide-y divide-border/50 border-t border-border/50">
-          {MARQUEE_STUDIES.map((study) => (
-            <li key={study.slug}>
-              <Link
-                href={`/learn/case-studies/${study.slug}/`}
-                className="pharos-focus-ring group grid gap-x-6 gap-y-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline"
-              >
-                <div className="min-w-0 space-y-1.5">
-                  <p className={cn("pharos-kicker", ARCHETYPE_VISUALS[study.archetype].kickerClass)}>
-                    {study.eyebrow}
-                  </p>
-                  <p className="font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
-                    {study.title}
-                  </p>
-                  <p className="line-clamp-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                    {study.subtitle}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground sm:flex-col sm:items-end sm:gap-1.5">
-                  <span>{study.eventDateLabel}</span>
-                  <span
-                    className={cn(
-                      CASE_STUDY_OUTCOME_CHIP_BASE,
-                      CASE_STUDY_OUTCOME_CHIPS[study.outcome],
-                    )}
-                  >
-                    {CASE_STUDY_OUTCOME_LABELS[study.outcome]}
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ol>
       </section>
 
       {/* 03 — Glossary: the lexicon */}
