@@ -110,14 +110,37 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(0);
   });
 
-  it("treats a fresh neutral skipped run as healthy without degraded impact", async () => {
+  it("treats a fresh neutral skipped run as healthy after a fresh required ok run", async () => {
     const rows = seedWithOverrides(NOW, [
       { job: "discovery-scan", status: "skipped_neutral", ageSec: 30 },
+      { job: "discovery-scan", status: "ok", ageSec: 86_400 },
     ]);
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
     expect(snapshot.crons["discovery-scan"]?.healthy).toBe(true);
     expect(snapshot.watchUnhealthyCrons).toBe(0);
     expect(snapshot.degradedCronRuns).toBe(0);
+  });
+
+  it("does not let a neutral weekly skip mask a fresh failed required run", async () => {
+    const rows = seedWithOverrides(NOW, [
+      { job: "weekly-recap", status: "skipped_neutral", ageSec: 30 },
+      { job: "weekly-recap", status: "error", ageSec: 86_400 },
+    ]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons["weekly-recap"]?.healthy).toBe(false);
+    expect(snapshot.watchUnhealthyCrons).toBe(1);
+    expect(snapshot.cronErrorCount).toBe(1);
+  });
+
+  it("does not let a neutral weekly skip suppress a fresh degraded required run", async () => {
+    const rows = seedWithOverrides(NOW, [
+      { job: "discovery-scan", status: "skipped_neutral", ageSec: 30 },
+      { job: "discovery-scan", status: "degraded", ageSec: 86_400 },
+    ]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons["discovery-scan"]?.healthy).toBe(false);
+    expect(snapshot.watchUnhealthyCrons).toBe(1);
+    expect(snapshot.degradedCronRuns).toBe(1);
   });
 
   it("chunks cron history queries below D1's compound SELECT term limit", async () => {

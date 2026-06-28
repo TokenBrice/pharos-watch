@@ -116,6 +116,14 @@ function parseCronRunStatus(status: string): CronRun["status"] {
   return parsed.success ? parsed.data : "error";
 }
 
+function isFreshCronRun(run: CronRun | null | undefined, now: number, interval: number): run is CronRun {
+  return run != null && now - run.startedAt <= interval * 2;
+}
+
+function latestRequiredCronRun(runs: readonly CronRun[]): CronRun | null {
+  return runs.find((run) => run.status !== "skipped_neutral") ?? null;
+}
+
 function buildCronHistoryQuery(jobCount: number): string {
   if (jobCount <= 0) {
     throw new Error("buildCronHistoryQuery: jobCount must be positive");
@@ -532,14 +540,17 @@ export async function loadCronHealth(
     const inFlight = cronProgressByJob.get(job);
     const telemetryUnknown = cronHistoryQueryFailed;
     const inFlightFresh = inFlight != null && now - inFlight.updatedAt <= Math.max(300, interval);
-    const isFresh = lastRun != null && now - lastRun.startedAt <= interval * 2;
+    const isFresh = isFreshCronRun(lastRun, now, interval);
+    const latestRequiredRun = latestRequiredCronRun(runs);
+    const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
+    const hasFreshRequiredOk = latestRequiredRunFresh && latestRequiredRun.status === "ok";
     const availabilityHealthyFromLastRun =
       isFresh &&
       lastRun != null &&
       (lastRun.status === "ok" ||
         lastRun.status === "degraded" ||
-        lastRun.status === "skipped_neutral" ||
+        (lastRun.status === "skipped_neutral" && hasFreshRequiredOk) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
     const latestAttempt = jobAttemptHealth.latestByJob.get(job);
@@ -568,10 +579,18 @@ export async function loadCronHealth(
         watchUnhealthyCrons++;
       }
     }
-    if (!telemetryUnknown && ((lastRun?.status === "degraded" && isFresh) || metadataDegraded)) {
+    if (
+      !telemetryUnknown
+      && (((lastRun?.status === "degraded" && isFresh)
+        || (lastRun?.status === "skipped_neutral" && latestRequiredRun?.status === "degraded" && latestRequiredRunFresh))
+        || metadataDegraded)
+    ) {
       degradedCronRuns++;
     }
-    if (!telemetryUnknown && lastRun?.status === "error" && !inFlightFresh) {
+    const latestErrorRunFresh =
+      (lastRun?.status === "error" && isFresh)
+      || (lastRun?.status === "skipped_neutral" && latestRequiredRun?.status === "error" && latestRequiredRunFresh);
+    if (!telemetryUnknown && latestErrorRunFresh && !inFlightFresh) {
       cronErrorCount++;
       if (statusImpact === "critical") {
         availabilityImpactingCronErrors++;
