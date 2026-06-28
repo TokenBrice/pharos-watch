@@ -1,4 +1,4 @@
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { BENCHMARK_FETCH_TIMEOUT_MS, BENCHMARK_FETCH_MAX_RETRIES } from "../../lib/constants";
 import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -104,16 +104,16 @@ export async function fetchAndParseBenchmark<T>({
   signal?: AbortSignal;
 }): Promise<T | null> {
   try {
-    const res = await fetchWithRetry(url, {
+    const result = await fetchTextWithRetry(url, {
       method,
       headers,
       body: body ?? undefined,
       signal,
     }, retries, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
-    if (!res?.ok) return null;
+    if (!result?.response.ok) return null;
 
-    return parse(await res.text());
+    return parse(result.body);
   } catch (err) {
     rethrowIfAborted(err, signal);
     logWorkerEvent({

@@ -9,10 +9,6 @@ const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
-  "worker/src/cron/tbill-sources/shared.ts::const res = await fetchWithRetry(url, {::return parse(await res.text());",
-  "worker/src/cron/tbill-sources/six.ts::const res = await fetchWithRetry(SIX_OAUTH_TOKEN_URL, {::return parseSixOauthToken(await res.text());",
-  "worker/src/cron/tbill-sources/six.ts::const res = await fetchWithRetry(SIX_OAUTH_TOKEN_URL, {::const body = await res.text();",
-  "worker/src/cron/tbill-sources/six.ts::const res = await fetchWithRetry(SIX_REPORT_DOWNLOAD_URL, {::const body = await res.text();",
   "worker/src/cron/yield-sync/etherfuse-cetes.ts::const res = await fetchWithRetry(::return parseEtherfuseCetesStablebondPage(await res.text());",
   "worker/src/cron/yield-sync/royco-dawn.ts::const res = await fetchWithRetry(::const body = (await res.json()) as RoycoExploreResponse;",
   "worker/src/cron/yield-sync/sources-dl.ts::const res = await fetchWithRetry(DL_YIELDS_URL, {::const body = (await res.json()) as { data?: unknown };",

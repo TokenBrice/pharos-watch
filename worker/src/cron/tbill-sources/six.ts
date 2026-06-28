@@ -1,4 +1,4 @@
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
@@ -64,7 +64,7 @@ function buildSixGuestHeaders(token?: string): Record<string, string> {
 
 async function trySixGuestToken(signal?: AbortSignal): Promise<string | null> {
   try {
-    const res = await fetchWithRetry(SIX_OAUTH_TOKEN_URL, {
+    const result = await fetchTextWithRetry(SIX_OAUTH_TOKEN_URL, {
       method: "POST",
       headers: {
         ...buildSixGuestHeaders(),
@@ -74,11 +74,11 @@ async function trySixGuestToken(signal?: AbortSignal): Promise<string | null> {
       signal,
     }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
-    if (!res?.ok) {
+    if (!result?.response.ok) {
       return null;
     }
 
-    return parseSixOauthToken(await res.text());
+    return parseSixOauthToken(result.body);
   } catch (err) {
     rethrowIfAborted(err, signal);
     logWorkerEvent({
@@ -99,7 +99,7 @@ export async function trySixSar3mcCsv(signal?: AbortSignal): Promise<{ rate: num
   if (!token) return null;
 
   try {
-    const res = await fetchWithRetry(SIX_REPORT_DOWNLOAD_URL, {
+    const result = await fetchTextWithRetry(SIX_REPORT_DOWNLOAD_URL, {
       method: "POST",
       headers: {
         ...buildSixGuestHeaders(token),
@@ -109,12 +109,12 @@ export async function trySixSar3mcCsv(signal?: AbortSignal): Promise<{ rate: num
       signal,
     }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
-    if (!res?.ok) {
+    if (!result?.response.ok) {
       return null;
     }
 
-    const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
-    const body = await res.text();
+    const contentType = (result.response.headers.get("content-type") ?? "").toLowerCase();
+    const body = result.body;
     if (contentType.includes("application/json")) {
       return null;
     }

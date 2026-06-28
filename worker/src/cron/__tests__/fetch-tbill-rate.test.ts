@@ -2,9 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { mockCircuitOutcomeRecord } from "../../test-helpers/cron";
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
-}));
+vi.mock("../../lib/fetch-retry", () => {
+  const fetchWithRetry = vi.fn();
+  return {
+    fetchWithRetry,
+    fetchTextWithRetry: vi.fn(async (...args: unknown[]) => {
+      const response = await fetchWithRetry(...args);
+      if (!response) return null;
+      if (!(response instanceof Response)) return response;
+      return { response, body: await response.text() };
+    }),
+  };
+});
 
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
