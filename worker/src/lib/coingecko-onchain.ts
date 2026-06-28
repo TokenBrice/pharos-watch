@@ -4,13 +4,14 @@
  * The liquidity cron uses these endpoints for canonical chains that have an
  * explicit CoinGecko network mapping and keeps GeckoTerminal for GT-only chains.
  */
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { cgUrl, cgHeaders } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
 import { fetchPagedTokenPools } from "./paged-token-pools";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { cancelResponseBodyQuietly, readResponseTextWithSignal } from "./response-body";
 import { CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE } from "../cron/dex-liquidity/constants";
 
 export { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "@shared/lib/chains";
@@ -78,6 +79,24 @@ export interface CgTokenPoolsResult {
 }
 
 const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
+const CG_ONCHAIN_DEFAULT_TIMEOUT_MS = 15_000;
+
+async function readCgOnchainJsonBody<T>(
+  response: Response,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<T> {
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new DOMException(`response body timed out after ${timeoutMs}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return JSON.parse(await readResponseTextWithSignal(response, timeout.signal)) as T;
+  } finally {
+    timeout.dispose();
+  }
+}
 
 // ---------------------------------------------------------------------------
 // API functions
@@ -136,7 +155,11 @@ export async function fetchCgTokenPoolsWithStatus(
         }
         return [];
       }
-      const json = (await res.json()) as { data?: unknown };
+      const json = await readCgOnchainJsonBody<{ data?: unknown }>(
+        res,
+        options?.timeoutMs ?? CG_ONCHAIN_DEFAULT_TIMEOUT_MS,
+        signal,
+      );
       if (!Array.isArray(json.data)) {
         ok = false;
         return [];
@@ -165,7 +188,7 @@ export async function fetchCgTokensBatch(
     signal,
   }, 1);
   if (!res?.ok) return [];
-  const json = (await res.json()) as { data?: unknown };
+  const json = await readCgOnchainJsonBody<{ data?: unknown }>(res, CG_ONCHAIN_DEFAULT_TIMEOUT_MS, signal);
   return Array.isArray(json.data) ? (json.data as CgToken[]) : [];
 }
 

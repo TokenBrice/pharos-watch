@@ -1,7 +1,7 @@
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { GT_API_BASE } from "./dex-cron-constants";
 import { RATE_LIMITS } from "./rate-limit";
 import { fetchWithRetry } from "./fetch-retry";
-import { cancelResponseBodyQuietly } from "./response-body";
 import { cgHeaders, cgUrl } from "./coingecko";
 import {
   USER_AGENT,
@@ -13,6 +13,7 @@ import {
 } from "./constants";
 import { shouldAttemptFetch, recordOutcome } from "./circuit-breaker";
 import { sleepWithSignal, throwIfAborted } from "./abort";
+import { cancelResponseBodyQuietly, readResponseTextWithSignal } from "./response-body";
 import { CG_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { GtPool } from "../cron/dex-liquidity/types";
@@ -163,6 +164,19 @@ function getTransportStats(stats: GtProbeStats, transport: ProbeTransport): GtPr
     : stats.transports.geckoTerminalPublic;
 }
 
+async function readGtProbeJsonBody<T>(response: Response, signal?: AbortSignal): Promise<T> {
+  const timeout = createTimeoutSignal({
+    timeoutMs: GT_PROBE_TIMEOUT_MS,
+    timeoutReason: new DOMException(`response body timed out after ${GT_PROBE_TIMEOUT_MS}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return JSON.parse(await readResponseTextWithSignal(response, timeout.signal)) as T;
+  } finally {
+    timeout.dispose();
+  }
+}
+
 type ProbeFetchOutcome =
   | { kind: "priced"; transport: ProbeTransport; result: GtProbeResult }
   | { kind: "lookup-miss"; transport: ProbeTransport }
@@ -202,38 +216,38 @@ async function fetchProbeOutcome(
     : { "User-Agent": USER_AGENT, Accept: "application/json" };
 
   try {
-    const res = await fetchWithRetry(
+    const response = await fetchWithRetry(
       url,
       { headers, signal },
       GT_PROBE_MAX_RETRIES,
       { passthroughStatuses: [404, 422], timeoutMs: GT_PROBE_TIMEOUT_MS },
     );
 
-    if (!res?.ok) {
-      if (isGtLookupMissStatus(res?.status)) {
+    if (!response?.ok) {
+      if (isGtLookupMissStatus(response?.status)) {
         transportStats.lookupMisses++;
-        await cancelResponseBodyQuietly(res);
+        await cancelResponseBodyQuietly(response);
         return { kind: "lookup-miss", transport };
       }
       transportStats.upstreamErrors++;
-      await cancelResponseBodyQuietly(res);
+      await cancelResponseBodyQuietly(response);
       return { kind: "upstream-error", transport };
     }
 
-    const json = (await res.json()) as { data?: GtPool[] };
+    const json = await readGtProbeJsonBody<{ data?: GtPool[] }>(response, signal);
     const pools = Array.isArray(json.data) ? json.data : [];
     if (pools.length === 0) {
       transportStats.lookupMisses++;
       return { kind: "lookup-miss", transport };
     }
 
-    const result = extractPoolPrice(pools, tokenAddress);
-    if (!result) {
+    const probeResult = extractPoolPrice(pools, tokenAddress);
+    if (!probeResult) {
       return { kind: "low-tvl", transport };
     }
 
     transportStats.priced++;
-    return { kind: "priced", transport, result };
+    return { kind: "priced", transport, result: probeResult };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     transportStats.upstreamErrors++;

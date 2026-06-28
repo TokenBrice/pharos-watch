@@ -8,16 +8,8 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
-const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
-  "worker/src/lib/address-price-providers/shared.ts::const response = await fetchWithRetry(::return { json: await response.json(), diagnostic };",
-  "worker/src/lib/backfill-fx.ts::const res = await fetchWithRetry(::const raw = await res.json();",
-  "worker/src/lib/backfill-fx.ts::let res = await fetchWithRetry(::const raw = await res.json();",
-  "worker/src/lib/backfill-fx.ts::res = await fetchWithRetry(::const raw = await res.json();",
-  "worker/src/lib/coingecko-onchain.ts::const res = await fetchWithRetry(url, {::const json = (await res.json()) as { data?: unknown };",
-  "worker/src/lib/dexscreener.ts::const res = await fetchWithRetry(url, {::const raw = await res.text();",
-  "worker/src/lib/geckoterminal-price-probe.ts::const res = await fetchWithRetry(::const json = (await res.json()) as { data?: GtPool[] };",
-  "worker/src/lib/native-peg-quotes.ts::const response = await fetchWithRetry(::const payload = await response.json();",
-]);
+/** @type {Set<string>} */
+const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set();
 
 function normalizeRelPath(path) {
   return path.replaceAll("\\", "/");

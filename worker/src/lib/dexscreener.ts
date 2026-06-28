@@ -3,12 +3,14 @@
  * Used as a universal fallback for pool discovery on chains not covered
  * by the main CG/GT/Curve/UniV3 pipeline.
  */
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { fetchWithRetry } from "./fetch-retry";
 import { DS_CHAIN_MAP } from "@shared/lib/chains";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 import { USER_AGENT } from "./constants";
 import { toErrorMessage } from "./error-utils";
+import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from "./response-body";
 
 export { DS_CHAIN_MAP } from "@shared/lib/chains";
 
@@ -78,44 +80,47 @@ function summarizeBody(raw: string, limit = 160): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, limit);
 }
 
-async function readBodySnippet(res: Response, maxBytes = 1024): Promise<string> {
-  if (!res.body) return "";
-  const reader = res.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let bytesRead = 0;
+async function readBodyText(res: Response, timeoutMs: number, signal?: AbortSignal): Promise<string> {
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new DOMException(`response body timed out after ${timeoutMs}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
   try {
-    while (bytesRead < maxBytes) {
-      const { done, value } = await reader.read();
-      if (done || !value) break;
-      const remaining = maxBytes - bytesRead;
-      const chunk = value.byteLength > remaining ? value.slice(0, remaining) : value;
-      chunks.push(chunk);
-      bytesRead += chunk.byteLength;
-      if (value.byteLength > remaining) break;
-    }
+    return await readResponseTextWithSignal(res, timeout.signal);
   } finally {
-    try {
-      await reader.cancel();
-    } catch {
-      // Best-effort cancellation only; diagnostics should never fail the fetch path.
-    }
+    timeout.dispose();
   }
-  if (chunks.length === 0) return "";
-  if (chunks.length === 1) return new TextDecoder().decode(chunks[0]);
-  const buffer = new Uint8Array(bytesRead);
-  let offset = 0;
-  for (const chunk of chunks) {
-    buffer.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(buffer);
 }
 
-async function describeNonOkResponse(url: string, res: Response): Promise<DsFetchPoolsResult> {
+async function readBodySnippet(
+  res: Response,
+  maxBytes = 1024,
+  timeoutMs = 10_000,
+  signal?: AbortSignal,
+): Promise<string> {
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new DOMException(`response body timed out after ${timeoutMs}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return await readResponseTextBoundedWithSignal(res, maxBytes, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
+
+async function describeNonOkResponse(
+  url: string,
+  res: Response,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<DsFetchPoolsResult> {
   const contentType = res.headers.get("content-type") ?? "unknown";
   let snippet = "";
   try {
-    snippet = summarizeBody(await readBodySnippet(res));
+    snippet = summarizeBody(await readBodySnippet(res, 1024, timeoutMs, signal));
   } catch {
     snippet = "";
   }
@@ -191,14 +196,13 @@ export async function fetchDsTokenPoolsWithStatus(
     signal,
   }, maxRetries, { timeoutMs, returnFinalResponse: true });
   if (!res) return { ok: false, pairs: [], error: `Fetch failed for ${url}` };
-  if (!res.ok) return describeNonOkResponse(url, res);
+  if (!res.ok) return await describeNonOkResponse(url, res, timeoutMs, signal);
 
   const contentType = res.headers.get("content-type") ?? "unknown";
   const status = res.status;
 
   try {
-    const raw = await res.text();
-    const data = JSON.parse(raw) as unknown;
+    const data = JSON.parse(await readBodyText(res, timeoutMs, signal)) as unknown;
     const parsedPairs = parseDexScreenerTokenPoolsResponse(data);
     if (parsedPairs == null) {
       return {

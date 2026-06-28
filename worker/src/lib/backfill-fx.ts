@@ -8,8 +8,7 @@ import {
   type TimestampedRatePoint,
 } from "@shared/lib/rate-series";
 import { USER_AGENT } from "./constants";
-import { fetchWithRetry } from "./fetch-retry";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
 import { getCache, setCache } from "./db-cache";
 import { FrankfurterTimeSeriesSchema, SecondaryFxResponseSchema } from "./external-api-schemas";
 import { rethrowIfAborted } from "./abort";
@@ -80,17 +79,17 @@ export async function fetchHistoricalFxRates(
   if (currencies.length === 0) return {};
   try {
     const url = `https://api.frankfurter.dev/v1/${startDate}..${endDate}?base=USD&symbols=${currencies.join(",")}`;
-    const res = await fetchWithRetry(
+    const fetchResult = await fetchJsonWithRetry<unknown>(
       url,
       { headers: { "User-Agent": USER_AGENT }, signal },
       2,
       { timeoutMs: 30_000 },
     );
-    if (!res || !res.ok) {
-      console.error(`[backfill-depegs] Frankfurter API returned ${res?.status ?? "no response"}`);
+    if (!fetchResult?.response.ok) {
+      console.error(`[backfill-depegs] Frankfurter API returned ${fetchResult?.response.status ?? "no response"}`);
       return {};
     }
-    const raw = await res.json();
+    const raw = fetchResult.body;
     const parsed = FrankfurterTimeSeriesSchema.safeParse(raw);
     if (!parsed.success) {
       console.warn("[backfill-depegs] Frankfurter validation failed:", parsed.error.message);
@@ -130,28 +129,26 @@ async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal)
   const primaryUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.min.json`;
   const fallbackUrl = `https://${date}.currency-api.pages.dev/v1/currencies/usd.min.json`;
 
-  let res = await fetchWithRetry(
+  let result = await fetchTextWithRetry(
     primaryUrl,
     { headers: { "User-Agent": USER_AGENT }, signal },
     2,
     { passthrough404: true, timeoutMs: 20_000 },
   );
-  if (!res || !res.ok) {
-    await cancelResponseBodyQuietly(res);
-    res = await fetchWithRetry(
+  if (!result?.response.ok) {
+    result = await fetchTextWithRetry(
       fallbackUrl,
       { headers: { "User-Agent": USER_AGENT }, signal },
       2,
       { passthrough404: true, timeoutMs: 20_000 },
     );
   }
-  if (!res || !res.ok) {
-    console.warn(`[backfill-depegs] secondary FX API returned ${res?.status ?? "no response"} for ${date}`);
-    await cancelResponseBodyQuietly(res);
+  if (!result?.response.ok) {
+    console.warn(`[backfill-depegs] secondary FX API returned ${result?.response.status ?? "no response"} for ${date}`);
     return null;
   }
 
-  const raw = await res.json();
+  const raw = JSON.parse(result.body) as unknown;
   const parsed = SecondaryFxResponseSchema.safeParse(raw);
   if (!parsed.success) {
     console.warn(`[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);

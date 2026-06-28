@@ -1,4 +1,5 @@
 export { isRecord } from "@shared/lib/type-guards";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { chunkArray } from "../collections";
 import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
@@ -20,6 +21,7 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
+import { readResponseTextWithSignal } from "../response-body";
 
 export const ADDRESS_PROVIDER_MIN_LIQUIDITY_USD = 50_000;
 export const ADDRESS_PROVIDER_RUN_BUDGET_MS = 90_000;
@@ -27,6 +29,27 @@ export const ADDRESS_PROVIDER_RUN_BUDGET_MS = 90_000;
 const ADDRESS_PROVIDER_TIMEOUT_MS = 5_000;
 const ADDRESS_PROVIDER_MAX_RETRIES = 0;
 const PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
+
+function responseFromBufferedBody(response: Response, body: string): Response {
+  return new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
+async function readProviderResponseText(response: Response, signal?: AbortSignal): Promise<string> {
+  const timeout = createTimeoutSignal({
+    timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
+    timeoutReason: new DOMException(`response body timed out after ${ADDRESS_PROVIDER_TIMEOUT_MS}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return await readResponseTextWithSignal(response, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
 
 export function hasValue(value: string | null | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -144,11 +167,15 @@ export async function fetchProviderJson(params: {
   });
 
   if (!response.ok) {
-    return { json: null, diagnostic: await applyNonOkProviderDiagnostic(diagnostic, response) };
+    const body = await readProviderResponseText(response, params.signal);
+    return {
+      json: null,
+      diagnostic: await applyNonOkProviderDiagnostic(diagnostic, responseFromBufferedBody(response, body)),
+    };
   }
 
   try {
-    return { json: await response.json(), diagnostic };
+    return { json: JSON.parse(await readProviderResponseText(response, params.signal)) as unknown, diagnostic };
   } catch (error) {
     return {
       json: null,
