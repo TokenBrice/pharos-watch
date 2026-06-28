@@ -25,13 +25,24 @@ function makeDb(opts?: {
   priceRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
   firstSeenRows?: Array<{ stablecoin_id: string; first_seen: number }>;
   setCacheIfNewerChanges?: number;
+  transientFailures?: Record<string, number>;
 }) {
   const calls: Array<{ sql: string; args: unknown[] }> = [];
   const batchCalls: D1PreparedStatement[][] = [];
+  const transientFailures = new Map(Object.entries(opts?.transientFailures ?? {}));
+
+  const maybeThrowTransientFailure = (sql: string) => {
+    for (const [pattern, remaining] of transientFailures) {
+      if (remaining <= 0 || !sql.includes(pattern)) continue;
+      transientFailures.set(pattern, remaining - 1);
+      throw new Error("D1 DB is overloaded");
+    }
+  };
 
   const db = {
     prepare: (sql: string) => {
       const runForSql = async () => {
+        maybeThrowTransientFailure(sql);
         if (sql.includes("ON CONFLICT(key) DO UPDATE")) {
           return { success: true, meta: { changes: opts?.setCacheIfNewerChanges ?? 1 } };
         }
@@ -39,6 +50,7 @@ function makeDb(opts?: {
       };
 
       const firstForSql = async <T>(args: unknown[]) => {
+        maybeThrowTransientFailure(sql);
         if (sql.includes("SELECT value, updated_at FROM cache")) {
           const key = String(args[0] ?? "");
           return (opts?.cache?.get(key) ?? null) as T | null;
@@ -52,6 +64,7 @@ function makeDb(opts?: {
       };
 
       const allForSql = async <T>(args: unknown[]) => {
+        maybeThrowTransientFailure(sql);
         if (sql.includes("FROM blacklist_sync_state") && sql.includes("IN (")) {
           const rows = (args as string[])
             .map((key) => {
@@ -269,6 +282,34 @@ describe("db utility helpers", () => {
     await expect(getLastBlock(db, "ethereum-0xAbC")).resolves.toBe(100);
   });
 
+  it("retries blacklist cursor helpers after transient D1 overload", async () => {
+    const { db } = makeDb({
+      lastBlocks: new Map([["ethereum-0xabc", 100]]),
+      transientFailures: {
+        "SELECT config_key, last_block": 1,
+        "INSERT OR REPLACE INTO blacklist_sync_state": 1,
+      },
+    });
+
+    const read = getLastBlock(db, "ethereum-0xAbC");
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(read).resolves.toBe(100);
+
+    const write = setLastBlock(db, "ethereum-0xAbC", 101);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(write).resolves.toBeUndefined();
+  });
+
+  it("honors abort signals before blacklist cursor retries start", async () => {
+    const { db, calls } = makeDb();
+    const controller = new AbortController();
+    controller.abort(new Error("cursor aborted"));
+
+    await expect(getLastBlock(db, "ethereum-0xAbC", controller.signal)).rejects.toThrow("cursor aborted");
+    await expect(setLastBlock(db, "ethereum-0xAbC", 101, controller.signal)).rejects.toThrow("cursor aborted");
+    expect(calls).toEqual([]);
+  });
+
   it("normalizes EVM blacklist cursor keys on write but preserves Tron keys", async () => {
     const { db, calls } = makeDb();
 
@@ -340,6 +381,23 @@ describe("db utility helpers", () => {
     const firstSeen = await getFirstSeenDates(db);
     expect(firstSeen.get("usdt-tether")).toBe(1690000000);
     expect(firstSeen.get("usdc-circle")).toBe(1680000000);
+  });
+
+  it("retries first-seen supply history reads after transient D1 overload", async () => {
+    const { db } = makeDb({
+      firstSeenRows: [
+        { stablecoin_id: "usdt-tether", first_seen: 1690000000 },
+      ],
+      transientFailures: {
+        "MIN(snapshot_date)": 1,
+      },
+    });
+
+    const read = getFirstSeenDates(db);
+    await vi.advanceTimersByTimeAsync(1_000);
+    const firstSeen = await read;
+
+    expect(firstSeen.get("usdt-tether")).toBe(1690000000);
   });
 
   it("uses a fresh first-seen cache row when available", async () => {

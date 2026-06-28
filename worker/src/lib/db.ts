@@ -128,28 +128,41 @@ export function normalizeBlacklistSyncStateKey(configKey: string): string {
   return `${configKey.slice(0, separator)}-${configKey.slice(separator + 1).toLowerCase()}`;
 }
 
-export async function getLastBlock(db: D1Database, configKey: string): Promise<number> {
+export async function getLastBlock(db: D1Database, configKey: string, signal?: AbortSignal): Promise<number> {
   const normalizedKey = normalizeBlacklistSyncStateKey(configKey);
   const keyCandidates = [...new Set([configKey, normalizedKey])];
   const keyInClause = buildInClause(keyCandidates);
-  const rows = await db
-    .prepare(
-      `SELECT config_key, last_block
-       FROM blacklist_sync_state
-       WHERE config_key IN (${keyInClause.sql})`,
-    )
-    .bind(...keyInClause.binds)
-    .all<{ config_key: string; last_block: number }>();
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT config_key, last_block
+         FROM blacklist_sync_state
+         WHERE config_key IN (${keyInClause.sql})`,
+      )
+      .bind(...keyInClause.binds)
+      .all<{ config_key: string; last_block: number }>(),
+    3,
+    signal,
+  );
 
   return Math.max(0, ...(rows.results ?? []).map((row) => row.last_block));
 }
 
-export async function setLastBlock(db: D1Database, configKey: string, block: number): Promise<void> {
+export async function setLastBlock(
+  db: D1Database,
+  configKey: string,
+  block: number,
+  signal?: AbortSignal,
+): Promise<void> {
   const normalizedKey = normalizeBlacklistSyncStateKey(configKey);
-  await db
-    .prepare("INSERT OR REPLACE INTO blacklist_sync_state (config_key, last_block) VALUES (?, ?)")
-    .bind(normalizedKey, block)
-    .run();
+  await runWithOverloadRetry(() =>
+    db
+      .prepare("INSERT OR REPLACE INTO blacklist_sync_state (config_key, last_block) VALUES (?, ?)")
+      .bind(normalizedKey, block)
+      .run(),
+    3,
+    signal,
+  );
 }
 
 // --- Coin first-seen dates (for peg score tracking window) ---
@@ -191,11 +204,19 @@ function parseFirstSeenCache(value: string): Map<string, number> | null {
   }
 }
 
-async function readFirstSeenCache(db: D1Database, nowSec: number): Promise<FirstSeenCacheRead | null> {
-  const row = await db
-    .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-    .bind(FIRST_SEEN_CACHE_KEY)
-    .first<{ value: string; updated_at: number }>();
+async function readFirstSeenCache(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<FirstSeenCacheRead | null> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .bind(FIRST_SEEN_CACHE_KEY)
+      .first<{ value: string; updated_at: number }>(),
+    3,
+    signal,
+  );
   if (!row) return null;
   const parsed = parseFirstSeenCache(row.value);
   if (!parsed) return null;
@@ -205,13 +226,22 @@ async function readFirstSeenCache(db: D1Database, nowSec: number): Promise<First
   };
 }
 
-async function writeFirstSeenCache(db: D1Database, firstSeen: Map<string, number>, nowSec: number): Promise<void> {
+async function writeFirstSeenCache(
+  db: D1Database,
+  firstSeen: Map<string, number>,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
   const firstSeenById = Object.fromEntries(firstSeen);
   const payload: FirstSeenCachePayload = { version: 1, firstSeenById };
-  await db
-    .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-    .bind(FIRST_SEEN_CACHE_KEY, JSON.stringify(payload), nowSec)
-    .run();
+  await runWithOverloadRetry(() =>
+    db
+      .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(FIRST_SEEN_CACHE_KEY, JSON.stringify(payload), nowSec)
+      .run(),
+    3,
+    signal,
+  );
 }
 
 function mergeFirstSeen(map: Map<string, number>, id: string, firstSeenSec: number): boolean {
@@ -242,9 +272,10 @@ function mergeObservedFirstSeen(
 export async function getFirstSeenDates(
   db: D1Database,
   observations: readonly FirstSeenObservation[] = [],
+  signal?: AbortSignal,
 ): Promise<Map<string, number>> {
   const nowSec = Math.floor(Date.now() / 1000);
-  const cached = await readFirstSeenCache(db, nowSec);
+  const cached = await readFirstSeenCache(db, nowSec, signal);
   if (cached?.fresh && observations.length === 0) return cached.map;
 
   const map = cached?.fresh ? new Map(cached.map) : new Map<string, number>();
@@ -254,9 +285,13 @@ export async function getFirstSeenDates(
       mergeFirstSeen(map, id, firstSeen);
     }
 
-    const result = await db
-      .prepare("SELECT stablecoin_id, MIN(snapshot_date) as first_seen FROM supply_history GROUP BY stablecoin_id")
-      .all<{ stablecoin_id: string; first_seen: number }>();
+    const result = await runWithOverloadRetry(() =>
+      db
+        .prepare("SELECT stablecoin_id, MIN(snapshot_date) as first_seen FROM supply_history GROUP BY stablecoin_id")
+        .all<{ stablecoin_id: string; first_seen: number }>(),
+      3,
+      signal,
+    );
     for (const row of result.results ?? []) {
       mergeFirstSeen(map, row.stablecoin_id, row.first_seen);
     }
@@ -264,7 +299,7 @@ export async function getFirstSeenDates(
 
   const changed = mergeObservedFirstSeen(map, observations, nowSec);
   if (!cached?.fresh || changed) {
-    await writeFirstSeenCache(db, map, nowSec);
+    await writeFirstSeenCache(db, map, nowSec, signal);
   }
 
   return map;

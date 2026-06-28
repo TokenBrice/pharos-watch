@@ -19,6 +19,32 @@ describe("loadBlacklistConfigStates", () => {
     expect(syncStateQueries).toHaveLength(1);
   });
 
+  it("retries the bulk blacklist_sync_state query after transient D1 overload", async () => {
+    const first = ELIGIBLE[0];
+    let attempts = 0;
+    const db = {
+      prepare: () => ({
+        all: async () => {
+          attempts++;
+          if (attempts === 1) throw new Error("D1 DB is overloaded");
+          return {
+            results: [{ config_key: first.configKey, last_block: 4321 }],
+            success: true,
+            meta: {},
+          };
+        },
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { configStates } = await loadBlacklistConfigStates(db);
+
+    expect(attempts).toBe(2);
+    expect(configStates.find((state) => state.configKey === first.configKey)?.lastBlock).toBe(4321);
+  });
+
   it("joins last_block per config in-memory and defaults missing configs to 0", async () => {
     const first = ELIGIBLE[0];
     const db = mockD1([

@@ -266,7 +266,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
     return cache;
   };
-  const { configStates, zeroCursorConfigs } = await loadBlacklistConfigStates(db);
+  const { configStates, zeroCursorConfigs } = await loadBlacklistConfigStates(db, signal);
   let tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "initial", { runBudget, signal });
   const etherscanCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
 
@@ -466,7 +466,11 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       }
 
       if (result.nextCursor != null) {
-        await setLastBlock(db, configKey, result.nextCursor);
+        if (signal) {
+          await setLastBlock(db, configKey, result.nextCursor, signal);
+        } else {
+          await setLastBlock(db, configKey, result.nextCursor);
+        }
       }
 
       totalFetchedEvents += result.rows.length;
