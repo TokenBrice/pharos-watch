@@ -3,7 +3,7 @@ import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { YieldMarketStatus, YieldSourceRisk, YieldTrancheSide } from "@shared/types/yield";
 import { USER_AGENT } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { YIELD_VARIANT_MAP } from "../yield-config-variants";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
@@ -240,7 +240,7 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
   try {
     let pageIndex = 0;
     while (!budget.budgetController.signal.aborted) {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<RoycoExploreResponse>(
         ROYCO_DAWN_EXPLORE_URL,
         {
           method: "POST",
@@ -255,9 +255,9 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       );
-      if (!res?.ok) return results;
+      if (!result?.response.ok) return results;
 
-      const body = (await res.json()) as RoycoExploreResponse;
+      const body = result.body;
       const markets = Array.isArray(body.data) ? body.data : [];
       if (markets.length === 0) break;
 

@@ -2,7 +2,7 @@ import {
   ETHERFUSE_CETES_BOND_PAGE_URL,
   USER_AGENT,
 } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { isRecord } from "@shared/lib/type-guards";
 
 const ETHERFUSE_CETES_BENCHMARK_SOURCE = "etherfuse-cetes-current-issuance";
@@ -134,7 +134,7 @@ export async function fetchEtherfuseCetesIssuance(params: {
   const { signal, timeoutMs = DEFAULT_ETHERFUSE_TIMEOUT_MS, retries = 0 } = params;
 
   try {
-    const res = await fetchWithRetry(
+    const result = await fetchTextWithRetry(
       ETHERFUSE_CETES_BOND_PAGE_URL,
       {
         headers: {
@@ -146,9 +146,9 @@ export async function fetchEtherfuseCetesIssuance(params: {
       retries,
       { timeoutMs },
     );
-    if (!res?.ok) return null;
+    if (!result?.response.ok) return null;
 
-    return parseEtherfuseCetesStablebondPage(await res.text());
+    return parseEtherfuseCetesStablebondPage(result.body);
   } catch (error) {
     if (signal?.aborted) {
       throw error instanceof Error ? error : new Error(String(error));

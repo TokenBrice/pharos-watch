@@ -9,9 +9,6 @@ const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set([
-  "worker/src/cron/yield-sync/etherfuse-cetes.ts::const res = await fetchWithRetry(::return parseEtherfuseCetesStablebondPage(await res.text());",
-  "worker/src/cron/yield-sync/royco-dawn.ts::const res = await fetchWithRetry(::const body = (await res.json()) as RoycoExploreResponse;",
-  "worker/src/cron/yield-sync/sources-dl.ts::const res = await fetchWithRetry(DL_YIELDS_URL, {::const body = (await res.json()) as { data?: unknown };",
   "worker/src/cron/yield-sync/sources-optional-protocols-onchain.ts::const res = await fetchWithRetry(::const body = (await res.json()) as Record<string, { usd?: number }>;",
   "worker/src/cron/yield-sync/sources-optional-protocols-protocol-api.ts::const res = await fetchWithRetry(::const body = (await res.json()) as { success?: boolean; data?: unknown };",
   "worker/src/cron/yield-sync/sources-optional-protocols-protocol-api.ts::const res = await fetchWithRetry(::const body = (await res.json()) as { entity?: string; data?: HashnoteReport[] };",

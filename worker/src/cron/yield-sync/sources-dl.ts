@@ -1,7 +1,7 @@
 import type { YieldSourceInputMeta } from "@shared/types/yield";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../../lib/constants";
 import { getCache } from "../../lib/db-cache";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { isYieldRelevantDlPool } from "./pool-filter";
 import { filterValidDlPools, parseDlStablecoinPoolsCache } from "./cache/defillama-pool-cache";
@@ -56,12 +56,12 @@ export async function loadDlStablecoinPools(
 
   if (dlPools.length === 0 && (await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS))) {
     try {
-      const res = await fetchWithRetry(DL_YIELDS_URL, {
+      const result = await fetchJsonWithRetry<{ data?: unknown }>(DL_YIELDS_URL, {
         headers: { "User-Agent": USER_AGENT },
         signal,
       });
-      if (res?.ok) {
-        const body = (await res.json()) as { data?: unknown };
+      if (result?.response.ok) {
+        const body = result.body;
         if (!Array.isArray(body.data)) {
           console.warn("[sync-yield-data] DL yields direct fetch returned invalid payload shape");
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
