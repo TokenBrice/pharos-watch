@@ -58,13 +58,6 @@
   "featuredContent": [
     {
       "type": "article",
-      "url": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html",
-      "title": "BDACS launches KRW1, the first fully KRW-backed stablecoin developed with Woori Bank on Avalanche",
-      "description": "September 2025 proof-of-concept launch; Avalanche-native KRW1 with real-time banking-API reserve attestation through Woori Bank.",
-      "source": "PR Newswire"
-    },
-    {
-      "type": "article",
       "url": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/",
       "title": "BDACS launches KRW1 stablecoin following successful proof of concept with Woori Bank",
       "description": "Pilot details: each KRW1 fully collateralized via won held in Woori Bank escrow; KISA cites Avalanche for public-sector reliability.",
@@ -112,7 +105,7 @@
       "type": "milestone",
       "title": "KRW1 proof-of-concept goes live on Avalanche with Woori Bank",
       "description": "Successful PoC validates fiat deposits, on-chain issuance, and real-time banking-API reserve attestation; not yet in public circulation.",
-      "sourceUrl": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html"
+      "sourceUrl": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/"
     },
     {
       "date": "2025-10-29",

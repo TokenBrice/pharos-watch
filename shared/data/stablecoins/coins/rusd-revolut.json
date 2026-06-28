@@ -63,6 +63,13 @@
       "url": "https://thedefiant.io/converge/tradfi-and-fintech/revolut-plans-2027-us-bank-launch-stablecoin-services-day-one",
       "title": "Revolut Plans 2027 US Bank Launch With Stablecoin Services Built In From Day One",
       "source": "The Defiant"
+    },
+    {
+      "type": "article",
+      "url": "https://www.theblock.co/post/403541/revoluts-us-bank-offer-stablecoin-services-fdic-insured-products-reuters",
+      "title": "Revolut's US bank to offer stablecoin services alongside FDIC-insured products: Reuters",
+      "description": "Reuters reports Revolut's planned US national bank will integrate stablecoin services with FDIC-insured accounts from launch; own-issuance of a Revolut USD token remains unconfirmed.",
+      "source": "The Block"
     }
   ],
   "milestones": [
@@ -100,6 +107,13 @@
       "title": "Revolut receives full UK banking licence from the PRA",
       "description": "Revolut exits mobilisation; 13M UK customers gain FSCS protection. A GBP stablecoin would be issued from Revolut's e-money entity, not the UK bank.",
       "sourceUrl": "https://www.coindesk.com/policy/2026/03/11/crypto-friendly-fintech-revolut-gains-full-uk-banking-license"
+    },
+    {
+      "date": "2026-06-03",
+      "type": "announcement",
+      "title": "Revolut confirms its planned US national bank will offer stablecoin services alongside FDIC-insured accounts",
+      "description": "Reuters reports Revolut Bank US, N.A. (OCC charter applicant) will offer stablecoin services alongside FDIC-insured products from day one, though own-issuance of a Revolut USD token remains unconfirmed; the USD path continues to run through the Lithuanian EMI / MiCA EMT route.",
+      "sourceUrl": "https://www.theblock.co/post/403541/revoluts-us-bank-offer-stablecoin-services-fdic-insured-products-reuters"
     }
   ]
 }

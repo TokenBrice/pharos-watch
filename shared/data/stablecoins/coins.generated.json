@@ -7270,9 +7270,9 @@
     "governanceQuality": "regulated-entity",
     "status": "pre-launch",
     "announcedDate": "2025-12",
-    "expectedLaunchDate": "2026-H2",
-    "launchPhase": "announced",
-    "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing B3RL, its own BRL settlement stablecoin for tokenized asset trading. At B3's Tokenization Day (May 26 2026) the target shifted to H2 2026 (from the original H1 2026); the stablecoin will be backed by cash and government bonds and settle tokenized equity. Fills gap left by narrowing of Brazil's Drex CBDC scope; ticker B3RL cited in Brazilian press but not yet officially confirmed by B3 IR/CVM",
+    "expectedLaunchDate": "2026-H1",
+    "launchPhase": "launching-soon",
+    "launchPhaseDetail": "Latin America's largest stock exchange (B3/São Paulo) is developing B3RL, its own BRL settlement stablecoin for tokenized-asset trading. At B3's Tokenization Day (May 26-27 2026), OTC and digital-assets director Humberto Costa clarified that the B3RL settlement stablecoin — backed by cash and government bonds and built on Polygon — targets H1 2026, while the tokenized-share registry/tokenizer advances in H2 2026 (earlier coverage that placed the stablecoin itself in H2 conflated it with the registry). Fills the gap left by the narrowing of Brazil's Drex CBDC scope; ticker B3RL is cited in Brazilian press but not yet officially confirmed by B3 IR/CVM, and no on-chain deployment was visible as of late June 2026",
     "featuredContent": [
       {
         "type": "article",
@@ -7292,6 +7292,13 @@
         "url": "https://brazilcrypto.substack.com/p/230-b3-to-launch-tokenized-stocks",
         "title": "B3 to launch tokenized stocks, stablecoin in 2026",
         "source": "Brazil Crypto Report"
+      },
+      {
+        "type": "article",
+        "url": "https://investnews.com.br/investimentos/b3-lancara-stablecoin-em-reais-ainda-neste-semestre/",
+        "title": "B3 lançará stablecoin em reais ainda neste semestre",
+        "description": "B3 OTC and digital-assets director Humberto Costa says the B3RL settlement stablecoin, built on Polygon, will launch in H1 2026, with the tokenization platform following in H2.",
+        "source": "InvestNews"
       }
     ],
     "milestones": [
@@ -7308,12 +7315,23 @@
         "title": "B3 Tokenization Day: B3RL stablecoin and tokenized share registry confirmed for H2 2026",
         "description": "B3 confirmed its tokenized share registry and B3RL settlement stablecoin target H2 2026 (slipped from H1 2026); stablecoin to be backed by cash and government bonds.",
         "sourceUrl": "https://cryptonews.net/news/finance/32952205/"
+      },
+      {
+        "date": "2026-05-27",
+        "type": "milestone",
+        "title": "B3 clarifies B3RL settlement stablecoin targets H1 2026 on Polygon; tokenization platform follows in H2",
+        "description": "At Tokenization Day, B3 OTC and digital-assets director Humberto Costa said the B3RL settlement stablecoin — backed by cash and government bonds, built on Polygon — is expected in the first half of 2026, while the tokenized-share registry/tokenizer advances in the second half, disentangling the two timelines that earlier coverage had merged.",
+        "sourceUrl": "https://investnews.com.br/investimentos/b3-lancara-stablecoin-em-reais-ainda-neste-semestre/"
       }
     ],
     "dateHistory": [
       {
         "date": "2026-H1",
         "setOn": "2026-06-07"
+      },
+      {
+        "date": "2026-H2",
+        "setOn": "2026-06-28"
       }
     ]
   },
@@ -29469,6 +29487,13 @@
         "url": "https://www.scmp.com/business/banking-finance/article/3350089/how-paymes-33-million-users-and-hong-kong-firms-could-start-using-stablecoins",
         "title": "How PayMe's 3.3 million users and Hong Kong firms could start using stablecoins",
         "source": "South China Morning Post"
+      },
+      {
+        "type": "blog",
+        "url": "https://www.about.hsbc.com.hk/news-and-media/hsbc-welcomes-hkmas-grant-of-a-hong-kong-stablecoin-issuer-licence",
+        "title": "HSBC welcomes HKMA's grant of a Hong Kong stablecoin issuer licence",
+        "description": "HSBC's primary-source statement confirming its HKMA stablecoin issuer licence and planned HKD stablecoin via PayMe and the HSBC HK app.",
+        "source": "HSBC"
       }
     ],
     "milestones": [
@@ -33745,8 +33770,8 @@
     "status": "pre-launch",
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "announced",
-    "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Japan's PSA amendments take full effect June 13 and the FSA activated rules for qualified foreign stablecoins June 1. As of early June no JPYSC deployment has been confirmed and the Q2 2026 window (ends June 30) is nearly elapsed, so a slip to H2 2026 is increasingly likely absent FSA approval; deployment chain not publicly confirmed",
+    "launchPhase": "launching-soon",
+    "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium. JPYSC went live June 24 2026, within the Q2 target, with Shinsei Trust & Banking as issuer and ~$63M of cash-plus-JGB reserves (up to 50% JGBs) held in segregated trust accounts. The initial phase is closed-loop: usable only by verified SBI VC Trade account holders, with no external-wallet withdrawals or public-chain/DeFi access yet — Startale says public-chain circulation is technically ready but is awaiting further legal and tax clarity. Public deployment chain not yet confirmed (Strium L1 / Soneium / Ethereum cited)",
     "featuredContent": [
       {
         "type": "blog",
@@ -33761,6 +33786,13 @@
         "title": "SBI Holdings unveils trust bank-backed JPY stablecoin with Q2 launch target",
         "description": "JPYSC will be Japan's first trust bank-issued yen stablecoin, distinguishing it from JPYC's prepaid payment instrument classification. Trust-based issuers may allocate up to 50% of reserves to government bonds.",
         "source": "The Block"
+      },
+      {
+        "type": "article",
+        "url": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/",
+        "title": "SBI and Startale Launch JPYSC, Japan's First Trust-Backed Yen Stablecoin",
+        "description": "JPYSC goes live June 24 2026 in a closed-loop phase for SBI VC Trade users; the trust-beneficiary structure exempts it from the ¥1M transfer cap and allows up to 50% JGB reserves.",
+        "source": "Crypto Times"
       }
     ],
     "milestones": [
@@ -33798,6 +33830,13 @@
         "title": "Japan FSA activates rules for foreign stablecoins as electronic payment instruments",
         "description": "Japan's regulated framework for qualified foreign stablecoins took effect, advancing the regime JPYSC will launch under.",
         "sourceUrl": "https://en.spaziocrypto.com/stablecoins/japan-foreign-stablecoins-yen-on-chain-2026/"
+      },
+      {
+        "date": "2026-06-24",
+        "type": "milestone",
+        "title": "JPYSC goes live (closed-loop) — issued by Shinsei Trust & Banking, distributed via SBI VC Trade",
+        "description": "Japan's first trust-bank-backed yen stablecoin launches with first issuance the same day; ~$63M of cash plus up to 50% JGB reserves held in segregated trust accounts under the Type III electronic payment instrument framework. Initial phase is closed-loop — SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet.",
+        "sourceUrl": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/"
       }
     ]
   },
@@ -35640,13 +35679,6 @@
     "featuredContent": [
       {
         "type": "article",
-        "url": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html",
-        "title": "BDACS launches KRW1, the first fully KRW-backed stablecoin developed with Woori Bank on Avalanche",
-        "description": "September 2025 proof-of-concept launch; Avalanche-native KRW1 with real-time banking-API reserve attestation through Woori Bank.",
-        "source": "PR Newswire"
-      },
-      {
-        "type": "article",
         "url": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/",
         "title": "BDACS launches KRW1 stablecoin following successful proof of concept with Woori Bank",
         "description": "Pilot details: each KRW1 fully collateralized via won held in Woori Bank escrow; KISA cites Avalanche for public-sector reliability.",
@@ -35694,7 +35726,7 @@
         "type": "milestone",
         "title": "KRW1 proof-of-concept goes live on Avalanche with Woori Bank",
         "description": "Successful PoC validates fiat deposits, on-chain issuance, and real-time banking-API reserve attestation; not yet in public circulation.",
-        "sourceUrl": "https://www.prnewswire.com/news-releases/bdacs-launches-krw1--the-first-fully-krw-backed-stablecoin-developed-with-woori-bank-on-avalanche-302259560.html"
+        "sourceUrl": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/"
       },
       {
         "date": "2025-10-29",
@@ -46541,7 +46573,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-01",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Gated testnet live (shared infrastructure with pUSD); security review and audit-preparation phase underway; mainnet date uncommitted",
+    "launchPhaseDetail": "Public testnet now open on Sepolia (connect via app.testnet.polarisfinance.io; shared infrastructure with pUSD); security review and audit-preparation phase underway with professional audits upcoming; mainnet date uncommitted (issuer prioritising security over speed)",
     "featuredContent": [
       {
         "type": "blog",
@@ -47494,7 +47526,7 @@
     "announcedDate": "2026-01",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Gated testnet live; security review and audit-preparation phase underway; mainnet date uncommitted",
+    "launchPhaseDetail": "Public testnet now open on Sepolia (connect via app.testnet.polarisfinance.io); security review and audit-preparation phase underway with professional audits upcoming; mainnet date uncommitted (issuer prioritising security over speed; 2026-Q4 target still cited)",
     "featuredContent": [
       {
         "type": "tweet",
@@ -48998,7 +49030,7 @@
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2027",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026 — dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries — though the 40% unremunerated-reserve requirement remains under review. On June 2 2026 the House of Lords Financial Services Regulation Committee urged the BoE to scrap individual holding limits entirely and reconsider that 40% floor; the BoE's revised draft rules are expected in June 2026. UK full authorisation regime not active until October 2027",
+    "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026 — dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries — though the 40% unremunerated-reserve requirement remains under review. On June 2 2026 the House of Lords Financial Services Regulation Committee urged the BoE to scrap individual holding limits entirely and reconsider that 40% floor. On June 22 2026 the BoE published its final policy statement and draft rules: individual holding limits are scrapped in favour of a temporary per-coin issuance cap (initially ~£40bn / $50bn), the short-dated-UK-T-bill reserve share rises to 70% with the remainder held at the BoE and no yield paid to holders, and par redemption within 24 hours is required; a Code of Practice consultation runs to September 22 2026, with rules finalised by end-2026 and regulated sterling stablecoins operating from 2027. UK full authorisation regime not active until October 2027",
     "featuredContent": [
       {
         "type": "article",
@@ -49013,6 +49045,13 @@
         "title": "Revolut UK Legal Head calls for GBP stablecoin",
         "description": "Rory Tanner tells House of Lords the UK is 'already behind' the US and EU on GBP stablecoins; highlights UK→India remittance corridor (seventh-largest globally) as priority B2B use case.",
         "source": "Payment Expert"
+      },
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/policy/2026/06/22/bank-of-england-backs-down-on-strict-stablecoin-holding-limits-sets-usd50-billion-issuance-cap",
+        "title": "Bank of England backs down on strict stablecoin holding limits, sets $50 billion issuance cap",
+        "description": "The BoE's final rules drop individual holding caps for a temporary ~£40bn per-coin issuance limit and raise the interest-bearing reserve share to 70%, clearing key blockers flagged by GBP issuers like Revolut.",
+        "source": "CoinDesk"
       }
     ],
     "milestones": [
@@ -49057,6 +49096,13 @@
         "title": "House of Lords committee urges BoE to drop individual holding limits and reconsider 40% reserve floor",
         "description": "The Financial Services Regulation Committee called on the Bank of England to scrap per-person stablecoin holding limits entirely and reconsider the 40% unremunerated-reserve requirement, warning it would harm issuer viability.",
         "sourceUrl": "https://www.coindesk.com/policy/2026/06/02/uk-house-of-lords-committee-calls-on-bank-of-england-to-reconsider-proposed-stablecoin-restrictions"
+      },
+      {
+        "date": "2026-06-22",
+        "type": "regulatory",
+        "title": "Bank of England publishes final policy statement and draft rules on systemic stablecoins",
+        "description": "The BoE scrapped individual holding limits in favour of a temporary per-coin issuance cap (initially ~£40bn / $50bn), raised the maximum short-dated-UK-T-bill reserve share from 60% to 70% (remainder held at the BoE, no yield to holders), and required par redemption within 24 hours. A Code of Practice consultation runs to September 22 2026, with rules finalised by end-2026 and regulated sterling stablecoins operating from 2027.",
+        "sourceUrl": "https://www.bankofengland.co.uk/news/2026/june/boe-launches-policy-statement-and-draft-rules-on-regulating-systemic-stablecoins"
       }
     ]
   },
@@ -49957,6 +50003,13 @@
         "url": "https://thedefiant.io/converge/tradfi-and-fintech/revolut-plans-2027-us-bank-launch-stablecoin-services-day-one",
         "title": "Revolut Plans 2027 US Bank Launch With Stablecoin Services Built In From Day One",
         "source": "The Defiant"
+      },
+      {
+        "type": "article",
+        "url": "https://www.theblock.co/post/403541/revoluts-us-bank-offer-stablecoin-services-fdic-insured-products-reuters",
+        "title": "Revolut's US bank to offer stablecoin services alongside FDIC-insured products: Reuters",
+        "description": "Reuters reports Revolut's planned US national bank will integrate stablecoin services with FDIC-insured accounts from launch; own-issuance of a Revolut USD token remains unconfirmed.",
+        "source": "The Block"
       }
     ],
     "milestones": [
@@ -49994,6 +50047,13 @@
         "title": "Revolut receives full UK banking licence from the PRA",
         "description": "Revolut exits mobilisation; 13M UK customers gain FSCS protection. A GBP stablecoin would be issued from Revolut's e-money entity, not the UK bank.",
         "sourceUrl": "https://www.coindesk.com/policy/2026/03/11/crypto-friendly-fintech-revolut-gains-full-uk-banking-license"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "announcement",
+        "title": "Revolut confirms its planned US national bank will offer stablecoin services alongside FDIC-insured accounts",
+        "description": "Reuters reports Revolut Bank US, N.A. (OCC charter applicant) will offer stablecoin services alongside FDIC-insured products from day one, though own-issuance of a Revolut USD token remains unconfirmed; the USD path continues to run through the Lithuanian EMI / MiCA EMT route.",
+        "sourceUrl": "https://www.theblock.co/post/403541/revoluts-us-bank-offer-stablecoin-services-fdic-insured-products-reuters"
       }
     ]
   },

@@ -44,11 +44,15 @@
     {
       "date": "2026-H1",
       "setOn": "2026-06-07"
+    },
+    {
+      "date": "2026-H2",
+      "setOn": "2026-06-28"
     }
   ],
-  "expectedLaunchDate": "2026-H2",
-  "launchPhase": "announced",
-  "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing B3RL, its own BRL settlement stablecoin for tokenized asset trading. At B3's Tokenization Day (May 26 2026) the target shifted to H2 2026 (from the original H1 2026); the stablecoin will be backed by cash and government bonds and settle tokenized equity. Fills gap left by narrowing of Brazil's Drex CBDC scope; ticker B3RL cited in Brazilian press but not yet officially confirmed by B3 IR/CVM",
+  "expectedLaunchDate": "2026-H1",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "Latin America's largest stock exchange (B3/São Paulo) is developing B3RL, its own BRL settlement stablecoin for tokenized-asset trading. At B3's Tokenization Day (May 26-27 2026), OTC and digital-assets director Humberto Costa clarified that the B3RL settlement stablecoin — backed by cash and government bonds and built on Polygon — targets H1 2026, while the tokenized-share registry/tokenizer advances in H2 2026 (earlier coverage that placed the stablecoin itself in H2 conflated it with the registry). Fills the gap left by the narrowing of Brazil's Drex CBDC scope; ticker B3RL is cited in Brazilian press but not yet officially confirmed by B3 IR/CVM, and no on-chain deployment was visible as of late June 2026",
   "featuredContent": [
     {
       "type": "article",
@@ -68,6 +72,13 @@
       "url": "https://brazilcrypto.substack.com/p/230-b3-to-launch-tokenized-stocks",
       "title": "B3 to launch tokenized stocks, stablecoin in 2026",
       "source": "Brazil Crypto Report"
+    },
+    {
+      "type": "article",
+      "url": "https://investnews.com.br/investimentos/b3-lancara-stablecoin-em-reais-ainda-neste-semestre/",
+      "title": "B3 lançará stablecoin em reais ainda neste semestre",
+      "description": "B3 OTC and digital-assets director Humberto Costa says the B3RL settlement stablecoin, built on Polygon, will launch in H1 2026, with the tokenization platform following in H2.",
+      "source": "InvestNews"
     }
   ],
   "milestones": [
@@ -84,6 +95,13 @@
       "title": "B3 Tokenization Day: B3RL stablecoin and tokenized share registry confirmed for H2 2026",
       "description": "B3 confirmed its tokenized share registry and B3RL settlement stablecoin target H2 2026 (slipped from H1 2026); stablecoin to be backed by cash and government bonds.",
       "sourceUrl": "https://cryptonews.net/news/finance/32952205/"
+    },
+    {
+      "date": "2026-05-27",
+      "type": "milestone",
+      "title": "B3 clarifies B3RL settlement stablecoin targets H1 2026 on Polygon; tokenization platform follows in H2",
+      "description": "At Tokenization Day, B3 OTC and digital-assets director Humberto Costa said the B3RL settlement stablecoin — backed by cash and government bonds, built on Polygon — is expected in the first half of 2026, while the tokenized-share registry/tokenizer advances in the second half, disentangling the two timelines that earlier coverage had merged.",
+      "sourceUrl": "https://investnews.com.br/investimentos/b3-lancara-stablecoin-em-reais-ainda-neste-semestre/"
     }
   ]
 }

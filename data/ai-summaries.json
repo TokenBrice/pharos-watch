@@ -1990,14 +1990,14 @@
     "factsAsOf": "2026-05-15"
   },
   "jpysc-sbi-startale": {
-    "title": "Japan's First Trust-Bank Yen",
-    "text": "Pre-launch trust-bank yen from Shinsei + SBI VC Trade + Startale under Japan's Type III electronic payment framework; Q2 2026 target. JPYSC is the first JPY stablecoin issued through Japan's trust bank framework rather than under JPYC's prepaid payment instrument workaround — and that distinction is the entire product. Shinsei Trust & Banking issues, SBI VC Trade distributes, and Startale Group (the Astar Network operator and Sony's Soneium co-developer) handles the technology, with the Q2 2026 target conditional on Financial Services Agency sign-off. Type III electronic payment instrument classification gives JPYSC the legal teeth that JPYC has been negotiating around for three years: redemption rights backed by trust law, segregation of customer assets, and — crucially — permission to allocate up to 50% of reserves to Japanese government bonds, generating yield that the prepaid model can't legally touch. The deployment chain is unannounced, which is unusual for a launch this close, and likely reflects a multi-chain or institutional rail strategy rather than a public-DeFi play. JPYSC is a bet that Japan's $309B-stablecoin-market participation has been gated on legal infrastructure, not technology — and that SBI's institutional client book plus Startale's blockchain stack is the right hand to play once the regulator signs. The trust-bank framework legalizes up to 50% JGB {{term:treasury}}treasury bonds{{/term}} in reserves, trust-segregated {{term:custody}}custody{{/term}}, FSA-grade {{term:attestation}}attestation{{/term}}, and statutory {{term:redemption}}redemption{{/term}} rights.",
-    "updatedAt": "2026-05-15",
+    "title": "Japan's Trust-Bank Yen Goes Live",
+    "text": "JPYSC went live on June 24, 2026 — Japan's first stablecoin issued through a trust bank rather than under JPYC's prepaid-instrument workaround, and that distinction is still the entire product. Shinsei Trust & Banking issues, SBI VC Trade distributes, and Startale Group (the Astar Network operator and Sony's Soneium co-developer) built the rails, with roughly $63M of cash-and-JGB reserves segregated in trust accounts on day one. The Type III electronic payment instrument classification gives JPYSC what JPYC spent three years negotiating around: trust-law redemption rights, asset segregation, exemption from the ¥1M transfer cap, and permission to park up to 50% of reserves in Japanese government bonds — yield the prepaid model legally can't touch. The catch is that 'launch' means a closed loop. For now only verified SBI VC Trade account holders can hold JPYSC, with no external-wallet withdrawals and no public-chain circulation; Startale insists the on-chain plumbing is built and merely waiting on legal and tax clarity, not technology. So JPYSC is live and untradeable at the same time — a regulated yen token that exists on-chain but can't yet leave the building, which is precisely the bet: that Japan's stablecoin market was gated on legal infrastructure, and SBI's institutional book plus Startale's stack is the right hand to play the moment the gate opens. The trust-bank framework legalizes up to 50% JGB {{term:treasury}}treasury bonds{{/term}} in reserves, trust-segregated {{term:custody}}custody{{/term}}, FSA-grade {{term:attestation}}attestation{{/term}}, and statutory {{term:redemption}}redemption{{/term}} rights.",
+    "updatedAt": "2026-06-28",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-opus-4-8",
+    "reviewedBy": "Pharos pre-launch update",
+    "reviewedAt": "2026-06-28",
+    "factsAsOf": "2026-06-28"
   },
   "rgbp-revolut": {
     "title": "13 Million Users, One Brand Ban Away",
@@ -2721,13 +2721,13 @@
   },
   "brl-b3": {
     "title": "The Stock Exchange Mints Money",
-    "text": "BRL-B3 is a pre-launch Brazilian real settlement stablecoin from B3, Latin America's largest stock exchange, designed for its tokenized {{term:rwa}}real-world-asset{{/term}} trading platform. When Latin America's largest stock exchange decides it needs its own stablecoin for tokenized asset settlement, the signal is less about crypto adoption and more about what traditional financial infrastructure considers table stakes in 2026. B3's BRL stablecoin — now branded B3RL — fills the gap left by Brazil's Drex CBDC narrowing its scope: the central bank's digital currency was meant to handle settlement, but as that project slowed, B3 decided to build the plumbing itself, backed by cash and government bonds inside its own clearing infrastructure. At its May 2026 Tokenization Day the exchange confirmed the target had slipped from H1 to H2 2026, and that the first phase is a blockchain replica of its depository database — direct on-chain trading will have to wait. The question was never whether B3 can issue a BRL stablecoin — it clears trillions annually — but whether Brazil's regulators will let a stock exchange run the settlement rails the central bank once reserved for itself.",
-    "updatedAt": "2026-06-07",
+    "text": "BRL-B3 is a pre-launch Brazilian real settlement stablecoin from B3, Latin America's largest stock exchange, designed for its tokenized {{term:rwa}}real-world-asset{{/term}} trading platform. When Latin America's largest stock exchange decides it needs its own stablecoin for tokenized asset settlement, the signal is less about crypto adoption and more about what traditional financial infrastructure considers table stakes in 2026. B3's BRL stablecoin — branded B3RL — fills the gap left by Brazil's Drex CBDC narrowing its scope: the central bank's digital currency was meant to handle settlement, but as that project slowed, B3 decided to build the plumbing itself, backed by cash and government bonds inside its own clearing infrastructure. At its May 2026 Tokenization Day, OTC and digital-assets director Humberto Costa untangled the timeline earlier coverage had knotted together: the B3RL settlement stablecoin — built on Polygon — targets the first half of 2026, while the tokenized-share registry and B3's own tokenizer follow in the second half. The question was never whether B3 can issue a BRL stablecoin — it clears trillions annually — but whether Brazil's regulators will let a stock exchange run the settlement rails the central bank once reserved for itself, and whether 'first half of 2026' survives contact with the CVM.",
+    "updatedAt": "2026-06-28",
     "authoredBy": "ai",
     "model": "claude-opus-4-8",
     "reviewedBy": "Pharos pre-launch update",
-    "reviewedAt": "2026-06-07",
-    "factsAsOf": "2026-06-07"
+    "reviewedAt": "2026-06-28",
+    "factsAsOf": "2026-06-28"
   },
   "usdf-flipcash": {
     "title": "Coinbase's White-Label Dollar",

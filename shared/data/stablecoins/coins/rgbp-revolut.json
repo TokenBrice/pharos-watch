@@ -45,7 +45,7 @@
   "announcedDate": "2026-02",
   "expectedLaunchDate": "2027",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026 — dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries — though the 40% unremunerated-reserve requirement remains under review. On June 2 2026 the House of Lords Financial Services Regulation Committee urged the BoE to scrap individual holding limits entirely and reconsider that 40% floor; the BoE's revised draft rules are expected in June 2026. UK full authorisation regime not active until October 2027",
+  "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026 — dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries — though the 40% unremunerated-reserve requirement remains under review. On June 2 2026 the House of Lords Financial Services Regulation Committee urged the BoE to scrap individual holding limits entirely and reconsider that 40% floor. On June 22 2026 the BoE published its final policy statement and draft rules: individual holding limits are scrapped in favour of a temporary per-coin issuance cap (initially ~£40bn / $50bn), the short-dated-UK-T-bill reserve share rises to 70% with the remainder held at the BoE and no yield paid to holders, and par redemption within 24 hours is required; a Code of Practice consultation runs to September 22 2026, with rules finalised by end-2026 and regulated sterling stablecoins operating from 2027. UK full authorisation regime not active until October 2027",
   "featuredContent": [
     {
       "type": "article",
@@ -60,6 +60,13 @@
       "title": "Revolut UK Legal Head calls for GBP stablecoin",
       "description": "Rory Tanner tells House of Lords the UK is 'already behind' the US and EU on GBP stablecoins; highlights UK→India remittance corridor (seventh-largest globally) as priority B2B use case.",
       "source": "Payment Expert"
+    },
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/policy/2026/06/22/bank-of-england-backs-down-on-strict-stablecoin-holding-limits-sets-usd50-billion-issuance-cap",
+      "title": "Bank of England backs down on strict stablecoin holding limits, sets $50 billion issuance cap",
+      "description": "The BoE's final rules drop individual holding caps for a temporary ~£40bn per-coin issuance limit and raise the interest-bearing reserve share to 70%, clearing key blockers flagged by GBP issuers like Revolut.",
+      "source": "CoinDesk"
     }
   ],
   "milestones": [
@@ -104,6 +111,13 @@
       "title": "House of Lords committee urges BoE to drop individual holding limits and reconsider 40% reserve floor",
       "description": "The Financial Services Regulation Committee called on the Bank of England to scrap per-person stablecoin holding limits entirely and reconsider the 40% unremunerated-reserve requirement, warning it would harm issuer viability.",
       "sourceUrl": "https://www.coindesk.com/policy/2026/06/02/uk-house-of-lords-committee-calls-on-bank-of-england-to-reconsider-proposed-stablecoin-restrictions"
+    },
+    {
+      "date": "2026-06-22",
+      "type": "regulatory",
+      "title": "Bank of England publishes final policy statement and draft rules on systemic stablecoins",
+      "description": "The BoE scrapped individual holding limits in favour of a temporary per-coin issuance cap (initially ~£40bn / $50bn), raised the maximum short-dated-UK-T-bill reserve share from 60% to 70% (remainder held at the BoE, no yield to holders), and required par redemption within 24 hours. A Code of Practice consultation runs to September 22 2026, with rules finalised by end-2026 and regulated sterling stablecoins operating from 2027.",
+      "sourceUrl": "https://www.bankofengland.co.uk/news/2026/june/boe-launches-policy-statement-and-draft-rules-on-regulating-systemic-stablecoins"
     }
   ]
 }

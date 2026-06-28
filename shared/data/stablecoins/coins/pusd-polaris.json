@@ -47,7 +47,7 @@
   "announcedDate": "2026-01",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Gated testnet live; security review and audit-preparation phase underway; mainnet date uncommitted",
+  "launchPhaseDetail": "Public testnet now open on Sepolia (connect via app.testnet.polarisfinance.io); security review and audit-preparation phase underway with professional audits upcoming; mainnet date uncommitted (issuer prioritising security over speed; 2026-Q4 target still cited)",
   "featuredContent": [
     {
       "type": "tweet",

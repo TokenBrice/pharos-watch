@@ -44,8 +44,8 @@
   "status": "pre-launch",
   "announcedDate": "2026-02",
   "expectedLaunchDate": "2026-Q2",
-  "launchPhase": "announced",
-  "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Japan's PSA amendments take full effect June 13 and the FSA activated rules for qualified foreign stablecoins June 1. As of early June no JPYSC deployment has been confirmed and the Q2 2026 window (ends June 30) is nearly elapsed, so a slip to H2 2026 is increasingly likely absent FSA approval; deployment chain not publicly confirmed",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium. JPYSC went live June 24 2026, within the Q2 target, with Shinsei Trust & Banking as issuer and ~$63M of cash-plus-JGB reserves (up to 50% JGBs) held in segregated trust accounts. The initial phase is closed-loop: usable only by verified SBI VC Trade account holders, with no external-wallet withdrawals or public-chain/DeFi access yet — Startale says public-chain circulation is technically ready but is awaiting further legal and tax clarity. Public deployment chain not yet confirmed (Strium L1 / Soneium / Ethereum cited)",
   "featuredContent": [
     {
       "type": "blog",
@@ -60,6 +60,13 @@
       "title": "SBI Holdings unveils trust bank-backed JPY stablecoin with Q2 launch target",
       "description": "JPYSC will be Japan's first trust bank-issued yen stablecoin, distinguishing it from JPYC's prepaid payment instrument classification. Trust-based issuers may allocate up to 50% of reserves to government bonds.",
       "source": "The Block"
+    },
+    {
+      "type": "article",
+      "url": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/",
+      "title": "SBI and Startale Launch JPYSC, Japan's First Trust-Backed Yen Stablecoin",
+      "description": "JPYSC goes live June 24 2026 in a closed-loop phase for SBI VC Trade users; the trust-beneficiary structure exempts it from the ¥1M transfer cap and allows up to 50% JGB reserves.",
+      "source": "Crypto Times"
     }
   ],
   "milestones": [
@@ -97,6 +104,13 @@
       "title": "Japan FSA activates rules for foreign stablecoins as electronic payment instruments",
       "description": "Japan's regulated framework for qualified foreign stablecoins took effect, advancing the regime JPYSC will launch under.",
       "sourceUrl": "https://en.spaziocrypto.com/stablecoins/japan-foreign-stablecoins-yen-on-chain-2026/"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "milestone",
+      "title": "JPYSC goes live (closed-loop) — issued by Shinsei Trust & Banking, distributed via SBI VC Trade",
+      "description": "Japan's first trust-bank-backed yen stablecoin launches with first issuance the same day; ~$63M of cash plus up to 50% JGB reserves held in segregated trust accounts under the Type III electronic payment instrument framework. Initial phase is closed-loop — SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet.",
+      "sourceUrl": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/"
     }
   ]
 }
