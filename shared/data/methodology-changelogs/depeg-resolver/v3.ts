@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.03",
+    title: "DDRR-Calibrated Stage 1 Terminality",
+    date: "2026-06-29",
+    effectiveAt: 1782691200,
+    summary:
+      "Uses reviewed DDRR outcomes to calibrate Stage 1 terminality: recent compromised/unbacked mint incidents now feed K1, while static very-high reserve concentration becomes severe K2 only when paired with a severe below-peg fingerprint or observed dependency impairment.",
+    impact: [
+      "Recent registry-reviewed mint-authority incidents can make K1 supply weaponization fire even when daily supply history misses the mint path",
+      "Very-high-risk reserve concentration is elevated by default and severe only with a severe/catastrophic below-peg break or a frozen/dead dependency",
+      "Stage 2 duration remains on duration-landmark-v1 because the DDRR duration sample is still too small and clustered for a fitted retune",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.02",
     title: "Close-gap Tail Grouping and Superseded Alias Review",
     date: "2026-06-19",
@@ -22,8 +37,7 @@ export const DEPEG_RESOLVER_V3: readonly MethodologyChangelogEntry[] = [
     title: "Live Context Input Wiring",
     date: "2026-06-06",
     effectiveAt: 1780704000,
-    summary:
-      "Wired Stage 1's documented live-context inputs into the Worker DDR precompute path.",
+    summary: "Wired Stage 1's documented live-context inputs into the Worker DDR precompute path.",
     impact: [
       "Uses fresh DEWS sub-signals to derive bank-run and blacklist-surge inputs for K5 and K3",
       "Uses the same 7-day DEX TVL baseline selection as the liquidity API for K5 exit-collapse checks",

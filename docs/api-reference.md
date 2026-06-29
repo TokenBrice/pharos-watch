@@ -1120,14 +1120,14 @@ Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg
     "degraded": false,
     "degradedReason": null,
     "publicWarning": "Forecast from Pharos historical data. Not investment advice or a credit rating.",
-    "resolutionRubricVersion": "resolution-rubric-v1",
+    "resolutionRubricVersion": "resolution-rubric-v2",
     "durationModelVersion": "duration-landmark-v1",
-    "incidentGroupingVersion": "incident-group-v1",
+    "incidentGroupingVersion": "incident-group-v2",
     "supportRulesVersion": "support-rules-v1",
     "lineage": { "eventCount": 34129, "incidentCount": 1820, "coinCount": 142, "quarantinedCoins": 7 }
   },
   "rows": [DdrV2ResponseRow, ...],
-  "methodology": { "version": "3.0", "versionLabel": "v3.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+  "methodology": { "version": "3.03", "versionLabel": "v3.03", "changelogPath": "/methodology/depeg-resolver-changelog/" }
 }
 ```
 

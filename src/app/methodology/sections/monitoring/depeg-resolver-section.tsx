@@ -1,12 +1,5 @@
-import {
-  DDR_METHODOLOGY_CHANGELOG_PATH,
-  DDR_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/depeg-resolver-version";
-import {
-  MethodologyDetails,
-  MethodologyFacts,
-  MethodologySectionShell,
-} from "../../methodology-shared";
+import { DDR_METHODOLOGY_CHANGELOG_PATH, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import { MethodologyDetails, MethodologyFacts, MethodologySectionShell } from "../../methodology-shared";
 import { DEPEG_RESOLVER_SECTION_CONTENT } from "../methodology-content";
 
 export function DepegResolverMethodologySection() {
@@ -14,7 +7,10 @@ export function DepegResolverMethodologySection() {
     <MethodologySectionShell
       id={DEPEG_RESOLVER_SECTION_CONTENT.id}
       title={DEPEG_RESOLVER_SECTION_CONTENT.title}
-      versionBadge={{ label: DDR_METHODOLOGY_VERSION_LABEL, className: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400" }}
+      versionBadge={{
+        label: DDR_METHODOLOGY_VERSION_LABEL,
+        className: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+      }}
       changelogPath={DDR_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when the resolution rubric, duration stratification, forecast-readiness trigger, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes."
       changelogClassName="hover:text-violet-700 dark:text-violet-400"
@@ -22,10 +18,10 @@ export function DepegResolverMethodologySection() {
       <p>
         When Pharos confirms an active depeg, the Depeg Duration Resolver answers two questions in order at the public
         forecast lock: will it come back, and if so, when. Stage 1 emits an ordinal Resolution Outlook &mdash; Recovery
-        Likely, At Risk, Recovery Unlikely, or Insufficient Signal &mdash; from five kill signals (supply weaponization, backing impairment,
-        freeze/seizure, reflexive death-spiral, exit collapse) and five recovery anchors (non-inflatable supply, hard
-        collateral with live redemption, no supply anomaly, no single freeze point, proven mean-reversion), each shown
-        with the factors that drove it.
+        Likely, At Risk, Recovery Unlikely, or Insufficient Signal &mdash; from five kill signals (supply weaponization,
+        backing impairment, freeze/seizure, reflexive death-spiral, exit collapse) and five recovery anchors
+        (non-inflatable supply, hard collateral with live redemption, no supply anomaly, no single freeze point, proven
+        mean-reversion), each shown with the factors that drove it.
       </p>
       <p>
         DDRv3 uses a forecast-readiness-or-72h public contract. Active confirmed incidents show live facts before the
@@ -35,10 +31,12 @@ export function DepegResolverMethodologySection() {
         prediction rather than rewriting it.
       </p>
       <p>
-        Stage 1 is a calibrated mechanistic rubric, not fitted machine learning. The terminal-label corpus is roughly
-        90 mostly month-precision deaths that do not join to a clean feature vector at the depeg moment, so the
-        thresholds are tuned and backtested against that corpus plus the recovered-event set rather than learned as
-        weights. Forecast readiness is a publication trigger, not a probability or confidence level.
+        Stage 1 is a calibrated mechanistic rubric, not fitted machine learning. The terminal-label corpus is roughly 90
+        mostly month-precision deaths that do not join to a clean feature vector at the depeg moment, so the thresholds
+        are tuned and backtested against that corpus, DDRR reviewed outcomes, and the recovered-event set rather than
+        learned as weights. Recent mint-authority incidents can now feed K1, while static very-high-risk reserves become
+        severe K2 only with a severe below-peg fingerprint or observed dependency impairment. Forecast readiness is a
+        publication trigger, not a probability or confidence level.
       </p>
       <p>
         Stage 2 runs only when Stage 1 is not terminal-leaning. It is an empirical landmark-survival estimate over the
@@ -56,8 +54,8 @@ export function DepegResolverMethodologySection() {
       </p>
       <p>
         DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. It is
-        a forecast from historical data, not investment advice and not a credit rating &mdash; a Recovery
-        Unlikely verdict is a structural read, not a guarantee, and vice versa.
+        a forecast from historical data, not investment advice and not a credit rating &mdash; a Recovery Unlikely
+        verdict is a structural read, not a guarantee, and vice versa.
       </p>
       <MethodologyFacts
         facts={[
@@ -85,10 +83,10 @@ export function DepegResolverMethodologySection() {
           </p>
           <p>
             DDRR does not replay today&rsquo;s resolver over historical rows. It compares the frozen first-published DDR
-            outcome with the later event outcome, keeps append-only errata visible, preserves immutable trigger/readiness
-            metadata, and separates policy-universe coverage from scoreable recovery/duration accuracy. If a health
-            deferral is followed by recovery or reliable terminal evidence before a healthy lock, the row remains a
-            pre-lock coverage outcome rather than a retroactive forecast.
+            outcome with the later event outcome, keeps append-only errata visible, preserves immutable
+            trigger/readiness metadata, and separates policy-universe coverage from scoreable recovery/duration
+            accuracy. If a health deferral is followed by recovery or reliable terminal evidence before a healthy lock,
+            the row remains a pre-lock coverage outcome rather than a retroactive forecast.
           </p>
         </div>
       </MethodologyDetails>

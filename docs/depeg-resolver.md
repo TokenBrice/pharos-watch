@@ -11,7 +11,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.02`
+- **Current methodology version:** `v3.03`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
@@ -72,7 +72,7 @@ Stage 1 combines **what the coin *is*** (structural fragility — can supply be 
 
 ### Inputs
 
-**Structural fragility** (static registry plus slow scores): `mintAuthority` posture / path / confidence, `mechanismArchetype`, governance flag, collateral quality, custody model, deployment model, reserve risk, blacklistability, dependencies, redemption capacity and route family, and the Report Card overall score as a coarse prior.
+**Structural fragility** (static registry plus slow scores): `mintAuthority` posture / path / confidence plus recent reviewed mint-authority incident dates, `mechanismArchetype`, governance flag, collateral quality, custody model, deployment model, reserve risk, blacklistability, dependencies, redemption capacity and route family, and the Report Card overall score as a coarse prior.
 
 **Event fingerprint** (event row plus live and reconstructed signals): depth bucket from `peak_deviation_bps`; direction; speed from start-to-peak timing; supply behavior (Δ7d / Δ30d from daily supply history plus mint/burn net flow into the break — the supply-weaponization tell); live DEWS band and which sub-signals fire; liquidity and exit signals; concurrent blacklist surge; and the orphan-close flag from related closed events.
 
@@ -84,8 +84,8 @@ Each kill signal is rated `none`, `elevated`, or `severe`.
 
 | # | Kill signal | Fires when |
 |---|---|---|
-| **K1** | Supply weaponization | Mint authority concentrated or unbounded/compromised **and** abnormal supply or mint expansion into the depeg (the USR archetype) |
-| **K2** | Backing impairment | Reserves concentrated in very-high-risk assets, exotic collateral, or a dependency frozen or dead above the weight threshold — collateral no longer covers liabilities |
+| **K1** | Supply weaponization | Mint authority concentrated or unbounded/compromised **and** abnormal supply/mint expansion into the depeg, or a recent compromised/unbacked mint incident near the break (the USR / StablR archetype) |
+| **K2** | Backing impairment | A frozen/dead dependency above the weight threshold, or very-high-risk reserves paired with a severe/catastrophic below-peg fingerprint. Static exotic/high-risk collateral without deep impairment is elevated, not severe |
 | **K3** | Freeze / seizure | Concurrent blacklist surge with a freezable token, sanctioned or frozen custody, or a regulatory shutdown — recovery administratively blocked |
 | **K4** | Reflexive death-spiral | Algorithmic (or synthetic with a broken hedge) **and** a price-down-while-supply-chases signature (the UST / IRON archetype) |
 | **K5** | Exit collapse | Liquidity erosion, exhausted redemption capacity, **or** a sustained one-sided outflow (bank-run) signal — any one removes the arbitrage path that restores the peg |
@@ -121,7 +121,7 @@ Stage 1 is a **mechanistic rubric whose thresholds are calibrated by backtest, n
 
 Terminal-outcome labels are small, editorial, and not event-linked: roughly 88 curated dead stablecoins (month-level `deathDate`, editorial narrative only), a handful of frozen tracked coins (day-level freeze dates), and two shadow assets (UST and IRON) with backfilled events. Against that sit hundreds of cleanly-timed recovered events. You **cannot** fit a supervised terminal classifier on ~90 mostly month-precision labels that do not join to a clean feature vector at the depeg moment. You **can** encode the domain priors as a transparent rubric and calibrate/backtest it against those deaths plus the recovery corpus.
 
-The rubric thresholds (what counts as an "abnormal" supply expansion, the liquidity-collapse cutoffs, the score boundaries) are tuned against the label corpus, then validated. We publish a backtest summary as a methodology fact, not a per-event probability, and we state the small sample size plainly.
+The rubric thresholds (what counts as an "abnormal" supply expansion, the liquidity-collapse cutoffs, the score boundaries) are tuned against the label corpus, then validated. DDRR reviewed outcomes are used as calibration evidence for bounded rubric changes, not as fitted ML weights: `v3.03` adds recent mint-authority incidents to K1 after StablR-family terminal misses, and gates static very-high reserve concentration after USDXL false-terminal rows. We publish a backtest summary as a methodology fact, not a per-event probability, and we state the small sample size plainly.
 
 ## Stage 2 — Expected Duration (conditional on recoverable)
 
@@ -173,9 +173,11 @@ Review outcomes are deliberately conservative:
 
 The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same review snapshot used by the UI. Headline stats are computed across the v2 policy universe, while public review rows are capped to keep the D1 cache row bounded; `_meta.publicRowsTruncated` and `_meta.assessmentRowsTruncated` disclose truncation. Missing or invalid snapshots return a degraded `200` with empty rows, matching DDR's public failure mode. Stale review snapshots keep their rows and mark `_meta.degraded=true` / `degradedReason="stale-cache"`.
 
+For calibration passes, run `npm run calibrate:ddrr` to generate the advisory DDRR calibration report described in [process/ddrr-calibration.md](./process/ddrr-calibration.md). The report groups factor attribution, no-call/coverage debt, duration signed error, K5 exit-collapse evidence, reserve/dependency nuance, and mint-incident timing without replaying current DDR logic over historical rows.
+
 ## Honest Limitations & Failure Modes
 
-- **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set. We state this plainly; forecast readiness is a publication trigger, not a stronger/weaker verdict label.
+- **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set plus DDRR reviewed forecast outcomes. We state this plainly; forecast readiness is a publication trigger, not a stronger/weaker verdict label.
 - **Supply resolution is coarse.** Supply history is daily, so it can miss intra-day spikes; mint/burn coverage exists for 137 of 407 tracked coins (137 contract configs across the configured issuance chains). A coin with neither usable source degrades to `insufficient_signal` on the supply-dependent kill signals rather than guessing.
 - **Empty provenance, so no verdict gating.** The depeg-event provenance side-table is unpopulated in production (0 rows). Audit-verdict filtering would discard the entire corpus, so DDR treats a null verdict as included and relies on incident grouping, quarantine, and the severity floor for quality. Provenance is a future enrichment, not a v1 dependency.
 - **Terminal ≠ event-recovery.** A backfilled dead coin (for example IRON) shows "recovered" events because replay closed them on a transient in-band print. Stage 1 terminal truth derives from cemetery / frozen `status` and the live deep-and-sustained-open or orphan pattern (the USR signature), never from the presence of a `recovery_price` on a historical row.

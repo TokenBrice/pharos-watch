@@ -18,6 +18,8 @@ export interface DdrCoinStructural {
   mechanismArchetype?: string | null;
   mintPath?: string | null;
   authorityPosture?: string | null;
+  /** YYYY-MM-DD mint-authority incident dates from the registry. */
+  mintIncidentDates?: string[] | null;
   collateralQuality?: string | null;
   custodyModel?: string | null;
   reserves?: { risk: string; pct: number }[];

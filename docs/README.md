@@ -39,6 +39,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [process/boundary-waivers.md](./process/boundary-waivers.md) - worker import-boundary waiver inventory with retirement rationale
 - [process/cron-trigger-policy.md](./process/cron-trigger-policy.md) - governance for adding new cron trigger expressions to the Worker
 - [process/d1-baseline-squash-plan.md](./process/d1-baseline-squash-plan.md) - planning doc for the second D1 baseline squash cadence and procedure
+- [process/ddrr-calibration.md](./process/ddrr-calibration.md) - advisory DDRR calibration report process for evidence-gated DDR refinements
 - [process/feature-flags.md](./process/feature-flags.md) - `NEXT_PUBLIC_PHAROS_*` feature flag inventory and default-state rules
 - [process/pages-env-rollout.md](./process/pages-env-rollout.md) - rollout procedure for flipping `NEXT_PUBLIC_PHAROS_*` flags on production Pages
 

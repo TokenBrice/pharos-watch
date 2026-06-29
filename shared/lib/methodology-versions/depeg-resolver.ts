@@ -4,13 +4,9 @@ import { DEPEG_RESOLVER_V3 } from "../../data/methodology-changelogs/depeg-resol
 import { createMethodologyVersion } from "./base";
 
 const ddr = createMethodologyVersion({
-  currentVersion: "3.02",
+  currentVersion: "3.03",
   changelogPath: "/methodology/depeg-resolver-changelog/",
-  changelog: [
-    ...DEPEG_RESOLVER_V3,
-    ...DEPEG_RESOLVER_V2,
-    ...DEPEG_RESOLVER_V1,
-  ],
+  changelog: [...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1],
 });
 const ddrV2ChangelogEntry = ddr.changelog.find((entry) => entry.version === "2.0");
 
@@ -30,7 +26,7 @@ export const DDR_METHODOLOGY_CHANGELOG = ddr.changelog;
 export const getDdrMethodologyVersionAt = ddr.getVersionAt;
 
 /** Sub-component versions surfaced in the API _meta for reproducibility. */
-export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v1";
+export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v2";
 export const DDR_DURATION_MODEL_VERSION = "duration-landmark-v1";
 export const DDR_INCIDENT_GROUPING_VERSION = "incident-group-v2";
 export const DDR_SUPPORT_RULES_VERSION = "support-rules-v1";

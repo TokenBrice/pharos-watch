@@ -1,8 +1,19 @@
 # Depeg Duration Resolver Methodology — Version Timeline
 
-Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.02`.
+Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.03`.
 
 Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
+
+---
+
+## v3.03 — DDRR-Calibrated Stage 1 Terminality (June 29, 2026)
+
+Uses reviewed DDRR outcomes to calibrate Stage 1 terminality without changing the forecast publication contract or Stage 2 duration model.
+
+- **K1 mint-incident evidence.** Recent registry-reviewed compromised/unbacked mint incidents can fire K1 supply weaponization when the minter is risky, even if daily supply history does not show a >20% expansion.
+- **K2 reserve-risk gating.** Static very-high-risk reserve concentration is elevated by default and becomes severe only when paired with a severe/catastrophic below-peg fingerprint or an observed frozen/dead dependency.
+- **Duration held.** Stage 2 remains `duration-landmark-v1`; the reviewed duration sample is still small, heterogeneous, and clustered by repeated same-coin incidents.
+- **Sub-component version bump.** The resolution rubric advances to `resolution-rubric-v2`; duration, incident grouping, and support-rule component versions are unchanged.
 
 ---
 

@@ -9,11 +9,7 @@ import {
 } from "@shared/lib/depeg-resolver-version";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
-import type {
-  DdrCanonicalIncident,
-  DdrCanonicalIncidentInput,
-  DdrDirection,
-} from "../depeg-resolver-v2-contracts";
+import type { DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection } from "../depeg-resolver-v2-contracts";
 import type { DdrEventDbRow } from "./types";
 
 export function abortIf(signal: AbortSignal | undefined, _label: string): void {
@@ -35,6 +31,7 @@ export function toStructural(meta: StablecoinMeta): DdrCoinStructural {
     mechanismArchetype: meta.mechanismArchetype ?? null,
     mintPath: meta.mintAuthority?.mintPath ?? null,
     authorityPosture: meta.mintAuthority?.authorityPosture ?? null,
+    mintIncidentDates: meta.mintAuthority?.mintIncidents?.map((incident) => incident.date) ?? null,
     collateralQuality: meta.collateralQuality ?? null,
     custodyModel: meta.custodyModel ?? null,
     reserves: meta.reserves?.map((r) => ({ risk: r.risk, pct: r.pct })),
@@ -70,7 +67,7 @@ export function allocateDdrRunId(slot: string, runAt: number): string {
 }
 
 export function recordValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
 export function stringValue(value: unknown, fallback: string): string {
@@ -78,7 +75,7 @@ export function stringValue(value: unknown, fallback: string): string {
 }
 
 export function nullableStringValue(value: unknown, fallback: string | null): string | null {
-  return value == null || typeof value === "string" ? value ?? fallback : fallback;
+  return value == null || typeof value === "string" ? (value ?? fallback) : fallback;
 }
 
 export function numberValue(value: unknown, fallback: number): number {
@@ -98,7 +95,10 @@ export function eligibleAt(startedAt: number): number {
 }
 
 function eventPolicyIncluded(row: DdrEventDbRow): boolean {
-  return row.started_at >= DDR_V2_EFFECTIVE_AT || (row.started_at < DDR_V2_EFFECTIVE_AT && (row.ended_at == null || row.ended_at >= DDR_V2_EFFECTIVE_AT));
+  return (
+    row.started_at >= DDR_V2_EFFECTIVE_AT ||
+    (row.started_at < DDR_V2_EFFECTIVE_AT && (row.ended_at == null || row.ended_at >= DDR_V2_EFFECTIVE_AT))
+  );
 }
 
 function buildRegistrySnapshot(meta: StablecoinMeta | undefined): Record<string, unknown> {
@@ -128,7 +128,8 @@ export function toCanonicalIncidentInput(row: DdrEventDbRow): DdrCanonicalIncide
     peakDeviationBps: row.peak_deviation_bps,
     source: row.source,
     sourceFingerprint: null,
-    rolloutActiveAtEnablement: row.started_at < DDR_V2_EFFECTIVE_AT && (row.ended_at == null || row.ended_at >= DDR_V2_EFFECTIVE_AT),
+    rolloutActiveAtEnablement:
+      row.started_at < DDR_V2_EFFECTIVE_AT && (row.ended_at == null || row.ended_at >= DDR_V2_EFFECTIVE_AT),
     publicTrackedAtFirstSeen: meta != null,
     psiShadowAtFirstSeen: meta == null,
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,

@@ -95,7 +95,12 @@ describe("resolveOutlook — acceptance cases", () => {
         collateralQuality: "native",
       }),
       baseSupply({ mintSurge: false, change7dPct: 1 }),
-      baseLive({ safetyScore: 92, liquidityScore: 80, redemptionCapacityRatio: 0.2, redemptionRouteFamily: "collateral-redeem" }),
+      baseLive({
+        safetyScore: 92,
+        liquidityScore: 80,
+        redemptionCapacityRatio: 0.2,
+        redemptionRouteFamily: "collateral-redeem",
+      }),
     );
     expect(r.tier).toBe("recovery_likely");
   });
@@ -181,9 +186,25 @@ describe("resolveOutlook — acceptance cases", () => {
 
   it("each missing key input independently yields insufficient_signal", () => {
     const structural = coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved" });
-    expect(resolveOutlook(event(), coin({ mechanismArchetype: "cdp", authorityPosture: undefined }), baseSupply(), baseLive()).tier).toBe("insufficient_signal");
-    expect(resolveOutlook(event(), structural, baseSupply({ covered: false, change7dPct: null, change30dPct: null, mintSurge: null }), baseLive()).tier).toBe("insufficient_signal");
-    expect(resolveOutlook(event({ currentDeviationBps: null }), structural, baseSupply(), baseLive()).tier).toBe("insufficient_signal");
+    expect(
+      resolveOutlook(
+        event(),
+        coin({ mechanismArchetype: "cdp", authorityPosture: undefined }),
+        baseSupply(),
+        baseLive(),
+      ).tier,
+    ).toBe("insufficient_signal");
+    expect(
+      resolveOutlook(
+        event(),
+        structural,
+        baseSupply({ covered: false, change7dPct: null, change30dPct: null, mintSurge: null }),
+        baseLive(),
+      ).tier,
+    ).toBe("insufficient_signal");
+    expect(resolveOutlook(event({ currentDeviationBps: null }), structural, baseSupply(), baseLive()).tier).toBe(
+      "insufficient_signal",
+    );
   });
 
   it("does not treat algorithmic mechanism alone as a reflexive death spiral", () => {
@@ -208,6 +229,40 @@ describe("resolveOutlook — acceptance cases", () => {
 });
 
 describe("resolveOutlook — factor-code emission (guards against silent code renames)", () => {
+  it("emits K1 severe for a recent compromised mint incident observed by forecast lock", () => {
+    const incidentAt = Date.UTC(2026, 4, 24) / 1000;
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -5000, startedAt: incidentAt - 12 * 3600 }),
+      coin({
+        authorityPosture: "concentrated-admin",
+        mintPath: "issuer-direct-mint",
+        mintIncidentDates: ["2026-05-24"],
+      }),
+      baseSupply({ mintSurge: false, change7dPct: 1 }),
+      baseLive(),
+      incidentAt + 86400,
+    );
+    expect(r.factors.some((f) => f.code === "K1_supply_weaponization" && f.severity === "severe")).toBe(true);
+    expect(r.tier).toBe("recovery_unlikely");
+  });
+
+  it("ignores stale mint incidents outside the recent-incident window", () => {
+    const incidentAt = Date.UTC(2026, 4, 24) / 1000;
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -5000, startedAt: incidentAt + 61 * 86400 }),
+      coin({
+        authorityPosture: "concentrated-admin",
+        mintPath: "issuer-direct-mint",
+        mintIncidentDates: ["2026-05-24"],
+      }),
+      baseSupply({ mintSurge: false, change7dPct: 1 }),
+      baseLive(),
+      incidentAt + 62 * 86400,
+    );
+    expect(r.factors.some((f) => f.code === "K1_supply_weaponization")).toBe(false);
+    expect(r.tier).not.toBe("recovery_unlikely");
+  });
+
   it("emits K2 severe for a frozen/dead collateral dependency", () => {
     const r = resolveOutlook(
       event(),
@@ -221,11 +276,51 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
   it("emits K2 elevated for an exotic collateral base", () => {
     const r = resolveOutlook(
       event(),
-      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", collateralQuality: "exotic", dependencyImpaired: false }),
+      coin({
+        mechanismArchetype: "cdp",
+        authorityPosture: "none-resolved",
+        collateralQuality: "exotic",
+        dependencyImpaired: false,
+      }),
       baseSupply(),
       baseLive(),
     );
     expect(r.factors.some((f) => f.code === "K2_backing_impairment" && f.severity === "elevated")).toBe(true);
+  });
+
+  it("downgrades static very-high reserve concentration on a minor below-peg break to K2 elevated", () => {
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -150 }),
+      coin({
+        mechanismArchetype: "cdp",
+        authorityPosture: "concentrated-admin",
+        mintPath: "user-collateralized-governed",
+        custodyModel: "onchain",
+        reserves: [{ risk: "very-high", pct: 60 }],
+        dependencyImpaired: false,
+      }),
+      baseSupply({ mintSurge: false, change7dPct: 0 }),
+      baseLive({ liquidityScore: 50 }),
+    );
+    expect(r.factors.some((f) => f.code === "K2_backing_impairment" && f.severity === "elevated")).toBe(true);
+    expect(r.factors.some((f) => f.code === "K2_backing_impairment" && f.severity === "severe")).toBe(false);
+    expect(r.tier).toBe("at_risk");
+  });
+
+  it("keeps very-high reserve concentration severe on a deep below-peg break", () => {
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -3000 }),
+      coin({
+        mechanismArchetype: "cdp",
+        authorityPosture: "none-resolved",
+        reserves: [{ risk: "very-high", pct: 60 }],
+        dependencyImpaired: false,
+      }),
+      baseSupply({ mintSurge: false, change7dPct: 0 }),
+      baseLive({ liquidityScore: 50 }),
+    );
+    expect(r.factors.some((f) => f.code === "K2_backing_impairment" && f.severity === "severe")).toBe(true);
+    expect(r.tier).toBe("recovery_unlikely");
   });
 
   it("emits R1 strong for immutable user-collateralized supply", () => {
@@ -241,7 +336,11 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
   it("emits R1 weak for governance-bounded user-collateralized supply", () => {
     const r = resolveOutlook(
       event(),
-      coin({ mechanismArchetype: "cdp", authorityPosture: "concentrated-admin", mintPath: "user-collateralized-governed" }),
+      coin({
+        mechanismArchetype: "cdp",
+        authorityPosture: "concentrated-admin",
+        mintPath: "user-collateralized-governed",
+      }),
       baseSupply(),
       baseLive(),
     );
@@ -281,7 +380,12 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
   it("lets a strong structural anchor block recovery_unlikely at two elevated kills", () => {
     const r = resolveOutlook(
       event({ direction: "below", peakDeviationBps: -300 }),
-      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", collateralQuality: "native", custodyModel: "cex" }),
+      coin({
+        mechanismArchetype: "cdp",
+        authorityPosture: "none-resolved",
+        collateralQuality: "native",
+        custodyModel: "cex",
+      }),
       baseSupply(),
       baseLive({ liquidityScore: 25, redemptionCapacityRatio: 0.2, redemptionRouteFamily: "collateral-redeem" }),
     );
@@ -312,8 +416,22 @@ describe("incident grouping + quarantine", () => {
   it("merges fragments within 6h and splits beyond", () => {
     const events: DdrHistoricalEvent[] = [
       { stablecoinId: "a", direction: "below", peakDeviationBps: -300, startedAt: 0, endedAt: 3600, recoveryPrice: 1 },
-      { stablecoinId: "a", direction: "below", peakDeviationBps: -500, startedAt: 3600 + 60, endedAt: 7200, recoveryPrice: 1 },
-      { stablecoinId: "a", direction: "below", peakDeviationBps: -200, startedAt: 7200 + 100 * 3600, endedAt: 7200 + 101 * 3600, recoveryPrice: 1 },
+      {
+        stablecoinId: "a",
+        direction: "below",
+        peakDeviationBps: -500,
+        startedAt: 3600 + 60,
+        endedAt: 7200,
+        recoveryPrice: 1,
+      },
+      {
+        stablecoinId: "a",
+        direction: "below",
+        peakDeviationBps: -200,
+        startedAt: 7200 + 100 * 3600,
+        endedAt: 7200 + 101 * 3600,
+        recoveryPrice: 1,
+      },
     ];
     const incidents = groupIncidents(events, usd);
     expect(incidents.length).toBe(2);
@@ -394,7 +512,12 @@ describe("computeDuration", () => {
       { direction: "below", depths: ["moderate", "severe", "catastrophic"], structural: "robust", currency: "__any__" },
       { direction: "below", depths: ["severe"], structural: "__any__", currency: "__any__" },
       { direction: "below", depths: ["severe", "catastrophic"], structural: "__any__", currency: "__any__" },
-      { direction: "below", depths: ["moderate", "severe", "catastrophic"], structural: "__any__", currency: "__any__" },
+      {
+        direction: "below",
+        depths: ["moderate", "severe", "catastrophic"],
+        structural: "__any__",
+        currency: "__any__",
+      },
     ]);
   });
 
@@ -471,7 +594,7 @@ describe("computeDuration", () => {
       direction: "below" as const,
       peakDeviationBps: -500,
       depth: "moderate" as const,
-      currency: i % 2 === 0 ? "USD" as const : "non-USD" as const,
+      currency: i % 2 === 0 ? ("USD" as const) : ("non-USD" as const),
       structural: "robust" as const,
       startedAt: i * 100000,
       endedAt: i * 100000 + 14 * 3600,
@@ -550,7 +673,11 @@ describe("resolveDepeg orchestration", () => {
   it("suppresses duration for a terminal verdict", () => {
     const row = resolveDepeg({
       active: event({ stablecoinId: "usr-resolv", direction: "below", peakDeviationBps: -9025 }),
-      coin: coin({ authorityPosture: "unbounded-or-compromised", mintPath: "offchain-attested-minter", governance: "centralized" }),
+      coin: coin({
+        authorityPosture: "unbounded-or-compromised",
+        mintPath: "offchain-attested-minter",
+        governance: "centralized",
+      }),
       supply: baseSupply({ mintSurge: true, change7dPct: 40 }),
       live: baseLive({ liquidityScore: 15, tvlChange7d: -60 }),
       nowSec: 1_000_000 + 3600,

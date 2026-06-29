@@ -44,7 +44,7 @@ export function resolveDepeg(input: DdrResolveInput): DdrRow {
   const { active, coin, supply, live, nowSec, incidents, quarantined } = input;
   const ageSec = Math.max(0, nowSec - active.startedAt);
 
-  const resolution = resolveOutlook(active, coin, supply, live);
+  const resolution = resolveOutlook(active, coin, supply, live, nowSec);
 
   const activeKey: DdrStratumKey = {
     direction: active.direction,
