@@ -192,16 +192,11 @@ describe("address price providers", () => {
     ]);
   });
 
-  it("batches Birdeye Solana targets through multi_price and records missing rows as coverage misses", async () => {
+  it("queries Birdeye Solana targets through the Standard-compatible price endpoint", async () => {
     const target = makeDexScreenerTarget(0, {
       chain: "solana",
       providerChainId: "solana",
       address: "So11111111111111111111111111111111111111112",
-    });
-    const missingTarget = makeDexScreenerTarget(1, {
-      chain: "solana",
-      providerChainId: "solana",
-      address: "missing1111111111111111111111111111111111111",
     });
     let requestedUrl: string | null = null;
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -209,14 +204,11 @@ describe("address price providers", () => {
       return new Response(JSON.stringify({
         success: true,
         data: {
-          [target.address]: {
-            value: "1.001",
-            liquidity: "75000",
-            updateUnixTime: 1_700_000_000,
-            priceChange24h: 0.02,
-            priceInNative: 0.004,
-          },
-          [missingTarget.address]: null,
+          value: "1.001",
+          liquidity: "75000",
+          updateUnixTime: 1_700_000_000,
+          priceChange24h: 0.02,
+          priceInNative: 0.004,
         },
       }), {
         status: 200,
@@ -226,7 +218,7 @@ describe("address price providers", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await runBirdeyeAddressProvider(
-      [target, missingTarget],
+      [target],
       { birdeyeApiKey: "test-key" },
       undefined,
       Date.now() + 60_000,
@@ -234,8 +226,8 @@ describe("address price providers", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const requestUrl = new URL(requestedUrl ?? "");
-    expect(requestUrl.pathname).toBe("/defi/multi_price");
-    expect(requestUrl.searchParams.get("list_address")).toBe(`${target.address},${missingTarget.address}`);
+    expect(requestUrl.pathname).toBe("/defi/price");
+    expect(requestUrl.searchParams.get("address")).toBe(target.address);
     expect(requestUrl.searchParams.get("include_liquidity")).toBe("true");
     expect(result.attemptedRequests).toBe(1);
     expect(result.successfulRequests).toBe(1);
@@ -256,22 +248,21 @@ describe("address price providers", () => {
         },
       },
     ]);
-    expect(result.rejectedTargets).toEqual({ "missing-quote": 1 });
+    expect(result.rejectedTargets).toEqual({});
     expect(result.diagnostics).toMatchObject([
       {
         source: "birdeye-address",
         status: 200,
         ok: true,
         success: true,
-        candidateCount: 2,
-        responseRowCount: 2,
+        candidateCount: 1,
+        responseRowCount: 1,
         matchedCount: 1,
-        rejectionReasonCounts: { "missing-quote": 1 },
       },
     ]);
   });
 
-  it("treats Birdeye null multi_price payloads as coverage misses instead of provider failures", async () => {
+  it("treats Birdeye null price payloads as coverage misses instead of provider failures", async () => {
     const target = makeDexScreenerTarget(0, {
       chain: "solana",
       providerChainId: "solana",
@@ -342,7 +333,7 @@ describe("address price providers", () => {
         ok: true,
         success: false,
         errorClass: "invalid-shape",
-        errorMessage: "Expected Birdeye multi_price data object",
+        errorMessage: "Expected Birdeye price data object",
         rejectionReasonCounts: { "invalid-shape": 1 },
       },
     ]);
