@@ -26,7 +26,7 @@ export function getNestedRecord(value: unknown, key: string): Record<string, unk
   return isRecord(value) && isRecord(value[key]) ? value[key] : null;
 }
 
-export function vaultsFyiNetworkToChain(value: unknown): string | null {
+function vaultsFyiNetworkToChain(value: unknown): string | null {
   const raw = getString(value);
   if (!raw) return null;
   if (raw === "mainnet") return "ethereum";
