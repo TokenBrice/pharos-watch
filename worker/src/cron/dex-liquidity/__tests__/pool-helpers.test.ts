@@ -3,6 +3,7 @@ import {
   classifyPoolType,
   computeDurabilityScore,
   computeLiquidityScore,
+  computePoolPairQuality,
   computePoolQualityContribution,
   computePoolStress,
   initMetrics,
@@ -82,6 +83,14 @@ describe("computePoolQualityContribution", () => {
       expect(contribution.qualityAdjustedTvl).toBe(0);
       expect(contribution.effectiveTvl).toBe(0);
     }
+  });
+});
+
+describe("computePoolPairQuality", () => {
+  it("scores Curve composite quote tokens from their underlying stablecoin basket", () => {
+    expect(computePoolPairQuality(["LUSD", "3CRV"], "LUSD")).toBe(1);
+    expect(computePoolPairQuality(["LUSD", "3pool"], "LUSD")).toBe(1);
+    expect(computePoolPairQuality(["LUSD", "FRAXBP"], "LUSD")).toBe(1);
   });
 });
 

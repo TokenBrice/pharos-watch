@@ -123,7 +123,8 @@ export function LiquidityTechnicalDetails() {
           <li>
             <span className="text-foreground">Pair quality</span> &mdash; co-token scored by Pharos governance
             classification (CeFi&rarr;1.0, DeFi&rarr;0.9, CeFi-Dep&rarr;0.8) plus static map for volatile assets
-            (WETH&rarr;0.65, WBTC&rarr;0.6)
+            (WETH&rarr;0.65, WBTC&rarr;0.6); composite Curve LP aliases such as 3Crv inherit the best quality of
+            their underlying stablecoin basket
           </li>
           <li>
             <span className="text-foreground">Metapool dedup</span> &mdash; uses TVL excluding base pool to prevent

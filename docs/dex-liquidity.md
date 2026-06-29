@@ -2,7 +2,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.83`
+- **Current methodology version:** `v5.84`
 - **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Version timeline:** [liquidity-score-timeline.md](./liquidity-score-timeline.md)
@@ -116,7 +116,7 @@ See the [Discovery Cron](#discovery-cron) section below for the full discovery p
 ### Pool Quality Adjustments
 
 - **Balance health**: Continuous `Math.pow(balanceRatio, 1.5)` instead of binary threshold
-- **Pair quality**: Co-token scored using Pharos governance classification (CeFi->1.0, DeFi->0.9, CeFi-Dep->0.8) + static map for volatile assets (WETH->0.65, WBTC->0.6, unknown->0.3). Known quote aliases such as `USD₮0`, `USDT0`, `aUSDC`, `aUSDT`, `USDbC`, and `.e` bridged variants are normalized to canonical symbols before scoring. Multi-asset pools use best co-token score
+- **Pair quality**: Co-token scored using Pharos governance classification (CeFi->1.0, DeFi->0.9, CeFi-Dep->0.8) + static map for volatile assets (WETH->0.65, WBTC->0.6, unknown->0.3). Known quote aliases such as `USD₮0`, `USDT0`, `aUSDC`, `aUSDT`, `USDbC`, and `.e` bridged variants are normalized to canonical symbols before scoring. Composite Curve LP aliases such as `3Crv` and `FRAXBP` inherit the best score from their underlying stablecoin basket. Multi-asset pools use best co-token score
 - **MetaPool TVL dedup**: Uses `usdTotalExcludingBasePool` to prevent double-counting base pool liquidity across ~322 Curve metapools
 - **Effective TVL**: `poolTvl x mechanismMultiplier x balanceHealth x pairQuality`, summed across all pools
 

@@ -255,12 +255,24 @@ export function buildPoolFingerprint(chain: string, protocol: string, tokenAddre
   return `fp:${chain.toLowerCase()}:${normalizeProtocol(protocol)}:${normalized.join(":")}`;
 }
 
+function getCompositePoolSymbols(symbol: string): string[] | null {
+  const normalized = normalizeDexSymbol(symbol);
+  for (const [name, symbols] of Object.entries(COMPOSITE_POOL_NAMES)) {
+    if (normalizeDexSymbol(name) === normalized) return symbols;
+  }
+  return null;
+}
+
 /**
  * Get pairing quality score for a token symbol.
  * Uses Pharos classification for tracked stablecoins, static map for known volatile assets.
  */
 export function getPairQuality(symbol: string): number {
   const normalized = normalizeDexSymbol(symbol);
+  const compositeSymbols = getCompositePoolSymbols(normalized);
+  if (compositeSymbols) {
+    return Math.max(...compositeSymbols.map((sym) => getPairQuality(sym)));
+  }
   const gov = SYMBOL_GOVERNANCE.get(normalized);
   if (gov) {
     if (gov === "centralized") return 1.0;

@@ -1,6 +1,14 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.83` (2026-02-19 -> 2026-06-19).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.84` (2026-02-19 -> 2026-06-29).
+
+---
+
+## v5.84 - Composite Curve LP pair-quality normalization (June 29, 2026)
+
+- Composite Curve LP quote tokens such as 3Crv and FRAXBP now inherit the best pair-quality score of their underlying stablecoin basket instead of falling back to the unknown-token haircut
+- LUSD/3Crv-style metapools still retain the balance-health penalty for one-sided inventory, but no longer take an additional unknown-token penalty for the 3Crv quote leg
+- The normalization is shared across configured composite pool aliases rather than special-cased to one stablecoin
 
 ---
 

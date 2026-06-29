@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.84",
+    title: "Composite Curve LP pair-quality normalization",
+    date: "2026-06-29",
+    effectiveAt: 1782691200,
+    summary:
+      "Composite Curve LP quote tokens such as 3Crv and FRAXBP now inherit the best pair-quality score of their underlying stablecoin basket instead of falling back to the unknown-token haircut.",
+    impact: [
+      "LUSD/3Crv-style metapools no longer treat the 3Crv quote side as an unknown token for effective TVL and pool-stress calculations",
+      "Composite quote aliases continue to flow through the existing balance-health haircut, so one-sided pools remain penalized for imbalance while no longer receiving an additional unknown-token penalty",
+      "The change applies to all configured composite pool aliases rather than special-casing one stablecoin",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.83",
     title: "Top-asset recovery guard quality baseline",
     date: "2026-06-19",
