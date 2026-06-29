@@ -11,7 +11,10 @@ import type {
   YieldSourceRiskCoverageSummary,
 } from "@shared/types/status";
 import { YIELD_SUPPLEMENTAL_CACHE_KEY, getYieldSupplementalFamilyCacheKey } from "../../cron/yield-sync/cache";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../cron/yield-sync/supplemental-source-families";
+import {
+  REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+} from "../../cron/yield-sync/supplemental-source-families";
 import { getBoolean, getNumber, getObject, getString } from "../../cron/dews/source-state/legacy-bridge";
 import { safeJsonParse } from "../api-cache-read";
 
@@ -574,6 +577,8 @@ function buildSupplementalHealth(
       status,
     };
   });
+  const requiredFamilySet = new Set(REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS);
+  const requiredFamilyRows = familyRows.filter((row) => requiredFamilySet.has(row.family));
   const families = Object.fromEntries(
     familyRows.map((row) => [
       row.family,
@@ -586,7 +591,7 @@ function buildSupplementalHealth(
     ]),
   );
 
-  if (!familyRows.some((row) => row.updatedAt != null)) {
+  if (!requiredFamilyRows.some((row) => row.updatedAt != null)) {
     return {
       updatedAt: aggregateRow?.updated_at ?? null,
       ageSec: aggregateAgeSec,
@@ -596,25 +601,25 @@ function buildSupplementalHealth(
       freshFamilyCount: 0,
       degradedFamilyCount: 0,
       staleFamilyCount: 0,
-      missingFamilyCount: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+      missingFamilyCount: REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
       families,
     };
   }
 
-  const familyStatuses = familyRows.map((row) => row.status);
+  const familyStatuses = requiredFamilyRows.map((row) => row.status);
   const latestFamilyUpdatedAt = Math.max(
-    ...familyRows.map((row) => row.updatedAt ?? 0),
+    ...requiredFamilyRows.map((row) => row.updatedAt ?? 0),
   ) || null;
   return {
     updatedAt: latestFamilyUpdatedAt,
     ageSec: ageSeconds(now, latestFamilyUpdatedAt),
     maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
     status: worstStatus(familyStatuses),
-    familyCount: familyRows.length,
-    freshFamilyCount: familyRows.filter((row) => row.status === "healthy").length,
-    degradedFamilyCount: familyRows.filter((row) => row.status === "degraded").length,
-    staleFamilyCount: familyRows.filter((row) => row.status === "stale").length,
-    missingFamilyCount: familyRows.filter((row) => row.status === "unknown").length,
+    familyCount: requiredFamilyRows.length,
+    freshFamilyCount: requiredFamilyRows.filter((row) => row.status === "healthy").length,
+    degradedFamilyCount: requiredFamilyRows.filter((row) => row.status === "degraded").length,
+    staleFamilyCount: requiredFamilyRows.filter((row) => row.status === "stale").length,
+    missingFamilyCount: requiredFamilyRows.filter((row) => row.status === "unknown").length,
     families,
   };
 }

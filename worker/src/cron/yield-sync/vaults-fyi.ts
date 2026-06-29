@@ -32,6 +32,7 @@ type VaultsFyiSkipReason =
   | "provider-quota"
   | "circuit-open"
   | "unauthorized"
+  | "invalid-config"
   | "request-failed"
   | "invalid-payload";
 
@@ -84,6 +85,14 @@ function vaultsFyiNetworkToChain(value: unknown): string | null {
   if (raw === "mega-eth") return "megaeth";
   if (raw === "hyperliquid") return "hyperevm";
   return resolveCanonicalChain(raw);
+}
+
+function rankableVaultNetwork(value: string): string {
+  const chain = vaultsFyiNetworkToChain(value);
+  if (chain === "ethereum") return "mainnet";
+  if (chain === "megaeth") return "mega-eth";
+  if (chain === "hyperevm") return "hyperliquid";
+  return value;
 }
 
 function resolveVaultsFyiChain(network: Record<string, unknown> | null, fallbackNetwork?: string): string | null {
@@ -511,8 +520,10 @@ async function fetchVaultsFyiJson(
 
 function classifyStatus(status: number): { skipReason: VaultsFyiSkipReason | null; circuit: CircuitOutcomeDecision } {
   if (status >= 200 && status < 300) return { skipReason: null, circuit: "success" };
-  if (status === 401 || status === 403) return { skipReason: "unauthorized", circuit: "failure" };
-  if (status === 402 || status === 429) return { skipReason: "provider-quota", circuit: "neutral" };
+  if (status === 401) return { skipReason: "unauthorized", circuit: "failure" };
+  if (status === 402 || status === 403 || status === 429) {
+    return { skipReason: "provider-quota", circuit: "neutral" };
+  }
   return { skipReason: "request-failed", circuit: "failure" };
 }
 
@@ -550,18 +561,6 @@ function buildRankableVaultKeySet(rankableVaults: ParsedRankableVault[]): Set<st
     if (chain === "hyperevm") keys.add(getRankableVaultKey("hyperliquid", entry.vaultId));
   }
   return keys;
-}
-
-function rankableNetworks(rankableVaults: ParsedRankableVault[]): string[] {
-  const networks = new Set<string>();
-  for (const entry of rankableVaults) {
-    networks.add(entry.network);
-    const chain = vaultsFyiNetworkToChain(entry.network);
-    if (chain === "ethereum") networks.add("mainnet");
-    if (chain === "megaeth") networks.add("mega-eth");
-    if (chain === "hyperevm") networks.add("hyperliquid");
-  }
-  return [...networks].sort((a, b) => a.localeCompare(b));
 }
 
 function rowNetworkKeys(row: Record<string, unknown>): string[] {
@@ -626,9 +625,29 @@ function getResponseNextPage(body: unknown, fallbackNextPage: number, rowCount: 
   return rowCount >= perPage ? fallbackNextPage : null;
 }
 
+function limitRowsToRequestedPageSize(
+  rows: unknown[],
+  perPage: number,
+  telemetry: VaultsFyiTelemetry,
+): unknown[] {
+  if (rows.length <= perPage) return rows;
+  recordDrop(telemetry, "malformed", `over-page:${rows.length}>${perPage}`);
+  telemetry.status = "partial";
+  telemetry.skipReason = "invalid-payload";
+  return rows.slice(0, perPage);
+}
+
+function extractDetailedVault(body: unknown): unknown | null {
+  if (isRecord(body) && "data" in body) return body.data;
+  return body;
+}
+
 function canSpendCredits(telemetry: VaultsFyiTelemetry, credits: number): boolean {
   return telemetry.creditsEstimated + credits <= telemetry.creditsCap
-    && (telemetry.monthlyCreditsEstimated == null || telemetry.monthlyCreditsEstimated + credits <= telemetry.monthlyCreditsCap);
+    && (
+      telemetry.monthlyCreditsEstimated == null
+      || telemetry.monthlyCreditsEstimated + credits <= telemetry.monthlyCreditsCap
+    );
 }
 
 async function spendCredits(
@@ -641,7 +660,18 @@ async function spendCredits(
   telemetry.creditsEstimated += credits;
   if (telemetry.monthlyCreditsEstimated != null) {
     telemetry.monthlyCreditsEstimated += credits;
-    await writeMonthlyCredits(db, bucket, telemetry.monthlyCreditsEstimated, signal);
+    await writeMonthlyCredits(db, bucket, telemetry.monthlyCreditsEstimated, signal).catch((error: unknown) => {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "vaults_fyi_credit_ledger_write_failed",
+        job: "sync-yield-supplemental",
+        provider: "vaults-fyi",
+        source: "credit-ledger",
+        message: "vaults.fyi credit ledger write failed",
+        error,
+      });
+    });
   }
 }
 
@@ -679,7 +709,8 @@ async function runInventoryProbe(params: {
       params.telemetry.skipReason = status.skipReason;
       return;
     }
-    const rows = extractRows(body.body);
+    const responseRows = extractRows(body.body);
+    const rows = responseRows ? limitRowsToRequestedPageSize(responseRows, perPage, params.telemetry) : null;
     if (!rows) {
       params.telemetry.status = params.telemetry.rawVaultCount > 0 ? "partial" : "failed";
       params.telemetry.skipReason = "invalid-payload";
@@ -690,6 +721,7 @@ async function runInventoryProbe(params: {
     params.telemetry.auditOnlyCount += rows.length;
     const nextPage = getResponseNextPage(body.body, page + 1, rows.length, perPage);
     if (nextPage == null) break;
+    if (params.telemetry.skipReason === "invalid-payload") break;
     if (page + 1 >= maxPages) {
       params.telemetry.status = "partial";
       break;
@@ -709,28 +741,24 @@ async function fetchAllowlistedVaults(params: {
   const rankableVaults = parseRankableVaults(params.config.rankableVaults);
   if (rankableVaults.length === 0) {
     params.telemetry.status = "skipped";
-    params.telemetry.skipReason = "invalid-payload";
+    params.telemetry.skipReason = "invalid-config";
     return candidates;
   }
   const allowedKeys = buildRankableVaultKeySet(rankableVaults);
-  const allowedNetworks = rankableNetworks(rankableVaults);
-  const maxPages = getMaxPagesPerRun(params.config);
 
-  for (let page = 0; page < maxPages; page += 1) {
+  for (const entry of rankableVaults) {
     throwIfAborted(params.signal);
-    const perPage = getDetailedVaultsPerPage(params.telemetry);
-    if (perPage == null) {
+    if (!canSpendCredits(params.telemetry, 3)) {
       params.telemetry.status = candidates.length > 0 ? "partial" : "skipped";
       params.telemetry.skipReason = "credit-cap";
       break;
     }
     const body = await fetchVaultsFyiJson(
-      buildDetailedVaultsPath({ page, perPage, allowedNetworks }),
+      `/detailed-vaults/${encodeURIComponent(rankableVaultNetwork(entry.network))}/${encodeURIComponent(entry.vaultId)}`,
       params.config,
       params.signal,
     );
     params.telemetry.requestCount += 1;
-    params.telemetry.pageCount += 1;
     if (!body) {
       params.telemetry.status = candidates.length > 0 ? "partial" : "failed";
       params.telemetry.skipReason = "request-failed";
@@ -742,36 +770,27 @@ async function fetchAllowlistedVaults(params: {
       params.telemetry.skipReason = status.skipReason;
       break;
     }
-    const rows = extractRows(body.body);
-    if (!rows) {
+    await spendCredits(params.db, params.bucket, params.telemetry, 3, params.signal);
+
+    const row = extractDetailedVault(body.body);
+    if (!isRecord(row)) {
       params.telemetry.status = candidates.length > 0 ? "partial" : "failed";
       params.telemetry.skipReason = "invalid-payload";
+      recordDrop(params.telemetry, "malformed", entry.vaultId);
       break;
     }
-    await spendCredits(params.db, params.bucket, params.telemetry, detailedVaultListCredits(rows.length), params.signal);
-    for (const row of rows) {
-      if (!isRecord(row)) {
-        recordDrop(params.telemetry, "malformed", "row");
-        continue;
-      }
-      if (!isRankableVaultAllowed(row, allowedKeys)) {
-        params.telemetry.rawVaultCount += 1;
-        params.telemetry.auditOnlyCount += 1;
-        continue;
-      }
-      const candidate = parseCandidateFromDetailedVault(row, params.telemetry, {
-        sourceObservedAt: params.startSec,
-      });
-      if (candidate) {
-        candidates.push(candidate);
-      }
+    if (!isRankableVaultAllowed(row, allowedKeys)) {
+      params.telemetry.rawVaultCount += 1;
+      params.telemetry.auditOnlyCount += 1;
+      continue;
     }
-
-    const nextPage = getResponseNextPage(body.body, page + 1, rows.length, perPage);
-    if (nextPage == null) break;
-    if (page + 1 >= maxPages) {
-      params.telemetry.status = "partial";
-      break;
+    const candidate = parseCandidateFromDetailedVault(row, params.telemetry, {
+      fallbackNetwork: entry.network,
+      fallbackVaultId: entry.vaultId,
+      sourceObservedAt: params.startSec,
+    });
+    if (candidate) {
+      candidates.push(candidate);
     }
   }
   return candidates;
@@ -845,7 +864,11 @@ export async function fetchVaultsFyiSources({
       });
     }
 
-    if (telemetry.skipReason === "provider-quota" || telemetry.skipReason === "credit-cap") {
+    if (
+      telemetry.skipReason === "provider-quota"
+      || telemetry.skipReason === "credit-cap"
+      || telemetry.skipReason === "invalid-config"
+    ) {
       circuitOutcome = "neutral";
     } else if (telemetry.status === "failed" || telemetry.skipReason === "request-failed" || telemetry.skipReason === "invalid-payload" || telemetry.skipReason === "unauthorized") {
       circuitOutcome = "failure";

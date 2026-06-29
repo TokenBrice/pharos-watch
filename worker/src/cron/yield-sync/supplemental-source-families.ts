@@ -16,6 +16,7 @@ import {
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
   type VaultsFyiSourceResult,
+  type VaultsFyiTelemetry,
 } from "./sources";
 import { OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT } from "./sources-rpc";
 import { runOptionalSourceFamily } from "./optional-source-runtime";
@@ -114,6 +115,28 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
   "aaveV3",
   "roycoDawn",
 ];
+
+export const REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
+  "morpho",
+  "pendle",
+  "yearnKong",
+  "beefy",
+  "compoundV3",
+  "aaveV3",
+  "roycoDawn",
+];
+
+function shouldPublishVaultsFyiFamilyCache(
+  telemetry: VaultsFyiTelemetry | undefined,
+  candidateCount: number,
+): boolean {
+  if (!telemetry) return false;
+  if (telemetry.status === "ok" || telemetry.status === "partial") return true;
+  if (telemetry.skipReason === "credit-cap") return candidateCount > 0;
+  return telemetry.skipReason === "disabled"
+    || telemetry.skipReason === "no-key"
+    || telemetry.skipReason === "invalid-config";
+}
 
 export function getSupplementalCandidateFamily(
   sourceKey: string | null | undefined,
@@ -399,12 +422,14 @@ async function runVaultsFyiFamily(
     null,
   );
   const candidates = value?.candidates ?? [];
+  const telemetry = value?.telemetry;
+  const canPublish = status === "ok" && shouldPublishVaultsFyiFamilyCache(telemetry, candidates.length);
   return {
     key: "vaultsFyi",
     candidates,
-    sourceFamilyCount: value?.telemetry.rawVaultCount ?? candidates.length,
-    status,
-    provider: value?.telemetry ? { vaultsFyi: value.telemetry } : undefined,
+    sourceFamilyCount: telemetry?.rawVaultCount ?? candidates.length,
+    status: canPublish ? "ok" : "failed",
+    provider: telemetry ? { vaultsFyi: telemetry } : undefined,
   };
 }
 

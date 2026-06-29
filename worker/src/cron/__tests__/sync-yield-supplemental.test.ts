@@ -478,6 +478,69 @@ describe("syncYieldSupplemental", () => {
     });
   });
 
+  it("does not publish a fresh vaults.fyi family cache when the provider run fails", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue([
+      {
+        symbol: "USDC",
+        chain: "ethereum",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        yield: {
+          currentApy: 4.1,
+          apyBase: 4.1,
+          apyReward: null,
+          sourcePool: "vault-a",
+          sourceTvlUsd: 1_500_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:beefy:ethereum:vault-a",
+          yieldSource: "Beefy: vault-a",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: 1_774_526_400,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+    ]);
+    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
+      candidates: [],
+      telemetry: {
+        ...emptyVaultsFyiResult({ enabled: true, hasKey: true }).telemetry,
+        status: "failed",
+        skipReason: "request-failed",
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi"),
+    ).toBe(false);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-published">;
+      sourceCoverage?: {
+        sourceFamilySummaries?: {
+          vaultsFyi?: {
+            status?: string;
+            provider?: {
+              vaultsFyi?: {
+                skipReason?: string | null;
+              };
+            };
+          };
+        };
+      };
+    };
+    expect(metadata.familyCacheResults?.vaultsFyi).toBe("empty");
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
+      status: "failed",
+      provider: {
+        vaultsFyi: {
+          skipReason: "request-failed",
+        },
+      },
+    });
+  });
+
   it("bounds optional RPC missing-target examples in source family summaries", async () => {
     const missingTargets = Array.from({ length: 30 }, (_, index) => `ethereum:T${index}`);
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({

@@ -122,28 +122,26 @@ describe("fetchVaultsFyiSources", () => {
     });
   });
 
-  it("emits exact address-matched allowlisted candidates from detailed-vault pagination and drops symbol-only spoofed assets", async () => {
+  it("emits exact address-matched allowlisted candidates from exact detailed-vault requests and drops symbol-only spoofed assets", async () => {
     const fetchSpy = vi.fn(async (input: string | Request | URL, init?: RequestInit) => {
       const url = String(input);
-      expect(url).toContain("/v2/detailed-vaults?");
-      expect(url).toContain("allowedNetworks=mainnet");
       expect(url).not.toContain("test-placeholder-key");
       expect(new Headers(init?.headers).get("x-api-key")).toBe("test-placeholder-key");
 
+      if (url.endsWith("/v2/detailed-vaults/mainnet/0x1111111111111111111111111111111111111111")) {
+        return response({ data: detailedVault() });
+      }
+      expect(url).toContain("/v2/detailed-vaults/mainnet/vault-b");
       return response({
-        nextPage: null,
-        data: [
-          detailedVault(),
-          detailedVault({
-            vaultId: "vault-b",
-            address: "0x2222222222222222222222222222222222222222",
-            name: "Spoofed USDC Vault",
-            asset: {
-              address: "0x9999999999999999999999999999999999999999",
-              symbol: "USDC",
-            },
-          }),
-        ],
+        data: detailedVault({
+          vaultId: "vault-b",
+          address: "0x2222222222222222222222222222222222222222",
+          name: "Spoofed USDC Vault",
+          asset: {
+            address: "0x9999999999999999999999999999999999999999",
+            symbol: "USDC",
+          },
+        }),
       });
     });
     vi.stubGlobal("fetch", fetchSpy);
@@ -159,7 +157,7 @@ describe("fetchVaultsFyiSources", () => {
       startSec: 1_781_267_400,
     });
 
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(result.candidates).toHaveLength(1);
     expect(result.candidates[0]).toMatchObject({
       stablecoinId: "usdc-circle",
@@ -182,12 +180,12 @@ describe("fetchVaultsFyiSources", () => {
     });
     expect(result.telemetry).toMatchObject({
       status: "ok",
-      requestCount: 1,
-      pageCount: 1,
+      requestCount: 2,
+      pageCount: 0,
       rawVaultCount: 2,
       rankableCandidateCount: 1,
       identityMissCount: 1,
-      creditsEstimated: 7,
+      creditsEstimated: 6,
     });
   });
 
@@ -229,15 +227,15 @@ describe("fetchVaultsFyiSources", () => {
       candidates: [],
       telemetry: {
         status: "skipped",
-        skipReason: "invalid-payload",
+        skipReason: "invalid-config",
         requestCount: 0,
         creditsEstimated: 0,
       },
     });
   });
 
-  it("fails open as skipped on provider quota responses without emitting candidates", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => response({ error: "quota" }, 429)));
+  it.each([403, 429])("fails open as skipped on provider quota HTTP %s without emitting candidates", async (status) => {
+    vi.stubGlobal("fetch", vi.fn(async () => response({ error: "quota" }, status)));
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({ rankableVaults: ["mainnet:vault-a"] }),

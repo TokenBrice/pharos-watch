@@ -20,6 +20,7 @@ import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } fr
 import { buildStablecoinSupplyMapFromCacheValue } from "./supply-map";
 import {
   getSupplementalCandidateFamily,
+  REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "./supplemental-source-families";
 import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-keys";
@@ -69,17 +70,19 @@ async function loadYieldSupplementalCandidates(
 ): Promise<{ candidates: ResolvedYieldCandidate[]; meta: YieldSupplementalCacheMeta }> {
   const familyCandidates: ResolvedYieldCandidate[] = [];
   const validFamilyKeys = new Set<SupplementalSourceFamilyKey>();
-  let familyCacheRows = 0;
-  let degradedFamilyCaches = 0;
+  const requiredFamilyKeys = new Set(REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS);
+  let requiredFamilyCacheRows = 0;
+  let degradedRequiredFamilyCaches = 0;
   let latestFamilyUpdatedAt: number | null = null;
 
   for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
     const cachedFamily = await getCache(db, getYieldSupplementalFamilyCacheKey(family));
     if (!cachedFamily) continue;
-    familyCacheRows += 1;
+    const requiredFamily = requiredFamilyKeys.has(family);
+    if (requiredFamily) requiredFamilyCacheRows += 1;
     const parsedFamily = parseYieldSupplementalSourcesCache(cachedFamily.value, cachedFamily.updatedAt, startSec);
     if (!parsedFamily || parsedFamily.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
-      degradedFamilyCaches += 1;
+      if (requiredFamily) degradedRequiredFamilyCaches += 1;
       continue;
     }
     validFamilyKeys.add(family);
@@ -89,7 +92,8 @@ async function loadYieldSupplementalCandidates(
 
   if (familyCandidates.length > 0) {
     const missingOrDegradedFamily =
-      degradedFamilyCaches > 0 || familyCacheRows < SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length;
+      degradedRequiredFamilyCaches > 0
+      || requiredFamilyCacheRows < REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length;
     let candidates = familyCandidates;
     let fallbackMode: string | null = missingOrDegradedFamily ? "partial-family-cache" : null;
     let updatedAt = latestFamilyUpdatedAt;

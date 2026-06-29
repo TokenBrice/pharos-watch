@@ -757,6 +757,7 @@ This best-effort cron owns the heavier optional families that used to run inline
 - `Pendle`
 - `Yearn/Kong`
 - `Beefy`
+- `Royco Dawn`
 - `Compound V3`
 - `Aave V3`
 - `vaults.fyi` (disabled by default; audit-only inventory unless explicit vault allowlist entries are configured)

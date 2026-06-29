@@ -2825,7 +2825,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.16",
+  "methodologyVersion": "v8.297",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2839,7 +2839,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.16",
+      "methodologyVersion": "v8.297",
       "updatedAt": 1779210000
     }
   ]
