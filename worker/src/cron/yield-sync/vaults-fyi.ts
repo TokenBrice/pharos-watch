@@ -4,6 +4,7 @@ import { CIRCUIT_SOURCE, MIN_LENDING_POOL_TVL_USD, USER_AGENT } from "../../lib/
 import { getCache, setCache } from "../../lib/db-cache";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { recordOutcomeDecision, shouldAttemptFetch, type CircuitOutcomeDecision } from "../../lib/circuit-breaker";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { buildYieldIdentityLookups, resolveYieldCandidateStablecoinId } from "./identity";
@@ -862,7 +863,15 @@ export async function fetchVaultsFyiSources({
     telemetry.budgetExhausted ||= budget.budgetController.signal.aborted;
     if (db) {
       await recordOutcomeDecision(db, CIRCUIT_SOURCE.VAULTS_FYI, circuitOutcome).catch((error: unknown) => {
-        console.warn("[yield] vaults.fyi circuit outcome write failed:", error);
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "vaults_fyi_circuit_outcome_write_failed",
+          job: "sync-yield-supplemental",
+          provider: "vaults-fyi",
+          message: "vaults.fyi circuit outcome write failed",
+          error,
+        });
       });
     }
   }
