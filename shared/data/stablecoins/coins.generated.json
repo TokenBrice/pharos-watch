@@ -22076,8 +22076,11 @@
       "semantics": "single-asset",
       "breakerScope": "eutbl-spiko",
       "display": {
-        "url": "https://www.spiko.io/",
-        "label": "Spiko EUTBL"
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/eutbl-nav",
+        "label": "Chainlink EUTBL NAV"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 345600
       },
       "adapter": "chainlink-nav",
       "inputs": {
@@ -22093,7 +22096,7 @@
         "assetLabel": "Spiko EU T-Bills Money Market Fund NAV",
         "assetRisk": "very-low",
         "oracleMethod": "latestRoundData",
-        "maxOracleAgeSec": 345600
+        "maxOracleAgeSec": 604800
       }
     },
     "notices": [
