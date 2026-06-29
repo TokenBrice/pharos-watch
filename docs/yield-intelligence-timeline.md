@@ -1,10 +1,19 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.296`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.297`.
 
 ---
 
-> Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent.
+> Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.297 - Optional vaults.fyi Supplemental Yield Source (June 29, 2026)
+
+- vaults.fyi joins the four-hour supplemental lane as a disabled-by-default provider; unset/false `VAULTS_FYI_ENABLED` or a missing runtime key means no fetches and no candidates
+- Enabled runs without `VAULTS_FYI_RANKABLE_VAULTS` perform bounded detailed-vault inventory probing for coverage review but publish no ranking candidates
+- Explicit `network:vaultId` allowlist entries can emit supplemental lending-opportunity rows only after exact chain-plus-token-address stablecoin matching, TVL/APY/source-shape gates, and local credit-budget checks
+- Provider quota/errors fail open into family telemetry; PYS formula, benchmark selection, deterministic source arbitration, history semantics, and publication guards are unchanged except for explicitly enabled and allowlisted supplemental rows
+
+---
 
 ## v8.296 - GBP SONIA St. Louis Fed Mirror Redundancy (June 25, 2026)
 

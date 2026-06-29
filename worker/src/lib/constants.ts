@@ -201,6 +201,7 @@ export const CIRCUIT_SOURCE = {
   ANTHROPIC: "anthropic-api",
   BLUECHIP: "bluechip-api",
   CG_TICKER: "coingecko-ticker",
+  VAULTS_FYI: "vaults-fyi",
   KINESIS_KAU: "kinesis-kau-horizon",
   KINESIS_KAG: "kinesis-kag-horizon",
   COINGECKO_CONFIRM: "coingecko-confirm",

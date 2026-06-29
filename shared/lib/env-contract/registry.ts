@@ -237,6 +237,60 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "VAULTS_FYI_API_KEY",
+    valueType: "string",
+    description: "Optional vaults.fyi credential for the disabled-by-default supplemental yield integration.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 49, status: "optional" },
+    },
+  },
+  {
+    key: "VAULTS_FYI_ENABLED",
+    valueType: "string",
+    description: "Optional vaults.fyi supplemental yield integration flag; unset, false, or malformed values keep the integration disabled.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 50, status: "optional" },
+    },
+  },
+  {
+    key: "VAULTS_FYI_RANKABLE_VAULTS",
+    valueType: "string",
+    description: "Optional CSV allowlist of vaults.fyi `network:vaultId` entries allowed to publish rankable supplemental yield rows.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 51, status: "optional" },
+    },
+  },
+  {
+    key: "VAULTS_FYI_MAX_CREDITS_PER_RUN",
+    valueType: "string",
+    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 52, status: "optional" },
+    },
+  },
+  {
+    key: "VAULTS_FYI_MAX_CREDITS_PER_MONTH",
+    valueType: "string",
+    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 53, status: "optional" },
+    },
+  },
+  {
+    key: "VAULTS_FYI_MAX_PAGES_PER_RUN",
+    valueType: "string",
+    description: "Optional positive integer page cap for the audit-only vaults.fyi inventory probe.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 54, status: "optional" },
+    },
+  },
+  {
     key: "GITHUB_PAT",
     valueType: "string",
     description: "GitHub personal access token used by the feedback -> issue bridge; required to keep `POST /api/feedback` available.",

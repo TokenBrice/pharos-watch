@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import {
   COMPOUND_V3_COMETS,
@@ -9,10 +10,12 @@ import {
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
+  fetchVaultsFyiSources,
   fetchYearnKongSources,
   type AaveV3SupplyRateRow,
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
+  type VaultsFyiSourceResult,
 } from "./sources";
 import { OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT } from "./sources-rpc";
 import { runOptionalSourceFamily } from "./optional-source-runtime";
@@ -37,9 +40,11 @@ const EMPTY_OPTIONAL_RPC_TELEMETRY: OptionalRpcFamilyTelemetry = {
 };
 
 interface SupplementalSourceFamilyContext {
+  db?: D1Database;
   startSec: number;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  vaultsFyi?: VaultsFyiRuntimeConfig;
 }
 
 export interface SupplementalSourceFamilyResult {
@@ -48,6 +53,7 @@ export interface SupplementalSourceFamilyResult {
   sourceFamilyCount: number;
   status: "ok" | "failed";
   telemetry?: OptionalRpcFamilyTelemetry;
+  provider?: unknown;
 }
 
 type SupplementalSourceFamilyStatus = SupplementalSourceFamilyResult["status"];
@@ -87,6 +93,7 @@ export interface SupplementalSourceFamilySummary {
     missingTargetExamples: string[];
     missingTargetExamplesTruncated: boolean;
   };
+  provider?: unknown;
 }
 
 type SupplementalSourceFamilySummaryRecord = Record<
@@ -102,6 +109,7 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
   "pendle",
   "yearnKong",
   "beefy",
+  "vaultsFyi",
   "compoundV3",
   "aaveV3",
   "roycoDawn",
@@ -119,6 +127,7 @@ function buildSourceFamilyCountRecord(): SourceFamilyCountRecord {
     pendle: 0,
     yearnKong: 0,
     beefy: 0,
+    vaultsFyi: 0,
     compoundV3: 0,
     aaveV3: 0,
     roycoDawn: 0,
@@ -131,6 +140,7 @@ function buildSourceFamilyExampleRecord(): SourceFamilyExampleRecord {
     pendle: [],
     yearnKong: [],
     beefy: [],
+    vaultsFyi: [],
     compoundV3: [],
     aaveV3: [],
     roycoDawn: [],
@@ -261,6 +271,9 @@ function buildSourceFamilySummaries(
     if (result.telemetry) {
       summary.optionalRpc = buildOptionalRpcSummary(result.telemetry);
     }
+    if (result.provider) {
+      summary.provider = result.provider;
+    }
     summaries[result.key] = summary;
   }
 
@@ -368,6 +381,31 @@ async function runBeefyFamily(
     [] as ResolvedYieldCandidate[],
   );
   return { key: "beefy", candidates, sourceFamilyCount: candidates.length, status };
+}
+
+async function runVaultsFyiFamily(
+  context: SupplementalSourceFamilyContext,
+): Promise<SupplementalSourceFamilyResult> {
+  const { value, status } = await runOptionalSupplementalFamily<VaultsFyiSourceResult | null>(
+    "vaults.fyi supplemental family",
+    context.signal,
+    () =>
+      fetchVaultsFyiSources({
+        db: context.db,
+        config: context.vaultsFyi,
+        signal: context.signal,
+        startSec: context.startSec,
+      }),
+    null,
+  );
+  const candidates = value?.candidates ?? [];
+  return {
+    key: "vaultsFyi",
+    candidates,
+    sourceFamilyCount: value?.telemetry.rawVaultCount ?? candidates.length,
+    status,
+    provider: value?.telemetry ? { vaultsFyi: value.telemetry } : undefined,
+  };
 }
 
 async function runCompoundFamily(
@@ -486,6 +524,7 @@ const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
   runPendleFamily,
   runYearnKongFamily,
   runBeefyFamily,
+  runVaultsFyiFamily,
   runCompoundFamily,
   runAaveFamily,
   runRoycoDawnFamily,

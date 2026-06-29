@@ -29,6 +29,7 @@ export const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
   { prefix: "protocol-api:kong:", venueProtocol: "kong", chainSegmentIndex: 2, family: "yearnKong" },
   { prefix: "protocol-api:k3:", venueProtocol: "k3", chainSegmentIndex: 2, family: "yearnKong" },
   { prefix: "protocol-api:beefy:", venueProtocol: "beefy", chainSegmentIndex: 2, family: "beefy" },
+  { prefix: "protocol-api:vaults-fyi:", venueProtocol: "vaults-fyi", chainSegmentIndex: 2, family: "vaultsFyi" },
   { prefix: "protocol-api:compound-v3-supply:", venueProtocol: "compound-v3", chainSegmentIndex: 2, family: "compoundV3" },
   { prefix: "aave-v3-onchain:", venueProtocol: "aave-v3", chainSegmentIndex: 1, family: "aaveV3" },
   { prefix: "royco-dawn:", venueProtocol: "royco-dawn", chainSegmentIndex: 1, family: "roycoDawn" },

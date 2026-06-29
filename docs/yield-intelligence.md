@@ -8,11 +8,15 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.296`
+- **Current methodology version:** `v8.297`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.297 adds vaults.fyi as a disabled-by-default supplemental source family. When `VAULTS_FYI_ENABLED` is unset/false or the runtime API key is absent, it performs no fetches and emits no candidates. When enabled without `VAULTS_FYI_RANKABLE_VAULTS`, it performs only a bounded detailed-vault inventory probe for coverage review. Only explicit `network:vaultId` allowlist entries can emit rankable candidates, and each row must pass chain-plus-token-address stablecoin identity matching, TVL/APY/safety-shape gates, local credit caps, and provider fail-open handling. PYS formula, benchmark selection, deterministic source arbitration, history semantics, and publication guards are unchanged except for those explicitly enabled and allowlisted supplemental rows.
+
+Audit-only source-preparation notes do not bump the methodology version. Promoting additional vaults.fyi rows beyond the allowlisted runtime path, changing its source-risk calibration, or making it required would need focused tests and the next Yield Intelligence methodology bump.
 
 Yield v8.296 adds ALFRED's graph CSV as a second St. Louis Fed mirror for the GBP SONIA Compounded Index (`IUDZOS2`). The daily benchmark cron still derives `GBP 3M compounded SONIA` from the same trailing 90-day index window, but now tries FRED (`fred-sonia-compounded-index`), then ALFRED (`alfred-sonia-compounded-index`), then Bank of England IADB (`boe-sonia-compounded-index`). The GBP rate, fallback mode `gbp-sonia-compounded-index-failed`, PYS formula, source-risk calibration, history semantics, and publication guards are unchanged.
 
@@ -312,6 +316,19 @@ The Etherfuse CETES adapter reads the current CETES Stablebond issuance from Eth
 The Midas mMEV adapter reads the issuer-listed Ethereum mMEV/USD oracle, decodes its Chainlink-style `latestRoundData()` answer using the oracle `decimals()`, and publishes `protocol-api:midas-mmev-nav-oracle` as a NAV-appreciation row. Oracle answers must be positive, decimals must be within the supported range, and `updatedAt` must be no older than three days. Like other NAV-oracle rows, the first successful observation can seed `exchange_rate` history with `currentApy=0`; later runs compute APY from a prior published oracle anchor between 7 and 45 days old.
 
 The Zephyr adapter reads the protocol's historical-return API and publishes the one-day effective APY only for `zys-zephyr-protocol`. This keeps base ZSD non-yield-bearing while still showing the native ZYS yield-share return on `/yield`.
+
+#### Optional gated supplemental source: vaults.fyi
+
+vaults.fyi is an optional supplemental source family for coverage review and selected allowlisted lending opportunities. It is disabled by default and is not required for normal Yield Intelligence operation:
+
+- Configure the key only as a Worker secret/runtime binding. Do not commit a vaults.fyi credential or place one in docs.
+- `VAULTS_FYI_ENABLED=true` plus `VAULTS_FYI_API_KEY` is required before the supplemental cron fetches vaults.fyi.
+- With no `VAULTS_FYI_RANKABLE_VAULTS`, the adapter runs a bounded detailed-vault inventory probe, records provider telemetry, and publishes no rankable candidates.
+- `VAULTS_FYI_RANKABLE_VAULTS` is a CSV of `network:vaultId` or `network/vaultId` entries. Only matching rows can become supplemental candidates.
+- Candidate rows must match a tracked stablecoin by canonical chain and token contract address. Symbol-only matches are rejected.
+- The adapter applies TVL, APY, active/corruption/warning, vault-score, and local credit-budget gates before writing cache candidates.
+- Source keys are stable as `protocol-api:vaults-fyi:<chain>:<vault>`. The row `project` and `sourceRisk.venueProtocol` use the underlying protocol slug from vaults.fyi when available.
+- Provider quota/errors fail open: the supplemental family records skipped/partial/failed telemetry but does not make the hourly publisher require vaults.fyi.
 
 ### Opportunity-Level Tranche Safety
 
@@ -742,8 +759,11 @@ This best-effort cron owns the heavier optional families that used to run inline
 - `Beefy`
 - `Compound V3`
 - `Aave V3`
+- `vaults.fyi` (disabled by default; audit-only inventory unless explicit vault allowlist entries are configured)
 
 It fetches those families, serializes the resolved candidate set into a cache snapshot, and lets the hourly publisher consume that snapshot. Empty snapshots are treated as degraded and do not overwrite the previous cache.
+
+vaults.fyi participates as a supplemental-family cache row only when explicitly enabled. Without `VAULTS_FYI_RANKABLE_VAULTS`, its output remains audit-only telemetry and contributes no supplemental candidates. With allowlisted vaults, emitted rows use the same cached supplemental-source path as the other optional families and remain subject to the hourly publisher's existing freshness, dedupe, source-risk, and publication-collapse guards.
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. That helper now shares peg analytics with `/api/report-cards`, preventing rated coins with live price/peg coverage from falling back to `NR` inside yield rankings. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 
@@ -875,8 +895,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.296",
-    "currentVersion": "8.296",
+    "version": "8.297",
+    "currentVersion": "8.297",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

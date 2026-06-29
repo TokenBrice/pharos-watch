@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  resolveVaultsFyiConfig,
   validateWorkerEnvContract,
   WORKER_ACTIVE_ENV_KEYS,
   WORKER_OPTIONAL_ENV_KEYS,
@@ -201,5 +202,80 @@ describe("worker env key groups", () => {
       ...WORKER_REQUIRED_ENV_KEYS,
       ...WORKER_OPTIONAL_ENV_KEYS,
     ]);
+  });
+});
+
+describe("resolveVaultsFyiConfig", () => {
+  const disabledVaultsFyiConfig = {
+    enabled: false,
+    apiKey: null,
+    rankableVaults: [],
+    maxCreditsPerRun: null,
+    maxCreditsPerMonth: null,
+    maxPagesPerRun: null,
+  };
+
+  it("defaults to disabled when unset", () => {
+    expect(resolveVaultsFyiConfig({})).toEqual(disabledVaultsFyiConfig);
+  });
+
+  it("requires the explicit enable flag and a configured API key", () => {
+    expect(resolveVaultsFyiConfig({
+      VAULTS_FYI_ENABLED: "true",
+      VAULTS_FYI_API_KEY: "  vaults-key  ",
+    })).toEqual({
+      enabled: true,
+      apiKey: "vaults-key",
+      rankableVaults: [],
+      maxCreditsPerRun: null,
+      maxCreditsPerMonth: null,
+      maxPagesPerRun: null,
+    });
+    expect(resolveVaultsFyiConfig({
+      VAULTS_FYI_API_KEY: "vaults-key",
+    })).toEqual(disabledVaultsFyiConfig);
+    expect(resolveVaultsFyiConfig({
+      VAULTS_FYI_ENABLED: "true",
+    })).toEqual(disabledVaultsFyiConfig);
+  });
+
+  it("fails open by disabling malformed or false flags", () => {
+    expect(resolveVaultsFyiConfig({
+      VAULTS_FYI_ENABLED: "maybe",
+      VAULTS_FYI_API_KEY: "vaults-key",
+    })).toEqual(disabledVaultsFyiConfig);
+    expect(resolveVaultsFyiConfig({
+      VAULTS_FYI_ENABLED: "off",
+      VAULTS_FYI_API_KEY: "vaults-key",
+    })).toEqual(disabledVaultsFyiConfig);
+  });
+
+  it("parses optional vaults.fyi caps and rankable allowlist only when enabled", () => {
+    expect(resolveVaultsFyiConfig({
+      VAULTS_FYI_ENABLED: "1",
+      VAULTS_FYI_API_KEY: "vaults-key",
+      VAULTS_FYI_RANKABLE_VAULTS: "base:vault-a, ethereum:vault-b",
+      VAULTS_FYI_MAX_CREDITS_PER_RUN: "25",
+      VAULTS_FYI_MAX_CREDITS_PER_MONTH: "1000",
+      VAULTS_FYI_MAX_PAGES_PER_RUN: "4",
+    })).toEqual({
+      enabled: true,
+      apiKey: "vaults-key",
+      rankableVaults: ["base:vault-a", "ethereum:vault-b"],
+      maxCreditsPerRun: 25,
+      maxCreditsPerMonth: 1000,
+      maxPagesPerRun: 4,
+    });
+    expect(resolveVaultsFyiConfig({
+      VAULTS_FYI_ENABLED: "true",
+      VAULTS_FYI_API_KEY: "vaults-key",
+      VAULTS_FYI_MAX_CREDITS_PER_RUN: "0",
+      VAULTS_FYI_MAX_CREDITS_PER_MONTH: "-1",
+      VAULTS_FYI_MAX_PAGES_PER_RUN: "not-a-number",
+    })).toMatchObject({
+      maxCreditsPerRun: null,
+      maxCreditsPerMonth: null,
+      maxPagesPerRun: null,
+    });
   });
 });

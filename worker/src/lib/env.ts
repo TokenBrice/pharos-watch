@@ -31,6 +31,12 @@ export interface Env {
   CMC_API_KEY?: string;
   JUPITER_API_KEY?: string;
   COINGECKO_API_KEY?: string;
+  VAULTS_FYI_API_KEY?: string;
+  VAULTS_FYI_ENABLED?: string;
+  VAULTS_FYI_RANKABLE_VAULTS?: string;
+  VAULTS_FYI_MAX_CREDITS_PER_RUN?: string;
+  VAULTS_FYI_MAX_CREDITS_PER_MONTH?: string;
+  VAULTS_FYI_MAX_PAGES_PER_RUN?: string;
   GITHUB_PAT?: string;
   FEEDBACK_IP_SALT?: string;
   TWITTER_API_KEY?: string;
@@ -88,6 +94,24 @@ export interface CloudflareD1StatusConfig {
   databaseId: string;
 }
 
+export type VaultsFyiRuntimeConfig =
+  | {
+      enabled: false;
+      apiKey: null;
+      rankableVaults: [];
+      maxCreditsPerRun: null;
+      maxCreditsPerMonth: null;
+      maxPagesPerRun: null;
+    }
+  | {
+      enabled: true;
+      apiKey: string;
+      rankableVaults: string[];
+      maxCreditsPerRun: number | null;
+      maxCreditsPerMonth: number | null;
+      maxPagesPerRun: number | null;
+    };
+
 import { hasConfiguredValue, getConfiguredValue } from "@shared/lib/env-utils";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 
@@ -102,6 +126,55 @@ export function parseCsvEnv(value: string | undefined): string[] {
     .split(",")
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
+}
+
+function parseBooleanEnv(value: string | undefined): boolean | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (["1", "true", "yes", "on", "enabled"].includes(normalized)) return true;
+  if (["0", "false", "no", "off", "disabled"].includes(normalized)) return false;
+  return null;
+}
+
+function parsePositiveIntegerEnv(value: string | undefined): number | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+export function resolveVaultsFyiConfig(
+  env: Pick<
+    Env,
+    | "VAULTS_FYI_API_KEY"
+    | "VAULTS_FYI_ENABLED"
+    | "VAULTS_FYI_RANKABLE_VAULTS"
+    | "VAULTS_FYI_MAX_CREDITS_PER_RUN"
+    | "VAULTS_FYI_MAX_CREDITS_PER_MONTH"
+    | "VAULTS_FYI_MAX_PAGES_PER_RUN"
+  >,
+): VaultsFyiRuntimeConfig {
+  const explicitlyEnabled = parseBooleanEnv(env.VAULTS_FYI_ENABLED) === true;
+  const apiKey = getConfiguredValue(env.VAULTS_FYI_API_KEY);
+  if (!explicitlyEnabled || !apiKey) {
+    return {
+      enabled: false,
+      apiKey: null,
+      rankableVaults: [],
+      maxCreditsPerRun: null,
+      maxCreditsPerMonth: null,
+      maxPagesPerRun: null,
+    };
+  }
+  return {
+    enabled: true,
+    apiKey,
+    rankableVaults: parseCsvEnv(env.VAULTS_FYI_RANKABLE_VAULTS),
+    maxCreditsPerRun: parsePositiveIntegerEnv(env.VAULTS_FYI_MAX_CREDITS_PER_RUN),
+    maxCreditsPerMonth: parsePositiveIntegerEnv(env.VAULTS_FYI_MAX_CREDITS_PER_MONTH),
+    maxPagesPerRun: parsePositiveIntegerEnv(env.VAULTS_FYI_MAX_PAGES_PER_RUN),
+  };
 }
 
 export function hasAnyCloudflareD1StatusBinding(env: CloudflareD1StatusBindings): boolean {

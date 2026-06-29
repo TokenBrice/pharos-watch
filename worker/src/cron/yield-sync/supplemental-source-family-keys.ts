@@ -3,6 +3,7 @@ export type SupplementalSourceFamilyKey =
   | "pendle"
   | "yearnKong"
   | "beefy"
+  | "vaultsFyi"
   | "compoundV3"
   | "aaveV3"
   | "roycoDawn";

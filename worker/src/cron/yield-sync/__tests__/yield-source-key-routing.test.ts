@@ -25,6 +25,7 @@ describe("yield source-key routing table", () => {
     { sourceKey: "protocol-api:kong:base:0x222", venueProtocol: "kong", family: "yearnKong", chain: "base" },
     { sourceKey: "protocol-api:k3:ethereum:0x333", venueProtocol: "k3", family: "yearnKong", chain: "ethereum" },
     { sourceKey: "protocol-api:beefy:optimism:0x444", venueProtocol: "beefy", family: "beefy", chain: "optimism" },
+    { sourceKey: "protocol-api:vaults-fyi:base:0x777", venueProtocol: "vaults-fyi", family: "vaultsFyi", chain: "base" },
     { sourceKey: "protocol-api:compound-v3-supply:ethereum:0x555", venueProtocol: "compound-v3", family: "compoundV3", chain: "ethereum" },
     { sourceKey: "aave-v3-onchain:base:0x666", venueProtocol: "aave-v3", family: "aaveV3", chain: "base" },
     { sourceKey: "royco-dawn:ethereum:tranche-1", venueProtocol: "royco-dawn", family: "roycoDawn", chain: "ethereum" },

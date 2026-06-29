@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.297",
+    title: "Optional vaults.fyi Supplemental Yield Source",
+    date: "2026-06-29",
+    effectiveAt: 1782691200,
+    summary:
+      "Yield Intelligence adds vaults.fyi as a disabled-by-default supplemental source family with local credit caps, audit-only inventory probing, and allowlisted rankable vault emission behind exact stablecoin address matching.",
+    impact: [
+      "vaults.fyi is off unless `VAULTS_FYI_ENABLED=true` and a runtime `VAULTS_FYI_API_KEY` are configured; no credential is committed or required for normal operation",
+      "When enabled without `VAULTS_FYI_RANKABLE_VAULTS`, the supplemental cron performs only a bounded detailed-vault inventory probe and publishes no ranking candidates",
+      "Only explicit `network:vaultId` allowlist entries can emit rankable supplemental candidates, and each candidate must match a tracked stablecoin by chain plus token contract address; symbol-only matches are rejected",
+      "The adapter estimates vaults.fyi credits locally, respects per-run, per-month, and page caps, fails open on provider quota/errors, and records compact provider telemetry under supplemental source-family metadata",
+      "Rankable vaults.fyi rows use stable `protocol-api:vaults-fyi:<chain>:<vault>` source keys and carry the underlying protocol slug into source-risk venue metadata when vaults.fyi provides it",
+      "PYS formula, benchmark selection, deterministic source arbitration, history semantics, and public publication guards are unchanged except for the optional new source-family candidates when explicitly enabled and allowlisted",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.296",
     title: "GBP SONIA St. Louis Fed Mirror Redundancy",
     date: "2026-06-25",

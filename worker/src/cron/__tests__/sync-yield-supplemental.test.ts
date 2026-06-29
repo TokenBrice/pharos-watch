@@ -47,6 +47,33 @@ vi.mock("../yield-sync/sources", () => ({
   fetchMorphoVaultSources: vi.fn(async () => []),
   fetchPendleMarketSources: vi.fn(async () => []),
   fetchRoycoDawnSources: vi.fn(async () => []),
+  fetchVaultsFyiSources: vi.fn(async () => ({
+    candidates: [],
+    telemetry: {
+      enabled: false,
+      hasKey: false,
+      status: "skipped",
+      skipReason: "disabled",
+      requestCount: 0,
+      pageCount: 0,
+      creditsEstimated: 0,
+      creditsCap: 25,
+      monthlyCreditsEstimated: null,
+      monthlyCreditsCap: 2500,
+      rawVaultCount: 0,
+      rankableCandidateCount: 0,
+      auditOnlyCount: 0,
+      malformedDropCount: 0,
+      unsupportedChainCount: 0,
+      identityMissCount: 0,
+      sizeGateDropCount: 0,
+      warningDropCount: 0,
+      durationMs: 0,
+      budgetMs: 20_000,
+      budgetExhausted: false,
+      dropExamples: [],
+    },
+  })),
   fetchYearnKongSources: vi.fn(async () => []),
   fetchBeefySources: vi.fn(async () => []),
   fetchCompoundV3SupplyRates: vi.fn(async () => ({
@@ -100,6 +127,7 @@ import {
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
+  fetchVaultsFyiSources,
   fetchYearnKongSources,
 } from "../yield-sync/sources";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
@@ -107,6 +135,40 @@ import {
   loadSupplementalSourceFamilies,
   SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
 } from "../yield-sync/supplemental-source-families";
+import type { VaultsFyiSourceResult } from "../yield-sync/sources";
+
+function emptyVaultsFyiResult(
+  overrides: Partial<VaultsFyiSourceResult["telemetry"]> = {},
+): VaultsFyiSourceResult {
+  return {
+    candidates: [],
+    telemetry: {
+      enabled: false,
+      hasKey: false,
+      status: "skipped",
+      skipReason: "disabled",
+      requestCount: 0,
+      pageCount: 0,
+      creditsEstimated: 0,
+      creditsCap: 25,
+      monthlyCreditsEstimated: null,
+      monthlyCreditsCap: 2500,
+      rawVaultCount: 0,
+      rankableCandidateCount: 0,
+      auditOnlyCount: 0,
+      malformedDropCount: 0,
+      unsupportedChainCount: 0,
+      identityMissCount: 0,
+      sizeGateDropCount: 0,
+      warningDropCount: 0,
+      durationMs: 0,
+      budgetMs: 20_000,
+      budgetExhausted: false,
+      dropExamples: [],
+      ...overrides,
+    },
+  };
+}
 
 async function flushMicrotasks() {
   for (let i = 0; i < 8; i += 1) {
@@ -121,6 +183,7 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchMorphoVaultSources).mockResolvedValue([]);
     vi.mocked(fetchPendleMarketSources).mockResolvedValue([]);
     vi.mocked(fetchRoycoDawnSources).mockResolvedValue([]);
+    vi.mocked(fetchVaultsFyiSources).mockResolvedValue(emptyVaultsFyiResult());
     vi.mocked(fetchYearnKongSources).mockResolvedValue([]);
     vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyTelemetry });
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ rates: new Map(), results: [], telemetry: emptyTelemetry });
@@ -160,6 +223,29 @@ describe("syncYieldSupplemental", () => {
         },
       },
     });
+  });
+
+  it("threads vaults.fyi runtime config into the supplemental source family loader without persisting the key", async () => {
+    const signal = new AbortController().signal;
+    const vaultsFyi = {
+      enabled: true as const,
+      apiKey: "vaults-key",
+      rankableVaults: ["base:vault-a"],
+      maxCreditsPerRun: 25,
+      maxCreditsPerMonth: null,
+      maxPagesPerRun: null,
+    };
+
+    const db = {} as D1Database;
+    const result = await syncYieldSupplemental(db, signal, new Map(), undefined, vaultsFyi);
+
+    expect(fetchVaultsFyiSources).toHaveBeenCalledWith({
+      db,
+      config: vaultsFyi,
+      signal,
+      startSec: 1_774_526_400,
+    });
+    expect(result.metadata).not.toContain("vaults-key");
   });
 
   it("keeps distinct same-chain Aave candidates by using asset-scoped source keys", async () => {
@@ -307,6 +393,89 @@ describe("syncYieldSupplemental", () => {
     expect(morphoPayload.sourceCount).toBe(0);
     expect(morphoPayload.data).toEqual([]);
     expect(metadata.familyCacheResults?.morpho).toBe("empty-published");
+  });
+
+  it("registers vaults.fyi as a supplemental family with per-family cache metadata", async () => {
+    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
+      candidates: [
+        {
+          symbol: "USDC",
+          chain: "base",
+          address: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          yield: {
+            currentApy: 4.8,
+            apyBase: 4.8,
+            apyReward: null,
+            sourcePool: "base-vault-1",
+            sourceTvlUsd: 2_500_000,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: "protocol-api:vaults-fyi:base:base-vault-1",
+            yieldSource: "vaults.fyi: base-vault-1",
+            yieldType: "lending-opportunity",
+            sourceObservedAt: 1_774_526_400,
+            comparisonAnchorObservedAt: null,
+          },
+        },
+      ],
+      telemetry: {
+        ...emptyVaultsFyiResult({ enabled: true, hasKey: true, rawVaultCount: 1, rankableCandidateCount: 1 }).telemetry,
+        status: "ok",
+        skipReason: null,
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(result.itemCount).toBe(1);
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi"),
+    ).toBe(true);
+
+    const vaultsFyiCall = vi
+      .mocked(setCacheIfNewer)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi");
+    const vaultsFyiPayload = JSON.parse(String(vaultsFyiCall?.[2])) as {
+      sourceCount: number;
+      data: Array<{ yield: { sourceKey: string } }>;
+    };
+    expect(vaultsFyiPayload.sourceCount).toBe(1);
+    expect(vaultsFyiPayload.data[0]?.yield.sourceKey).toBe("protocol-api:vaults-fyi:base:base-vault-1");
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-published">;
+      sourceCoverage?: {
+        sourceFamilyCounts?: { vaultsFyi?: number };
+        sourceFamilySummaries?: {
+          vaultsFyi?: {
+            status?: string;
+            rawCandidateCount?: number;
+            candidateCount?: number;
+            malformedDropCount?: number;
+            provider?: {
+              vaultsFyi?: {
+                status?: string;
+                rankableCandidateCount?: number;
+              };
+            };
+          };
+        };
+      };
+    };
+    expect(metadata.familyCacheResults?.vaultsFyi).toBe("published");
+    expect(metadata.sourceCoverage?.sourceFamilyCounts?.vaultsFyi).toBe(1);
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
+      status: "ok",
+      rawCandidateCount: 1,
+      candidateCount: 1,
+      malformedDropCount: 0,
+      provider: {
+        vaultsFyi: {
+          status: "ok",
+          rankableCandidateCount: 1,
+        },
+      },
+    });
   });
 
   it("bounds optional RPC missing-target examples in source family summaries", async () => {
@@ -605,7 +774,15 @@ describe("syncYieldSupplemental", () => {
   });
 
   it("bounds supplemental source family execution concurrency", async () => {
-    type PendingSource = "morpho" | "pendle" | "yearnKong" | "beefy" | "compoundV3" | "aaveV3" | "roycoDawn";
+    type PendingSource =
+      | "morpho"
+      | "pendle"
+      | "yearnKong"
+      | "beefy"
+      | "vaultsFyi"
+      | "compoundV3"
+      | "aaveV3"
+      | "roycoDawn";
 
     const started: PendingSource[] = [];
     const pending = new Map<PendingSource, () => void>();
@@ -631,6 +808,7 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchPendleMarketSources).mockImplementation(trackFamily("pendle", []));
     vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", []));
     vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", []));
+    vi.mocked(fetchVaultsFyiSources).mockImplementation(trackFamily("vaultsFyi", emptyVaultsFyiResult()));
     vi.mocked(fetchRoycoDawnSources).mockImplementation(trackFamily("roycoDawn", []));
     vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(
       trackFamily("compoundV3", {
@@ -669,7 +847,7 @@ describe("syncYieldSupplemental", () => {
 
     expect(maxActive).toBeLessThanOrEqual(SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY);
     expect(result.supplementalSourceAccounting.familyExecution).toEqual({
-      familyCount: 7,
+      familyCount: 8,
       concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
     });
   });

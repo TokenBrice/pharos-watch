@@ -9,6 +9,9 @@ export {
   fetchOndoUsdyOracleSource,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
+  fetchVaultsFyiSources,
+  type VaultsFyiSourceResult,
+  type VaultsFyiTelemetry,
   fetchYearnKongSources,
   fetchZephyrZysSource,
 } from "./sources-optional-protocols";

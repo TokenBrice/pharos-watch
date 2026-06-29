@@ -95,6 +95,12 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `CMC_API_KEY` | `string` | optional | - | - | CoinMarketCap credential used by the price-fallback pass. |
 | `JUPITER_API_KEY` | `string` | optional | - | - | Jupiter credential used by the Solana price-fallback pass against `api.jup.ag`. |
 | `COINGECKO_API_KEY` | `string` | optional | - | - | CoinGecko credential used for price enrichment and depeg confirmation. |
+| `VAULTS_FYI_API_KEY` | `string` | optional | - | - | Optional vaults.fyi credential for the disabled-by-default supplemental yield integration. |
+| `VAULTS_FYI_ENABLED` | `string` | optional | - | - | Optional vaults.fyi supplemental yield integration flag; unset, false, or malformed values keep the integration disabled. |
+| `VAULTS_FYI_RANKABLE_VAULTS` | `string` | optional | - | - | Optional CSV allowlist of vaults.fyi `network:vaultId` entries allowed to publish rankable supplemental yield rows. |
+| `VAULTS_FYI_MAX_CREDITS_PER_RUN` | `string` | optional | - | - | Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run. |
+| `VAULTS_FYI_MAX_CREDITS_PER_MONTH` | `string` | optional | - | - | Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month. |
+| `VAULTS_FYI_MAX_PAGES_PER_RUN` | `string` | optional | - | - | Optional positive integer page cap for the audit-only vaults.fyi inventory probe. |
 | `GITHUB_PAT` | `string` | required | - | - | GitHub personal access token used by the feedback -> issue bridge; required to keep `POST /api/feedback` available. |
 | `FEEDBACK_IP_SALT` | `string` | required | - | - | Dedicated salt for hashed-IP feedback submission throttling; required to keep `POST /api/feedback` available. |
 | `API_KEY_SELF_SERVE_IP_SALT` | `string` | required | - | - | Dedicated salt for hashed-IP self-serve API key request throttling. |

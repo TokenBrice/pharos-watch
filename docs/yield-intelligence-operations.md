@@ -7,6 +7,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - `sync-yield-data` now runs on a dedicated hourly trigger at `20 * * * *`, after the `10,40 * * * *` DEX lane and `16,46 * * * *` charts lane have had time to settle. It does not depend on the separate `26,56 * * * *` DEWS / PSI lane.
 - `sync-yield-supplemental` runs on its own slower `25 */4 * * *` trigger and feeds a cache snapshot that the hourly publisher consumes.
 - The hourly publisher is now the freshness path for `yield-rankings`; optional upstream families are deliberately kept off that path.
+- vaults.fyi is an optional gated supplemental source. It is disabled unless `VAULTS_FYI_ENABLED=true` and `VAULTS_FYI_API_KEY` are configured; without `VAULTS_FYI_RANKABLE_VAULTS`, it records audit-only inventory telemetry and emits no production candidates.
 
 ## Runtime Guardrails
 
@@ -44,6 +45,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - The hourly publisher prefers fresh per-family supplemental caches when present, so a malformed or stale family cache suppresses only that family while other fresh families can still publish optional rows. If no family cache is usable, the publisher falls back to the legacy aggregate cache.
 - Aave on-chain reads are batched two assets at a time to stay below the Worker connection ceiling even on the isolated supplemental trigger.
 - the monthly yield coverage audit now counts explicit auto-lending overrides and curated exact-pool overrides as covered DL surfaces, and its high-TVL gap list is scoped to unsupported protocol families so the report stays actionable.
+- Configure vaults.fyi credentials only as Worker runtime secrets. Do not commit a credential or put one in docs. `VAULTS_FYI_MAX_CREDITS_PER_RUN`, `VAULTS_FYI_MAX_CREDITS_PER_MONTH`, and `VAULTS_FYI_MAX_PAGES_PER_RUN` bound local spend estimates; provider quota/errors fail open and should not block the hourly publisher.
 
 ## Yield Health Thresholds
 
@@ -72,6 +74,8 @@ The monthly coverage audit is an operator queue, not a persistent workflow store
 | `watch` | The item is plausible but needs another cycle, more TVL, better timestamps, or venue review | Leave it visible for the next monthly audit and note the condition to re-check |
 
 Do not add dismissal persistence until repeated monthly reports show that the same reviewed noise is consuming operator time. The admin queue rows are read-only; there are no `accept`/`dismiss` buttons and no stored operator state. Do not edit `yield-rankings` or source-risk fields to clear the queue; fix the source config, add an intentional gap, or leave the item on watch.
+
+vaults.fyi audit evidence should be classified through the same queue actions. `accept` means "add or adjust explicit `VAULTS_FYI_RANKABLE_VAULTS` entries with focused tests and docs"; `watch` means leave it as research evidence; `dismiss` means record why the source shape is unsuitable or duplicative. No queue classification should mutate production rankings by itself.
 
 ## Adapter lifecycle states
 
@@ -104,3 +108,4 @@ When promoting an adapter out of `quarantined` or `intentional-gap`, remove the 
 - The four-hour supplemental publisher writes both the aggregate snapshot and per-family snapshots. The hourly publisher prefers fresh per-family caches, and when family coverage is partial it backfills missing/degraded families from a still-fresh aggregate snapshot instead of dropping otherwise valid candidates.
 - The `yield-rankings` cache compare-and-swap, current/history row replacement, selected-source decision write, and generation publish run in one guarded D1 batch. If the cache write fails or compare-and-swap skips because a newer cache exists, the staged generation is marked `failed` before current rows are replaced. Public history and downstream D1 readers continue using the last published generation. Each hourly run also attempts to repair D1 row states for the generation currently advertised by the published cache before loading evaluation history.
 - The intended failure mode for optional upstream stress is reduced supplemental coverage or an older cached supplemental snapshot. If that reduction would severely collapse the prior public lending-opportunity cohort or total ranking count, the hourly publisher returns degraded and keeps the previous `yield-rankings` snapshot.
+- vaults.fyi unavailability has no public-critical impact. When disabled or inventory-only, it should surface only as provider-family telemetry/research evidence. When allowlisted rows are configured, failures reduce that supplemental family's coverage and are handled by the existing supplemental freshness and publication-collapse guards.

@@ -13,6 +13,11 @@ export {
   fetchRoycoDawnSources,
 } from "./royco-dawn";
 export {
+  fetchVaultsFyiSources,
+  type VaultsFyiSourceResult,
+  type VaultsFyiTelemetry,
+} from "./vaults-fyi";
+export {
   fetchBeefySources,
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
