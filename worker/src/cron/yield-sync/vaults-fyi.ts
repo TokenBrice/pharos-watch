@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
+import { throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, MIN_LENDING_POOL_TVL_USD, USER_AGENT } from "../../lib/constants";
 import { getCache, setCache } from "../../lib/db-cache";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
@@ -653,6 +654,7 @@ async function runInventoryProbe(params: {
 }): Promise<void> {
   const maxPages = getMaxPagesPerRun(params.config);
   for (let page = 0; page < maxPages; page += 1) {
+    throwIfAborted(params.signal);
     const perPage = getDetailedVaultsPerPage(params.telemetry);
     if (perPage == null) {
       params.telemetry.status = params.telemetry.rawVaultCount > 0 ? "partial" : "skipped";
@@ -715,6 +717,7 @@ async function fetchAllowlistedVaults(params: {
   const maxPages = getMaxPagesPerRun(params.config);
 
   for (let page = 0; page < maxPages; page += 1) {
+    throwIfAborted(params.signal);
     const perPage = getDetailedVaultsPerPage(params.telemetry);
     if (perPage == null) {
       params.telemetry.status = candidates.length > 0 ? "partial" : "skipped";
