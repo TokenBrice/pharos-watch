@@ -13,6 +13,8 @@ import {
   VALIDATE_PREBUILD_TIER_ENV,
 } from "../lib/validate-contract.mjs";
 
+const GENERATED_ARTIFACTS_CHECK_COMMAND = "npm run check:generated-artifacts";
+
 export function buildValidatePrebuildExecutionUnits(surface, tier = "full") {
   return buildValidatePrebuildCommands({ surface, tier }).map((cmd) => createExecutionUnit([cmd]));
 }
@@ -27,6 +29,21 @@ export function buildValidatePrebuildExecutionUnitsForEnv(surface, tier = "full"
 
 export function isValidatePrebuildDryRun(argv = process.argv.slice(2)) {
   return argv.includes("--dry-run");
+}
+
+export function splitGeneratedArtifactsCheckExecutionUnits(units) {
+  const leadingUnits = [];
+  const generatedArtifactUnits = [];
+
+  for (const unit of units) {
+    if (unit.commands.includes(GENERATED_ARTIFACTS_CHECK_COMMAND)) {
+      generatedArtifactUnits.push(unit);
+    } else {
+      leadingUnits.push(unit);
+    }
+  }
+
+  return { leadingUnits, generatedArtifactUnits };
 }
 
 export function printValidatePrebuildCommandPlan(units, { log = console.log } = {}) {
@@ -83,11 +100,35 @@ export async function runValidatePrebuild({
     log(`[validate:prebuild] Skipped by caller: ${skippedCommands.join(", ")}`);
   }
 
-  return runExecutionUnits(units, {
+  const { leadingUnits, generatedArtifactUnits } = splitGeneratedArtifactsCheckExecutionUnits(units);
+  const leadingResult =
+    leadingUnits.length > 0
+      ? await runExecutionUnits(leadingUnits, {
+          continueOnError: env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",
+          label: "validate:prebuild",
+          maxParallel: VALIDATE_PREBUILD_MAX_PARALLEL,
+        })
+      : { status: 0, failedCmd: null, aborted: false };
+
+  if (leadingResult.status !== 0 && env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR !== "1") {
+    return leadingResult;
+  }
+
+  if (generatedArtifactUnits.length === 0) {
+    return leadingResult;
+  }
+
+  const generatedResult = await runExecutionUnits(generatedArtifactUnits, {
     continueOnError: env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",
     label: "validate:prebuild",
-    maxParallel: VALIDATE_PREBUILD_MAX_PARALLEL,
+    maxParallel: 1,
   });
+
+  if (leadingResult.status !== 0) {
+    return leadingResult;
+  }
+
+  return generatedResult;
 }
 
 const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;

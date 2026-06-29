@@ -14,6 +14,7 @@ import {
   buildValidatePrebuildExecutionUnits,
   printValidatePrebuildCommandPlan,
   runValidatePrebuild,
+  splitGeneratedArtifactsCheckExecutionUnits,
 } from "../maintenance/run-validate-prebuild.mjs";
 
 describe("validate:prebuild surface filtering", () => {
@@ -259,30 +260,43 @@ describe("validate:prebuild surface filtering", () => {
   });
 
   it("uses the full prebuild command set by default in non-dry-run mode", async () => {
-    let receivedUnits: Array<{ commands: string[] }> = [];
-    let receivedOptions: { continueOnError?: boolean; label?: string; maxParallel?: number } | undefined;
+    const calls: Array<{
+      units: Array<{ commands: string[] }>;
+      options?: { continueOnError?: boolean; label?: string; maxParallel?: number };
+    }> = [];
 
     await runValidatePrebuild({
       argv: [],
       env: {},
       log: () => {},
       runExecutionUnits: (units, options) => {
-        receivedUnits = units;
-        receivedOptions = options;
+        calls.push({ units, options });
         return Promise.resolve({ status: 0, failedCmd: null, aborted: false });
       },
     });
 
-    expect(receivedUnits.map((unit) => unit.commands[0])).toEqual(VALIDATE_PREBUILD_COMMANDS);
-    expect(receivedOptions).toMatchObject({
+    expect(calls).toHaveLength(2);
+    expect(calls[0].units.map((unit) => unit.commands[0])).toEqual(
+      VALIDATE_PREBUILD_COMMANDS.filter((cmd) => cmd !== "npm run check:generated-artifacts"),
+    );
+    expect(calls[0].options).toMatchObject({
       continueOnError: false,
       label: "validate:prebuild",
+      maxParallel: 8,
+    });
+    expect(calls[1].units.map((unit) => unit.commands[0])).toEqual(["npm run check:generated-artifacts"]);
+    expect(calls[1].options).toMatchObject({
+      continueOnError: false,
+      label: "validate:prebuild",
+      maxParallel: 1,
     });
   });
 
   it("passes filtered runner units and continue-on-error through the prebuild runner", async () => {
-    let receivedUnits: Array<{ commands: string[] }> = [];
-    let receivedOptions: { continueOnError?: boolean; label?: string; maxParallel?: number } | undefined;
+    const calls: Array<{
+      units: Array<{ commands: string[] }>;
+      options?: { continueOnError?: boolean; label?: string; maxParallel?: number };
+    }> = [];
 
     await runValidatePrebuild({
       argv: [],
@@ -292,18 +306,38 @@ describe("validate:prebuild surface filtering", () => {
         VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
       },
       runExecutionUnits: (units, options) => {
-        receivedUnits = units;
-        receivedOptions = options;
+        calls.push({ units, options });
         return Promise.resolve({ status: 0, failedCmd: null, aborted: false });
       },
     });
 
-    expect(receivedUnits.map((unit) => unit.commands[0])).toEqual(
-      buildValidatePrebuildCommandsForSurfaceAndTier("pages", "surface"),
+    const expectedCommands = buildValidatePrebuildCommandsForSurfaceAndTier("pages", "surface");
+    expect(calls).toHaveLength(2);
+    expect(calls[0].units.map((unit) => unit.commands[0])).toEqual(
+      expectedCommands.filter((cmd) => cmd !== "npm run check:generated-artifacts"),
     );
-    expect(receivedOptions).toMatchObject({
+    expect(calls[0].options).toMatchObject({
       continueOnError: true,
       label: "validate:prebuild",
+    });
+    expect(calls[1].units.map((unit) => unit.commands[0])).toEqual(["npm run check:generated-artifacts"]);
+    expect(calls[1].options).toMatchObject({
+      continueOnError: true,
+      label: "validate:prebuild",
+      maxParallel: 1,
+    });
+  });
+
+  it("splits generated artifact checks into a serial trailing phase", () => {
+    const units = [
+      { commands: ["npm run typecheck"] },
+      { commands: ["npm run check:generated-artifacts"] },
+      { commands: ["npm run lint"] },
+    ];
+
+    expect(splitGeneratedArtifactsCheckExecutionUnits(units)).toEqual({
+      leadingUnits: [{ commands: ["npm run typecheck"] }, { commands: ["npm run lint"] }],
+      generatedArtifactUnits: [{ commands: ["npm run check:generated-artifacts"] }],
     });
   });
 });
