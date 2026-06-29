@@ -10,6 +10,7 @@ import {
   DDR_METHODOLOGY_VERSION,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
+  DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/depeg-resolver-version";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
@@ -691,6 +692,13 @@ function baseFieldsForIncident(incident: DdrCanonicalIncident, payload: Record<s
   };
 }
 
+function coverageEligibilityAt(incident: DdrCanonicalIncident): number {
+  if (incident.rolloutActiveAtEnablement === true) {
+    return Math.max(incident.eligibleAt, DDR_V2_EFFECTIVE_AT);
+  }
+  return incident.eligibleAt;
+}
+
 function sealedExposureStartedAt(
   sealed: DdrSealedPublicPrediction,
   incident: DdrCanonicalIncident,
@@ -838,6 +846,7 @@ function coverageStateForIncident(
   actual: DdrrActualEvent | null,
   nowSec: number,
 ): Pick<DdrrV2CoverageInput, "predictionState" | "coverageCause" | "operationalCoverageCause" | "outcomeQualityState" | "reason"> {
+  const reviewEligibleAt = coverageEligibilityAt(incident);
   if (actual == null) {
     return {
       predictionState: "data_quality_gap",
@@ -847,7 +856,7 @@ function coverageStateForIncident(
       reason: "source_event_missing",
     };
   }
-  if (actual.endedAt != null && actual.recoveryPrice != null && actual.endedAt < incident.eligibleAt) {
+  if (actual.endedAt != null && actual.recoveryPrice != null && actual.endedAt < reviewEligibleAt) {
     return {
       predictionState: "resolved_before_prediction",
       coverageCause: "pre_lock_recovered",
@@ -856,7 +865,7 @@ function coverageStateForIncident(
       reason: null,
     };
   }
-  if (hasTerminalStatusOrEvidence(actual) && hasTerminalBeforeEligibility(actual, incident.eligibleAt)) {
+  if (hasTerminalStatusOrEvidence(actual) && hasTerminalBeforeEligibility(actual, reviewEligibleAt)) {
     return {
       predictionState: "terminal_before_prediction",
       coverageCause: "pre_lock_terminal",
@@ -865,7 +874,7 @@ function coverageStateForIncident(
       reason: null,
     };
   }
-  if (nowSec < incident.eligibleAt) {
+  if (nowSec < reviewEligibleAt) {
     return {
       predictionState: "pending_lock",
       coverageCause: "active_pending_lock",
@@ -925,7 +934,7 @@ function coverageRowForIncident(
   nowSec: number,
 ): DdrrV2CoverageInput {
   const state = coverageStateForIncident(incident, actual, nowSec);
-  const terminalEvidenceAt = terminalEvidenceAtForEligibility(actual, incident.eligibleAt);
+  const terminalEvidenceAt = terminalEvidenceAtForEligibility(actual, coverageEligibilityAt(incident));
   return {
     ...baseFieldsForIncident(incident, {}),
     sourceEventState: sourceEventState(actual),

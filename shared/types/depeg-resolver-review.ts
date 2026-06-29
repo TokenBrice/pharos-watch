@@ -15,12 +15,12 @@ import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 /**
  * Depeg Duration Resolver Reviewer (DDRR) shared contract.
  *
- * DDRR v2 reviews the frozen public_prediction lock outcome that entered a
+ * DDRR reviews the frozen public_prediction lock outcome that entered a
  * first-publication manifest. It does not replay current DDR code over old
  * incidents, and it keeps no-prediction coverage separate from accuracy.
  */
 
-export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v2";
+export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v3";
 export const DDRR_SNAPSHOT_CACHE_GENERATION = 2;
 export const DDRR_PUBLIC_WARNING =
   "Reviews compare frozen DDR predictions Pharos published with later Pharos event data. Coverage rows are not scored as predictions.";

@@ -170,11 +170,11 @@ function invalidated(overrides: Partial<DdrrV2InvalidatedPredictionInput> = {}):
   };
 }
 
-describe("DDRR v2 row contract", () => {
+describe("DDRR row contract", () => {
   it("bumps the public reviewer version and emits discriminated prediction rows", () => {
     const row = reviewDepegResolverAssessment(assessment(), actualEvent(), REVIEWED_AT);
 
-    expect(DDRR_REVIEWER_VERSION).toBe("ddr-reviewer-v2");
+    expect(DDRR_REVIEWER_VERSION).toBe("ddr-reviewer-v3");
     expect(row.kind).toBe("prediction_review");
     expect(row.predictionState).toBe("frozen");
     expect(row.lockedAt).toBe(LOCKED_AT);
@@ -194,7 +194,7 @@ describe("DDRR v2 row contract", () => {
   });
 });
 
-describe("DDRR v2 scoring", () => {
+describe("DDRR scoring", () => {
   it.each([
     ["malformed_assessment_timestamp", { lockedAt: Number.NaN }, actualEvent()],
     ["assessment_before_event_start", { lockedAt: STARTED_AT - 1 }, actualEvent()],
@@ -360,7 +360,7 @@ describe("DDRR v2 scoring", () => {
   });
 });
 
-describe("DDRR v2 coverage metrics", () => {
+describe("DDRR coverage metrics", () => {
   it("excludes no-calls and coverage rows from accuracy denominators", () => {
     const { summary } = reviewDdrrV2Rows({
       assessments: [

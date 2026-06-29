@@ -4,7 +4,7 @@ import { DEPEG_RESOLVER_V3 } from "../../data/methodology-changelogs/depeg-resol
 import { createMethodologyVersion } from "./base";
 
 const ddr = createMethodologyVersion({
-  currentVersion: "3.03",
+  currentVersion: "3.04",
   changelogPath: "/methodology/depeg-resolver-changelog/",
   changelog: [...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1],
 });
@@ -77,4 +77,4 @@ export const DDR_LOCK_ON_TIME_GRACE_SEC = 20 * 60;
 /** DDRv2 cache/manifest generation values. */
 export const DDR_SNAPSHOT_CACHE_GENERATION = 2;
 export const DDRR_SNAPSHOT_CACHE_GENERATION = 2;
-export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v2";
+export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v3";

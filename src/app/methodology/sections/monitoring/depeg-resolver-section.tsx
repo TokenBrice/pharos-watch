@@ -49,8 +49,10 @@ export function DepegResolverMethodologySection() {
         The Depeg Duration Resolver Reviewer (DDRR) is the companion audit layer. It scores only frozen outcomes that
         reached first publication, while coverage metrics keep no-calls, pre-lock recoveries, missed locks, publication
         retries/failures, data-quality gaps, and invalidated predictions visible. Recovery-likelihood and duration
-        accuracy are computed only where a public frozen prediction can fairly be reviewed, and old sticky 24h policy
-        rows remain auditable with their original lock metadata.
+        accuracy are computed only where a public frozen prediction can fairly be reviewed. Rollout-active incidents
+        that predate the DDRv2 public contract use that public-contract boundary for coverage classification, so
+        historical terminal evidence is not counted as live missed-lock debt, and old sticky 24h policy rows remain
+        auditable with their original lock metadata.
       </p>
       <p>
         DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. It is
@@ -86,7 +88,9 @@ export function DepegResolverMethodologySection() {
             outcome with the later event outcome, keeps append-only errata visible, preserves immutable
             trigger/readiness metadata, and separates policy-universe coverage from scoreable recovery/duration
             accuracy. If a health deferral is followed by recovery or reliable terminal evidence before a healthy lock,
-            the row remains a pre-lock coverage outcome rather than a retroactive forecast.
+            the row remains a pre-lock coverage outcome rather than a retroactive forecast. Rollout-active incidents
+            that already existed before DDRv2 use the public-contract effective timestamp as the fairness boundary for
+            the same pre-lock coverage test.
           </p>
         </div>
       </MethodologyDetails>

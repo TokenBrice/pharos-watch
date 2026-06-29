@@ -11,7 +11,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.03`
+- **Current methodology version:** `v3.04`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
@@ -58,7 +58,7 @@ Errata are append-only. If a source event or input is later proven wrong, DDR ke
 
 Repair-required events no longer halt the run. When the writer encounters an event that needs an explicit repair migration (ambiguous overlap with a canonical incident, or an unlinked event whose key maps to an existing incident), it quarantines that event for the run — no canonical incident, no fallback pseudo-incident, no public row — and continues resolving and publishing every other incident. The run records the quarantined event ids and reasons in `repairRequiredEvents` cron metadata, writes `cache["ddr:repair-debt:v1"]` as the rollout fallback marker, and dual-writes deterministic `worker_repair_tasks` rows with kind `ddr-repair-required-event`. DDR publication can stay otherwise healthy; `/api/status` surfaces the marker as data-quality warning cause `ddr_repair_debt_present` and exposes the broader `dataQuality.repairDebt` summary instead of treating repair debt itself as a cron outage.
 
-Short depegs are not predicted after the fact. If a confirmed incident recovers before a healthy readiness/backstop lock, DDRR classifies it as `resolved_before_prediction`; reliable terminal evidence before a healthy lock becomes `terminal_before_prediction`. Health-deferred incidents that recover or become terminal before the next healthy sealing run remain pre-lock coverage outcomes rather than retroactive predictions. Incidents that crossed eligibility but never received a public prediction become explicit coverage debt such as `missed_lock_recovered`, `missed_lock_terminal`, `publication_failed`, `orphan_closed`, or `data_quality_gap`.
+Short depegs are not predicted after the fact. If a confirmed incident recovers before a healthy readiness/backstop lock, DDRR classifies it as `resolved_before_prediction`; reliable terminal evidence before a healthy lock becomes `terminal_before_prediction`. Health-deferred incidents that recover or become terminal before the next healthy sealing run remain pre-lock coverage outcomes rather than retroactive predictions. For incidents already active when the DDRv2 public prediction contract was enabled, the reviewer floors the pre-lock boundary at the DDRv2 effective timestamp so historical outcomes that predate any possible public prediction do not count as live missed locks. Incidents that crossed eligibility under the applicable public-contract boundary but never received a public prediction become explicit coverage debt such as `missed_lock_recovered`, `missed_lock_terminal`, `publication_failed`, `orphan_closed`, or `data_quality_gap`.
 
 ### Compatibility with DDRv2 Sticky 24h Outcomes
 

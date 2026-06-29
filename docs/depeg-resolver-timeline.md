@@ -1,8 +1,19 @@
 # Depeg Duration Resolver Methodology — Version Timeline
 
-Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.03`.
+Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.04`.
 
 Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
+
+---
+
+## v3.04 — Rollout Coverage Boundary Review (June 29, 2026)
+
+DDRR now treats rollout-active incidents whose reliable recovery or terminal evidence predates the DDRv2 public prediction contract as pre-lock coverage outcomes instead of live missed-lock debt.
+
+- **Rollout boundary floor.** Coverage classification for incidents already active when DDRv2 was enabled is floored at the DDRv2 public-contract effective timestamp, not only the raw `started_at + 72h` timestamp.
+- **Historical terminal evidence.** Reliable terminal evidence before that boundary becomes `terminal_before_prediction`, not `missed_lock_terminal`.
+- **Reviewer version bump.** The reviewer engine advances to `ddr-reviewer-v3` so cached DDRR snapshots are rebuilt under the corrected public audit contract.
+- **Forecast logic unchanged.** Live DDR prediction sealing, Stage 1 terminality, and Stage 2 duration remain unchanged from `v3.03`.
 
 ---
 

@@ -196,7 +196,7 @@ function response(rows: DdrrRow[]): DdrrResponse {
       expiresAt: LOCKED_AT + 25 * 3600,
       degraded: false,
       degradedReason: null,
-      reviewerVersion: "ddr-reviewer-v2",
+      reviewerVersion: "ddr-reviewer-v3",
       publicWarning: "fixture",
       assessedEventCount: rows.length,
       reviewedEventCount: rows.length,

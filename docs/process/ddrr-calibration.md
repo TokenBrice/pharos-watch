@@ -25,5 +25,6 @@ The script reads the public DDRR response contract, validates it with `DdrrRespo
 - The report is advisory. It does not replay today's DDR engine over historical rows.
 - Do not retune Stage 2 until the report passes its sample gate: at least 50 scored duration rows and 20 unique coins.
 - Treat no-calls, missed locks, publication failures, and data-quality gaps as coverage or input debt before changing terminality thresholds.
+- Before treating `missed_lock_terminal` rows as live lock debt, verify whether the incident was rollout-active and whether reliable terminal evidence predates the DDRv2 public prediction contract. Those rows should classify as `terminal_before_prediction` under reviewer v3.
 - Treat factor labels as explanatory text. Raw K5, reserve, and mint-authority inputs require a D1/sealed-payload/registry join before making a methodology change.
 - Promote a report to `docs/process/` or `docs/process/archive/` only after it supports a reviewed methodology decision; otherwise leave it in `agents/`.

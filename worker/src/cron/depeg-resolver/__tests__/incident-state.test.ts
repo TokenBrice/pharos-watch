@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
 import {
   applyConfirmationTimes,
   ensureCanonicalIncidentsForEvents,
   recordSystemHealthDeferrals,
 } from "../incident-state";
+import { toStructural } from "../utils";
 import type { DdrEventDbRow } from "../types";
 import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
 
@@ -27,6 +29,36 @@ function makeEventRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow {
     ...overrides,
   };
 }
+
+describe("toStructural", () => {
+  it("carries reviewed mint-authority incident dates into DDR structural context", () => {
+    const meta = {
+      id: "fixture-usd",
+      symbol: "FXD",
+      name: "Fixture USD",
+      flags: {
+        pegCurrency: "USD",
+        governance: "centralized",
+      },
+      mintAuthority: {
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "concentrated-admin",
+        mintIncidents: [
+          { date: "2026-05-24", summary: "Compromised minter minted unbacked supply." },
+          { date: "2026-05-25", summary: "Follow-up reviewed mint incident." },
+        ],
+      },
+    } as StablecoinMeta;
+
+    expect(toStructural(meta)).toMatchObject({
+      id: "fixture-usd",
+      symbol: "FXD",
+      mintPath: "issuer-direct-mint",
+      authorityPosture: "concentrated-admin",
+      mintIncidentDates: ["2026-05-24", "2026-05-25"],
+    });
+  });
+});
 
 describe("ensureCanonicalIncidentsForEvents", () => {
   it("excludes quarantined events instead of assigning fallback pseudo-incidents", async () => {

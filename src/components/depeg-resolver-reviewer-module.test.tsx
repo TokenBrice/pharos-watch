@@ -129,7 +129,7 @@ function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
       expiresAt: 2,
       degraded: false,
       degradedReason: null,
-      reviewerVersion: "ddr-reviewer-v2",
+      reviewerVersion: "ddr-reviewer-v3",
       publicWarning: "review warning",
       assessedEventCount: 1,
       reviewedEventCount: 1,

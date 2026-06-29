@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.04",
+    title: "Rollout Coverage Boundary Review",
+    date: "2026-06-29",
+    effectiveAt: 1782741600,
+    summary:
+      "DDRR now treats rollout-active incidents whose reliable recovery or terminal evidence predates the DDRv2 public prediction contract as pre-lock coverage outcomes instead of live missed-lock debt.",
+    impact: [
+      "Coverage classification for incidents already active when DDRv2 was enabled is floored at the DDRv2 public-contract effective timestamp",
+      "Historical terminal evidence before that boundary becomes terminal_before_prediction, not missed_lock_terminal",
+      "The reviewer engine advances to ddr-reviewer-v3 so cached review snapshots are rebuilt under the corrected public audit contract",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.03",
     title: "DDRR-Calibrated Stage 1 Terminality",
     date: "2026-06-29",

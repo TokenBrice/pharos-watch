@@ -733,6 +733,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/fixtures/sql-safety/worker/src/safe-safety-comment.ts` - buildSafeCommentQuery
 - `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - buildUnsafeWorkerSrcQuery
 - `scripts/__tests__/freeze-stablecoin.test.ts`
+- `scripts/__tests__/generate-ddrr-calibration-report.test.ts`
 - `scripts/__tests__/generate-dependency-coverage-audit.test.ts`
 - `scripts/__tests__/generate-l2beat-snapshot-coverage-audit.test.ts`
 - `scripts/__tests__/generate-markdown-exports.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/lighthouse-static-export.test.ts`
 - `scripts/__tests__/merge-gate-parallel-mode.test.ts`
 - `scripts/__tests__/mint-authority-review-audit.test.ts`
-- `scripts/__tests__/night-watch-worker.test.ts`
-- ... 221 more files omitted; use `rg --files scripts` for the full list.
+- ... 223 more files omitted; use `rg --files scripts` for the full list.

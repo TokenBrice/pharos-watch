@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import {
+  DDR_METHODOLOGY_VERSION,
+  DDR_METHODOLOGY_VERSION_LABEL,
+  DDR_V2_EFFECTIVE_AT,
+} from "@shared/lib/depeg-resolver-version";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
@@ -144,7 +148,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
         expiresAt: ASSESSED_AT + 1800,
         degraded: false,
         degradedReason: null,
-        reviewerVersion: "ddr-reviewer-v2",
+        reviewerVersion: "ddr-reviewer-v3",
         publicWarning: "v2",
         assessedEventCount: 1,
         reviewedEventCount: 1,
@@ -891,6 +895,61 @@ describe("buildDepegResolverReviewSnapshot", () => {
       sourceEventState: "terminal",
       predictionState: "terminal_before_prediction",
       coverageCause: "pre_lock_terminal",
+      terminalEvidenceAt: USR_FROZEN_AT,
+      terminalEvidenceInterval: { start: USR_FROZEN_AT, end: USR_FROZEN_AT + 86_400 },
+      terminalEvidencePrecision: "day",
+      terminalEvidenceSourceDate: "2026-04-27",
+    });
+    expect(snapshot.summary.headline.terminalBeforePredictionCount).toBe(1);
+    expect(snapshot.summary.headline.missedLockTerminalCount).toBe(0);
+  });
+
+  it("treats rollout-active terminal evidence before DDRv2 enablement as pre-lock coverage", async () => {
+    const rolloutStartedAt = Math.floor(Date.UTC(2026, 2, 22, 2, 4, 57) / 1000);
+    const rawEligibleAt = rolloutStartedAt + 72 * 3600;
+    expect(rawEligibleAt).toBeLessThan(USR_FROZEN_AT);
+    expect(USR_FROZEN_AT).toBeLessThan(DDR_V2_EFFECTIVE_AT);
+
+    const incident = {
+      incidentKey: "ddr2:usr-rollout-terminal-before-enable",
+      eventId: 88045,
+      currentEventId: 88045,
+      stablecoinId: "usr-resolv",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: rolloutStartedAt,
+      eligibleAt: rawEligibleAt,
+      policyUniverseIncluded: true,
+      rolloutActiveAtEnablement: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 88045,
+            stablecoin_id: "usr-resolv",
+            started_at: rolloutStartedAt,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, DDR_V2_EFFECTIVE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      eligibleAt: rawEligibleAt,
+      sourceEventState: "terminal",
+      predictionState: "terminal_before_prediction",
+      coverageCause: "pre_lock_terminal",
+      operationalCoverageCause: null,
       terminalEvidenceAt: USR_FROZEN_AT,
       terminalEvidenceInterval: { start: USR_FROZEN_AT, end: USR_FROZEN_AT + 86_400 },
       terminalEvidencePrecision: "day",
