@@ -617,7 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, toStagedPool
 - `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
-- ... 343 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 346 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
