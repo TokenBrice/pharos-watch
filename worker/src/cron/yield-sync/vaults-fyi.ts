@@ -48,8 +48,10 @@ function emptyTelemetry(overrides: Partial<VaultsFyiTelemetry> = {}): VaultsFyiT
     skipReason: "disabled",
     requestCount: 0,
     pageCount: 0,
+    pageCapReached: false,
     creditsEstimated: 0,
     creditsCap: VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_RUN,
+    creditCapReached: false,
     monthlyCreditsEstimated: null,
     monthlyCreditsCap: VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_MONTH,
     rawVaultCount: 0,
@@ -264,8 +266,9 @@ async function runInventoryProbe(params: {
     throwIfAborted(params.signal);
     const perPage = getDetailedVaultsPerPage(params.telemetry);
     if (perPage == null) {
-      params.telemetry.status = params.telemetry.rawVaultCount > 0 ? "partial" : "skipped";
-      params.telemetry.skipReason = "credit-cap";
+      params.telemetry.creditCapReached = true;
+      params.telemetry.status = params.telemetry.rawVaultCount > 0 ? "ok" : "skipped";
+      params.telemetry.skipReason = params.telemetry.rawVaultCount > 0 ? null : "credit-cap";
       return;
     }
     const body = await fetchVaultsFyiJson(
@@ -300,7 +303,9 @@ async function runInventoryProbe(params: {
     if (nextPage == null) break;
     if (params.telemetry.skipReason === "invalid-payload") break;
     if (page + 1 >= maxPages) {
-      params.telemetry.status = "partial";
+      params.telemetry.pageCapReached = true;
+      params.telemetry.status = "ok";
+      params.telemetry.skipReason = null;
       break;
     }
   }
@@ -326,6 +331,7 @@ async function fetchAllowlistedVaults(params: {
   for (const entry of rankableVaults) {
     throwIfAborted(params.signal);
     if (!canSpendCredits(params.telemetry, 3)) {
+      params.telemetry.creditCapReached = true;
       params.telemetry.status = candidates.length > 0 ? "partial" : "skipped";
       params.telemetry.skipReason = "credit-cap";
       break;
@@ -405,6 +411,7 @@ export async function fetchVaultsFyiSources({
   const bucket = getCurrentMonthBucket(startSec);
   telemetry.monthlyCreditsEstimated = await readMonthlyCredits(db, bucket);
   if (telemetry.monthlyCreditsEstimated != null && telemetry.monthlyCreditsEstimated >= telemetry.monthlyCreditsCap) {
+    telemetry.creditCapReached = true;
     telemetry.status = "skipped";
     telemetry.skipReason = "credit-cap";
     telemetry.durationMs = Date.now() - startedAtMs;

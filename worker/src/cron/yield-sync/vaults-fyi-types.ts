@@ -20,8 +20,10 @@ export interface VaultsFyiTelemetry {
   skipReason: VaultsFyiSkipReason | null;
   requestCount: number;
   pageCount: number;
+  pageCapReached: boolean;
   creditsEstimated: number;
   creditsCap: number;
+  creditCapReached: boolean;
   monthlyCreditsEstimated: number | null;
   monthlyCreditsCap: number;
   rawVaultCount: number;

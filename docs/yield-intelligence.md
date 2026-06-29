@@ -323,11 +323,12 @@ vaults.fyi is an optional supplemental source family for coverage review and sel
 
 - Configure the key only as a Worker secret/runtime binding. Do not commit a vaults.fyi credential or place one in docs.
 - `VAULTS_FYI_ENABLED=true` plus `VAULTS_FYI_API_KEY` is required before the supplemental cron fetches vaults.fyi.
-- With no `VAULTS_FYI_RANKABLE_VAULTS`, the adapter runs a bounded detailed-vault inventory probe, records provider telemetry, and publishes no rankable candidates.
+- With no `VAULTS_FYI_RANKABLE_VAULTS`, the adapter runs a bounded detailed-vault inventory probe, records provider telemetry, and publishes no rankable candidates. Inventory volume is reported separately from supplemental candidate counts.
 - `VAULTS_FYI_RANKABLE_VAULTS` is a CSV of `network:vaultId` or `network/vaultId` entries. Only matching rows can become supplemental candidates.
 - Candidate rows must match a tracked stablecoin by canonical chain and token contract address. Symbol-only matches are rejected.
 - The adapter applies TVL, APY, active/corruption/warning, vault-score, and local credit-budget gates before writing cache candidates.
 - Source keys are stable as `protocol-api:vaults-fyi:<chain>:<vault>`. The row `project` and `sourceRisk.venueProtocol` use the underlying protocol slug from vaults.fyi when available.
+- Provider telemetry exposes `pageCapReached` and `creditCapReached` so expected bounded probes are distinguishable from provider errors.
 - Provider quota/errors fail open: the supplemental family records skipped/partial/failed telemetry but does not make the hourly publisher require vaults.fyi.
 
 ### Opportunity-Level Tranche Safety
@@ -764,7 +765,7 @@ This best-effort cron owns the heavier optional families that used to run inline
 
 It fetches those families, serializes the resolved candidate set into a cache snapshot, and lets the hourly publisher consume that snapshot. Empty snapshots are treated as degraded and do not overwrite the previous cache.
 
-vaults.fyi participates as a supplemental-family cache row only when explicitly enabled. Without `VAULTS_FYI_RANKABLE_VAULTS`, its output remains audit-only telemetry and contributes no supplemental candidates. With allowlisted vaults, emitted rows use the same cached supplemental-source path as the other optional families and remain subject to the hourly publisher's existing freshness, dedupe, source-risk, and publication-collapse guards.
+vaults.fyi participates as a supplemental-family cache row only when explicitly enabled. Without `VAULTS_FYI_RANKABLE_VAULTS`, its output remains audit-only telemetry and contributes no supplemental candidates. `sourceFamilyCounts.vaultsFyi` tracks emitted candidates, while `sourceFamilyInventoryCounts.vaultsFyi` and the vaults.fyi provider telemetry track audit inventory volume. With allowlisted vaults, emitted rows use the same cached supplemental-source path as the other optional families and remain subject to the hourly publisher's existing freshness, dedupe, source-risk, and publication-collapse guards.
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. That helper now shares peg analytics with `/api/report-cards`, preventing rated coins with live price/peg coverage from falling back to `NR` inside yield rankings. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 

@@ -56,8 +56,10 @@ vi.mock("../yield-sync/sources", () => ({
       skipReason: "disabled",
       requestCount: 0,
       pageCount: 0,
+      pageCapReached: false,
       creditsEstimated: 0,
       creditsCap: 25,
+      creditCapReached: false,
       monthlyCreditsEstimated: null,
       monthlyCreditsCap: 2500,
       rawVaultCount: 0,
@@ -149,8 +151,10 @@ function emptyVaultsFyiResult(
       skipReason: "disabled",
       requestCount: 0,
       pageCount: 0,
+      pageCapReached: false,
       creditsEstimated: 0,
       creditsCap: 25,
+      creditCapReached: false,
       monthlyCreditsEstimated: null,
       monthlyCreditsCap: 2500,
       rawVaultCount: 0,
@@ -446,11 +450,13 @@ describe("syncYieldSupplemental", () => {
       familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-published">;
       sourceCoverage?: {
         sourceFamilyCounts?: { vaultsFyi?: number };
+        sourceFamilyInventoryCounts?: { vaultsFyi?: number };
         sourceFamilySummaries?: {
           vaultsFyi?: {
             status?: string;
             rawCandidateCount?: number;
             candidateCount?: number;
+            inventoryCount?: number;
             malformedDropCount?: number;
             provider?: {
               vaultsFyi?: {
@@ -464,15 +470,94 @@ describe("syncYieldSupplemental", () => {
     };
     expect(metadata.familyCacheResults?.vaultsFyi).toBe("published");
     expect(metadata.sourceCoverage?.sourceFamilyCounts?.vaultsFyi).toBe(1);
+    expect(metadata.sourceCoverage?.sourceFamilyInventoryCounts?.vaultsFyi).toBe(1);
     expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
       status: "ok",
       rawCandidateCount: 1,
       candidateCount: 1,
+      inventoryCount: 1,
       malformedDropCount: 0,
       provider: {
         vaultsFyi: {
           status: "ok",
           rankableCandidateCount: 1,
+        },
+      },
+    });
+  });
+
+  it("keeps vaults.fyi audit inventory counts separate from supplemental candidate counts", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue([
+      {
+        symbol: "USDC",
+        chain: "ethereum",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        yield: {
+          currentApy: 4.1,
+          apyBase: 4.1,
+          apyReward: null,
+          sourcePool: "vault-a",
+          sourceTvlUsd: 1_500_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:beefy:ethereum:vault-a",
+          yieldSource: "Beefy: vault-a",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: 1_774_526_400,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+    ]);
+    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
+      candidates: [],
+      telemetry: {
+        ...emptyVaultsFyiResult({
+          enabled: true,
+          hasKey: true,
+          rawVaultCount: 8,
+          auditOnlyCount: 8,
+          creditsEstimated: 25,
+          pageCount: 1,
+          pageCapReached: true,
+        }).telemetry,
+        status: "ok",
+        skipReason: null,
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage?: {
+        sourceFamilyCounts?: { vaultsFyi?: number };
+        sourceFamilyInventoryCounts?: { vaultsFyi?: number };
+        sourceFamilySummaries?: {
+          vaultsFyi?: {
+            rawCandidateCount?: number;
+            candidateCount?: number;
+            inventoryCount?: number;
+            provider?: {
+              vaultsFyi?: {
+                pageCapReached?: boolean;
+                rawVaultCount?: number;
+                auditOnlyCount?: number;
+              };
+            };
+          };
+        };
+      };
+    };
+
+    expect(metadata.sourceCoverage?.sourceFamilyCounts?.vaultsFyi).toBe(0);
+    expect(metadata.sourceCoverage?.sourceFamilyInventoryCounts?.vaultsFyi).toBe(8);
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
+      rawCandidateCount: 0,
+      candidateCount: 0,
+      inventoryCount: 8,
+      provider: {
+        vaultsFyi: {
+          pageCapReached: true,
+          rawVaultCount: 8,
+          auditOnlyCount: 8,
         },
       },
     });

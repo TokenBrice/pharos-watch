@@ -99,6 +99,7 @@ export async function syncYieldSupplemental(
     candidates,
     familyResults,
     sourceFamilyCounts,
+    sourceFamilyInventoryCounts,
     supplementalSourceAccounting,
     sourceFamilySummaries,
     optionalRpcTelemetry,
@@ -119,6 +120,7 @@ export async function syncYieldSupplemental(
         successfulFamilies: familyResults.filter((family) => family.status === "ok").length,
       },
       sourceFamilyCounts,
+      sourceFamilyInventoryCounts,
       sourceFamilySummaries,
     },
   });
@@ -144,6 +146,7 @@ export async function syncYieldSupplemental(
           rowsDropped: droppedCount,
         },
         fallbackMode: "empty-snapshot",
+        sourceFamilyInventoryCounts,
         sourceFamilySummaries,
       },
     });
@@ -159,6 +162,7 @@ export async function syncYieldSupplemental(
           dedupedSupplementalCandidates: 0,
           supplementalCandidatesWritten: 0,
           sourceFamilyCounts,
+          sourceFamilyInventoryCounts,
           supplementalSourceAccounting,
           sourceFamilySummaries,
           optionalRpcTelemetry,
@@ -239,6 +243,7 @@ export async function syncYieldSupplemental(
       },
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
       familyCacheResults,
+      sourceFamilyInventoryCounts,
       sourceFamilySummaries,
     },
   });
@@ -254,6 +259,7 @@ export async function syncYieldSupplemental(
         dedupedSupplementalCandidates: dedupedCandidates.length,
         supplementalCandidatesWritten: cacheResult.written ? dedupedCandidates.length : 0,
         sourceFamilyCounts,
+        sourceFamilyInventoryCounts,
         supplementalSourceAccounting,
         sourceFamilySummaries,
         optionalRpcTelemetry,

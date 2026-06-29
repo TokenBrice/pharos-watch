@@ -52,6 +52,7 @@ export interface SupplementalSourceFamilyResult {
   key: SupplementalSourceFamilyKey;
   candidates: ResolvedYieldCandidate[];
   sourceFamilyCount: number;
+  inventoryCount?: number;
   status: "ok" | "failed";
   telemetry?: OptionalRpcFamilyTelemetry;
   provider?: unknown;
@@ -81,6 +82,7 @@ export interface SupplementalSourceFamilySummary {
   status: SupplementalSourceFamilyStatus;
   rawCandidateCount: number;
   candidateCount: number;
+  inventoryCount?: number;
   malformedDropCount: number;
   optionalRpc?: {
     targetCount: number;
@@ -291,6 +293,9 @@ function buildSourceFamilySummaries(
       candidateCount: result.candidates.length,
       malformedDropCount: malformedSourceDrops.bySourceFamily[result.key],
     };
+    if (result.inventoryCount != null) {
+      summary.inventoryCount = result.inventoryCount;
+    }
     if (result.telemetry) {
       summary.optionalRpc = buildOptionalRpcSummary(result.telemetry);
     }
@@ -427,7 +432,8 @@ async function runVaultsFyiFamily(
   return {
     key: "vaultsFyi",
     candidates,
-    sourceFamilyCount: telemetry?.rawVaultCount ?? candidates.length,
+    sourceFamilyCount: candidates.length,
+    inventoryCount: telemetry?.rawVaultCount,
     status: canPublish ? "ok" : "failed",
     provider: telemetry ? { vaultsFyi: telemetry } : undefined,
   };
@@ -585,6 +591,7 @@ export async function loadSupplementalSourceFamilies(
   candidates: ResolvedYieldCandidate[];
   familyResults: SupplementalSourceFamilyResult[];
   sourceFamilyCounts: SourceFamilyCountRecord;
+  sourceFamilyInventoryCounts: SourceFamilyCountRecord;
   supplementalSourceAccounting: SupplementalSourceAccounting;
   sourceFamilySummaries: SupplementalSourceFamilySummaryRecord;
   optionalRpcTelemetry: {
@@ -598,15 +605,18 @@ export async function loadSupplementalSourceFamilies(
     filterMalformedSupplementalCandidates(result, malformedSourceDrops),
   );
   const sourceFamilyCounts = buildSourceFamilyCountRecord();
+  const sourceFamilyInventoryCounts = buildSourceFamilyCountRecord();
 
   for (const result of familyResults) {
     sourceFamilyCounts[result.key] = result.sourceFamilyCount;
+    sourceFamilyInventoryCounts[result.key] = result.inventoryCount ?? result.sourceFamilyCount;
   }
 
   return {
     candidates: familyResults.flatMap((result) => result.candidates),
     familyResults,
     sourceFamilyCounts,
+    sourceFamilyInventoryCounts,
     supplementalSourceAccounting: {
       familyExecution: {
         familyCount: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,

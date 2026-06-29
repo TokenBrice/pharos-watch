@@ -115,10 +115,37 @@ describe("fetchVaultsFyiSources", () => {
       skipReason: null,
       requestCount: 1,
       pageCount: 1,
+      pageCapReached: false,
       creditsEstimated: 7,
+      creditCapReached: false,
       rawVaultCount: 2,
       auditOnlyCount: 2,
       rankableCandidateCount: 0,
+    });
+  });
+
+  it("marks bounded audit inventory page caps without treating the provider run as partial", async () => {
+    const rows = Array.from({ length: 8 }, (_, index) =>
+      detailedVault({ address: `0x${String(index + 1).padStart(40, "0")}` }),
+    );
+    vi.stubGlobal("fetch", vi.fn(async () => response({ data: rows })));
+
+    const result = await fetchVaultsFyiSources({
+      config: enabledConfig(),
+      startSec: 1_781_267_400,
+    });
+
+    expect(result.candidates).toEqual([]);
+    expect(result.telemetry).toMatchObject({
+      status: "ok",
+      skipReason: null,
+      requestCount: 1,
+      pageCount: 1,
+      pageCapReached: true,
+      creditCapReached: false,
+      creditsEstimated: 25,
+      rawVaultCount: 8,
+      auditOnlyCount: 8,
     });
   });
 
@@ -208,6 +235,7 @@ describe("fetchVaultsFyiSources", () => {
         status: "skipped",
         skipReason: "credit-cap",
         requestCount: 0,
+        creditCapReached: true,
         creditsEstimated: 0,
       },
     });
