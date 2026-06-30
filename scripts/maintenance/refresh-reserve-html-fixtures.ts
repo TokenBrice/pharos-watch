@@ -115,9 +115,13 @@ async function fetchFixture(spec: HtmlFixtureSpec): Promise<string | null> {
 }
 
 function writeFixture(spec: HtmlFixtureSpec, body: string): void {
-  const header = `<!-- captured-at: ${new Date().toISOString()} from ${spec.url} -->\n`;
+  const capturedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  const header = `<!-- captured-at: ${capturedAt} -->\n<!-- source: ${spec.url} -->\n`;
   const path = join(FIXTURES_DIR, spec.fixture);
-  writeFileSync(path, header + body, "utf8");
+  const normalizedBody = body
+    .replace(/^[ \t]+/gm, (indent) => indent.replace(/\t/g, "  "))
+    .replace(/[ \t]+$/gm, "");
+  writeFileSync(path, header + normalizedBody, "utf8");
 }
 
 async function main(): Promise<void> {

@@ -21,16 +21,16 @@ describe("adaptUsdhNativeMarkets", () => {
 
   it("picks the latest attestation link by (year, month) and derives end-of-month timestamp", () => {
     const result = adaptUsdhNativeMarkets(SAMPLE_HTML);
-    // Fixture has January + February 2026 → latest = 2026_february.pdf → Feb 28, 2026
+    // Fixture has attestations through April 2026; latest = 2026_april.pdf -> Apr 30, 2026.
     expect(result.metadata).toMatchObject({
-      attestationPeriod: "February 2026",
-      attestationPdfPath: "/attestations/2026_february.pdf",
-      sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+      attestationPeriod: "April 2026",
+      attestationPdfPath: "/attestations/2026_april.pdf",
+      sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,
       freshnessMode: "verified",
       redemption: {
         capacityKind: "documented-bound",
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+        sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
       },

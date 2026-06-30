@@ -15,22 +15,30 @@ describe("adaptReMetrics", () => {
     const result = adaptReMetrics(SAMPLE_HTML);
 
     expect(result.slices).toEqual([
-      { name: "Off-chain insurance / reinsurance capital", pct: 36.9, risk: "medium" },
-      { name: "USDC reserves", pct: 34.2, risk: "low", coinId: "usdc-circle" },
-      { name: "sUSDe (delta-neutral ETH basis)", pct: 21.2, risk: "high", coinId: "susde-ethena", depType: "collateral" },
-      { name: "USDT reserves", pct: 6.7, risk: "low", coinId: "usdt-tether" },
+      { name: "Off-chain insurance / reinsurance capital", pct: 83.3, risk: "medium" },
+      { name: "sUSDe (delta-neutral ETH basis)", pct: 15.7, risk: "high", coinId: "susde-ethena", depType: "collateral" },
       { name: "reUSD / sUSDe LP position", pct: 0.7, risk: "high" },
-      { name: "USDe (delta-neutral ETH basis)", pct: 0.3, risk: "high", coinId: "usde-ethena" },
+      { name: "USDC reserves", pct: 0.2, risk: "low", coinId: "usdc-circle" },
+      { name: "USDe (delta-neutral ETH basis)", pct: 0.1, risk: "high", coinId: "usde-ethena" },
     ]);
     expect(result.metadata).toMatchObject({
-      chainBreakdownCount: 2,
-      trackedTokenCount: 5,
-      offchainCapitalUsd: 73740021.94399603,
-      sourceTimestamp: Date.UTC(2026, 2, 24) / 1000,
+      chainBreakdownCount: 4,
+      trackedTokenCount: 6,
+      offchainCapitalUsd: 177667132.2437341,
+      sourceTimestamp: Date.UTC(2026, 5, 29) / 1000,
       freshnessMode: "verified",
       stableAssetUsd: expect.any(Number),
+      immediateRedeemableUsd: 38999607.14142658,
+      redemptionRowsCount: 4,
+      redemption: {
+        capacityUsd: 38999607.14142658,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-api",
+        routeStatus: "unknown",
+        routeStatusSource: "protocol-api",
+        holderEligibility: "any-holder",
+      },
     });
-    expect(result.metadata?.redemption).toBeUndefined();
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("re-metrics") ?? undefined }).valid).toBe(true);
   });
 
@@ -39,12 +47,12 @@ describe("adaptReMetrics", () => {
 
     expect(result.slices[0]).toEqual({
       name: "Off-chain insurance / reinsurance capital",
-      pct: 36.9,
+      pct: 83.3,
       risk: "medium",
     });
     expect(result.metadata).toMatchObject({
-      offchainCapitalUsd: 73740021.94399603,
-      sourceTimestamp: Date.UTC(2026, 2, 24) / 1000,
+      offchainCapitalUsd: 177667132.2437341,
+      sourceTimestamp: Date.UTC(2026, 5, 29) / 1000,
       freshnessMode: "verified",
     });
   });

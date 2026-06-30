@@ -150,7 +150,7 @@ describe("mento adapter", () => {
 
   it("extracts the current cdp_backings dashboard timestamp with deeper escaped quotes", () => {
     expect(extractMentoDashboardTimestamp(CURRENT_DASHBOARD_HTML)).toBe(
-      Math.floor(Date.parse("2026-05-17T13:46:16.506Z") / 1000),
+      Math.floor(Date.parse("2026-06-30T00:14:18.000Z") / 1000),
     );
   });
 

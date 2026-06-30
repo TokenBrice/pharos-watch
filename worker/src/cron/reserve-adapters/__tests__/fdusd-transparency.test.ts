@@ -13,20 +13,18 @@ describe("adaptFdusdTransparency", () => {
   it("maps the transparency badges into Pharos reserve slices", () => {
     const result = adaptFdusdTransparency(SAMPLE_HTML);
     expect(result.slices).toEqual([
-      { name: "U.S. Treasury Bills", pct: 74.5, risk: "very-low" },
-      { name: "Cash", pct: 17.5, risk: "very-low" },
-      { name: "Bank Deposits", pct: 6, risk: "very-low" },
-      { name: "Overnight Reverse Repos", pct: 2, risk: "very-low" },
+      { name: "U.S. Treasury Bills", pct: 86.4, risk: "very-low" },
+      { name: "Cash", pct: 13.6, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
-      sliceCount: 4,
-      asOf: "Feb 28, 2026",
-      sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+      sliceCount: 2,
+      asOf: "May 31, 2026",
+      sourceTimestamp: Date.UTC(2026, 4, 31) / 1000,
       freshnessMode: "verified",
       redemption: {
         capacityKind: "documented-bound",
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+        sourceTimestamp: Date.UTC(2026, 4, 31) / 1000,
         routeStatus: "unknown",
       },
     });

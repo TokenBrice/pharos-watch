@@ -25,25 +25,23 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(USDC_HTML, "usdc");
     expect(result.slices.length).toBe(4);
     const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
-    expect(total).toBe(100);
+    expect(total).toBeCloseTo(100, 10);
     expect(result.metadata).toMatchObject({
-      freshnessMode: "unverified",
-      details: {
-        freshnessSource: "html-disclosure",
-      },
+      freshnessMode: "verified",
+      sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
     });
   });
 
   it("uses Circle's reserve disclosure date when the page exposes one", () => {
-    const result = adaptCircleTransparency(`${USDC_HTML}<div>As of Apr 09, 2026</div>`, "usdc");
+    const result = adaptCircleTransparency(`${USDC_HTML}<div>As of Jun 25, 2026</div>`, "usdc");
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
+      sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
       redemption: {
         capacityKind: "documented-bound",
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
+        sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
       },
@@ -68,10 +66,10 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(USDC_AMOUNT_HTML, "usdc");
     expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
-      { name: "<3-Month U.S. Treasuries", pct: 57.1, risk: "very-low" },
-      { name: "Deposits at Systemically Important Institutions", pct: 27.3, risk: "very-low" },
-      { name: "Other Bank Deposits", pct: 14.8, risk: "very-low" },
-      { name: "Overnight Reverse Treasury Repo", pct: 0.8, risk: "very-low" },
+      { name: "<3-Month U.S. Treasuries", pct: 70.7, risk: "very-low" },
+      { name: "Other Bank Deposits", pct: 14.9, risk: "very-low" },
+      { name: "Deposits at Systemically Important Institutions", pct: 13.5, risk: "very-low" },
+      { name: "Overnight Reverse Treasury Repo", pct: 0.9, risk: "very-low" },
     ]);
   });
 
@@ -97,11 +95,11 @@ describe("adaptCircleTransparency", () => {
     const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
     const stalePageBanner = `<div>As of Jan 01, 2020</div>${farPadding}`;
     const futureBanner = `${farPadding}<div>As of Feb 02, 2022</div>`;
-    const adversarial = `${stalePageBanner}${USDC_AMOUNT_HTML}<div>As of Apr 09, 2026</div>${futureBanner}`;
+    const adversarial = `${stalePageBanner}${USDC_AMOUNT_HTML}<div>As of Jun 25, 2026</div>${futureBanner}`;
     const result = adaptCircleTransparency(adversarial, "usdc");
 
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
+      sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
     });
   });
 
