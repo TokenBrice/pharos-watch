@@ -31,7 +31,6 @@ const BASE_COLLATERAL_REDEEM_IDS = [
   "nect-beraborrow",
   "fxusd-f-x-protocol",
   "usdq-quill",
-  "usdk-orki",
 ] as const;
 const BASE_COLLATERAL_OVERRIDE_REASON =
   "Reviewed collateral-specific route replaces the shared collateral redemption default.";
@@ -215,26 +214,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-    },
-    "usdk-orki": {
-      ...collateralRedeemBase,
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-      docs: [
-        sourceRef("Orki USDK docs", "https://orki-finance.gitbook.io/orki-finance-docs/products/usdusdk", [
-          "route",
-          "capacity",
-        ]),
-        sourceRef("Orki USDK benefits", "https://orki-finance.gitbook.io/orki-finance-docs/products/usdusdk/benefits", [
-          "route",
-          "capacity",
-        ]),
-      ],
-      notes: [
-        "Fresh live reserve metadata reads Orki's Liquity v2 ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
-      ],
     },
     "cdp-enosys": {
       ...collateralRedeemBase,
@@ -665,7 +644,6 @@ applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
   "meusd-mezo",
   "nect-beraborrow",
   "usdq-quill",
-  "usdk-orki",
   "usdaf-asymmetry",
   "ebusd-ebisu",
   "reusd-resupply",

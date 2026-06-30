@@ -78,7 +78,6 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/gtusdcp-gauntlet.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/jupusd-jupiter.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/msusd-main-street.ts",
-      "shared/lib/redemption-backstop-configs/stablecoin-redeem/msy-main-street.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/ousd-origin-protocol.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/ousg-ondo-finance.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/pusd-polymarket.ts",

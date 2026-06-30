@@ -14,7 +14,6 @@ import { GTUSDC_GAUNTLET_STABLECOIN_REDEEM_CONFIG } from "./gtusdc-gauntlet";
 import { GTUSDCP_GAUNTLET_STABLECOIN_REDEEM_CONFIG } from "./gtusdcp-gauntlet";
 import { JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG } from "./jupusd-jupiter";
 import { MSUSD_MAIN_STREET_STABLECOIN_REDEEM_CONFIG } from "./msusd-main-street";
-import { MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG } from "./msy-main-street";
 import { OUSD_ORIGIN_PROTOCOL_STABLECOIN_REDEEM_CONFIG } from "./ousd-origin-protocol";
 import { OUSG_ONDO_FINANCE_STABLECOIN_REDEEM_CONFIG } from "./ousg-ondo-finance";
 import { PUSD_POLYMARKET_STABLECOIN_REDEEM_CONFIG } from "./pusd-polymarket";
@@ -125,7 +124,6 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "stcusd-cap": STCUSD_CAP_STABLECOIN_REDEEM_CONFIG,
   "sbold-k3-capital": SBOLD_K3_CAPITAL_STABLECOIN_REDEEM_CONFIG,
   "ybold-yearn": YBOLD_YEARN_STABLECOIN_REDEEM_CONFIG,
-  "msy-main-street": MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG,
   "yusd-yieldfi": YUSD_YIELDFI_STABLECOIN_REDEEM_CONFIG,
   "said-gaib": SAID_GAIB_STABLECOIN_REDEEM_CONFIG,
   "zys-zephyr-protocol": ZYS_ZEPHYR_PROTOCOL_STABLECOIN_REDEEM_CONFIG,
