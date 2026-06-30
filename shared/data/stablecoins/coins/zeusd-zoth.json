@@ -269,6 +269,11 @@
       "type": "warning",
       "title": "March 2025 exploit history",
       "message": "Zoth suffered March 2025 exploits affecting ZeUSD platform risk, including a collateral-accounting bug and a later admin-key compromise. Review current redemption and reserve evidence before assuming normal peg liquidity. https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
+    },
+    {
+      "type": "danger",
+      "title": "Severe residual depeg",
+      "message": "By late June 2026, ZeUSD market pricing and public liquidity remained far below the $1 peg after the 2025 exploit history, with supply reduced to a small residual base. Treat ZeUSD as a high-risk legacy/depeg case unless current issuer redemption and reserve evidence is independently revalidated."
     }
   ],
   "launchDate": "2025-01-27"

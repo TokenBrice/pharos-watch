@@ -340,7 +340,7 @@
   },
   "yieldConfig": {
     "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
-    "yieldType": "nav-appreciation"
+    "yieldType": "rebase"
   },
   "notices": [
     {

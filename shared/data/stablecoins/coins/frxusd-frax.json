@@ -462,7 +462,7 @@
       "coinId": "buidl-blackrock"
     },
     {
-      "name": "USDB (DBS tokenized deposits)",
+      "name": "USDB (Bridge/Stripe fiat-backed stablecoin)",
       "pct": 1,
       "risk": "low",
       "coinId": "usdb-bridge"

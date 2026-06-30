@@ -2,7 +2,18 @@
   "id": "msusd-main-street",
   "name": "Main Street USD",
   "symbol": "MSUSD",
-  "oneLiner": "msUSD is Main Street's dollar token; redemptions target USDC but are capacity-limited and currently carry unresolved reserve-verification risk.",
+  "oneLiner": "msUSD was Main Street's dollar token; Pharos freezes it after Accountable terminated reserve verification and the token permanently depegged in June 2026.",
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "frozen",
+  "frozenAt": "2026-06-20",
+  "obituary": {
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-06-20",
+    "epitaph": "Verification failed before the dollar did",
+    "obituary": "Main Street's msUSD collapsed after Accountable terminated its verification relationship on June 20, 2026, saying the protocol failed verification standards. msUSD fell far below the dollar and remained around $0.29-$0.33 in the following week while independent on-chain analysts reported minimal immediately redeemable reserves against tens of millions of tokens. Main Street disputed the characterization and said assets remained backed, but the combination of failed third-party verification, unresolved redemption capacity, and persistent market pricing made msUSD unsuitable for active stablecoin tracking.",
+    "sourceUrl": "https://finance.yahoo.com/markets/crypto/articles/main-street-msusd-stablecoin-loses-201216552.html",
+    "sourceLabel": "Yahoo Finance msUSD depeg report"
+  },
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,8 +22,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Main Street docs describe msUSD mint/redemption against USDC, but redemption capacity can be limited while positions are unwound and assets are converted; Pharos no longer treats the public wallet balance as verified USDC backing.",
-  "pegMechanism": "Verified users may request USDC redemption after the protocol cooldown, subject to dynamic capacity. The msY staking token is modeled separately as a strategy vault, but msUSD reserve segregation is not independently verified here.",
+  "collateral": "Main Street docs described msUSD mint/redemption against USDC and strategy assets, but third-party verification was terminated and Pharos no longer treats the reserve base as active, verified dollar backing.",
+  "pegMechanism": "Formerly redeemed by verified users through capacity-limited USDC withdrawals after a protocol cooldown. Following the June 2026 verification failure and depeg, Pharos treats msUSD as a frozen collapse case rather than an active redeemable dollar.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "297",
   "detailProvider": "defillama",
@@ -196,9 +207,9 @@
   ],
   "notices": [
     {
-      "type": "warning",
-      "title": "Reserve segregation unverified",
-      "message": "Main Street describes msUSD redemptions to USDC, but public verification is not sufficient for Pharos to treat unstaked msUSD as fully segregated USDC backing. Redemptions may depend on capacity, cooldowns, asset conversion, and strategy unwinds."
+      "type": "danger",
+      "title": "Frozen after June 2026 depeg",
+      "message": "Accountable terminated Main Street's reserve-verification agreement on June 20, 2026, and msUSD has traded far below $1 since. Main Street disputes the reserve-failure characterization, but Pharos archives msUSD as frozen because independent verification and durable peg behavior failed."
     }
   ],
   "launchDate": "2025-06-08"

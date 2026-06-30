@@ -82,6 +82,16 @@
       "chain": "optimism",
       "address": "0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
       "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a",
+      "decimals": 6
+    },
+    {
+      "chain": "tron",
+      "address": "TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,

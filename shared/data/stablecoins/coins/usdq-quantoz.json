@@ -27,12 +27,29 @@
     "provider": "Quantoz transparency dashboard"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "Quantoz publishes USDQ as a regulated issuer token across Ethereum, Polygon, XRPL, and Algorand with issuer transparency and resource pages, and no separate bridge protocol was resolved. The reviewed route is issuer-managed native issuance/redemption across supported chains.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "external-lock-mint",
+    "summary": "Quantoz announced LayerZero and Stargate interoperability for USDQ and EURQ, starting with Ethereum-to-Polygon transfers. The route therefore depends on external LayerZero/Stargate infrastructure rather than solely issuer-native mint/redeem rails; exact adapter topology should remain under review.",
+    "reviewedAt": "2026-06-30",
+    "reviewer": "Codex static correction review",
     "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "LayerZero / Stargate",
+        "slug": "layerzero",
+        "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ],
+        "note": "Quantoz announced LayerZero messaging and Stargate liquidity transport for EURQ/USDQ cross-chain transfers; final on-chain adapter topology remains to be re-reviewed."
+      }
+    ],
     "sources": [
+      {
+        "label": "Quantoz LayerZero/Stargate announcement",
+        "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq"
+      },
       {
         "label": "Quantoz USDQ product page",
         "url": "https://www.quantoz.com/products/eurq-usdq"
@@ -40,10 +57,6 @@
       {
         "label": "Quantoz transparency",
         "url": "https://www.quantoz.com/transparency"
-      },
-      {
-        "label": "Quantoz resources",
-        "url": "https://www.quantoz.com/resources"
       }
     ]
   },
@@ -325,5 +338,5 @@
       "token": "USDQ"
     }
   },
-  "launchDate": "2024-11-13"
+  "launchDate": "2024-11-18"
 }

@@ -81,19 +81,35 @@
     }
   ],
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "tGBP has issuer-managed deployments across several chains and no source-verified third-party bridge route in reviewed materials. The route is reviewed as issuer-native multichain issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "external-lock-mint",
+    "summary": "tGBP uses LayerZero OFT-style multichain token infrastructure rather than issuer-native issuance alone. The reviewed StableTokenV1OFT route depends on external LayerZero messaging and OFT contracts across the supported chains.",
+    "reviewedAt": "2026-06-30",
+    "reviewer": "Codex static correction review",
     "confidence": "probable",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "LayerZero OFT",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ]
+      }
+    ],
     "sources": [
       {
         "label": "tGBP website",
         "url": "https://www.tokenisedgbp.com/"
       },
       {
-        "label": "tGBP transparency",
-        "url": "https://www.tokenisedgbp.com/transparency"
+        "label": "OpenZeppelin tGBP audit",
+        "url": "https://www.openzeppelin.com/news/tgbp-audit"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
       }
     ]
   },

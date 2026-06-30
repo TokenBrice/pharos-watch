@@ -2,7 +2,18 @@
   "id": "msy-main-street",
   "name": "Main Street Yield",
   "symbol": "msY",
-  "oneLiner": "msY is the ERC-4626-style strategy vault token over msUSD, with exchange-rate appreciation from Main Street's delta-neutral options and derivatives book.",
+  "oneLiner": "msY was Main Street's ERC-4626-style strategy vault over msUSD; Pharos freezes it after the parent msUSD collapse in June 2026.",
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "frozen",
+  "frozenAt": "2026-06-20",
+  "obituary": {
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-06-20",
+    "epitaph": "The wrapper followed the parent down",
+    "obituary": "msY is a strategy-vault wrapper over msUSD, so the June 2026 msUSD collapse impaired the wrapper's durable dollar backing. As msUSD depegged after Accountable terminated reserve verification, msY also traded far below its prior net-asset value and could not recover independently from the parent asset. Pharos freezes msY with msUSD as a derivative collapse rather than treating the vault share as an active stablecoin-like dollar instrument.",
+    "sourceUrl": "https://protos.com/latest-defi-yield-vault-drama-wipes-out-69m-of-msusd-and-avlt-market-cap-1/",
+    "sourceLabel": "Protos Main Street vault collapse report"
+  },
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,9 +29,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "variantOf": "msusd-main-street",
-  "variantKind": "strategy-vault",
-  "pegReferenceId": "msusd-main-street",
   "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
   "pegMechanism": "ERC-4626-style staking token over msUSD; users stake msUSD for msY, whose exchange rate appreciates with strategy returns, while final USDC redemption inherits Main Street's primary-market caps and cooldowns",
   "mechanismArchetype": "synthetic-delta-neutral",

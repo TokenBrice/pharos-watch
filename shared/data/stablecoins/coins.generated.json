@@ -1457,34 +1457,31 @@
     "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
     "bridgeRouteRisk": {
-      "tier": "canonical-rollup-bridge",
-      "summary": "AID is reviewed as a native multichain GAIB asset with Arbitrum route evidence. The only reviewed bridge-route signal is the canonical Arbitrum rollup path, so Pharos assigns the canonical rollup bridge tier rather than an external third-party token bridge tier.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "probable",
+      "tier": "external-validated-network",
+      "summary": "AID is a LayerZero OFT omnichain deployment at the same EVM address on Ethereum, Arbitrum, Base, and BNB Chain. Cross-chain movement uses LayerZero burn/mint messaging rather than the Arbitrum canonical rollup bridge.",
+      "reviewedAt": "2026-06-30",
+      "reviewer": "Codex static correction review",
+      "confidence": "verified",
       "protocols": [
         {
-          "source": "l2beat",
-          "name": "Arbitrum One",
-          "slug": "arbitrum",
-          "url": "https://l2beat.com/scaling/projects/arbitrum",
+          "source": "issuer",
+          "name": "LayerZero OFT",
+          "slug": "layerzero",
+          "url": "https://blog.gaib.ai/the-ai-dollar-is-live/",
           "bridgeTypes": [
-            "canonical-rollup-bridge"
+            "oft",
+            "burnAndMint"
           ]
         }
       ],
       "sources": [
         {
-          "label": "GAIB docs",
-          "url": "https://docs.gaib.ai"
+          "label": "GAIB AID launch blog",
+          "url": "https://blog.gaib.ai/the-ai-dollar-is-live/"
         },
         {
           "label": "GAIB AID transparency",
           "url": "https://aid.gaib.ai/transparency"
-        },
-        {
-          "label": "L2BEAT Arbitrum One",
-          "url": "https://l2beat.com/scaling/projects/arbitrum"
         }
       ]
     },
@@ -7602,10 +7599,10 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "brla-digital-brla",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
-      "provider": "Avenia",
-      "attestorTier": "self",
+      "provider": "External audit firm disclosed through BRLA transparency materials",
+      "attestorTier": "niche",
       "cadence": "monthly",
       "attestorJurisdiction": "Brazil"
     },
@@ -18780,7 +18777,7 @@
         }
       }
     },
-    "launchDate": "2024-08-18"
+    "launchDate": "2019-11-11"
   },
   {
     "id": "euri-banking-circle",
@@ -22103,7 +22100,7 @@
       {
         "type": "info",
         "title": "Multi-chain EU-regulated MMF",
-        "message": "EUTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
+        "message": "EUTBL is issued on Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar, with cross-chain transfers relayed via Chainlink CCIP where supported."
       },
       {
         "type": "info",
@@ -23635,7 +23632,7 @@
         }
       }
     },
-    "launchDate": "2020-12-16"
+    "launchDate": "2020-12-20"
   },
   {
     "id": "frxusd-frax",
@@ -24135,7 +24132,7 @@
         "coinId": "buidl-blackrock"
       },
       {
-        "name": "USDB (DBS tokenized deposits)",
+        "name": "USDB (Bridge/Stripe fiat-backed stablecoin)",
         "pct": 1,
         "risk": "low",
         "coinId": "usdb-bridge"
@@ -27322,29 +27319,18 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "bridgeRouteRisk": {
-      "tier": "liquidity-or-intent-route",
-      "summary": "GRAMG is tracked on Avalanche and Polygon, and the L2BEAT queue resolved Across/Avalanche route signals rather than issuer bridge docs. The reviewed route is therefore conservatively treated as liquidity or intent routing for cross-chain movement.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "probable",
+      "tier": "issuer-native-burn-mint",
+      "summary": "GRAMG uses Token Teknoloji issuer-native StableCoin contracts on Avalanche and Polygon. Direct source verification resolves externalTransfer/externalTransferFrom burn/mint functions controlled by the issuer supply manager, so the previous Across/Avalanche route signal is not the durable supply path.",
+      "reviewedAt": "2026-06-30",
+      "reviewer": "Codex static correction review",
+      "confidence": "verified",
       "protocols": [
         {
-          "source": "l2beat",
-          "name": "Across",
-          "slug": "across",
-          "url": "https://l2beat.com/interop/protocols/across",
+          "source": "explorer",
+          "name": "Token Teknoloji StableCoin externalTransfer route",
+          "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
           "bridgeTypes": [
-            "liquidity",
-            "intent"
-          ]
-        },
-        {
-          "source": "l2beat",
-          "name": "Avalanche Bridge",
-          "slug": "avalanche",
-          "url": "https://l2beat.com/bridges/projects/avalanche",
-          "bridgeTypes": [
-            "canonicalBridge"
+            "issuer-native-burn-mint"
           ]
         }
       ],
@@ -27354,8 +27340,8 @@
           "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
         },
         {
-          "label": "L2BEAT Across",
-          "url": "https://l2beat.com/interop/protocols/across"
+          "label": "GRAMG Avalanche contract source",
+          "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
         }
       ]
     },
@@ -27784,7 +27770,7 @@
       "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
       "yieldType": "lending-vault"
     },
-    "launchDate": "2024-03-05"
+    "launchDate": "2024-03-13"
   },
   {
     "id": "gtusdcp-gauntlet",
@@ -29942,6 +29928,16 @@
         "chain": "optimism",
         "address": "0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
         "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a",
+        "decimals": 6
+      },
+      {
+        "chain": "tron",
+        "address": "TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -30482,7 +30478,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
+    "collateral": "1:1 basket of USDC.e, USDt0, BYUSD, and USDe on Berachain",
     "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
     "geckoId": "honey-3",
     "pythFeedId": "0xf67b033925d73d43ba4401e00308d9b0f26ab4fbd1250e8b5407b9eaade7e1f4",
@@ -30662,19 +30658,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
-        "name": "USDC (Circle)",
+        "name": "USDC.e (bridged Circle)",
         "pct": 40,
         "risk": "low",
         "coinId": "usdc-circle"
       },
       {
-        "name": "USDT0 (Tether via LayerZero)",
+        "name": "USDt0 (Tether via LayerZero)",
         "pct": 25,
         "risk": "low",
         "coinId": "usdt-tether"
       },
       {
-        "name": "pyUSD / BYUSD (PayPal)",
+        "name": "BYUSD (Berachain Yield USD)",
         "pct": 20,
         "risk": "low",
         "coinId": "pyusd-paypal"
@@ -33132,17 +33128,28 @@
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "bridgeRouteRisk": {
-      "tier": "issuer-native-burn-mint",
-      "summary": "JPYC v1 is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
+      "tier": "external-lock-mint",
+      "summary": "JPYC v1 legacy deployments on Polygon and Gnosis use third-party bridge rails from Ethereum rather than purely issuer-native multichain issuance. The reviewed durable route is Polygon PoS plus Gnosis OmniBridge lock/mint exposure for the non-Ethereum contracts.",
+      "reviewedAt": "2026-06-30",
+      "reviewer": "Codex static correction review",
       "confidence": "probable",
       "protocols": [
         {
-          "source": "issuer",
-          "name": "JPYC v1 issuer-operated multichain issuance",
+          "source": "docs",
+          "name": "Polygon PoS Bridge",
+          "slug": "polygon-pos",
+          "url": "https://docs.polygon.technology/pos/concepts/bridge/",
           "bridgeTypes": [
-            "issuer-native-mint-redeem"
+            "lockAndMint"
+          ]
+        },
+        {
+          "source": "docs",
+          "name": "Gnosis OmniBridge",
+          "slug": "gnosis-omnibridge",
+          "url": "https://docs.gnosischain.com/bridges/OmniBridge/",
+          "bridgeTypes": [
+            "lockAndMint"
           ]
         }
       ],
@@ -33735,7 +33742,7 @@
     "detailProvider": "defillama",
     "name": "JPYSC",
     "symbol": "JPYSC",
-    "oneLiner": "JPYSC is a pre-launch yen stablecoin to be issued by Shinsei Trust & Banking, distributed by SBI VC Trade under Japan's Type III electronic payment framework.",
+    "oneLiner": "JPYSC is Shinsei Trust & Banking's closed-loop yen stablecoin for verified SBI VC Trade users, awaiting public-chain circulation.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "JPY",
@@ -33744,8 +33751,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Planned trust-bank JPY backing through Shinsei Trust & Banking under Japan's Type III Electronic Payment Instrument framework; public reserve composition and attestations are pending launch",
-    "pegMechanism": "Pre-launch trust-bank-backed JPY stablecoin: Shinsei Trust & Banking is expected to issue JPYSC under Japan's regulated electronic-payment-instrument framework, with SBI VC Trade as distributor and Startale as technical lead; contracts, redemption terms, and reserve reports remain pending regulatory approval and launch",
+    "collateral": "Segregated Shinsei Trust & Banking trust accounts holding yen cash and Japanese government bonds, with JGBs capped at 50% of reserves under Japan's Type III Electronic Payment Instrument framework",
+    "pegMechanism": "Trust-bank-backed JPY stablecoin issued by Shinsei Trust & Banking and distributed by SBI VC Trade. The June 24, 2026 launch is closed-loop for verified SBI VC Trade users; external-wallet withdrawals and public-chain circulation remain pending legal, tax, and deployment clarity.",
     "mechanismArchetype": "fiat-cash",
     "links": [
       {
@@ -33774,10 +33781,10 @@
     },
     "custodyModel": "institutional-regulated",
     "status": "pre-launch",
+    "launchDate": "2026-06-24",
     "announcedDate": "2026-02",
-    "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "launching-soon",
-    "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium. JPYSC went live June 24 2026, within the Q2 target, with Shinsei Trust & Banking as issuer and ~$63M of cash-plus-JGB reserves (up to 50% JGBs) held in segregated trust accounts. The initial phase is closed-loop: usable only by verified SBI VC Trade account holders, with no external-wallet withdrawals or public-chain/DeFi access yet — Startale says public-chain circulation is technically ready but is awaiting further legal and tax clarity. Public deployment chain not yet confirmed (Strium L1 / Soneium / Ethereum cited)",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "JPYSC went live June 24, 2026 with Shinsei Trust & Banking as issuer and cash-plus-JGB reserves held in segregated trust accounts. The initial phase is closed-loop for verified SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet; Startale says public-chain use is technically ready but awaiting further legal and tax clarity.",
     "featuredContent": [
       {
         "type": "blog",
@@ -36992,7 +36999,7 @@
     },
     "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
     "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "leverup-usd",
     "links": [
       {
@@ -40822,9 +40829,10 @@
     "id": "msusd-main-street",
     "llamaId": "297",
     "detailProvider": "defillama",
+    "marketAvailability": "legacy-or-wind-down",
     "name": "Main Street USD",
     "symbol": "MSUSD",
-    "oneLiner": "msUSD is Main Street's dollar token; redemptions target USDC but are capacity-limited and currently carry unresolved reserve-verification risk.",
+    "oneLiner": "msUSD was Main Street's dollar token; Pharos freezes it after Accountable terminated reserve verification and the token permanently depegged in June 2026.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -40833,8 +40841,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Main Street docs describe msUSD mint/redemption against USDC, but redemption capacity can be limited while positions are unwound and assets are converted; Pharos no longer treats the public wallet balance as verified USDC backing.",
-    "pegMechanism": "Verified users may request USDC redemption after the protocol cooldown, subject to dynamic capacity. The msY staking token is modeled separately as a strategy vault, but msUSD reserve segregation is not independently verified here.",
+    "collateral": "Main Street docs described msUSD mint/redemption against USDC and strategy assets, but third-party verification was terminated and Pharos no longer treats the reserve base as active, verified dollar backing.",
+    "pegMechanism": "Formerly redeemed by verified users through capacity-limited USDC withdrawals after a protocol cooldown. Following the June 2026 verification failure and depeg, Pharos treats msUSD as a frozen collapse case rather than an active redeemable dollar.",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-usd",
     "links": [
@@ -41018,11 +41026,21 @@
     ],
     "notices": [
       {
-        "type": "warning",
-        "title": "Reserve segregation unverified",
-        "message": "Main Street describes msUSD redemptions to USDC, but public verification is not sufficient for Pharos to treat unstaked msUSD as fully segregated USDC backing. Redemptions may depend on capacity, cooldowns, asset conversion, and strategy unwinds."
+        "type": "danger",
+        "title": "Frozen after June 2026 depeg",
+        "message": "Accountable terminated Main Street's reserve-verification agreement on June 20, 2026, and msUSD has traded far below $1 since. Main Street disputes the reserve-failure characterization, but Pharos archives msUSD as frozen because independent verification and durable peg behavior failed."
       }
     ],
+    "status": "frozen",
+    "frozenAt": "2026-06-20",
+    "obituary": {
+      "causeOfDeath": "counterparty-failure",
+      "deathDate": "2026-06-20",
+      "epitaph": "Verification failed before the dollar did",
+      "obituary": "Main Street's msUSD collapsed after Accountable terminated its verification relationship on June 20, 2026, saying the protocol failed verification standards. msUSD fell far below the dollar and remained around $0.29-$0.33 in the following week while independent on-chain analysts reported minimal immediately redeemable reserves against tens of millions of tokens. Main Street disputed the characterization and said assets remained backed, but the combination of failed third-party verification, unresolved redemption capacity, and persistent market pricing made msUSD unsuitable for active stablecoin tracking.",
+      "sourceUrl": "https://finance.yahoo.com/markets/crypto/articles/main-street-msusd-stablecoin-loses-201216552.html",
+      "sourceLabel": "Yahoo Finance msUSD depeg report"
+    },
     "launchDate": "2025-06-08"
   },
   {
@@ -41248,9 +41266,10 @@
   {
     "id": "msy-main-street",
     "detailProvider": "coingecko",
+    "marketAvailability": "legacy-or-wind-down",
     "name": "Main Street Yield",
     "symbol": "msY",
-    "oneLiner": "msY is the ERC-4626-style strategy vault token over msUSD, with exchange-rate appreciation from Main Street's delta-neutral options and derivatives book.",
+    "oneLiner": "msY was Main Street's ERC-4626-style strategy vault over msUSD; Pharos freezes it after the parent msUSD collapse in June 2026.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -41259,7 +41278,6 @@
       "rwa": false,
       "navToken": true
     },
-    "pegReferenceId": "msusd-main-street",
     "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
     "pegMechanism": "ERC-4626-style staking token over msUSD; users stake msUSD for msY, whose exchange rate appreciates with strategy returns, while final USDC redemption inherits Main Street's primary-market caps and cooldowns",
     "mechanismArchetype": "synthetic-delta-neutral",
@@ -41406,8 +41424,6 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
-    "variantOf": "msusd-main-street",
-    "variantKind": "strategy-vault",
     "reserves": [
       {
         "name": "msUSD options strategy vault shares",
@@ -41447,6 +41463,16 @@
       "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
       "yieldSource": "Main Street savings (msY)",
       "yieldType": "nav-appreciation"
+    },
+    "status": "frozen",
+    "frozenAt": "2026-06-20",
+    "obituary": {
+      "causeOfDeath": "counterparty-failure",
+      "deathDate": "2026-06-20",
+      "epitaph": "The wrapper followed the parent down",
+      "obituary": "msY is a strategy-vault wrapper over msUSD, so the June 2026 msUSD collapse impaired the wrapper's durable dollar backing. As msUSD depegged after Accountable terminated reserve verification, msY also traded far below its prior net-asset value and could not recover independently from the parent asset. Pharos freezes msY with msUSD as a derivative collapse rather than treating the vault share as an active stablecoin-like dollar instrument.",
+      "sourceUrl": "https://protos.com/latest-defi-yield-vault-drama-wipes-out-69m-of-msusd-and-avlt-market-cap-1/",
+      "sourceLabel": "Protos Main Street vault collapse report"
     },
     "launchDate": "2025-12-04"
   },
@@ -42262,7 +42288,7 @@
         }
       }
     },
-    "launchDate": "2024-01-26"
+    "launchDate": "2025-03-26"
   },
   {
     "id": "mxne-real-mxn",
@@ -45289,6 +45315,11 @@
         "chain": "solana",
         "address": "i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc",
         "decimals": 6
+      },
+      {
+        "chain": "xrpl",
+        "address": "4F55534700000000000000000000000000000000.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -48294,7 +48325,7 @@
         "reserveSourceLabel": "Stablecorp balances API"
       }
     },
-    "launchDate": "2026-04-21"
+    "launchDate": "2020-02-11"
   },
   {
     "id": "reur-royal-euro",
@@ -48987,7 +49018,7 @@
         "message": "Resupply suffered a June 2025 oracle-manipulation exploit that created about $9.6M of bad debt. The protocol reported the bad debt fully repaid by August 2025 using treasury funds, insurance-pool burn mechanics, and a Yearn DAO loan, but the incident remains relevant to vault/oracle risk."
       }
     ],
-    "launchDate": "2025-03-13"
+    "launchDate": "2025-03-20"
   },
   {
     "id": "rgbp-revolut",
@@ -50499,24 +50530,8 @@
     },
     "reserves": [
       {
-        "name": "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)",
-        "pct": 50,
-        "risk": "low"
-      },
-      {
-        "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",
-        "pct": 25,
-        "risk": "medium",
-        "blacklistable": true
-      },
-      {
-        "name": "Tokenized gold assets (10+ aggregated)",
-        "pct": 15,
-        "risk": "medium"
-      },
-      {
-        "name": "Market-neutral fund units (Nomura, Fasanara, Edge Capital)",
-        "pct": 10,
+        "name": "Institutional credit and market-neutral fund basket",
+        "pct": 100,
         "risk": "high"
       }
     ],
@@ -53240,13 +53255,6 @@
         }
       }
     },
-    "notices": [
-      {
-        "type": "info",
-        "title": "Legacy savings contract",
-        "message": "The tracked Aave sGHO contract currently resolves as stkGHO-compatible rather than a full ERC-4626 vault. Pharos uses `previewRedeem` for price discovery and live reserve telemetry, and avoids the generic ERC-4626 reserve adapter until the replacement savings vault exposes standard asset and totalAssets methods."
-      }
-    ],
     "yieldConfig": {
       "yieldSource": "Aave Savings GHO",
       "yieldType": "governance-set"
@@ -54807,6 +54815,11 @@
         "chain": "ethereum",
         "address": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -54827,7 +54840,7 @@
       "reviewedAt": "2026-05-14"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "single-chain",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
@@ -59645,19 +59658,35 @@
     },
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
-      "tier": "issuer-native-burn-mint",
-      "summary": "tGBP has issuer-managed deployments across several chains and no source-verified third-party bridge route in reviewed materials. The route is reviewed as issuer-native multichain issuance.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
+      "tier": "external-lock-mint",
+      "summary": "tGBP uses LayerZero OFT-style multichain token infrastructure rather than issuer-native issuance alone. The reviewed StableTokenV1OFT route depends on external LayerZero messaging and OFT contracts across the supported chains.",
+      "reviewedAt": "2026-06-30",
+      "reviewer": "Codex static correction review",
       "confidence": "probable",
+      "protocols": [
+        {
+          "source": "explorer",
+          "name": "LayerZero OFT",
+          "slug": "layerzero",
+          "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+          "bridgeTypes": [
+            "oft",
+            "lockAndMint"
+          ]
+        }
+      ],
       "sources": [
         {
           "label": "tGBP website",
           "url": "https://www.tokenisedgbp.com/"
         },
         {
-          "label": "tGBP transparency",
-          "url": "https://www.tokenisedgbp.com/transparency"
+          "label": "OpenZeppelin tGBP audit",
+          "url": "https://www.openzeppelin.com/news/tgbp-audit"
+        },
+        {
+          "label": "LayerZero OFT technical reference",
+          "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
         }
       ]
     },
@@ -62258,10 +62287,10 @@
         "coinId": "m-m0"
       },
       {
-        "name": "USTBL by Spiko",
+        "name": "USDtb by Ethena (via UsualUSDtb wrapper)",
         "pct": 10,
         "risk": "low",
-        "coinId": "ustbl-spiko"
+        "coinId": "usdtb-ethena"
       },
       {
         "name": "USDC (Circle)",
@@ -67279,7 +67308,7 @@
       "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://brale.xyz/stablecoins/USDGLO",
       "redemptionPolicyPresent": true,
-      "monthlyAttestationPresent": true,
+      "monthlyAttestationPresent": false,
       "latestReportDate": "2026-05-31",
       "references": [
         {
@@ -68602,9 +68631,10 @@
     "id": "usdk-orki",
     "llamaId": "265",
     "detailProvider": "defillama",
+    "marketAvailability": "legacy-or-wind-down",
     "name": "Orki USD",
     "symbol": "USDK",
-    "oneLiner": "USDK is Orki's Liquity v2-style CDP stablecoin on Swellchain, minted against WETH, weETH, rswETH, and swETH; SWELL collateral branch currently shut down.",
+    "oneLiner": "USDK was Orki's Liquity v2-style CDP stablecoin on Swellchain, frozen after the underlying chain shutdown in June 2026.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -68821,9 +68851,19 @@
       {
         "type": "danger",
         "title": "Swellchain shutdown deadline",
-        "message": "Swellchain's June 15, 2026 front-end shutdown deadline has passed. Remaining USDK-related positions may require direct contract interaction and could become unrecoverable as Swellchain winds down toward its late-June shutdown window."
+        "message": "Swellchain's June 23, 2026 bridge-withdrawal deadline and June 30, 2026 chain-shutdown window have passed. Remaining USDK-related positions may require direct contract interaction and should be treated as effectively wound down."
       }
     ],
+    "status": "frozen",
+    "frozenAt": "2026-06-30",
+    "obituary": {
+      "causeOfDeath": "abandoned",
+      "deathDate": "2026-06-30",
+      "epitaph": "A CDP stranded on a shuttered chain",
+      "obituary": "Orki USDK was deployed only on Swellchain. Swellchain shut down its bridge flow in June 2026 and moved to halt chain operations on June 30, leaving remaining positions dependent on direct contract access or unrecoverable as the network wound down. Because USDK had no verified deployment outside Swellchain, Pharos freezes it as a discontinued single-chain CDP stablecoin.",
+      "sourceUrl": "https://cryptoslate.com/swellchain-shutdown-users-left-behind-when-crypto-projects-move-on/",
+      "sourceLabel": "CryptoSlate Swellchain shutdown report"
+    },
     "launchDate": "2025-05-15"
   },
   {
@@ -72025,12 +72065,29 @@
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
-      "tier": "issuer-native-burn-mint",
-      "summary": "Quantoz publishes USDQ as a regulated issuer token across Ethereum, Polygon, XRPL, and Algorand with issuer transparency and resource pages, and no separate bridge protocol was resolved. The reviewed route is issuer-managed native issuance/redemption across supported chains.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
+      "tier": "external-lock-mint",
+      "summary": "Quantoz announced LayerZero and Stargate interoperability for USDQ and EURQ, starting with Ethereum-to-Polygon transfers. The route therefore depends on external LayerZero/Stargate infrastructure rather than solely issuer-native mint/redeem rails; exact adapter topology should remain under review.",
+      "reviewedAt": "2026-06-30",
+      "reviewer": "Codex static correction review",
       "confidence": "probable",
+      "protocols": [
+        {
+          "source": "issuer",
+          "name": "LayerZero / Stargate",
+          "slug": "layerzero",
+          "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq",
+          "bridgeTypes": [
+            "oft",
+            "lockAndMint"
+          ],
+          "note": "Quantoz announced LayerZero messaging and Stargate liquidity transport for EURQ/USDQ cross-chain transfers; final on-chain adapter topology remains to be re-reviewed."
+        }
+      ],
       "sources": [
+        {
+          "label": "Quantoz LayerZero/Stargate announcement",
+          "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq"
+        },
         {
           "label": "Quantoz USDQ product page",
           "url": "https://www.quantoz.com/products/eurq-usdq"
@@ -72038,10 +72095,6 @@
         {
           "label": "Quantoz transparency",
           "url": "https://www.quantoz.com/transparency"
-        },
-        {
-          "label": "Quantoz resources",
-          "url": "https://www.quantoz.com/resources"
         }
       ]
     },
@@ -72076,7 +72129,7 @@
         "token": "USDQ"
       }
     },
-    "launchDate": "2024-11-13"
+    "launchDate": "2024-11-18"
   },
   {
     "id": "usdq-quill",
@@ -72228,7 +72281,7 @@
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "governanceQuality": "immutable-code",
+    "governanceQuality": "multisig",
     "oracleRisk": {
       "tier": "standard-external",
       "summary": "Quill uses Chainlink as the primary oracle for collateral price feeds used by USDQ liquidations, with Pyth only noted for a future USDQ-USD feed.",
@@ -77808,12 +77861,23 @@
     "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
     "bridgeRouteRisk": {
-      "tier": "issuer-native-burn-mint",
-      "summary": "Sonic USSD docs describe 1:1 redemption into supported USD assets on the chain of choice and CCTP-supported redemption paths. Candidate CCTP evidence supports an issuer-native burn/mint route.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "verified",
+      "tier": "external-validated-network",
+      "summary": "USSD uses Frax/LayerZero OFT-style omnichain infrastructure for cross-chain USSD minting, while CCTP v2 remains a secondary USDC redemption rail. The durable cross-chain risk is therefore the external LayerZero route plus scoped CCTP redemption exposure, not issuer-native CCTP alone.",
+      "reviewedAt": "2026-06-30",
+      "reviewer": "Codex static correction review",
+      "confidence": "probable",
       "protocols": [
+        {
+          "source": "docs",
+          "name": "LayerZero OFT",
+          "slug": "layerzero",
+          "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/",
+          "bridgeTypes": [
+            "oft",
+            "burnAndMint"
+          ],
+          "note": "Primary USSD cross-chain minting route through Frax/LayerZero infrastructure."
+        },
         {
           "source": "l2beat",
           "name": "CCTP v2",
@@ -77821,13 +77885,18 @@
           "url": "https://l2beat.com/interop/protocols/cctpv2",
           "bridgeTypes": [
             "burnAndMint"
-          ]
+          ],
+          "note": "Secondary USDC redemption/on-off-ramp route, not the primary USSD minting route."
         }
       ],
       "sources": [
         {
-          "label": "Sonic USSD docs",
-          "url": "https://docs.soniclabs.com/sonic/ussd"
+          "label": "Sonic USSD launch blog",
+          "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/"
+        },
+        {
+          "label": "The Block USSD / Frax infrastructure report",
+          "url": "https://www.theblock.co/post/392860/sonic-labs-taps-frax-infrastructure-native-network-stablecoin"
         },
         {
           "label": "L2BEAT CCTP v2",
@@ -78364,7 +78433,7 @@
       "yieldSource": "Spiko US T-Bills MMF (U.S. Treasury bill NAV)",
       "yieldType": "nav-appreciation"
     },
-    "launchDate": "2024-04-19"
+    "launchDate": "2024-06-12"
   },
   {
     "id": "usx-dforce",
@@ -79718,18 +79787,34 @@
     "governanceQuality": "regulated-entity",
     "bridgeRouteRisk": {
       "tier": "external-validated-network",
-      "summary": "VBILL fund shares are issued through Securitize across Avalanche, BNB Chain, Ethereum, and Solana investment rails. The reviewed evidence supports issuer/platform-native multichain issuance rather than a public external bridge route.",
+      "summary": "Wormhole is Securitize and VanEck's official interoperability provider for VBILL, powering token transfers between Securitize-issued deployments on Ethereum, Avalanche, BNB Chain, and Solana.",
       "reviewedAt": "2026-06-13",
       "reviewer": "Codex bridge route review",
       "confidence": "probable",
+      "protocols": [
+        {
+          "source": "docs",
+          "name": "Wormhole",
+          "slug": "wormhole",
+          "url": "https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill",
+          "bridgeTypes": [
+            "validatedNetwork",
+            "nativeTokenTransfer"
+          ]
+        }
+      ],
       "sources": [
         {
           "label": "Securitize VBILL page",
           "url": "https://securitize.io/primary-market/vaneck-vbill"
         },
         {
-          "label": "VanEck VBILL launch release",
-          "url": "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html"
+          "label": "Securitize/Wormhole VBILL interoperability release",
+          "url": "https://www.prnewswire.com/news-releases/securitize-announces-wormhole-as-official-interoperability-provider-for-vanecks-first-tokenized-fund-vbill-302453258.html"
+        },
+        {
+          "label": "Wormhole VBILL interoperability announcement",
+          "url": "https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill"
         }
       ]
     },
@@ -80722,7 +80807,6 @@
     },
     "collateral": "Issuer-disclosed VNDC 2.0 USDT/USDC smart-contract collateral on Polygon and BNB Smart Chain; reserve and redemption claims remain high-risk after the March 2026 ONUS/VNDC investigation",
     "pegMechanism": "Issuer-controlled mint and redemption through ONUS/VNDC Hub; VNDC 2.0 disclosures describe USDT/USDC collateral pools rather than direct VND bank reserves, with redemption reliability impaired by the March 2026 investigation and withdrawal disruptions",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "vndc",
     "proofOfReserves": {
       "type": "self-reported",
@@ -81748,7 +81832,7 @@
         "risk": "high"
       }
     ],
-    "launchDate": "2025-07-11"
+    "launchDate": "2025-10-10"
   },
   {
     "id": "wclp-ripio",
@@ -82755,34 +82839,31 @@
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
-      "tier": "canonical-rollup-bridge",
-      "summary": "wiTRY is reviewed as a two-chain wrapped iTRY deployment with MegaETH route evidence in the workflow and issuer documentation for the Brix product. The route is scored as canonical rollup bridge because the reviewed external signal is the MegaETH rollup route rather than a separate token bridge lockbox.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
-      "confidence": "probable",
+      "tier": "external-lock-mint",
+      "summary": "wiTRY uses LayerZero OFT Adapter infrastructure between Ethereum and MegaETH. Brix docs list an Ethereum wiTRY OFT Adapter and a MegaETH wiTRY OFT representation bridged through LayerZero messaging, so the route is external lock/mint rather than MegaETH canonical rollup bridging.",
+      "reviewedAt": "2026-06-30",
+      "reviewer": "Codex static correction review",
+      "confidence": "verified",
       "protocols": [
         {
-          "source": "l2beat",
-          "name": "MegaETH",
-          "slug": "megaeth",
-          "url": "https://l2beat.com/scaling/projects/megaeth",
+          "source": "docs",
+          "name": "LayerZero OFT Adapter",
+          "slug": "layerzero",
+          "url": "https://docs.brix.money/resources/contracts",
           "bridgeTypes": [
-            "canonical-rollup-bridge"
+            "oft-adapter",
+            "lockAndMint"
           ]
         }
       ],
       "sources": [
         {
-          "label": "Brix docs",
-          "url": "https://docs.brix.money/"
+          "label": "Brix contracts docs",
+          "url": "https://docs.brix.money/resources/contracts"
         },
         {
-          "label": "Brix proof of reserves",
-          "url": "https://accountable.brix.money/"
-        },
-        {
-          "label": "L2BEAT MegaETH",
-          "url": "https://l2beat.com/scaling/projects/megaeth"
+          "label": "CoinGecko wiTRY listing",
+          "url": "https://www.coingecko.com/en/coins/wrapped-itry"
         }
       ]
     },
@@ -84195,7 +84276,7 @@
     ],
     "yieldConfig": {
       "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
-      "yieldType": "nav-appreciation"
+      "yieldType": "rebase"
     },
     "launchDate": "2023-11-07"
   },
@@ -84913,6 +84994,13 @@
         "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
     },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Deprecated credit-line stablecoin",
+        "message": "SiloDAO approved a plan to deprecate XAI in 2024 and burn/raise credit-line constraints across legacy markets. Residual supply still circulates, but new mint capacity should be treated as governance-dependent wind-down infrastructure rather than an expanding active stablecoin system."
+      }
+    ],
     "launchDate": "2022-11-09"
   },
   {
@@ -87489,7 +87577,7 @@
         ]
       }
     },
-    "launchDate": "2024-02-01"
+    "launchDate": "2024-07-17"
   },
   {
     "id": "ybold-yearn",
@@ -87501,7 +87589,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": true
     },
@@ -90060,6 +90148,11 @@
         "type": "warning",
         "title": "March 2025 exploit history",
         "message": "Zoth suffered March 2025 exploits affecting ZeUSD platform risk, including a collateral-accounting bug and a later admin-key compromise. Review current redemption and reserve evidence before assuming normal peg liquidity. https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
+      },
+      {
+        "type": "danger",
+        "title": "Severe residual depeg",
+        "message": "By late June 2026, ZeUSD market pricing and public liquidity remained far below the $1 peg after the 2025 exploit history, with supply reduced to a small residual base. Treat ZeUSD as a high-risk legacy/depeg case unless current issuer redemption and reserve evidence is independently revalidated."
       }
     ],
     "launchDate": "2025-01-27"

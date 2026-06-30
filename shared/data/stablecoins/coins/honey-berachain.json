@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
+  "collateral": "1:1 basket of USDC.e, USDt0, BYUSD, and USDe on Berachain",
   "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
   "llamaId": "231",
   "detailProvider": "defillama",
@@ -114,19 +114,19 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "USDC (Circle)",
+      "name": "USDC.e (bridged Circle)",
       "pct": 40,
       "risk": "low",
       "coinId": "usdc-circle"
     },
     {
-      "name": "USDT0 (Tether via LayerZero)",
+      "name": "USDt0 (Tether via LayerZero)",
       "pct": 25,
       "risk": "low",
       "coinId": "usdt-tether"
     },
     {
-      "name": "pyUSD / BYUSD (PayPal)",
+      "name": "BYUSD (Berachain Yield USD)",
       "pct": 20,
       "risk": "low",
       "coinId": "pyusd-paypal"

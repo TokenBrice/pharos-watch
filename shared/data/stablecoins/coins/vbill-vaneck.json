@@ -148,7 +148,7 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "VBILL fund shares are issued through Securitize across Avalanche, BNB Chain, Ethereum, and Solana investment rails. The reviewed evidence supports issuer/platform-native multichain issuance rather than a public external bridge route.",
+    "summary": "Wormhole is Securitize and VanEck's official interoperability provider for VBILL, powering token transfers between Securitize-issued deployments on Ethereum, Avalanche, BNB Chain, and Solana.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
     "confidence": "probable",
@@ -158,8 +158,24 @@
         "url": "https://securitize.io/primary-market/vaneck-vbill"
       },
       {
-        "label": "VanEck VBILL launch release",
-        "url": "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html"
+        "label": "Securitize/Wormhole VBILL interoperability release",
+        "url": "https://www.prnewswire.com/news-releases/securitize-announces-wormhole-as-official-interoperability-provider-for-vanecks-first-tokenized-fund-vbill-302453258.html"
+      },
+      {
+        "label": "Wormhole VBILL interoperability announcement",
+        "url": "https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill"
+      }
+    ],
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole",
+        "slug": "wormhole",
+        "url": "https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill",
+        "bridgeTypes": [
+          "validatedNetwork",
+          "nativeTokenTransfer"
+        ]
       }
     ]
   },

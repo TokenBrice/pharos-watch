@@ -47,6 +47,11 @@
       "chain": "ethereum",
       "address": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,
@@ -136,7 +141,7 @@
     }
   },
   "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
+  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

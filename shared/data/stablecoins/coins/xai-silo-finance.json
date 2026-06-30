@@ -185,5 +185,12 @@
       "weight": 0.8945
     }
   ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Deprecated credit-line stablecoin",
+      "message": "SiloDAO approved a plan to deprecate XAI in 2024 and burn/raise credit-line constraints across legacy markets. Residual supply still circulates, but new mint capacity should be treated as governance-dependent wind-down infrastructure rather than an expanding active stablecoin system."
+    }
+  ],
   "launchDate": "2022-11-09"
 }

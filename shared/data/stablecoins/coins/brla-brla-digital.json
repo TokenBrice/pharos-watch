@@ -18,10 +18,10 @@
   "detailProvider": "defillama",
   "geckoId": "brla-digital-brla",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
-    "provider": "Avenia",
-    "attestorTier": "self",
+    "provider": "External audit firm disclosed through BRLA transparency materials",
+    "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Brazil"
   },

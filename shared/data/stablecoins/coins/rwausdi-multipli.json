@@ -87,24 +87,8 @@
   "collateralQuality": "rwa",
   "reserves": [
     {
-      "name": "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)",
-      "pct": 50,
-      "risk": "low"
-    },
-    {
-      "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",
-      "pct": 25,
-      "risk": "medium",
-      "blacklistable": true
-    },
-    {
-      "name": "Tokenized gold assets (10+ aggregated)",
-      "pct": 15,
-      "risk": "medium"
-    },
-    {
-      "name": "Market-neutral fund units (Nomura, Fasanara, Edge Capital)",
-      "pct": 10,
+      "name": "Institutional credit and market-neutral fund basket",
+      "pct": 100,
       "risk": "high"
     }
   ],

@@ -74,7 +74,7 @@
   "deploymentModel": "single-chain",
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "governanceQuality": "immutable-code",
+  "governanceQuality": "multisig",
   "infrastructures": [
     "liquity-v2"
   ],

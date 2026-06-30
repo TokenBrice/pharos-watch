@@ -354,10 +354,10 @@
       "coinId": "m-m0"
     },
     {
-      "name": "USTBL by Spiko",
+      "name": "USDtb by Ethena (via UsualUSDtb wrapper)",
       "pct": 10,
       "risk": "low",
-      "coinId": "ustbl-spiko"
+      "coinId": "usdtb-ethena"
     },
     {
       "name": "USDC (Circle)",

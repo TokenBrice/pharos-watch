@@ -290,34 +290,31 @@
   "deploymentModel": "native-multichain",
   "launchDate": "2025-10-31",
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "AID is reviewed as a native multichain GAIB asset with Arbitrum route evidence. The only reviewed bridge-route signal is the canonical Arbitrum rollup path, so Pharos assigns the canonical rollup bridge tier rather than an external third-party token bridge tier.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "AID is a LayerZero OFT omnichain deployment at the same EVM address on Ethereum, Arbitrum, Base, and BNB Chain. Cross-chain movement uses LayerZero burn/mint messaging rather than the Arbitrum canonical rollup bridge.",
+    "reviewedAt": "2026-06-30",
+    "reviewer": "Codex static correction review",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Arbitrum One",
-        "slug": "arbitrum",
-        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "source": "issuer",
+        "name": "LayerZero OFT",
+        "slug": "layerzero",
+        "url": "https://blog.gaib.ai/the-ai-dollar-is-live/",
         "bridgeTypes": [
-          "canonical-rollup-bridge"
+          "oft",
+          "burnAndMint"
         ]
       }
     ],
     "sources": [
       {
-        "label": "GAIB docs",
-        "url": "https://docs.gaib.ai"
+        "label": "GAIB AID launch blog",
+        "url": "https://blog.gaib.ai/the-ai-dollar-is-live/"
       },
       {
         "label": "GAIB AID transparency",
         "url": "https://aid.gaib.ai/transparency"
-      },
-      {
-        "label": "L2BEAT Arbitrum One",
-        "url": "https://l2beat.com/scaling/projects/arbitrum"
       }
     ]
   }

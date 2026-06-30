@@ -2,7 +2,18 @@
   "id": "usdk-orki",
   "name": "Orki USD",
   "symbol": "USDK",
-  "oneLiner": "USDK is Orki's Liquity v2-style CDP stablecoin on Swellchain, minted against WETH, weETH, rswETH, and swETH; SWELL collateral branch currently shut down.",
+  "oneLiner": "USDK was Orki's Liquity v2-style CDP stablecoin on Swellchain, frozen after the underlying chain shutdown in June 2026.",
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "frozen",
+  "frozenAt": "2026-06-30",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-06-30",
+    "epitaph": "A CDP stranded on a shuttered chain",
+    "obituary": "Orki USDK was deployed only on Swellchain. Swellchain shut down its bridge flow in June 2026 and moved to halt chain operations on June 30, leaving remaining positions dependent on direct contract access or unrecoverable as the network wound down. Because USDK had no verified deployment outside Swellchain, Pharos freezes it as a discontinued single-chain CDP stablecoin.",
+    "sourceUrl": "https://cryptoslate.com/swellchain-shutdown-users-left-behind-when-crypto-projects-move-on/",
+    "sourceLabel": "CryptoSlate Swellchain shutdown report"
+  },
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -222,7 +233,7 @@
     {
       "type": "danger",
       "title": "Swellchain shutdown deadline",
-      "message": "Swellchain's June 15, 2026 front-end shutdown deadline has passed. Remaining USDK-related positions may require direct contract interaction and could become unrecoverable as Swellchain winds down toward its late-June shutdown window."
+      "message": "Swellchain's June 23, 2026 bridge-withdrawal deadline and June 30, 2026 chain-shutdown window have passed. Remaining USDK-related positions may require direct contract interaction and should be treated as effectively wound down."
     }
   ]
 }

@@ -166,17 +166,28 @@
   },
   "launchDate": "2021-01-26",
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "JPYC v1 is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "external-lock-mint",
+    "summary": "JPYC v1 legacy deployments on Polygon and Gnosis use third-party bridge rails from Ethereum rather than purely issuer-native multichain issuance. The reviewed durable route is Polygon PoS plus Gnosis OmniBridge lock/mint exposure for the non-Ethereum contracts.",
+    "reviewedAt": "2026-06-30",
+    "reviewer": "Codex static correction review",
     "confidence": "probable",
     "protocols": [
       {
-        "source": "issuer",
-        "name": "JPYC v1 issuer-operated multichain issuance",
+        "source": "docs",
+        "name": "Polygon PoS Bridge",
+        "slug": "polygon-pos",
+        "url": "https://docs.polygon.technology/pos/concepts/bridge/",
         "bridgeTypes": [
-          "issuer-native-mint-redeem"
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Gnosis OmniBridge",
+        "slug": "gnosis-omnibridge",
+        "url": "https://docs.gnosischain.com/bridges/OmniBridge/",
+        "bridgeTypes": [
+          "lockAndMint"
         ]
       }
     ],

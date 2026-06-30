@@ -144,6 +144,11 @@
       "chain": "solana",
       "address": "i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc",
       "decimals": 6
+    },
+    {
+      "chain": "xrpl",
+      "address": "4F55534700000000000000000000000000000000.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

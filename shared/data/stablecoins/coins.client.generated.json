@@ -6322,7 +6322,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "monerium-eur-money-2",
-    "launchDate": "2024-08-18",
+    "launchDate": "2019-11-11",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -7993,7 +7993,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "frax",
-    "launchDate": "2020-12-16",
+    "launchDate": "2020-12-20",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -8213,7 +8213,7 @@
         "coinId": "buidl-blackrock"
       },
       {
-        "name": "USDB (DBS tokenized deposits)",
+        "name": "USDB (Bridge/Stripe fiat-backed stablecoin)",
         "pct": 1,
         "risk": "low",
         "coinId": "usdb-bridge"
@@ -9276,7 +9276,7 @@
     "geckoId": "gauntlet-usdc-prime-morpho-vault",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
-    "launchDate": "2024-03-05",
+    "launchDate": "2024-03-13",
     "yieldConfig": {
       "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
       "yieldType": "lending-vault"
@@ -10572,19 +10572,19 @@
     },
     "reserves": [
       {
-        "name": "USDC (Circle)",
+        "name": "USDC.e (bridged Circle)",
         "pct": 40,
         "risk": "low",
         "coinId": "usdc-circle"
       },
       {
-        "name": "USDT0 (Tether via LayerZero)",
+        "name": "USDt0 (Tether via LayerZero)",
         "pct": 25,
         "risk": "low",
         "coinId": "usdt-tether"
       },
       {
-        "name": "pyUSD / BYUSD (PayPal)",
+        "name": "BYUSD (Berachain Yield USD)",
         "pct": 20,
         "risk": "low",
         "coinId": "pyusd-paypal"
@@ -11484,7 +11484,7 @@
     "id": "jpysc-sbi-startale",
     "name": "JPYSC",
     "symbol": "JPYSC",
-    "oneLiner": "JPYSC is a pre-launch yen stablecoin to be issued by Shinsei Trust & Banking, distributed by SBI VC Trade under Japan's Type III electronic payment framework.",
+    "oneLiner": "JPYSC is Shinsei Trust & Banking's closed-loop yen stablecoin for verified SBI VC Trade users, awaiting public-chain circulation.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "JPY",
@@ -11495,9 +11495,9 @@
     },
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
+    "launchDate": "2026-06-24",
     "announcedDate": "2026-02",
-    "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "launching-soon",
+    "launchPhase": "beta",
     "milestones": [
       {
         "date": "2026-02-05",
@@ -12603,7 +12603,7 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "leverup-usd",
     "canBeBlacklisted": "possible",
     "reserves": [
@@ -13713,7 +13713,8 @@
     "id": "msusd-main-street",
     "name": "Main Street USD",
     "symbol": "MSUSD",
-    "oneLiner": "msUSD is Main Street's dollar token; redemptions target USDC but are capacity-limited and currently carry unresolved reserve-verification risk.",
+    "oneLiner": "msUSD was Main Street's dollar token; Pharos freezes it after Accountable terminated reserve verification and the token permanently depegged in June 2026.",
+    "marketAvailability": "legacy-or-wind-down",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -13724,6 +13725,8 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-usd",
+    "status": "frozen",
+    "frozenAt": "2026-06-20",
     "launchDate": "2025-06-08",
     "reserves": [
       {
@@ -13838,7 +13841,8 @@
     "id": "msy-main-street",
     "name": "Main Street Yield",
     "symbol": "msY",
-    "oneLiner": "msY is the ERC-4626-style strategy vault token over msUSD, with exchange-rate appreciation from Main Street's delta-neutral options and derivatives book.",
+    "oneLiner": "msY was Main Street's ERC-4626-style strategy vault over msUSD; Pharos freezes it after the parent msUSD collapse in June 2026.",
+    "marketAvailability": "legacy-or-wind-down",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -13849,8 +13853,8 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-yield",
-    "variantOf": "msusd-main-street",
-    "variantKind": "strategy-vault",
+    "status": "frozen",
+    "frozenAt": "2026-06-20",
     "launchDate": "2025-12-04",
     "yieldConfig": {
       "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
@@ -14149,7 +14153,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mxnb",
-    "launchDate": "2024-01-26",
+    "launchDate": "2025-03-26",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -16109,7 +16113,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "stablecorp-qcad",
-    "launchDate": "2026-04-21",
+    "launchDate": "2020-02-11",
     "reserves": [
       {
         "name": "CAD fiat reserves",
@@ -16330,7 +16334,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "resupply-usd",
-    "launchDate": "2025-03-13",
+    "launchDate": "2025-03-20",
     "reserves": [
       {
         "name": "Curve Lend vault shares (crvUSD lending positions)",
@@ -17076,24 +17080,8 @@
     "launchDate": "2025-11-23",
     "reserves": [
       {
-        "name": "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)",
-        "pct": 50,
-        "risk": "low"
-      },
-      {
-        "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",
-        "pct": 25,
-        "risk": "medium",
-        "blacklistable": true
-      },
-      {
-        "name": "Tokenized gold assets (10+ aggregated)",
-        "pct": 15,
-        "risk": "medium"
-      },
-      {
-        "name": "Market-neutral fund units (Nomura, Fasanara, Edge Capital)",
-        "pct": 10,
+        "name": "Institutional credit and market-neutral fund basket",
+        "pct": 100,
         "risk": "high"
       }
     ],
@@ -20739,10 +20727,10 @@
         "coinId": "m-m0"
       },
       {
-        "name": "USTBL by Spiko",
+        "name": "USDtb by Ethena (via UsualUSDtb wrapper)",
         "pct": 10,
         "risk": "low",
-        "coinId": "ustbl-spiko"
+        "coinId": "usdtb-ethena"
       },
       {
         "name": "USDC (Circle)",
@@ -22791,7 +22779,7 @@
       "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://brale.xyz/stablecoins/USDGLO",
       "redemptionPolicyPresent": true,
-      "monthlyAttestationPresent": true,
+      "monthlyAttestationPresent": false,
       "latestReportDate": "2026-05-31",
       "references": [
         {
@@ -23333,7 +23321,8 @@
     "id": "usdk-orki",
     "name": "Orki USD",
     "symbol": "USDK",
-    "oneLiner": "USDK is Orki's Liquity v2-style CDP stablecoin on Swellchain, minted against WETH, weETH, rswETH, and swETH; SWELL collateral branch currently shut down.",
+    "oneLiner": "USDK was Orki's Liquity v2-style CDP stablecoin on Swellchain, frozen after the underlying chain shutdown in June 2026.",
+    "marketAvailability": "legacy-or-wind-down",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -23343,6 +23332,8 @@
       "navToken": false
     },
     "mechanismArchetype": "cdp",
+    "status": "frozen",
+    "frozenAt": "2026-06-30",
     "launchDate": "2025-05-15",
     "canBeBlacklisted": "possible",
     "infrastructures": [
@@ -24644,7 +24635,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "quantoz-usdq",
-    "launchDate": "2024-11-13",
+    "launchDate": "2024-11-18",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -27082,7 +27073,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-us-t-bills-money-market-fund",
-    "launchDate": "2024-04-19",
+    "launchDate": "2024-06-12",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko US T-Bills MMF (U.S. Treasury bill NAV)",
@@ -27830,7 +27821,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "vndc",
     "launchDate": "2019-08-30",
     "canBeBlacklisted": "possible",
@@ -28052,7 +28042,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "brazilian-real",
-    "launchDate": "2025-07-11",
+    "launchDate": "2025-10-10",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -28752,7 +28742,7 @@
     },
     "yieldConfig": {
       "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
-      "yieldType": "nav-appreciation"
+      "yieldType": "rebase"
     },
     "reserves": [
       {
@@ -29804,7 +29794,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "straitsx-xusd",
-    "launchDate": "2024-02-01",
+    "launchDate": "2024-07-17",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -29947,7 +29937,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": true
     },
