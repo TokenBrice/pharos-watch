@@ -92,7 +92,7 @@ describe("tracked stablecoin metadata", () => {
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
     expect(TRACKED_STABLECOINS).toHaveLength(407);
-    expect(ACTIVE_STABLECOINS).toHaveLength(367);
+    expect(ACTIVE_STABLECOINS).toHaveLength(364);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -176,7 +176,6 @@ describe("tracked stablecoin metadata", () => {
       "fxsave-f-x-protocol",
       "susn-noon",
       "syzusd-yuzu",
-      "msy-main-street",
       "sdusd-dtrinity",
       "srusd-reservoir",
       "syrupusdc-maple",
