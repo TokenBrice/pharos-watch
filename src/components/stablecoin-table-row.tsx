@@ -238,7 +238,7 @@ function StablecoinVirtualRowBase({
           <div className="flex items-center">
             <Link
               href={buildStablecoinUrl(coin.id)}
-              className={`pharos-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-md font-medium hover:bg-muted/35 ${isFigmaOverview ? "px-0 py-0" : "px-1 py-1"}`}
+              className={`pharos-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-md font-medium ${isFigmaOverview ? "px-0 py-0" : "px-1 py-1 hover:bg-muted/35"}`}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
               onMouseEnter={() => onPrefetch(coin.id)}
