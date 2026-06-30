@@ -1,6 +1,6 @@
 import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { buildInClause } from "../../lib/db";
+import { buildInClause, D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
 import {
@@ -12,8 +12,19 @@ import {
 export { isSuppressedYieldHistoryRow } from "../../lib/yield-history-ownership-handoffs";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
+const STALE_YIELD_DELETE_FIXED_BIND_COUNT = 1;
 const YIELD_HISTORY_LOAD_CHUNK_SIZE = 30;
 export const MAX_PREVIOUS_TVL_HISTORY_ROWS = 5_000;
+
+function getStaleYieldDeleteChunkSize(frozenIdCount: number): number {
+  return Math.max(
+    1,
+    Math.min(
+      D1_SAFE_SQL_IN_CHUNK_SIZE,
+      D1_MAX_BOUND_PARAMETERS - STALE_YIELD_DELETE_FIXED_BIND_COUNT - frozenIdCount,
+    ),
+  );
+}
 
 export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promise<void> {
   for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
@@ -320,7 +331,8 @@ export async function deleteStaleYieldRows(db: D1Database, managedYieldIds: stri
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
     frozenIdsList.length > 0 ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})` : "";
-  for (const idChunk of chunkArray(managedYieldIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
+  const chunkSize = getStaleYieldDeleteChunkSize(frozenIdsList.length);
+  for (const idChunk of chunkArray(managedYieldIds, chunkSize)) {
     const staleRowInClause = buildInClause(idChunk);
     await db
       .prepare(

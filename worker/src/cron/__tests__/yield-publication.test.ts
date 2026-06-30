@@ -8,6 +8,7 @@ import {
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
@@ -1092,6 +1093,21 @@ describe("publishYieldCoordinatorResults", () => {
 });
 
 describe("pruneYieldTables", () => {
+  it("chunks stale yield_data cleanup below the D1 bind-variable ceiling while preserving frozen rows", async () => {
+    const db = mockD1();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+
+    await pruneYieldTables(db, startSec);
+
+    const staleDeletes = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("pharos:yield-sync:stale-yield-data-delete"));
+    expect(staleDeletes.length).toBeGreaterThan(1);
+    expect(Math.max(...staleDeletes.map((entry) => entry.binds.length))).toBeLessThanOrEqual(
+      D1_MAX_BOUND_PARAMETERS,
+    );
+  });
+
   it("deletes old null rollout audit rows while retaining inferable trend rows", async () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");
