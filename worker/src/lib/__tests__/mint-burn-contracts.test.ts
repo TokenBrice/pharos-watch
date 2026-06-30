@@ -255,7 +255,6 @@ describe("mint-burn-contracts top-100 Ethereum additions", () => {
     { stablecoinId: "nusd-neutrl", symbol: "NUSD", address: "0xe556aba6fe6036275ec1f87eda296be72c811bce", decimals: 18 },
     { stablecoinId: "alusd-alchemix", symbol: "ALUSD", address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9", decimals: 18 },
     { stablecoinId: "fidd-fidelity", symbol: "FIDD", address: "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d", decimals: 18 },
-    { stablecoinId: "msusd-main-street", symbol: "MSUSD", address: "0x4ba01f22827018b4772cd326c7627fb4956a7c00", decimals: 18 },
   ];
 
   it("tracks newly added top-100 Ethereum contracts via standard zero-address Transfer filters", () => {

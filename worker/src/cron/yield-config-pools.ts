@@ -63,8 +63,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "savusd-avant": "c74227a1-e738-4021-bbe1-13363815aecb",
   // Neutrl USD -> sNUSD - pendle PT-buying pool, Ethereum, $41M TVL, ~7.5% APY
   "nusd-neutrl": "0f38d9a4-8e34-4abc-b9ba-25f326ef7828",
-  // Main Street msY - mainstreet native pool, Ethereum, $50M+ TVL, ~12.0% APY
-  "msy-main-street": "8a28570f-2316-488a-94a7-67c87e76c1f1",
   // Yuzu USD -> syzUSD - yuzu-money native savings, Plasma, $28M TVL, ~7.3% APY
   "yzusd-yuzu": "6174b1d6-8212-4964-95bf-ca9c539864ba",
   // Staked Yuzu USD (syzUSD) - shares the yuzu-money Plasma savings pool with parent yzusd-yuzu (DefiLlama tracks only the SYZUSD wrapper)

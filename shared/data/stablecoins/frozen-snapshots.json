@@ -542,5 +542,180 @@
         }
       ]
     }
+  },
+  {
+    "id": "msusd-main-street",
+    "capturedAt": "2026-06-30T00:20:23Z",
+    "peggedAssetRow": {
+      "id": "msusd-main-street",
+      "name": "Main Street USD",
+      "symbol": "MSUSD",
+      "geckoId": "main-street-usd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.27515218496506444,
+      "priceSource": "alchemy-address+coingecko",
+      "priceConfidence": "low",
+      "priceUpdatedAt": 1782777672,
+      "priceObservedAt": 1782777672,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1782777652,
+      "consensusSources": [
+        "coingecko",
+        "coingecko-onchain-address",
+        "alchemy-address",
+        "moralis-address"
+      ],
+      "agreeSources": [
+        "coingecko",
+        "alchemy-address"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 20059795.830470316
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 20059795.830470316
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 20059795.830470316
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 21748649.777200114
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": 20015128.59813086,
+          "circulatingPrevDay": 20015128.59813086,
+          "circulatingPrevWeek": 20015375.19278706,
+          "circulatingPrevMonth": 21687926.89806688
+        },
+        "Sonic": {
+          "current": 44667.23233946032,
+          "circulatingPrevDay": 44667.23233946032,
+          "circulatingPrevWeek": 44420.63768326052,
+          "circulatingPrevMonth": 60722.87913323719
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Sonic"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+          "decimals": 18
+        },
+        {
+          "chain": "sonic",
+          "address": "0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
+          "decimals": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "usdk-orki",
+    "capturedAt": "2026-06-30T00:20:23Z",
+    "peggedAssetRow": {
+      "id": "usdk-orki",
+      "name": "Orki USD",
+      "symbol": "USDK",
+      "geckoId": null,
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.9997365198835886,
+      "priceSource": "defillama",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1782777652,
+      "priceObservedAt": 1782777652,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": 1782777652,
+      "consensusSources": [
+        "defillama"
+      ],
+      "agreeSources": [
+        "defillama"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 2180.3800752427496
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 2180.3800752427496
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 2180.3800752427496
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 2183.2827661632414
+      },
+      "chainCirculating": {
+        "Swellchain": {
+          "current": 2180.3800752427496,
+          "circulatingPrevDay": 2180.3800752427496,
+          "circulatingPrevWeek": 2180.3800752427496,
+          "circulatingPrevMonth": 2183.2827661632414
+        }
+      },
+      "chains": [
+        "Swellchain"
+      ],
+      "contracts": [
+        {
+          "chain": "swellchain",
+          "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
+          "decimals": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "msy-main-street",
+    "capturedAt": "2026-06-30T00:20:23Z",
+    "peggedAssetRow": {
+      "id": "msy-main-street",
+      "name": "Main Street Yield",
+      "symbol": "msY",
+      "geckoId": "main-street-yield",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.289244,
+      "priceSource": "coingecko",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1782777674,
+      "priceObservedAt": 1782777674,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1782777652,
+      "consensusSources": [
+        "coingecko"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "coingecko-fallback",
+      "circulating": {
+        "peggedUSD": 18379272.009520162
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 21622262.707450878
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 19612742.744698882
+      },
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": [
+        "Ethereum"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x890a5122aa1da30fec4286de7904ff808f0bd74a",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

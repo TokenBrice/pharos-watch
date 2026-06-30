@@ -78,7 +78,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "busd0-usual", dustThreshold: 10_000 },
   { stablecoinId: "stkgho-umbrella-aave", dustThreshold: 10_000 },
   { stablecoinId: "stcusd-cap", dustThreshold: 10_000 },
-  { stablecoinId: "msy-main-street", dustThreshold: 10_000 },
   { stablecoinId: "sbold-k3-capital", dustThreshold: 10_000 },
   { stablecoinId: "ybold-yearn", dustThreshold: 10_000 },
   { stablecoinId: "yusd-yieldfi", dustThreshold: 10_000 },
@@ -136,7 +135,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "nusd-neutrl", dustThreshold: 10_000 },
   { stablecoinId: "alusd-alchemix", dustThreshold: 10_000 },
   { stablecoinId: "fidd-fidelity", dustThreshold: 10_000 },
-  { stablecoinId: "msusd-main-street", dustThreshold: 10_000 },
   // --- Top-150 supported expansion (Ethereum only) ---
   { stablecoinId: "wusd-worldwide", dustThreshold: 10_000 },
   { stablecoinId: "sbc-brale", dustThreshold: 10_000 },

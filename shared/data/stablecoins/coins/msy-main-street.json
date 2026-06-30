@@ -183,31 +183,5 @@
     "yieldSource": "Main Street savings (msY)",
     "yieldType": "nav-appreciation"
   },
-  "liveReservesConfig": {
-    "adapter": "erc4626-single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "msy-main-street",
-    "display": {
-      "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/technical/key-addresses",
-      "label": "Main Street msY"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "slice": {
-        "name": "msUSD options strategy vault shares",
-        "risk": "high",
-        "coinId": "msusd-main-street",
-        "depType": "wrapper",
-        "expectedAssetAddress": "0x4ba01f22827018b4772cd326c7627fb4956a7c00"
-      }
-    }
-  },
   "launchDate": "2025-12-04"
 }

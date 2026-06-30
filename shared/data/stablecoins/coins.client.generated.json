@@ -13899,8 +13899,7 @@
           "modulesOrGuardsStatus": "unknown"
         }
       ]
-    },
-    "liveReserveAdapter": "erc4626-single-asset"
+    }
   },
   {
     "id": "mtbill-midas",
@@ -23375,8 +23374,7 @@
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
-    },
-    "liveReserveAdapter": "liquity-v2-branches"
+    }
   },
   {
     "id": "usdkg-gold-dollar",
