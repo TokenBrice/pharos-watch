@@ -138,13 +138,21 @@ Reference-group hero calls (owner-settled 2026-07-01):
 - **`/funding/`** — a **full-width hero strip**: the frost "One Beam" = the monthly running cost (`costs.json` total); the coverage % stays neutral (a directional funding-progress figure, never recolored frost). The resting `shadow-sm` was neutralized to flat `pharos-card-shell`, previous-month chips adopt the pill control visual, and figures use `.pharos-numeric`. The progress-bar fill and the Giveth "recommended" tile are the sanctioned frost keeps.
 - **`/methodology/`** — **no hero**: it stays a longform carve-out (see below). Only its control + numeric *grammar* was aligned — the reader/analyst and show-your-work toggles adopt the pill control language and stray figures move to `.pharos-numeric` — while the 76rem measure, section shells, and `LongformScrollspyNav` are untouched.
 
+Learn-group hero calls (owner-settled 2026-07-01):
+
+- **Shared shell:** the Learn hubs use `src/app/learn/_shared/learn-hero.tsx` (`LearnHero`) — a lighter flat `pharos-card-shell` header band (frost "One Beam" figure + muted sub-metrics + optional full-width slot), **not** `FeatureHeroSplit`. These are Category-C editorial surfaces where a drawn metaphor is not forced, so the split shell would strand dead space (the `/liquidity/` lesson). Titles were brought to homepage parity: `LearnPageShell`'s `h1` now uses `.pharos-page-title` (ABC Whyte Inktrap display face, fixed scale) and its section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale — previously Geist Sans at a fluid clamp. This shell is shared, so the face change also reaches the mechanism and case-study detail pages.
+- **`/learn/`** — the `OutcomeLedger` is promoted into a flat `pharos-card-shell` hero band and deliberately **opts out** of the One Beam: its survived/wounded/died figures keep the semantic ramp (a directional death count, never recolored frost). The three numbered module links are the workbench beneath.
+- **`/learn/mechanisms/`** — `LearnHero` with the neutral active-coin total as the frost beam plus a restrained active-coins-by-mechanism distribution bar (reuses the flat proportional-bar idiom; non-frost `CHART_PALETTE` sequence tones, index 0 skipped because it resolves to frost). The six mechanism diagrams and the "at a glance" comparison matrix remain the workbench.
+- **`/learn/glossary/`** — `LearnHero` with the term count as the frost beam; the A–Z jump rail restyled to a cohesive pill chip rail. Keeps the `FeaturePageShell` longform narrow measure.
+- **`/learn/case-studies/`** — 🚫 editorial **carve-out**, polished within register: a restrained `LearnHero` (neutral archive count as the frost beam, semantic survived/wounded/died breakdown beside it) and the outcome/mechanism filter chips migrated off frost onto `pharos-toggle-pill` / `pharos-control-pill-active`. Archive rows keep their row layout + outcome chips (no card/rank conversion — see Longform Pages).
+
 ### Longform Pages
 
 - Privacy: `mx-auto w-full space-y-6 max-w-2xl`
 - Methodology: `mx-auto w-full max-w-[76rem] space-y-8`
 - Digest archive: `mx-auto max-w-4xl`
 - Digest detail shell: `mx-auto max-w-4xl`, with editorial body copy constrained to `max-w-[68ch]`
-- Learn case-study pages: detail articles use the standard sans token with a sticky wayfinding rail on long reads; the hub's priority studies use a lighter editorial card treatment but are not nested cards, and archive rows keep outcome chips plus archetype accents rather than ordinal ranking.
+- Learn case-study pages: detail articles use the standard sans token with a sticky wayfinding rail on long reads; the hub's priority studies use a lighter editorial card treatment but are not nested cards, and archive rows keep outcome chips plus archetype accents rather than ordinal ranking. The hub gained a restrained `LearnHero` header band and neutral `pharos-toggle-pill` filter chips (2026-07-01) but keeps this editorial register — no ordinal ranking, no row→card conversion.
 
 ### Start Here (Special)
 
