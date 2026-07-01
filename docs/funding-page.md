@@ -11,6 +11,15 @@ Public ledger of Pharos's running costs, donations, and sustainability path. The
 - `scripts/maintenance/generate-llms-txt.ts` includes Funding in the public LLM-facing index.
 - `public/_headers` must not emit `X-Robots-Tag: noindex` for `/funding/*`.
 
+## Layout
+
+Aligned to the redesigned-homepage canon (owner-settled 2026-07-01) while keeping the honest, prose-forward register:
+
+- The KPI card opens on a full-width hero strip whose frost-blue "One Beam" lights the monthly running cost (`costs.json` total). Coverage % stays **neutral** — it is a directional funding-progress figure and is never recolored frost.
+- Cards are flat: the raw `ui/card` `shadow-sm` is neutralized to `pharos-card-shell` at the usage level (the primitive is not edited).
+- Previous-month coverage chips use the pill control visual; every dollar/percent figure uses `.pharos-numeric`.
+- The only sanctioned frost surfaces beyond the One Beam are the progress-bar fill and the Giveth "recommended" tile (existing owner choices). See `docs/design-language.md` → Reference-group hero calls.
+
 ## Data model
 
 Two hand-maintained JSON files:

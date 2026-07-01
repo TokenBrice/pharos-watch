@@ -96,7 +96,7 @@ Additional page-level sources:
 
 ## Feature Snapshot
 
-The feature snapshot leads the page. It is the first stop for users who want to understand total Pharos coverage before drilling into individual assets.
+The feature snapshot leads the page. It is the first stop for users who want to understand total Pharos coverage before drilling into individual assets. It is framed as the route's signature full-width hero (design canon): a compact header strip carries the frost-blue "One Beam" = the active-coin universe count, with neutral `.pharos-numeric` avg-reach % and tracked-surfaces sub-metrics, and the stacked-bar breadth chart reads as the drawn metaphor full-width beneath. See `docs/design-language.md` → Reference-group hero calls.
 
 Every row shows:
 
@@ -140,7 +140,7 @@ If a feature gains richer user-facing states, update the relevant resolver under
 - Search filters by name and ticker.
 - Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`). `No Dependency` now means unresolved dependency-map coverage (`Gap` or `Data n/a`), not "no upstream dependency."
 - The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
-- Default sort is descending live market cap.
+- Default sort is descending live market cap. The sort control stays a grouped `<select>` but is reskinned to the pill/token visual; discrete quick filters use `pharos-control-pill`, and every digit-bearing cell uses `.pharos-numeric`.
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states. Mobile renders the result set in batches with explicit "show next" and collapse controls so large filtered sets do not mount hundreds of cards before the user asks for them.
 - From `md` upward, the full comparison table renders with the first column sticky.
 - The per-coin matrix renders after the pricing-source card and is explicitly positioned as the asset-level drill-down surface.

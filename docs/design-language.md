@@ -110,7 +110,7 @@ Most routes use:
 - Title row outer layer: `flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3`
 - Title row inner text/action layer: `flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2`
 
-### Markets-Tab Feature Hero (`FeatureHeroSplit`)
+### Feature-Page Hero (`FeatureHeroSplit`)
 
 The redesigned-homepage hero composition is available as a shared shell, `src/components/feature-hero-split.tsx` (`FeatureHeroSplit`), modeled on the locked `HomeAltHero` recipe (the homepage component itself is unchanged). It renders a single flat `pharos-card-shell` split `lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]`: a frost-blue "One Beam" headline figure (`.pharos-numeric text-frost-blue`) plus a `pharos-kicker` sub-metric block on the left, a drawn metaphor or staged chart in the right slot, hairline `border-border/50` dividers, and a corner `CardExpandButton`. The route `h1` still comes from `FeaturePageShell`; a hero is rendered as its first child, not a title replacement.
 
@@ -122,6 +122,21 @@ Per-page hero approach and One Beam calls (owner-settled 2026-06-28, including t
 - **`/liquidity/`** — the `FeatureHeroSplit` hero was **reverted on follow-up** (the short left column left dead space against the tall exit-route map): the page keeps its KPI-stat grid (aggregate DEX depth as the lead stat) above the full-width exit-route-map card. The two intro education cards plus the FAQ (and its `FAQPage` JSON-LD) remain removed; filters live in the table toolbar as `pharos-control-pill`s.
 - **`/flows/`** — deliberately **opts out** of the One Beam: the hero stays a flat `pharos-card-shell` whose net-flow headline and Bank Run Gauge keep the semantic green→red ramp (net flow is a directional state, never recolored frost). The radial cyan/emerald hero gradient was removed, the gauges moved to a workbench band below the hero, and the `FlowMachineScene` metaphor is preserved.
 - **`/chains/`** — keeps its existing sequential bands (no `FeatureHeroSplit`); only the Total Stablecoin Supply metric was recolored to the frost beam, and its "Top N chains hold X%" frost badge is intentionally retained as an owner override.
+
+Risk-tab calls (owner-settled 2026-06-30):
+
+- **`/safety-scores/`** — uses `FeatureHeroSplit`: beam = ecosystem-average safety score; right slot = a compact A/B/C/D/F/NR grade-distribution bar (semantic grade swatches from `getSafetyGradeMetadata`, never frost), reusing the Peg-Health/DDR distribution-bar chrome in `pharos-chart-stage`. The frost-on-active-control leak in the inspection board was neutralized.
+- **`/depeg/`** — **full-width DDR hero**: a `pharos-card-shell` beam band (frost active-depeg count + DEWS-alert count + a semantic worst-live-deviation pill), with `DepegResolverModule` (the DDR forecast timeline) rendered as a **sibling below the beam card** — not inside it — so its per-event forecast cards stay flat top-level surfaces (no card nesting). DEWS radar + DDRR ledger demoted to a secondary band. `DepegResolverRowCard`/`StateOnlyCard` flattening also reaches the stablecoin-detail DDR card (canon-consistent flat-card harmonization).
+- **`/freezewatch/`** — **full-width freeze-meter hero**: frost freezable-share-of-tracked-supply beam + freezable value/coins sub-metrics in the header; `FreezableSupplyMeter` full-width below; `BlacklistStats` KPIs became a flat bento (data-quality tone reduced to a data-driven left-stripe). Filters → `pharos-control-pill`.
+- **`/compliance/`** — **full-width hero** (table-first): frost MiCA-authorized count beam + GENIUS-tracked / authorization-rate / assessed-rows sub-metrics + a neutral GENIUS regime-state badge; the two compliance tables are the workbench beneath, with a `pharos-table-toolbar` carrying `pharos-control-pill` regime/type/peg filters.
+- **`/cemetery/`** — 🚫 memorial **carve-out**, untouched except a light consistency polish: title → `pharos-page-title`, sort → `pharos-control-pill`, stat digits → `.pharos-numeric`. Tombstones, cause palette, flower interaction, and obituary typography are unchanged.
+
+Reference-group hero calls (owner-settled 2026-07-01):
+
+- **`/coverage/`** — a **full-width signature hero** (no `FeatureHeroSplit`; the 10-row feature-breadth bar list is too tall and would strand dead space beside a sparse left column, the documented `/liquidity/` failure). Compact header strip carries the frost "One Beam" = the active-coin universe count, with neutral `.pharos-numeric` avg-reach % and tracked-surfaces sub-metrics; the existing feature-breadth stacked-bar chart is reused full-width beneath as the drawn metaphor, and the MatrixTable stays the workbench. The sort control stays a `<select>` (grouped options) but is reskinned to the pill/token visual; filter quick-picks already use `pharos-control-pill`.
+- **`/about/`** — a **modest hero** (light/editorial page; no metaphor): a single frost "One Beam" = `TRACKED_STABLECOIN_COUNT`, the editorial lede preserved verbatim, and a neutral `.pharos-numeric` stat strip. The former `AboutReferenceModule` reference-card block was removed so the signature leads under the intro (see `docs/about-page.md`).
+- **`/funding/`** — a **full-width hero strip**: the frost "One Beam" = the monthly running cost (`costs.json` total); the coverage % stays neutral (a directional funding-progress figure, never recolored frost). The resting `shadow-sm` was neutralized to flat `pharos-card-shell`, previous-month chips adopt the pill control visual, and figures use `.pharos-numeric`. The progress-bar fill and the Giveth "recommended" tile are the sanctioned frost keeps.
+- **`/methodology/`** — **no hero**: it stays a longform carve-out (see below). Only its control + numeric *grammar* was aligned — the reader/analyst and show-your-work toggles adopt the pill control language and stray figures move to `.pharos-numeric` — while the 76rem measure, section shells, and `LongformScrollspyNav` are untouched.
 
 ### Longform Pages
 
