@@ -35,7 +35,7 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
           <Badge className="bg-red-500/15 text-xs text-red-700 dark:text-red-400">open</Badge>
         )}
       </TableCell>
-      <TableCell className="py-2 font-mono tabular-nums">{circuit.consecutiveFailures}</TableCell>
+      <TableCell className="py-2 pharos-numeric">{circuit.consecutiveFailures}</TableCell>
       <TableCell className="py-2 font-mono text-xs text-muted-foreground">
         {formatTimestampSeconds(circuit.lastFailureAt)}
       </TableCell>

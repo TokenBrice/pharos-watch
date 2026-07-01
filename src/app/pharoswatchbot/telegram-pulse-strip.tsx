@@ -172,7 +172,7 @@ function PulseStatGroup({
             <div key={item.label} className="space-y-1.5">
               <div className="flex min-w-0 items-baseline justify-between gap-3">
                 <span className="min-w-0 text-xs leading-tight text-muted-foreground">{item.label}</span>
-                <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
+                <span className="shrink-0 pharos-numeric text-sm font-semibold text-foreground">
                   {formatCount(item.value)}
                 </span>
               </div>
@@ -218,19 +218,19 @@ export function TelegramPulseStrip() {
     content = (
       <>
         <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground font-mono">{formatCount(data.activeWatchers)}</span> active
+          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.activeWatchers)}</span> active
           Telegram chats
         </span>
         <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
         <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground font-mono">
+          <span className="font-semibold text-foreground pharos-numeric">
             {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
           </span>{" "}
           estimated capacity
         </span>
         <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
         <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground font-mono">{formatCount(data.coinSubscriptions)}</span> alert
+          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.coinSubscriptions)}</span> alert
           links (incl. presets)
         </span>
         <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
@@ -349,10 +349,6 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       aria-live="polite"
       aria-busy="false"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--brand-accent)_18%,var(--brand-accent)_66%,transparent)] opacity-70"
-      />
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border/55 pb-4">
         <div className="flex items-center gap-3">
           <span aria-hidden="true" className="relative flex h-2 w-2">
@@ -374,11 +370,11 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       ) : null}
 
       <div className="grid gap-5 pt-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-6">
-        <div className="rounded-2xl border border-frost-blue/25 bg-frost-blue/8 p-4 dark:bg-frost-blue/6 sm:p-5">
+        <div className="rounded-2xl border border-border/60 bg-background/60 p-4 sm:p-5">
           <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
             Active / estimated capacity
           </p>
-          <p className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1 font-mono leading-none tabular-nums text-foreground">
+          <p className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1 pharos-numeric leading-none text-foreground">
             <span className="text-[clamp(3.4rem,12vw,7rem)] font-semibold tracking-normal">
               {formatCount(data.activeWatchers)}
             </span>
@@ -389,7 +385,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-background/80 ring-1 ring-border/45">
             <div className="h-full rounded-full bg-[var(--brand-accent)]" style={{ width: `${capacityPercent}%` }} />
           </div>
-          <p className="mt-3 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+          <p className="mt-3 pharos-numeric text-xs font-semibold text-muted-foreground">
             {formatCapacityUsage(data.activeWatchers)}
           </p>
         </div>
@@ -399,18 +395,18 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
             <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.18em] text-muted-foreground">
               Alert follows
             </p>
-            <p className="mt-3 font-mono text-4xl font-semibold leading-none tabular-nums text-foreground sm:text-5xl">
+            <p className="mt-3 pharos-numeric text-4xl font-semibold leading-none text-foreground sm:text-5xl">
               {formatCount(data.coinSubscriptions)}
             </p>
             <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-xs text-muted-foreground">
               <span>
-                <span className="block font-mono text-sm font-semibold text-foreground">
+                <span className="block pharos-numeric text-sm font-semibold text-foreground">
                   {formatCount(explicitFollows)}
                 </span>
                 explicit
               </span>
               <span>
-                <span className="block font-mono text-sm font-semibold text-foreground">
+                <span className="block pharos-numeric text-sm font-semibold text-foreground">
                   {formatCount(presetImpliedFollows)}
                 </span>
                 preset-implied
@@ -427,9 +423,9 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
                 {topCoins.map((coin, index) => (
                   <li
                     key={coin}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-1.5 font-mono text-[13px] font-semibold tabular-nums text-sky-800 dark:text-sky-200"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 pharos-numeric text-[13px] font-semibold text-foreground"
                   >
-                    <span aria-hidden="true" className="text-[10px] font-medium text-sky-700/60 dark:text-sky-300/60">
+                    <span aria-hidden="true" className="text-[10px] font-medium text-muted-foreground">
                       {index + 1}
                     </span>
                     {coin}

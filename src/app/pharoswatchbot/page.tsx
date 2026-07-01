@@ -240,7 +240,7 @@ function HeroPreview() {
     <div className="relative rounded-[1.25rem] border border-border/70 bg-card/86 p-3 shadow-[0_24px_60px_oklch(0_0_0_/0.22)]">
       <div className="mb-3 flex items-center justify-between rounded-xl border border-border/60 bg-background/55 px-3 py-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-frost-blue/15 text-sky-700 dark:text-sky-200">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/60 text-sky-700 dark:text-sky-300">
             <Bot className="h-4 w-4" />
           </span>
           <div>
@@ -275,7 +275,7 @@ function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[numb
   const Icon = TELEGRAM_ACTION_ICONS[action.key];
   const anchorId = ACTION_ANCHORS[action.key];
   const cardClassName = action.isPrimary
-    ? "border-frost-blue/35 bg-frost-blue/8 dark:bg-frost-blue/6 md:col-span-2 lg:col-span-1"
+    ? "border-border/65 bg-card/78 md:col-span-2 lg:col-span-1"
     : "border-border/65 bg-card/78";
 
   return (
@@ -292,7 +292,7 @@ function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[numb
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-semibold leading-tight text-foreground">{action.title}</h2>
             {action.isPrimary ? (
-              <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-sky-700 dark:text-sky-300">
+              <span className="rounded-full border border-border/60 bg-muted/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
                 Primary
               </span>
             ) : (
@@ -398,13 +398,9 @@ export default function PharosWatchBotPage() {
     >
       <div className="space-y-14">
         <section
-          className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-[linear-gradient(135deg,oklch(0.98_0.006_248_/_0.96),oklch(0.94_0.014_248_/_0.92))] px-5 py-7 shadow-sm dark:bg-[linear-gradient(135deg,oklch(0.17_0.024_248_/_0.96),oklch(0.105_0.018_248_/_0.98))] sm:px-7 sm:py-9 lg:px-9 lg:py-11"
+          className="pharos-card-shell relative overflow-hidden rounded-[1.5rem] px-5 py-7 sm:px-7 sm:py-9 lg:px-9 lg:py-11"
           aria-labelledby="telegram-hero-title"
         >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--brand-accent)_20%,var(--brand-accent)_60%,transparent)] opacity-70"
-          />
           <div className="space-y-8 sm:space-y-10">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] lg:items-center">
               <div className="space-y-6">
@@ -447,7 +443,7 @@ export default function PharosWatchBotPage() {
                 <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
                   Tracked universe
                 </p>
-                <p className="mt-3 font-mono text-[3.5rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4.5rem] lg:text-[6rem]">
+                <p className="mt-3 pharos-numeric text-[3.5rem] font-semibold leading-[0.9] text-frost-blue sm:text-[4.5rem] lg:text-[6rem]">
                   {TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")}
                 </p>
                 <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
@@ -458,7 +454,7 @@ export default function PharosWatchBotPage() {
                 <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
                   Alert lane
                 </p>
-                <p className="mt-3 font-mono text-3xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-4xl lg:text-5xl">
+                <p className="mt-3 pharos-numeric text-3xl font-semibold leading-[0.95] text-foreground sm:text-4xl lg:text-5xl">
                   5m
                 </p>
                 <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
@@ -467,7 +463,7 @@ export default function PharosWatchBotPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-frost-blue/30 bg-frost-blue/8 p-5 dark:bg-frost-blue/6 sm:p-6">
+            <div className="pharos-card-shell p-5 sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1 space-y-3">
                   <p className="pharos-kicker text-sky-700 dark:text-sky-300">Recommended first command</p>
@@ -537,7 +533,7 @@ export default function PharosWatchBotPage() {
         </section>
 
         <section className="space-y-4" id="mini-app" aria-labelledby="mini-app-title">
-          <div className="pharos-card-shell overflow-hidden border-frost-blue/30 bg-frost-blue/8 dark:bg-frost-blue/6">
+          <div className="pharos-card-shell overflow-hidden">
             <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)]">
               <div className="border-b border-border/55 p-5 lg:border-b-0 lg:border-r lg:p-7">
                 <div className="flex items-baseline justify-between gap-3 border-b border-border/45 pb-3">
@@ -546,7 +542,7 @@ export default function PharosWatchBotPage() {
                     <span aria-hidden="true" className="text-border">/</span>
                     <span className="text-muted-foreground">Telegram</span>
                   </p>
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground tabular-nums">
+                  <span className="pharos-numeric text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     {MINI_APP_FEATURES.length} controls
                   </span>
                 </div>
@@ -564,7 +560,7 @@ export default function PharosWatchBotPage() {
                     <li key={feature.title} className="flex gap-3 border-t border-border/40 py-3">
                       <span
                         aria-hidden="true"
-                        className="mt-[2px] shrink-0 font-mono text-[11px] font-semibold tabular-nums tracking-[0.08em] text-sky-700/85 dark:text-sky-300/90"
+                        className="mt-[2px] shrink-0 pharos-numeric text-[11px] font-semibold tracking-[0.08em] text-sky-700/85 dark:text-sky-300/90"
                       >
                         {String(index + 1).padStart(2, "0")}
                       </span>
@@ -736,7 +732,7 @@ export default function PharosWatchBotPage() {
             <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
               <span className="flex items-center gap-2.5">
                 Command Reference
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground pharos-numeric">
                   {TELEGRAM_COMMAND_COUNT}
                 </span>
               </span>

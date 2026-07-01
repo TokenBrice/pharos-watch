@@ -38,10 +38,9 @@ export function PublicTransitionTimeline({
               key={option}
               type="button"
               onClick={() => onWindowChange(option)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                option === window
-                  ? "bg-foreground text-background"
-                  : "border border-border/70 text-muted-foreground hover:text-foreground"
+              aria-pressed={option === window}
+              className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${
+                option === window ? "pharos-control-pill-active" : ""
               }`}
             >
               {option}

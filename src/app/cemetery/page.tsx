@@ -76,8 +76,8 @@ export default function CemeteryPage() {
         }}
       />
       <div className="space-y-2">
-        <h1 className="text-4xl font-extrabold tracking-tighter">Stablecoin Cemetery</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="pharos-page-title">Stablecoin Cemetery</h1>
+        <p className="pharos-lead">
           Defunct, depegged, and discontinued. Logos mark each grave, biggest collapses stand tallest, and hover plaques surface the autopsy context.{" "}
           <span className="hidden md:inline">Press F on hover to pay respects.</span>
         </p>

@@ -88,13 +88,13 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
 
         {/* Peak mcap */}
         {coin.peakMcap && (
-          <span className="hidden md:inline text-xs font-mono tabular-nums text-muted-foreground/70 shrink-0">
+          <span className="hidden md:inline text-xs pharos-numeric text-muted-foreground/70 shrink-0">
             {formatCurrency(coin.peakMcap, 1)}
           </span>
         )}
 
         {/* Death date */}
-        <span className="text-xs font-mono tabular-nums text-muted-foreground shrink-0">
+        <span className="text-xs pharos-numeric text-muted-foreground shrink-0">
           {formatDeathDate(coin.deathDate)}
         </span>
 
@@ -124,7 +124,7 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
               {coin.peakMcap && (
                 <div>
                   <span className="text-muted-foreground">Peak Mcap: </span>
-                  <span className="font-mono tabular-nums">{formatCurrency(coin.peakMcap, 1)}</span>
+                  <span className="pharos-numeric">{formatCurrency(coin.peakMcap, 1)}</span>
                 </div>
               )}
               <div>
@@ -133,7 +133,7 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
               </div>
               <div>
                 <span className="text-muted-foreground">Death: </span>
-                <span className="font-mono tabular-nums">{formatDeathDate(coin.deathDate)}</span>
+                <span className="pharos-numeric">{formatDeathDate(coin.deathDate)}</span>
               </div>
             </div>
 

@@ -54,7 +54,7 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
       />
       <nav
         aria-label="Jump to release"
-        className="overflow-x-auto scrollbar-none -mx-1 px-1 text-xs font-mono"
+        className="overflow-x-auto scrollbar-none -mx-1 px-1 text-xs"
       >
         <div className="flex min-w-max items-center gap-1.5">
           <span className="shrink-0 text-xs font-medium text-muted-foreground pl-1">Jump to:</span>
@@ -69,24 +69,24 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
                 href={`#${id}`}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "pharos-focus-ring flex items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2.5 sm:py-1.5 transition-colors",
-                  isActive
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                  "pharos-focus-ring pharos-control-pill gap-2 whitespace-nowrap",
+                  isActive && "pharos-control-pill-active",
                 )}
               >
                 <span
                   className={cn(
                     "size-1.5 shrink-0 rounded-full transition-colors",
                     isActive
-                      ? "bg-foreground"
+                      ? "bg-current"
                       : "border border-border/80 bg-transparent",
                   )}
                   aria-hidden
                 />
-                {formatDateRange(entry.dateRange.from, entry.dateRange.to, {
-                  compact: true,
-                })}
+                <span className="pharos-numeric">
+                  {formatDateRange(entry.dateRange.from, entry.dateRange.to, {
+                    compact: true,
+                  })}
+                </span>
                 {isLatest && (
                   <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-sans font-semibold uppercase tracking-wider text-foreground">
                     Latest

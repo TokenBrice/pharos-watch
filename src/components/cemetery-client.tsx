@@ -70,16 +70,14 @@ export function CemeteryClient({ entries }: { entries: CemeteryEntry[] }) {
                   : "Oldest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."}
               </CardDescription>
             </div>
-            <div className="inline-flex w-full flex-wrap gap-2 rounded-full border border-border/70 bg-muted/30 p-1 @min-[560px]/card-header:w-auto">
+            <div className="inline-flex w-full flex-wrap gap-2 @min-[560px]/card-header:w-auto">
               {SORT_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   className={cn(
-                    "pharos-focus-ring rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                    sortMode === option.value
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                    "pharos-focus-ring pharos-control-pill",
+                    sortMode === option.value && "pharos-control-pill-active",
                   )}
                   onClick={() => setSortMode(option.value)}
                   aria-pressed={sortMode === option.value}

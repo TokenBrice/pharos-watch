@@ -25,7 +25,7 @@ export function SummaryBadge({
       )}
     >
       <span className="text-muted-foreground">{label}</span>
-      <span className="ml-1.5 font-mono tabular-nums text-foreground">{value}</span>
+      <span className="ml-1.5 pharos-numeric text-foreground">{value}</span>
     </div>
   );
 }

@@ -137,7 +137,7 @@ export default function ApiAccessPage() {
       <div className="space-y-3">
         <section className="grid gap-5 lg:grid-cols-[minmax(0,0.66fr)_minmax(18rem,0.34fr)] lg:items-end">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+            <div className="pharos-kicker inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1">
               <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
               Public API Access
             </div>
@@ -251,7 +251,7 @@ export default function ApiAccessPage() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,0.7fr)_minmax(18rem,0.3fr)]">
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+            <div className="pharos-kicker inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1">
               <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
               Working Examples
             </div>

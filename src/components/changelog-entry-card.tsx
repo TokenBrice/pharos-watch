@@ -86,7 +86,7 @@ export function ChangelogEntryCard({
           "pharos-card-shell -ml-4 -mr-4 px-4 py-5 sm:-ml-5 sm:-mr-5 sm:px-5 sm:py-6",
       )}
     >
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+      <p className="pharos-numeric text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
         Week #{weekNumber}
       </p>
       <h2
@@ -116,7 +116,7 @@ export function ChangelogEntryCard({
                 Latest
               </span>
             )}
-            <span className="text-xs font-mono font-normal text-muted-foreground">
+            <span className="pharos-numeric text-xs font-normal text-muted-foreground">
               {stats.totalCommits} commits
             </span>
           </span>

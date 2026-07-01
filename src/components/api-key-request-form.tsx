@@ -9,9 +9,7 @@ import { PUBLIC_API_HOST, PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-c
 import { ApiKeySelfServeCadenceSchema } from "@shared/types/api-key-requests";
 import { AlertCircle, CheckCircle2, Copy, KeyRound, Loader2, MailCheck, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   useApiKeyRequestFormState,
@@ -30,6 +28,15 @@ import {
   endpointId,
   formatSelfServeExpiry,
 } from "@/lib/api-key-request-form-view-model";
+
+// Canon input recipe (DESIGN.md §5 Inputs): translucent fill, hairline border,
+// rounded, flat at rest, `.pharos-focus-ring` on focus-visible. Kept as form
+// inputs — no pill treatment on data-entry fields.
+const FIELD_CLASS =
+  "pharos-focus-ring h-9 w-full rounded-md border border-border/60 bg-background/45 px-3 py-1 text-base text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive md:text-sm";
+
+const TEXTAREA_CLASS =
+  "pharos-focus-ring w-full resize-none rounded-md border border-border/60 bg-background/45 px-3 py-2 text-base text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
 export function ApiKeyRequestForm() {
   const {
@@ -98,10 +105,11 @@ export function ApiKeyRequestForm() {
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="api-email">Email</Label>
-            <Input
+            <input
               id="api-email"
               type="email"
               autoComplete="email"
+              className={FIELD_CLASS}
               maxLength={EMAIL_MAX_LENGTH}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -111,9 +119,10 @@ export function ApiKeyRequestForm() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="api-name">Name</Label>
-            <Input
+            <input
               id="api-name"
               autoComplete="name"
+              className={FIELD_CLASS}
               maxLength={NAME_MAX_LENGTH}
               value={requesterName}
               onChange={(event) => setRequesterName(event.target.value)}
@@ -122,9 +131,10 @@ export function ApiKeyRequestForm() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="api-org">Organization</Label>
-            <Input
+            <input
               id="api-org"
               autoComplete="organization"
+              className={FIELD_CLASS}
               maxLength={ORGANIZATION_MAX_LENGTH}
               value={organization}
               onChange={(event) => setOrganization(event.target.value)}
@@ -133,10 +143,11 @@ export function ApiKeyRequestForm() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="api-url">Project URL</Label>
-            <Input
+            <input
               id="api-url"
               type="url"
               placeholder="https://"
+              className={FIELD_CLASS}
               maxLength={PROJECT_URL_MAX_LENGTH}
               aria-describedby="api-url-help"
               aria-invalid={projectUrlValue.length > 0 && !projectUrlValid}
@@ -150,7 +161,7 @@ export function ApiKeyRequestForm() {
 
         <div className="mt-4 space-y-1.5">
           <Label htmlFor="api-use-case">Use Case</Label>
-          <Textarea
+          <textarea
             id="api-use-case"
             value={useCase}
             onChange={(event) => setUseCase(event.target.value)}
@@ -158,7 +169,7 @@ export function ApiKeyRequestForm() {
             maxLength={SELF_SERVE_USE_CASE_MAX_LENGTH}
             aria-describedby="api-use-case-help"
             disabled={requestStatus === "submitting"}
-            className="resize-none"
+            className={TEXTAREA_CLASS}
             required
           />
           <p id="api-use-case-help" className="text-xs text-muted-foreground">
@@ -171,7 +182,7 @@ export function ApiKeyRequestForm() {
             <Label htmlFor="api-cadence">Expected Cadence</Label>
             <select
               id="api-cadence"
-              className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className={FIELD_CLASS}
               value={expectedCadence}
               onChange={(event) => {
                 const parsed = ApiKeySelfServeCadenceSchema.safeParse(event.target.value);
@@ -188,9 +199,10 @@ export function ApiKeyRequestForm() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="api-volume">Expected Volume</Label>
-            <Input
+            <input
               id="api-volume"
               placeholder="e.g. 2,000 requests/day"
+              className={FIELD_CLASS}
               maxLength={EXPECTED_VOLUME_MAX_LENGTH}
               aria-describedby="api-volume-help"
               value={expectedVolume}
@@ -233,7 +245,7 @@ export function ApiKeyRequestForm() {
 
         <div className="hidden" aria-hidden="true">
           <Label htmlFor="api-website">Website</Label>
-          <Input
+          <input
             id="api-website"
             tabIndex={-1}
             autoComplete="off"

@@ -56,7 +56,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
                 />
               </div>
               <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/65">
-                <span className="tabular-nums text-sky-300">{String(idx + 1).padStart(2, "0")}</span>
+                <span className="pharos-numeric text-sky-300">{String(idx + 1).padStart(2, "0")}</span>
                 <span aria-hidden="true" className="text-white/25">·</span>
                 <span>{screenshot.title}</span>
               </figcaption>
@@ -86,17 +86,11 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
               setPaused(true);
             }}
             className={cn(
-              "pharos-focus-ring h-8 rounded-md px-1.5",
-              activeIndex === idx ? "text-sky-700 dark:text-sky-300" : "text-muted-foreground",
+              "pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs",
+              activeIndex === idx ? "pharos-control-pill-active" : "",
             )}
           >
-            <span
-              aria-hidden="true"
-              className={cn(
-                "block h-[3px] w-7 rounded-full",
-                activeIndex === idx ? "bg-sky-600 dark:bg-sky-300" : "bg-muted-foreground/30",
-              )}
-            />
+            {screenshot.title}
           </button>
         ))}
       </div>
