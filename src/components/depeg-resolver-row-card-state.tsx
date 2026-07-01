@@ -1,6 +1,5 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   formatUtcTimestamp,
@@ -76,7 +75,7 @@ export function StateOnlyCard({
   const dirGlyph = row.direction === "below" ? "▼" : "▲";
 
   return (
-    <Card className="gap-0 overflow-hidden p-4 sm:p-5">
+    <div className="pharos-card-shell gap-0 overflow-hidden p-4 sm:p-5">
       <div className="space-y-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -160,6 +159,6 @@ export function StateOnlyCard({
           </details>
         ) : null}
       </div>
-    </Card>
+    </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatPrice, pegCurrencySymbol } from "@shared/lib/format";
 import type { DdrFactor } from "@shared/types/depeg-resolver";
@@ -133,13 +132,13 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   const showBand = !duration.suppressed && !terminal && !insufficient && (Boolean(duration.iqrSec) || Boolean(duration.stratum));
 
   return (
-    <Card className="@container/ddr gap-0 overflow-hidden p-4 sm:p-5">
+    <div className="pharos-card-shell @container/ddr gap-0 overflow-hidden p-4 sm:p-5">
       <div className="space-y-3">
         {/* Identity + verdict + direction — one inline row, direction aligned right */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <CoinLockup row={row} logos={logos} logoSize={52} />
           {priceLabel ? (
-            <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
+            <span className="pharos-numeric shrink-0 text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
           ) : null}
           <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
             <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
@@ -167,7 +166,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
 
         {/* Prediction facts (band + comparison stratum) — quiet caption under the hero */}
         {showBand ? (
-          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-mono text-[11px] tabular-nums text-muted-foreground">
+          <p className="pharos-numeric flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] tabular-nums text-muted-foreground">
             {duration.iqrSec ? (
               <span>
                 band{" "}
@@ -236,7 +235,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground group-hover:text-foreground">
                 Will it recover?
               </span>
-              <span className="font-mono text-[10px] text-muted-foreground/80">
+              <span className="pharos-numeric text-[10px] text-muted-foreground/80">
                 {kills.length} kill · {anchors.length} anchor
               </span>
               <span className="ml-auto hidden w-24 shrink-0 sm:block">
@@ -263,7 +262,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           <LiveFacts row={row} />
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -310,7 +309,7 @@ function PredictionDetails({ row, frozen }: { row: DdrDisplayRow; frozen: boolea
             {items.map((item) => (
               <div key={item.label} className="flex items-center gap-1.5">
                 <dt className="text-muted-foreground">{item.label}</dt>
-                <dd className="font-mono tabular-nums text-foreground">{item.value}</dd>
+                <dd className="pharos-numeric tabular-nums text-foreground">{item.value}</dd>
               </div>
             ))}
           </dl>

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -586,7 +585,7 @@ function DEWSLegend({
       ))}
       <span
         className={cn(
-          "text-xs text-muted-foreground/70 tabular-nums font-mono",
+          "pharos-numeric text-xs text-muted-foreground/70 tabular-nums",
           compact ? "w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0" : "ml-auto",
         )}
       >
@@ -624,18 +623,14 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
 
   if (isLoading) {
     return (
-      <Card className={className}>
+      <div className={cn("pharos-card-shell flex flex-col p-4 sm:p-5", className)}>
         {showHeader && (
-          <CardHeader>
-            <CardTitle as="h2">
-              <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-            </CardTitle>
-          </CardHeader>
+          <h2 className="mb-3 text-base font-semibold leading-none">
+            <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
+          </h2>
         )}
-        <CardContent className={showHeader ? undefined : "p-4"}>
-          <div aria-busy="true" className={`${showHeader ? "h-[440px]" : "min-h-[440px]"} rounded-lg bg-muted animate-pulse`} />
-        </CardContent>
-      </Card>
+        <div aria-busy="true" className={`${showHeader ? "h-[440px]" : "min-h-[440px]"} rounded-lg bg-muted animate-pulse`} />
+      </div>
     );
   }
 
@@ -655,22 +650,20 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
   } = viewModel;
 
   return (
-    <Card className={cn("flex flex-col", className)}>
+    <div className={cn("pharos-card-shell flex flex-col p-4 sm:p-5", className)}>
       {showHeader && (
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle as="h2">
-              <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-            </CardTitle>
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {elevated.length > 0
-                ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
-                : `All ${totalCount} coins calm`}
-            </span>
-          </div>
-        </CardHeader>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold leading-none">
+            <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
+          </h2>
+          <span className="pharos-numeric text-xs text-muted-foreground tabular-nums">
+            {elevated.length > 0
+              ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
+              : `All ${totalCount} coins calm`}
+          </span>
+        </div>
       )}
-      <CardContent className={showHeader ? "flex flex-col pb-4" : "flex flex-1 flex-col gap-2.5 p-3 sm:p-4"}>
+      <div className="pharos-chart-stage flex flex-1 flex-col">
         <div className={cn(showHeader ? undefined : "flex flex-1 items-center justify-center")}>
           <DEWSRadar
             elevated={elevated}
@@ -682,7 +675,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           />
         </div>
         <DEWSLegend bandCounts={bandCounts} updatedAtLabel={updatedAtLabel} compact={!showHeader} />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Card } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import type { PegSummaryStats } from "@shared/types";
@@ -72,7 +71,7 @@ function DepegLogoStack({
         {overflow.length > 0 && (
           <span
             title={overflow.map((c) => c.symbol).join(", ")}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-muted/70 font-mono text-[11px] font-semibold tabular-nums text-muted-foreground ring-2 ring-card"
+            className="pharos-numeric inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-muted/70 text-[11px] font-semibold tabular-nums text-muted-foreground ring-2 ring-card"
           >
             +{overflow.length}
           </span>
@@ -96,7 +95,7 @@ function PegStat({
     <div className="pharos-card-shell rounded-xl px-4 py-3">
       <p className="pharos-kicker">{title}</p>
       <p className="mt-1.5 flex items-baseline gap-2">
-        <span className="font-mono text-2xl font-bold tabular-nums leading-none">{value}</span>
+        <span className="pharos-numeric text-2xl font-bold tabular-nums leading-none">{value}</span>
         <span className="text-xs text-muted-foreground">{subtext}</span>
       </p>
     </div>
@@ -114,7 +113,7 @@ function StripStat({
 }) {
   return (
     <span className="text-xs text-muted-foreground">
-      <span className="font-mono font-semibold tabular-nums text-foreground">{value}</span> {label}
+      <span className="pharos-numeric font-semibold tabular-nums text-foreground">{value}</span> {label}
       {trail ? <span className="text-muted-foreground/70"> {trail}</span> : null}
     </span>
   );
@@ -131,14 +130,14 @@ export function DepegTrackerStats({ stats, activeDepegCoins = [], logos }: Depeg
   return (
     <div className="flex flex-col gap-3">
       {/* Tier 1 — the headline: are coins actively broken right now? */}
-      <Card className="rounded-xl p-4 sm:p-5">
+      <div className="pharos-card-shell rounded-xl p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="shrink-0">
             <p className="pharos-kicker">
               <MethodologyLabel topic="activeDepegs">Active Depegs</MethodologyLabel>
             </p>
             <p className="mt-1.5 flex items-baseline gap-2">
-              <span className="font-mono text-4xl font-extrabold tabular-nums leading-none">
+              <span className="pharos-numeric text-4xl font-extrabold tabular-nums leading-none">
                 {stats.activeDepegCount}
               </span>
               <span className="text-sm text-muted-foreground">ongoing events</span>
@@ -149,7 +148,7 @@ export function DepegTrackerStats({ stats, activeDepegCoins = [], logos }: Depeg
             <ActiveStatusPill active={hasActive} />
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Tier 2 — peg health: how much of the tracked set is holding? */}
       <div className="grid grid-cols-2 gap-3">

@@ -58,7 +58,7 @@ function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
           </TooltipProvider>
         </div>
         {lineage ? (
-          <p className="font-mono text-[10px] text-muted-foreground">
+          <p className="pharos-numeric text-[10px] text-muted-foreground">
             calibrated on {lineage.incidentCount.toLocaleString()} recovered incidents · {lineage.coinCount} coins
           </p>
         ) : null}

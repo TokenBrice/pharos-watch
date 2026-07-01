@@ -182,7 +182,7 @@ export function ForecastTimeline({ row }: { row: DdrDisplayRow }) {
 
   return (
     <div
-      className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3 sm:px-4"
+      className="pharos-chart-stage px-3.5 py-3 sm:px-4"
       role="img"
       aria-label={ariaLabel}
     >

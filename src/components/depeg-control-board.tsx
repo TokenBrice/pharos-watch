@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp, RotateCcw, ShieldCheck, Waves } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { DEWSBadge } from "@/components/dews-badge";
@@ -113,7 +112,7 @@ function ThreatTickerStrip({
                 <div className="truncate text-xs text-muted-foreground">{cell.detail}</div>
               </div>
             </div>
-            <div className={cn("shrink-0 font-mono text-lg font-bold tabular-nums", cell.className)}>
+            <div className={cn("pharos-numeric shrink-0 text-lg font-bold tabular-nums", cell.className)}>
               {cell.value}
             </div>
           </div>
@@ -157,11 +156,11 @@ function MetricCell({
     <div className={cn("min-w-0", className)}>
       <div className="mb-1 flex items-baseline justify-between gap-2 md:hidden">
         <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
-        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">{value}</span>
+        <span className="pharos-numeric text-sm font-semibold tabular-nums text-foreground">{value}</span>
       </div>
-      <div className="hidden font-mono text-sm font-semibold tabular-nums text-foreground md:block">{value}</div>
+      <div className="pharos-numeric hidden text-sm font-semibold tabular-nums text-foreground md:block">{value}</div>
       {children ? <div className="mt-1.5">{children}</div> : null}
-      {subline ? <div className="mt-1 truncate font-mono text-[10px] text-muted-foreground">{subline}</div> : null}
+      {subline ? <div className="pharos-numeric mt-1 truncate text-[10px] text-muted-foreground">{subline}</div> : null}
     </div>
   );
 }
@@ -207,7 +206,7 @@ function InstrumentRow({
       )}
       aria-label={`Open ${coin.symbol} depeg detail`}
     >
-      <div className="pt-0.5 font-mono text-xs tabular-nums text-muted-foreground md:text-right">#{rank}</div>
+      <div className="pharos-numeric pt-0.5 text-xs tabular-nums text-muted-foreground md:text-right">#{rank}</div>
       <div className="min-w-0">
         <StablecoinIdentity
           logoSrc={logos?.[coin.id]}
@@ -221,8 +220,8 @@ function InstrumentRow({
           <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none", statusClassName(row))}>
             {statusLabel(row)}
           </span>
-          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{eventAge}</span>
-          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{coin.pegCurrency}</span>
+          <span className="pharos-numeric text-[11px] text-muted-foreground tabular-nums">{eventAge}</span>
+          <span className="pharos-numeric text-[11px] text-muted-foreground tabular-nums">{coin.pegCurrency}</span>
         </div>
       </div>
       <div className="col-span-2 grid grid-cols-2 gap-x-4 gap-y-3 md:contents">
@@ -322,14 +321,14 @@ export function DepegControlBoard({
           <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">Peg control board</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span><span className="font-mono font-semibold text-foreground tabular-nums">{sortedTotalRows}</span> rows</span>
+          <span><span className="pharos-numeric font-semibold text-foreground tabular-nums">{sortedTotalRows}</span> rows</span>
           <span aria-hidden="true">/</span>
-          <span><span className="font-mono font-semibold text-foreground tabular-nums">{warningCount}</span> attention</span>
+          <span><span className="pharos-numeric font-semibold text-foreground tabular-nums">{warningCount}</span> attention</span>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-background/35">
-        <div className="border-b border-border/70 bg-muted/25 p-3">
+      <div className="pharos-table-shell">
+        <div className="pharos-table-toolbar">
           <ThreatTickerStrip
             worstAbs={worstAbs}
             warningCount={warningCount}
@@ -337,33 +336,39 @@ export function DepegControlBoard({
             clearPct={clearPct}
             worstSymbol={stats?.worstCurrent?.symbol}
           />
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ToggleGroup
-              type="single"
-              value={pegFilter}
-              onValueChange={(v) => v && onPegFilterChange(v as PegCurrency | "all")}
-              className="flex flex-wrap gap-1"
-              aria-label="Filter by peg currency"
-            >
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by peg currency">
               {PEG_FILTER_OPTIONS.map((f) => (
-                <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => onPegFilterChange(f.value as PegCurrency | "all")}
+                  aria-pressed={pegFilter === f.value}
+                  className={cn(
+                    "pharos-focus-ring pharos-control-pill",
+                    pegFilter === f.value ? "pharos-control-pill-active" : "",
+                  )}
+                >
                   {f.label}
-                </ToggleGroupItem>
+                </button>
               ))}
-            </ToggleGroup>
-            <ToggleGroup
-              type="single"
-              value={typeFilter}
-              onValueChange={(v) => v && onTypeFilterChange(v as GovernanceType | "all")}
-              className="flex flex-wrap gap-1"
-              aria-label="Filter by governance type"
-            >
+            </div>
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by governance type">
               {GOVERNANCE_FILTER_OPTIONS.map((f) => (
-                <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => onTypeFilterChange(f.value as GovernanceType | "all")}
+                  aria-pressed={typeFilter === f.value}
+                  className={cn(
+                    "pharos-focus-ring pharos-control-pill",
+                    typeFilter === f.value ? "pharos-control-pill-active" : "",
+                  )}
+                >
                   {f.label}
-                </ToggleGroupItem>
+                </button>
               ))}
-            </ToggleGroup>
+            </div>
             <FilterSearchInput
               value={searchQuery}
               onValueChange={onSearchChange}
@@ -376,7 +381,7 @@ export function DepegControlBoard({
               <button
                 type="button"
                 onClick={onClearFilters}
-                className="pharos-focus-ring inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-border/70 bg-background/45 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="pharos-focus-ring pharos-control-pill gap-1.5"
               >
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                 Clear filters
@@ -397,10 +402,8 @@ export function DepegControlBoard({
                   aria-pressed={sortKey === mode.key}
                   aria-label={`${mode.label} sort${sortKey === mode.key ? `, ${sortDirection}` : ""}`}
                   className={cn(
-                    "pharos-focus-ring rounded-sm border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                    sortKey === mode.key
-                      ? "border-foreground/20 bg-foreground text-background"
-                      : "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground",
+                    "pharos-focus-ring pharos-control-pill",
+                    sortKey === mode.key ? "pharos-control-pill-active" : "",
                   )}
                 >
                   <span>{mode.label}</span>
@@ -414,7 +417,7 @@ export function DepegControlBoard({
                 </button>
               ))}
             </div>
-            <div className="font-mono text-xs tabular-nums text-muted-foreground">
+            <div className="pharos-numeric text-xs tabular-nums text-muted-foreground">
               {rangeStart}-{rangeEnd} / {sortedTotalRows}
             </div>
           </div>
@@ -435,7 +438,7 @@ export function DepegControlBoard({
                   <button
                     type="button"
                     onClick={onClearFilters}
-                    className="pharos-focus-ring mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-sm border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
+                    className="pharos-focus-ring pharos-control-pill mt-3 gap-1.5"
                   >
                     <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                     Clear filters
@@ -461,18 +464,18 @@ export function DepegControlBoard({
                 type="button"
                 onClick={onPreviousPage}
                 disabled={effectivePage <= 0}
-                className="pharos-focus-ring rounded-sm border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                className="pharos-focus-ring pharos-control-pill disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
-              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+              <span className="pharos-numeric text-xs tabular-nums text-muted-foreground">
                 page {effectivePage + 1} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={onNextPage}
                 disabled={effectivePage >= totalPages - 1}
-                className="pharos-focus-ring rounded-sm border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                className="pharos-focus-ring pharos-control-pill disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>

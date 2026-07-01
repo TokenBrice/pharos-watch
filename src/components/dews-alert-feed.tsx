@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DEWSBadge } from "@/components/dews-badge";
@@ -72,34 +71,30 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
 
   if (!signals) {
     return (
-      <Card className={cn("rounded-xl flex flex-col", className)}>
-        <CardHeader className="pb-3">
-          <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            DEWS Alert Queue
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+      <div className={cn("pharos-card-shell flex flex-col p-4", className)}>
+        <h2 className="pb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          DEWS Alert Queue
+        </h2>
+        <div className="space-y-2">
           <Skeleton className="h-12 rounded-lg" />
           <Skeleton className="h-12 rounded-lg" />
           <Skeleton className="h-12 rounded-lg" />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className={cn("rounded-xl flex flex-col", className)}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            DEWS Alert Queue
-          </CardTitle>
-          <span className="text-xs font-mono tabular-nums text-muted-foreground">
-            {alertCoins.length} at alert+
-          </span>
-        </div>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 gap-y-1.5" aria-live="polite">
+    <div className={cn("pharos-card-shell flex flex-col p-4", className)}>
+      <div className="flex items-center justify-between gap-2 pb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          DEWS Alert Queue
+        </h2>
+        <span className="pharos-numeric text-xs tabular-nums text-muted-foreground">
+          {alertCoins.length} at alert+
+        </span>
+      </div>
+      <div className="grid flex-1 grid-cols-1 gap-y-1.5" aria-live="polite">
         {alertCoins.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border/70 px-3 py-3 text-sm text-muted-foreground">
             All coins with current DEWS coverage are below ALERT.
@@ -129,7 +124,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
 
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <DEWSBadge score={coin.score} band={coin.band} />
-                <span className="w-6 text-right text-xs font-mono tabular-nums text-muted-foreground">
+                <span className="pharos-numeric w-6 text-right text-xs tabular-nums text-muted-foreground">
                   {coin.score}
                 </span>
               </div>
@@ -137,9 +132,9 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
             );
           })
         )}
-      </CardContent>
+      </div>
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-border/60 px-4 py-2">
+        <div className="-mx-4 -mb-4 mt-2 flex items-center justify-between border-t border-border/60 px-4 py-2">
           <button
             type="button"
             disabled={safePage === 0}
@@ -149,7 +144,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
           >
             ← Prev
           </button>
-          <span className="text-xs font-mono tabular-nums text-muted-foreground">
+          <span className="pharos-numeric text-xs tabular-nums text-muted-foreground">
             {safePage + 1} / {totalPages}
           </span>
           <button
@@ -163,6 +158,6 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
           </button>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -99,13 +98,11 @@ export function DepegFeed({
   }, [events]);
 
   return (
-    <Card className="rounded-xl flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle as="h2" className="pharos-kicker">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 items-start gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
+    <div className="pharos-card-shell flex flex-col p-4">
+      <h2 className="pharos-kicker pb-3">
+        {title}
+      </h2>
+      <div className="flex-1 overflow-y-auto grid grid-cols-1 items-start gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
         {events.length === 0 ? (
           <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-3 text-sm text-emerald-700 dark:text-emerald-400 lg:col-span-3">
             {emptyMessage}
@@ -129,7 +126,7 @@ export function DepegFeed({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-sm font-medium group-hover:underline">{evt.symbol}</span>
-                    <span className={`font-mono text-xs font-semibold ${deviationColorClass(Math.abs(evt.peakDeviationBps))}`}>
+                    <span className={`pharos-numeric text-xs font-semibold ${deviationColorClass(Math.abs(evt.peakDeviationBps))}`}>
                       {formatBps(evt.peakDeviationBps)}
                     </span>
                     <Badge
@@ -159,7 +156,7 @@ export function DepegFeed({
                 </div>
               </div>
 
-              <span className="text-xs text-muted-foreground font-mono flex-shrink-0">
+              <span className="pharos-numeric text-xs text-muted-foreground flex-shrink-0">
                 {formatDuration(evt.startedAt, evt.endedAt)}
               </span>
             </Link>
@@ -189,7 +186,7 @@ export function DepegFeed({
             </Button>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
