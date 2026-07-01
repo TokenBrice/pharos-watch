@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9971` (2026-02-09 -> 2026-06-23).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9972` (2026-02-09 -> 2026-07-01).
+
+---
+
+## v3.9972 — Actionable data-quality warning scope (2026-07-01)
+
+- **Resolved snapshot age is diagnostic** — old but resolved freeze-ledger rows keep their age distributions in `freezeLedgerMeta` without opening the stale public warning solely because the retained snapshot is old
+- **Permanent limitations are not active gaps** — `permanently_unavailable` rows remain auditable in amount-status distributions, but no longer count as warning-level amount gaps
+- **Coverage inventory stays visible** — deferred coverage configs remain in `coverage.unsupportedDeferred` and counts, but do not degrade `/freezewatch` by themselves
 
 ---
 

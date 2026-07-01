@@ -5,11 +5,26 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // INTEGER, not a decimal fraction — so `3.997` parses to [3, 997] and sorts after
 // `3.99` ([3, 99]) and `3.9` ([3, 9]). The minor segment is therefore an
 // open-ended integer counter within the v3 bucket; routine changes bump it
-// (…3.9 → 3.99 → 3.997 → 3.9971 …) and stay in this file. Create a new `v4.ts`
+// (…3.9 → 3.99 → 3.997 → 3.9971 → 3.9972 …) and stay in this file. Create a new `v4.ts`
 // (and a sibling vN file array) only for a genuine major/breaking change to the
 // blacklist-tracker methodology, not merely to "roll over" the counter. There is
 // no implicit cap that forces a v4; entries below are newest-first by version.
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
+  {
+    version: "3.9972",
+    title: "Actionable data-quality warning scope",
+    date: "2026-07-01",
+    effectiveAt: 1782864000, // 2026-07-01T00:00:00Z
+    summary:
+      "Scopes FreezeWatch data-quality warnings to actionable degraded conditions instead of treating permanent historical limitations, deferred coverage inventory, or old resolved ledger snapshots as stale failures.",
+    impact: [
+      "Resolved freeze-ledger snapshots keep their age diagnostics in `freezeLedgerMeta` without opening the stale warning banner solely because the snapshot is old",
+      "Permanently unavailable amount rows remain visible as audit limitations but no longer count as warning-level amount gaps",
+      "Deferred coverage configs remain exposed in coverage metadata without degrading the public FreezeWatch summary by themselves",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.9971",
     title: "Legacy derived-zero retry ceiling",

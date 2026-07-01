@@ -116,12 +116,47 @@ describe("BlacklistStats", () => {
     );
 
     expect(screen.getByText("Data Quality")).toBeTruthy();
-    expect(screen.getByText("Freeze ledger snapshots are stale")).toBeTruthy();
+    expect(screen.getByText("Freeze ledger coverage is stale")).toBeTruthy();
     expect(screen.getByText("4 current-balance provider failures")).toBeTruthy();
     expect(screen.getByText("3 stale current-balance snapshots")).toBeTruthy();
     expect(screen.getByText("2 tracked ledger gaps")).toBeTruthy();
-    expect(screen.getByText(/3 amount gaps across/)).toBeTruthy();
-    expect(screen.getByText("1 deferred coverage configs")).toBeTruthy();
+    expect(screen.getByText(/2 recoverable amount gaps across/)).toBeTruthy();
+    expect(screen.queryByText(/deferred coverage configs/)).toBeNull();
+  });
+
+  it("does not open the warning for permanent gaps or deferred coverage alone", () => {
+    render(
+      <BlacklistStats
+        summary={{
+          ...makeSummary(),
+          dataQuality: {
+            status: "ok",
+            warnings: [],
+            amountGaps: {
+              totalEvents: 100,
+              recoverable: 0,
+              unrecoverable: 10,
+              recentRecoverable: 0,
+              missingRatio: 0,
+              recentWindowSec: 86_400,
+            },
+            freezeLedger: {
+              providerFailedCount: 0,
+              staleSnapshotCount: 0,
+              trackedGapCount: 1,
+              scopedRows: 10,
+              legacyRows: 0,
+            },
+            coverage: { supportedConfigs: 8, unsupportedDeferredConfigs: 1 },
+          },
+        }}
+        isLoading={false}
+        blacklistStatusBuckets={null}
+        supportDataLoading={false}
+      />,
+    );
+
+    expect(screen.queryByText("Data Quality")).toBeNull();
   });
 
   it("keeps extra precision for sub-0.1% market-share values", () => {

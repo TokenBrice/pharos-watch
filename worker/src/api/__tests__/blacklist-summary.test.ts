@@ -778,6 +778,88 @@ describe("handleBlacklistSummary", () => {
     expect(json.dataQuality.status).toBe("ok");
   });
 
+  it("keeps resolved old snapshots and permanent limitations out of the warning state", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "GROUP BY stablecoin, event_type", rows: [] },
+      { match: "latest_event_type", rows: [] },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 4, max_ts: now, recent_30d: 1, recent_24h: 1 },
+      },
+      {
+        match: "FROM blacklist_current_balances",
+        rows: [
+          {
+            id: "USDT:ethereum:0xold-current",
+            stablecoin: "USDT",
+            chain_id: "ethereum",
+            address: "0xold-current",
+            amount_native: 1,
+            amount_usd: 1,
+            source: "current_balance",
+            status: "resolved",
+            observed_at: now - 90 * 86400,
+            attempt_count: 1,
+            last_attempted_at: now - 90 * 86400,
+            last_error_class: null,
+          },
+        ],
+      },
+      {
+        match: "blacklist-gap-aggregate",
+        rows: [],
+        first: {
+          total: 4,
+          missing: 0,
+          missing_recent: 0,
+          oldest_gap_age_sec: null,
+          never_attempted: 0,
+          repeated_failures: 0,
+          unrecoverable: 2,
+        },
+      },
+      {
+        match: "blacklist-gap-status-distribution",
+        rows: [
+          { amount_status: "resolved", n: 2 },
+          { amount_status: "permanently_unavailable", n: 2 },
+        ],
+      },
+      {
+        match: "blacklist-gap-source-distribution",
+        rows: [
+          { amount_source: "historical_balance", n: 2 },
+          { amount_source: "unavailable", n: 2 },
+        ],
+      },
+      { match: "quarter_sort_key", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: now } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      freezeLedgerMeta: {
+        currentFreshnessDistribution: { stale: number };
+      };
+      dataQuality: {
+        status: string;
+        warnings: string[];
+        amountGaps: { unrecoverable: number };
+        freezeLedger: { staleSnapshotCount: number };
+        coverage: { unsupportedDeferredConfigs: number };
+      };
+    };
+
+    expect(json.freezeLedgerMeta.currentFreshnessDistribution.stale).toBe(1);
+    expect(json.dataQuality.amountGaps.unrecoverable).toBe(2);
+    expect(json.dataQuality.coverage.unsupportedDeferredConfigs).toBeGreaterThan(0);
+    expect(json.dataQuality.freezeLedger.staleSnapshotCount).toBe(0);
+    expect(json.dataQuality.status).toBe("ok");
+    expect(json.dataQuality.warnings).toEqual([]);
+  });
+
   it("excludes suppression_reason != null from public aggregates", async () => {
     // Handler's WHERE suppression_reason IS NULL filter lives in SQL; the
     // aggregate queries would simply return empty/zero rows for suppressed-only

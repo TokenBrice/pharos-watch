@@ -263,18 +263,19 @@ function buildDataQuality(
     missingRatio: gapMetrics.missingRatio,
     recentMissingAmounts: gapMetrics.recentMissingAmounts,
   });
-  const staleLedgerRows = freezeLedgerMeta.currentFreshnessDistribution.stale;
-  const status = gapStatus === "stale" || staleLedgerRows > 0
+  // Resolved freeze-ledger rows are retained historical snapshots by design.
+  // Their age remains visible in freezeLedgerMeta.currentFreshnessDistribution,
+  // but it is not an actionable stale condition unless the provider is failing
+  // or recoverable amount gaps cross the shared gap thresholds.
+  const actionableStaleSnapshotCount = 0;
+  const status = gapStatus === "stale"
     ? "stale"
     : gapStatus === "degraded" || freezeLedgerMeta.providerFailedCount > 0
       ? "degraded"
       : "ok";
   const warnings: string[] = [];
-  if (gapMetrics.missingAmounts > 0) warnings.push("recoverable-amount-gaps");
-  if (gapMetrics.unrecoverableMissingAmounts > 0) warnings.push("unrecoverable-amount-gaps");
+  if (gapStatus !== "healthy" && gapMetrics.missingAmounts > 0) warnings.push("recoverable-amount-gaps");
   if (freezeLedgerMeta.providerFailedCount > 0) warnings.push("current-balance-provider-failures");
-  if (staleLedgerRows > 0) warnings.push("stale-current-balance-snapshots");
-  if (coverage.counts.unsupportedDeferredConfigs > 0) warnings.push("deferred-coverage");
 
   return {
     status,
@@ -289,7 +290,7 @@ function buildDataQuality(
     },
     freezeLedger: {
       providerFailedCount: freezeLedgerMeta.providerFailedCount,
-      staleSnapshotCount: staleLedgerRows,
+      staleSnapshotCount: actionableStaleSnapshotCount,
       trackedGapCount: freezeLedgerMeta.gaps.tracked,
       scopedRows: freezeLedgerMeta.scopedRows,
       legacyRows: freezeLedgerMeta.legacyRows,

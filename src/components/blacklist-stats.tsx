@@ -52,16 +52,11 @@ export function BlacklistStats({
   const hasFreezeLedgerWarnings =
     dataQuality &&
     (dataQuality.status !== "ok" ||
-      dataQuality.warnings.length > 0 ||
       dataQuality.freezeLedger.providerFailedCount > 0 ||
-      dataQuality.freezeLedger.staleSnapshotCount > 0 ||
-      dataQuality.freezeLedger.trackedGapCount > 0 ||
-      dataQuality.amountGaps.recoverable > 0 ||
-      dataQuality.amountGaps.unrecoverable > 0 ||
-      dataQuality.coverage.unsupportedDeferredConfigs > 0);
+      dataQuality.freezeLedger.staleSnapshotCount > 0);
   const qualityTone = dataQuality?.status === "stale" ? "stale" : "degraded";
   const qualityTitle =
-    dataQuality?.status === "stale" ? "Freeze ledger snapshots are stale" : "Freeze ledger coverage is degraded";
+    dataQuality?.status === "stale" ? "Freeze ledger coverage is stale" : "Freeze ledger coverage is degraded";
 
   if (isLoading) {
     return (
@@ -110,14 +105,10 @@ export function BlacklistStats({
               {dataQuality.freezeLedger.trackedGapCount > 0 ? (
                 <li>{dataQuality.freezeLedger.trackedGapCount} tracked ledger gaps</li>
               ) : null}
-              {dataQuality.amountGaps.recoverable + dataQuality.amountGaps.unrecoverable > 0 ? (
+              {dataQuality.amountGaps.recoverable > 0 ? (
                 <li>
-                  {dataQuality.amountGaps.recoverable + dataQuality.amountGaps.unrecoverable} amount gaps across freeze
-                  events
+                  {dataQuality.amountGaps.recoverable} recoverable amount gaps across freeze events
                 </li>
-              ) : null}
-              {dataQuality.coverage.unsupportedDeferredConfigs > 0 ? (
-                <li>{dataQuality.coverage.unsupportedDeferredConfigs} deferred coverage configs</li>
               ) : null}
             </ul>
           </CardContent>
