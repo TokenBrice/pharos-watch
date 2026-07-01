@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { LearnHero } from "../_shared/learn-hero";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
@@ -74,14 +75,14 @@ function GlossaryJumpRail({
               {isPresent ? (
                 <a
                   href={`#letter-${letter}`}
-                  className="pharos-focus-ring inline-flex h-7 min-w-7 items-center justify-center rounded-sm border border-border/60 bg-background/80 px-1.5 text-foreground hover:bg-muted/50"
+                  className="pharos-focus-ring inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/60 bg-background/60 px-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                 >
                   {letter}
                 </a>
               ) : (
                 <span
                   aria-disabled="true"
-                  className="inline-flex h-7 min-w-7 items-center justify-center rounded-sm border border-border/30 bg-background/30 px-1.5 text-muted-foreground/70"
+                  className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/30 bg-background/30 px-1.5 text-muted-foreground/70"
                 >
                   {letter}
                 </span>
@@ -181,6 +182,18 @@ export default function GlossaryPage() {
       }
     >
       <div className="space-y-8">
+        <LearnHero
+          beamLabel="Terms defined"
+          beamValue={GLOSSARY_ENTRIES.length}
+          subKicker="Version-pinned"
+          sub={
+            <div className="space-y-1 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              <p>Anchored to methodology</p>
+              <p>A&ndash;Z</p>
+            </div>
+          }
+          ariaLabel="Glossary coverage"
+        />
         <GlossaryJumpRail presentLetters={presentLetters} />
         <div className="divide-y divide-border/60 border-y border-border/60">
           {groups.map((group) => (

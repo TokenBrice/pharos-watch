@@ -38,8 +38,17 @@ const OUTCOME_FILTERS: ReadonlyArray<{ value: OutcomeFilter; label: string }> = 
   { value: "died", label: CASE_STUDY_OUTCOME_LABELS.died },
 ];
 
-const SEGMENT_BTN_BASE =
-  "pharos-focus-ring inline-flex min-h-9 items-center gap-2 rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-[background-color,border-color,color] hover:text-foreground aria-pressed:border-frost-blue/50 aria-pressed:bg-frost-blue/10 aria-pressed:text-foreground";
+/* tw: min-h-11 sm:min-h-9 — keep literal for the Tailwind scanner */
+const FILTER_TOUCH = "min-h-11 sm:min-h-9";
+
+// Neutral toggle-pill filter chips. DESIGN.md §5 keeps frost out of controls:
+// the active chip takes the near-black `control-ink` fill (via
+// `pharos-control-pill-active`), inactive chips rest as quiet toggle-pills.
+function segmentBtnClass(active: boolean): string {
+  return active
+    ? `pharos-focus-ring pharos-control-pill pharos-control-pill-active ${FILTER_TOUCH}`
+    : `pharos-focus-ring pharos-toggle-pill ${FILTER_TOUCH}`;
+}
 
 export function CaseStudyList({
   studies,
@@ -95,7 +104,7 @@ export function CaseStudyList({
                 type="button"
                 aria-pressed={outcome === filter.value}
                 onClick={() => setOutcome(filter.value)}
-                className={SEGMENT_BTN_BASE}
+                className={segmentBtnClass(outcome === filter.value)}
               >
                 {filter.label}
               </button>
@@ -111,7 +120,7 @@ export function CaseStudyList({
                 type="button"
                 aria-pressed={archetype === filter.value}
                 onClick={() => setArchetype(filter.value)}
-                className={SEGMENT_BTN_BASE}
+                className={segmentBtnClass(archetype === filter.value)}
               >
                 {filter.label}
               </button>
@@ -126,7 +135,7 @@ export function CaseStudyList({
         </p>
       ) : (
         <>
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground" aria-live="polite">
+          <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground" aria-live="polite">
             {visible.length} case {visible.length === 1 ? "study" : "studies"}
           </p>
           <ol className="divide-y divide-border/60">

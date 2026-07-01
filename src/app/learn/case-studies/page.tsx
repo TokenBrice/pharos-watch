@@ -7,7 +7,9 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { cn } from "@/lib/utils";
 import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
 import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
+import { LearnHero } from "../_shared/learn-hero";
 import { CASE_STUDY_LIST } from "./content";
+import type { CaseStudyOutcome } from "./content/types";
 import { content as terraUst2022 } from "./content/terra-ust-2022";
 import { content as ironTitan2021 } from "./content/iron-titan-2021";
 import { content as feiProtocol } from "./content/fei-protocol";
@@ -57,6 +59,17 @@ const caseStudyListItems: readonly CaseStudyListItem[] = CASE_STUDY_LIST.map(
 ).filter((study) => !priorityCaseStudySlugs.has(study.slug));
 
 export default function CaseStudiesHub() {
+  // Outcome spread for the header hero, derived from the archive so the copy can
+  // never drift. The archive count itself is neutral → frost One-Beam; the
+  // breakdown figures stay semantic (emerald/amber/rose).
+  const outcomeCounts = CASE_STUDY_LIST.reduce(
+    (acc, study) => {
+      acc[study.outcome] += 1;
+      return acc;
+    },
+    { survived: 0, wounded: 0, died: 0 } as Record<CaseStudyOutcome, number>,
+  );
+
   return (
     <CaseStudyPageShell
       breadcrumbItems={[
@@ -67,6 +80,34 @@ export default function CaseStudiesHub() {
       subtitle="Practitioner retrospectives of the depegs and failures that reshaped the stablecoin market — what happened, why the design produced it, and what each one left behind. Built on Pharos data."
     >
       <CaseStudyListJsonLd studies={CASE_STUDY_LIST} />
+      <LearnHero
+        beamLabel="Depegs reconstructed"
+        beamValue={CASE_STUDY_LIST.length}
+        subKicker="Outcome spread"
+        sub={
+          <p className="pharos-numeric text-sm text-muted-foreground">
+            <span className="text-emerald-600 dark:text-emerald-400">
+              {outcomeCounts.survived}
+            </span>{" "}
+            survived
+            <span aria-hidden="true" className="px-1.5 text-muted-foreground/50">
+              ·
+            </span>
+            <span className="text-amber-600 dark:text-amber-400">
+              {outcomeCounts.wounded}
+            </span>{" "}
+            wounded
+            <span aria-hidden="true" className="px-1.5 text-muted-foreground/50">
+              ·
+            </span>
+            <span className="text-rose-600 dark:text-rose-400">
+              {outcomeCounts.died}
+            </span>{" "}
+            died
+          </p>
+        }
+        ariaLabel="Case study archive"
+      />
       <section aria-labelledby="case-study-starting-points" className="space-y-4 border-y border-border/60 py-5">
         <div className="space-y-2">
           <SectionKicker>Start Here</SectionKicker>

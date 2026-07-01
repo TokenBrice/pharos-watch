@@ -91,7 +91,7 @@ function OutcomeLedger({
   return (
     <section
       aria-labelledby="learn-verdict"
-      className="space-y-7 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:[animation-timing-function:var(--motion-ease-standard)]"
+      className="pharos-card-shell space-y-7 p-6 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:[animation-timing-function:var(--motion-ease-standard)] sm:p-7"
     >
       <div className="space-y-3">
         <p className="pharos-kicker">The verdict so far</p>
@@ -111,7 +111,7 @@ function OutcomeLedger({
           <div key={outcome.key} className="space-y-1.5">
             <dd
               className={cn(
-                "pharos-numeric text-[clamp(2rem,5vw,3rem)] font-semibold leading-none tabular-nums",
+                "pharos-numeric text-[clamp(2rem,5vw,3rem)] font-semibold leading-none",
                 outcome.figure,
               )}
             >
@@ -164,7 +164,7 @@ function ModuleHeader({
           href={href}
           className="pharos-focus-ring group inline-flex items-baseline gap-3 rounded-sm"
         >
-          <span className="font-mono text-sm font-semibold tabular-nums tracking-[0.1em] text-frost-blue">
+          <span className="pharos-numeric text-sm font-semibold tracking-[0.1em] text-frost-blue">
             {index}
           </span>
           <h2
@@ -250,7 +250,7 @@ export default function LearnIndexPage() {
                   <div className="space-y-0.5">
                     {low != null ? (
                       <>
-                        <p className="pharos-numeric text-[1.7rem] font-semibold leading-none tabular-nums text-foreground">
+                        <p className="pharos-numeric text-[1.7rem] font-semibold leading-none text-foreground">
                           ${low.toFixed(2)}
                         </p>
                         <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
@@ -317,7 +317,7 @@ export default function LearnIndexPage() {
                   <p className="font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
                     {getMechanismArchetypeLabel(archetype)}
                   </p>
-                  <p className="shrink-0 font-mono text-[11px] tabular-nums uppercase tracking-[0.08em] text-muted-foreground">
+                  <p className="shrink-0 pharos-numeric text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                     <span className="text-foreground">{mechanismCounts[archetype]}</span> live
                   </p>
                 </div>
@@ -353,7 +353,7 @@ export default function LearnIndexPage() {
                 >
                   {entry.term}
                 </Link>
-                <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground/80">
+                <span className="shrink-0 pharos-numeric text-[10px] uppercase tracking-[0.08em] text-muted-foreground/80">
                   {entry.methodologyVersion}
                 </span>
               </dt>

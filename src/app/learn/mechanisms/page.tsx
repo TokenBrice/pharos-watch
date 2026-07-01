@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype } from "@shared/types";
 import {
+  MECHANISM_ARCHETYPE_SHORT_LABELS,
   getMechanismArchetypeLabel,
   getMechanismArchetypeOneLiner,
   getMechanismExplainerPath,
@@ -14,7 +15,9 @@ import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld"
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { MechanismJsonLd } from "@/lib/mechanism-json-ld";
+import { CHART_PALETTE } from "@/lib/chart-colors";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
+import { LearnHero } from "../_shared/learn-hero";
 import { LearnPageShell } from "../_shared/learn-page-shell";
 import { MechanismComparisonMatrix } from "./comparison-matrix";
 import { ARCHETYPE_CONTENT } from "./content";
@@ -52,6 +55,56 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: `${SITE_URL}/og-editorial-learn.png`,
 });
 
+// Non-frost sequence tones for the six archetype segments (frost stays the
+// headline beam). CHART_PALETTE[0] is frost, so start at index 1.
+const MECHANISM_SEGMENT_COLORS = CHART_PALETTE.slice(1, 1 + MECHANISM_ARCHETYPE_VALUES.length);
+
+// Restrained decomposition of the hero's One-Beam total: how the active coins
+// split across the six designs. Reuses the flat proportional-bar idiom
+// (OutcomeLedger / grade-distribution bar), not a new drawn scene.
+function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, number> }) {
+  const segments = MECHANISM_ARCHETYPE_VALUES.map((archetype, index) => ({
+    archetype,
+    count: counts[archetype],
+    color: MECHANISM_SEGMENT_COLORS[index],
+    label: MECHANISM_ARCHETYPE_SHORT_LABELS[archetype],
+  }));
+  const legend = segments.map((segment) => `${segment.count} ${segment.label}`).join(", ");
+  return (
+    <div className="space-y-3">
+      <p className="pharos-kicker">Active coins by mechanism</p>
+      <div
+        className="flex h-2 w-full overflow-hidden rounded-full bg-border/40"
+        role="img"
+        aria-label={`Active coins by mechanism: ${legend}.`}
+      >
+        {segments.map((segment) => (
+          <span
+            key={segment.archetype}
+            aria-hidden="true"
+            style={{ flexGrow: segment.count, backgroundColor: segment.color }}
+          />
+        ))}
+      </div>
+      <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        {segments.map((segment) => (
+          <li key={segment.archetype} className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 rounded-sm"
+              style={{ backgroundColor: segment.color }}
+            />
+            <span className="pharos-numeric text-[13px] font-semibold text-foreground">
+              {segment.count}
+            </span>
+            <span className="text-[11px] text-muted-foreground">{segment.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function MechanismExplainersHub() {
   const counts = countActiveByArchetype();
   const preLaunchCounts: Record<MechanismArchetype, number> = Object.fromEntries(
@@ -60,6 +113,9 @@ export default function MechanismExplainersHub() {
   const frozenCounts: Record<MechanismArchetype, number> = Object.fromEntries(
     MECHANISM_ARCHETYPE_VALUES.map((a) => [a, getCoinsByLifecycleStatus(a, "frozen").length]),
   ) as Record<MechanismArchetype, number>;
+  const mechanismTotal = MECHANISM_ARCHETYPE_VALUES.reduce((sum, a) => sum + counts[a], 0);
+  const upcomingTotal = MECHANISM_ARCHETYPE_VALUES.reduce((sum, a) => sum + preLaunchCounts[a], 0);
+  const frozenTotal = MECHANISM_ARCHETYPE_VALUES.reduce((sum, a) => sum + frozenCounts[a], 0);
 
   return (
     <LearnPageShell
@@ -71,6 +127,31 @@ export default function MechanismExplainersHub() {
       subtitle="The mechanism a coin uses determines how it survives stress. These six explainers map each design — what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
       titleClassName="max-w-[22ch]"
     >
+      <LearnHero
+        beamLabel="Active coins tracked"
+        beamValue={mechanismTotal}
+        subKicker="Across six designs"
+        sub={
+          <div className="space-y-1 text-[13px] sm:text-right">
+            <p className="pharos-numeric text-muted-foreground">
+              <span className="text-foreground">{MECHANISM_ARCHETYPE_VALUES.length}</span> mechanisms
+            </p>
+            {upcomingTotal > 0 ? (
+              <p className="pharos-numeric text-muted-foreground">
+                <span className="text-foreground">+{upcomingTotal}</span> upcoming
+              </p>
+            ) : null}
+            {frozenTotal > 0 ? (
+              <p className="pharos-numeric text-muted-foreground">
+                <span className="text-foreground">+{frozenTotal}</span> frozen
+              </p>
+            ) : null}
+          </div>
+        }
+        ariaLabel="Mechanism coverage"
+      >
+        <MechanismDistribution counts={counts} />
+      </LearnHero>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -131,7 +212,7 @@ export default function MechanismExplainersHub() {
               >
                 <div className="flex flex-col gap-3">
                   <h2 className="text-[clamp(1.75rem,2.6vw,2.5rem)] font-extrabold leading-[1.02] tracking-[-0.025em] text-foreground transition-colors group-hover:text-frost-blue">
-                    <span className="mr-3 font-mono text-[0.5em] font-semibold tabular-nums tracking-[0.12em] text-muted-foreground align-baseline">
+                    <span className="pharos-numeric mr-3 text-[0.5em] font-semibold tracking-[0.12em] text-muted-foreground align-baseline">
                       {indexLabel}.
                     </span>
                     {getMechanismArchetypeLabel(archetype)}
@@ -139,7 +220,7 @@ export default function MechanismExplainersHub() {
                   <p className="text-[15px] leading-relaxed text-muted-foreground">
                     {getMechanismArchetypeOneLiner(archetype)}
                   </p>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                     {countParts.join(" · ")}
                   </p>
                   <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">
