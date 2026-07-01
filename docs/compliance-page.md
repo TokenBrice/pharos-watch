@@ -34,6 +34,8 @@ rows with nested-only evidence still render citations.
 
 `/compliance/` is statically exported and included in the sitemap. It uses `createClientFeaturePage()` and reads `CLIENT_TRACKED_STABLECOINS`.
 
+The page leads with a full-width `pharos-card-shell` hero (homepage-canon alignment, 2026-06-30): the frost-blue "One Beam" is the MiCA-authorized count, with authorization-rate %, GENIUS-tracked count, and assessed-regime-row count as neutral `.pharos-numeric` sub-metrics plus a neutral GENIUS regime-state badge (`buildComplianceSummary()` in `model.ts` derives these from the unfiltered view-model — no new data source). The regime/status/type/peg filters are `pharos-control-pill`s in a `pharos-table-toolbar` above the two `pharos-table-shell` tables, which are the workbench. Compliance-status colors keep their categorical ramp (never frost).
+
 URL filters:
 
 - `regime=all|mica|genius`

@@ -313,6 +313,30 @@ function sortComplianceRows(a: ComplianceRow, b: ComplianceRow): number {
   return a.symbol.localeCompare(b.symbol);
 }
 
+export interface ComplianceSummary {
+  micaAuthorized: number;
+  micaAssessed: number;
+  geniusTracked: number;
+  assessedRegimeRows: number;
+  micaAuthorizedPct: number;
+}
+
+export function buildComplianceSummary(): ComplianceSummary {
+  const { rows, watchRows } = buildAllComplianceRows();
+  const all = [...rows, ...watchRows];
+  const micaRows = all.filter((row) => row.regime === "mica");
+  const micaAssessed = micaRows.length;
+  const micaAuthorized = micaRows.filter((row) => row.status === "authorized").length;
+  const geniusTracked = all.filter((row) => row.regime === "genius").length;
+  return {
+    micaAuthorized,
+    micaAssessed,
+    geniusTracked,
+    assessedRegimeRows: all.length,
+    micaAuthorizedPct: micaAssessed > 0 ? Math.round((micaAuthorized / micaAssessed) * 100) : 0,
+  };
+}
+
 export function buildComplianceViewModel(filters: ComplianceFilters): ComplianceViewModel {
   const all = buildAllComplianceRows();
   const q = filters.search.toLowerCase().trim();

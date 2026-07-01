@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
+import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { ComplianceLoadingState } from "@/app/compliance/loading";
+import { buildComplianceSummary } from "@/app/compliance/model";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
@@ -39,6 +41,50 @@ const COMPLIANCE_FAQ_ITEMS = [
       "No. The tracker is an informational surface with sourced links, not legal advice. Statuses are editorial assignments against public registers, regulator notices, and issuer disclosures, and may lag real-world authorizations or restrictions.",
   },
 ] as const satisfies readonly FaqItem[];
+
+const COMPLIANCE_SUMMARY = buildComplianceSummary();
+
+const COMPLIANCE_HERO = (
+  <section aria-label="Compliance coverage summary" className="pharos-card-shell overflow-hidden">
+    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border/50 p-5 sm:p-6">
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium text-muted-foreground">MiCA-authorized stablecoins</p>
+        <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+          {COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()}
+        </p>
+        <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} EU-assessed issuers</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-xs font-medium text-muted-foreground">
+          GENIUS regime
+          <span className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</span>
+          <span className="pharos-numeric tabular-nums text-foreground">· effective {GENIUS_REGIME_STATE.effectiveDate}</span>
+        </span>
+        <CardExpandButton href="#data" expandLabel="Jump to compliance tables" />
+      </div>
+    </div>
+    <dl className="grid grid-cols-3 divide-x divide-border/40">
+      <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
+        <dt className="pharos-meta">MiCA authorization rate</dt>
+        <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+          {COMPLIANCE_SUMMARY.micaAuthorizedPct}%
+        </dd>
+      </div>
+      <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
+        <dt className="pharos-meta">GENIUS tracked</dt>
+        <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+          {COMPLIANCE_SUMMARY.geniusTracked.toLocaleString()}
+        </dd>
+      </div>
+      <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
+        <dt className="pharos-meta">Assessed regime rows</dt>
+        <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+          {COMPLIANCE_SUMMARY.assessedRegimeRows.toLocaleString()}
+        </dd>
+      </div>
+    </dl>
+  </section>
+);
 
 const COMPLIANCE_STATIC_SECTION = (
   <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -121,6 +167,11 @@ export default createClientFeaturePage({
       </p>
     ),
   },
-  beforeClient: COMPLIANCE_STATIC_SECTION,
+  beforeClient: (
+    <>
+      {COMPLIANCE_HERO}
+      {COMPLIANCE_STATIC_SECTION}
+    </>
+  ),
   afterClient: <FaqSection items={COMPLIANCE_FAQ_ITEMS} includeJsonLd />,
 });

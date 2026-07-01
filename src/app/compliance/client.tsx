@@ -14,13 +14,12 @@ import {
   TableRow,
 } from "@/components/table";
 import { TableSourceLink } from "@/components/table/client";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
+import { cn } from "@/lib/utils";
 import { PEG_FILTER_OPTIONS, PEG_METADATA } from "@shared/lib/classification";
 import {
   GENIUS_APPLICABILITY_LABELS,
@@ -56,13 +55,12 @@ import {
 } from "./model";
 
 const COMPLIANCE_TEXT_CELL_CLASS = "whitespace-normal break-words align-top leading-snug";
-const COMPLIANCE_TOGGLE_ITEM_CLASS = "min-h-[44px] text-xs md:min-h-0";
 
-function ComplianceToggleGroup<T extends string>({
+function CompliancePillGroup<T extends string>({
   value,
   options,
   ariaLabel,
-  className = "flex flex-wrap gap-1",
+  className = "flex flex-wrap gap-1.5",
   onChange,
 }: {
   value: T;
@@ -72,25 +70,25 @@ function ComplianceToggleGroup<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <ToggleGroup
-      type="single"
-      value={value}
-      onValueChange={(nextValue) => nextValue && onChange(nextValue as T)}
-      className={className}
-      aria-label={ariaLabel}
-    >
-      {options.map((option) => (
-        <ToggleGroupItem
-          key={option.value}
-          value={option.value}
-          variant="outline"
-          size="sm"
-          className={COMPLIANCE_TOGGLE_ITEM_CLASS}
-        >
-          {option.label}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <div role="group" aria-label={ariaLabel} className={className}>
+      {options.map((option) => {
+        const isActive = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "pharos-focus-ring pharos-control-pill min-h-[44px] text-xs md:min-h-0",
+              isActive && "pharos-control-pill-active",
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -187,62 +185,67 @@ export function ComplianceClient() {
 
   return (
     <div className="space-y-6">
-      <section id="data" aria-label="Compliance data" tabIndex={-1} className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="pharos-kicker">
-              {matchingCount === totalTracked
-                ? `${totalTracked.toLocaleString()} assessed regime rows`
-                : `${matchingCount.toLocaleString()}/${totalTracked.toLocaleString()} matching`}
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              GENIUS effective-date state: {GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")} · reviewed{" "}
-              {GENIUS_REGIME_STATE.reviewedAt}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <ComplianceToggleGroup
-              value={regimeFilter}
-              options={COMPLIANCE_REGIME_FILTER_OPTIONS}
-              ariaLabel="Filter by compliance regime"
-              onChange={setRegimeFilter}
-            />
-            {regimeFilter !== "all" ? (
-              <ComplianceToggleGroup
-                value={statusFilter}
-                options={statusOptions}
-                ariaLabel={`Filter by ${regimeFilter === "mica" ? "MiCA" : "GENIUS"} status`}
-                onChange={setStatusFilter}
+      <section id="data" aria-label="Compliance data" tabIndex={-1} className="space-y-5">
+        <div className="pharos-table-toolbar rounded-xl border border-border/60">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 space-y-1">
+              <p className="pharos-kicker">Compliance Workbench</p>
+              <p className="pharos-meta">
+                {matchingCount === totalTracked ? (
+                  <>
+                    <span className="pharos-numeric tabular-nums">{totalTracked.toLocaleString()}</span> assessed regime
+                    rows
+                  </>
+                ) : (
+                  <>
+                    <span className="pharos-numeric tabular-nums">{matchingCount.toLocaleString()}</span>/
+                    <span className="pharos-numeric tabular-nums">{totalTracked.toLocaleString()}</span> matching
+                  </>
+                )}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              <CompliancePillGroup
+                value={regimeFilter}
+                options={COMPLIANCE_REGIME_FILTER_OPTIONS}
+                ariaLabel="Filter by compliance regime"
+                onChange={setRegimeFilter}
               />
-            ) : null}
-            {regimeFilter !== "genius" ? (
-              <ComplianceToggleGroup
-                value={tokenTypeFilter}
-                options={MICA_TOKEN_TYPE_FILTER_OPTIONS}
-                className="flex gap-1"
-                ariaLabel="Filter by MiCA token type"
-                onChange={setTokenTypeFilter}
+              {regimeFilter !== "all" ? (
+                <CompliancePillGroup
+                  value={statusFilter}
+                  options={statusOptions}
+                  ariaLabel={`Filter by ${regimeFilter === "mica" ? "MiCA" : "GENIUS"} status`}
+                  onChange={setStatusFilter}
+                />
+              ) : null}
+              {regimeFilter !== "genius" ? (
+                <CompliancePillGroup
+                  value={tokenTypeFilter}
+                  options={MICA_TOKEN_TYPE_FILTER_OPTIONS}
+                  ariaLabel="Filter by MiCA token type"
+                  onChange={setTokenTypeFilter}
+                />
+              ) : null}
+              <CompliancePillGroup
+                value={pegFilter}
+                options={PEG_FILTER_OPTIONS}
+                ariaLabel="Filter by peg currency"
+                onChange={setPegFilter}
               />
-            ) : null}
-            <ComplianceToggleGroup
-              value={pegFilter}
-              options={PEG_FILTER_OPTIONS}
-              className="flex gap-1"
-              ariaLabel="Filter by peg currency"
-              onChange={setPegFilter}
-            />
-            <FilterSearchInput
-              value={searchInput}
-              onValueChange={setSearchInput}
-              placeholder="Search..."
-              className="relative w-full sm:w-44"
-              inputClassName="pl-8 h-11 md:h-8 text-xs"
-              ariaLabel="Search stablecoins by name or symbol"
-            />
+              <FilterSearchInput
+                value={searchInput}
+                onValueChange={setSearchInput}
+                placeholder="Search..."
+                className="relative w-full sm:w-44"
+                inputClassName="pl-8 h-11 md:h-8 text-xs"
+                ariaLabel="Search stablecoins by name or symbol"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-5">
           <div className="space-y-2">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
@@ -251,7 +254,7 @@ export function ComplianceClient() {
                   Active, assessed stablecoins only. Frozen and pre-launch assets are excluded from the main table.
                 </p>
               </div>
-              <span className="font-mono text-xs text-muted-foreground">{rows.length.toLocaleString()} rows</span>
+              <span className="pharos-numeric text-xs text-muted-foreground">{rows.length.toLocaleString()} rows</span>
             </div>
             {rows.length === 0 ? (
               <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
@@ -281,7 +284,7 @@ export function ComplianceClient() {
                     determinations.
                   </p>
                 </div>
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="pharos-numeric text-xs text-muted-foreground">
                   {watchRows.length.toLocaleString()} rows
                 </span>
               </div>
