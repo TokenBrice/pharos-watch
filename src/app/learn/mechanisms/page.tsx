@@ -211,7 +211,7 @@ export default function MechanismExplainersHub() {
                 className="pharos-focus-ring group grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-10"
               >
                 <div className="flex flex-col gap-3">
-                  <h2 className="text-[clamp(1.75rem,2.6vw,2.5rem)] font-extrabold leading-[1.02] tracking-[-0.025em] text-foreground transition-colors group-hover:text-frost-blue">
+                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">
                     <span className="pharos-numeric mr-3 text-[0.5em] font-semibold tracking-[0.12em] text-muted-foreground align-baseline">
                       {indexLabel}.
                     </span>

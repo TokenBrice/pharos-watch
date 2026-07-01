@@ -26,7 +26,7 @@ export function SectionHeading({
   id?: string;
 }) {
   return (
-    <h2 id={id} className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
+    <h2 id={id} className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
       {children}
     </h2>
   );

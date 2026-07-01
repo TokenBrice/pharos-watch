@@ -169,7 +169,7 @@ function ModuleHeader({
           </span>
           <h2
             id={headingId}
-            className="text-[clamp(1.6rem,2.8vw,2.1rem)] font-extrabold leading-[1.04] tracking-[-0.03em] text-foreground transition-colors group-hover:text-frost-blue"
+            className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl"
           >
             {title}
           </h2>

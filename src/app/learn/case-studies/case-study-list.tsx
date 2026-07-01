@@ -154,7 +154,7 @@ export function CaseStudyList({
                   >
                     {study.eyebrow}
                   </p>
-                  <h2 className="text-[clamp(1.6rem,2.4vw,2.25rem)] font-extrabold leading-[1.05] tracking-[-0.025em] text-foreground transition-colors group-hover:text-frost-blue">
+                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">
                     {study.title}
                   </h2>
                   <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
