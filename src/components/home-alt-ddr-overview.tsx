@@ -220,9 +220,18 @@ function VerdictDistribution({ items }: { items: ForecastItem[] }) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
-        {groups.map(({ tier, count }) => (
-          <span key={tier} className={NOW_DOT_TONE[tier]} style={{ flexGrow: count }} aria-hidden="true" />
+      <div className="flex h-10 w-full gap-0.5 overflow-hidden rounded-md bg-background/70">
+        {groups.map(({ tier, count }, index) => (
+          <span
+            key={tier}
+            className={cn(
+              NOW_DOT_TONE[tier],
+              index === 0 && "rounded-l-md",
+              index === groups.length - 1 && "rounded-r-md",
+            )}
+            style={{ flexGrow: count }}
+            aria-hidden="true"
+          />
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -461,7 +470,7 @@ export function HomeAltDdrOverviewFallback(): React.JSX.Element {
       <div className="pharos-card-shell overflow-hidden">
         <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-5 lg:divide-x lg:divide-y-0">
           <div className="space-y-3 p-4 sm:p-5 lg:col-span-3">
-            <Skeleton className="h-2.5 w-full rounded-full" />
+            <Skeleton className="h-10 w-full rounded-md" />
             <div className="grid gap-x-6 sm:grid-cols-2">
               {[0, 1].map((col) => (
                 <div key={col} className="space-y-2.5">
