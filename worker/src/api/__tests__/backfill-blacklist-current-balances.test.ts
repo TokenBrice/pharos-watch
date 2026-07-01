@@ -56,5 +56,7 @@ describe("handleBackfillBlacklistCurrentBalances", () => {
     expect(selectSql).toContain("config_key = ?");
     expect(selectSql).toContain("LOWER(contract_address) = LOWER(?)");
     expect(selectSql).toContain("config_key IS NULL AND contract_address IS NULL");
+    expect(selectSql).toMatch(/WHERE rn = 1\s+ORDER BY timestamp DESC, id DESC\s+LIMIT \?/);
+    expect(selectSql).not.toContain("ORDER BY timestamp ASC, id ASC");
   });
 });

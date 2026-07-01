@@ -869,7 +869,7 @@ Supported inputs:
 
 - `stablecoin` (symbol, optional)
 - `chainId` (optional)
-- `limit` (default `500`, max `2000`)
+- `limit` (default `500`, max `2000`; selects the newest latest-per-address rows per config)
 - `dryRun` (`true` to inspect candidates without writing)
 
 Frozen stablecoins are excluded. Use narrow `stablecoin` + `chainId` filters and `dryRun=true` before a write-enabled backfill.

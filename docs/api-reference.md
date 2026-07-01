@@ -4827,7 +4827,7 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
 | ------------ | --------- | ------- | --------------------------------------------------------------------------------------------- |
 | `stablecoin` | `string`  | —       | Optional uppercase symbol filter; matches any configured blacklist-contract stablecoin symbol |
 | `chainId`    | `string`  | —       | Optional chain filter matching the blacklist contract config `chainId`                        |
-| `limit`      | `integer` | `500`   | Max blacklist-event rows to load per matching config (max `2000`)                             |
+| `limit`      | `integer` | `500`   | Max newest latest-per-address blacklist-event rows to load per matching config (max `2000`)   |
 | `dryRun`     | `"true"`  | —       | Preview the active-blacklisted candidate count without writing cache rows                     |
 
 `400` is returned when the filters match no configured blacklist contracts.

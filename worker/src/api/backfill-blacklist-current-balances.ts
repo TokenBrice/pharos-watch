@@ -124,7 +124,7 @@ export async function handleBackfillBlacklistCurrentBalances(
              SELECT *
              FROM ranked
              WHERE rn = 1
-             ORDER BY timestamp ASC, id ASC
+             ORDER BY timestamp DESC, id DESC
              LIMIT ?`,
           )
           .bind(
