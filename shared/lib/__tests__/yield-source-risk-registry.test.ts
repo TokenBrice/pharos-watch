@@ -69,7 +69,7 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
   });
 
   it("flags venue-risk scores older than the max age oldest-first", () => {
-    // Every entry was reviewed 2026-05-15..2026-06-15, so nothing is stale soon after.
+    // Every entry was reviewed 2026-05-15..2026-07-01, so nothing is stale soon after.
     expect(findStaleVenueRiskScores(Date.parse("2026-06-16T00:00:00Z"))).toEqual([]);
 
     const stale = findStaleVenueRiskScores(Date.parse("2026-09-01T00:00:00Z"));

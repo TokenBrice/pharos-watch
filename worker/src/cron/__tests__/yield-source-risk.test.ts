@@ -56,7 +56,7 @@ const WAVE_2_REVIEWED_TIERS = {
   "euler-v2": "low",
   gearbox: "low",
   "curve-llamalend": "low",
-  "fluid-lending": "medium",
+  "fluid-lending": "low",
   dolomite: "medium",
   exactly: "low",
   "fraxlend-v2": "medium",
@@ -171,7 +171,10 @@ describe("yield source-risk registry", () => {
       1.135,
       5,
     );
-    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedMaple!) })).toBeCloseTo(1.18, 5);
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(reviewedMaple!) })).toBeCloseTo(
+      1.1125,
+      5,
+    );
   });
 
   it("publishes the reviewed venue tier on built source-risk evidence", () => {
@@ -247,7 +250,7 @@ describe("yield source-risk registry", () => {
   });
 
   it("flags venue-risk scores older than the max age for re-review", () => {
-    // Every entry was reviewed 2026-05-15..2026-06-15, so nothing is stale soon after.
+    // Every entry was reviewed 2026-05-15..2026-07-01, so nothing is stale soon after.
     expect(findStaleVenueRiskScores(Date.parse("2026-06-16T00:00:00Z"))).toEqual([]);
 
     // ~109 days after the oldest cohort (2026-05-15), those entries cross 90d.

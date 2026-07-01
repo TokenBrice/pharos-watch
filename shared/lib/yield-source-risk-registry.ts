@@ -11,7 +11,7 @@ const YEARN_VENUE_SCORES: YieldVenueRiskScores = {
   centralization: 2,
   fundsManagement: 2,
   liquidity: 2,
-  operational: 2,
+  operational: 1,
 };
 
 // Shared scores for all Morpho venue slugs (morpho, morpho-v1, morpho-blue).
@@ -138,33 +138,33 @@ export const YIELD_RISK_CONFIG = {
   // upstream audit inheritance, has a billion-plus TVL, and is operated through Sky
   // governance. Low venue risk.
   sparklend: {
-    scores: { audits: 2, centralization: 2, fundsManagement: 1, liquidity: 2, operational: 1 },
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-05-15",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "spark-savings": {
-    scores: { audits: 2, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 1, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   maple: {
-    scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 4, operational: 2 },
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   yearn: {
     scores: YEARN_VENUE_SCORES,
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "yearn-finance": {
     scores: YEARN_VENUE_SCORES,
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   morpho: {
@@ -215,15 +215,15 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "3jane-lending": {
-    scores: { audits: 5, centralization: 5, fundsManagement: 5, liquidity: 4, operational: 4 },
-    confidence: "partial",
-    reviewedAt: "2026-06-15",
+    scores: { audits: 4, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   centrifuge: {
-    scores: { audits: 1, centralization: 3, fundsManagement: 4, liquidity: 4, operational: 2 },
+    scores: { audits: 1, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "flux-finance": {
@@ -233,9 +233,9 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   cap: {
-    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   avantis: {
@@ -264,9 +264,9 @@ export const YIELD_RISK_CONFIG = {
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   "fluid-lending": {
-    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 2 },
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-07-01",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
   dolomite: {
@@ -579,6 +579,24 @@ const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentratio
     severity: "low",
     note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
     reviewedAt: "2026-06-15",
+  },
+  // syrupUSDC/USDT yield is originated by a single off-chain Pool Delegate EOA
+  // ("Maple Direct") controlling ~97% of AUM loan origination/impairments with no
+  // on-chain governance gate. Surfaced at LOW severity (informational, no penalty)
+  // because the `maple` venue tier already prices the credit/delegate risk — a HIGH
+  // entry would double-count it. Matches the single-curator Morpho chips above.
+  // Source: Yearn maple-syrupUSDC dependency graph (2026-07-01 cross-check).
+  "syrupusdc-maple": {
+    ecosystem: "Maple (Pool Delegate)",
+    severity: "low",
+    note: "syrupUSDC's yield is originated by a single off-chain Pool Delegate EOA ('Maple Direct') that controls loan origination and impairments for ~97% of AUM with no on-chain governance gate. Surfaced without an added penalty because the medium `maple` venue tier already prices the credit/delegate risk.",
+    reviewedAt: "2026-07-01",
+  },
+  "syrupusdt-maple": {
+    ecosystem: "Maple (Pool Delegate)",
+    severity: "low",
+    note: "syrupUSDT shares syrupUSDC's single off-chain Pool Delegate ('Maple Direct') for loan origination and impairments. Surfaced without an added penalty because the medium `maple` venue tier already prices the credit/delegate risk.",
+    reviewedAt: "2026-07-01",
   },
 };
 

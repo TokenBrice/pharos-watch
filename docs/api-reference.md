@@ -2682,8 +2682,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.297",
-    "currentVersion": "8.297",
+    "version": "8.298",
+    "currentVersion": "8.298",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2825,7 +2825,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.297",
+  "methodologyVersion": "v8.298",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2839,7 +2839,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.297",
+      "methodologyVersion": "v8.298",
       "updatedAt": 1779210000
     }
   ]

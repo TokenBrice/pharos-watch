@@ -2,6 +2,26 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.298",
+    title: "Yearn-Report Venue-Risk Recalibration",
+    date: "2026-07-01",
+    effectiveAt: 1782864000,
+    summary:
+      "Reviewed venue sub-scores are recalibrated against Yearn's newly-published per-protocol risk reports: five direct-match RWA/credit venues that scored harsher than Yearn are lowered, the shared Sky/Spark funds-management leg is raised, `3jane-lending` is upgraded to verified confidence, and two proxy-only reports are held. The PYS formula, tier thresholds, penalty curve, and dependency-concentration registry are unchanged.",
+    impact: [
+      "Five direct-match venues that scored harsher than Yearn's published reports are lowered: `3jane-lending` (audits/centralization/funds 5→4, liquidity/operational 4→3), `cap` (centralization 4→3, funds 4→3, operational 3→2), `maple` (funds 4→3, liquidity 4→3), `centrifuge` (funds 4→3, liquidity 4→3), and `fluid-lending` (centralization 3→2, funds 3→2)",
+      "The continuous PYS venue penalty falls accordingly `(weighted − 2.0) × 0.15`: 3jane-lending 0.42→0.27, cap 0.21→0.11, maple 0.18→0.11, centrifuge 0.15→0.08, fluid-lending 0.09→0; `fluid-lending`'s derived tier moves medium→low, so it also leaves the DEWS structured-medium-risk-venue branch (DEWS thresholds unchanged)",
+      "`3jane-lending` confidence is upgraded partial→verified against Yearn's USD3 report (four dedicated audits plus a Morpho Blue base and Certora coverage); its metadata rationale and evidence are updated to match the new scores",
+      "The Sky/Spark legs `sparklend` and `spark-savings` move funds management 1→2 to reflect the shared MCD_VAT backing (~26% off-chain RWA custody plus Circle USDC concentration) that Yearn scores at 1.8; both legs stay below the 2.0 penalty knee, so the blue-chip no-op is preserved and no penalty changes",
+      "`yearn`/`yearn-finance` operational moves 2→1 (org-level maturity: BORG legal entity, named multisig signers, active monitoring); funds management is held at 2 to hedge the generic venue's leveraged-vault coverage, and the weighted score stays below 2.0 so the no-op is preserved",
+      "Adds two low-severity (informational, zero-penalty) dependency-concentration entries — `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate) — surfacing the single off-chain Pool-Delegate EOA that originates ~97% of syrupUSDC/USDT AUM; severity is low because the `maple` venue tier already prices the credit/delegate risk (no double-count), matching the existing single-curator Morpho chips",
+      "`aave-v3` (assessed against Yearn's sGHO savings-vault report) and `morpho`/`morpho-v1`/`morpho-blue` (against Yearn's Gauntlet Aera-vault report) are unchanged: those reports are proxy matches whose deltas are product-specific and do not re-score the venue",
+      "Calibration source is Yearn's published risk reports as a documentation cross-check, not a runtime feed; PYS formula shape, benchmark selection, dependency-concentration registry, history semantics, and publication guards are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.297",
     title: "Optional vaults.fyi Supplemental Yield Source",
     date: "2026-06-29",

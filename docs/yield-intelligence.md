@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.297`
+- **Current methodology version:** `v8.298`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.298 recalibrates reviewed venue sub-scores against Yearn's newly-published per-protocol risk reports (documentation cross-check, not a runtime feed). Five direct-match RWA/credit venues that scored harsher than Yearn are lowered — `3jane-lending` (also upgraded partial→verified), `cap`, `maple`, `centrifuge`, and `fluid-lending` — so their continuous venue penalties fall and `fluid-lending`'s derived tier moves medium→low (leaving the DEWS medium-venue branch; DEWS thresholds unchanged). The shared Sky/Spark legs `sparklend` and `spark-savings` move funds management 1→2 for the shared MCD_VAT backing, and `yearn`/`yearn-finance` operational moves 2→1; all three stay below the 2.0 penalty knee so the blue-chip no-op is preserved. Two proxy-only reports (`aave-v3` vs sGHO, `morpho` vs a Gauntlet Aera vault) are held unchanged. It also adds two low-severity (zero-penalty) dependency-concentration entries `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate), surfacing the single off-chain Pool-Delegate EOA without double-counting the `maple` venue tier. The PYS formula, tier thresholds, and penalty curve are unchanged.
 
 Yield v8.297 adds vaults.fyi as a disabled-by-default supplemental source family. When `VAULTS_FYI_ENABLED` is unset/false or the runtime API key is absent, it performs no fetches and emits no candidates. When enabled without `VAULTS_FYI_RANKABLE_VAULTS`, it performs only a bounded detailed-vault inventory probe for coverage review. Only explicit `network:vaultId` allowlist entries can emit rankable candidates, and each row must pass chain-plus-token-address stablecoin identity matching, TVL/APY/safety-shape gates, local credit caps, and provider fail-open handling. PYS formula, benchmark selection, deterministic source arbitration, history semantics, and publication guards are unchanged except for those explicitly enabled and allowlisted supplemental rows.
 
@@ -897,8 +899,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.297",
-    "currentVersion": "8.297",
+    "version": "8.298",
+    "currentVersion": "8.298",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

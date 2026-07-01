@@ -142,12 +142,13 @@ export const YIELD_RISK_CONFIG_METADATA = {
   },
   "3jane-lending": {
     rationale:
-      "3Jane is brand-new uncollateralized credit with no verifiable live audit, offchain legal recovery, and an unproven admin structure — the highest venue risk in the reviewed set.",
+      "3Jane is an unsecured on-chain credit venue whose core risk is uncollateralized lending against off-chain cash flows with off-chain legal recovery; a 3-of-5 multisig with anonymous signers and heavy off-chain credit operations keep it in the high tier despite real audit coverage. Aligned to Yearn's published USD3 risk report (3.5/5 'Medium — enhanced monitoring', 2026-07-01 cross-check).",
     evidence: [
-      "USD3 Etherscan shows 'No Contract Security Audit Submitted'; Veridise prior work unverified on live contracts",
-      "Multisig/timelock/veto only on roadmap, not verified on a days-old (Nov 2025) protocol",
-      "Fully uncollateralized vs offchain cash flows (zkTLS/Plaid); offchain US legal recovery; sUSD3 first-loss 15%",
-      "Deposits capped ~$50M, small TVL ~$17-35M; first-loss tranche illiquidity",
+      "Four dedicated audits (Veridise, Sherlock x2, Electisec) plus an inherited Morpho Blue base and Certora coverage; high finding volume and no live bug bounty keep audits above pristine",
+      "3-of-5 multisig with a 24h timelock on upgradeable proxies; signers anonymous and privileged roles unsplit; loan origination is a heavy off-chain credit operation",
+      "Unsecured lending vs off-chain cash flows (zkTLS/Plaid/EigenLayer stack); a first-loss sUSD3 tranche (~$6.4M) plus a ~$1M insurance fund and on-chain ERC-4626 pricing partially offset default risk",
+      "Redemption via Aave idle reserves at ~44% utilization with a throttling queue; USDC-denominated; small TVL (~$17-35M)",
+      "Doxxed founder (ex-Ribbon/Aevo) and a $5.2M seed (Paradigm, Coinbase Ventures) with strong docs, offset by an undisclosed broader team and no named legal entity",
     ],
   },
   centrifuge: {

@@ -1,10 +1,23 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.297`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.298`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.298 - Yearn-Report Venue-Risk Recalibration (July 1, 2026)
+
+- Recalibrates reviewed venue sub-scores against Yearn's newly-published per-protocol risk reports (documentation cross-check, not a runtime feed)
+- Lowers five direct-match RWA/credit venues that scored harsher than Yearn: `3jane-lending` (audits/centralization/funds 5→4, liquidity/operational 4→3), `cap` (centralization 4→3, funds 4→3, operational 3→2), `maple` (funds 4→3, liquidity 4→3), `centrifuge` (funds 4→3, liquidity 4→3), `fluid-lending` (centralization 3→2, funds 3→2)
+- Venue penalties fall `(weighted − 2.0) × 0.15`: 3jane 0.42→0.27, cap 0.21→0.11, maple 0.18→0.11, centrifuge 0.15→0.08, fluid-lending 0.09→0; `fluid-lending` moves medium→low and leaves the DEWS structured-medium-risk-venue branch (DEWS thresholds unchanged)
+- Upgrades `3jane-lending` confidence partial→verified (four dedicated audits + Morpho Blue base + Certora) and updates its metadata rationale/evidence
+- Raises `sparklend` and `spark-savings` funds management 1→2 for shared MCD_VAT backing, and moves `yearn`/`yearn-finance` operational 2→1; all three stay below the 2.0 knee so the blue-chip no-op holds and no penalty changes
+- Adds two low-severity (zero-penalty, informational) dependency-concentration entries `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate), surfacing the single off-chain EOA that originates ~97% of syrupUSDC/USDT AUM; low severity avoids double-counting the `maple` venue tier
+- Holds `aave-v3` (vs Yearn's sGHO report) and `morpho`/`morpho-v1`/`morpho-blue` (vs Yearn's Gauntlet Aera-vault report) unchanged — those are proxy matches whose deltas are product-specific
+- PYS formula shape, tier thresholds, penalty curve, benchmark selection, dependency-concentration registry, history semantics, and publication guards are unchanged
+
+---
 
 ## v8.297 - Optional vaults.fyi Supplemental Yield Source (June 29, 2026)
 
