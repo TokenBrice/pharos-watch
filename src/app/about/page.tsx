@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ExternalLink, GitBranch, Radio } from "lucide-react";
-import { AboutReferenceModule } from "@/components/about-reference-module";
 import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -267,7 +266,6 @@ export default function AboutPage() {
       path="/about/"
       title="About Pharos"
       leadParagraphs={leadParagraphs}
-      headerSupplement={<AboutReferenceModule />}
       preface={
         <>
           <script
