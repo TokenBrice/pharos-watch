@@ -347,6 +347,7 @@ function Tombstone({
           <div
             className="absolute left-1/2 -translate-x-1/2 bg-stone-100 dark:bg-muted border border-border"
             style={{ width: cross.vw, height: cross.vh, filter: `brightness(${brightness})` }}
+            suppressHydrationWarning
           />
           {/* Horizontal bar */}
           <div
@@ -357,6 +358,7 @@ function Tombstone({
               top: 2,
               filter: `brightness(${brightness})`,
             }}
+            suppressHydrationWarning
           />
         </div>
       )}
@@ -370,6 +372,11 @@ function Tombstone({
           cfg.w, cfg.h, topRounding,
         )}
         style={tombstoneStyle}
+        // Weathering brightness/moss derive from the grave's age vs the current
+        // time; in a static export the build-time value differs from the client
+        // load-time value. The delta is cosmetic and imperceptible, so suppress
+        // the hydration attribute mismatch rather than defer the paint.
+        suppressHydrationWarning
       >
         {/* Hammer smashing into tombstone for regulatory kills */}
         {shape === "hammer" && <HammerStrike size={size} />}
