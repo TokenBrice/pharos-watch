@@ -58,8 +58,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(407);
-    expect(canonicalOrder).toHaveLength(407);
+    expect(perCoinGenerated).toHaveLength(408);
+    expect(canonicalOrder).toHaveLength(408);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -86,12 +86,12 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(32);
+    expect(preLaunchCoins).toHaveLength(33);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(407);
+    expect(TRACKED_STABLECOINS).toHaveLength(408);
     expect(ACTIVE_STABLECOINS).toHaveLength(364);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
@@ -126,6 +126,7 @@ describe("tracked stablecoin metadata", () => {
       "ejpy-jbfd",
       "aed-rakbank",
       "bils-bitsofgold",
+      "ousd-open-standard",
     ]);
   });
 

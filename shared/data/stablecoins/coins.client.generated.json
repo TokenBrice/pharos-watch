@@ -14939,6 +14939,47 @@
     "liveReserveAdapter": "curated-validated"
   },
   {
+    "id": "ousd-open-standard",
+    "name": "Open USD",
+    "symbol": "OUSD",
+    "oneLiner": "Open USD is Open Standard's fully-reserved consortium dollar, backed by 140+ firms including Visa, Mastercard, and BlackRock; launch expected in 2026.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "mechanismArchetype": "fiat-cash",
+    "status": "pre-launch",
+    "announcedDate": "2026-06",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "milestones": [
+      {
+        "date": "2026-06-30",
+        "type": "announcement",
+        "title": "Open Standard unveils Open USD (OUSD), a partner-governed consortium stablecoin",
+        "description": "140+ businesses back a fully-reserved dollar that shares most reserve earnings with partners, with zero mint/redeem fees and no volume limits. Circle shares fell ~15-17% on the news.",
+        "sourceUrl": "https://joinopenstandard.com/blog/introducing-open-usd"
+      },
+      {
+        "date": "2026-06-30",
+        "type": "partnership",
+        "title": "140+ launch partners including Visa, Mastercard, American Express, Stripe, BlackRock, Coinbase, and PayPal",
+        "sourceUrl": "https://www.theblock.co/post/406736/visa-stripe-coinbase-join-open-usd-stablecoin-shares-reserve-revenue"
+      },
+      {
+        "date": "2026-06-30",
+        "type": "milestone",
+        "title": "Zach Abrams (Bridge co-founder) named interim CEO; Fireblocks selected for settlement; OUSD to launch natively on Solana",
+        "sourceUrl": "https://thedefiant.io/converge/tradfi-and-fintech/open-standard-open-usd-ousd-stablecoin-consortium-blackrock-visa-mastercard"
+      }
+    ],
+    "blacklistStatus": true
+  },
+  {
     "id": "ousd-origin-protocol",
     "name": "Origin Dollar",
     "symbol": "OUSD",

@@ -44819,6 +44819,101 @@
     }
   },
   {
+    "id": "ousd-open-standard",
+    "detailProvider": "defillama",
+    "name": "Open USD",
+    "symbol": "OUSD",
+    "oneLiner": "Open USD is Open Standard's fully-reserved consortium dollar, backed by 140+ firms including Visa, Mastercard, and BlackRock; launch expected in 2026.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Fully-reserved U.S. dollar backing for Open USD; Open Standard states most reserve earnings are shared with consortium partners after an operating fee. Reserve composition, custodian, and attestation are not yet public.",
+    "pegMechanism": "Issuer-managed 1:1 USD mint and redemption with zero fees and no volume limits for consortium partners; operated by Open Standard, an independent company governed by a board of its partner businesses. Positioned as GENIUS Act-compliant. Contracts, reserve reporting, and named custodians are pending launch.",
+    "mechanismArchetype": "fiat-cash",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://joinopenstandard.com"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/openstandard"
+      },
+      {
+        "label": "Announcement",
+        "url": "https://joinopenstandard.com/blog/introducing-open-usd"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "OUSD resolves to Yes: it is announced as a centralized, issuer-controlled fully-reserved dollar operated by Open Standard, so an issuer freeze/blacklist surface is expected once contracts deploy. No mainnet contract is public yet to point at a specific freeze function.",
+      "reviewer": "Claude pre-launch addition",
+      "reviewedAt": "2026-07-01"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-06",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Announced June 30, 2026 by Open Standard, an independent company operated by a board of 140+ partner businesses spanning payments, banking, fintech, tech, and crypto (Visa, Mastercard, American Express, Discover, Stripe, Adyen, BlackRock, BNY Mellon, Standard Chartered, U.S. Bank, BBVA, Coinbase, PayPal, Google, Samsung, Shopify, and more). OUSD is pitched as a GENIUS Act-compliant, fully-reserved dollar with zero mint/redeem fees and no volume limits, sharing most reserve earnings with partners after an operating fee. Zach Abrams (Bridge co-founder, now at Stripe) is interim CEO; Fireblocks is named for settlement infrastructure. Announced to launch natively on Solana, with Stellar and Plasma also named as launch partners, targeting 'later in 2026'. No mainnet contracts, named reserve custodian, audit, or attestation are public yet. Incumbents Circle, Tether, and PayPal's PYUSD are notably absent — Circle shares fell ~15-17% on the news.",
+    "featuredContent": [
+      {
+        "type": "blog",
+        "url": "https://joinopenstandard.com/blog/introducing-open-usd",
+        "title": "Introducing Open USD",
+        "source": "Open Standard"
+      },
+      {
+        "type": "article",
+        "url": "https://www.theblock.co/post/406736/visa-stripe-coinbase-join-open-usd-stablecoin-shares-reserve-revenue",
+        "title": "Visa, Stripe, Coinbase and more join Open USD stablecoin that shares reserve revenue",
+        "source": "The Block"
+      },
+      {
+        "type": "article",
+        "url": "https://www.americanbanker.com/payments/news/open-standards-stablecoin-draws-stripe-visa-and-mastercard",
+        "title": "Open Standard's stablecoin draws Stripe, Visa and Mastercard",
+        "source": "American Banker"
+      },
+      {
+        "type": "article",
+        "url": "https://www.forbes.com/sites/christiancatalini/2026/06/30/why-an-open-standard-will-win-the-stablecoin-race/",
+        "title": "Why An Open Standard Will Win The Stablecoin Race",
+        "source": "Forbes"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-06-30",
+        "type": "announcement",
+        "title": "Open Standard unveils Open USD (OUSD), a partner-governed consortium stablecoin",
+        "description": "140+ businesses back a fully-reserved dollar that shares most reserve earnings with partners, with zero mint/redeem fees and no volume limits. Circle shares fell ~15-17% on the news.",
+        "sourceUrl": "https://joinopenstandard.com/blog/introducing-open-usd"
+      },
+      {
+        "date": "2026-06-30",
+        "type": "partnership",
+        "title": "140+ launch partners including Visa, Mastercard, American Express, Stripe, BlackRock, Coinbase, and PayPal",
+        "sourceUrl": "https://www.theblock.co/post/406736/visa-stripe-coinbase-join-open-usd-stablecoin-shares-reserve-revenue"
+      },
+      {
+        "date": "2026-06-30",
+        "type": "milestone",
+        "title": "Zach Abrams (Bridge co-founder) named interim CEO; Fireblocks selected for settlement; OUSD to launch natively on Solana",
+        "sourceUrl": "https://thedefiant.io/converge/tradfi-and-fintech/open-standard-open-usd-ousd-stablecoin-consortium-blackrock-visa-mastercard"
+      }
+    ]
+  },
+  {
     "id": "ousd-origin-protocol",
     "llamaId": "23",
     "detailProvider": "defillama",
