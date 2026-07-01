@@ -1,21 +1,17 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
-import Link from "next/link";
 import { X } from "lucide-react";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@/lib/urls";
-import { formatCurrency } from "@shared/lib/format";
 import type { ReportCard } from "@shared/types";
+import { SafetyGradeDistributionBar } from "./grade-distribution-bar";
 import {
   GRADE_RANGES,
-  type CoreSettlementProfile,
   type GradeFilter,
   type SortKey,
 } from "./view-model";
@@ -150,93 +146,73 @@ export function SafetyScoresLoadingState() {
   );
 }
 
-export function SafetyHeadlineStats({
-  stats,
+function HeroMetricRow({
+  label,
+  value,
+  detail,
 }: {
-  stats: Array<{ label: string; value: string; detail: string }>;
+  label: string;
+  value: string;
+  detail: string;
 }) {
-  if (stats.length === 0) return null;
-
   return (
-    <div className="grid grid-cols-3 gap-3 animate-fade-in">
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          className="pharos-card-shell px-3 py-3 text-center"
-        >
-          <p className="pharos-kicker">{stat.label}</p>
-          <p className="text-lg font-bold font-mono tracking-tight">{stat.value}</p>
-          <p className="text-xs text-muted-foreground font-mono">{stat.detail}</p>
-        </div>
-      ))}
+    <div className="flex items-baseline justify-between gap-3 py-2">
+      <span className="min-w-0 truncate text-sm text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-right">
+        <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
+        <span className="ml-2 text-[11px] text-muted-foreground">{detail}</span>
+      </span>
     </div>
   );
 }
 
-export function CoreSettlementStrip({
-  cards,
-  profiles,
-  logos,
+/**
+ * Split hero for Safety Scores. The One Beam lights the ecosystem average score
+ * (frost); the sub-slot folds the retired headline-stat tiles (supply in A/B,
+ * weakest dimension) into compact rows; the right slot stages the semantic
+ * grade-distribution bar. `stats` is the `buildSafetyHeadlineStats` array:
+ * [ecosystem avg, supply in A/B, weakest dimension].
+ */
+export function SafetyScoresHero({
+  stats,
+  gradeCounts,
+  totalCards,
 }: {
-  cards: ReportCard[];
-  profiles: Map<string, CoreSettlementProfile>;
-  logos?: Record<string, string>;
+  stats: Array<{ label: string; value: string; detail: string }>;
+  gradeCounts: Record<string, number>;
+  totalCards: number;
 }) {
-  const coreCards = cards
-    .filter((card) => profiles.has(card.id))
-    .sort((a, b) => (profiles.get(b.id)?.marketCapUsd ?? 0) - (profiles.get(a.id)?.marketCapUsd ?? 0));
-
-  if (coreCards.length === 0) return null;
+  const [avg, abSupply, weakest] = stats;
+  if (!avg) return null;
 
   return (
-    <section className="rounded-lg border border-frost-blue/30 bg-frost-blue/5 px-4 py-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">Core settlement rails</h2>
-          <p className="text-sm text-muted-foreground">
-            Very large supply, broad chain reach, tight peg history, self-backed reserves, and a reviewed offchain issuer exit.
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[34rem]">
-          {coreCards.map((card) => {
-            const profile = profiles.get(card.id);
-            return (
-              <Link
-                key={card.id}
-                href={buildStablecoinUrl(card.id)}
-                className="pharos-focus-ring rounded-lg border border-border/60 bg-background/50 px-3 py-2 transition-colors hover:bg-accent/50"
-              >
-                <div className="flex items-center gap-3">
-                  <StablecoinLogo src={logos?.[card.id]} name={card.name} size={28} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">{card.symbol}</span>
-                      <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-800 dark:text-sky-300">
-                        Core rail
-                      </span>
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">{card.name}</p>
-                  </div>
-                  <div className="text-right">
-                    <SafetyGradeBadge
-                      grade={card.overallGrade}
-                      size="xs"
-                      className="font-mono font-semibold"
-                      versionTopic="safetyScore"
-                      versionVariant="tooltip-only"
-                      versionInteractive={false}
-                    />
-                    <div className="text-[10px] text-muted-foreground">
-                      {profile ? `${formatCurrency(profile.marketCapUsd)} / ${profile.chainCount} chains` : ""}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+    <FeatureHeroSplit
+      ariaLabel="Ecosystem safety overview"
+      beamLabel={
+        <>
+          {avg.label} <span className="text-foreground/70">&middot; grade {avg.detail}</span>
+        </>
+      }
+      beamValue={avg.value}
+      expand={{ href: "#data", label: "Jump to the full grade table" }}
+      subKicker="Ecosystem read"
+      sub={
+        abSupply || weakest ? (
+          <div className="divide-y divide-border/50">
+            {abSupply ? (
+              <HeroMetricRow label={abSupply.label} value={abSupply.value} detail={abSupply.detail} />
+            ) : null}
+            {weakest ? (
+              <HeroMetricRow label={weakest.label} value={weakest.value} detail={weakest.detail} />
+            ) : null}
+          </div>
+        ) : null
+      }
+    >
+      <div className="flex h-full flex-col justify-center p-5 sm:p-6 lg:p-7">
+        <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={totalCards} />
       </div>
-    </section>
+    </FeatureHeroSplit>
   );
 }
 

@@ -28,8 +28,8 @@ import {
   SafetyCardsGrid,
   SafetyControlsPanel,
   SafetyEmptyState,
-  SafetyHeadlineStats,
   SafetyResultsSummary,
+  SafetyScoresHero,
   SafetyScoresLoadingState,
   SafetySimulationBanner,
 } from "./presentational";
@@ -184,7 +184,7 @@ export function ReportCardsClient() {
         ]}
       />
 
-      <SafetyHeadlineStats stats={headlineStats} />
+      <SafetyScoresHero stats={headlineStats} gradeCounts={gradeCounts} totalCards={totalCards} />
 
       <StressTestPanel
         stressTest={stressTest}

@@ -107,7 +107,7 @@ export function SafetyInspectionBoard({
               <AlertTriangle className={cn("h-4 w-4", leadTone.text)} aria-hidden />
               <span className="text-xs text-muted-foreground">Weakest load</span>
             </div>
-            <p className={cn("mt-1 font-mono text-lg font-bold tabular-nums", leadTone.text)}>
+            <p className={cn("mt-1 pharos-numeric text-lg font-bold", leadTone.text)}>
               {model.leadFinding.shortLabel} {formatScoreOrNotRated(model.leadFinding.weightedScore ?? model.leadFinding.averageScore)}
             </p>
           </div>
@@ -119,17 +119,17 @@ export function SafetyInspectionBoard({
               <ClipboardCheck className="h-4 w-4 text-emerald-700 dark:text-emerald-300" aria-hidden />
               <span className="text-[11px] uppercase tracking-wide">Inspected</span>
             </div>
-            <p className="mt-1 font-mono text-lg font-bold tabular-nums">{model.inspectedCount}</p>
+            <p className="mt-1 pharos-numeric text-lg font-bold">{model.inspectedCount}</p>
             <p className="text-xs text-muted-foreground">active report cards</p>
           </div>
           <div className="rounded-xl border border-border/60 bg-background/35 p-3">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Open findings</p>
-            <p className="mt-1 font-mono text-lg font-bold tabular-nums text-amber-700 dark:text-amber-300">{totalFindings}</p>
+            <p className="mt-1 pharos-numeric text-lg font-bold text-amber-700 dark:text-amber-300">{totalFindings}</p>
             <p className="text-xs text-muted-foreground">D/F dimension grades</p>
           </div>
           <div className="rounded-xl border border-border/60 bg-background/35 p-3">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Finding exposure</p>
-            <p className="mt-1 font-mono text-lg font-bold tabular-nums">{formatCurrency(model.findingExposureUsd, 0)}</p>
+            <p className="mt-1 pharos-numeric text-lg font-bold">{formatCurrency(model.findingExposureUsd, 0)}</p>
             <p className="text-xs text-muted-foreground">unique market cap with any D/F finding</p>
           </div>
         </div>
@@ -148,7 +148,7 @@ export function SafetyInspectionBoard({
                 aria-label={`Sort report cards by weakest ${row.label} first`}
                 className={cn(
                   "pharos-focus-ring min-h-11 rounded-xl border p-3 text-left transition-colors",
-                  active ? "border-frost-blue bg-frost-blue/10" : "border-border/60 bg-background/35 hover:bg-muted/30",
+                  active ? "border-foreground/40 bg-muted/60" : "border-border/60 bg-background/35 hover:bg-muted/30",
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -156,7 +156,7 @@ export function SafetyInspectionBoard({
                     <p className="text-sm font-semibold text-foreground">{row.shortLabel}</p>
                     <p className="text-[11px] text-muted-foreground">{tone.label}</p>
                   </div>
-                  <span className={cn("font-mono text-lg font-bold tabular-nums", tone.text)}>
+                  <span className={cn("pharos-numeric text-lg font-bold", tone.text)}>
                     {formatScoreOrNotRated(score)}
                   </span>
                 </div>
@@ -165,10 +165,10 @@ export function SafetyInspectionBoard({
                 </div>
                 <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                   <p>
-                    <span className="font-mono font-semibold text-foreground">{row.findingCount}</span> findings
+                    <span className="pharos-numeric font-semibold text-foreground">{row.findingCount}</span> findings
                     {row.unknownCount > 0 ? `, ${row.unknownCount} unknown` : ""}
                   </p>
-                  <p className="font-mono tabular-nums">{formatCurrency(row.findingExposureUsd, 0)} exposure</p>
+                  <p className="pharos-numeric">{formatCurrency(row.findingExposureUsd, 0)} exposure</p>
                 </div>
                 {row.worstFindings.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-1.5">
