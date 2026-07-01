@@ -251,7 +251,7 @@ export default function MethodologyPage() {
         navAriaLabel="Methodology section controls"
         rightSlot={
           <div className="hidden items-center gap-3 md:flex">
-            <ShowYourWorkToggle />
+            <ShowYourWorkToggle className="pharos-toggle-pill pharos-focus-ring min-h-9" />
             <MethodologyModeToggle />
           </div>
         }

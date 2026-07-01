@@ -46,22 +46,18 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
       <button
         type="button"
         aria-pressed={mode === "reader"}
+        data-state={mode === "reader" ? "on" : "off"}
         onClick={() => setAndApplyMode("reader")}
-        className={cn(
-          "pharos-focus-ring inline-flex min-h-11 items-center justify-center rounded-full px-3.5 py-2 transition-colors md:min-h-8 md:px-3 md:py-1.5",
-          mode === "reader" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-        )}
+        className="pharos-toggle-pill pharos-focus-ring min-h-11 justify-center md:min-h-9"
       >
         Reader
       </button>
       <button
         type="button"
         aria-pressed={mode === "analyst"}
+        data-state={mode === "analyst" ? "on" : "off"}
         onClick={() => setAndApplyMode("analyst")}
-        className={cn(
-          "pharos-focus-ring inline-flex min-h-11 items-center justify-center rounded-full px-3.5 py-2 transition-colors md:min-h-8 md:px-3 md:py-1.5",
-          mode === "analyst" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-        )}
+        className="pharos-toggle-pill pharos-focus-ring min-h-11 justify-center md:min-h-9"
       >
         Analyst
       </button>

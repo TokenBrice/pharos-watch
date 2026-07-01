@@ -182,7 +182,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
 
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 md:justify-self-end">
         <div className="min-w-0 md:text-right">
-          <div className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+          <div className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
             {summary.availableCount}
             <span className="ml-0.5 text-sm font-medium text-muted-foreground">/{summary.totalCount}</span>
           </div>
@@ -191,7 +191,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           </div>
         </div>
         <div className="min-w-0 md:text-right">
-          <div className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+          <div className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
             {marketCapLabel}
           </div>
           <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -217,7 +217,7 @@ export function FeatureSnapshotInsight({ label, title, detail, accent }: Feature
     <div className={cn("rounded-lg border px-3 py-2.5", accentClasses.tile)}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
       <div className={cn("mt-1 truncate text-sm font-semibold leading-tight", accentClasses.title)}>{title}</div>
-      <div className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{detail}</div>
+      <div className="mt-1 pharos-numeric text-xs text-muted-foreground">{detail}</div>
     </div>
   );
 }

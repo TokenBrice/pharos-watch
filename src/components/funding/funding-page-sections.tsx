@@ -98,13 +98,24 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
   const community = buildCommunityLabel(summary);
 
   return (
-    <Card className="rounded-lg">
+    <Card className="pharos-card-shell">
       <CardContent className="space-y-5 p-4 sm:p-5">
+        <div className="space-y-1.5 border-b border-border/50 pb-5">
+          <p className="pharos-kicker text-muted-foreground">Monthly running cost</p>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+              {USD_COMPACT.format(monthlyTargetUsd)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              What it takes to keep Pharos online, maintained, and free to use every month.
+            </p>
+          </div>
+        </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-1.5">
             <p className="pharos-kicker text-muted-foreground">This month coverage</p>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className="font-mono text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+              <p className="pharos-numeric text-3xl font-semibold tracking-tight text-foreground">
                 {thisMonth.primary}
               </p>
               <p className="text-sm text-muted-foreground">{thisMonth.secondary}</p>
@@ -161,15 +172,12 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
             <p className="pharos-kicker text-muted-foreground">Previous months</p>
             <ul className="flex flex-wrap gap-1.5">
               {monthlyHistory.map((m) => (
-                <li
-                  key={m.monthKey}
-                  className="flex items-baseline gap-2 rounded-full border border-border/40 bg-background/40 px-2.5 py-1 text-xs"
-                >
+                <li key={m.monthKey} className="pharos-control-pill gap-2">
                   <span className="text-muted-foreground">{m.label}</span>
-                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                  <span className="pharos-numeric font-semibold text-foreground">
                     {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
                   </span>
-                  <span className="font-mono tabular-nums text-muted-foreground">
+                  <span className="pharos-numeric text-muted-foreground">
                     {USD_COMPACT.format(m.communityUsd)}
                   </span>
                 </li>
@@ -191,7 +199,7 @@ function FundingMiniStat({ label, value, detail }: { label: string; value: strin
   return (
     <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
       <p className="pharos-kicker text-muted-foreground">{label}</p>
-      <p className="font-mono text-lg font-semibold tracking-tight text-foreground tabular-nums">{value}</p>
+      <p className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
   );
@@ -220,7 +228,7 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
   });
 
   return (
-    <Card className="rounded-lg">
+    <Card className="pharos-card-shell">
       <CardHeader className="space-y-1">
         <p className="pharos-kicker text-muted-foreground">Where it goes</p>
         <CardTitle as="h2">Monthly costs</CardTitle>
@@ -238,7 +246,7 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
                     {item.label}
                     {item.note ? <span className="ml-2 text-xs text-muted-foreground">— {item.note}</span> : null}
                   </span>
-                  <span className="font-mono tabular-nums text-muted-foreground">
+                  <span className="pharos-numeric text-muted-foreground">
                     {USD_COMPACT.format(item.usd_per_month)}
                   </span>
                 </li>
@@ -248,7 +256,7 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
         ))}
         <div className="flex justify-between border-t border-border/60 pt-2 text-sm font-medium">
           <span>Total / month</span>
-          <span className="font-mono tabular-nums">{USD_COMPACT.format(total)}</span>
+          <span className="pharos-numeric">{USD_COMPACT.format(total)}</span>
         </div>
         <div className="space-y-0.5 text-xs text-muted-foreground">
           <p>
@@ -282,7 +290,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
       : null;
 
   return (
-    <Card className="rounded-lg">
+    <Card className="pharos-card-shell">
       <CardHeader className="space-y-1">
         <p className="pharos-kicker text-muted-foreground">Supporters</p>
         <CardTitle as="h2">Recent supporters</CardTitle>
@@ -301,7 +309,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
                 <li key={`${d.chain}-${d.tx_hash}`} className="flex items-baseline justify-between gap-3">
                   <span className="flex-1 truncate font-mono text-xs">{displayText}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {USD_COMPACT.format(d.usd_at_receipt)}{" "}
+                    <span className="pharos-numeric">{USD_COMPACT.format(d.usd_at_receipt)}</span>{" "}
                     {explorerUrl ? (
                       <a
                         href={explorerUrl}
@@ -334,7 +342,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
 export function SupportCtas() {
   return (
     <section id="how-to-support">
-      <Card className="rounded-lg">
+      <Card className="pharos-card-shell">
         <CardHeader className="space-y-1">
           <p className="pharos-kicker text-muted-foreground">Get involved</p>
           <CardTitle as="h2">How to support</CardTitle>
@@ -455,7 +463,7 @@ function SocialButton({
 export function YearEndHorizon() {
   const shareUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(PHAROS_SHARE_MESSAGE);
   return (
-    <Card className="rounded-lg">
+    <Card className="pharos-card-shell">
       <CardHeader className="space-y-1">
         <p className="pharos-kicker text-muted-foreground">Where we&apos;re going</p>
         <CardTitle as="h2">Path to sustainability</CardTitle>
@@ -511,7 +519,7 @@ export function FundingFaq() {
     },
   ];
   return (
-    <Card className="rounded-lg">
+    <Card className="pharos-card-shell">
       <CardHeader className="space-y-1">
         <p className="pharos-kicker text-muted-foreground">Questions</p>
         <CardTitle as="h2">FAQ</CardTitle>

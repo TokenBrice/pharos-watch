@@ -64,9 +64,9 @@ export function BlacklistTrackerMethodologySection() {
                 </dl>
               </div>
               <WorkedExample summary="Worked example: blacklist event reconciliation">
-                <p className="font-mono tabular-nums">Event: AddedBlackList(0xabc...def) on USDT (Ethereum), block 19,234,567</p>
-                <p className="font-mono tabular-nums">Ledger update: +1 frozen address, total frozen balance recalculated from on-chain balanceOf</p>
-                <p className="font-mono tabular-nums">Cross-chain: Tron USDT freeze count unchanged → combined freeze count increments by 1</p>
+                <p className="pharos-numeric">Event: AddedBlackList(0xabc...def) on USDT (Ethereum), block 19,234,567</p>
+                <p className="pharos-numeric">Ledger update: +1 frozen address, total frozen balance recalculated from on-chain balanceOf</p>
+                <p className="pharos-numeric">Cross-chain: Tron USDT freeze count unchanged → combined freeze count increments by 1</p>
                 <p>Result: <span className="text-foreground">Dashboard shows updated freeze count and reconciled total across chains.</span></p>
               </WorkedExample>
               <MethodologyDetails summary="Technical details: freeze ledger reconciliation">

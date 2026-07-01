@@ -77,40 +77,40 @@ export function CoverageFeatureSnapshotCard({
             <div className="space-y-1.5">
               <p className="pharos-kicker">Coverage Overview</p>
               <CardTitle as="h2" className="text-xl font-semibold leading-tight tracking-tight sm:text-[1.6rem]">
-                Coverage control panel
+                Feature breadth by surface
               </CardTitle>
             </div>
-            <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-t border-border/40 pt-3">
-              <div className="flex items-baseline gap-1.5">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Universe
-                </dt>
-                <dd className="font-mono text-[15px] font-semibold leading-none tabular-nums text-foreground">
+            <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border/40 pt-3">
+              <div className="min-w-0">
+                <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
                   {activeCoinTotal}
-                </dd>
-                <span className="text-[11px] text-muted-foreground">coins</span>
+                </p>
+                <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  active coins tracked
+                </p>
               </div>
-              <span aria-hidden="true" className="h-3 w-px bg-border/60" />
-              <div className="flex items-baseline gap-1.5">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Avg. reach
-                </dt>
-                <dd className="font-mono text-[15px] font-semibold leading-none tabular-nums text-foreground">
-                  {averageCoveragePct.toFixed(0)}%
-                </dd>
-                <span className="text-[11px] text-muted-foreground">headline</span>
-              </div>
-              <span aria-hidden="true" className="h-3 w-px bg-border/60" />
-              <div className="flex items-baseline gap-1.5">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Surfaces
-                </dt>
-                <dd className="font-mono text-[15px] font-semibold leading-none tabular-nums text-foreground">
-                  {featureSummaries.length}
-                </dd>
-                <span className="text-[11px] text-muted-foreground">tracked</span>
-              </div>
-            </dl>
+              <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 pb-0.5">
+                <div className="flex items-baseline gap-1.5">
+                  <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Avg. reach
+                  </dt>
+                  <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
+                    {averageCoveragePct.toFixed(0)}%
+                  </dd>
+                  <span className="text-[11px] text-muted-foreground">headline</span>
+                </div>
+                <span aria-hidden="true" className="h-3 w-px bg-border/60" />
+                <div className="flex items-baseline gap-1.5">
+                  <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Surfaces
+                  </dt>
+                  <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
+                    {featureSummaries.length}
+                  </dd>
+                  <span className="text-[11px] text-muted-foreground">tracked</span>
+                </div>
+              </dl>
+            </div>
           </div>
 
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -215,7 +215,7 @@ export function CoveragePricingSourcesCard({
               className="flex flex-col items-center gap-1.5 rounded-xl border border-border/60 bg-background/40 px-4 py-4"
             >
               <span className="text-sm font-semibold text-foreground">{getPricingSourceLabel(source.name)}</span>
-              <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">{source.count}</span>
+              <span className="pharos-numeric text-2xl font-semibold text-foreground">{source.count}</span>
               <span className="text-[11px] text-muted-foreground">coins</span>
             </div>
           ))}
@@ -249,7 +249,7 @@ export function CoveragePricingSourcesCard({
                   <span className={cn("text-sm font-semibold", AUTHORITATIVE_ACCENT.cardLabel)}>
                     {getPricingSourceLabel(source.name)}
                   </span>
-                  <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">{source.count}</span>
+                  <span className="pharos-numeric text-2xl font-semibold text-foreground">{source.count}</span>
                   <span className="text-[11px] text-muted-foreground">coins</span>
                 </div>
               ))}
@@ -329,7 +329,7 @@ export function CoverageMatrixCard(
               <select
                 value={model.sort}
                 onChange={(event) => model.setSort(event.target.value as CoverageSortKey)}
-                className="pharos-focus-ring h-11 rounded-lg border border-border/65 bg-background/45 px-3 text-sm text-foreground transition-colors sm:h-10"
+                className="pharos-focus-ring h-11 rounded-full border border-border/65 bg-background/45 px-4 text-sm text-foreground transition-colors hover:border-foreground/20 sm:h-10"
                 aria-label="Sort coverage table"
               >
                 {SORT_OPTIONS.map((group) => (

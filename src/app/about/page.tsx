@@ -33,6 +33,7 @@ import {
   ACTIVE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
   PRE_LAUNCH_STABLECOIN_COUNT,
+  TRACKED_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
 // Intentionally extends pharos-prose-link with inline-flex/gap-1 for icon-paired links (ExternalLink icon)
@@ -239,6 +240,12 @@ export default function AboutPage() {
     deadStablecoins: DEAD_STABLECOIN_COUNT,
   });
   const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: ACTIVE_STABLECOIN_COUNT });
+  const heroStats: readonly { label: string; value: string | number }[] = [
+    { label: "Active", value: ACTIVE_STABLECOIN_COUNT },
+    { label: "Retired", value: DEAD_STABLECOIN_COUNT },
+    { label: "Pre-launch", value: PRE_LAUNCH_STABLECOIN_COUNT },
+    { label: "Sources", value: "50+" },
+  ];
   const operatingPrincipleIds = [
     "independence",
     "risk-over-price",
@@ -279,22 +286,42 @@ export default function AboutPage() {
       }
     >
       <div className="space-y-8">
-        <section aria-labelledby="about-lede" className="space-y-3 pb-2">
-          <p
-            id="about-lede"
-            className="w-full max-w-none text-[clamp(1.35rem,2.35vw,2rem)] font-semibold leading-[1.18] tracking-tight text-foreground/95 [text-wrap:balance]"
-          >
-            Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
-            at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}live tokens and the chains
-            and reserves beneath them so that desks, treasuries, and researchers can read the peg the way
-            navigators read weather.
-          </p>
-          <p className="font-mono text-xs text-muted-foreground/80">
-            Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
-          </p>
-          <p className="font-mono text-3xs uppercase tracking-[0.18em] text-muted-foreground/70">
-            Watching the peg.
-          </p>
+        <section aria-labelledby="about-lede" className="space-y-6 pb-2">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <p className="pharos-kicker">Stablecoins tracked</p>
+              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+                {TRACKED_STABLECOIN_COUNT}
+              </p>
+            </div>
+            <div className="space-y-3">
+              <p
+                id="about-lede"
+                className="w-full max-w-none text-[clamp(1.35rem,2.35vw,2rem)] font-semibold leading-[1.18] tracking-tight text-foreground/95 [text-wrap:balance]"
+              >
+                Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
+                at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}live tokens and the chains
+                and reserves beneath them so that desks, treasuries, and researchers can read the peg the way
+                navigators read weather.
+              </p>
+              <p className="font-mono text-xs text-muted-foreground/80">
+                Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
+              </p>
+              <p className="font-mono text-3xs uppercase tracking-[0.18em] text-muted-foreground/70">
+                Watching the peg.
+              </p>
+            </div>
+          </div>
+          <dl className="flex flex-wrap gap-x-10 gap-y-4 border-t border-border/60 pt-5">
+            {heroStats.map((stat) => (
+              <div key={stat.label} className="space-y-1">
+                <dt className="pharos-kicker">{stat.label}</dt>
+                <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+                  {stat.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </section>
 
         <AboutSection
