@@ -76,7 +76,7 @@ function ComparePreview({
                   >
                     <span className="text-xs text-muted-foreground">{label}</span>
                     <span
-                      className="text-xs font-mono text-muted-foreground"
+                      className="text-xs pharos-numeric text-muted-foreground"
                     >
                       {index === 0 ? "-0.02%" : index === 1 ? "+2.4%" : "78/100"}
                     </span>

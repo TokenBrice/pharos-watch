@@ -102,7 +102,7 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
                 key={preset.title}
                 type="button"
                 onClick={() => onApplyPreset(preset)}
-                className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm font-medium text-foreground hover:border-primary/45 hover:bg-primary/8"
+                className="pharos-focus-ring pharos-control-pill min-h-11 gap-2 px-4 text-sm sm:min-h-9"
               >
                 <ShieldCheck className="h-4 w-4 text-primary/80" />
                 {preset.title}

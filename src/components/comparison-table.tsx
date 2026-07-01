@@ -192,7 +192,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
         desktopLabel: "Price",
         renderValue: (_coin, i) => rowData.prices[i],
         valueClassName: (_coin, i, isDesktop) =>
-          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`,
+          `${isDesktop ? "text-center" : "text-right"} pharos-numeric ${i === rowData.bestPrice ? BEST_CLASS : ""}`,
       },
       {
         key: "peg-score",
@@ -203,7 +203,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
             ? formatScore(rowData.pegScores[i])
             : <NullCell frozen={coin.meta.status === "frozen"} />,
         valueClassName: (_coin, i, isDesktop) =>
-          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`,
+          `${isDesktop ? "text-center" : "text-right"} pharos-numeric ${i === rowData.bestPegScore ? BEST_CLASS : ""}`,
       },
       {
         key: "market-cap",
@@ -211,7 +211,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
         desktopLabel: "Market Cap",
         renderValue: (_coin, i) => formatCurrency(rowData.marketCaps[i]),
         valueClassName: (_coin, _i, isDesktop) =>
-          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums`,
+          `${isDesktop ? "text-center" : "text-right"} pharos-numeric`,
       },
       {
         key: "weekly-change",
@@ -223,7 +223,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
           return change != null ? `${sign}${change.toFixed(2)}%` : <NullCell frozen={coin.meta.status === "frozen"} />;
         },
         valueClassName: (_coin, _i, isDesktop) =>
-          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums`,
+          `${isDesktop ? "text-center" : "text-right"} pharos-numeric`,
       },
       {
         key: "liquidity-score",
@@ -234,7 +234,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
             ? formatScore(rowData.liquidityScores[i])
             : <NullCell frozen={coin.meta.status === "frozen"} />,
         valueClassName: (_coin, i, isDesktop) =>
-          `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`,
+          `${isDesktop ? "text-center" : "text-right"} pharos-numeric ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`,
       },
       {
         key: "governance",
@@ -275,7 +275,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
             : <NullCell frozen={coin.meta.status === "frozen"} />,
         valueClassName: (_coin, i, isDesktop) => {
           const value = rowData.netFlow30dValues[i];
-          return `${isDesktop ? "text-center" : "text-right"} font-mono tabular-nums ${
+          return `${isDesktop ? "text-center" : "text-right"} pharos-numeric ${
             i === rowData.bestNetFlow30d ? BEST_CLASS : value != null ? getNetColor(value) : ""
           }`;
         },

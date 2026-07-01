@@ -341,9 +341,7 @@ export function ScreenerClient() {
   const activeFilterCount = countActiveScreenerFilters(filters);
   // One coin-count story: the screener universe is the full tracked registry
   // (pre-launch and frozen included), unlike the active-only dashboard table.
-  const matchSummary = active
-    ? `${matchingRows.toLocaleString("en-US")}/${totalRows.toLocaleString("en-US")} tracked stablecoins matching`
-    : `All ${totalRows.toLocaleString("en-US")} tracked stablecoins — pre-launch and frozen included`;
+  // The live matched count is the toolbar's One Beam (frost) figure.
 
   return (
     <div className="space-y-6">
@@ -358,7 +356,8 @@ export function ScreenerClient() {
 
       <ScreenerToolbar
         filters={filters}
-        matchSummary={matchSummary}
+        matchingRows={matchingRows}
+        totalRows={totalRows}
         activeFilterCount={activeFilterCount}
         onChange={setFilters}
         onReset={resetFilters}

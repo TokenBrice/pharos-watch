@@ -100,7 +100,7 @@ function HoldingRow({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="0"
-            className="pharos-focus-ring min-h-11 w-full rounded-md border bg-transparent pl-5 pr-2 py-2 text-right text-sm outline-none placeholder:text-muted-foreground sm:min-h-0 sm:w-28 sm:py-1.5"
+            className="pharos-numeric pharos-focus-ring min-h-11 w-full rounded-md border border-border/60 bg-transparent pl-5 pr-2 py-2 text-right text-sm outline-none placeholder:text-muted-foreground sm:min-h-0 sm:w-28 sm:py-1.5"
             aria-label={`Amount in USD for ${meta.name}`}
           />
         </div>
@@ -218,11 +218,11 @@ function ExposureBar({
           {!isCollateral && <span className="text-muted-foreground"> ({symbol})</span>}
           {isWarning && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-700 dark:text-amber-400" />}
         </span>
-        <span className="text-muted-foreground ml-2 shrink-0">
+        <span className="pharos-numeric text-muted-foreground ml-2 shrink-0">
           {formatUsd(usd)} ({pct.toFixed(1)}%)
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-muted/40 overflow-hidden">
         <div
           className={
             isCollateral
@@ -269,15 +269,17 @@ export function PortfolioSummaryCard({
             >
               {portfolioGrade}
               {portfolioScore !== null && (
-                <span className="ml-1 opacity-70" aria-hidden="true">
+                <span className="pharos-numeric ml-1 opacity-70" aria-hidden="true">
                   ({portfolioScore})
                 </span>
               )}
             </Badge>
           </ScoreBadgeWrapper>
           <div>
-            <div className="text-sm text-muted-foreground">Portfolio Total</div>
-            <div className="text-lg font-semibold">{formatUsd(totalUsd)}</div>
+            <div className="pharos-kicker">Total Portfolio Value</div>
+            <div className="pharos-numeric text-frost-blue text-3xl font-semibold leading-none mt-1">
+              {formatUsd(totalUsd)}
+            </div>
           </div>
         </div>
 
@@ -285,7 +287,9 @@ export function PortfolioSummaryCard({
           {radarCard && (
             <div>
               <h3 className="pharos-kicker mb-2">Portfolio Radar</h3>
-              <ReportCardRadar card={radarCard} size={260} labels="short" />
+              <div className="pharos-chart-stage">
+                <ReportCardRadar card={radarCard} size={260} labels="short" />
+              </div>
             </div>
           )}
 
@@ -293,12 +297,12 @@ export function PortfolioSummaryCard({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="pharos-kicker">Upstream Exposure</h3>
-                <div role="group" aria-label="Exposure view" className="inline-flex items-center rounded-md border bg-muted/30 p-0.5 gap-0.5">
+                <div role="group" aria-label="Exposure view" className="flex flex-wrap gap-1">
                   <button
                     type="button"
                     aria-pressed={!showUpstreamDetail}
                     onClick={() => onShowUpstreamDetailChange(false)}
-                    className={`pharos-focus-ring px-3 py-2 text-xs font-medium rounded-sm transition-colors ${!showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${!showUpstreamDetail ? "pharos-control-pill-active" : ""}`}
                   >
                     Summary
                   </button>
@@ -306,7 +310,7 @@ export function PortfolioSummaryCard({
                     type="button"
                     aria-pressed={showUpstreamDetail}
                     onClick={() => onShowUpstreamDetailChange(true)}
-                    className={`pharos-focus-ring px-3 py-2 text-xs font-medium rounded-sm transition-colors ${showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${showUpstreamDetail ? "pharos-control-pill-active" : ""}`}
                   >
                     Detail
                   </button>

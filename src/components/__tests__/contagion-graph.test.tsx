@@ -128,7 +128,7 @@ describe("ContagionGraph", () => {
   it("supports keyboard neighborhood focus and directional node navigation", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
     const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
     const usdcNode = screen.getByRole("button", { name: /USDC/i });
@@ -144,7 +144,7 @@ describe("ContagionGraph", () => {
   it("lets clicks retarget the selected neighborhood", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
     const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
     fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
@@ -157,7 +157,7 @@ describe("ContagionGraph", () => {
       <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
     );
 
-    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
     const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
     const initialValue = nodePicker.value;
@@ -204,7 +204,7 @@ describe("ContagionGraph", () => {
   it("filters visible edges by dependency type", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "Wrapper" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));
 
     expect(screen.getByText(/Showing 4 of 4 dependency-linked stablecoins with 1 visible edges\./)).toBeTruthy();
   });
@@ -212,7 +212,7 @@ describe("ContagionGraph", () => {
   it("reduces visible nodes in neighborhood mode for connected subsets", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
     fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
 
     expect(screen.getByText(/Showing 3 of 4 dependency-linked stablecoins with 2 visible edges\./)).toBeTruthy();
@@ -223,7 +223,7 @@ describe("ContagionGraph", () => {
 
     expect(screen.getByText(/Showing 4 of 4 dependency-linked stablecoins with 3 visible edges\./)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
     const sr = screen.getByText(/Showing \d+ of \d+ dependency-linked stablecoins with \d+ visible edges\./);
     expect(sr.textContent).not.toMatch(/Showing 4 of 4 dependency-linked stablecoins with 3 visible edges\./);

@@ -1,10 +1,10 @@
 "use client";
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
 import { DEPENDENCY_TYPE_FILTERS } from "@/components/contagion-graph-model";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
-import { ALL_NODE_LIMIT, NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
+import { NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
 
 interface ContagionGraphControlsProps {
   focusMode: FocusMode;
@@ -16,6 +16,39 @@ interface ContagionGraphControlsProps {
   onEdgeTypeFilterChange: (edgeTypeFilter: EdgeTypeFilter) => void;
   onNodeLimitChange: (limit: NodeLimitOption) => void;
   onTraceNodeChange: (nodeId: string | null) => void;
+}
+
+const FOCUS_OPTIONS: { value: FocusMode; label: string; ariaLabel?: string }[] = [
+  { value: "all", label: "All" },
+  { value: "hub", label: "Hubs", ariaLabel: "Hub dependencies" },
+  { value: "neighborhood", label: "Neighborhood", ariaLabel: "Selected neighborhood" },
+];
+
+function ControlPill({
+  isActive,
+  ariaLabel,
+  onClick,
+  children,
+}: {
+  isActive: boolean;
+  ariaLabel?: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={isActive}
+      aria-label={ariaLabel}
+      className={cn(
+        "pharos-focus-ring pharos-control-pill px-3 py-1 font-mono text-[10px] uppercase tracking-[0.08em]",
+        isActive ? "pharos-control-pill-active" : "",
+      )}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function ContagionGraphControls({
@@ -36,36 +69,21 @@ export function ContagionGraphControls({
           <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             Focus
           </span>
-          <div className="w-0 min-w-0 flex-1 overflow-x-auto 2xl:w-auto 2xl:flex-none">
-            <ToggleGroup
-              type="single"
-              value={focusMode}
-              aria-label="Graph focus mode"
-              onValueChange={(value) => {
-                if (value) onFocusModeChange(value as FocusMode);
-              }}
-              variant="outline"
-              size="sm"
-              className="inline-flex h-9 min-w-max rounded-md md:h-7"
-            >
-              <ToggleGroupItem value="all" className="font-mono text-[10px] uppercase tracking-[0.08em]">
-                All
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="hub"
-                aria-label="Hub dependencies"
-                className="font-mono text-[10px] uppercase tracking-[0.08em]"
+          <div
+            role="group"
+            aria-label="Graph focus mode"
+            className="flex min-w-0 flex-1 flex-wrap gap-1.5 2xl:flex-none"
+          >
+            {FOCUS_OPTIONS.map((option) => (
+              <ControlPill
+                key={option.value}
+                isActive={focusMode === option.value}
+                ariaLabel={option.ariaLabel}
+                onClick={() => onFocusModeChange(option.value)}
               >
-                Hubs
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="neighborhood"
-                aria-label="Selected neighborhood"
-                className="font-mono text-[10px] uppercase tracking-[0.08em]"
-              >
-                Neighborhood
-              </ToggleGroupItem>
-            </ToggleGroup>
+                {option.label}
+              </ControlPill>
+            ))}
           </div>
         </div>
 
@@ -73,7 +91,7 @@ export function ContagionGraphControls({
           <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             Trace coin
             <select
-              className="h-11 max-w-full rounded-md border bg-background px-2 font-mono text-[11px] text-foreground md:h-7 2xl:w-[11rem]"
+              className="pharos-focus-ring h-9 max-w-full rounded-full border border-[color:var(--control-pill-border)] bg-[color:var(--control-pill-bg)] px-3 font-mono text-[11px] text-foreground 2xl:w-[11rem]"
               value={selectedNeighborhoodId ?? ""}
               onChange={(event) => onTraceNodeChange(event.target.value || null)}
             >
@@ -92,56 +110,31 @@ export function ContagionGraphControls({
 
       <div className="flex w-full items-center gap-2">
         <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Type</span>
-        <div className="w-0 min-w-0 flex-1 overflow-x-auto">
-          <ToggleGroup
-            type="single"
-            value={edgeTypeFilter}
-            aria-label="Dependency type filter"
-            onValueChange={(value) => {
-              if (value) onEdgeTypeFilterChange(value as EdgeTypeFilter);
-            }}
-            variant="outline"
-            size="sm"
-            className="inline-flex h-9 min-w-max rounded-md md:h-7"
-          >
-            {DEPENDENCY_TYPE_FILTERS.map((filter) => (
-              <ToggleGroupItem
-                key={filter.value}
-                value={filter.value}
-                className="font-mono text-[10px] uppercase tracking-[0.08em]"
-              >
-                {filter.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+        <div role="group" aria-label="Dependency type filter" className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+          {DEPENDENCY_TYPE_FILTERS.map((filter) => (
+            <ControlPill
+              key={filter.value}
+              isActive={edgeTypeFilter === filter.value}
+              onClick={() => onEdgeTypeFilterChange(filter.value)}
+            >
+              {filter.label}
+            </ControlPill>
+          ))}
         </div>
       </div>
 
       <div className="flex w-full items-center gap-2">
         <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Limit</span>
-        <div className="w-0 min-w-0 flex-1 overflow-x-auto">
-          <ToggleGroup
-            type="single"
-            value={String(nodeLimit)}
-            aria-label="Maximum nodes shown"
-            onValueChange={(value) => {
-              if (!value) return;
-              onNodeLimitChange(value === ALL_NODE_LIMIT ? ALL_NODE_LIMIT : (Number(value) as NodeLimitOption));
-            }}
-            variant="outline"
-            size="sm"
-            className="inline-flex h-9 min-w-max rounded-md md:h-7"
-          >
-            {NODE_LIMIT_OPTIONS.map((limit) => (
-              <ToggleGroupItem
-                key={limit}
-                value={String(limit)}
-                className="font-mono text-[10px] uppercase tracking-[0.08em]"
-              >
-                {limit === ALL_NODE_LIMIT ? "All" : limit}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+        <div role="group" aria-label="Maximum nodes shown" className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+          {NODE_LIMIT_OPTIONS.map((limit) => (
+            <ControlPill
+              key={limit}
+              isActive={nodeLimit === limit}
+              onClick={() => onNodeLimitChange(limit)}
+            >
+              {limit === "all" ? "All" : limit}
+            </ControlPill>
+          ))}
         </div>
       </div>
 

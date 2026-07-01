@@ -483,7 +483,9 @@ export function CompareClient() {
                   />
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col items-center justify-center">
-                  <CompareRadar cards={radarCards} size={300} cohortMedians={cohortBaseline.medians} />
+                  <div className="pharos-chart-stage flex w-full justify-center">
+                    <CompareRadar cards={radarCards} size={300} cohortMedians={cohortBaseline.medians} />
+                  </div>
                   <div className="flex flex-wrap gap-3 justify-center mt-3">
                     {radarCards.map(({ card, color }) => (
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">

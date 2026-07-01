@@ -21,7 +21,7 @@ function DependencyMetric({ label, value, detail }: { label: string; value: stri
   return (
     <div className="rounded-md border border-border/70 bg-background/55 p-3">
       <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-lg font-bold tabular-nums text-foreground">{value}</p>
+      <p className="mt-1 pharos-numeric text-lg font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
   );
@@ -79,18 +79,18 @@ function DependencyHubRow({
                 />
               </svg>
               <span>{DEPENDENCY_TYPE_PRESENTATION[entry.type].label}</span>
-              <span className="font-mono tabular-nums text-foreground">
+              <span className="pharos-numeric text-foreground">
                 {entry.edgeCount} / {entry.summedDirectDependencyWeight.toFixed(2)}
               </span>
             </span>
           ))}
         </div>
       </TableCell>
-      <TableCell className="px-3 py-3 align-top font-mono text-sm font-semibold tabular-nums text-foreground">
+      <TableCell className="px-3 py-3 align-top pharos-numeric text-sm font-semibold text-foreground">
         {hub.dependentCount}
       </TableCell>
       <TableCell className="px-3 py-3 align-top">
-        <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
+        <p className="pharos-numeric text-sm font-semibold text-foreground">
           {hub.summedDirectDependencyWeight.toFixed(2)}
         </p>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/45" aria-hidden="true">
@@ -98,7 +98,7 @@ function DependencyHubRow({
         </div>
       </TableCell>
       <TableCell className="px-3 py-3 align-top">
-        <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
+        <p className="pharos-numeric text-sm font-semibold text-foreground">
           {formatCurrency(hub.uniqueDependentMcapUsd, 1)}
         </p>
         <p className="text-[11px] text-muted-foreground">Hub own market cap {formatCurrency(hub.hubMcapUsd, 1)}</p>

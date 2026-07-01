@@ -61,10 +61,8 @@ export function FlowComparisonChart({
                 type="button"
                 aria-pressed={hours === opt.value}
                 onClick={() => onHoursChange(opt.value)}
-                className={`pharos-focus-ring rounded px-2 py-0.5 text-xs transition-colors ${
-                  hours === opt.value
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${
+                  hours === opt.value ? "pharos-control-pill-active" : ""
                 }`}
               >
                 {opt.label}
@@ -100,7 +98,8 @@ export function FlowComparisonChart({
               : `Net flow comparison — ${total} data points`
           }
         />
-        <ResponsiveContainer width="100%" height={200}>
+        <div className="pharos-chart-stage">
+          <ResponsiveContainer width="100%" height={200}>
           <LineChart
             data={mergedData}
             margin={{ top: 4, right: 8, bottom: 0, left: 0 }}
@@ -159,7 +158,8 @@ export function FlowComparisonChart({
               />
             ))}
           </LineChart>
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

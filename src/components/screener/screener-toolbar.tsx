@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useId } from "react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { useJustEntered } from "@/hooks/use-just-entered";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
@@ -42,12 +41,43 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
   possible: "Possible",
 };
 
-const FILTER_PILL_CLASS_NAME =
-  "min-h-11 font-semibold text-muted-foreground transition-[background-color,border-color,color,box-shadow,filter] hover:text-foreground data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:!border-transparent data-[state=on]:!bg-foreground data-[state=on]:!text-background data-[state=on]:shadow-none sm:min-h-8";
+type FilterPillOption<V extends string> = { value: V; label: string; title?: string };
+
+const TYPE_OPTIONS: readonly FilterPillOption<GovernanceType>[] = GOVERNANCE_TYPE_VALUES.map(
+  (value) => ({ value, label: GOVERNANCE_LABELS_SHORT[value] }),
+);
+const MECHANISM_OPTIONS: readonly FilterPillOption<MechanismArchetype>[] =
+  MECHANISM_ARCHETYPE_VALUES.map((value) => ({ value, label: MECHANISM_ARCHETYPE_LABELS[value] }));
+const BLACKLISTABLE_OPTIONS: readonly FilterPillOption<BlacklistableValue>[] =
+  BLACKLISTABLE_VALUES.map((value) => ({ value, label: BLACKLISTABLE_LABELS[value] }));
+const LIFECYCLE_OPTIONS: readonly FilterPillOption<StablecoinStatus>[] =
+  STABLECOIN_STATUS_VALUES.map((value) => ({ value, label: LIFECYCLE_LABELS[value] }));
+const MINT_AUTHORITY_OPTIONS: readonly FilterPillOption<MintAuthorityStatusKind>[] =
+  MINT_AUTHORITY_FILTER_VALUES.map((value) => ({
+    value,
+    label: MINT_AUTHORITY_STATUS_CONFIG[value].label,
+    title: MINT_AUTHORITY_STATUS_CONFIG[value].detail,
+  }));
+const MINT_AUTHORITY_SCORE_OPTIONS: readonly FilterPillOption<MintAuthorityScoreFilterValue>[] =
+  MINT_AUTHORITY_SCORE_FILTER_VALUES.map((value) => ({
+    value,
+    label: MINT_AUTHORITY_SCORE_FILTER_CONFIG[value].label,
+    title: MINT_AUTHORITY_SCORE_FILTER_CONFIG[value].detail,
+  }));
+const PEG_OPTIONS: readonly FilterPillOption<PegCurrency>[] = PEG_VALUES.map((value) => ({
+  value,
+  label: PEG_METADATA[value].filterLabel,
+  title: PEG_METADATA[value].label,
+}));
+
+function toggleFilterValue<V>(current: readonly V[], value: V): V[] {
+  return current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value];
+}
 
 interface ScreenerToolbarProps {
   filters: ScreenerFilters;
-  matchSummary: string;
+  matchingRows: number;
+  totalRows: number;
   activeFilterCount: number;
   onChange: (next: ScreenerFilters) => void;
   onReset: () => void;
@@ -56,7 +86,8 @@ interface ScreenerToolbarProps {
 
 export function ScreenerToolbar({
   filters,
-  matchSummary,
+  matchingRows,
+  totalRows,
   activeFilterCount,
   onChange,
   onReset,
@@ -87,12 +118,19 @@ export function ScreenerToolbar({
   return (
     <div className="pharos-card-shell space-y-3 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base font-semibold text-foreground" aria-live="polite">
-          <span>{matchSummary}</span>
-          <span className="text-sm font-medium text-muted-foreground">
-            {filterCountLabel}
-          </span>
-        </p>
+        <div className="min-w-0" aria-live="polite">
+          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            {/* One Beam: the live matched-coin count is the page's single frost figure. */}
+            <span className="pharos-numeric text-2xl font-semibold leading-none text-frost-blue">
+              {matchingRows.toLocaleString("en-US")}
+            </span>
+            <span className="text-sm font-medium text-muted-foreground">
+              of <span className="pharos-numeric text-foreground">{totalRows.toLocaleString("en-US")}</span> tracked{" "}
+              {active ? "matching" : "— pre-launch and frozen included"}
+            </span>
+          </p>
+          <p className="pharos-meta mt-0.5">{filterCountLabel}</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {rightSlot}
           <Button
@@ -111,25 +149,25 @@ export function ScreenerToolbar({
           <span className="pharos-kicker" id={`${groupId}-safety-grades`}>
             Safety Grade
           </span>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            className="w-full flex-wrap justify-start"
-            value={filters.safetyGrades as string[]}
-            onValueChange={(v) => update("safetyGrades", v as typeof filters.safetyGrades)}
-            aria-labelledby={`${groupId}-safety-grades`}
-          >
-            {SAFETY_GRADE_VALUES.map((grade) => (
-              <ToggleGroupItem
-                key={grade}
-                value={grade}
-                className={`min-h-11 font-semibold opacity-80 transition-[opacity,box-shadow,filter] data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:border-current data-[state=on]:opacity-100 data-[state=on]:ring-1 data-[state=on]:ring-current data-[state=on]:ring-inset data-[state=on]:brightness-125 sm:min-h-8 ${getSafetyGradeBadgeClassName(grade)} ${justEnteredSafety.has(grade) ? "pharos-chip-animate-in" : ""}`}
-              >
-                {grade}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          {/* Grade pills keep the semantic green→red ramp (a data-driven
+              indicator), so they use the pill shape + focus ring but their own
+              grade color instead of the neutral control-pill-active fill. */}
+          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={`${groupId}-safety-grades`}>
+            {SAFETY_GRADE_VALUES.map((grade) => {
+              const isActive = filters.safetyGrades.includes(grade);
+              return (
+                <button
+                  key={grade}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => update("safetyGrades", toggleFilterValue(filters.safetyGrades, grade))}
+                  className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 font-semibold ${getSafetyGradeBadgeClassName(grade)} ${isActive ? "opacity-100 ring-1 ring-inset ring-current brightness-110" : "opacity-70"} ${justEnteredSafety.has(grade) ? "pharos-chip-animate-in" : ""}`}
+                >
+                  {grade}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <ThresholdField
           label="DEWS Stress"
@@ -209,185 +247,103 @@ export function ScreenerToolbar({
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,0.75fr)]">
-        <div className="space-y-2">
-          <span className="pharos-kicker" id={`${groupId}-types`}>
-            Type
-          </span>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            className="w-full flex-wrap justify-start"
-            value={filters.types as string[]}
-            onValueChange={(v) => update("types", v as GovernanceType[])}
-            aria-labelledby={`${groupId}-types`}
-          >
-            {GOVERNANCE_TYPE_VALUES.map((type) => (
-              <ToggleGroupItem
-                key={type}
-                value={type}
-                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredTypes.has(type) ? "pharos-chip-animate-in" : ""}`}
-              >
-                {GOVERNANCE_LABELS_SHORT[type]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="space-y-2">
-          <span className="pharos-kicker" id={`${groupId}-mechanisms`}>
-            Mechanism
-          </span>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            className="w-full flex-wrap justify-start"
-            value={filters.mechanisms as string[]}
-            onValueChange={(v) => update("mechanisms", v as MechanismArchetype[])}
-            aria-labelledby={`${groupId}-mechanisms`}
-          >
-            {MECHANISM_ARCHETYPE_VALUES.map((archetype) => (
-              <ToggleGroupItem
-                key={archetype}
-                value={archetype}
-                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredMechanisms.has(archetype) ? "pharos-chip-animate-in" : ""}`}
-              >
-                {MECHANISM_ARCHETYPE_LABELS[archetype]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="space-y-2">
-          <span className="pharos-kicker" id={`${groupId}-blacklistable`}>
-            Blacklistable
-          </span>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            className="w-full flex-wrap justify-start"
-            value={filters.blacklistable as string[]}
-            onValueChange={(v) => update("blacklistable", v as BlacklistableValue[])}
-            aria-labelledby={`${groupId}-blacklistable`}
-          >
-            {BLACKLISTABLE_VALUES.map((bucket) => (
-              <ToggleGroupItem
-                key={bucket}
-                value={bucket}
-                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredBlacklistable.has(bucket) ? "pharos-chip-animate-in" : ""}`}
-              >
-                {BLACKLISTABLE_LABELS[bucket]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="space-y-2">
-          <span className="pharos-kicker" id={`${groupId}-lifecycle`}>
-            Lifecycle
-          </span>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            className="w-full flex-wrap justify-start"
-            value={filters.lifecycle as string[]}
-            onValueChange={(v) => update("lifecycle", v as StablecoinStatus[])}
-            aria-labelledby={`${groupId}-lifecycle`}
-          >
-            {STABLECOIN_STATUS_VALUES.map((status) => (
-              <ToggleGroupItem
-                key={status}
-                value={status}
-                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredLifecycle.has(status) ? "pharos-chip-animate-in" : ""}`}
-              >
-                {LIFECYCLE_LABELS[status]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
+        <FilterPillGroup
+          kicker="Type"
+          options={TYPE_OPTIONS}
+          selected={filters.types}
+          justEntered={justEnteredTypes}
+          onChange={(next) => update("types", next)}
+        />
+        <FilterPillGroup
+          kicker="Mechanism"
+          options={MECHANISM_OPTIONS}
+          selected={filters.mechanisms}
+          justEntered={justEnteredMechanisms}
+          onChange={(next) => update("mechanisms", next)}
+        />
+        <FilterPillGroup
+          kicker="Blacklistable"
+          options={BLACKLISTABLE_OPTIONS}
+          selected={filters.blacklistable}
+          justEntered={justEnteredBlacklistable}
+          onChange={(next) => update("blacklistable", next)}
+        />
+        <FilterPillGroup
+          kicker="Lifecycle"
+          options={LIFECYCLE_OPTIONS}
+          selected={filters.lifecycle}
+          justEntered={justEnteredLifecycle}
+          onChange={(next) => update("lifecycle", next)}
+        />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="space-y-2">
-          <span className="pharos-kicker" id={`${groupId}-mint-authority`}>
-            Mint Authority Route
-          </span>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            className="w-full flex-wrap justify-start"
-            value={filters.mintAuthority as string[]}
-            onValueChange={(v) => update("mintAuthority", v as MintAuthorityStatusKind[])}
-            aria-labelledby={`${groupId}-mint-authority`}
-          >
-            {MINT_AUTHORITY_FILTER_VALUES.map((statusKind) => (
-              <ToggleGroupItem
-                key={statusKind}
-                value={statusKind}
-                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredMintAuthority.has(statusKind) ? "pharos-chip-animate-in" : ""}`}
-                title={MINT_AUTHORITY_STATUS_CONFIG[statusKind].detail}
-              >
-                {MINT_AUTHORITY_STATUS_CONFIG[statusKind].label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="space-y-2">
-          <span className="pharos-kicker" id={`${groupId}-mint-authority-score`}>
-            Mint Authority Score
-          </span>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            className="w-full flex-wrap justify-start"
-            value={filters.mintAuthorityScores as string[]}
-            onValueChange={(v) => update("mintAuthorityScores", v as MintAuthorityScoreFilterValue[])}
-            aria-labelledby={`${groupId}-mint-authority-score`}
-          >
-            {MINT_AUTHORITY_SCORE_FILTER_VALUES.map((scoreKind) => (
-              <ToggleGroupItem
-                key={scoreKind}
-                value={scoreKind}
-                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredMintAuthorityScores.has(scoreKind) ? "pharos-chip-animate-in" : ""}`}
-                title={MINT_AUTHORITY_SCORE_FILTER_CONFIG[scoreKind].detail}
-              >
-                {MINT_AUTHORITY_SCORE_FILTER_CONFIG[scoreKind].label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
+        <FilterPillGroup
+          kicker="Mint Authority Route"
+          options={MINT_AUTHORITY_OPTIONS}
+          selected={filters.mintAuthority}
+          justEntered={justEnteredMintAuthority}
+          onChange={(next) => update("mintAuthority", next)}
+        />
+        <FilterPillGroup
+          kicker="Mint Authority Score"
+          options={MINT_AUTHORITY_SCORE_OPTIONS}
+          selected={filters.mintAuthorityScores}
+          justEntered={justEnteredMintAuthorityScores}
+          onChange={(next) => update("mintAuthorityScores", next)}
+        />
       </div>
 
-      <div className="space-y-2">
-        <span className="pharos-kicker" id={`${groupId}-pegs`}>
-          Peg
-        </span>
-        <ToggleGroup
-          type="multiple"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={filters.pegs as string[]}
-          onValueChange={(v) => update("pegs", v as PegCurrency[])}
-          aria-labelledby={`${groupId}-pegs`}
-        >
-          {PEG_VALUES.map((peg) => (
-            <ToggleGroupItem
-              key={peg}
-              value={peg}
-              className={`${FILTER_PILL_CLASS_NAME} ${justEnteredPegs.has(peg) ? "pharos-chip-animate-in" : ""}`}
-              title={PEG_METADATA[peg].label}
+      <FilterPillGroup
+        kicker="Peg"
+        options={PEG_OPTIONS}
+        selected={filters.pegs}
+        justEntered={justEnteredPegs}
+        onChange={(next) => update("pegs", next)}
+      />
+    </div>
+  );
+}
+
+interface FilterPillGroupProps<V extends string> {
+  kicker: string;
+  options: readonly FilterPillOption<V>[];
+  selected: readonly V[];
+  justEntered: ReadonlySet<V>;
+  onChange: (next: V[]) => void;
+}
+
+function FilterPillGroup<V extends string>({
+  kicker,
+  options,
+  selected,
+  justEntered,
+  onChange,
+}: FilterPillGroupProps<V>) {
+  const labelId = useId();
+  return (
+    <div className="space-y-2">
+      <span className="pharos-kicker" id={labelId}>
+        {kicker}
+      </span>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={labelId}>
+        {options.map((option) => {
+          const isActive = selected.includes(option.value);
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={isActive}
+              title={option.title}
+              onClick={() => onChange(toggleFilterValue(selected, option.value))}
+              className={`pharos-focus-ring pharos-control-pill px-2.5 py-1${
+                isActive ? " pharos-control-pill-active" : ""
+              }${justEntered.has(option.value) ? " pharos-chip-animate-in" : ""}`}
             >
-              {PEG_METADATA[peg].filterLabel}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+              {option.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -451,7 +407,7 @@ function ThresholdField({
           value={minValue || ""}
           placeholder={placeholder ?? String(defaultMin)}
           onChange={(e) => onMinChange(parseValue(e.target.value, defaultMin))}
-          className="pharos-focus-ring min-h-11 w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm tabular-nums sm:min-h-9"
+          className="pharos-focus-ring min-h-11 w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm pharos-numeric sm:min-h-9"
         />
       </div>
     </div>

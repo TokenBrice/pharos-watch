@@ -265,7 +265,7 @@ function ScreenerLayoutPending() {
 
 function ScoreValue({ value }: { value: number | null }) {
   return value != null ? (
-    <span className="font-mono tabular-nums text-foreground">{value.toFixed(0)}</span>
+    <span className="pharos-numeric text-foreground">{value.toFixed(0)}</span>
   ) : (
     <span className="text-muted-foreground">—</span>
   );
@@ -328,7 +328,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         </Link>
         <div className="shrink-0 text-right">
           <p className="pharos-kicker">Supply</p>
-          <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
+          <p className="pharos-numeric text-sm font-semibold text-foreground">
             {row.supplyUsd > 0 ? formatCompactUsd(row.supplyUsd) : "—"}
           </p>
         </div>
@@ -376,7 +376,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
 
 function DesktopScoreCell({ value }: { value: number | null }) {
   return (
-    <TableCell className="text-right tabular-nums">
+    <TableCell className="text-right pharos-numeric">
       {value != null ? value.toFixed(0) : (
         <span className="text-muted-foreground">—</span>
       )}
@@ -417,7 +417,7 @@ function ScreenerRow({
           />
         </Link>
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="text-right pharos-numeric">
         {row.supplyUsd > 0 ? formatCompactUsd(row.supplyUsd) : (
           <span className="text-muted-foreground">—</span>
         )}

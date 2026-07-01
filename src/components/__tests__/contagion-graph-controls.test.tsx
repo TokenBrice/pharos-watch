@@ -31,7 +31,7 @@ describe("ContagionGraphControls", () => {
   it("emits the all node-limit option without numeric coercion", () => {
     const { onNodeLimitChange } = renderControls();
 
-    const limitControls = screen.getByLabelText("Maximum nodes shown");
+    const limitControls = screen.getByRole("group", { name: "Maximum nodes shown" });
     fireEvent.click(within(limitControls).getByText("All"));
 
     expect(onNodeLimitChange).toHaveBeenCalledWith(ALL_NODE_LIMIT);

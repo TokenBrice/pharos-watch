@@ -4,12 +4,12 @@ import { useMemo } from "react";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
-import { ContagionGraph } from "@/components/contagion-graph";
 import { DependencyMapMobileSummary } from "@/components/dependency-map-mobile-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { DependencyHero } from "./dependency-hero";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
 import { buildDependencyHubsModel } from "./dependency-hubs-model";
 
@@ -81,7 +81,8 @@ export function DependencyMapClient() {
 
   return (
     <div className="space-y-4">
-      <ContagionGraph
+      <DependencyHero
+        model={dependencyHubsModel}
         cards={reportData.cards}
         dependencyEdges={reportData.dependencyGraph?.edges}
         mcapMap={mcapMap}
