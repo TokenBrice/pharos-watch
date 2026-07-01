@@ -50,15 +50,16 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 
 The CI guard in `npm run check:frozen-invariants` enforces the listed independent registry removals; `liveReservesConfig` and bespoke per-coin crons still require manual review.
 
-### 3b. Add the cemetery logo
+### 3b. Add or verify the cemetery logo
 
-Copy the active logo from the path registered for the coin in `data/logos.json` into the cemetery directory using the symbol-derived filename `frozenToDeadShape` resolves:
+`frozenToDeadShape()` uses the coin's canonical `data/logos.json` entry for frozen cemetery rows. Verify that entry points to an existing asset under `public/logos/` before freezing the coin.
 
 ```bash
-cp "public/logos/<registered-logo-file>.png" "public/logos/cemetery/${SYMBOL_LOWERCASE}.png"
+rg '"<coin-id>"' data/logos.json
+test -f "public/logos/<registered-logo-file>"
 ```
 
-The cemetery tombstone falls back to a single-letter glyph when the file is missing.
+If no canonical tracked logo is registered, add one or copy the active logo into the cemetery directory using the symbol-derived fallback filename that `frozenToDeadShape()` resolves. The cemetery tombstone falls back to a single-letter glyph when the file is missing.
 
 ### 4. Validate
 

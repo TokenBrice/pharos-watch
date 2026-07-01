@@ -60,4 +60,33 @@ describe("buildMergedCemetery", () => {
     const result = frozenToDeadShape(eurr!);
     expect(result.logo).toBe("/logos/239-eurr.png");
   });
+
+  it("uses canonical tracked logo paths for frozen assets with id-named logos", () => {
+    const msy = FROZEN_STABLECOINS.find((coin) => coin.id === "msy-main-street");
+    expect(msy).toBeDefined();
+
+    const result = frozenToDeadShape(msy!);
+    expect(result.logo).toBe("/logos/msy-main-street.png");
+  });
+
+  it("falls back to the legacy cemetery logo heuristic when no tracked logo is registered", () => {
+    const result = frozenToDeadShape({
+      id: "synthetic-frozen",
+      name: "Synthetic",
+      symbol: "SYN",
+      llamaId: "123",
+      flags: { pegCurrency: "USD" },
+      contracts: undefined,
+      obituary: {
+        deathDate: "2026-01-01",
+        epitaph: "Synthetic epitaph",
+        obituary: "Synthetic obituary",
+        causeOfDeath: "abandoned",
+        sourceUrl: "https://example.com",
+        sourceLabel: "Example",
+      },
+    } as unknown as Parameters<typeof frozenToDeadShape>[0]);
+
+    expect(result.logo).toBe("/logos/123-syn.png");
+  });
 });

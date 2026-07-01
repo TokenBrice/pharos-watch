@@ -1,4 +1,5 @@
 import type { DeadStablecoin } from "../types";
+import logosByStablecoinId from "../../data/logos.json";
 import { DEAD_STABLECOINS } from "./dead-stablecoins";
 // Cemetery rendering needs obituary prose, contracts, and peak market cap —
 // fields that intentionally live outside the slim client projection. Stay on
@@ -11,6 +12,10 @@ export type CemeteryEntry = DeadStablecoin & { archivedDataAvailable?: boolean }
 type FrozenStablecoin = (typeof FROZEN_STABLECOINS)[number];
 
 function frozenLogoPath(coin: FrozenStablecoin): string {
+  const registeredLogo = (logosByStablecoinId as Record<string, string | undefined>)[coin.id];
+  if (registeredLogo) {
+    return registeredLogo;
+  }
   const symbolSlug = coin.symbol.toLowerCase();
   return coin.llamaId ? `/logos/${coin.llamaId}-${symbolSlug}.png` : `${symbolSlug}.png`;
 }
