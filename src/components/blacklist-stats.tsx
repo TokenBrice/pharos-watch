@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
+import { cn } from "@/lib/utils";
 import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
@@ -79,11 +80,10 @@ export function BlacklistStats({
     <div className="grid grid-cols-1 gap-3 animate-in fade-in duration-300 sm:grid-cols-2 sm:gap-5">
       {hasFreezeLedgerWarnings ? (
         <Card
-          className={
-            qualityTone === "stale"
-              ? "rounded-xl border-amber-500/60 bg-amber-500/10 sm:col-span-2"
-              : "rounded-xl border-yellow-500/60 bg-yellow-500/10 sm:col-span-2"
-          }
+          className={cn(
+            "pharos-card-shell border-l-[3px] sm:col-span-2",
+            qualityTone === "stale" ? "border-l-amber-500/70" : "border-l-yellow-500/70",
+          )}
           role="status"
         >
           <CardHeader className="pb-2">
@@ -120,7 +120,7 @@ export function BlacklistStats({
         subtext={unfreezableMarketShareSubtext}
         className="sm:col-span-2"
         contentClassName="pt-1"
-        valueClassName="text-4xl font-black leading-none sm:text-5xl"
+        valueClassName="pharos-numeric text-4xl font-semibold leading-none tabular-nums sm:text-5xl"
         subtextClassName="mt-2 text-sm text-muted-foreground"
         onClick={canDrillIntoUnfreezable ? onUnfreezableSelect : undefined}
         actionLabel="Show unfreezable stablecoins"
@@ -129,14 +129,14 @@ export function BlacklistStats({
         title="Tracked Frozen Total"
         value={formatCurrency(trackedFrozenTotal)}
         subtext="last-known freeze snapshots"
-        valueClassName="text-3xl font-black"
+        valueClassName="pharos-numeric text-3xl font-semibold tabular-nums"
         subtextClassName="text-sm text-muted-foreground"
       />
       <MetricStatCard
         title="Total Wiped Value"
         value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
         subtext="destroyed or confiscated value"
-        valueClassName="text-3xl font-black"
+        valueClassName="pharos-numeric text-3xl font-semibold tabular-nums"
         subtextClassName="text-sm text-muted-foreground"
       />
     </div>

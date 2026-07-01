@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { ComposedChart, Bar, Line, Tooltip } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
@@ -52,26 +51,24 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl">
-        <CardHeader>
+      <section className="pharos-card-shell overflow-hidden rounded-xl">
+        <div className="space-y-2 border-b border-border/50 p-5 sm:p-6">
           <Skeleton className="h-6 w-56" />
           <Skeleton className="h-4 w-72 mt-1" />
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="p-5 sm:p-6">
           <Skeleton className={`${CHART_HEIGHT} w-full`} />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     );
   }
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader>
+    <section className="pharos-card-shell overflow-hidden rounded-xl animate-in fade-in duration-300">
+      <div className="space-y-2 border-b border-border/50 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle as="h2" className="pharos-kicker">
-              Tracked Frozen Total by Quarter
-            </CardTitle>
+            <h2 className="pharos-kicker">Tracked Frozen Total by Quarter</h2>
             <p className="text-sm text-muted-foreground">
               Quarterly spread of the tracked freeze ledger, attributed to each address&apos;s latest recorded freeze
               quarter.
@@ -85,7 +82,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                   className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground"
                 >
                   <span className="font-medium text-foreground">{quarter.quarter}</span>
-                  <span className="font-mono">{formatCurrency(quarter.total, 0)}</span>
+                  <span className="pharos-numeric">{formatCurrency(quarter.total, 0)}</span>
                 </span>
               ))}
             </div>
@@ -94,8 +91,8 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
         <p className="text-xs text-muted-foreground">
           Bars stack only tracked USD balances, so the quarterly totals roll up to the public freeze-ledger total.
         </p>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div className="p-5 sm:p-6">
         {chartData.length > 0 ? (
           <>
             <div className="mb-3 flex flex-wrap gap-2">
@@ -112,13 +109,14 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                 Total
               </ChartLegendChip>
             </div>
-            <div
-              ref={chartContainerRef}
-              className={CHART_HEIGHT}
-              role="figure"
-              aria-label={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
-            >
-              {isChartReady ? (
+            <div className="pharos-chart-stage">
+              <div
+                ref={chartContainerRef}
+                className={CHART_HEIGHT}
+                role="figure"
+                aria-label={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
+              >
+                {isChartReady ? (
                 <ComposedChart
                   width={width}
                   height={height}
@@ -168,18 +166,21 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                     activeDot={{ r: 3, strokeWidth: 0 }}
                   />
                 </ComposedChart>
-              ) : (
-                <Skeleton className="h-full w-full" />
-              )}
+                ) : (
+                  <Skeleton className="h-full w-full" />
+                )}
+              </div>
             </div>
           </>
         ) : (
-          <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
+          <div
+            className={`pharos-chart-stage flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}
+          >
             No freeze events recorded yet.
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

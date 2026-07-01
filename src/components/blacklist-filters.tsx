@@ -1,10 +1,34 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "pharos-focus-ring pharos-control-pill min-h-11 px-3 sm:min-h-8",
+        active && "pharos-control-pill-active",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 interface BlacklistFiltersProps {
   chains: Array<{ id: string; name: string }>;
@@ -46,26 +70,20 @@ export function BlacklistFilters({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-6">
       <div className="space-y-1.5">
         <span className="pharos-kicker">Stablecoin</span>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={stablecoinFilter}
-          onValueChange={(v) => {
-            if (v) onStablecoinChange(v as BlacklistStablecoin | "all");
-          }}
-          aria-label="Filter by stablecoin"
-        >
-          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
+        <div className="flex w-full flex-wrap justify-start gap-1.5" role="group" aria-label="Filter by stablecoin">
+          <FilterPill active={stablecoinFilter === "all"} onClick={() => onStablecoinChange("all")}>
             All
-          </ToggleGroupItem>
+          </FilterPill>
           {(hasEventCounts ? withEvents : BLACKLIST_STABLECOINS).map((stablecoin) => (
-            <ToggleGroupItem key={stablecoin} value={stablecoin} className="min-h-11 sm:min-h-8">
+            <FilterPill
+              key={stablecoin}
+              active={stablecoinFilter === stablecoin}
+              onClick={() => onStablecoinChange(stablecoin)}
+            >
               {stablecoin}
-            </ToggleGroupItem>
+            </FilterPill>
           ))}
-        </ToggleGroup>
+        </div>
         {hasEventCounts && withoutEvents.length > 0 ? (
           <div className="space-y-1.5">
             <button
@@ -82,77 +100,55 @@ export function BlacklistFilters({
               {showWithoutEvents ? "Hide" : "Show"} tracked without events yet ({withoutEvents.length})
             </button>
             {showWithoutEvents ? (
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                size="sm"
+              <div
                 id="blacklist-no-events-filter-group"
-                className="w-full flex-wrap justify-start opacity-80"
-                value={stablecoinFilter}
-                onValueChange={(v) => {
-                  if (v) onStablecoinChange(v as BlacklistStablecoin | "all");
-                }}
+                className="flex w-full flex-wrap justify-start gap-1.5 opacity-80"
+                role="group"
                 aria-label="Filter by stablecoin without recorded events"
               >
                 {withoutEvents.map((stablecoin) => (
-                  <ToggleGroupItem key={stablecoin} value={stablecoin} className="min-h-11 sm:min-h-8">
+                  <FilterPill
+                    key={stablecoin}
+                    active={stablecoinFilter === stablecoin}
+                    onClick={() => onStablecoinChange(stablecoin)}
+                  >
                     {stablecoin}
-                  </ToggleGroupItem>
+                  </FilterPill>
                 ))}
-              </ToggleGroup>
+              </div>
             ) : null}
           </div>
         ) : null}
       </div>
       <div className="space-y-1.5">
         <span className="pharos-kicker">Chain</span>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={chainFilter}
-          onValueChange={(v) => {
-            if (v) onChainChange(v);
-          }}
-          aria-label="Filter by chain"
-        >
-          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
+        <div className="flex w-full flex-wrap justify-start gap-1.5" role="group" aria-label="Filter by chain">
+          <FilterPill active={chainFilter === "all"} onClick={() => onChainChange("all")}>
             All
-          </ToggleGroupItem>
+          </FilterPill>
           {chains.map((chain) => (
-            <ToggleGroupItem key={chain.id} value={chain.id} className="min-h-11 sm:min-h-8">
+            <FilterPill key={chain.id} active={chainFilter === chain.id} onClick={() => onChainChange(chain.id)}>
               {chain.name}
-            </ToggleGroupItem>
+            </FilterPill>
           ))}
-        </ToggleGroup>
+        </div>
       </div>
       <div className="space-y-1.5">
         <span className="pharos-kicker">Event Type</span>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={eventTypeFilter}
-          onValueChange={(v) => {
-            if (v) onEventTypeChange(v as BlacklistEventType | "all");
-          }}
-          aria-label="Filter by event type"
-        >
-          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
+        <div className="flex w-full flex-wrap justify-start gap-1.5" role="group" aria-label="Filter by event type">
+          <FilterPill active={eventTypeFilter === "all"} onClick={() => onEventTypeChange("all")}>
             All
-          </ToggleGroupItem>
-          <ToggleGroupItem value="blacklist" className="min-h-11 sm:min-h-8">
+          </FilterPill>
+          <FilterPill active={eventTypeFilter === "blacklist"} onClick={() => onEventTypeChange("blacklist")}>
             Freeze
-          </ToggleGroupItem>
-          <ToggleGroupItem value="unblacklist" className="min-h-11 sm:min-h-8">
+          </FilterPill>
+          <FilterPill active={eventTypeFilter === "unblacklist"} onClick={() => onEventTypeChange("unblacklist")}>
             Release
-          </ToggleGroupItem>
-          <ToggleGroupItem value="destroy" className="min-h-11 sm:min-h-8">
+          </FilterPill>
+          <FilterPill active={eventTypeFilter === "destroy"} onClick={() => onEventTypeChange("destroy")}>
             Wipe
-          </ToggleGroupItem>
-        </ToggleGroup>
+          </FilterPill>
+        </div>
       </div>
     </div>
   );

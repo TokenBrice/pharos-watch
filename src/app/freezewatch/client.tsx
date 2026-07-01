@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
@@ -14,10 +15,15 @@ import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { FreezableSupplyMeter } from "@/components/freezewatch/freezable-supply-meter";
+import {
+  FreezableSupplyMeter,
+  computeFreezableSummary,
+  formatShare,
+} from "@/components/freezewatch/freezable-supply-meter";
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
 import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
+import { formatCurrency } from "@shared/lib/format";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -44,6 +50,19 @@ function FreezeWatchSection({
       </div>
       {children}
     </section>
+  );
+}
+
+function HeroStat({ label, value, loading }: { label: string; value: string; loading: boolean }) {
+  return (
+    <div className="space-y-1">
+      <dt className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
+      {loading ? (
+        <Skeleton className="h-7 w-24" />
+      ) : (
+        <dd className="pharos-numeric text-xl font-semibold tabular-nums text-foreground sm:text-2xl">{value}</dd>
+      )}
+    </div>
   );
 }
 
@@ -96,6 +115,10 @@ export default function FreezeWatchClient() {
     focusedCoin?.id ??
     (stablecoinFilter !== "all" ? coinIdBySymbol(stablecoinFilter) : null);
 
+  const heroLoading = summaryLoading || supportDataLoading;
+  const { freezableMarketCap, freezableCount, freezableShare } =
+    computeFreezableSummary(blacklistStatusBuckets);
+
   return (
     <FeaturePageShell
       breadcrumbName="FreezeWatch"
@@ -128,23 +151,44 @@ export default function FreezeWatchClient() {
         ]}
       />
 
-      <section className="space-y-3 animate-in fade-in duration-300">
-        <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
-          <FreezableSupplyMeter
-            buckets={blacklistStatusBuckets}
-            isLoading={summaryLoading || supportDataLoading}
-            selectedBucket={statusBucket}
-            onBucketSelect={handleStatusBucketChange}
-          />
-          <BlacklistStats
-            summary={summary}
-            isLoading={summaryLoading}
-            blacklistStatusBuckets={blacklistStatusBuckets}
-            supportDataLoading={supportDataLoading}
-            onUnfreezableSelect={() => handleStatusBucketChange("no")}
-          />
+      <section
+        aria-label="Freezable supply overview"
+        className="pharos-card-shell overflow-hidden animate-in fade-in duration-300"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-border/50 p-5 sm:p-6">
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-sm font-medium text-muted-foreground">Freezable share of tracked supply</p>
+            {heroLoading ? (
+              <Skeleton className="h-10 w-32" />
+            ) : (
+              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+                {formatShare(freezableShare)}
+              </p>
+            )}
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              of tracked stablecoin market cap sits under direct, upstream, or possible issuer freeze control.
+            </p>
+          </div>
+          <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
+            <HeroStat label="Freezable value" value={formatCurrency(freezableMarketCap, 0)} loading={heroLoading} />
+            <HeroStat label="Freezable coins" value={String(freezableCount)} loading={heroLoading} />
+          </dl>
         </div>
+        <FreezableSupplyMeter
+          buckets={blacklistStatusBuckets}
+          isLoading={heroLoading}
+          selectedBucket={statusBucket}
+          onBucketSelect={handleStatusBucketChange}
+        />
       </section>
+
+      <BlacklistStats
+        summary={summary}
+        isLoading={summaryLoading}
+        blacklistStatusBuckets={blacklistStatusBuckets}
+        supportDataLoading={supportDataLoading}
+        onUnfreezableSelect={() => handleStatusBucketChange("no")}
+      />
 
       {statusBucket ? (
         <div ref={drilldownRef}>
@@ -166,7 +210,7 @@ export default function FreezeWatchClient() {
         description="Filter by asset, chain, event type, or address to isolate the rows that matter."
       >
         <div className="pharos-card-shell rounded-xl">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-4 p-4 sm:p-5">
             <BlacklistFilters
               chains={summary?.chains ?? []}
               stablecoinFilter={stablecoinFilter}
