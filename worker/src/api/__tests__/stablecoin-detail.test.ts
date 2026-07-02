@@ -358,6 +358,49 @@ describe("handleStablecoinDetail", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("lets synchronous callers read a refresh also awaited by stale background refresh", async () => {
+    const staleCachedValue = makeDLDetailBody({ tokens: [
+      { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },
+    ] });
+    const freshUpstreamBody = makeDLDetailBody({ tokens: [
+      { date: 1700000000, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
+    ] });
+    const now = Math.floor(Date.now() / 1000);
+    const staleDb = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { value: staleCachedValue, updated_at: now - 900 },
+      },
+    ]);
+    const coldDb = mockD1([{ match: "cache", rows: [] }]);
+    let resolveFetch!: (response: Response) => void;
+    fetchSpy.mockReturnValueOnce(new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    }));
+
+    const backgroundCtx = makeCtx();
+    const staleRes = await handleStablecoinDetail(staleDb, "usdt-tether", backgroundCtx);
+    expect(staleRes.status).toBe(200);
+    expect(staleRes.headers.get("Warning")).toContain("refresh scheduled");
+    expect(backgroundCtx.waitUntil).toHaveBeenCalledTimes(1);
+
+    const syncCtx = makeCtx();
+    const syncResponse = handleStablecoinDetail(coldDb, "usdt-tether", syncCtx);
+    resolveFetch(new Response(freshUpstreamBody, { status: 200 }));
+
+    const res = await syncResponse;
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/json");
+    expect(res.headers.get("Cache-Control")).toMatch(/s-maxage/);
+    const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
+    expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(120_000_000);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(syncCtx.waitUntil).not.toHaveBeenCalled();
+
+    await Promise.allSettled(backgroundCtx.waitUntilPromises);
+  });
+
   it("calls ctx.waitUntil to cache the response", async () => {
     const dlBody = makeDLDetailBody();
     const db = mockD1([{ match: "cache", rows: [] }]);

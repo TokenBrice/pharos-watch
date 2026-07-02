@@ -11,11 +11,40 @@ import {
 import { applyCuratedDetailAddress } from "./stablecoin-detail/defillama";
 import { routeStablecoinDetail } from "./stablecoin-detail/router";
 
+interface SharedDetailRefreshResponse {
+  body: ArrayBuffer;
+  status: number;
+  statusText: string;
+  headers: [string, string][];
+}
+
 // Per-isolate, best-effort de-dupe of concurrent detail refreshes for the same coin.
 // This Map is scoped to a single Worker isolate and does NOT serialize across isolates,
 // so under load multiple isolates can each run one refresh for the same coin. Cross-isolate
 // herd protection relies on the circuit breaker + D1 cache (stale-serve), not this Map.
-const detailRefreshesInFlight = new Map<string, Promise<Response>>();
+// Store bytes instead of Response objects so overlapping consumers never share a live body stream.
+const detailRefreshesInFlight = new Map<string, Promise<SharedDetailRefreshResponse>>();
+
+function responseStatusForbidsBody(status: number): boolean {
+  return status === 101 || status === 204 || status === 205 || status === 304;
+}
+
+async function materializeSharedResponse(response: Response): Promise<SharedDetailRefreshResponse> {
+  return {
+    body: await response.arrayBuffer(),
+    status: response.status,
+    statusText: response.statusText,
+    headers: Array.from(response.headers.entries()),
+  };
+}
+
+function createResponseFromSharedResponse(response: SharedDetailRefreshResponse): Response {
+  return new Response(responseStatusForbidsBody(response.status) ? null : response.body.slice(0), {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
 
 function startStablecoinDetailRefresh(config: {
   db: D1Database;
@@ -24,7 +53,7 @@ function startStablecoinDetailRefresh(config: {
   cached: { value: string; updatedAt: number } | null;
   ctx: ExecutionContext;
   coingeckoApiKey?: string | null;
-}): Promise<Response> {
+}): Promise<SharedDetailRefreshResponse> {
   const cacheKey = `detail:${config.id}`;
   const existing = detailRefreshesInFlight.get(cacheKey);
   if (existing) return existing;
@@ -37,7 +66,7 @@ function startStablecoinDetailRefresh(config: {
       cached: config.cached,
       execCtx: config.ctx,
     });
-    return routeStablecoinDetail(
+    const response = await routeStablecoinDetail(
       {
         db: config.db,
         stablecoinId: config.id,
@@ -46,6 +75,7 @@ function startStablecoinDetailRefresh(config: {
       },
       detail,
     );
+    return materializeSharedResponse(response);
   })().finally(() => {
     detailRefreshesInFlight.delete(cacheKey);
   });
@@ -65,7 +95,7 @@ function scheduleStablecoinDetailRefresh(config: {
   const refresh = startStablecoinDetailRefresh(config);
   config.ctx.waitUntil(
     refresh
-      .then((response) => response.body?.cancel().catch(() => undefined))
+      .then(() => undefined)
       .catch((err) => {
         console.warn(
           `[detail] background refresh failed stablecoin=${config.id} error=${String(err).slice(0, 300)}`,
@@ -102,7 +132,7 @@ export const handleStablecoinDetail = withErrorHandler(
           ctx,
           coingeckoApiKey,
         });
-        return response.clone();
+        return createResponseFromSharedResponse(response);
       }
       scheduleStablecoinDetailRefresh({ db, id, pegType, cached: normalizedCached, ctx, coingeckoApiKey });
       return createStaleCacheHitResponse(normalizedCached.value, age);
@@ -116,6 +146,6 @@ export const handleStablecoinDetail = withErrorHandler(
       ctx,
       coingeckoApiKey,
     });
-    return response.clone();
+    return createResponseFromSharedResponse(response);
   },
 );

@@ -1936,6 +1936,18 @@
     "description": "startStablecoinDetailRefresh de-dupes concurrent refreshes per coin by sharing ONE Promise<Response> (line 29-30). scheduleStablecoinDetailRefresh attaches `.then((response) => response.body?.cancel())` (line 68) to that shared promise. If a second request for the same coin arrives while that refresh is in flight and takes a synchronous path — cache age crossing DETAIL_STALE_CACHE_MAX_AGE_SECONDS (= 1 day) at line 93, or the cache row vanishing — it receives the SAME promise and calls `response.clone()` (lines 105/119). When the background continuation was attached first, its cancel() disturbs the body before the sync caller resumes, and clone() on a disturbed body throws TypeError, which withErrorHandler converts to a 500 for a request that should have succeeded.",
     "recommendation": "Make the shared in-flight value immune to consumer ordering: inside the shared promise, buffer the payload once (e.g. resolve to {status, headers, bodyText} or a fully-read Response) and have each consumer construct/clone its own Response; the scheduled path then needs no cancel() at all. This only removes the erroneous 500 in the race window; all successful responses are byte-identical.",
     "estImpact": "eliminates sporadic 500s on /api/stablecoin/<id> under concurrency"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed shared stablecoin-detail refreshes to materialize response bytes and metadata once, then construct a fresh Response for each consumer so background refresh handling cannot disturb synchronous callers.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/stablecoin-detail.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/stablecoin-detail.ts worker/src/api/__tests__/stablecoin-detail.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added a regression where a stale-cache background refresh and a synchronous cold-cache caller share the same in-flight refresh and both complete without cloning a disturbed body."
    }
   },
   {
