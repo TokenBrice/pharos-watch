@@ -73,7 +73,7 @@ Selected specialized checks:
 - Provider fetch resilience changes: `npm run check:provider-resilience` verifies the external-provider registry, required timeout/body/circuit/test markers, and raw Worker `fetch(...)` coverage.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Static export SEO: `npm run seo:check`; live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch`.
-- Static export accessibility: `npm run test:a11y` scans the bare static export, while `npm run test:a11y:hydrated` reuses the API-backed static-export smoke server so axe sees hydrated product data.
+- Static export accessibility: `npm run test:a11y` scans the bare static export, while `npm run test:a11y:hydrated` reuses the API-backed static-export smoke server so axe sees hydrated product data. Both run route-per-test with 3 Playwright workers (`fullyParallel: true` in `playwright.config.ts`); the scans are independent per route, so parallelism changes no coverage.
 - GSC exports: `npm run analyze:gsc-coverage -- <path>` and `npm run analyze:gsc-performance -- <path>` are offline triage helpers.
 - Optional render-budget probe: `node scripts/maintenance/audit-seo-render-budget.mjs --url https://pharos.watch`.
 
@@ -142,6 +142,15 @@ export default defineConfig({
 ```
 
 The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and pull-request CI runs a non-blocking Node 26 typecheck proof lane.
+
+The suite is split into four `test.projects` (all `extends: true` from the root config):
+
+- `node` — `functions/`, `scripts/`, `shared/` suites with `isolate: false` (pure-node tests reuse worker processes instead of paying a fork per file).
+- `node-isolated` — the few node-root suites that depend on per-file process isolation (module-level registry/env state); listed explicitly in `vitest.config.ts`. If a `node`-project test starts failing only in full runs, module-state leakage is the first suspect — fix the leak or move the file here.
+- `worker` — `worker/` suites with default per-file isolation (they lean on module-level state: circuit breakers, caches, D1 stubs; verified to fail without isolation).
+- `src` — `src/` suites with default isolation for jsdom/React state.
+
+Because project include lists ignore CLI `--exclude`, the noncritical runner excludes critical test files via the `VITEST_EXCLUDE_CRITICAL_TESTS=1` env contract (set by `scripts/maintenance/run-noncritical-tests.mjs`, consumed by `vitest.config.ts`); `scripts/__tests__/validate-ci-parity.test.ts` pins both sides.
 
 When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob exclusions so coverage still includes the active repository files; nested worktree directories remain excluded in a normal top-level checkout.
 
@@ -346,6 +355,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ### Registry Guardrails
 
+- Six content-coverage guardrails run in every deploy-impacting prebuild pass alongside the code checks: `check:glossary-coverage`, `check:one-liner-coverage`, `check:mechanism-archetype-coverage`, `check:archetype-explainer-coverage`, `check:attestor-tier-coverage`, and `check:oracle-risk-coverage:enforce`. They gate editorial/data completeness (glossary wiring, coin one-liners, mechanism archetypes and their explainers, attestor tiers, oracle-risk coverage) rather than code correctness; each is a sub-second registry scan.
 - `npm run check:redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 - `npm run check:redemption-coverage-audit` validates the Redemption Backstop backlog audit against `scripts/lib/redemption-coverage-audit-baseline.json`, so default-inferred active gaps, total active gaps, and heuristic route counts cannot grow while the backlog is being researched.
 - `worker/src/lib/__tests__/redemption-backstops-store.test.ts` now covers completed-run snapshot manifests for `redemption_backstop_runs`, including generation-filtered reads and current/history rows written with `snapshot_run_id`.
@@ -367,6 +377,7 @@ Full-suite coverage threshold is not enforced; only per-file critical-coverage a
 CI does **not** run a full-suite coverage gate. CI runs the critical-path gate via `npm run coverage:critical`:
 
 - Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
+- Scopes v8 remapping to the enrolled critical source via per-file `--coverage.include` flags (built in `buildCriticalCoverageArgs`); per-file numbers are unchanged, the reporter just stops remapping the rest of the module graph
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
 - Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `discovery`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.mjs`)
