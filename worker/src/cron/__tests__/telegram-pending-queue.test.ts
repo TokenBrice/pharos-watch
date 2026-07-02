@@ -2290,7 +2290,13 @@ describe("cleanupExpiredPendingAlerts", () => {
 
     const history = db.getHistory();
     const selectCall = history.find((e) => e.sql.includes("FROM telegram_pending_alerts"));
+    expect(selectCall?.sql).toContain("COALESCE(expires_at, created_at + ?) <= ?");
     expect(selectCall?.sql).toContain("LIMIT ?");
+    expect(selectCall?.binds).toEqual([
+      PENDING_TTL_SEC,
+      nowSec,
+      EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
+    ]);
     expect(selectCall?.binds[selectCall.binds.length - 1]).toBe(EXPIRED_PENDING_CLEANUP_BATCH_LIMIT);
     const deleteCall = history.find((e) => e.sql.includes("DELETE FROM telegram_pending_alerts"));
     expect(deleteCall).toBeDefined();
@@ -2327,7 +2333,7 @@ describe("cleanupExpiredPendingAlerts", () => {
 
     const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_pending_alerts"));
     expect(selectCall?.binds).toEqual([
-      nowSec - PENDING_TTL_SEC,
+      PENDING_TTL_SEC,
       nowSec,
       EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
     ]);
@@ -2337,6 +2343,55 @@ describe("cleanupExpiredPendingAlerts", () => {
         record.cappedAtLimit === EXPIRED_PENDING_CLEANUP_BATCH_LIMIT
       ),
     ).toBe(true);
+  });
+
+  it("preserves rows whose explicit expires_at extends beyond the default TTL", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const nowSec = 5_000;
+      insertPendingSqlite(sqlite, {
+        id: 1,
+        chatId: "long-expiry-chat",
+        html: "<b>Still live</b>",
+        createdAt: nowSec - PENDING_TTL_SEC - 60,
+        dedupeKey: "long-expiry-key",
+        expiresAt: nowSec + 600,
+      });
+      insertPendingSqlite(sqlite, {
+        id: 2,
+        chatId: "default-expired-chat",
+        html: "<b>Default expired</b>",
+        createdAt: nowSec - PENDING_TTL_SEC - 60,
+        dedupeKey: "default-expired-key",
+        expiresAt: null,
+      });
+      insertPendingSqlite(sqlite, {
+        id: 3,
+        chatId: "explicit-expired-chat",
+        html: "<b>Explicit expired</b>",
+        createdAt: nowSec - 60,
+        dedupeKey: "explicit-expired-key",
+        expiresAt: nowSec - 1,
+      });
+
+      expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(2);
+
+      expect(
+        sqlite
+          .prepare("SELECT id, chat_id FROM telegram_pending_alerts ORDER BY id ASC")
+          .all(),
+      ).toEqual([{ id: 1, chat_id: "long-expiry-chat" }]);
+      expect(
+        sqlite
+          .prepare("SELECT pending_id, reason FROM telegram_alert_dead_letters ORDER BY pending_id ASC")
+          .all(),
+      ).toEqual([
+        { pending_id: 2, reason: "ttl_expired" },
+        { pending_id: 3, reason: "ttl_expired" },
+      ]);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("logs each expired cleanup row with TTL and prior failure reason classes", async () => {
@@ -2448,7 +2503,7 @@ describe("cleanupExpiredPendingAlerts", () => {
 
   it("returns 0 when no alerts expired", async () => {
     const db = mockD1([
-      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [], runMeta: { changes: 0 } },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
     ]);
     expect(await cleanupExpiredPendingAlerts(db, 5000)).toBe(0);
   });

@@ -1536,6 +1536,17 @@
     "description": "The expiry sweep deletes on `created_at < (now - PENDING_TTL_SEC) OR expires_at <= now` (lines 251-252), while the drain claim query, capacity snapshot, and loadChatsInBackoff all treat liveness as `COALESCE(expires_at, created_at + PENDING_TTL_SEC) > now`. A row whose explicit expires_at is beyond created_at+3600 would be counted live/due by drain and capacity but deleted (dead-lettered as ttl_expired) by cleanup. Today this is latent: every TELEGRAM_ALERT_TTL_SEC value is <= PENDING_TTL_SEC and the only external caller (admin-telegram-broadcast.ts:277) passes 30min — but enqueuePendingAlerts' PendingEnqueueOptions.ttlSec accepts any positive value, so the first longer TTL silently expires early with no test tripping.",
     "recommendation": "Align the sweep predicate with the rest of the queue: `WHERE COALESCE(expires_at, created_at + ?) <= ?`. For all currently-possible rows this selects the identical set (explicit expiry never exceeds the default window today), so behavior is preserved while removing the trap.",
     "estImpact": "removes latent early-expiry trap; one predicate change"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Aligned pending-alert cleanup expiry selection with drain/capacity liveness by using `COALESCE(expires_at, created_at + ?) <= ?`, so explicit longer expiries are preserved until their own deadline.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/telegram-pending-queue.test.ts -t cleanupExpiredPendingAlerts",
+     "npx vitest run worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Currently configured TTLs remain within the default pending TTL; this removes the latent early-expiry trap for future longer explicit expiries."
    }
   },
   {

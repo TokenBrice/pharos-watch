@@ -243,17 +243,15 @@ export async function cleanupExpiredPendingAlerts(
   db: D1Database,
   nowSec: number,
 ): Promise<number> {
-  const cutoff = nowSec - PENDING_TTL_SEC;
   const expiredRows = await db
     .prepare(
       `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, expires_at
          FROM telegram_pending_alerts
-        WHERE created_at < ?
-           OR (expires_at IS NOT NULL AND expires_at <= ?)
+        WHERE COALESCE(expires_at, created_at + ?) <= ?
         ORDER BY id ASC
         LIMIT ?`,
     )
-    .bind(cutoff, nowSec, EXPIRED_PENDING_CLEANUP_BATCH_LIMIT)
+    .bind(PENDING_TTL_SEC, nowSec, EXPIRED_PENDING_CLEANUP_BATCH_LIMIT)
     .all<ExpiredPendingRow>();
 
   const rows = expiredRows.results ?? [];
